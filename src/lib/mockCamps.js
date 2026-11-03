@@ -1132,7 +1132,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (stateOf(db, camp) === 'finished') return st('finished');
       const changes = { closed_by_hand: !a.p_open };
       if (a.p_open && today() > camp.signup_closes_on) {
-        if (!ctx.isAdmin) return st('not_allowed'); // "The closing date has passed. Ask an admin to reopen."
+        if (!ctx.isAdmin) return st('not_allowed'); // "The closing date has passed. Ask an admin to open it." (v0.725)
         changes.signup_closes_on = lastDayOf(db, camp.id); // admin: open until the last day
       }
       updateRow(camp, changes, ctx);

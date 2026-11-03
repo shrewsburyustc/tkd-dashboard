@@ -42,15 +42,6 @@ import * as T from '../text.js';
 export const PRICE_KEYS = ['memberEarlyCents', 'memberRegularCents', 'nonmemberEarlyCents', 'nonmemberRegularCents'];
 export const PRICE_LABELS = [T.COL_MEMBER_EARLY, T.COL_MEMBER_REGULAR, T.COL_NONMEMBER_EARLY, T.COL_NONMEMBER_REGULAR];
 
-// Camp hours in 5-minute steps (C3: "camp hours in 5-minute steps"), 6:00 AM to 9:00 PM.
-export const TIME_CHOICES = (() => {
-  const list = [];
-  for (let minutes = 6 * 60; minutes <= 21 * 60; minutes += 5) {
-    list.push(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`);
-  }
-  return list;
-})();
-
 // "09:00:00" (database) → "09:00"
 const hhmm = (time) => (typeof time === 'string' ? time.slice(0, 5) : '');
 // The bigger / smaller of two ISO dates (text compares correctly for 'YYYY-MM-DD').
@@ -440,6 +431,48 @@ export function checkForm(values, ctx) {
       : { ...common, days: isoDays, signupOpensOn: values.opensOn, signupClosesOn: values.closesOn, earlyUntil: values.earlyUntil };
   }
   return { errors, sections, firstProblem, payload };
+}
+
+// ----- Undo after Edit camp (rulebook v0.726, design review C5) -----
+// The toast's Undo sends the camp's OLD values again (the payload the dialog would have sent if
+// nothing had been changed). One fix is needed first: an extra the save REMOVED no longer exists,
+// so its old id would be refused ("an id that isn't one of this camp's extras"). Such an extra is
+// sent without its id, so the database adds it again as a new extra (no active camper had it —
+// otherwise the save itself was refused). Extras the save ADDED aren't in the old list, so the
+// Undo removes them (refused if a family picked one meanwhile — the amber bar then says so).
+//   before = the old payload (checkForm on the values the dialog loaded)
+//   saved  = the payload that was just saved
+export function undoCampPayload(before, saved) {
+  if (!before) return null;
+  const kept = new Set((saved?.extras ?? []).map((e) => e.extraId).filter(Boolean));
+  return { ...before, extras: before.extras.map((e) => (e.extraId && !kept.has(e.extraId) ? { ...e, extraId: null } : e)) };
+}
+
+// Did the save take a day off that is already in the past? Then its Undo would add a NEW past day,
+// which the database always refuses ('invalid'): the amber bar can say why.
+export function undoAddsPastDay(before, saved, today) {
+  if (!before?.days || !saved?.days) return false;
+  return before.days.some((d) => d < today && !saved.days.includes(d));
+}
+
+// The words for an Undo of Edit camp the database refused for a reason it named, or null (then
+// the page uses its general "Couldn't undo. Someone else changed this just now.").
+//   not_empty → the same sentences Edit camp's own Save shows (v0.701 / 0027 v0.720)
+//   invalid   → "New days can't be in the past." when the Undo puts back a past day
+export function campUndoRefusal(result, { addsPastDay = false } = {}) {
+  if (!result) return null;
+  if (result.status === 'not_empty') {
+    let reason;
+    if (result.kind === 'day') reason = T.cantRemoveDay(result.day, result.firstName ?? '', result.lastName ?? '', result.more ?? 0);
+    else if (result.kind === 'extra') reason = T.cantRemoveExtra(result.extraName ?? '', result.count ?? 0);
+    else if (result.kind === 'extra_day') reason = T.cantRemoveExtraDay(result.day ?? '', result.extraName ?? '', result.count ?? 0);
+    else if (result.kind === 'extra_per') reason = T.cantChangeExtraPer(result.extraName ?? '', result.count ?? 0);
+    else if (result.kind === 'extra_included') reason = T.cantIncludeExtra(result.extraName ?? '', result.count ?? 0);
+    else reason = T.extraNoDaysLeft(result.extraName ?? '');
+    return T.undoRefused(reason);
+  }
+  if (result.status === 'invalid' && !result.field && addsPastDay) return T.undoRefused(T.PAST_DAY);
+  return null;
 }
 
 // Re-exported for the section files (one import place for the form's limits).

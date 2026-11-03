@@ -5,28 +5,40 @@
 //          "Late pick-up … today", "No pizza party") ·
 //   Paid   (Paid green · "$219 due" gray · "Owes $15" amber — tapping one that isn't Paid opens
 //          the small Mark paid box: one click, this device's school, Undo) ·
-//   one column per camp day (today's column tinted): ✓ 7:42 = checked in (tap → undo, with an Undo
-//          toast) · Check in = signed up, tap to check in (any day, v0.706) · ✗ = a past day not
-//          checked in (still tappable, to fix a missed one) · — = not signed up that day ·
+//   one column per camp day (today's column tinted): [user-check] 7:42 = checked in (tap → undo,
+//          with an Undo toast) · Check in = signed up, tap to check in (any day, v0.706) ·
+//          [user-x] = a past day not checked in (still tappable, to fix a missed one) · — = not
+//          signed up that day. The two icons are ti-user-check / ti-user-x since v0.723 (design
+//          review C16: one icon per meaning, as Prospects and the Calendar; was ti-check / ti-x).
+//          The printed roster (PrintRoster.jsx) still prints ✓ / ✗ ·
 //   ⋯     (mouse only; on touch screens the ⋯ items live in Camper detail).
 // Above the table: the summary line ("9 of 15 here today  5 to collect · $1,040  Pizza party
 // today: 11"), Find a camper, and — only when the camp's days cross more than one calendar week —
 // the week switch ("Week 1 · Jul 6–10 | Week 2 · Jul 13–17"; each week shows only its own days,
-// Paid and "to collect" stay whole-camp). Below it: the possible-duplicate box, then "Removed".
+// Paid and "to collect" stay whole-camp). Below it: the possible-duplicate box (the shared
+// components/DuplicateBox.jsx since rulebook v0.729), then "Removed".
 // Phones: one card per child — name + Paid on top, the week's day buttons underneath (today
 // outlined), 44px targets. The page (CampPage.jsx) does every write; this file only draws.
 // Live-test fixes (2026-10-21): the grid always spans the full width, even for a 1-day camp (the
 // Camper column takes the spare room); a camp with nobody signed up still shows the grid (headers,
 // week switch, legend) with "No campers yet…" as one row inside it, so a closed or past camp
 // never looks like it lost its roster; and the summary line ends with a quiet "Updated 2:41:07 PM".
+// "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
+// v0.412): no Paid column (PC / tablet) and no money tags on the phone cards, no "N to collect ·
+// $X" / "All paid", and the Mark paid box can't open (an open one closes). A "Possible duplicate"
+// tag isn't money: on PC / tablet it moves onto the name's line, on phones it stays on its card.
+// Check-in, "here today", Find a camper, the extra counts and "Updated …" stay.
+// Money ("to collect · $1,040", the tags) is written by the shared formatMoney (src/lib/money.js;
+// rulebook v0.732, design review C17), as every section does.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconUserCheck, IconUserX } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, toCollectCents } from '../../lib/camps/campRules.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import DuplicateBox from './DuplicateBox.jsx';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
+import { formatMoney } from '../../lib/money.js';
+import DuplicateBox from '../../components/DuplicateBox.jsx';
 import * as T from './text.js';
 
 // A–Z by first name, then last name (as drawn in the mockup).
@@ -170,7 +182,7 @@ function todayNote(row, todayDay, extras, days) {
   return mine ? T.extraShort(mine.name) : null;
 }
 
-// One day of one child: ✓ time / Check in / ✗ / —.  compact = phone card (weekday letter on top).
+// One day of one child: [user-check] time / Check in / [user-x] / —.  compact = phone card (weekday letter on top).
 function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
   const mine = (row.days ?? []).find((d) => d.dayId === day.dayId);
   const name = T.camperLabel(row);
@@ -202,7 +214,7 @@ function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
       >
         {letter}
         <span className="cp-dc-val">
-          <IconCheck size={14} aria-hidden="true" />
+          <IconUserCheck size={14} aria-hidden="true" />
           {T.clockShort(mine.checkedInAt)}
         </span>
       </button>
@@ -220,8 +232,25 @@ function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
       }}
     >
       {letter}
-      <span className="cp-dc-val">{missed ? <IconX size={14} aria-hidden="true" /> : T.CHECK_IN}</span>
+      <span className="cp-dc-val">{missed ? <IconUserX size={14} aria-hidden="true" /> : T.CHECK_IN}</span>
     </button>
+  );
+}
+
+// The legend under the grid (v0.723, design review C16): the same two icons as the day cells, in front
+// of their words. The icons are hidden from screen readers: the words already say "came" and
+// "didn't come", so nothing is read twice.
+function RosterLegend({ touch }) {
+  const parts = T.rosterLegendParts(touch);
+  return (
+    <p className="field-hint cp-hint-line">
+      <IconUserCheck size={14} aria-hidden="true" className="cp-legend-icon" />
+      {parts.came}
+      {parts.checkIn}
+      <IconUserX size={14} aria-hidden="true" className="cp-legend-icon" />
+      {parts.missed}
+      {parts.rest}
+    </p>
   );
 }
 
@@ -245,6 +274,7 @@ export default function CampRoster({
   menuFor,
   notSavedId,
   updatedAt = null, // when the page last loaded fresh data (useLiveLoad) — shown as "Updated …"
+  detailsHidden = false, // Hide private details is on: no money on the roster (v0.722)
   handlers, // { onOpen(row, el), onMore(row, el), onMarkPaid(row), onReview(row, el), onReviewPair(pair, el), onCheckIn(row, day), onUndoCheckIn(row, day) }
 }) {
   const [popover, setPopover] = useState(null); // { rowId, anchor }
@@ -294,11 +324,28 @@ export default function CampRoster({
   const removedRows = removed.filter(match).sort(byFirstName);
 
   const popoverRow = popover ? active.find((r) => r.id === popover.rowId) : null;
-  // The camper was paid meanwhile (another device): the box closes by itself.
+  // The camper was paid meanwhile (another device), or Hide private details was switched on: the
+  // box closes by itself.
   useEffect(() => {
-    if (popover && (!popoverRow || !['not_paid', 'owes'].includes(payTag(popoverRow)))) setPopover(null);
-  }, [popover, popoverRow]);
+    if (!popover) return;
+    if (detailsHidden) {
+      // The Paid cell (and its button) went with the switch: focus moves to the same row's ⋯, else
+      // its name (focus must not fall to the page body), when focus was in the box or on its tag.
+      const hadFocus = document.activeElement === document.body || popover.anchor.contains(document.activeElement) || document.querySelector('.cp-popover')?.contains(document.activeElement);
+      setPopover(null);
+      if (hadFocus) {
+        const id = popover.rowId;
+        window.requestAnimationFrame(() => {
+          (document.querySelector(`[data-camper-more="${id}"]`) ?? document.querySelector(`[data-nav-row="${id}"]`))?.focus();
+        });
+      }
+      return;
+    }
+    if (!popoverRow || !['not_paid', 'owes'].includes(payTag(popoverRow))) setPopover(null);
+  }, [popover, popoverRow, detailsHidden]);
   const onPay = (row, anchor) => setPopover({ rowId: row.id, anchor });
+  // While hidden, the only tag an active camper keeps is "Possible duplicate" (it opens the compare).
+  const duplicateTag = (row) => (payTag(row) === 'duplicate' ? <CamperTag row={row} onReview={handlers.onReview} /> : null);
 
   // ↑ ↓ move between the names, Enter opens Camper detail (PC rule 3.6; the Tab key reaches the
   // roster's names as one stop, like every other list).
@@ -376,7 +423,8 @@ export default function CampRoster({
                     </span>
                   )}
                 </span>
-                <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
+                {/* Hidden: no money tag; a possible duplicate keeps its tag here (picture 01). */}
+                {detailsHidden ? duplicateTag(row) : <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />}
               </div>
               {note && <span className="cp-rnote">{note}</span>}
               <div className="cp-rdays">{shownDays.map((d) => cell(row, d, true))}</div>
@@ -390,7 +438,7 @@ export default function CampRoster({
     );
   } else {
     // ----- PC and tablet: the grid -----
-    const columns = 2 + shownDays.length + (showMore ? 1 : 0);
+    const columns = 1 + (detailsHidden ? 0 : 1) + shownDays.length + (showMore ? 1 : 0);
     list = (
       // Always the full content width (Jeffrey, live test 2026-10-21: "make it fit the whole
       // screen"); with only a few days the Camper column takes the spare room (camps.css).
@@ -401,9 +449,11 @@ export default function CampRoster({
               <th scope="col" className="cp-rcol-name">
                 {T.COL_CAMPER}
               </th>
-              <th scope="col" className="cp-rcol-paid">
-                {T.COL_PAID}
-              </th>
+              {!detailsHidden && (
+                <th scope="col" className="cp-rcol-paid">
+                  {T.COL_PAID}
+                </th>
+              )}
               {shownDays.map((d) => (
                 <th key={d.dayId} scope="col" className={`cp-rcol-day${d.day === today ? ' is-today' : ''}`}>
                   {T.dayHead(d.day, today, isWide)}
@@ -424,6 +474,8 @@ export default function CampRoster({
                   <th scope="row" className="cp-rcol-name">
                     {nameButton(row)}
                     <span className="cp-age-text"> · {row.age}</span>
+                    {/* Hidden: "Possible duplicate" moves onto the name's line (picture 01). */}
+                    {detailsHidden && payTag(row) === 'duplicate' && <span className="cp-namedup">{duplicateTag(row)}</span>}
                     {notSavedId === row.id && (
                     <span className="ttag ttag--warn cp-notsaved">
                       <IconAlertTriangle size={12} aria-hidden="true" />
@@ -432,9 +484,11 @@ export default function CampRoster({
                   )}
                     {note && <span className="cp-rnote">{note}</span>}
                   </th>
-                  <td className="cp-rcol-paid">
-                    <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
-                  </td>
+                  {!detailsHidden && (
+                    <td className="cp-rcol-paid">
+                      <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
+                    </td>
+                  )}
                   {shownDays.map((d) => (
                     <td key={d.dayId} className={`cp-rcol-day${d.day === today ? ' is-today' : ''}`}>
                       {cell(row, d, false)}
@@ -508,13 +562,14 @@ export default function CampRoster({
       ) : (
       <p className="cp-statline">
         {first}
-        {toCollect === 0 ? (
+        {/* Hidden: neither "N to collect · $X" nor "All paid" (both say who paid). */}
+        {detailsHidden ? null : toCollect === 0 ? (
           <span className="cp-allpaid">{T.ALL_PAID}</span>
         ) : (
           <span>
             <span className="cp-big">{toCollect}</span>
             {T.toCollectShort}
-            {isWide && ` · ${T.dollars(toCollectCents(active))}`}
+            {isWide && ` · ${formatMoney(toCollectCents(active))}`}
           </span>
         )}
         {dayExtras.map((extra) => (
@@ -541,12 +596,21 @@ export default function CampRoster({
         />
       </div>
       )}
-      <DuplicateBox pairs={pairs} onReview={handlers.onReviewPair} />
+      {/* The shared possible-duplicate box (rulebook v0.729 / v1.102): Camps' count line and one
+          "<name> is signed up twice" line per pair, each with Review (opens the compare). */}
+      <DuplicateBox
+        countText={T.duplicateBoxLine(pairs.length)}
+        pairs={pairs.map((pair) => ({
+          key: pair.first.id,
+          text: T.signedUpTwice(T.camperLabel(pair.first)),
+          onReview: (opener) => handlers.onReviewPair(pair, opener),
+        }))}
+      />
       {weekSwitch}
       {list}
       {removedGroup}
-      {!isPhone && active.length > 0 && <p className="field-hint cp-hint-line">{T.rosterLegend(isTouch)}</p>}
-      {popover && popoverRow && (
+      {!isPhone && active.length > 0 && <RosterLegend touch={isTouch} />}
+      {popover && popoverRow && !detailsHidden && (
         <PaymentPopover
           row={popoverRow}
           anchor={popover.anchor}

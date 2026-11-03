@@ -6,37 +6,42 @@
 //
 // The items, in the approved order (C1 phone sheet, follows Star v0.92):
 //   Edit camp (admin; on PC / tablet rows it's the pencil instead, so it's left out there)
-//   Close sign-up / Reopen sign-up   (no icon; Close is hidden while Not open yet; nothing once
-//                                     the camp is over; staff can't Reopen after the closing
+//   Close sign-up / Open sign-up     (no icon; Close is hidden while Not open yet; nothing once
+//                                     the camp is over; staff can't Open after the closing
 //                                     date — grayed, with "The closing date has passed. Ask an
-//                                     admin to reopen." — Star v0.86)
-//   Save as template (admin)  → SaveTemplateDialog
+//                                     admin to open it." — Star v0.86; "Open", not "Reopen",
+//                                     since rulebook v0.725, design review C12)
+//   Save as template (admin)  → SaveTemplateDialog (toast "Template saved · <name>" with Undo =
+//                               delete the new template, rulebook v0.726)
 //   Print roster              → PrintRoster (the attendance grid on paper)
 //   Delete camp (admin, red)  → DeleteCampDialog (asks first; permanent)
-// Close / Reopen are instant with a 5-second Undo toast (C1, 2026-10-19).
+// Close / Open are instant with a 5-second Undo toast (C1, 2026-10-19).
 //
 //   const actions = useCampActions({ … });
 //   actions.items(camp, days, { includeEdit, onEdit })  → the RowMenu items
 //   actions.elements   → the open dialog and the print sheet (draw them once on the page)
 //   actions.dialogOpen → true while one of its dialogs shows (the page behind goes inert)
+// "Hide private details" (rulebook v0.722): Delete camp's sentence names no amount while it is on
+// (read here, so the Camps list and the camp page both follow it); Print roster reads it itself.
 import { useEffect, useRef, useState } from 'react';
 import { IconEdit, IconPrinter, IconTemplate, IconTrash } from '@tabler/icons-react';
-import { loadCamp, setSignup } from '../../lib/camps/campsApi.js';
+import { deleteTemplate, loadCamp, setSignup } from '../../lib/camps/campsApi.js';
 import { signupState } from '../../lib/camps/campRules.js';
+import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import DeleteCampDialog from './DeleteCampDialog.jsx';
 import PrintRoster from './PrintRoster.jsx';
 import SaveTemplateDialog from './SaveTemplateDialog.jsx';
 import * as T from './text.js';
 
-// A menu item with no icon (Close / Reopen sign-up are drawn without one, like Star's built ⋯).
+// A menu item with no icon (Close / Open sign-up are drawn without one, like Star's built ⋯).
 export function NoIcon() {
   return <span className="menu-icon ev-noicon" aria-hidden="true" />;
 }
 
-// Can this person reopen sign-up right now? Staff only before the closing date (Star v0.86);
-// admins any time before the camp is over (the database then moves the closing date to the
-// camp's last day, contract §1.14 camp_set_signup).
-export function canReopen(camp, today, isAdmin) {
+// Can this person open sign-up again right now ("Open sign-up", v0.725)? Staff only before the
+// closing date (Star v0.86); admins any time before the camp is over (the database then moves
+// the closing date to the camp's last day, contract §1.14 camp_set_signup).
+export function canOpenSignup(camp, today, isAdmin) {
   return isAdmin || today <= camp.signupClosesOn;
 }
 
@@ -56,6 +61,7 @@ export function useCampActions({
   const [printing, setPrinting] = useState(null); // the loaded camp data while it prints
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
+  const [detailsHidden] = usePrivateDetailsHidden(); // Hide private details (v0.506 / v0.722)
 
   function begin() {
     if (busyRef.current) return false;
@@ -69,7 +75,7 @@ export function useCampActions({
     if (status && status !== 'ok') clearToast();
   }
 
-  // ----- Close / Reopen sign-up (instant, with Undo) -----
+  // ----- Close / Open sign-up (instant, with Undo) -----
   async function switchSignup(camp, days, open, isUndo = false, expectedVersion = camp.version) {
     if (!begin()) return;
     const result = await setSignup(camp.id, expectedVersion, open);
@@ -82,10 +88,10 @@ export function useCampActions({
         showToast(T.TOAST_UNDONE, { icon: false });
         return;
       }
-      // Admin reopening after the closing date: the database moved it to the last day.
+      // An admin opening it after the closing date: the database moved that date to the last day.
       const moved = open && today > camp.signupClosesOn;
       const lastDay = days[days.length - 1]?.day ?? null;
-      const text = open ? (moved && lastDay ? T.signupReopenedUntil(lastDay) : T.TOAST_SIGNUP_REOPENED) : T.TOAST_SIGNUP_CLOSED;
+      const text = open ? (moved && lastDay ? T.signupOpenUntil(lastDay) : T.TOAST_SIGNUP_OPEN) : T.TOAST_SIGNUP_CLOSED;
       const newVersion = result.version;
       showToast(text, {
         icon: false,
@@ -94,7 +100,7 @@ export function useCampActions({
     } else if (status === 'no_access') {
       onNoAccess();
     } else if (status === 'not_allowed') {
-      setBanner({ text: open ? T.REOPEN_NEEDS_ADMIN : T.CAMPS_NOT_ALLOWED });
+      setBanner({ text: open ? T.OPEN_NEEDS_ADMIN : T.CAMPS_NOT_ALLOWED });
       onRefreshProfile();
       reload();
     } else if (status === 'finished') {
@@ -107,7 +113,7 @@ export function useCampActions({
       // Didn't reach the database: the banner says so and offers Retry (never silent, rule 3.5).
       setBanner({
         kind: 'switch',
-        text: open ? T.signupNotReopened(camp.name) : T.signupNotClosed(camp.name),
+        text: open ? T.signupNotOpened(camp.name) : T.signupNotClosed(camp.name),
         retry: () => switchSignup(camp, days, open, isUndo, expectedVersion),
       });
     }
@@ -165,6 +171,26 @@ export function useCampActions({
     setPrinting({ ...data, printedAt: new Date().toISOString() });
   }
 
+  // ----- Undo of Save as template: delete the new template (as Add camp's Undo deletes the new
+  // camp; rulebook v0.726). Edited or deleted meanwhile → 'stale' / 'not_found' → "Couldn't undo.
+  // Someone else changed this just now." No connection → the amber bar with Retry. -----
+  async function undoSaveTemplate(saved) {
+    if (!begin()) return;
+    const result = await deleteTemplate(saved.id, saved.version);
+    end(result.status);
+    const status = result.status;
+    if (status === 'ok') {
+      setBanner((current) => (current?.kind === 'undoTemplate' ? null : current));
+      showToast(T.TOAST_UNDONE, { icon: false });
+    } else if (status === 'no_access') onNoAccess();
+    else if (status === 'not_allowed') {
+      setBanner({ text: T.CAMPS_NOT_ALLOWED });
+      onRefreshProfile();
+    } else if (status === 'error') {
+      setBanner({ kind: 'undoTemplate', text: T.UNDO_FAILED, retry: () => undoSaveTemplate(saved) });
+    } else setBanner({ text: T.UNDO_STALE });
+  }
+
   function startSaveTemplate(camp, days, opener) {
     if (!isAdmin) return;
     clearToast();
@@ -196,15 +222,15 @@ export function useCampActions({
     if (state === 'open') {
       list.push({ key: 'close', label: T.CLOSE_SIGNUP, Icon: NoIcon, disabled: busy, onSelect: () => switchSignup(camp, days, false) });
     } else if (state === 'closed') {
-      const allowed = canReopen(camp, today, isAdmin);
+      const allowed = canOpenSignup(camp, today, isAdmin);
       list.push({
-        key: 'reopen',
+        key: 'open',
         label: allowed ? (
-          T.REOPEN_SIGNUP
+          T.OPEN_SIGNUP
         ) : (
           <span className="ev-menu-two">
-            <span>{T.REOPEN_SIGNUP}</span>
-            <span className="ev-menu-reason">{T.REOPEN_NEEDS_ADMIN}</span>
+            <span>{T.OPEN_SIGNUP}</span>
+            <span className="ev-menu-reason">{T.OPEN_NEEDS_ADMIN}</span>
           </span>
         ),
         Icon: NoIcon,
@@ -230,9 +256,9 @@ export function useCampActions({
           key={dialog.key}
           camp={dialog.camp}
           onClose={closeDialog}
-          onSaved={(name) => {
+          onSaved={(name, saved) => {
             closeDialog();
-            showToast(T.templateSavedToast(name), { icon: false });
+            showToast(T.templateSavedToast(name), { icon: false, action: { label: T.UNDO, onAction: () => undoSaveTemplate(saved) } });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -246,6 +272,7 @@ export function useCampActions({
           count={dialog.count}
           active={dialog.active}
           cents={dialog.cents}
+          detailsHidden={detailsHidden}
           onClose={closeDialog}
           onDeleted={() => {
             const camp = dialog.camp;

@@ -1,0 +1,35 @@
+{
+  "title": "Camps C1 · 2 of 3 — Camper detail and the ⋯ menu while “Hide private details” is on",
+  "subtitle": "Camper detail keeps every row but money reads gray <b>“Hidden on this tablet”</b>; the Payments part becomes one gray line <b>“Payment details are hidden on this tablet.”</b> (the shared words in <code>src/lib/privateDetails.js</code>). The money items leave the ⋯ menu and the touch “More” (Change how they’ll pay, Edit payment, Undo payment), as Color Belt’s v0.412. The gray “Admin” label goes too (C9, v1.012), and what’s left is in 10a’s order (C8). Admin view, Grace Lee ($395 due). Amber = what changes.",
+  "columns": [
+    { "label": "Today · switch on", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c1-detail-pc-today.png", "crop": [420, 80, 440, 700], "scale": 0.8, "marks": [[440, 296, 400, 52], [440, 350, 400, 30], [440, 398, 400, 95]],
+          "caption": "<b>PC 1280×800.</b> The price sum, “Paying by Cash”, “$395 due” and the payments list all show." },
+        { "src": "shots/c1-menu-pc-today.png", "crop": [930, 370, 350, 240], "scale": 1, "marks": [[1052, 426, 190, 28], [1052, 528, 190, 26]],
+          "caption": "<b>PC ⋯ menu.</b> “Change how they’ll pay” (money) and the gray “Admin” label." }
+      ] },
+      { "row": [
+        { "src": "shots/c1-detail-tab-today.png", "crop": [190, 96, 440, 1066], "scale": 0.5, "shotWidth": 820, "marks": [[208, 312, 404, 50], [208, 366, 404, 30], [208, 412, 404, 96], [208, 940, 404, 135]],
+          "caption": "<b>Tablet 820×1180.</b> Touch screens list the ⋯ items under “More”." },
+        { "src": "shots/c1-detail-ph-today-bottom.png", "crop": [0, 0, 390, 844], "scale": 0.62, "shotWidth": 390, "marks": [[8, 62, 374, 100], [8, 628, 374, 140]],
+          "caption": "<b>Phone 390×844</b> (scrolled down)." }
+      ] }
+    ] },
+    { "label": "After · switch on (mockup)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/c1-detail-pc-after.png", "crop": [420, 80, 440, 700], "scale": 0.8, "marks": [[440, 296, 400, 64], [440, 378, 400, 44]],
+          "caption": "<b>PC.</b> Price and Paying by keep their rows, gray. Payments is one gray line. Days, extras, check-in, family and sign-up stay." },
+        { "src": "shots/c1-menu-pc-after.png", "crop": [930, 370, 350, 240], "scale": 1, "marks": [[1048, 418, 198, 112]],
+          "caption": "<b>PC ⋯ menu.</b> Edit details — Withdraw · Delete permanently (red, last). No money items, no “Admin” label." }
+      ] },
+      { "row": [
+        { "src": "shots/c1-detail-tab-after.png", "crop": [190, 96, 440, 1066], "scale": 0.5, "shotWidth": 820, "marks": [[208, 312, 404, 64], [208, 392, 404, 46], [208, 866, 404, 62]],
+          "caption": "<b>Tablet.</b> “More” keeps Withdraw and Delete permanently, in one row." },
+        { "src": "shots/c1-detail-ph-after-bottom.png", "crop": [0, 0, 390, 844], "scale": 0.62, "shotWidth": 390, "marks": [[8, 112, 374, 62], [8, 192, 374, 46], [8, 704, 374, 64]],
+          "caption": "<b>Phone</b> (scrolled down). Same." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>To settle (question for Jeffrey):</b> the walkthrough’s picture 02 #5 still drew “Change how they’ll pay” and the “Admin” label under More with the switch on. This mockup follows Color Belt’s v0.412 (the item goes while hidden) and v1.012 (no “Admin” label). Staff see the same minus Delete permanently. <b>Not drawn, same rule:</b> Edit details’ extras prices and “Total now $X” go while hidden; the Delete camper / Delete camp sentences say “any recorded payment” instead of an amount (as v0.412). <b>Scripts:</b> <code>mock-c01-camper-hidden.js</code>, <code>mock-c08-menu.js</code>."
+}

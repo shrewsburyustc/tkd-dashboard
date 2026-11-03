@@ -8,7 +8,7 @@
 //   - "Both schools · held at Worcester" under a both-schools camp's name; on the switcher's Both
 //     a School column instead (phone: a line on the card)
 //   - admins: the Edit pencil (PC / tablet) and the ⋯ menu (CampRowMenu.jsx); staff: ⋯ with Close
-//     / Reopen sign-up and Print roster only
+//     / Open sign-up and Print roster only
 //   - a click on a row opens the camp's page (App.jsx gives it the #camps/camp/<id> address)
 //
 // Columns (PC and tablet): Camp · [School on Both] · Dates (all days + how many) · Campers ·
@@ -22,8 +22,8 @@ import { loadCamps, campToday } from '../../lib/camps/campsApi.js';
 import { campTag, firstDay } from '../../lib/camps/campRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../testing/events/useLiveLoad.js';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useCampActions } from './CampRowMenu.jsx';
 import * as T from './text.js';
 

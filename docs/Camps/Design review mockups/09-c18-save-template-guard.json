@@ -1,0 +1,25 @@
+{
+  "title": "Camps C18 — Save as template keeps the typing (the unsaved-changes guard)",
+  "subtitle": "Rule v1.027 (the guard everywhere; rule v0.46): with a changed name, <b>Esc, a click outside or Back</b> keep the dialog open and show the shared note <b>“Unsaved changes. Save or cancel first.”</b> under the buttons — exactly as Camps’ Edit details, Edit payment and Add / Edit camp already do. On phones the note adds <b>“Discard changes”</b> (rule v0.56). With the name unchanged, Esc still just closes it. Admin, camp ⋯ → Save as template, name changed to “April Vacation Week”. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c18-pc-typed.png", "crop": [460, 80, 360, 322], "scale": 1.1, "marks": [[484, 190, 312, 32]],
+          "caption": "<b>PC 1280×800.</b> A new name typed …" },
+        { "src": "shots/c18-pc-today-esc.png", "crop": [460, 80, 360, 322], "scale": 1.1, "marks": [],
+          "caption": "… one Esc (or a click outside): the dialog closes and the typing is gone." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "src": "shots/c18-pc-after.png", "crop": [460, 80, 360, 322], "scale": 1.1, "marks": [[484, 344, 312, 34]],
+        "caption": "<b>PC.</b> After Esc / a click outside the dialog stays; the amber note sits under Cancel / Save. Cancel or Save closes it." },
+      { "row": [
+        { "src": "shots/c18-ph-after.png", "crop": [0, 70, 390, 380], "scale": 0.9, "shotWidth": 390, "marks": [[40, 356, 310, 70]],
+          "caption": "<b>Phone 390×844</b> (after Back): the note with “Discard changes”." },
+        { "src": "shots/c18-320-after.png", "crop": [0, 50, 320, 420], "scale": 0.9, "shotWidth": 320, "marks": [],
+          "caption": "<b>320 wide:</b> fits, no sideways scroll." }
+      ] }
+    ] }
+  ],
+  "footer": "The note’s words and look are the shared ones already in Camps’ text (<code>T.UNSAVED</code>, <code>T.DISCARD_CHANGES</code>, from Color Belt). The walkthrough’s picture 17b #6 drew the PC note the same way. <b>Script:</b> <code>mock-c18-guard.js</code>."
+}

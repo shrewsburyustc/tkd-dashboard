@@ -1,0 +1,43 @@
+{
+  "title": "Camps C6 / C20 — the three delete boxes switch to the shared ConfirmBox",
+  "subtitle": "Rule v1.008 / v1.103 (approved M2). Delete camp, Delete template and Delete camper permanently stop using Color Belt’s ConfirmDeleteDialog and use <code>components/ConfirmBox.jsx</code> with <code>loses: 'forGood'</code>. <b>The words don’t change</b> (Keep camp · Delete camp, Keep template · Delete template, Keep camper · Delete permanently). What changes: <b>while it works</b> the red button says “Deleting…” and grays, and “Keep …” grays too (today nothing on screen changes); the buttons <b>stack, each full width,</b> when they don’t fit side by side (today the labels squeeze onto two lines); and the box <b>never takes the pinned button row</b> (today a screen under 700px tall gives it one, with a line across). Esc, a click outside and Back wait while it works (not visible in a picture). Admin. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c20-del-pc-today.png", "crop": [440, 60, 400, 200], "scale": 1, "marks": [],
+          "caption": "<b>PC 1280×800.</b> Delete camp (camp ⋯)." },
+        { "src": "shots/c20-del-pc-today-busy.png", "crop": [440, 60, 400, 200], "scale": 1, "marks": [[484, 187, 312, 32]],
+          "caption": "… after pressing <b>Delete camp</b>, while it works: looks exactly the same; both buttons still look pressable." }
+      ] },
+      { "row": [
+        { "src": "shots/c20-cmr-ph-today.png", "crop": [0, 70, 390, 250], "scale": 0.9, "shotWidth": 390, "marks": [],
+          "caption": "<b>Phone 390×844.</b> Delete camper permanently (Camper detail → More)." },
+        { "src": "shots/c20-cmr-320x700-today.png", "crop": [0, 50, 320, 320], "scale": 0.9, "shotWidth": 320, "marks": [[38, 264, 244, 40]],
+          "caption": "<b>320 wide:</b> “Keep camper” and “Delete permanently” squeeze onto two lines each." }
+      ] },
+      { "src": "shots/c20-cmr-390x640-today.png", "crop": [0, 50, 390, 250], "scale": 0.9, "shotWidth": 390, "marks": [[17, 214, 356, 60]],
+        "caption": "<b>Short phone 390×640</b> (any screen under 700px tall): the box picks up the form dialogs’ pinned row: a line across the box above the buttons." }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/c20-del-pc-after.png", "crop": [440, 60, 400, 200], "scale": 1, "marks": [],
+          "caption": "<b>PC.</b> At rest: the same as today." },
+        { "src": "shots/c20-del-pc-after-busy.png", "crop": [440, 60, 400, 200], "scale": 1, "marks": [[484, 187, 312, 32]],
+          "caption": "While it works: <b>“Deleting…”</b>, both buttons gray; the red button keeps its width, so nothing moves." }
+      ] },
+      { "row": [
+        { "src": "shots/c20-cmr-ph-after-busy.png", "crop": [0, 70, 390, 250], "scale": 0.9, "shotWidth": 390, "marks": [[40, 237, 312, 36]],
+          "caption": "<b>Phone 390×844</b>, while it works (at rest it looks as today)." },
+        { "src": "shots/c20-cmr-320x700-after.png", "crop": [0, 50, 320, 320], "scale": 0.9, "shotWidth": 320, "marks": [[38, 264, 244, 84]],
+          "caption": "<b>320 wide:</b> they stack, each full width, Keep on top." }
+      ] },
+      { "row": [
+        { "src": "shots/c20-cmr-390x640-after.png", "crop": [0, 50, 390, 250], "scale": 0.9, "shotWidth": 390, "marks": [[40, 216, 312, 38]],
+          "caption": "<b>Short phone 390×640:</b> no pinned row, no line — the same box as on a tall screen." },
+        { "src": "shots/c20-tpl-pc-after-busy.png", "crop": [440, 60, 400, 200], "scale": 0.9, "marks": [[484, 187, 312, 32]],
+          "caption": "<b>Delete template</b> (Templates ⋯), while it works." }
+      ] }
+    ] }
+  ],
+  "footer": "The After pictures are the real Camps boxes in the preview with the shared ConfirmBox’s own markup and classes swapped in (<code>cfm-actions</code>, <code>is-unavailable</code>, the hidden sizer that measures the stacking), copied from <code>parts.html#M2/busy</code>, so the app’s real <code>shared.css</code> draws them. “Today, while it works” is a real screenshot taken with the preview’s save slowed down. A failed delete keeps today’s amber note under the buttons (“Couldn’t delete…”). <b>Script:</b> <code>mock-c20-confirm.js</code>. Compare dialog: picture 10b."
+}

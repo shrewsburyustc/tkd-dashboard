@@ -2,20 +2,27 @@
 // Why it exists: deleting a camp is PERMANENT (its campers, check-ins and payments go with it),
 // so rule 1.4 asks first and names exactly what is deleted (contract §7.3: "<Camp> and its <N>
 // campers and <$X> in payments are deleted. This can't be undone."). No Undo.
-// It reuses Color Belt's confirmation box (ConfirmDeleteDialog: Keep / red Delete, focus on Keep).
+// It uses the dashboard's shared "are you sure?" box (components/ConfirmBox.jsx, loses 'forGood':
+// "Keep camp" on the left with the first focus, red "Delete camp" on the right; rulebook v0.729,
+// design review C6 / C20 — it replaced Color Belt's ConfirmDeleteDialog). While it works the red
+// button says "Deleting…" and both buttons gray; Esc, a click outside and Back wait.
 //
 // The numbers were read fresh just before this opened (CampRowMenu.jsx), and the delete sends
 // exactly those numbers: if a family signed up meanwhile, the database answers "stale" instead of
 // deleting something the admin didn't see (§1.14 camp_delete_camp).
 //
+// While "Hide private details" is on (detailsHidden, rulebook v0.722) the sentence says "any recorded
+// payment" instead of the amount; the delete still sends the real numbers.
+//
 // Props: camp, count (every camper, withdrawn too), active (the header's count), cents (payments net of reversals),
-//        onClose, onDeleted, onProblem(status)
+//        detailsHidden, onClose, onDeleted, onProblem(status)
 import { useState } from 'react';
+import { IconTrash } from '@tabler/icons-react';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
 import { deleteCamp } from '../../lib/camps/campsApi.js';
-import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
 import * as T from './text.js';
 
-export default function DeleteCampDialog({ camp, count, active, cents, onClose, onDeleted, onProblem }) {
+export default function DeleteCampDialog({ camp, count, active, cents, detailsHidden = false, onClose, onDeleted, onProblem }) {
   const [deleting, setDeleting] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -35,15 +42,19 @@ export default function DeleteCampDialog({ camp, count, active, cents, onClose, 
   }
 
   return (
-    <ConfirmDeleteDialog
+    <ConfirmBox
       title={T.deleteCampTitle(camp.name)}
-      body={T.deleteCampBody(camp.name, active, count - active, cents)}
       keepLabel={T.KEEP_CAMP}
-      deleteLabel={T.DELETE_CAMP}
-      failed={failed}
-      deleting={deleting}
-      onDelete={handleDelete}
-      onCancel={() => !deleting && onClose()}
-    />
+      actionLabel={T.DELETE_CAMP}
+      actionIcon={IconTrash} // ti-trash = delete (red: deleting only)
+      busyLabel={T.DELETING}
+      loses="forGood"
+      busy={deleting}
+      failed={failed ? T.DELETE_FAILED : null}
+      onConfirm={handleDelete}
+      onKeep={onClose} // ConfirmBox ignores it while the delete works
+    >
+      {T.deleteCampBody(camp.name, active, count - active, cents, detailsHidden)}
+    </ConfirmBox>
   );
 }

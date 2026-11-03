@@ -1,0 +1,335 @@
+{
+ "title": "Camps C1 · 3b — Edit details, the delete boxes and toasts while “Hide private details” is on",
+ "subtitle": "The rest of C1 (rule v1.000, as Color Belt’s v0.412). <b>Edit details:</b> each extra’s price and “Total now $X” read gray <b>“Hidden on this tablet”</b> (the words in <code>src/lib/privateDetails.js</code>); the extras’ names, ticks and day chips stay, and so does the note about current prices (it has no amount). <b>Delete camper / Delete camp:</b> the sentence says <b>“any recorded payment”</b> instead of the amount (Color Belt’s and Star’s hidden wording). <b>Toasts:</b> the one Camps toast with an amount, Mark paid’s, drops it. Admin; switch on. Amber = what changes.",
+ "columns": [
+  {
+   "label": "Today · switch on",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/c1e-edit-pc-today.png",
+     "crop": [
+      380,
+      80,
+      520,
+      705
+     ],
+     "scale": 0.82,
+     "marks": [
+      [
+       404,
+       296,
+       330,
+       20
+      ],
+      [
+       404,
+       376,
+       330,
+       20
+      ],
+      [
+       404,
+       422,
+       140,
+       24
+      ]
+     ],
+     "caption": "<b>Edit details, PC 1280×800.</b> “Early drop-off … · $15 a day”, “Late pick-up … · $8 a day”, “Total now $395”."
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c1e-delcamper-pc-today.png",
+       "crop": [
+        460,
+        80,
+        360,
+        209
+       ],
+       "scale": 1.0,
+       "marks": [
+        [
+         484,
+         128,
+         312,
+         62
+        ]
+       ],
+       "caption": "<b>Delete camper:</b> “… the $335 card payment recorded on Mar 25 …”."
+      },
+      {
+       "src": "shots/c1e-delcamp-pc-today.png",
+       "crop": [
+        460,
+        80,
+        360,
+        183
+       ],
+       "scale": 1.0,
+       "marks": [
+        [
+         484,
+         128,
+         312,
+         62
+        ]
+       ],
+       "caption": "<b>Delete camp:</b> “… and $3,795 in payments are deleted.”"
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c1e-edit-ph-today.png",
+       "crop": [
+        0,
+        250,
+        390,
+        220
+       ],
+       "scale": 0.85,
+       "shotWidth": 390,
+       "marks": [
+        [
+         16,
+         288,
+         360,
+         22
+        ],
+        [
+         16,
+         384,
+         360,
+         22
+        ],
+        [
+         16,
+         436,
+         200,
+         22
+        ]
+       ],
+       "caption": "<b>Phone 390×844:</b> Edit details."
+      },
+      {
+       "src": "shots/c1e-delcamper-ph-today.png",
+       "crop": [
+        0,
+        80,
+        390,
+        230
+       ],
+       "scale": 0.85,
+       "shotWidth": 390,
+       "marks": [
+        [
+         38,
+         134,
+         320,
+         62
+        ]
+       ],
+       "caption": "<b>Phone:</b> Delete camper."
+      }
+     ]
+    },
+    {
+     "src": "shots/c1e-toast-today.png",
+     "crop": [
+      880,
+      716,
+      400,
+      80
+     ],
+     "scale": 1.1,
+     "marks": [
+      [
+       981,
+       736,
+       275,
+       40
+      ]
+     ],
+     "caption": "<b>Mark paid toast:</b> “Leo Kim marked paid · $15 cash” · Undo."
+    }
+   ]
+  },
+  {
+   "label": "After · switch on (mockup)",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/c1e-edit-pc-after.png",
+     "crop": [
+      380,
+      80,
+      520,
+      705
+     ],
+     "scale": 0.82,
+     "marks": [
+      [
+       404,
+       296,
+       330,
+       20
+      ],
+      [
+       404,
+       376,
+       330,
+       20
+      ],
+      [
+       404,
+       422,
+       210,
+       24
+      ]
+     ],
+     "caption": "<b>Edit details, PC.</b> Prices and the total read “Hidden on this tablet”; picking days and extras works as before."
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c1e-delcamper-pc-after.png",
+       "crop": [
+        460,
+        80,
+        360,
+        209
+       ],
+       "scale": 1.0,
+       "marks": [
+        [
+         484,
+         128,
+         312,
+         44
+        ]
+       ],
+       "caption": "<b>Delete camper:</b> “The sign-up and any recorded payment are deleted from April Vacation Camp. This can’t be undone.”"
+      },
+      {
+       "src": "shots/c1e-delcamp-pc-after.png",
+       "crop": [
+        460,
+        80,
+        360,
+        183
+       ],
+       "scale": 1.0,
+       "marks": [
+        [
+         484,
+         128,
+         312,
+         62
+        ]
+       ],
+       "caption": "<b>Delete camp:</b> “April Vacation Camp, its 19 campers and 1 removed, and any recorded payment are deleted. This can’t be undone.”"
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c1e-edit-ph-after.png",
+       "crop": [
+        0,
+        250,
+        390,
+        220
+       ],
+       "scale": 0.7,
+       "shotWidth": 390,
+       "marks": [
+        [
+         16,
+         288,
+         360,
+         22
+        ],
+        [
+         16,
+         384,
+         360,
+         22
+        ],
+        [
+         16,
+         436,
+         210,
+         22
+        ]
+       ],
+       "caption": "<b>Phone:</b> Edit details. (320 wide checked.)"
+      },
+      {
+       "src": "shots/c1e-delcamper-ph-after.png",
+       "crop": [
+        0,
+        80,
+        390,
+        230
+       ],
+       "scale": 0.7,
+       "shotWidth": 390,
+       "marks": [
+        [
+         38,
+         134,
+         320,
+         44
+        ]
+       ],
+       "caption": "<b>Phone:</b> Delete camper (320 checked)."
+      },
+      {
+       "src": "shots/c1e-delcamp-tab-after.png",
+       "crop": [
+        230,
+        96,
+        360,
+        188
+       ],
+       "scale": 0.7,
+       "shotWidth": 820,
+       "marks": [
+        [
+         254,
+         146,
+         312,
+         62
+        ]
+       ],
+       "caption": "<b>Tablet 820×1180:</b> Delete camp."
+      }
+     ]
+    },
+    {
+     "src": "shots/c1e-toast-after.png",
+     "crop": [
+      880,
+      716,
+      400,
+      80
+     ],
+     "scale": 1.1,
+     "marks": [
+      [
+       1040,
+       736,
+       216,
+       40
+      ]
+     ],
+     "caption": "<b>Mark paid toast:</b> “Leo Kim marked paid” · Undo (no amount)."
+    }
+   ]
+  }
+ ],
+ "footer": "<b>Notes:</b> (1) With the switch on there is no Paid column, so Mark paid can’t be pressed. Its toast only matters if the switch is turned on while it shows. Color Belt’s v0.412 closes the toast at that moment, and Camps would copy that, so the drawn words are a safety net. Camps’ other toasts have no amounts. (2) “Total now” keeps its label so staff see that a total exists. The option is to leave the line out entirely, as Color Belt shows no fee in Edit. (3) The Delete camp sentence is new wording (Color Belt’s event version reads “Its N students, … and any recorded payment are deleted too.”). <b>Script:</b> <code>mock-c01-edit-delete-hidden.js</code>."
+}

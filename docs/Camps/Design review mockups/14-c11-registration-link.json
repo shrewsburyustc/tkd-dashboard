@@ -1,0 +1,59 @@
+{
+  "title": "Camps C11 — Registration link",
+  "subtitle": "Rules v1.015 (one “Registration link” button with its words on every screen; Camps keeps its blue, its phone button gets words) and v1.106 / v1.111 (the shared box <code>components/RegistrationLinkBox.jsx</code> + <code>lib/qr.js</code>). Three changes: <b>(a)</b> phones: the icon-only blue square becomes the blue <b>Registration link</b> button with its words, on its own line under the camp’s name and line, as Color Belt’s buttons go under the title on phones; ⋯ stays beside it. <b>(b)</b> the box becomes the shared one (Camps’ card heading “Both schools · held at Worcester”, one link, no flyer): a failed copy or download now shows its amber note <i>inside</i> the box, in the shared words, until the box closes or the action works. Today it is a bar on the page behind the box — on phones the full-screen box hides it until you go back. <b>(c)</b> the QR file’s name (card at the bottom). PC and tablet buttons don’t change. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c11-pc-today-head.png", "crop": [640, 100, 640, 110], "scale": 0.5, "marks": [[1070, 130, 150, 32]],
+          "caption": "<b>PC 1280×800.</b> The blue button (stays as it is)." },
+        { "src": "shots/c11-pc-today-copyfail.png", "crop": [60, 80, 820, 540], "scale": 0.42, "marks": [[76, 184, 1180, 36]],
+          "caption": "Copy fails: the bar appears on the page, <i>behind</i> the dimmed box." }
+      ] },
+      { "row": [
+        { "src": "shots/c11-tab-today-copyfail.png", "crop": [80, 90, 740, 530], "scale": 0.45, "shotWidth": 820, "marks": [[96, 219, 700, 56]],
+          "caption": "<b>Tablet 820×1180 touch.</b> Same: the bar is behind the box." }
+      ] },
+      { "row": [
+        { "src": "shots/c11-ph-today-head.png", "crop": [0, 140, 390, 120], "scale": 0.6, "shotWidth": 390, "marks": [[290, 160, 36, 36]],
+          "caption": "<b>Phone 390×844 touch.</b> Icon-only blue square (its name only in a tooltip / screen reader)." },
+        { "src": "shots/c11-ph-today-copyfail.png", "crop": [0, 0, 390, 440], "scale": 0.45, "shotWidth": 390,
+          "caption": "Copy fails: nothing shows — the bar is under the full-screen box." },
+        { "src": "shots/c11-ph-today-copyfail-closed.png", "crop": [0, 140, 390, 180], "scale": 0.6, "shotWidth": 390, "marks": [[16, 249, 358, 59]],
+          "caption": "Only after Back: the bar, Camps’ words (“copy it by hand”)." }
+      ] },
+      { "row": [
+        { "src": "shots/c11-320-today-head.png", "crop": [0, 140, 320, 120], "scale": 0.6, "shotWidth": 320, "marks": [[220, 160, 36, 36]],
+          "caption": "<b>320 wide.</b> Same square." },
+        { "src": "shots/c11-320-today-copyfail-closed.png", "crop": [0, 140, 320, 180], "scale": 0.6, "shotWidth": 320, "marks": [[16, 249, 288, 59]],
+          "caption": "The bar after Back." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/c11-pc-after-box.png", "crop": [400, 70, 480, 520], "scale": 0.42,
+          "caption": "<b>PC.</b> The shared box: looks as today’s (Camps’ was copied from the same design)." },
+        { "src": "shots/c11-pc-after-copyfail.png", "crop": [400, 70, 480, 560], "scale": 0.42, "marks": [[444, 502, 392, 34]],
+          "caption": "Copy fails: the amber note <b>inside</b> the box, under the card, shared words." }
+      ] },
+      { "row": [
+        { "src": "shots/c11-tab-after-copyfail.png", "crop": [170, 80, 480, 580], "scale": 0.45, "shotWidth": 820, "marks": [[214, 526, 392, 34]],
+          "caption": "<b>Tablet touch.</b> Same, inside the box." }
+      ] },
+      { "row": [
+        { "src": "shots/c11-ph-after-head.png", "crop": [0, 140, 390, 150], "scale": 0.6, "shotWidth": 390, "marks": [[16, 236, 150, 36]],
+          "caption": "<b>Phone.</b> Blue, with its words, on its own line under the name; ⋯ beside it." },
+        { "src": "shots/c11-ph-after-copyfail.png", "crop": [0, 0, 390, 480], "scale": 0.45, "shotWidth": 390, "marks": [[16, 434, 358, 34]],
+          "caption": "Copy fails: the note shows in the full-screen box." }
+      ] },
+      { "row": [
+        { "src": "shots/c11-320-after-head.png", "crop": [0, 140, 320, 150], "scale": 0.6, "shotWidth": 320, "marks": [[16, 236, 150, 36]],
+          "caption": "<b>320 wide.</b> Fits on one line." },
+        { "src": "shots/c11-320-after-copyfail.png", "crop": [0, 0, 320, 540], "scale": 0.42, "shotWidth": 320, "marks": [[16, 478, 288, 52]],
+          "caption": "Buttons stack; the note wraps to two lines." }
+      ] },
+      { "src": "shots/c11-names.png", "crop": [16, 16, 336, 238], "scale": 0.9, "marks": [[28, 192, 318, 44]],
+        "caption": "<b>(c) The QR file’s name — question for Jeffrey.</b> A both-schools camp gets “April Vacation Camp QR code.png” either way. A one-school camp: <b>A</b> no school, or <b>B</b> “… - Worcester QR code.png”. <b>B matches</b> the rule v1.106 wrote (“[event] - [school] QR code.png”), its approved M5 one-school Color Belt sample (“November Children Testing - Worcester QR code.png”) and Star (v0.518: “[event] - Worcester QR code.png”). <b>Recommend B.</b>" }
+    ] }
+  ],
+  "footer": "<b>Words that change:</b> copy failure “Couldn't copy the link. Select the link and copy it <i>by hand</i>.” (Camps) → “… copy it <i>yourself</i>.” (shared <code>COPY_FAILED</code>); download failure “Couldn't make the QR code <i>file</i>. Try again.” → “Couldn't make the QR code <i>picture</i>. Try again.” (shared <code>QR_FAILED</code>; same note place, not shot). Camps passes: title “Registration link”, the camp name, today’s line, one link <code>{ url: campLink(code), school: null (both-schools) or the school (option B), heading: “Both schools · held at Worcester” / “Worcester” }</code> (a one-school camp keeps its heading “Worcester”, not the default “Worcester school”); no flyer. With one link the buttons never name a school. <b>Phone button:</b> Color Belt and Star have no ⋯, so ⋯ beside the button is Camps’ own — the same pair as Camps’ PC header. Color Belt hasn’t switched to the shared box yet on any branch; Star has (v0.518). The link shows “localhost:5791” because this is the preview. <b>Drawn:</b> the After box is the <b>real</b> shared box mounted with Camps’ words (a failing <code>copy</code> passed in, as the parts page does); the phone header is the real one re-arranged (button’s words added, its square class removed); the file-name card is drawn, its names worked out by the real <code>qrFileName</code> helpers (Camps’ today and the shared one). <b>Script:</b> <code>mock-c11-link.js</code>."
+}
