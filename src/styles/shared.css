@@ -2086,13 +2086,50 @@ html.is-reordering .tib-tip {
   }
 }
 
-/* ===== M6 — the count cards (CountCards.jsx; rulebook v1.107). The cards are the .ev-cards /
-   .ev-card look above; this is the optional gray line under the row (Black Belt's duplicates
-   note). ===== */
+/* ===== M6 — the count cards (CountCards.jsx; rulebook v1.107, v1.117). The cards are the
+   .ev-cards / .ev-card look above; this is the optional gray line under the row (Black Belt's
+   duplicates note) and the inline "Show all" link. ===== */
 .cards-note {
   margin: 0 0 var(--space-12);
   color: var(--color-text-secondary);
   font-size: var(--text-13);
+}
+
+/* A link inside a sentence: "Showing not paid only · Show all" (v1.117, option a). On touch it
+   keeps the line's own height and sits right after the dot; its 44px tap area comes from an
+   invisible box around the words (guidelines 2.5) — the way Star's .st-inline-link does it — not
+   from app.css's 44px touch box for every link button. Unlike Star's (43.5px, with no room made for
+   it), this box is exactly 44px and the line makes room for it. The touch rules work only inside
+   the shared line (.cards-showing), which has that room; anywhere else a link button keeps
+   app.css's own touch box. */
+.inline-link {
+  position: relative; /* the invisible box below is placed from the link itself */
+  font-size: inherit;
+}
+
+@media (pointer: coarse) {
+  .cards-showing .link-button.inline-link {
+    min-height: 0;
+    padding: 0;
+  }
+
+  /* Exactly 44px tall, from 11px above the words: it starts in the gap above the line (not on the
+     cards) and ends inside the space under the line (not on what comes next). */
+  .cards-showing .inline-link::after {
+    content: '';
+    position: absolute;
+    top: -11px;
+    right: -4px;
+    left: -4px;
+    height: var(--tap-size);
+  }
+
+  /* The gray line with Show all gets room for that box (v1.117, option a): no pull-up toward the
+     cards (12px from them, not 8px) and 24px under it (not 12px), so the box never covers a card
+     above or a control under the line (guidelines 2.5: tap areas don't overlap). */
+  .ev-filter-line.cards-showing {
+    margin: 0 0 var(--space-24);
+  }
 }
 
 /* ===== M7 — the history line and list (HistoryLine.jsx; rulebook v1.108) =====

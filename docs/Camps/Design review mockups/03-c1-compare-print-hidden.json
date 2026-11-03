@@ -1,0 +1,27 @@
+{
+  "title": "Camps C1 · 3 of 3 — the Compare dialog and Print roster while “Hide private details” is on",
+  "subtitle": "Two more places that show money with the switch on today. <b>Compare dialog</b> (“… is signed up twice”): Paying by, Total and Payment keep their rows, read gray “Hidden on this tablet” and are never marked different (Dashboard core plan §10; the shared Compare dialog’s hidden rows, v1.102). <b>Print roster</b>: paper isn’t a screen, but the printout can lie on the mat — <b>a question for Jeffrey</b>, one option drawn. Amber = what changes.",
+  "columns": [
+    { "label": "Today · switch on", "tone": "today", "items": [
+      { "src": "shots/c1-compare-pc-today.png", "crop": [260, 80, 760, 556], "scale": 0.82, "marks": [[284, 351, 712, 110]],
+        "caption": "<b>Compare dialog, PC 1280×800.</b> Paying by, “$390 / $315” and “Paid Mar 10 / Not paid” show, highlighted as differences." },
+      { "row": [
+        { "src": "shots/c1-compare-ph-today.png", "crop": [0, 0, 390, 844], "scale": 0.5, "shotWidth": 390, "marks": [[16, 296, 358, 108]],
+          "caption": "<b>Phone 390×844.</b> Same, one card per sign-up." },
+        { "src": "shots/c1-print-today.png", "crop": [0, 0, 1280, 680], "scale": 0.52, "marks": [[278, 68, 270, 580]],
+          "caption": "<b>Print roster</b> (as the printer sees it). The Paid column prints whatever the switch says." }
+      ] }
+    ] },
+    { "label": "After · switch on (mockup)", "tone": "after", "items": [
+      { "src": "shots/c1-compare-pc-after.png", "crop": [260, 80, 760, 556], "scale": 0.82, "marks": [[284, 351, 712, 110]],
+        "caption": "<b>Compare dialog, PC.</b> The three money rows read “Hidden on this tablet”, never highlighted. Signed up, Reference, Days and Extras stay, so staff can still tell the two apart and Keep one." },
+      { "row": [
+        { "src": "shots/c1-compare-ph-after.png", "crop": [0, 0, 390, 844], "scale": 0.5, "shotWidth": 390, "marks": [[16, 296, 358, 108], [16, 652, 358, 108]],
+          "caption": "<b>Phone.</b> Same in both cards." },
+        { "src": "shots/c1-print-after.png", "crop": [0, 0, 1280, 680], "scale": 0.52, "marks": [[0, 68, 545, 580]],
+          "caption": "<b>Print roster — option drawn:</b> with the switch on, the sheet has no Paid column; “Possible duplicate” moves next to the name. With the switch off it prints as today." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>Question for Jeffrey (Print roster):</b> follow the switch (drawn — the sheet then matches the screen it was printed from), or always print the Paid column (it is the staff’s own sheet, design review CP5)? Recommendation: follow the switch, as every screen does (v0.249: “every screen, in every section”). <b>Scripts:</b> <code>mock-c01-compare-hidden.js</code>, <code>mock-c01-print-hidden.js</code>."
+}

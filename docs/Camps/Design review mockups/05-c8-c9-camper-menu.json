@@ -1,0 +1,299 @@
+{
+ "title": "Camps C8 + C9 (+ C16 Restore) — the camper’s ⋯ menu",
+ "subtitle": "<b>C8</b> (rule v1.011, Color Belt’s order): three groups with a line between — <b>about the person</b> (Edit details first, Change how they’ll pay, Review), <b>money</b> (Edit payment, Undo payment; Print receipt comes later with C3), <b>taking someone off</b> (Withdraw, then Delete permanently, last and red). Items that don’t apply are left out. <b>C9</b> (v1.012): no “Admin” heading — staff don’t see what they can never do; admins see the whole menu. <b>C16</b>: Restore gets <code>ti-arrow-back-up</code>. PC 1280×800, switch off. Touch screens list the same items under “More” in Camper detail (Edit details is the blue button there), in the same order. Amber = the changed menu.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/c8-admin-partpaid-today.png",
+       "crop": [
+        1036,
+        512,
+        232,
+        291
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Admin · Leo Kim (owes $15, has a payment).</b> “Change how they’ll pay” first; Withdraw before the money; “Admin” heading."
+      },
+      {
+       "src": "shots/c8-admin-unpaid-today.png",
+       "crop": [
+        1036,
+        387,
+        232,
+        227
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Admin · Grace Lee (nothing paid).</b> No payment yet, so no Edit / Undo payment."
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c8-admin-paid-today.png",
+       "crop": [
+        1036,
+        461,
+        232,
+        259
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Admin · Chloe Martin (paid).</b> Edit payment and Undo payment sit under “Admin”."
+      },
+      {
+       "src": "shots/c8-admin-dup-today.png",
+       "crop": [
+        1036,
+        412,
+        232,
+        259
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Admin · Ava Thompson (possible duplicate, not paid).</b> “Review” after Edit details; “Change how they’ll pay” first."
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c8-staff-partpaid-today.png",
+       "crop": [
+        1036,
+        649,
+        232,
+        163
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Staff · Leo Kim.</b> Staff never see admin-only items."
+      },
+      {
+       "src": "shots/c8-staff-paid-today.png",
+       "crop": [
+        1036,
+        461,
+        232,
+        131
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Staff · Chloe Martin (paid).</b> Edit details · Withdraw."
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c8-admin-removed-today.png",
+       "crop": [
+        1036,
+        648,
+        232,
+        131
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Admin · Owen Walsh (removed).</b> Restore has no icon."
+      },
+      {
+       "src": "shots/c8-staff-removed-today.png",
+       "crop": [
+        1036,
+        648,
+        232,
+        90
+       ],
+       "scale": 1.25,
+       "marks": [],
+       "caption": "<b>Staff · Owen Walsh (removed).</b> Restore only."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After (mockup)",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/c8-admin-partpaid-after.png",
+       "crop": [
+        1036,
+        512,
+        232,
+        291
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         548,
+         200,
+         220
+        ]
+       ],
+       "caption": "<b>Admin · Leo Kim (owes $15, has a payment).</b> About the person — money — taking someone off."
+      },
+      {
+       "src": "shots/c8-admin-unpaid-after.png",
+       "crop": [
+        1036,
+        387,
+        232,
+        227
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         423,
+         200,
+         147
+        ]
+       ],
+       "caption": "<b>Admin · Grace Lee (nothing paid).</b> Edit details first; no money group (nothing to fix)."
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c8-admin-paid-after.png",
+       "crop": [
+        1036,
+        461,
+        232,
+        259
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         497,
+         200,
+         188
+        ]
+       ],
+       "caption": "<b>Admin · Chloe Martin (paid).</b> Money in its own group, Withdraw after it."
+      },
+      {
+       "src": "shots/c8-admin-dup-after.png",
+       "crop": [
+        1036,
+        412,
+        232,
+        259
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         448,
+         200,
+         179
+        ]
+       ],
+       "caption": "<b>Admin · Ava Thompson (possible duplicate, not paid).</b> Review stays in the first group, after Change how they’ll pay."
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c8-staff-partpaid-after.png",
+       "crop": [
+        1036,
+        649,
+        232,
+        163
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         685,
+         200,
+         115
+        ]
+       ],
+       "caption": "<b>Staff · Leo Kim.</b> Same items in 10a’s order, a line before Withdraw."
+      },
+      {
+       "src": "shots/c8-staff-paid-after.png",
+       "crop": [
+        1036,
+        461,
+        232,
+        131
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         497,
+         200,
+         83
+        ]
+       ],
+       "caption": "<b>Staff · Chloe Martin (paid).</b> A line between the groups."
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c8-admin-removed-after.png",
+       "crop": [
+        1036,
+        648,
+        232,
+        131
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         684,
+         200,
+         83
+        ]
+       ],
+       "caption": "<b>Admin · Owen Walsh (removed).</b> Restore gets <code>ti-arrow-back-up</code> (C16)."
+      },
+      {
+       "src": "shots/c8-staff-removed-after.png",
+       "crop": [
+        1036,
+        648,
+        232,
+        90
+       ],
+       "scale": 1.25,
+       "marks": [
+        [
+         1047,
+         684,
+         200,
+         42
+        ]
+       ],
+       "caption": "<b>Staff · Owen Walsh (removed).</b> Restore with its icon."
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<b>To settle:</b> (1) The item stays <b>“Review”</b> (the app’s word today); 10a’s list calls it “Review possible duplicate” — say if the menu should use the longer words. (2) <b>Change how they’ll pay has no icon</b> in Camps; v1.024 gives that meaning <code>ti-switch-horizontal</code> for Color Belt, Star and Black Belt but doesn’t name Camps — recommendation: follow the map (not drawn). (3) Nothing in a Camps camper menu is “can do, but not right now” for staff, so no grayed “Ask an admin” line appears here; the one in Camps is the camp menu’s Open sign-up after the closing date (picture 6). (4) Touch “More” today shows only items that aren’t grayed; with no “Admin” label its buttons just follow this order in one wrapping row. <b>Script:</b> <code>mock-c08-menu.js</code>."
+}

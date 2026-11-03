@@ -5,8 +5,12 @@
 // finger does. Under the filtered row a few faint sample rows give the gray line its context.
 // After step 1: Star's four cards on Both schools, whose Candidates card has a two-line note
 // (rulebook v1.115; Star's Q5 picture, option B). No M6 mockup draws it, so it is listed apart.
-import { useState } from 'react';
+// And "A card tapped" has a real control under the gray line — a class switch, as Color Belt's
+// and Star's rosters have one there — so the checks can see that Show all's invisible tap area on
+// touch doesn't cover it (v1.117).
+import { useId, useState } from 'react';
 import { IconAlertTriangle, IconCalendar, IconCheck, IconCircleX, IconClock, IconSum, IconUsers } from '@tabler/icons-react';
+import ChoiceGroup from '../components/ChoiceGroup.jsx';
 import CountCards from '../components/CountCards.jsx';
 import { findByWords, pressLikeMouse, useLater } from './act.js';
 
@@ -41,12 +45,33 @@ const STAR_BOTH = [
   { key: 'money', Icon: IconSum, label: 'Payments recorded', value: '$930', kind: 'total' },
 ];
 
-// A sample roster: the cards and the filter they set (plus faint rows, when `rows`).
-function SampleCards({ cards, showing = SHOWING, note = null, rows = false }) {
+// A sample class switch (the shared segmented ChoiceGroup), for the control under the gray line.
+function ClassSwitch() {
+  const labelId = useId();
+  const [chosen, setChosen] = useState('all');
+  const options = [
+    { key: 'all', label: 'All classes' },
+    { key: 'tigers', label: 'Little Tigers' },
+    { key: 'a', label: 'Group A' },
+  ];
+  return (
+    <div className="parts-under">
+      <span id={labelId} className="visually-hidden">
+        Class
+      </span>
+      <ChoiceGroup labelId={labelId} variant="segmented" options={options} value={chosen} onChange={setChosen} />
+    </div>
+  );
+}
+
+// A sample roster: the cards and the filter they set (plus a control under them, when `below`, and
+// faint rows, when `rows`).
+function SampleCards({ cards, showing = SHOWING, note = null, below = null, rows = false }) {
   const [selected, setSelected] = useState(null);
   return (
     <div className="parts-frame" data-shot>
       <CountCards cards={cards} selected={selected} onSelect={setSelected} showingText={showing[selected] ?? ''} note={note} />
+      {below}
       {rows && (
         <div className="parts-ghost" aria-hidden="true">
           <div>Student</div>
@@ -60,7 +85,7 @@ function SampleCards({ cards, showing = SHOWING, note = null, rows = false }) {
 
 function FilteredState() {
   useLater(() => pressLikeMouse(findByWords('.ev-card', 'Not paid9')), 200);
-  return <SampleCards cards={COLOR_BELT} rows />;
+  return <SampleCards cards={COLOR_BELT} below={<ClassSwitch />} rows />;
 }
 
 // Black Belt's four, with the keyboard's focus ring on Late (as the mockup shows it)

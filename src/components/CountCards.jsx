@@ -1,5 +1,5 @@
 // CountCards.jsx — the row of count cards above a roster (design review M6, rulebook v1.013 /
-// v1.014 / v1.107 / v1.115; §8 Metric cards).
+// v1.014 / v1.107 / v1.115 / v1.117; §8 Metric cards).
 // Why it exists: Color Belt (twice), Star and Black Belt each drew their own cards; Camps had a
 // summary line. Every roster gets this one row:
 //   - up to four cards in a row, two by two on phones: a small icon and label on top, the number
@@ -7,7 +7,11 @@
 //     or two, each under the one before (Star's "Shrewsbury 5" / "Worcester 8" on Both, v1.115);
 //   - a count card is a button that filters the list below (screen readers hear it as pressed);
 //     the tapped card gets the blue edge and one gray line says so — "Showing not paid only ·
-//     Show all" (the section's words); tapping it again or Show all shows everyone;
+//     Show all" (the section's words); tapping it again or Show all shows everyone. Show all is a
+//     link inside that line: on touch it keeps the line's height, right after the dot, with an
+//     invisible tap area of exactly 44px (the way Star's own inline links get theirs); the line
+//     (.cards-showing) gets room for that area, so it never covers the cards above or a control
+//     under the line (v1.117, option a);
 //   - the 'all' card (Students, Campers) is a button that shows everyone;
 //   - a money total (Payments recorded) is never a button;
 //   - a section can add one gray line under the row (Black Belt's duplicates note);
@@ -82,9 +86,9 @@ export default function CountCards({ cards, selected = null, onSelect, showingTe
       </div>
       {note && <p className="cards-note">{note}</p>}
       {selectedCard && (
-        <p className="ev-filter-line">
+        <p className="ev-filter-line cards-showing">
           {showingText} ·{' '}
-          <button type="button" className="link-button" onClick={() => onSelect(null)}>
+          <button type="button" className="link-button inline-link" onClick={() => onSelect(null)}>
             {showAllLabel}
           </button>
         </p>

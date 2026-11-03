@@ -1,0 +1,119 @@
+<!doctype html>
+<!--
+  Camps-DesignReview-Mockups.html — the record of the Camps design-review mockups (change list §2.5, the items
+  that don't wait for shared parts: C1, C4 first half, C5, C8, C9, C12, C13, C15, C16, C18), drawn 2026-10-28.
+  Why: Jeffrey reviews one combined picture per screen; this page keeps them together with a short caption each.
+  The pictures are preview screenshots (fake database) with the "after" state drawn over the real page by the
+  mock-c*.js scripts in this folder; nothing in the app was changed. None of this is approved yet.
+  How they were made: shotx.mjs (screenshot + mock-up in one connection, driving docs/Design Review/tools/cdp.mjs's
+  Chrome), compose-camps.mjs (the picture from each NN-*.json spec; amber outlines on every changed part).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camps design review mockups</title>
+<style>
+  :root { --bg: #FFFFFF; --text: #1F1F1F; --muted: #6B6B6B; --line: #E5E5E2; --amber: #F59E0B; --tint: #FDF6EA; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1880px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 6px; }
+  .lead { color: #3A3A3A; max-width: 980px; margin: 0 0 20px; }
+  nav ol { margin: 0 0 28px; padding-left: 20px; }
+  nav a { color: #003595; }
+  section { border-top: 1px solid var(--line); padding: 20px 0 8px; }
+  h2 { font-size: 17px; font-weight: 500; margin: 0 0 4px; }
+  .items { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  .cap { max-width: 980px; margin: 0 0 12px; }
+  .q { background: var(--tint); border-left: 3px solid var(--amber); padding: 8px 12px; max-width: 980px; margin: 0 0 12px; font-size: 14px; }
+  img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Camps — design review mockups (for Jeffrey’s OK, one screen at a time)</h1>
+  <p class="lead">Branch <code>camps</code>, drawn 2026-10-28 over the preview app (fake data; the preview’s “today” is Wed, Apr 21, 2027, inside the April Vacation Camp). Left of each picture is today, right is the mockup; every changed part is outlined in amber. Nothing in the app was changed. Rules: v1.000, v1.003, v1.006, v1.011, v1.012, v1.016, v1.018, v1.022, v1.024, v1.027.</p>
+  <nav><ol>
+    <li><a href="#p1">C1 · the roster while “Hide private details” is on</a> (+ <a href="#p1b">sharp PC close-up</a>)</li>
+    <li><a href="#p2">C1 · Camper detail and the ⋯ menu while hidden</a></li>
+    <li><a href="#p3">C1 · Compare dialog and Print roster while hidden</a></li>
+    <li><a href="#p3b">C1 · Edit details, delete boxes and toasts while hidden</a></li>
+    <li><a href="#p4">C15 + C16 · “Both schools”, came / didn’t come icons</a></li>
+    <li><a href="#p5">C8 + C9 (+ C16 Restore) · the camper’s ⋯ menu</a></li>
+    <li><a href="#p6">C12 · “Open sign-up”</a></li>
+    <li><a href="#p7">C4 + C5 · toasts with Undo</a></li>
+    <li><a href="#p8">C13 · the shared date picker</a></li>
+    <li><a href="#p9">C18 · Save as template keeps the typing</a></li>
+  </ol></nav>
+
+  <section id="p1">
+    <h2>1 · C1 — the roster while “Hide private details” is on</h2>
+    <p class="items">C1 · rule v1.000 · PC, tablet, phone (320 checked)</p>
+    <p class="cap">No Paid column and no “N to collect” while the switch is on; attendance, check-in, the counts that aren’t money and the duplicate warning stay. The “Possible duplicate” tag moves onto the name’s line (phones keep it on the card).</p>
+    <img src="01-c1-roster-hidden.png" alt="Camp roster today and after with Hide private details on">
+  </section>
+  <section id="p1b">
+    <h2>1b · C1 — sharp PC close-up of picture 1</h2>
+    <img src="01b-c1-roster-hidden-closeup.png" alt="Close-up of the roster top, today and after">
+  </section>
+  <section id="p2">
+    <h2>2 · C1 — Camper detail and the ⋯ menu while hidden</h2>
+    <p class="items">C1 (with C8 / C9 order) · PC, tablet, phone</p>
+    <p class="cap">Price and Paying by say “Hidden on this tablet”; Payments becomes “Payment details are hidden on this tablet.” The money items leave the ⋯ menu and the touch “More”, and the “Admin” label goes.</p>
+    <p class="q"><b>Question:</b> walkthrough picture 02 #5 still showed “Change how they’ll pay” and “Admin” with the switch on. Drawn here as v0.412 / v1.012 say (both gone). OK?</p>
+    <img src="02-c1-camper-hidden.png" alt="Camper detail and menu today and after with Hide private details on">
+  </section>
+  <section id="p3">
+    <h2>3 · C1 — Compare dialog and Print roster while hidden</h2>
+    <p class="items">C1 · PC and phone; the print sheet as the printer sees it</p>
+    <p class="cap">The Compare dialog’s Paying by, Total and Payment read “Hidden on this tablet” and are never highlighted.</p>
+    <p class="q"><b>Question:</b> Print roster with the switch on — drop the Paid column (drawn, recommended) or always print it?</p>
+    <img src="03-c1-compare-print-hidden.png" alt="Compare dialog and print roster today and after">
+  </section>
+  <section id="p3b">
+    <h2>3b · C1 — Edit details, the delete boxes and toasts while hidden</h2>
+    <p class="items">C1 · rule v1.000 · PC, tablet, phone (320 checked)</p>
+    <p class="cap">Edit details hides each extra&#8217;s price and &#8220;Total now&#8221; as &#8220;Hidden on this tablet&#8221;. Delete camper and Delete camp say &#8220;any recorded payment&#8221; instead of an amount. The Mark paid toast drops its amount.</p>
+    <p class="q"><b>Words to approve:</b> &#8220;The sign-up and any recorded payment are deleted from April Vacation Camp. This can&#8217;t be undone.&#8221; &#183; &#8220;April Vacation Camp, its 19 campers and 1 removed, and any recorded payment are deleted. This can&#8217;t be undone.&#8221; &#183; &#8220;Leo Kim marked paid&#8221;.</p>
+    <img src="03b-c1-edit-delete-hidden.png" alt="Edit details, delete boxes and Mark paid toast, today and after with Hide private details on">
+  </section>
+  <section id="p4">
+    <h2>4 · C15 + C16 — “Both schools”; came / didn’t come icons</h2>
+    <p class="items">C15 · rule v1.022 · C16 · rule v1.024</p>
+    <p class="cap">The day grid and its legend use <code>ti-user-check</code> / <code>ti-user-x</code>; the Camps page line on Both says “Both schools”.</p>
+    <p class="q"><b>Question:</b> Print roster’s ✓ / ✗ characters — leave paper as is (recommended) or print the icons?</p>
+    <img src="04-c15-c16-roster-icons-both.png" alt="Day grid icons and Both schools line, today and after">
+  </section>
+  <section id="p5">
+    <h2>5 · C8 + C9 (+ C16 Restore) — the camper’s ⋯ menu</h2>
+    <p class="items">C8 · rule v1.011 · C9 · rule v1.012 · admin and staff; unpaid, part-paid, paid, duplicate, removed</p>
+    <p class="cap">About the person — money — taking someone off, with a line between; no “Admin” heading; Restore gets its icon.</p>
+    <p class="q"><b>Questions:</b> keep the word “Review” or say “Review possible duplicate”? Give “Change how they’ll pay” the map’s <code>ti-switch-horizontal</code> (recommended)?</p>
+    <img src="05-c8-c9-camper-menu.png" alt="Camper menus today and after for admin and staff">
+  </section>
+  <section id="p6">
+    <h2>6 · C12 — “Reopen sign-up” becomes “Open sign-up”</h2>
+    <p class="items">C12 · rule v1.016 · admin, staff, phone sheet</p>
+    <p class="q"><b>Words to settle:</b> “Sign-up open” / “Sign-up open until …” toasts, “… wasn’t opened”, “Open it from the ⋯ menu”, and the staff reason “Ask an admin to open it.” (drawn).</p>
+    <img src="06-c12-open-signup.png" alt="Camp menu with Open sign-up, today and after">
+  </section>
+  <section id="p7">
+    <h2>7 · C4 (Edit payment) + C5 — Undo for 5 seconds</h2>
+    <p class="items">C4 first half · rule v1.003 · C5 · rule v1.006</p>
+    <p class="cap">“Payment changed” · Undo (Black Belt’s words); “Camp saved”, “Template saved”, “Changes saved” and Save as template’s toast get Undo. Withdraw and Restore already have it.</p>
+    <p class="q"><b>Question:</b> a camper’s Undo after a days / member / extras change re-prices at today’s camp prices, so the old total may not come back. Undo anyway (recommended), or no Undo for those changes?</p>
+    <img src="07-c4-c5-toasts-undo.png" alt="Toasts today and after with Undo">
+  </section>
+  <section id="p8">
+    <h2>8 · C13 — the shared date picker</h2>
+    <p class="items">C13 · rule v1.018 · Edit camp’s three sign-up dates and Edit payment’s Date paid; the camp-days calendar stays</p>
+    <img src="08-c13-date-picker.png" alt="Date boxes today and the shared date picker after">
+  </section>
+  <section id="p9">
+    <h2>9 · C18 — Save as template keeps the typing</h2>
+    <p class="items">C18 · rule v1.027 · PC, phone, 320</p>
+    <img src="09-c18-save-template-guard.png" alt="Save as template today and with the unsaved-changes note">
+  </section>
+</main>
+</body>
+</html>

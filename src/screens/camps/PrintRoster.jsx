@@ -5,12 +5,16 @@
 // times (every week of a longer camp) and "Came X of Y". No phones on paper (rulebook §5).
 // It is drawn into the page only while printing; the print rules in camps.css hide everything
 // else, and it removes itself when the browser's print window closes ('afterprint').
+// Follows "Hide private details" (rulebook v0.722, design review C1 — Jeffrey: "follow the
+// switch"): while it is on, the sheet has no Paid column, so a printout left on the mat shows no
+// money; "Possible duplicate" then prints next to the name instead. With it off it prints as before.
 //
 // Props: data = a loaded camp ({ camp, days, roster, today, printedAt }), onDone()
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { attendanceCell, cameCount, payTag } from '../../lib/camps/campRules.js';
 import { campToday } from '../../lib/camps/campsApi.js';
+import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import { byFirstName } from './CampRoster.jsx';
 import * as T from './text.js';
 
@@ -36,6 +40,7 @@ function cellText(row, day, today) {
 }
 
 export default function PrintRoster({ data, onDone }) {
+  const [detailsHidden] = usePrivateDetailsHidden(); // Hide private details (v0.506 / v0.722)
   // The newest onDone in a ref, so a re-draw of the page never prints a second time.
   const onDoneRef = useRef(onDone);
   useEffect(() => {
@@ -67,7 +72,7 @@ export default function PrintRoster({ data, onDone }) {
         <thead>
           <tr>
             <th scope="col">{T.COL_CAMPER}</th>
-            <th scope="col">{T.COL_PAID}</th>
+            {!detailsHidden && <th scope="col">{T.COL_PAID}</th>}
             {days.map((d) => (
               <th key={d.dayId} scope="col">
                 {T.dayChip(d.day)}
@@ -81,8 +86,12 @@ export default function PrintRoster({ data, onDone }) {
             const { came, soFar } = cameCount(row, days, today);
             return (
               <tr key={row.id}>
-                <th scope="row">{T.camperNameAge(row)}</th>
-                <td>{paidText(row)}</td>
+                {/* Hidden: no Paid column; "· Possible duplicate" goes after the name (picture 03). */}
+                <th scope="row">
+                  {T.camperNameAge(row)}
+                  {detailsHidden && payTag(row) === 'duplicate' && ` · ${T.TAG_POSSIBLE_DUPLICATE}`}
+                </th>
+                {!detailsHidden && <td>{paidText(row)}</td>}
                 {days.map((d) => (
                   <td key={d.dayId}>{cellText(row, d, today)}</td>
                 ))}

@@ -1,0 +1,43 @@
+{
+  "title": "Camps C14 — Starts and Ends use the shared time list (6:00 AM–10:00 PM, every 5 minutes)",
+  "subtitle": "Rule v1.019 (one time list everywhere; camps 6:00 AM–10:00 PM) and v1.109 (the shared <code>components/TimeList.jsx</code>, as drawn in M8). Add / Edit camp → <b>2. Times</b> → Camp hours. Today Starts and Ends are the browser’s own <code>&lt;select&gt;</code>: 181 times, 6:00 AM–<b>9:00 PM</b>, already every 5 minutes; the list that opens is the browser’s (on phones, the phone’s own picker), so it looks different on every device. After: the shared field and list, the same on every device: every time with AM/PM, ends at <b>10:00 PM</b>, opens with the chosen time in the middle (tinted, with the 2px blue ring on the row the arrow keys are on), typing a number jumps to that hour. No database change (the camp’s time check only asks for 5-minute steps). Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/c14-pc-today.png", "crop": [270, 180, 740, 230], "scale": 1.0, "marks": [[297, 272, 337, 31], [646, 272, 337, 31]],
+        "caption": "<b>PC 1280×800.</b> Starts and Ends: the browser’s own boxes (each browser draws its own arrow and list)." },
+      { "src": "shots/c14-pc-today-end.png", "crop": [270, 180, 740, 230], "scale": 1.0, "marks": [[646, 250, 337, 146]],
+        "caption": "<b>The list’s end: 9:00 PM.</b> Drawn: the browser’s open list can’t be photographed, so the real Ends box is shown as a list, scrolled to its last times." },
+      { "row": [
+        { "src": "shots/c14-tab-today.png", "crop": [40, 250, 740, 95], "scale": 1.0, "shotWidth": 820, "marks": [[67, 296, 686, 36]],
+          "caption": "<b>Tablet 820×1180 touch.</b> Same boxes; a tap opens the tablet’s own list." }
+      ] },
+      { "row": [
+        { "src": "shots/c14-ph-today.png", "crop": [0, 150, 390, 360], "scale": 0.75, "shotWidth": 390, "marks": [[28, 195, 334, 36], [28, 265, 334, 36]],
+          "caption": "<b>Phone 390×844 touch.</b> A tap opens the phone’s own wheel / list." },
+        { "src": "shots/c14-320-today.png", "crop": [0, 48, 320, 362], "scale": 0.75, "shotWidth": 320, "marks": [[28, 70, 264, 36], [28, 140, 264, 36]],
+          "caption": "<b>320 wide.</b> Same." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "src": "shots/c14-pc-after-open.png", "crop": [270, 180, 740, 380], "scale": 0.8, "marks": [[297, 272, 686, 31], [297, 308, 337, 244]],
+        "caption": "<b>PC.</b> The shared field (gray ⌄, as the date fields beside it); Starts open: 9:00 AM in the middle, tinted, with the blue ring." },
+      { "src": "shots/c14-pc-after-end.png", "crop": [270, 180, 740, 380], "scale": 0.8, "marks": [[646, 308, 337, 244]],
+        "caption": "Ends open, scrolled to its end: <b>…9:55 PM, 10:00 PM.</b>" },
+      { "row": [
+        { "src": "shots/c14-tab-after-open.png", "crop": [55, 276, 710, 314], "scale": 0.6, "shotWidth": 820, "marks": [[67, 336, 337, 244]],
+          "caption": "<b>Tablet touch.</b> The same list; rows are finger-sized, so about 5 times show at once." },
+        { "src": "shots/c14-tab-after-end.png", "crop": [55, 276, 710, 314], "scale": 0.6, "shotWidth": 820, "marks": [[416, 336, 337, 244]],
+          "caption": "Ends, at its end." }
+      ] },
+      { "row": [
+        { "src": "shots/c14-ph-after-open.png", "crop": [0, 236, 390, 410], "scale": 0.7, "shotWidth": 390, "marks": [[28, 321, 334, 244]],
+          "caption": "<b>Phone 390 touch.</b> Not the phone’s picker: the list opens under the field, over the date fields." },
+        { "src": "shots/c14-ph-after-end.png", "crop": [0, 236, 390, 410], "scale": 0.7, "shotWidth": 390, "marks": [[28, 391, 334, 244]],
+          "caption": "Ends, at 10:00 PM." },
+        { "src": "shots/c14-320-after-end.png", "crop": [0, 236, 320, 410], "scale": 0.7, "shotWidth": 320, "marks": [[28, 391, 264, 244]],
+          "caption": "<b>320 wide.</b> Fits; no sideways scroll." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>On phones and touch:</b> the list rows are finger-sized (44px), so only about 5 times show at once — 193 times in 5-minute steps is a lot of scrolling by finger; the list opening on the chosen time and typing a number (on a keyboard) to jump to an hour help, but a phone user scrolls. That is the approved v1.109 list, not a Camps choice. On touch the field’s time is 16px but the list’s rows are 13px (measured), so the open list reads smaller than the field it came from — a shared-part detail (M8), noted for Dashboard core, not changed here. On a phone the open Ends list covers the date fields below it and stops just above the pinned Save button (390×844 and 320×700). <b>For the build:</b> TimesSection passes the label’s id (<code>labelId</code>), <code>readOnly</code> while saving, and <code>invalid</code> + <code>describedBy</code> for Camps’ amber line under Ends (“The camp must end after it starts.”); Camps’ own 6:00 AM–9:00 PM list (<code>campForm.js</code> TIME_CHOICES) goes. A saved time outside the list is still shown (the shared list adds it). <b>Drawn:</b> only “Today, the list’s end” (see its caption). The After pictures are the <b>real shared TimeList</b>, mounted over each hidden box with the page’s own React. <b>Script:</b> <code>mock-c14-timelist.js</code>."
+}
