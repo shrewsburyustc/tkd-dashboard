@@ -1,8 +1,8 @@
 # Design & Quality Review — status
 
 **Updated:** 2026-11-04 (Design Review worktree session, branch `design-review`)
-**Rulebook at this update:** 1.040 on this branch, 0.972 on `main` (the header shows the last number any branch used). Design Review rows: **v1.000–v1.034** on main, **v1.035–v1.040** on this branch (not merged yet) — block **1.000–1.099**, next free **1.041** (`git merge main` before any rulebook edit).
-**Branch:** `design-review` = `main` e7fd75b (merged in as 0b9d45c on 2026-11-04) + its own docs-only commits (`docs/Design Review/`), which are not on `main` yet. Never pushed. Phase 1 covers `main` up to **45a8b79**; `main` keeps moving while other sessions merge, so each phase states its cut-off commit and picks up later merges at the start of the next phase (next: dbbacc2, Star's Home "Today" card, v0.515).
+**Rulebook at this update:** 1.040 on this branch, 1.039 on `main` (the header shows the last number any branch used). Design Review rows: **v1.000–v1.039** on main (pass 1 merged and pushed as 5087732, 2026-11-04, on Jeffrey's OK), **v1.040** on this branch (not merged yet) — block **1.000–1.099**, next free **1.041** (`git merge main` before any rulebook edit).
+**Branch:** `design-review` = `main` 5087732 (merged in as 1ebc386 on 2026-11-04) + its own docs-only commits (`docs/Design Review/`), which are not on `main` yet. Never pushed. Phase 1 covers `main` up to **45a8b79**; `main` keeps moving while other sessions merge, so each phase states its cut-off commit and picks up later merges at the start of the next phase (next: dbbacc2, Star's Home "Today" card, v0.515).
 
 > Read `CLAUDE.md` first. This file says where the Design & Quality Review stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
