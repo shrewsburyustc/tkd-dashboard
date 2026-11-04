@@ -16,7 +16,7 @@
 import { createPortal } from 'react-dom';
 import * as T from '../text.js';
 
-// One empty tick box with its word ("☐ Pass"), drawn with CSS like GradingSheet's.
+// One empty tick box with its word ("☐ Passed"), drawn with CSS like GradingSheet's.
 function Tick({ label }) {
   return (
     <span className="gs-tick">

@@ -103,10 +103,13 @@ function StudentRow({ row, ctx }) {
       className="btn btn-sm ev-markpaid"
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
+      aria-haspopup="dialog"
+      aria-expanded={ctx.markPaidFor === row.id ? 'true' : 'false'}
       tabIndex={nav.itemTabIndex(row.id)}
       onClick={(event) => {
         event.stopPropagation();
-        if (!ctx.busy) handlers.onMarkPaid(row);
+        // CB1: opens the shared Mark paid box under this button (a second press closes it)
+        if (!ctx.busy) handlers.onMarkPaid(row, event.currentTarget);
       }}
     >
       {/* ti-check: approved in the Mark paid drawing (plan answer 6) */}

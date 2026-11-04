@@ -22,16 +22,16 @@
 // tab shows the browser's own question.
 // The page reloads every 15 seconds (v0.157). Deleted → "This private testing was deleted, or the
 // link is wrong." A private testing of the other school closes the page, like the event page does.
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconArrowLeft, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
-import Dialog from '../../../components/Dialog.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import { placeTip } from '../../../components/IconButton.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { canChangeResults, gradingWindow } from '../../../lib/testing/gradingRules.js';
 import { loadPrivateTesting, setPrivateResult, setPrivateResultNote } from '../../../lib/testing/privateApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import NoteDialog, { checkNote, isNoteDirty } from '../event/NoteDialog.jsx';
 import ResultButtons, { ResultTag } from '../event/ResultButtons.jsx';
 import { TestingForCell } from '../event/StudentDialog.jsx';
@@ -104,7 +104,6 @@ export default function PrivateGradingPage({
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const layout = { isPhone, isTouch };
-  const baseId = useId();
 
   const [banner, setBanner] = useState(null); // { text, retry? }
   const [dialog, setDialog] = useState(null); // the note dialog or the leave question
@@ -356,21 +355,22 @@ export default function PrivateGradingPage({
       />
     );
   } else if (dialog && !screenLocked && dialog.type === 'leave') {
-    // The same small question as the event page (v0.192): "Stay on this page" is the default.
+    // The same question as the event page, on the shared confirm box (v1.008 D1c, v1.103, v0.422):
+    // "Stay on this page" on the left and focused first (Esc, a click outside and Back also mean
+    // Stay); "Leave anyway" on the right and red — leaving loses the unsaved results for good. At
+    // 320 wide the two stack full width, Stay on top.
     dialogElement = (
-      <Dialog key={dialog.key} title={T.leaveTitle(dialog.count)} variant="confirm" describedBy={`${baseId}-leave-body`} onRequestClose={closeDialog}>
-        <p id={`${baseId}-leave-body`} className="tdialog-sub tdialog-body">
-          {dialog.body}
-        </p>
-        <div className="dialog-actions">
-          <button type="button" className="btn" onClick={leaveAnyway}>
-            {T.LEAVE_ANYWAY}
-          </button>
-          <button type="button" className="btn btn-primary" data-autofocus onClick={closeDialog}>
-            {T.STAY_ON_PAGE}
-          </button>
-        </div>
-      </Dialog>
+      <ConfirmBox
+        key={dialog.key}
+        title={T.leaveTitle(dialog.count)}
+        keepLabel={T.STAY_ON_PAGE}
+        actionLabel={T.LEAVE_ANYWAY}
+        loses="forGood"
+        onKeep={closeDialog}
+        onConfirm={leaveAnyway}
+      >
+        {dialog.body}
+      </ConfirmBox>
     );
   }
 

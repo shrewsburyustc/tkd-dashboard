@@ -35,12 +35,26 @@
 // Removed row has no ⋯ for staff; admins get Open private testing and a grayed Restore (with the
 // reason) — no Delete permanently. Everything else on this page is phase 3 exactly.
 //
+// The design review's part 2 (rulebook v0.420 / v0.421, mockups P1 and P3; Star's v0.518 copied):
+//   - CB1: Mark paid opens the shared Mark paid box (amount worked out by the database, Paid by
+//     Cash / Check / Card preset to Paying by) and calls testing_mark_paid_by (migration 0030);
+//     a different way also changes Paying by; a price that changed meanwhile saves nothing
+//     and the bar says to press Mark paid again (v0.423);
+//   - CB3 (second half): ⋯ → Undo payment asks first on the shared confirm box;
+//   - CB2: ⋯ → Print receipt (staff and admins, a row with a payment) opens the shared receipt,
+//     built by lib/testing/receipt.js;
+//   - CB9: the summary cards are the shared count cards (nothing changes on screen).
+// CB18 (v0.416, v0.418 Q3): the Grading tab's Download CSV (admins only, not drawn while Hide
+// private details is on) — this page runs it (downloadCsv below) because it owns the banner,
+// the toast and the profile refresh; GradingTab only draws the button.
+//
 // Follows "Hide private details" (v0.506, v0.507 Q2), the same way as Star's Candidates tab: while
 // the device switch is on, only the Students card shows (no Paid / Not paid / Payments recorded),
 // the roster has no payment columns, tags or Mark paid, the ⋯ menu has no Change how they'll pay /
-// Edit payment / Undo payment, and the dialogs name no amount. Turning it on closes an open payment
-// dialog, clears the Paid / Not paid filter, closes the ⋯ menu and clears the toast (it may name
-// money or carry a payment Undo). Color Belt keeps no date of birth or email, so it is money only.
+// Edit payment / Undo payment / Print receipt, and the dialogs name no amount. Turning it on closes
+// an open payment dialog, clears the Paid / Not paid filter, closes the ⋯ menu and clears the toast
+// (it may name money or carry a payment Undo). Color Belt keeps no date of birth or email, so it is
+// money only.
 // The Grading tab's gray "Not paid" tag stays (exception, v0.250).
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
@@ -51,33 +65,43 @@ import {
   IconSum,
   IconCashEdit,
   IconCheck,
-  IconClock,
+  IconCircleX,
   IconEdit,
   IconPlus,
+  IconPrinter,
   IconQrcode,
+  IconSwitchHorizontal,
   IconTrash,
   IconUserMinus,
   IconUsers,
 } from '@tabler/icons-react';
-import Dialog from '../../../components/Dialog.jsx';
+import CompareDialog from '../../../components/CompareDialog.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
+import CountCards from '../../../components/CountCards.jsx';
+import DuplicateBox from '../../../components/DuplicateBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import MarkPaidBox from '../../../components/MarkPaidBox.jsx';
+import ReceiptDialog from '../../../components/Receipt.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
-import { centsToInputText } from '../../../lib/money.js';
+import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { classTimeLabel } from '../../../lib/testing/eventRules.js';
+import { classTimeLabel, feeFor } from '../../../lib/testing/eventRules.js';
+import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
 import {
   addStudent,
   changePayingBy,
   deleteStudent,
+  downloadResultsCsv,
   editPayment,
   loadEvent,
+  loadMyName,
   loadResult,
-  markPaid,
+  markPaidBy,
   resolveDuplicate,
   restoreStudent,
   undoPayment,
@@ -95,11 +119,8 @@ import {
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
-import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
-import { NoIcon } from '../events/EventsTab.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
-import CompareDialog from './CompareDialog.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import GradingSheet from './GradingSheet.jsx';
 import GradingTab, { groupGearTags } from './GradingTab.jsx';
 import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
@@ -122,7 +143,7 @@ const gradingClassPicked = new Set();
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED', 'MOVE_HAS_RESULT'];
 const TABS = ['students', 'grading'];
 // The dialogs that are about money: closed when Hide private details is switched on.
-const PAYMENT_DIALOGS = ['paying', 'payment'];
+const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment'];
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-nav-row="${id}"]`);
@@ -203,6 +224,15 @@ export default function EventPage({
   const [notSavedId, setNotSavedId] = useState(null);
   const [schools, setSchools] = useState(null); // for the flyer's address
   const [printing, setPrinting] = useState(null); // { printedAt, opener } while the grading sheet prints
+  // CB1: the shared Mark paid box under a row's Mark paid — { key, rowId, anchor, snap, amountCents }
+  // or null. snap = the row as it was when the box opened (its version goes to the database).
+  const [markPaidBox, setMarkPaidBox] = useState(null);
+  // CB2: the receipt — { key, rowId, opener, data, notFound } or null (data null while it loads).
+  const [receipt, setReceipt] = useState(null);
+  // CB18: true while Download CSV is working (the button says Downloading…).
+  const [csvBusy, setCsvBusy] = useState(false);
+  const csvBusyRef = useRef(false);
+  const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
   // The open tab comes from the address (App.jsx); a local copy only if no App is listening.
   const [localTab, setLocalTab] = useState('students');
   const tab = TABS.includes(eventTab) ? eventTab : localTab;
@@ -304,7 +334,7 @@ export default function EventPage({
     return () => window.cancelAnimationFrame(frame);
   }, [screenLocked]);
 
-  const modalShown = dialog !== null && !screenLocked;
+  const modalShown = (dialog !== null || receipt !== null) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -315,6 +345,8 @@ export default function EventPage({
     if (live.status !== 'notFound') return;
     setDialog(null);
     setMenu(null);
+    setMarkPaidBox(null);
+    setReceipt(null);
   }, [live.status]);
   // The student whose ⋯ menu is open was deleted on another device: close the menu and put
   // focus back on something that still exists.
@@ -331,6 +363,9 @@ export default function EventPage({
   // toast or banner follows the current value, not the one from when it started.
   const hiddenNowRef = useRef(hidden);
   hiddenNowRef.current = hidden;
+  // The same for "is this sign-in an admin" (CB18: Download CSV reads it when its answer arrives).
+  const isAdminNowRef = useRef(isAdmin);
+  isAdminNowRef.current = isAdmin;
   // A money save's answer that arrives while hidden: the general words only — no amount, no paid
   // status, no Retry that would record money (Mark paid / Undo payment / Edit payment …).
   function hiddenMoneyProblem(status) {
@@ -365,6 +400,7 @@ export default function EventPage({
     }
     setFilter(null);
     setMenu(null);
+    setMarkPaidBox(null); // no Mark paid while hidden (an open receipt stays: it shows v1.105's gray line)
     // A toast may name money ("marked paid · $65 cash") or carry a payment Undo: it goes too.
     clearToast();
     // So does every banner: a failed Mark paid / Undo payment keeps a Retry that records money,
@@ -374,6 +410,24 @@ export default function EventPage({
     // (only when the switch changes)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden]);
+
+  // CB1: a Mark paid box that can no longer show is forgotten (after drawing — never while
+  // drawing): its row got a payment (another device), was removed, left the view (class switch,
+  // Grading tab), or the screen locked / private details were hidden.
+  const markPaidBoxRow = markPaidBox ? roster.find((r) => r.id === markPaidBox.rowId) : null;
+  const markPaidGone =
+    markPaidBox !== null &&
+    (screenLocked ||
+      hidden ||
+      tab !== 'students' ||
+      !markPaidBoxRow ||
+      markPaidBoxRow.paid ||
+      markPaidBoxRow.status !== 'active' ||
+      markPaidBoxRow.duplicateState === 'possible' ||
+      !markPaidBox.anchor?.isConnected);
+  useEffect(() => {
+    if (markPaidGone) setMarkPaidBox(null);
+  }, [markPaidGone]);
 
   // ===== Derived data =====
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
@@ -595,7 +649,9 @@ export default function EventPage({
     const payment = activePaymentOf(payments, row.id);
     if (!payment) return;
     const values = { method: payment.method, amount: centsToInputText(payment.amountCents), paidOn: payment.paidOn };
-    openDialog({ type: 'payment', rowId: row.id, snapshot: row, paymentId: payment.id, values, initial: values, opener });
+    // undoTo: the payment as it is now, so the toast's Undo can put it back (v1.003)
+    const undoTo = { method: payment.method, amountCents: payment.amountCents, paidOn: payment.paidOn };
+    openDialog({ type: 'payment', rowId: row.id, snapshot: row, paymentId: payment.id, undoTo, values, initial: values, opener });
   }
   function openCompare(pair, opener) {
     openDialog({ type: 'compare', firstId: pair.first.id, secondId: pair.second.id, pair, opener });
@@ -610,6 +666,61 @@ export default function EventPage({
       const result = await loadSchools();
       if (result.status === 'ok') setSchools(result.schools);
     }
+  }
+
+  // ----- Print receipt (CB2, rulebook v0.420 / v0.421, mockups P1 and P3) -----
+  // The shared receipt, filled from this page's data (the student, the class, the payments — all
+  // already loaded), both schools (loadSchools, read once) and the reader's name (get_my_profile,
+  // called when it opens; a failed call just leaves the name out, as Star's v0.518 Q7 A). Built by
+  // lib/testing/receipt.js, which the private testing tab reuses.
+  // From the summary's Print receipt (P3) it opens on top of the summary (onTop, Star's v0.518);
+  // from ⋯ on its own.
+  function openReceipt(row, opener, onTop = false) {
+    setMenu(null);
+    const key = Date.now();
+    setReceipt({ key, rowId: row.id, opener, onTop, data: null, notFound: false });
+    readReceipt(row.id, key);
+  }
+  async function readReceipt(rowId, key) {
+    const schoolsRead = schoolsRef.current ? Promise.resolve({ status: 'ok', schools: schoolsRef.current }) : loadSchools();
+    const [schoolsResult, name] = await Promise.all([schoolsRead, loadMyName()]);
+    if (schoolsResult.status === 'ok') schoolsRef.current = schoolsResult.schools;
+    // The newest data (a background refresh may have come in while the name was read).
+    const current = dataRef.current;
+    const row = current?.roster?.find((r) => r.id === rowId) ?? null;
+    setReceipt((open) => {
+      if (!open || open.key !== key) return open;
+      if (!row || !current?.event) return { ...open, notFound: true };
+      const ranks = new Map((current.classes ?? []).flatMap((c) => c.ranks.map((r) => [r.id, r])));
+      const rank = ranks.get(row.eventRankId) ?? null;
+      const cls = (current.classes ?? []).find((c) => c.id === row.eventClassId) ?? null;
+      const mine = (current.payments ?? []).filter((p) => p.registrationId === row.id);
+      const data = buildColorBeltReceipt({
+        firstName: row.firstName,
+        lastName: row.lastName,
+        rankName: rank?.name ?? null,
+        testingForName: rank?.testingFor?.name ?? null,
+        event: { name: current.event.name, testingDate: current.event.testingDate },
+        className: cls?.className ?? '',
+        classStart: cls?.startTime ?? null,
+        classEnd: cls?.endTime ?? null,
+        locationCode: current.event.locationCode,
+        reference: row.reference ?? null,
+        payments: mine,
+        totalDueCents: eventTotalDueCents(rank, mine, current.today, current.event.testingDate),
+        // Offline for the schools only: the receipt shows without the schools' lines.
+        schools: schoolsResult.status === 'ok' ? schoolsResult.schools : [],
+        printedOn: current.today,
+        printedByName: name,
+      });
+      return { ...open, data };
+    });
+  }
+  function closeReceipt() {
+    const r = receipt;
+    setReceipt(null);
+    // On top of the summary, the shared dialog puts focus back on the summary's button (returnFocusTo).
+    if (r && !r.onTop) focusLater(() => r.opener, () => moreEl(r.rowId) ?? rowEl(r.rowId));
   }
 
   // ----- Phase 4: Move to private testing (P5) -----
@@ -680,6 +791,49 @@ export default function EventPage({
     } else {
       handleDialogProblem(status);
     }
+  }
+
+  // ----- Grading: Download CSV (CB18, v0.416 / v0.418 Q3; Star's Results tab download) -----
+  // Admins only (the database checks too), the WHOLE event, one click. The button is not drawn
+  // while Hide private details is on. Its answers, as Star's:
+  //   ok          the file downloads; a toast names it and says to keep it private
+  //   no_access   the sign-in can't see data right now → the app's no-access handling
+  //   not_allowed this sign-in isn't an admin (any more) → the banner says so and the profile is
+  //               read again, so the button goes away
+  //   anything else (error, not_found, stale, invalid) → "Couldn't download the CSV …" + Retry
+  // If Hide private details turned on, or this sign-in stopped being an admin, while the call was
+  // on its way: the file is NOT saved (eventsApi drops the rows; answer 'skipped'), no toast, and
+  // no "Couldn't download" banner with a Retry (the button isn't there any more either). Retry
+  // asks the same question before it calls again, and its button only shows while the answer is yes.
+  const canSaveCsv = () => !hiddenNowRef.current && isAdminNowRef.current;
+  async function downloadCsv() {
+    if (csvBusyRef.current || !event || !canSaveCsv()) return; // a second click while it works does nothing
+    csvBusyRef.current = true;
+    setCsvBusy(true);
+    setBanner(null);
+    const answer = await downloadResultsCsv({ eventId: event.id, eventName: event.name, canSave: canSaveCsv });
+    csvBusyRef.current = false;
+    setCsvBusy(false);
+    if (answer.status === 'no_access') {
+      onNoAccess();
+    } else if (answer.status === 'not_allowed') {
+      setBanner({ text: T.CB_CSV_NOT_ALLOWED });
+      onRefreshProfile();
+    } else if (answer.status === 'skipped' || !canSaveCsv()) {
+      // Hidden, or not an admin any more: stop quietly — no toast (it names the file) and no Retry.
+      // ('skipped' = eventsApi asked canSaveCsv when the rows arrived and saved nothing.)
+    } else if (answer.status === 'ok') {
+      showToast(T.cbCsvDownloaded(answer.fileName, answer.rowCount), { icon: false });
+    } else {
+      setBanner({ text: T.CB_CSV_FAILED, retry: retryCsv, csv: true });
+    }
+  }
+  function retryCsv() {
+    if (!canSaveCsv()) {
+      setBanner(null); // hidden or not an admin now: nothing to retry
+      return;
+    }
+    downloadCsv();
   }
 
   // ----- Grading: the note dialog (G2) -----
@@ -845,11 +999,20 @@ export default function EventPage({
       icon: false,
       action: {
         label: T.UNDO,
-        onAction: () =>
+        onAction: () => {
+          // A result saved during the 5 seconds doesn't change the row's version, and putting the
+          // old belt back would clear it. So when the Undo changes the belt, look at the latest
+          // loaded row first; if it has a result now, say so and don't undo.
+          const fresh = (liveRef.current.data?.roster ?? []).find((r) => r.id === d.rowId);
+          if (p.eventRankId !== snap.eventRankId && fresh?.result) {
+            setBanner({ text: T.UNDO_HAS_RESULT });
+            return;
+          }
           runUndo(
             () => updateStudent({ registrationId: d.rowId, expectedVersion: savedVersion, firstName: snap.firstName, lastName: snap.lastName, eventRankId: snap.eventRankId }),
             { find: () => rowEl(d.rowId) },
-          ),
+          );
+        },
       },
     });
     focusLater(() => rowEl(d.rowId), () => d.opener, reloaded);
@@ -897,7 +1060,7 @@ export default function EventPage({
   async function savePayment(canSave) {
     const d = dialogRef.current;
     if (!d || d.saving) return;
-    const check = checkEditPayment(d);
+    const check = checkEditPayment(d, today);
     if (!canSave || !check.canSave) {
       patchDialog({ triedSave: true });
       return;
@@ -919,9 +1082,29 @@ export default function EventPage({
     }
     if (open) setDialog(null);
     const reloaded = reloadQuiet();
-    // Hidden now: the general words ("Payment saved" would say there is a payment).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.TOAST_PAYMENT_SAVED, { icon: false });
     focusLater(() => d.opener, () => rowEl(d.rowId), reloaded);
+    // Hidden now: the general words ("Payment changed" would say there is a payment) and no Undo.
+    if (hiddenNowRef.current) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
+    // "Payment changed" + Undo (v1.003, Black Belt's words). Edit payment reverses the old payment
+    // and records a new one; the Undo edits that NEW payment (its id came back from the database)
+    // back to the old way to pay, amount and date — the same function, nothing new in the database.
+    const newPaymentId = result.paymentId;
+    const back = d.undoTo;
+    showToast(T.TOAST_PAYMENT_CHANGED, {
+      icon: false,
+      action: {
+        label: T.UNDO,
+        onAction: () =>
+          runUndo(
+            () => editPayment({ paymentId: newPaymentId, method: back.method, amountCents: back.amountCents, paidOn: back.paidOn }),
+            { find: () => rowEl(d.rowId) },
+            { money: true },
+          ),
+      },
+    });
   }
 
   // ----- Save: the grading note (G2, contract 0010 §4.5) -----
@@ -1044,19 +1227,52 @@ export default function EventPage({
     }
   }
 
-  // ===== Mark paid: one click, paid in full (plan answer 6) =====
-  async function doMarkPaid(row) {
+  // ===== Mark paid: the shared Mark paid box (CB1, rulebook v0.418 / v0.420, mockup P1) =====
+  // The row's Mark paid opens the box under it (a second press closes it): the name and the amount
+  // (the price the database charges today — the early price before the testing day, the
+  // testing-day price on it — shown, never typed), Paid by preset to the row's Paying by with
+  // "They chose … on the form." / "… at the desk.", then "Mark paid $X" (first focus). The box
+  // closes when pressed; the database records today's date. A different way also changes Paying
+  // by (the database does it; the reload shows it). Staff and admins see the same box.
+  function openMarkPaid(row, anchor) {
+    clearToast();
+    setMenu(null);
+    const rank = rankById.get(row.eventRankId);
+    const amountCents = event ? feeFor(rank, today, event.testingDate) : null;
+    if (typeof amountCents !== 'number') return;
+    setMarkPaidBox((current) => (current?.rowId === row.id ? null : { key: Date.now(), rowId: row.id, anchor, snap: row, amountCents }));
+  }
+  async function saveMarkPaid(rowId, snap, method, amountCents, anchor) {
     if (!beginWrite()) return;
-    const result = await markPaid({ registrationId: row.id, expectedVersion: row.version });
-    endWrite(result.status);
+    const result = await markPaidBy({ registrationId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents });
+    const row = roster.find((r) => r.id === rowId) ?? snap;
     const name = T.studentLabel(row);
+    if (result.status === 'price_changed' && !hiddenNowRef.current) {
+      // v0.423 (changes v0.418 Q1): nothing was saved (the testing-day price started, or an admin
+      // changed the price, while the box was open). The box stays closed and the amber bar says
+      // why; staff press Mark paid again and pick the way again, so a way picked before can't be
+      // recorded by a stray Enter.
+      setBanner({ kind: 'price', text: T.priceChangedNote(name, result.amountCents) });
+      // The box's amount is feeFor(rank, today, …) with `today` and the prices from the LAST load,
+      // so the page reloads first (a new `today` and the new prices) and the write stays "busy"
+      // until it lands: the rows' Mark paid is unavailable meanwhile, so a quick second press
+      // can't open the box with the old price. Then focus goes back to the row's Mark paid.
+      await reloadQuiet();
+      endWrite(result.status);
+      focusLater(() => anchor, () => rowEl(rowId));
+      return;
+    }
+    endWrite(result.status);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaid(row) }, true);
+      // price_changed while Hide private details came on: the general "changed just now" words.
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => saveMarkPaid(rowId, snap, method, amountCents, anchor) }, true);
       return;
     }
     setNotSavedId(null);
-    setBanner((current) => (current?.kind === 'row' ? null : current));
-    reloadQuiet();
+    setBanner((current) => (current?.kind === 'row' || current?.kind === 'price' ? null : current));
+    const reloaded = reloadQuiet();
+    // The Mark paid button goes away with the payment: focus moves to the row.
+    focusLater(() => rowEl(rowId), addStudentEl, reloaded);
     const paymentId = result.paymentId;
     // Hide private details switched on while this was saving: the general words, no Undo payment.
     if (hiddenNowRef.current) {
@@ -1097,19 +1313,51 @@ export default function EventPage({
     focusLater(() => rowEl(row.id), addStudentEl, reloaded);
   }
 
-  // ===== Undo payment from ⋯ (admins, any time) =====
-  async function doUndoPayment(row) {
+  // ===== Undo payment from ⋯ (admins, any time) — asks first (CB3 second half, v0.420) =====
+  // The shared confirm box with Star's words (v0.518): "Undo Ava Chen's payment?" / "The $65 cash
+  // payment recorded on Nov 3 is reversed …" · Keep payment (first focus) · Undo payment (blue:
+  // something is lost, but not for good); "Undoing…" while it works. The toast's Undo right after
+  // Mark paid stays one tap (rule 1.4) — that one doesn't come here.
+  function openUndoPayment(row, opener) {
     const payment = activePaymentOf(payments, row.id);
-    if (!payment || !beginWrite()) return;
-    const result = await undoPayment({ paymentId: payment.id });
+    if (!payment) return;
+    openDialog({ type: 'undoPayment', rowId: row.id, snapshot: row, payment, opener });
+  }
+  async function confirmUndoPayment() {
+    const d = dialogRef.current;
+    if (!d || d.saving || !beginWrite()) return;
+    patchDialog({ saving: true, failed: false });
+    const result = await undoPayment({ paymentId: d.payment.id });
     endWrite(result.status);
-    if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) }, true);
+    // Hide private details came on meanwhile: the box already closed (a payment dialog).
+    const open = stillOpen(d);
+    if (result.status === 'ok') {
+      if (open) {
+        setDialog(null);
+        focusAfterClose(d);
+      }
+      reloadQuiet();
+      // Hidden now: the general words ("Payment undone" would say they had paid).
+      showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.studentLabel(d.snapshot)), { icon: false });
       return;
     }
-    reloadQuiet();
-    // Hidden now: the general words ("Payment undone" would say they had paid).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.studentLabel(row)), { icon: false });
+    if (result.status === 'error' && open) {
+      // Star's Q2 B: the box stays open with "Couldn't undo. …"; pressing Undo payment tries again.
+      patchDialog({ saving: false, failed: true });
+      return;
+    }
+    if (result.status === 'no_access') {
+      if (open) patchDialog({ saving: false });
+      onNoAccess();
+      return;
+    }
+    // Refused (stale: already undone or changed elsewhere; not_allowed …): the box closes and the
+    // page's bar says why, as before.
+    if (open) {
+      setDialog(null);
+      focusAfterClose(d);
+    }
+    rowProblem(result.status, d.snapshot, { text: T.actionFailed, run: () => openUndoPayment(d.snapshot, d.opener) }, true);
   }
 
   // ===== Delete permanently (admins; read fresh first so the warning names the real payment) =====
@@ -1192,10 +1440,11 @@ export default function EventPage({
   });
 
   // ===== Possible duplicate: keep one / keep both (Star v0.114) =====
-  async function keepOne(keep, other) {
+  // busyKey: which button of the shared Compare dialog says "Keeping…" ('keep-first' / 'keep-second').
+  async function keepOne(keep, other, busyKey) {
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false });
+    patchDialog({ saving: true, failed: false, busyKey });
     const result = await resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
     endWrite(result.status);
     if (result.status === 'error') {
@@ -1237,7 +1486,7 @@ export default function EventPage({
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
     const { first, second } = d.pair;
-    patchDialog({ saving: true, failed: false });
+    patchDialog({ saving: true, failed: false, busyKey: 'keep-both' });
     const result = await resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
     endWrite(result.status);
     if (result.status === 'error') {
@@ -1257,14 +1506,10 @@ export default function EventPage({
   }
 
   // ===== Copy link =====
-  async function copyLink(link) {
-    try {
-      if (!link || !navigator.clipboard) throw new Error('No clipboard');
-      await navigator.clipboard.writeText(link);
-      showToast(T.TOAST_LINK_COPIED, { icon: false });
-    } catch {
-      setBanner({ text: T.COPY_FAILED });
-    }
+  // The shared Registration link box copies the link itself; a failed copy shows its amber note
+  // inside the box (v1.106 detail a, v0.422), so only the toast is left here.
+  function linkCopied() {
+    showToast(T.TOAST_LINK_COPIED, { icon: false });
   }
 
   // ===== The ⋯ menu (Star v0.110: staff see only what they can do) =====
@@ -1286,7 +1531,8 @@ export default function EventPage({
     const anchor = menu.anchor;
     const items = [];
     // One fixed order on every row (R8): Edit details (always first, never moves), Change how
-    // they'll pay, Review possible duplicate — Edit payment, Undo payment — Withdraw / Restore,
+    // they'll pay, Review possible duplicate — Edit payment, Undo payment, Print receipt (CB2) —
+    // Withdraw / Restore,
     // Delete permanently. Items that don't apply are left out; the rest keep their order. A
     // divider starts each later group, but never the menu itself.
     const groupStart = () => items.length > 0;
@@ -1315,18 +1561,27 @@ export default function EventPage({
       items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) });
       // Phase 4: right after Edit details, all staff (P5)
       if (canMoveToPrivate(row)) items.push({ key: 'move', label: T.MOVE_TO_PRIVATE, Icon: IconArrowRight, onSelect: () => openMove(row, anchor) });
-      if (moneyShown && !row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
+      // ti-switch-horizontal = switch how they'll pay (v1.024)
+      if (moneyShown && !row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => openPayingBy(row, anchor) });
       if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompareFor(row, anchor) });
       if (moneyShown && isAdmin && row.paid) {
         items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: groupStart(), onSelect: () => openEditPayment(row, anchor) });
-        items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
+        items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => openUndoPayment(row, anchor) });
+      }
+      // CB2 (v0.420): Print receipt ends the money group, for staff and admins, on a row with a
+      // payment that still stands; hidden while Hide private details is on (v0.518 Q8 B). Staff's
+      // money group holds only this item.
+      if (moneyShown && row.paid) {
+        const startsGroup = !isAdmin; // admins: it follows Undo payment in the same group
+        items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, separatorBefore: startsGroup && groupStart(), onSelect: () => openReceipt(row, anchor) });
       }
     }
     if (isAdmin) {
       if (row.status === 'active') {
         items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: IconUserMinus, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row) });
       } else {
-        items.push({ key: 'restore', label: T.RESTORE, Icon: NoIcon, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
+        // ti-arrow-back-up = bring back (v1.024)
+        items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
       }
       items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
     }
@@ -1407,13 +1662,23 @@ export default function EventPage({
     </button>
   );
 
+  // The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone, Paid and Not
+  // paid filter the roster, Payments recorded is a plain total with its "includes $X from removed
+  // students" note (R8).
   const allCards = [
-    { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
-    { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
-    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: active.length - paidCount },
-    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(paymentsTotal) }, // ti-sum = a money total (v0.303)
+    { key: 'all', label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length, kind: 'all' },
+    { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount, kind: 'filter' },
+    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: active.length - paidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
+    {
+      key: 'money',
+      label: T.CARD_PAYMENTS,
+      Icon: IconSum, // ti-sum = a money total (v0.303)
+      value: formatMoney(paymentsTotal),
+      kind: 'total',
+      note: removedPayments > 0 ? T.includesRemoved(removedPayments) : null,
+    },
   ];
-  // Hide private details: only the Students card (as Star's G4).
+  // Hide private details: only the Students card (as Star's G4; the shared row's one-card look).
   const cards = hidden ? allCards.slice(0, 1) : allCards;
   // Hide private details: the Status column shows only when a shown row has a tag that isn't about
   // money (Possible duplicate, Not saved, Removed / Duplicate copy) — Star's G4 rule.
@@ -1426,6 +1691,7 @@ export default function EventPage({
     busy,
     isAdmin,
     menuFor: menu?.id ?? null,
+    markPaidFor: markPaidBox?.rowId ?? null, // CB1: the row whose Mark paid box is open
     selectedId: dialog && !screenLocked && dialog.rowId ? dialog.rowId : null,
     notSavedId,
     hidden,
@@ -1434,7 +1700,7 @@ export default function EventPage({
     handlers: {
       onOpen: (row) => openView(row, rowEl(row.id)),
       onMore: (row, anchor) => openMenu(row, anchor),
-      onMarkPaid: (row) => doMarkPaid(row),
+      onMarkPaid: (row, anchor) => openMarkPaid(row, anchor),
       onReview: (row) => openCompareFor(row),
     },
   };
@@ -1459,6 +1725,11 @@ export default function EventPage({
           today={today}
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
+          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — an active student
+          // with a payment that still stands, money shown; staff and admins.
+          canPrintReceipt={record?.status === 'active' && record?.paid === true && !hidden}
+          onPrintReceipt={(opener) => record && openReceipt(record, opener, true)}
+          onNoAccess={onNoAccess}
           graded={dialog.graded ?? null}
           beltLocked={dialog.mode === 'edit' && Boolean(dialog.graded?.graded) && dayWindow === 'after' && !isAdmin}
           hidden={hidden}
@@ -1471,7 +1742,7 @@ export default function EventPage({
     } else if (dialog.type === 'paying' && !hidden) {
       dialogElement = <PayingByDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onSave={savePayingBy} {...common} />;
     } else if (dialog.type === 'payment' && !hidden) {
-      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onTouch={touch} onSave={savePayment} {...common} />;
+      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} today={today} onTouch={touch} onSave={savePayment} {...common} />;
     } else if (dialog.type === 'move') {
       const rank = rankById.get(dialog.snapshot.eventRankId);
       dialogElement = (
@@ -1493,41 +1764,84 @@ export default function EventPage({
     } else if (dialog.type === 'compare') {
       const first = roster.find((r) => r.id === dialog.firstId) ?? dialog.pair.first;
       const second = roster.find((r) => r.id === dialog.secondId) ?? dialog.pair.second;
+      // The shared Compare dialog (v1.102, v0.422; R7 / Star v0.114): Color Belt's rows, words and
+      // order. Each differing value says "⚠ different"; the Registered time and the reference always
+      // differ, so they are never marked (`plain`, as Star and Black Belt). With Hide private details
+      // on, Paying by and Payment read "Hidden on this tablet" on both sides (v0.507).
+      const testingFor = (row) => {
+        const rank = rankById.get(row.eventRankId);
+        return rank ? `${rank.name} → ${rank.testingFor?.name ?? T.NO_NEW_RANK}` : '';
+      };
+      const paymentText = (row) => (row.paid ? `${T.TAG_PAID} ${T.monthDay(row.paidOn)}` : T.TAG_NOT_PAID);
+      const compareRows = [
+        { key: 'registered', label: T.DETAIL_REGISTERED, first: T.registeredDetail(first.registeredAt, first.source, null), second: T.registeredDetail(second.registeredAt, second.source, null), plain: true },
+        { key: 'reference', label: T.COMPARE_REFERENCE, first: first.reference ?? T.NO_REFERENCE, second: second.reference ?? T.NO_REFERENCE, plain: true },
+        { key: 'testing', label: T.DETAIL_TESTING_FOR, first: testingFor(first), second: testingFor(second) },
+        { key: 'paying', label: T.DETAIL_PAYING_BY, first: T.payingByText(first.payingBy), second: T.payingByText(second.payingBy), hidden },
+        { key: 'payment', label: T.DETAIL_PAYMENT, first: paymentText(first), second: paymentText(second), hidden },
+      ];
+      // v0.194: after the testing day "keep one" is admin-only, so staff don't see it (the same
+      // way staff don't see Add student on a finished event); the note then says why.
+      const canKeepOne = isAdmin || dayWindow !== 'after';
       dialogElement = (
         <CompareDialog
           key={dialog.key}
-          first={first}
-          second={second}
-          rankById={rankById}
-          isPhone={isPhone}
-          saving={dialog.saving}
-          failed={dialog.failed}
-          // v0.194: after the testing day "keep one" is admin-only, so staff don't see it
-          // (the same way staff don't see Add student on a finished event).
-          canKeepOne={isAdmin || dayWindow !== 'after'}
-          hidden={hidden}
-          onKeep={keepOne}
+          title={T.compareTitle(T.studentLabel(first))}
+          sub={T.COMPARE_SUB}
+          heads={[T.FIRST_REGISTRATION, T.SECOND_REGISTRATION]}
+          rows={compareRows}
+          canKeepOne={canKeepOne}
+          note={canKeepOne ? T.COMPARE_NOTE : T.KEEP_ONE_ADMIN_ONLY}
+          busy={dialog.saving ? (dialog.busyKey ?? null) : null}
+          failed={dialog.failed ? T.SAVE_FAILED : null}
+          onKeep={(index) => (index === 0 ? keepOne(first, second, 'keep-first') : keepOne(second, first, 'keep-second'))}
           onKeepBoth={keepBoth}
           onClose={cancelDialog}
+          isPhone={isPhone}
         />
       );
     } else if (dialog.type === 'link') {
       const address = schools?.find((s) => s.code === event.locationCode)?.address ?? null;
-      dialogElement = <RegistrationLinkDialog key={dialog.key} event={event} school={school} address={address} isPhone={isPhone} onCopy={copyLink} onClose={cancelDialog} />;
+      dialogElement = <RegistrationLinkDialog key={dialog.key} event={event} school={school} address={address} isPhone={isPhone} onCopied={linkCopied} onClose={cancelDialog} />;
     } else if (dialog.type === 'delete') {
       dialogElement = (
-        <ConfirmDeleteDialog
+        // The shared confirm box (v1.008 / v1.103, v0.422) with the words it had: "Keep student ·
+        // Delete permanently", red, first focus on Keep student; "Deleting…" while it works.
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={T.deleteStudentBody(...dialog.bodyParts, hidden)}
           hint={T.DELETE_STUDENT_HINT}
           keepLabel={T.KEEP_STUDENT}
-          deleteLabel={T.DELETE_PERMANENTLY}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          actionLabel={T.DELETE_PERMANENTLY}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={cancelDialog}
+        >
+          {T.deleteStudentBody(...dialog.bodyParts, hidden)}
+        </ConfirmBox>
+      );
+    } else if (dialog.type === 'undoPayment' && !hidden) {
+      // CB3, second half (v0.420): Star's words; blue (not lost for good), Keep payment focused.
+      dialogElement = (
+        <ConfirmBox
+          key={dialog.key}
+          title={T.undoPaymentTitle(T.studentLabel(dialog.snapshot))}
+          keepLabel={T.KEEP_PAYMENT}
+          actionLabel={T.UNDO_PAYMENT}
+          actionIcon={IconArrowBackUp}
+          busyLabel={T.UNDOING}
+          loses="something"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.UNDO_BOX_FAILED : null}
+          onConfirm={confirmUndoPayment}
+          onKeep={cancelDialog}
+        >
+          {T.undoPaymentBody(dialog.payment.amountCents, dialog.payment.method, dialog.payment.paidOn)}
+        </ConfirmBox>
       );
     } else if (dialog.type === 'note') {
       const row = active.find((r) => r.id === dialog.rowId) ?? dialog.snapshot;
@@ -1551,24 +1865,63 @@ export default function EventPage({
         />
       );
     } else if (dialog.type === 'leave') {
-      // v0.192 (approved image P3, option B): the same small box on every device. Nothing is
-      // deleted, so no red: "Stay on this page" is the blue default (Enter, Esc, backdrop, Back).
+      // v0.192's question on the shared confirm box (v1.008 D1c, v1.103, v0.422; the same small
+      // box on every device): "Stay on this page" on the left and focused first (Enter, Esc, a
+      // click outside and Back also mean Stay); "Leave anyway" on the right and red — leaving
+      // loses the unsaved results for good. At 320 wide the two stack full width, Stay on top.
       dialogElement = (
-        <Dialog key={dialog.key} title={T.leaveTitle(dialog.count)} variant="confirm" describedBy={`${baseId}-leave-body`} onRequestClose={stayOnPage}>
-          <p id={`${baseId}-leave-body`} className="tdialog-sub tdialog-body">
-            {dialog.body}
-          </p>
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={leaveAnyway}>
-              {T.LEAVE_ANYWAY}
-            </button>
-            <button type="button" className="btn btn-primary" data-autofocus onClick={stayOnPage}>
-              {T.STAY_ON_PAGE}
-            </button>
-          </div>
-        </Dialog>
+        <ConfirmBox
+          key={dialog.key}
+          title={T.leaveTitle(dialog.count)}
+          keepLabel={T.STAY_ON_PAGE}
+          actionLabel={T.LEAVE_ANYWAY}
+          loses="forGood"
+          onKeep={stayOnPage}
+          onConfirm={leaveAnyway}
+        >
+          {dialog.body}
+        </ConfirmBox>
       );
     }
+  }
+
+  // CB2: the receipt, in its own dialog (from ⋯ or from the student's summary). Never while locked (it comes back after unlocking).
+  let receiptElement = null;
+  if (receipt && !screenLocked) {
+    const row = roster.find((r) => r.id === receipt.rowId);
+    receiptElement = (
+      <ReceiptDialog
+        receipt={receipt.data}
+        sub={T.receiptSub(row ? T.studentLabel(row) : T.THIS_STUDENT, event.name)}
+        notFound={receipt.notFound ? T.receiptNotFound(row ? T.studentLabel(row) : T.THIS_STUDENT) : null}
+        hidden={hidden}
+        onClose={closeReceipt}
+        isPhone={isPhone}
+        onTop={Boolean(receipt.onTop && dialog)}
+        returnFocusTo={receipt.onTop ? receipt.opener : null}
+      />
+    );
+  }
+
+  // CB1: the Mark paid box — only while its row still shows Mark paid (markPaidGone, above).
+  let markPaidElement = null;
+  if (markPaidBox && !markPaidGone) {
+    const { key, rowId, snap, anchor, amountCents } = markPaidBox;
+    markPaidElement = (
+      <MarkPaidBox
+        key={key}
+        anchor={anchor}
+        name={T.studentLabel(markPaidBoxRow)}
+        amountCents={amountCents}
+        familyChoice={markPaidBoxRow.payingBy}
+        choiceWhere={markPaidBoxRow.source === 'form' ? 'form' : 'desk'}
+        onMarkPaid={(method) => saveMarkPaid(rowId, snap, method, amountCents, anchor)}
+        onClose={(restoreFocus) => {
+          setMarkPaidBox(null);
+          if (restoreFocus) anchor.focus();
+        }}
+      />
+    );
   }
 
   const content = menu && !screenLocked ? menuContent() : null;
@@ -1617,7 +1970,7 @@ export default function EventPage({
         <ErrorBanner text={grading.banner.text} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />
       )}
       {banner && (
-        <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
+        <ErrorBanner text={banner.text} onRetry={banner.retry && !(banner.csv && (hidden || !isAdmin)) ? () => banner.retry() : undefined} retrying={busy || csvBusy} onDismiss={() => setBanner(null)} />
       )}
 
       {tab === 'grading' ? (
@@ -1633,74 +1986,34 @@ export default function EventPage({
           grading={grading}
           onOpenNote={openNote}
           onPrint={(opener) => setPrinting({ printedAt: new Date(), opener })}
+          csv={isAdmin && !hidden ? { busy: csvBusy, onDownload: downloadCsv } : null}
           panelId={tabIds.panel('grading')}
           tabId={tabIds.tab('grading')}
         />
       ) : (
         <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
-          {/* Summary cards (Star v0.115): clicking Paid / Not paid filters the roster.
-              Hide private details: the Students card alone (is-one). */}
-          <div className={`ev-cards${hidden ? ' is-one' : ''}`}>
-            {cards.map((card) => {
-              const isFilter = card.key === 'paid' || card.key === 'notPaid';
-              const pressed = isFilter && shownFilter === card.key;
-              const inner = (
-                <>
-                  <span className="ev-card-label">
-                    <card.Icon size={16} aria-hidden="true" />
-                    {card.label}
-                  </span>
-                  <span className="ev-card-value">{card.value}</span>
-                </>
-              );
-              if (card.key === 'money') {
-                return (
-                  <div key="money" className="ev-card">
-                    {inner}
-                    {removedPayments > 0 && <span className="ev-card-note">{T.includesRemoved(removedPayments)}</span>}
-                  </div>
-                );
-              }
-              return (
-                <button
-                  key={card.key ?? 'all'}
-                  type="button"
-                  className={`ev-card ev-card--button${pressed ? ' is-selected' : ''}`}
-                  aria-pressed={isFilter ? (pressed ? 'true' : 'false') : undefined}
-                  onClick={() => setFilter(isFilter && filter !== card.key ? card.key : null)}
-                >
-                  {inner}
-                </button>
-              );
-            })}
-          </div>
-          {shownFilter && (
-            <p className="ev-filter-line">
-              {filter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID} ·{' '}
-              <button type="button" className="link-button" onClick={() => setFilter(null)}>
-                {T.SHOW_ALL}
-              </button>
-            </p>
-          )}
+          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
+              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
+              recorded is a plain total. Hide private details: the Students card alone. */}
+          <CountCards
+            cards={cards}
+            selected={shownFilter}
+            onSelect={setFilter}
+            showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
+            showAllLabel={T.SHOW_ALL}
+          />
 
-          {/* Possible duplicates (Star v0.114): one line per pair, with Review. */}
-          {pairs.length > 0 && (
-            <div className="ev-dupbox" role="status">
-              <IconAlertTriangle size={16} aria-hidden="true" className="ev-dupbox-icon" />
-              <div className="ev-dupbox-lines">
-                {pairs.map((pair, index) => (
-                  <p key={pair.first.id} className="ev-dupbox-line">
-                    {index === 0 && <strong>{T.duplicateBoxLine(pairs.length)}</strong>}
-                    {index === 0 && ' · '}
-                    {T.registeredTwice(T.studentLabel(pair.first), classById.get(pair.first.eventClassId)?.className ?? '')}
-                    <button type="button" className="btn btn-sm ev-dupbox-review" onClick={(clickEvent) => openCompare(pair, clickEvent.currentTarget)}>
-                      {T.REVIEW}
-                    </button>
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Possible duplicates (Star v0.114) in the shared duplicate box (v1.102, v0.422): the
+              count on the first line only (its own line on phones), then one line per pair, each
+              with Review; Review passes itself, so focus returns to it when the compare closes. */}
+          <DuplicateBox
+            countText={T.duplicateBoxLine(pairs.length)}
+            pairs={pairs.map((pair) => ({
+              key: pair.first.id,
+              text: T.registeredTwice(T.studentLabel(pair.first), classById.get(pair.first.eventClassId)?.className ?? ''),
+              onReview: (opener) => openCompare(pair, opener),
+            }))}
+          />
 
           {classes.length === 0 ? (
             <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>
@@ -1763,6 +2076,8 @@ export default function EventPage({
         <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />
       )}
       {dialogElement}
+      {receiptElement}
+      {markPaidElement}
     </>
   );
 }

@@ -1,0 +1,125 @@
+/*
+  testing-both.css — Color Belt testing on "Both": one read-only box per school (CB13, rulebook
+  v1.022 / v0.415; screen 3 of Color Belt's design review, option B).
+  Why it exists: the page copies Finance's Both page (finance.css "Both (D6)", v0.198), but
+  Finance's classes live in Finance's own stylesheet, so Color Belt gets its own equivalents here,
+  all starting with "tb-" (testing Both) so nothing collides. Shared pieces (.btn, .ttag,
+  .ttag--ok, .errbar, .visually-hidden) come from shared.css / app.css.
+  Imported by screens/testing/BothSummary.jsx. Colors and sizes only from tokens.css.
+  Layouts: PC and tablet — the two boxes side by side; phone (<640px) — stacked, as Finance;
+  nothing scrolls sideways at 320px.
+*/
+
+/* ===== The two boxes ===== */
+.tb-both {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+/* One school (Finance's .fin-box) */
+.tb-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+/* "⌖ Worcester" (Finance's .fin-box-title) */
+.tb-box-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8); /* the mockup's space under the school name (both-B.png) */
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.tb-box-icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* An event's name and the "Private testings" heading */
+.tb-heading {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-16);
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a long event name wraps instead of widening the box */
+}
+
+/* The upcoming events, one under the other */
+.tb-events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-self: stretch;
+}
+
+.tb-event + .tb-event {
+  margin-top: var(--space-12);
+}
+
+/* "Fri, Nov 20, 2026 · 15 students  [Open until Nov 13]" — the tag wraps under on narrow boxes */
+.tb-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  font-size: var(--text-13);
+}
+
+/* "No upcoming events." / "No upcoming private testings." */
+.tb-empty {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* Space between the events part and the private-testing line (12px, as the mockup) */
+.tb-private-heading {
+  margin-top: var(--space-12);
+}
+
+/* "Open Worcester" — under the box's content */
+.tb-open {
+  margin-top: var(--space-12);
+}
+
+/* The gray hint under the boxes */
+.tb-hint {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== Loading: two gray boxes where the school boxes will be (Finance's skeleton) ===== */
+.tb-skeleton {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.tb-skeleton > span:not(.visually-hidden) {
+  height: 200px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+/* ===== Phone: the boxes stacked (as Finance's Both page) ===== */
+@media (max-width: 639.98px) {
+  .tb-both,
+  .tb-skeleton {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tb-box {
+    padding: var(--space-12);
+  }
+
+  .tb-skeleton > span:not(.visually-hidden) {
+    height: 160px;
+  }
+}

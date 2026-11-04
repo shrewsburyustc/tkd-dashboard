@@ -24,7 +24,7 @@ import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
 import { amountDue } from '../../../lib/testing/privateRules.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import DayTimeFields, { checkDayTime } from './DayTimeFields.jsx';
 import * as T from '../text.js';
 

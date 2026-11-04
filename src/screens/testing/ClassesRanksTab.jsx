@@ -9,7 +9,8 @@
 //   - sends every change to the database (src/lib/testing/api.js) and reacts to the answer
 //   - offers Undo for reversible changes (edit, add, reorder) — never for delete (v0.41)
 // The drawing is done by smaller files: ClassBlock / RankRows (the list), RankDialog,
-// ClassDialog, DeleteDialog, FinalAwardSelect, and the shared Dialog / RowMenu / ErrorBanner.
+// ClassDialog, FinalAwardSelect, and the shared Dialog / RowMenu / ErrorBanner / ConfirmBox (the
+// delete question: "Keep rank · Delete rank" / "Keep class · Delete class", v1.008, v0.422).
 //
 // Rules worth knowing (contract 0003 §8):
 //   - ONE change at a time: while a save is on its way, other changes are ignored.
@@ -58,9 +59,9 @@ import { NARROW_PHONE_QUERY, PC_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, use
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../lib/useShortcutN.js';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
 import ClassBlock, { ClassLine, classNavKey } from './ClassBlock.jsx';
 import ClassDialog, { checkClassForm, isClassFormDirty } from './ClassDialog.jsx';
-import DeleteDialog from './DeleteDialog.jsx';
 import RankDialog, { checkRankForm, isRankFormDirty } from './RankDialog.jsx';
 import { rankGridColumns } from './RankRows.jsx';
 import TestingSkeleton from './TestingSkeleton.jsx';
@@ -954,15 +955,24 @@ export default function ClassesRanksTab({
       );
     } else {
       dialogElement = (
-        <DeleteDialog
+        // The shared confirm box (v1.008 / v1.103, v0.422): "Keep rank · Delete rank" or "Keep
+        // class · Delete class", red (a delete is for good), first focus on Keep. While it works
+        // the red button says "Deleting…" and Keep grays; a failure keeps its note under the buttons.
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={dialog.body}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          keepLabel={dialog.kind === 'rank' ? T.KEEP_RANK : T.KEEP_CLASS}
+          actionLabel={dialog.kind === 'rank' ? T.DELETE_RANK : T.DELETE_CLASS}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={cancelDialog}
+        >
+          {dialog.body}
+        </ConfirmBox>
       );
     }
   }

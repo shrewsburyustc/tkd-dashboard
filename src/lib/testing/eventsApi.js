@@ -7,6 +7,8 @@
 //   'duplicate_name' · 'invalid' · 'not_empty' · 'final_award_not_set' (+ className) ·
 //   'not_open' · 'closed' · 'finished' · 'already_paid' · 'withdrawn' · 'rate_limited' ·
 //   'has_results' (phase 3: Edit event can't move the date of an event that has results) ·
+//   'price_changed' (0030, Mark paid: + amountCents, the amount the database works out) ·
+//   (0030, CB18) downloadResultsCsv's ok carries fileName, rowCount, text — see the end ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -27,12 +29,16 @@ import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { eventState, eventCounts, testingFor, todayInSchoolTime, shortTime, isIsoDate, PREVIEW_TODAY_KEY } from './eventRules.js';
 import { RESULTS, isGraded, addedAfterDay } from './gradingRules.js';
+import { csvRows, csvFileName, isCsvRow } from './resultsCsv.js'; // CB18
+import { toCsv, saveCsvFile } from '../star/csv.js'; // CB18: Star's CSV writer, used as it is
+import { CB_CSV_HEADINGS } from '../../screens/testing/text.js'; // CB18
 
 // Every status a call here can return.
 export const EVENT_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty',
   'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'has_results',
   'moved', // phase 4: Restore of a registration that was moved to a private testing
+  'price_changed', // 0030 (CB1): Mark paid's amount isn't the one the box showed (+ amountCents)
   'error',
 ];
 const SERVER_STATUSES = new Set(EVENT_STATUSES.filter((s) => s !== 'error'));
@@ -363,6 +369,24 @@ export async function loadResult(registrationId) {
   }
 }
 
+// The signed-in person's name, for the receipt's "Printed … by [name]" (design review CB2, rulebook
+// v0.421; a Color Belt copy of Star's loadMyName, v0.518 Q7 A, so the sections stay apart). Reads
+// get_my_profile (migration 0001: the caller's own staff row; App.jsx calls it at sign-in and the
+// preview answers it) when a receipt opens. → the full name, or null when the call fails or there
+// is no name — the receipt then just leaves the name out. Never throws.
+export async function loadMyName() {
+  try {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc('get_my_profile');
+    if (error) return null;
+    const row = Array.isArray(data) ? data[0] : data; // the function returns 0 or 1 rows
+    const name = row?.full_name;
+    return typeof name === 'string' && name.trim() !== '' ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 // ----- Writing (one database function each, contract 0005 §1.8) -----
 
 const isText = (v) => typeof v === 'string' && v.length > 0;
@@ -380,6 +404,8 @@ async function callRpc(name, args, readOk) {
     const status = data?.status;
     if (typeof status !== 'string' || !SERVER_STATUSES.has(status)) return unexpected(name);
     if (status === 'final_award_not_set') return { status, className: typeof data.class_name === 'string' ? data.class_name : null };
+    // 0030 (CB1): nothing was saved; the database's amount comes back so the box can show it.
+    if (status === 'price_changed') return isInt(data.amount_cents) ? { status, amountCents: data.amount_cents } : unexpected(name);
     if (status !== 'ok') return { status };
     const result = readOk(data);
     return result ? { status: 'ok', ...result } : unexpected(name);
@@ -512,16 +538,27 @@ export async function changePayingBy({ registrationId, expectedVersion, payingBy
   );
 }
 
-// Mark paid: one click pays in full. The DATABASE decides the amount (early price before the
-// testing day, testing-day price on it) and the date (today). → { status:'ok', paymentId,
-// amountCents, method, version } · 'already_paid' · 'withdrawn' · 'stale' (e.g. a double click)
-export async function markPaid({ registrationId, expectedVersion } = {}) {
+// Mark paid with a way to pay (migration 0030, design review CB1, rulebook v0.418 / v0.420): the
+// shared Mark paid box shows the amount and asks Paid by Cash / Check / Card.
+//   method          'cash' | 'check' | 'card' — how they paid
+//   expectedCents   the amount the box SHOWED. The DATABASE still works out the amount (the early
+//                   price before the testing day, the testing-day price on it and after) and the
+//                   date (today); if its amount is different (the testing day began at midnight
+//                   while the box was open) it saves nothing and answers 'price_changed' with
+//                   amountCents, so the page can name the new amount (v0.423).
+// A way that isn't the family's "Paying by" changes "Paying by" too (v0.418 Q2); Undo payment puts
+// the family's choice back. (It replaces the old one-click testing_mark_paid, which the database
+// keeps until a later small migration removes it; nothing in the app calls that one any more.)
+// → { status:'ok', paymentId, amountCents, method, paidOn, payingBy, version } · 'price_changed'
+//   (+ amountCents) · 'already_paid' · 'withdrawn' · 'stale' (e.g. a double click) · 'not_found' ·
+//   'invalid' · 'no_access' · 'error'
+export async function markPaidBy({ registrationId, expectedVersion, method, expectedCents } = {}) {
   return callRpc(
-    'testing_mark_paid',
-    { p_registration_id: registrationId, p_expected_version: expectedVersion },
+    'testing_mark_paid_by',
+    { p_registration_id: registrationId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents },
     (d) =>
       isText(d.payment_id) && isInt(d.amount_cents) && isText(d.method) && isInt(d.version)
-        ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, version: d.version }
+        ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, paidOn: d.paid_on ?? null, payingBy: d.paying_by ?? d.method, version: d.version }
         : null,
   );
 }
@@ -562,6 +599,26 @@ export async function restoreStudent({ registrationId, expectedVersion } = {}) {
   return callRpc('testing_restore_student', { p_registration_id: registrationId, p_expected_version: expectedVersion }, readVersion);
 }
 
+// ----- History (design review CB7, migration 0030 §5b, rulebook v1.010 / v0.421) -----
+// A registration's change-log rows, for the History line at the end of its summary:
+// testing_registration_history (staff and admins): newest first, at most 500 rows — the
+// registration's own rows, its result's and its payments' — each { occurred_at, actor_name,
+// action, table_name, op, before, after } (database names; login ids taken out by the database,
+// a signature only "on file"). lib/testing/history.js turns them into words.
+// → { status:'ok', rows } · 'no_access' · 'invalid' · 'not_found' · 'stale' · 'error'.
+// (Like everything here it never throws; history.js's historyReader throws for HistoryLine.)
+export async function loadRegistrationHistory(registrationId) {
+  return callRpc('testing_registration_history', { p_registration_id: registrationId }, readHistoryRows);
+}
+
+// Shared by eventsApi and privateApi: checks the reader's rows (each one an object with a time, a
+// table and an operation); a wrong shape → null (→ 'error', not a guess).
+export function readHistoryRows(d) {
+  if (!Array.isArray(d.rows)) return null;
+  const okRow = (r) => r !== null && typeof r === 'object' && typeof r.occurred_at === 'string' && typeof r.table_name === 'string' && typeof r.op === 'string';
+  return d.rows.every(okRow) ? { rows: d.rows } : null;
+}
+
 // Delete permanently (admin). expectedPaymentIds = the ids of ALL payment rows of this student
 // (payments and reversals) the warning was built from; 'stale' if they differ now.
 export async function deleteStudent({ registrationId, expectedVersion, expectedPaymentIds } = {}) {
@@ -570,4 +627,35 @@ export async function deleteStudent({ registrationId, expectedVersion, expectedP
     { p_registration_id: registrationId, p_expected_version: expectedVersion, p_expected_payment_ids: expectedPaymentIds },
     readNothing,
   );
+}
+
+// ----- CB18: the results CSV (admins only, migration 0030 §6c) -----
+
+// Download CSV on the Grading tab: ONE testing_results_csv call for the whole event. The database
+// checks "admin only" itself and writes its download log BEFORE it answers. The rows are turned into
+// the 15 columns (resultsCsv.js) and written with Star's csv.js (quoting, = + - @ cells made safe,
+// the BOM); the file goes from memory straight to the browser's download, never into a web address.
+// testing_results_csv is volatile (it writes the log), so this is a normal call (POST).
+//   { eventId, eventName } → { status:'ok', fileName, rowCount, text } (the download is started) ·
+//   'not_allowed' (not an admin) · 'not_found' (no such event) · 'invalid' (no id) · 'no_access' ·
+//   'stale' (a rare lock problem; nothing was logged) · 'error' (no connection / a wrong shape) ·
+//   'skipped' (the app's own answer, never the database's: canSave said no — see below)
+// canSave (optional): asked once the database's ok ARRIVES, before the file is built or saved.
+// EventPage passes "Hide private details is still off and this is still an admin": the switch can
+// turn on (or the role change) while the call is on its way, and then the file must not be saved
+// at all — the rows (payments, graders' notes) are dropped and nothing goes to the browser.
+export async function downloadResultsCsv({ eventId, eventName, canSave = null } = {}) {
+  const answer = await callRpc('testing_results_csv', { p_event_id: eventId ?? null }, (d) =>
+    Array.isArray(d.rows) && d.rows.every(isCsvRow) ? { rows: d.rows } : null,
+  );
+  if (answer.status !== 'ok') return answer;
+  if (canSave && !canSave()) return { status: 'skipped' };
+  try {
+    const text = toCsv(CB_CSV_HEADINGS, csvRows(answer.rows));
+    const fileName = csvFileName(eventName, schoolToday());
+    saveCsvFile(fileName, text); // does nothing outside a browser (the checks)
+    return { status: 'ok', fileName, rowCount: answer.rows.length, text };
+  } catch (error) {
+    return failure(error);
+  }
 }
