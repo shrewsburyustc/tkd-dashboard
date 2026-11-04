@@ -15,10 +15,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in your merged work (N1, N2, N4, N5, N6, N8, N9, N12, N17). Your N10, N13 and N14 merged after the cut (f8873e7); pass 2 checks them.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
+- **Waits on Jeffrey:** nothing now: Jeffrey answered every pass 1 question (v1.035–v1.051).
 - **Smaller:** fix them while you're in the file. A few are questions your prompt already told you to ask Jeffrey.
 - Each item keeps its finding id (R2-01, R2-06 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved. N10, N13 and N14 changed `Calendar.jsx`, `Prospects.jsx`, `forms/Builder.jsx`, `forms/FillInDialog.jsx`, `calendar.css`, `forms-public.css` and `forms.css`, among others, after the cut. Items decided in v1.045–v1.049 cite main 84a6e7d's.
+- **Line numbers** are main 5f1db41's; they may have moved. N10, N13 and N14 changed `Calendar.jsx`, `Prospects.jsx`, `forms/Builder.jsx`, `forms/FillInDialog.jsx`, `calendar.css`, `forms-public.css` and `forms.css`, among others, after the cut. Items decided in v1.045–v1.049 cite main 84a6e7d's, and items decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** `Forms.jsx`, `Prospects.jsx` and `Calendar.jsx` are in `src/screens/`; `forms/…` and `prospects/…` are under `src/screens/`, and so are the bare names `Builder.jsx`, `FillInDialog.jsx` and `FormsList.jsx` (in `src/screens/forms/`); `FormsApp.jsx` is the family page's `src/forms/FormsApp.jsx`; `calendar.css` and `forms-public.css` are in `src/styles/`; `components/…` is `src/components/…`.
 
 ### Rules
@@ -115,12 +115,17 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Change:** pass `icon: false` where the ✓ shows today (`Prospects.jsx:227`, which passes `{}` when there is no Undo, and `:473`; `Forms.jsx:182, 223`; `forms/Builder.jsx:317, 345`).
 - **Check (preview mode):** save a note on a prospect: "Note saved", with no ✓; Duplicate a form: "Copied as "Copy of …" (a Draft)", with no ✓; publish a form: the same.
 
-### R3-09 (your part) — One wording and place for the in-list search · Low · decided 2026-11-04 (v1.047) · after Jeffrey picks the words
+### R3-09 (your part) — "Find a prospect", on the left above the list · Low · decided 2026-11-04 (v1.047, v1.050)
 
-- **What's wrong:** Prospects' box reads "Search name or phone" (`prospects/text.js:28`), sits right of the chips (`prospects/PipelineBar.jsx:48–55`; on Both, `Prospects.jsx:801–806`) and says "No one matches that search." (`prospects/text.js:45`). Black Belt says "Search candidates", on the left above its table; Camps says "Find a camper".
-- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) use the same words and place, with one no-match line; the words and the place are shown to Jeffrey in one picture before any box changes (proposed: "Search candidates / campers / prospects", on the left above the table, with Clear search; it would change Camps' "Find a camper", v0.715, and move Prospects' box out of the chip row, v0.236).
-- **Change:** once Jeffrey has picked the words, the place and the no-match line (the design review asks him with one picture; the answer reaches you through the Main session): the placeholder and its screen-reader name (`prospects/text.js:28–29`), the box's place (today right of the chips, `prospects/PipelineBar.jsx:48–55`; on Both `Prospects.jsx:801–806`), and the no-match line (`:45`). Clear search is already the shared `IconButton` (v0.631, on main). Mockup first, with R3-03's line.
-- **Check (preview mode):** Prospects at 1280, 820 touch and 390: the box reads and sits as Jeffrey picked; type "zz": the approved no-match line shows; Clear search brings everyone back. Board and Both the same.
+- **What's wrong:** Prospects' box reads "Search name or phone" (`prospects/text.js:28`), sits at the right end of the chip row on PC and tablet (`prospects/PipelineBar.jsx:144`; on phones on its own line under the chips, `:107`; on Both, one box for the two schools, `Prospects.jsx:805–822`) and says "No one matches that search." (`prospects/text.js:45`). Black Belt says "Search candidates", on the left above its table; Camps says "Find a camper".
+- **Rule:** v1.050 (Jeffrey, 2026-11-04: "A: Find a …"; settles v1.047 (14)): the three in-list search boxes read "Find a candidate" (Black Belt), "Find a camper" (Camps, as v0.715) and "Find a prospect" (Prospects), and sit on the left, above the list; Prospects' box moves out of the chip row. When nothing is found, one line: 'No candidates / campers / prospects match "[text]".' followed by a Clear search link, as "Showing … only · Show all"; the box's own ✕ stays the shared icon button (v0.631). Prospects' box still finds by phone, and its screen-reader name keeps saying so. Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q11-list-search-words.png`.
+- **Change:**
+  - The placeholder reads "Find a prospect" (`prospects/text.js:28`). The screen-reader name (`:29`, today "Search prospects by child, parent or phone") keeps saying that the box finds by phone, and starts with the words shown (e.g. "Find a prospect by child, parent or phone").
+  - The box (`prospects/PipelineBar.jsx:48–67`) leaves the chip row (`:144`) and sits on the left, above the list, in v1.047 (15)'s order: after R3-03's "Showing … only" line, before the list. Phones (`:107`) and Both (`Prospects.jsx:805–822`) the same.
+  - The no-match line (`prospects/text.js:45`, used at `Prospects.jsx:635`) reads 'No prospects match "[text]".' and ends with "· Clear search", a link that empties the box, drawn like the shared "Showing … only · Show all" line; the box's ✕ stays the shared `IconButton` (v0.631).
+  - The Board says what a search shows in its own note (`prospects/Board.jsx:97–103`, "Showing N of … · matching …"): draw the Board with nothing found in your mockup.
+  - Mockup first, with R3-03's line.
+- **Check (preview mode):** Prospects at 1280, 820 touch and 390: the box reads "Find a prospect" and sits on the left, above the list, out of the chip row; type "zz": 'No prospects match "zz". · Clear search', and the Clear search link brings everyone back (so does the box's ✕); four digits of a family's phone number still find it. Board and Both the same.
 
 ### R4-06 (your part) — Screen text drops from weight 600 to 500 · Low · decided 2026-11-04 (v1.048)
 
@@ -157,12 +162,42 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Change:** after Dashboard core's R3-06, use it at `Builder.jsx:386` (keep its words, its "Back to Forms" name and its save-first step), and `.fb-back` goes.
 - **Check (preview mode):** the builder at 1280, 820 touch, 390 and 320: "← Forms" looks as today, and the form's name doesn't move between 1280 and 820.
 
+### S-2 (your part) — One line when a page can't load · Low · decided 2026-11-04 (v1.051) · after Dashboard core's S-2
+
+- **What's wrong:** Calendar, Forms and Prospects end their load failures "… Check the connection and try again." (`calendar/text.js:248`, `forms/text.js:15`, `prospects/text.js:15`), where your Schedule, Camps, Finance and Color Belt end "… Check the connection, then retry.". Three places show the line with nothing to press:
+  - opening a form in the builder (`Forms.jsx:96`);
+  - the Add prospect box's list of forms (`prospects/Dialogs.jsx:175`), where the line says "the prospects";
+  - a check-in from the Calendar's day panel that failed (`Calendar.jsx:589`), which isn't a load at all.
+- **Rule:** v1.051 (2) (Jeffrey, 2026-11-04: "Yes approved go ahead"): when a page can't load, it says "Couldn't load. Check the connection, then retry." with Retry, everywhere. A line may still name what didn't load ("Couldn't load the calendar. Check the connection, then retry."), so only the endings change: Calendar, Forms, Prospects and Black Belt … (R3's S-2). A read that fails behind a menu or inside a dialog is a connection failure too: v1.004 and §8 ("always include Retry where it applies") already ask for its Retry.
+- **Change:**
+  - After Dashboard core's S-2 puts the sentence in `src/components/text.js`, the three lines end "Check the connection, then retry." (they keep naming what didn't load: "Couldn't load the calendar.").
+  - `Forms.jsx:96` gets a Retry that opens the form again, and the Add prospect box a Retry that reads the forms again, with words that name the forms.
+  - `Calendar.jsx:589`: a failed check-in gets its own words and a Retry that checks in again (v1.004: a connection failure always has Retry in the same bar), not the load line.
+  - Two shorter lines say less and have no Retry: the day panel's "Couldn't load follow-ups." (`calendar/text.js:86`, `calendar/DayPanel.jsx:181`) and "Couldn't load the open times. Check the connection." (`forms/text.js:261`, `forms/FormFields.jsx:223`, which the family page draws too). They end the same way, with Retry (v1.051 (2): everywhere): "Couldn't load follow-ups. Check the connection, then retry." and "Couldn't load the open times. Check the connection, then retry."; show the family page's line in your mockup.
+- **Check (preview mode):** `failNextFormsSave()` and `failNextCalendarSave()` fail the next function call, not a table read (opening a form and the Calendar's month read tables), so add a failed-read helper in your own fake-data files (registered in `src/lib/mockClient.js`: list it), or a check case. With it armed: open a form, + Add prospect, and the Calendar: each says "… Check the connection, then retry." with Retry, and Retry reads again.
+
+### R2-09 (the full stop) — One-sentence toasts drop their full stop · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** these toasts are one sentence and end with a full stop, where Testing's, Camps' and Black Belt's one-sentence toasts have none:
+  - Prospects (`prospects/text.js`): "Note saved." (`:212`, shown at `Prospects.jsx:296`); "[name] checked in." and "[name] didn't show — call back tomorrow." (`:213–214`, `Prospects.jsx:306`); "Free class booked for [name]." (`:215`, `:341`); "[name]'s free class was cancelled." (`:216`, `:351`); "[name] moved to [stage]." (`:114`, `:429, 456`); "[name] was deleted." (`:217`, `:473`).
+  - Forms (`forms/text.js`): "Copied as "…" (a Draft)." (`:50`, `Forms.jsx:182`); "… is closed — the link now says so." and "… is taking sign-ups again." (`:51–52`, `Forms.jsx:208` and `forms/Builder.jsx:409`); "… was deleted." (`:56`, `Forms.jsx:223`); "… is published — families see the new version." (`:98`, `Builder.jsx:384`); "Booking settings saved — they are live now." (`:181`, `Builder.jsx:356`).
+  - Calendar: "[name] checked in." (`calendar/text.js:102`, `Calendar.jsx:583`).
+- **Rule:** v1.051 (5) (Jeffrey, 2026-11-04: "Yes approved go ahead"): a one-sentence toast has no full stop at the end ("Ava Reed restored"); a two-sentence toast keeps them; Prospects, Forms, Finance and Calendar change, and so does Staff accounts' "Password reset for [name]." (Dashboard core), the one other one-sentence toast with a full stop (R2-09).
+- **Change:** drop the closing full stop from each of those words. A dash doesn't make two sentences, so "… is closed — the link now says so" loses it too. Build it with your R2-09 item: Prospects' and Forms' toasts drop their ✓ at the same time. Not on this list: "Couldn't undo — the form has changed since." (`forms/text.js:131`, a toast at `Builder.jsx:273`) is a refused Undo shown as a toast, from your "(now)" 5–7, which pass 2 checks.
+- **Check (preview mode):** save a note on a prospect: "Note saved"; Duplicate a form: "Copied as "Copy of …" (a Draft)"; in the Calendar's day panel, check in a child booked today: "[name] checked in". None ends with a full stop.
+
+### R2-07 (the words after an Undo) — Reopening a form says so · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** the Undo of Close form opens the form again but says only "Undone": in the Forms list (`Forms.jsx:201`, inside `toggleClosed`) and in the builder (`forms/Builder.jsx:410`, `setAccepting`'s Undo). Your other Undos say "Undone", as v1.051 asks.
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Finance "Undone. The day is open again.", Star "Undone. Registration is open again."; the same rule covers every Undo that opens registration, sign-up or a form again, in the same pattern: Forms "Undone. The form is open again." (R2-07's open part).
+- **Change:** when the Undo opened the form again, show "Undone. The form is open again." (`forms/text.js`, next to `UNDONE`, `:54`). An Undo that closes it stays "Undone".
+- **Check (preview mode):** Forms → ⋯ Close form → Undo → "Undone. The form is open again."; in the builder, turn off "Accepting sign-ups (Live)" → Undo → the same; ⋯ Open form → Undo → "Undone".
+
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R3-09, the in-list search** (Low): the words, the place and the no-match line of the three in-list search boxes (v1.047 (14)). The design review asks Jeffrey with one picture; the answer reaches you through the Main session. Your R3-09 item (Fix now) follows the answer.
-- **R2-07, the open part** (Low): the load-failure words (Calendar's, Forms' and Prospects' "… Check the connection and try again.", `calendar/text.js:248`, `forms/text.js:15`, `prospects/text.js:15`) and the words after an Undo are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
+Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.051); each answer is a Fix now or Smaller item in this file.
 
 ---
 

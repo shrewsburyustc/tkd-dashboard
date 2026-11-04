@@ -14,13 +14,13 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in your merged work (C1, C2, C3, C4b, C6, C7, C11, C14, C17, C18, C20). Your C10 (the four count cards) merged after the cut (main e7fd75b); pass 2 checks it.
 
-Your own straight fixes from pass 1: R1-05, R5-04 and R2-03 (Jeffrey's answers to questions 5, 4 and 8: v1.039, v1.038 and v1.043), and R3-02, R3-09, R3-10, R4-06 and S-8 (his answers to question 10: v1.046–v1.048). The rest is shared fixes you adopt after Dashboard core or New students builds them, a few small things and unrecorded checks.
+Your own straight fixes from pass 1: R1-05, R5-04 and R2-03 (Jeffrey's answers to questions 5, 4 and 8: v1.039, v1.038 and v1.043), and R3-02, R3-09, R3-10, R4-06 and S-8 (his answers to question 10: v1.046–v1.048; R3-09's words: question 11, v1.050), and S-2 and R2-07 (the words after an Undo) (the follow-up batch, v1.051). The rest is shared fixes you adopt after Dashboard core or New students builds them, a few small things and unrecorded checks.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
+- **Waits on Jeffrey:** nothing now: Jeffrey answered every pass 1 question (v1.035–v1.051).
 - **Smaller:** fix them while you're in the file, and record the checks.
 - Each item keeps its finding id (R2-05, R1-08 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved. Your C10 merge changed `CampRoster.jsx`, `CampPage.jsx`, `camps/text.js`, `campRules.js` and `camps.css` after the cut. Items decided in v1.045–v1.049 cite main 84a6e7d's.
+- **Line numbers** are main 5f1db41's; they may have moved. Your C10 merge changed `CampRoster.jsx`, `CampPage.jsx`, `camps/text.js`, `campRules.js` and `camps.css` after the cut. Items decided in v1.045–v1.049 cite main 84a6e7d's, and items decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** `CampRoster.jsx`, `CampPage.jsx`, `PaymentDialogs.jsx` and `CampRowMenu.jsx` are in `src/screens/camps/`; `camps/text.js` is `src/screens/camps/text.js`; `campRules.js` is `src/lib/camps/campRules.js`; `camps.css` and `camp.css` are in `src/styles/`; `components/…` is `src/components/…`.
 
 ### Rules
@@ -89,10 +89,10 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 - **Change:** after Dashboard core's R2-05 (an Undo pressed while a save runs is *queued*: it waits its turn and runs as soon as that save ends, and its toast stays as "Undoing…"), your `runUndo` uses Dashboard core's helper.
 - **Check (preview mode):** `__tkdPreview.setTestingDelay(2500)`; withdraw camper A, withdraw camper B, press A's Undo during B's save → A comes back with "Undone".
 
-### R3-02 (your part) — Possible duplicates stay out of the counts until resolved · Low · decided 2026-11-04 (v1.046)
+### R3-02 (your part) — Possible duplicates stay out of To collect until resolved · Low · decided 2026-11-04 (v1.046)
 
-- **What's wrong:** your cards count rows marked "Possible duplicate". Ava Thompson's two rows are both in Campers and Coming, and the unpaid copy's $315 is in To collect, though the tag on its row replaces "$315 due" (`src/lib/camps/campRules.js:495–515`; `toCollectCents`, `:445–449`, says "Possible duplicates count"). So the To collect amounts on screen don't add up to the card.
-- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of To collect (your Not paid) until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038).
+- **What's wrong:** your To collect card counts rows marked "Possible duplicate": the unpaid copy of Ava Thompson's pair adds its $315 to To collect, though the tag on its row replaces "$315 due" (`src/lib/camps/campRules.js:495–515`; `toCollectCents`, `:445–449`, says "Possible duplicates count"). So the To collect amounts on screen don't add up to the card. (Both rows also count in Campers and Coming. That stays: the people counts don't change.)
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of Paid and Not paid (Camps: To collect) until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; the people counts (Campers, Coming) don't change, so the line's words name To collect and are drawn in your mockup; Payments recorded still counts any money received (v1.038).
 - **Change:**
   - `campCardCounts` (`campRules.js:495`): To collect (count and amount) leaves out rows with `duplicateState === 'possible'` (Campers, Coming and its "here" don't change: a flagged camper may be a child who is here); `recordedCents` keeps their money. The To collect filter (`matchesCardFilter`, `:517`) lists exactly the rows the card counts, as Black Belt's does (`src/lib/blackBelt/rules.js:1062`). Test it in `src/lib/camps/checks.mjs`.
   - The gray line, in words that name To collect (drawn in your mockup for Jeffrey; Black Belt's "… isn't counted in the cards …" would be wrong here, because Campers and Coming still count the row), written in your own `camps/text.js`. `CountCards` takes one line under the row (`note`), and your pizza line already uses it on camp days (`CampRoster.jsx:281, 552`): plan both lines in the mockup, and ask before changing the shared part.
@@ -100,12 +100,12 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
   - Mockup first.
 - **Check (preview mode):** `__tkdPreview.resetCamps()`, April Vacation Camp: Ava Thompson's possible duplicate isn't in To collect (Campers and Coming unchanged), the gray line says so, and tapping To collect doesn't list it. Review → Keep this one: the counts are whole again and the line goes. Payments recorded is the same before and after.
 
-### R3-09 (your part) — One wording and place for the in-list search · Low · decided 2026-11-04 (v1.047) · after Jeffrey picks the words
+### R3-09 (your part) — "Find a camper" stays, with one no-match line and Clear search · Low · decided 2026-11-04 (v1.047, v1.050)
 
-- **What's wrong:** your box reads "Find a camper" (`camps/text.js:551`), says "No camper with that name." when nothing matches (`:530`), and has no Clear search. Black Belt says "Search candidates" and Prospects "Search name or phone", each with its own no-match line.
-- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) use the same words and place, with one no-match line; the words and the place are shown to Jeffrey in one picture before any box changes (proposed: "Search candidates / campers / prospects", on the left above the table, with Clear search; it would change Camps' "Find a camper", v0.715, and move Prospects' box out of the chip row, v0.236).
-- **Change:** once Jeffrey has picked the words, the place and the no-match line (the design review asks him with one picture; the answer reaches you through the Main session): the placeholder and its name (`camps/text.js:551`, `CampRoster.jsx:562–563`), the box's place (in R3-10's order), Clear search if it is picked (the shared `IconButton` with `IconX`), and the no-match line (`:530`). Mockup first.
-- **Check (preview mode):** April Vacation Camp, type "zz": the approved no-match line shows; Clear search empties the box and brings everyone back; at 820 / 390 / 320 touch it has a 44 px tap area.
+- **What's wrong:** your box reads "Find a camper" (`camps/text.js:551`), says "No camper with that name." when nothing matches (`:530`, used at `CampRoster.jsx:302`), and has no Clear search. Black Belt says "Search candidates" and Prospects "Search name or phone", each with its own no-match line.
+- **Rule:** v1.050 (Jeffrey, 2026-11-04: "A: Find a …"; settles v1.047 (14)): the three in-list search boxes read "Find a candidate" (Black Belt), "Find a camper" (Camps, as v0.715) and "Find a prospect" (Prospects), and sit on the left, above the list; Prospects' box moves out of the chip row. When nothing is found, one line: 'No candidates / campers / prospects match "[text]".' followed by a Clear search link, as "Showing … only · Show all"; the box's own ✕ stays the shared icon button (v0.631). Prospects' box still finds by phone, and its screen-reader name keeps saying so. Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q11-list-search-words.png`.
+- **Change:** keep "Find a camper" (`camps/text.js:551`; the placeholder and the name, `CampRoster.jsx:562–563`) and the box's place on the left, above the roster (`CampRoster.jsx:556–568`; after R3-10 moves the duplicate box above the cards, the box sits under the cards and their "Showing … only" line, above the week switch). The no-match line (`camps/text.js:530`) reads 'No campers match "[text]".' (also when a card filter is on, as Black Belt's `CandidatesTab.jsx:410`: search text wins), and ends with "· Clear search", a link that empties the box, drawn like the shared "Showing … only · Show all" line. Add the box's own ✕ while it has text: the shared `IconButton` with `IconX` and the "Clear search" tooltip, as Prospects' (`src/screens/prospects/PipelineBar.jsx:53–65`, v0.631). Mockup first.
+- **Check (preview mode):** April Vacation Camp, type "zz": 'No campers match "zz". · Clear search' shows, with To collect tapped too; the Clear search link empties the box and brings everyone back; the box's ✕ does the same, with its tooltip on PC and a 44 px tap area at 820 / 390 / 320 touch.
 
 ### R3-10 (your part) — The duplicate box moves above the cards · Low · decided 2026-11-04 (v1.047)
 
@@ -118,7 +118,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 
 - **What's wrong:** the camp family page's week title uses weight 600 (`src/styles/camp.css:186`, `.camp-week__title`); §7 allows 400 and 500 on screen.
 - **Rule:** v1.048 (23) (Jeffrey, 2026-11-04: "Approve all"): screen text uses weights 400 and 500 only (§7): Black Belt's, Camps' and New students' 600s go to 500; printed sheets keep their heavier weights (v0.142, v0.143).
-- **Change:** `camp.css:186` → 500. The other line the question named (`camps.css:1141` then, `:1127` now) belongs to the printed roster (`@media print`), so it keeps 600.
+- **Change:** `camp.css:186` → 500. The other line the question named (`camps.css:1141` then, `:1127` now) belongs to the printed roster (`@media print`), so it keeps 600. The family total on the same page (`.reg-total b`, drawn at `src/camp/StepCheck.jsx:103` and `src/camp/SignedUp.jsx:90`) comes from Color Belt's `src/styles/register.css:659`: it goes to 500 with Color Belt's R4-06 (v1.051 (4)), so don't change it here.
 - **Check (preview mode):** the camp's family page (its Registration link, e.g. `/camp/thx9kv3m` in the preview) at 1280 and 390: the week title computes weight 500. Print roster: unchanged.
 
 ### S-8 — The camp list's ⋯ order · Low · decided 2026-11-04 (v1.047)
@@ -127,6 +127,20 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 - **Rule:** v1.047 (18) (Jeffrey, 2026-11-04: "Approve all"): every event list's ⋯ uses one order: Copy link(s), Close / Open, Edit, then the rest.
 - **Change:** in `items()` (`CampRowMenu.jsx:218`), move the Edit camp line (`:221`) to just after the Close / Open sign-up block (`:222–240`). Save as template, Print roster and Delete camp follow, as today. Your ⋯ has no Copy link, and the row adds none.
 - **Check (preview mode):** at 390 touch, the camp list's ⋯ reads Close sign-up (or Open sign-up), Edit camp, Save as template, Print roster, then Delete camp; the camp page's header ⋯ the same.
+
+### S-2 (your part) — A Retry wherever a read fails · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** your load lines already end word for word "Check the connection, then retry." (`camps/text.js:135, 302, 488, 618, 722`), and the page's own bars have Retry. Five places show them with nothing to press: Edit camp when the camp can't be read (`CampDialog.jsx:424`, Close only), the reads before Undo payment, Edit payment and Delete permanently (`CampPage.jsx:497, 618, 635`) and the read before Delete camp (`CampRowMenu.jsx:132`).
+- **Rule:** v1.051 (2) (Jeffrey, 2026-11-04: "Yes approved go ahead"): when a page can't load, it says "Couldn't load. Check the connection, then retry." with Retry, everywhere. A line may still name what didn't load ("Couldn't load the calendar. Check the connection, then retry."), so only the endings change. Your words already match, so only the Retry is missing. A read that fails behind a menu or inside a dialog is a connection failure too: v1.004 and §8 ("always include Retry where it applies") already ask for its Retry.
+- **Change:** give the five a Retry that repeats the same read, as Camper detail (`CamperDialog.jsx:197–202`) and Print roster (`CampRowMenu.jsx:164`) already do. The words stay.
+- **Check (preview mode):** the preview's `failNextSave()` skips reads (`src/lib/mockCamps.js:1999`), so add a failed-read helper in your own fake store, registered in `src/lib/mockClient.js` (a CLAUDE.md shared file: list it), or a check case, as Black Belt's R4-11 does. With it armed: Edit camp, and ⋯ Undo payment on a paid camper, each show "… Check the connection, then retry." with Retry, and Retry opens the box.
+
+### R2-07 (the words after an Undo) — Reopening sign-up says so · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** the Undo of ⋯ Close sign-up opens sign-up again but says only "Undone" (`CampRowMenu.jsx:87–88`, `switchSignup`'s `isUndo` branch). Your other Undos say "Undone", as v1.051 asks.
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Finance "Undone. The day is open again.", Star "Undone. Registration is open again."; the same rule covers every Undo that opens registration, sign-up or a form again, in the same pattern: Camps "Undone. Sign-up is open again." (R2-07's open part).
+- **Change:** when that Undo opened sign-up, show "Undone. Sign-up is open again." (in your own `camps/text.js`, next to `TOAST_SIGNUP_OPEN`, `:253`). An Undo that closes it stays "Undone".
+- **Check (preview mode):** a camp's ⋯ Close sign-up → Undo → "Undone. Sign-up is open again."; ⋯ Open sign-up → Undo → "Undone".
 
 ### R1-08 (your part) — The "$X due" tags don't gray while a Mark paid save runs · Low · after Dashboard core's R1-08
 
@@ -145,7 +159,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 ### R1-06 (your part) — The Undo payment box takes Black Belt's words · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06
 
 - **What's wrong:** your box asks "Undo [Name]'s payment?" and says "The $X [way] payment recorded on [date] is reversed …" (`camps/text.js:596–602`, drawn at `CampPage.jsx:1100, 1111`), though the date is the day the family paid.
-- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; shared words are kept once in `src/components/text.js`.
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; v1.045: "Built by Dashboard core (the shared words) and by each section switching to them."
 - **Change:** after Dashboard core's R1-06, take the title and "Paid on [date]" from `src/components/text.js` (not from Color Belt's file), pass the amount and the way (`CampPage.jsx:1100`), and keep your consequence (what is owed again after the Undo; both stay in the history).
 - **Check (preview mode):** April Vacation Camp, a paid camper → ⋯ Undo payment: the box asks "Undo [Name]'s $X [way] payment?", and its line starts "Paid on" with the payment's date.
 
@@ -181,8 +195,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R3-09, the in-list search** (Low): the words, the place and the no-match line of the three in-list search boxes (v1.047 (14)). The design review asks Jeffrey with one picture; the answer reaches you through the Main session. Your R3-09 item (Fix now) follows the answer.
-- **R2-07, the open part** (Low): the load-failure words (yours say "… Check the connection, then retry.", e.g. `camps/text.js:135, 488, 722`) and the words after an Undo are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
+Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.051); each answer is a Fix now or Smaller item in this file.
 
 ---
 

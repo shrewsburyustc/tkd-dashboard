@@ -15,10 +15,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in Star's merged work (Part 1 and Part 2, S1–S12).
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
+- **Waits on Jeffrey:** nothing now: Jeffrey answered every pass 1 question (v1.035–v1.051).
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (R1-02, R2-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved. Items decided in v1.045–v1.049 cite main 84a6e7d's.
+- **Line numbers** are main 5f1db41's; they may have moved. Items decided in v1.045–v1.049 cite main 84a6e7d's, and items decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** `CandidatesTab.jsx`, `CandidateDialog.jsx`, `CandidateHistory.jsx`, `CandidateRows.jsx`, `StarPaymentDialogs.jsx` and `candidates/text.js` are in `src/screens/testing/star/candidates/`. `star/…` is under `src/screens/testing/star/`: `ResultRows.jsx` and `results.css` are in its `results/` folder, `StarEventsTab.jsx` in `events/`, `RubricsTab.jsx` and `star.css` at its top. `lib/star/…` is `src/lib/star/…`, `components/…` is `src/components/…`, and `testing/text.js` is Color Belt's `src/screens/testing/text.js`. Camps' files named for comparison are in `src/screens/camps/` and `src/lib/camps/`.
 
 ### Rules
@@ -171,6 +171,13 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Change:** `CandidatesTab.jsx:258`: `['worcester', 'shrewsbury']`, and its comment. The belt order: plan it and show Jeffrey, as Black Belt's S-1 does. Either the screens sort what they get (stars, then Worcester before Shrewsbury, then last and first name; the CSV rows sorted before the file is written), or one migration replaces `star_event_results` and `star_results_csv` with Worcester first (ask the Main session for a number; handoff §6; a security review). Either way `sortBeltOrder` and its comment, the two fake stores and the check at `src/lib/star/resultsChecks.mjs:154–156` change too.
 - **Check (preview mode):** Fall Star Testing on Both, at 1280 and 390: the Candidates card lists Worcester, then Shrewsbury; within a star level the roster, the Grading and Results tabs and the downloaded results CSV list Worcester's candidates first.
 
+### R2-07 (the words after an Undo) — "Undone" after every Undo · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** two of your Undos don't say "Undone" when they work. The Undo of an edit that kept registration closed (v0.504) opens it again and says "Registration open" (`lib/star/eventsText.js:79`, passed as `doneText` at `star/events/StarEventsTab.jsx:466`). On the Results tab, the Undo in Mark as sent's toast says nothing at all (`star/results/ResultsTab.jsx:334–348`: it only reloads). Your other Undos say "Undone". Two of them should name the reopening too: the Undo of ⋯ Close registration opens registration again but says only "Undone" (`StarEventsTab.jsx:586–587`), and so does Edit event's Undo when the edit had closed registration (`:505–507`).
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Star "Undone. Registration is open again."; the same rule covers every Undo that opens registration, sign-up or a form again (R2-07's open part).
+- **Change:** add "Undone. Registration is open again." to `lib/star/eventsText.js`, and show it after every Undo that opens registration again: the `doneText` at `StarEventsTab.jsx:466`, `switchRegistration`'s Undo (`:586–587`, when the Undo opened registration) and Edit event's Undo (`:505–507`) when it put registration back to open. An Undo that closes registration stays "Undone". Keep `TOAST_REGISTRATION_OPEN` (`:79`): Open registration's own toast still uses it (`StarEventsTab.jsx:592`). In the Results tab's `undoFromToast`, show "Undone" when the Undo worked.
+- **Check (preview mode):** `__tkdPreview.setToday()` to a day after an open event's closing date → Edit event → untick the closing date → Save: "Changes saved. Registration stays closed …" → Undo → "Undone. Registration is open again.", and the event is open again. Results tab → a finished row's Email result → Mark as sent → Undo in its toast → "Undone", and the row reads "Not sent yet" again. ⋯ Close registration on an open event → Undo → "Undone. Registration is open again."; ⋯ Open registration on a closed one → Undo → "Undone".
+
 ### R1-08 (your part) — Mark paid buttons don't gray while a save runs · Low · after Dashboard core's R1-08
 
 - **What's wrong:** while a Mark paid save runs, every row's Mark paid is `aria-disabled` (marked "off" for screen readers, but still reachable with Tab) yet looks exactly as before (`CandidateRows.jsx:124–128`). On slow mat-side Wi-Fi, taps do nothing and nothing says why.
@@ -195,7 +202,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 ### R1-06 (your part) — The Undo payment box takes Black Belt's words · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06
 
 - **What's wrong:** your box asks "Undo [Name]'s payment?" and says "The $140 card payment recorded on [date] is reversed …" (`candidates/text.js:172–174`, drawn at `CandidatesTab.jsx:1264–1280`), though the date it shows is the day the family paid. Black Belt corrected the same words (v0.964, v0.965).
-- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence. Shared words are kept once in `src/components/text.js`.
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence. v1.045: "Built by Dashboard core (the shared words) and by each section switching to them."
 - **Change:** after Dashboard core's R1-06, take the title and "Paid on [date]" from `src/components/text.js`, pass the amount and the way (`CandidatesTab.jsx:1267`), and keep your own consequence (the row goes back to Not paid; both stay in the history). Your Undo refund box (`candidates/text.js:176`) isn't part of this.
 - **Check (preview mode):** mark Lily Brooks paid $140 by card → ⋯ Undo payment: the box asks "Undo Lily Brooks's $140 card payment?", and its line starts "Paid on" with the payment's date.
 
@@ -209,7 +216,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 ### R2-07 (your part) — One set of words for "someone else changed it" and a failed Undo · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R2-07
 
 - **What's wrong:** your refusals say "Someone else changed this just now. Your change wasn't saved." and "Couldn't undo. Someone else changed this just now." (`star/text.js:231, 241`; `lib/star/candidatesText.js:22`; `lib/star/eventsText.js:92`), and two failed Undos say "Couldn't undo. Check the connection, then try again." (`candidates/text.js:151`, the Undo payment and Undo refund boxes; `lib/star/resultsText.js:123`). Black Belt's newer words name who changed and say what the screen now shows.
-- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry." (Black Belt's v0.966 set).
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry." (Black Belt's words: v0.966 (2) and its own Undo lines); item (4)'s sentences are kept once in the shared words file (`src/components/text.js`).
 - **Change:** after Dashboard core's R2-07, use its three sentences from `src/components/text.js` at those lines ([Name] is the candidate's or the event's name). `star/text.js:242` already says the failed-Undo sentence: take it from the shared file too.
 - **Check (preview mode):** withdraw a candidate, then `__tkdPreview.simulateOtherAdminEdit()`, then Undo within 5 s: the bar says "Someone else changed [Name] just now, so nothing was done. Their change is shown." Then, on a paid candidate, `__tkdPreview.failNextSave('star')` and ⋯ Undo payment → Undo payment: the box says "Undo didn't save. Check the connection, then retry."
 
@@ -220,11 +227,18 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Change:** after Dashboard core's R3-06, your three back links use it (`star/event/StarEventPage.jsx:722`, `star/grading/PrivateGradingPage.jsx:98`, `star/StarTesting.jsx:122`), with their words and screen-reader names, and `.st-back` goes from `star.css` (`:19–25, 589–592, 779`). Your focus code looks for `.st-back` (`StarEventPage.jsx:614`): point it at the shared link.
 - **Check (preview mode):** the Star testing page, an event page and a private grading page at 1280, 820 touch, 390 and 320: the back link looks as today, the title doesn't move between 1280 and 820, and focus lands on the link where it did before.
 
+### S-2 (your part) — One line when a page can't load · Low · decided 2026-11-04 (v1.051) · after Dashboard core's S-2
+
+- **What's wrong:** most of your load failures already end "Check the connection, then retry." with Retry. Three end "then try again": the Results tab (`lib/star/resultsText.js:152`), the private grading page (`star/grading/text.js:88`) and the Grading tab (`:102`; both v0.513's words). Two show the "then retry" line with nothing to press: a candidate's summary that couldn't load (`CandidateDialog.jsx:247`, Cancel only) and the signature box (`star/candidates/SignatureDialog.jsx:19`).
+- **Rule:** v1.051 (2) (Jeffrey, 2026-11-04: "Yes approved go ahead"): when a page can't load, it says "Couldn't load. Check the connection, then retry." with Retry, everywhere. A line may still name what didn't load ("Couldn't load the calendar. Check the connection, then retry."), so only the endings change. v1.051 (2) names these three lines of yours too (two of them v0.513's). A read that fails behind a menu or inside a dialog is a connection failure too: v1.004 and §8 ("always include Retry where it applies") already ask for its Retry.
+- **Change:** after Dashboard core's S-2 puts the sentence in `src/components/text.js`, the three lines end "Check the connection, then retry." (they keep naming what didn't load, as your other lines do), and the summary and the signature box get a Retry that reads again.
+- **Check (preview mode):** `failNextSave('star')` fails only writes, so add a failed-read helper in your own fake store (`src/lib/mockStar*.js`, registered in `src/lib/mockClient.js`, a CLAUDE.md shared file: list it), or a check case, as Black Belt's R4-11 does. With it armed, open a candidate: "Couldn't load this candidate. Check the connection, then retry." with Retry, and Retry opens the summary. The Results and Grading lines end "then retry".
+
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R2-07, the open part** (Low): the words after an Undo, including your "Registration open" (`lib/star/eventsText.js:79`, shown after an Undo at `StarEventsTab.jsx:466`), and the load-failure words are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
+Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.051); each answer is a Fix now or Smaller item in this file.
 
 ---
 

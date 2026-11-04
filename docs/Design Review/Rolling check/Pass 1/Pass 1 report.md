@@ -46,17 +46,17 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Star | `Fix-Star.md` | 12 + 8 after another session's fix | 1 | 7 |
-| New students | `Fix-NewStudents.md` | 11 + 3 after another session's fix | 2 | 15 |
-| Black Belt | `Fix-BlackBelt.md` | 21 + 9 after another session's fix | 2 | 12 |
-| Camps | `Fix-Camps.md` | 8 + 8 after another session's fix | 2 | 13 |
-| Finance | `Fix-Finance.md` | 5 + 4 after another session's fix | 2 | 2 |
-| Dashboard core | `Fix-DashboardCore.md` | 11 | 1 | 15 |
-| Color Belt | `Notes-ColorBelt.md` | its points, now fixes on main 84a6e7d | 1 | 8 |
+| Star | `Fix-Star.md` | 13 + 9 after another session's fix | 0 | 7 |
+| New students | `Fix-NewStudents.md` | 13 + 4 after another session's fix | 0 | 15 |
+| Black Belt | `Fix-BlackBelt.md` | 22 + 10 after another session's fix | 0 | 12 |
+| Camps | `Fix-Camps.md` | 10 + 8 after another session's fix | 0 | 13 |
+| Finance | `Fix-Finance.md` | 8 + 4 after another session's fix | 0 | 3 |
+| Dashboard core | `Fix-DashboardCore.md` | 13 | 0 | 15 |
+| Color Belt | `Notes-ColorBelt.md` | 8 + 7 after another session's fix, and 3 checks (its merged work, main 84a6e7d) | 0 | 9 |
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.050). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.052). The sections it changes hear it through the Main session.
 
 1. **Money: which school's report counts a payment taken at one school's desk?** (R1-01, High.) **Answered 2026-11-04: A** (v1.035).
    - **A (recommended):** the desk that took it, for every section, as Camps does. The report then always matches the drawer.
@@ -91,34 +91,78 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
    - **A (recommended):** amber, like its own "Late" tag.
    - **B:** gray, like Star and Color Belt.
    - **C:** keep red, written into §7 as an exception.
-10. **The small ones, as one batch.** Jeffrey approves the recommendations together, or pulls any out to see one by one. **Answered 2026-11-04: "Approve all"** (v1.045–v1.049):
-    - **Words: "Hidden on this tablet".** Use this everywhere; Black Belt says "device" (R4-03).
-    - **Words: Undo payment box.** Use Black Belt's "Paid on [date]" (R1-06).
-    - **Words: payment toasts.** "[Name] marked paid · $X [way]" and "Payment undone for [Name]" everywhere. The payment line and the history words follow (R1-07).
-    - **Words: "someone else changed it" and "Undo failed".** Use Black Belt's newer set, kept once in the shared words file (R2-07, R4-14).
-    - **Words: closed staff line.** "Ask an admin to open it." everywhere, as Camps (R4-13).
-    - **Words: row menu labels.** "More actions for …" everywhere (pass 1b).
-    - **Toasts: ✓.** The ✓ stays only on the account toasts (PIN, password) (R2-09).
-    - **Counts: possible duplicates.** Possible duplicates stay out of Paid / Not paid until resolved, with a gray line, as Black Belt does. Mark paid on a possible duplicate follows the same answer (R3-02).
-    - **Counts: cards while hidden.** People counts stay and money cards go: Star, Color Belt and Camps already do this. Black Belt shows its Candidates card (pass 1b).
-    - **Lists: Prospects' filter line.** Prospects shows "Showing … only · Show all" like the rosters (R3-03).
-    - **Lists: Camps' touch roster.** Keep it (no row ⋯; the actions are in Camper detail's More), written as a named exception (R3-04).
-    - **Lists: back link.** One shared back link, built by Dashboard core (R3-06).
-    - **Lists: Star's icons.** "Back to the testing day" gets the testing day's `ti-calendar-event` instead of Undo's icon. "Change private day or time" gets `ti-calendar`, as Color Belt has it (R3-08).
-    - **Lists: search boxes.** Same words and place for the three in-list search boxes. Star and Color Belt rely on the planned top-bar people search (R3-09).
-    - **Lists: order above a roster.** One order above every roster: duplicate box, count cards, "Showing" line, school line, search, switches. Black Belt and Camps move lines (R3-10, C10).
-    - **Lists: page ⋯.** The page's ⋯ always goes last, to the right of the blue button. Prospects, Calendar and the Schedule's phone headers move it (R3-11).
-    - **Lists: roster order line.** A roster says its sort order only when it isn't by name. Black Belt's "Dan, then school…" stays (S-9).
-    - **Lists: event list ⋯ order.** One order on every event list: Copy link(s), Close / Open, Edit, then the rest. Camps changes (S-8).
-    - **Lists: school order.** Worcester first everywhere, as in the location switcher (S-1).
-    - **Lists: dropdowns.** The browser dropdowns become the shared dropdown when a section next touches that screen; no sweep (S-10).
-    - **Lists: after Edit details.** Edit details closes back to the roster, as Star and Camps do; Black Belt changes.
-    - **Family pages: removing a child.** Use the trash icon button on every family page; Camps' "Remove" link changes (R5-03).
-    - **Weights.** Screen text drops from weight 600 to 500 in Black Belt, Camps and New students; print keeps its heavier weights (R4-06).
-    - **Records only.** A desk-only form that's open while the switch is flipped in another browser tab is left as is, and recorded (R4-02). "Kept both" has no Undo, recorded as a named exception.
+10. **The small ones, as one batch.** Jeffrey approves the recommendations together, or pulls any out to see one by one. **Answered 2026-11-04: "Approve all"** (v1.045–v1.049). The list he was shown:
+
+    **Words**
+
+    1. "Hidden on this tablet" everywhere (Black Belt still says "device" in places).
+    2. The Undo payment box uses Black Belt's "Paid on [date]" wording everywhere.
+    3. One set of payment toasts everywhere: "[Name] marked paid · $X [way]" and "Payment undone for [Name]". The payment line and the history words match them.
+    4. One set of "someone else changed it" and "Undo didn't save" messages (Black Belt's newer ones), kept once in the shared words file.
+    5. "Ask an admin to open it." everywhere, as Camps already says.
+    6. Row menu labels read "More actions for …" everywhere.
+
+    **Toasts**
+
+    7. The ✓ appears only on account toasts (PIN, password).
+
+    **Counts**
+
+    8. A "Possible duplicate" row stays out of Paid and Not paid until it's resolved, with a gray line saying so (Black Belt's rule). Mark paid on a possible duplicate follows the same answer.
+    9. While private details are hidden, people counts stay and money cards go. Black Belt shows its Candidates card.
+
+    **Lists**
+
+    10. Prospects gets the "Showing … only · Show all" line, like the rosters.
+    11. Camps keeps its touch roster (actions in Camper detail's "More"), written down as an exception.
+    12. Dashboard core builds one shared "← back" link for every section.
+    13. Star's icons: "Back to the testing day" gets the testing-day calendar icon, and "Change private day or time" gets the calendar icon, as in Color Belt.
+    14. The three in-list search boxes use the same words and place. Star and Color Belt rely on the planned top-bar search instead.
+    15. One order above every roster: duplicate box, count cards, "Showing" line, school line, search, switches.
+    16. A page's ⋯ always goes last, to the right of the blue button.
+    17. A roster states its sort order only when it isn't by name, so Black Belt's line stays.
+    18. One order for event-list ⋯ menus: Copy link(s), Close / Open, Edit, then the rest.
+    19. Worcester comes first everywhere.
+    20. The browser's own dropdowns become the shared dropdown whenever a section next touches that screen.
+    21. Edit details closes back to the roster in every section; Black Belt changes.
+
+    **Family pages and look**
+
+    22. Every family page uses the trash icon to remove a child; Camps' "Remove" link changes.
+    23. Screen text goes from weight 600 to 500 in Black Belt, Camps and New students. Printed sheets keep their heavier weights.
+
+    **Recorded only (nothing to build)**
+
+    24. A desk-only form left open while the switch is flipped in another browser tab stays as it is. "Kept both" having no Undo becomes a written exception.
+
+11. **The in-list search boxes: which words, and where?** (R3-09; it follows item 14.) **Answered 2026-11-04: "A: Find a …"** (v1.050).
+    - **A (recommended):** "Find a candidate", "Find a camper" (as today), "Find a prospect".
+    - **B:** "Search candidates", "Search campers", "Search prospects".
+    - Both put every box on the left, above the list (Prospects' box moves out of the chip row), with one line when nothing is found, 'No [candidates / campers / prospects] match "…".', followed by a Clear search link; the box's own ✕ stays the shared icon button (v1.050). Prospects' box still finds by phone.
+    - Picture: `Q11-list-search-words.png`.
 
 ## Next
 
-- **Jeffrey:** questions 1–10 and 5b are answered (2026-11-04); the fix files carry the answers. **Still to ask, one at a time, with pictures:** (a) the in-list search's words, place and no-match line (v1.047 (14)); (b) R2-07's open part: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open") and the load-failure words (S-2: Camps / Finance "then retry", Black Belt "then try again", Calendar "and try again"); (c) Finance's row chevrons (S-11); (d) Color Belt's weight-600 family-page text (`register.css:375, 394, 659`, which Star's and Camps' family pages load too, so Camps' page keeps 600 text after its own R4-06); (e) whether section toasts also drop their closing full stop (v1.046 (7) drops only the ✓). The Main session merges `design-review` when he says so.
-- **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13 and BB8 History, new students' "(now)" 2–4, Dashboard core's v1.118), and Color Belt's merged Part 1 and Part 2 (84a6e7d).
+- **Jeffrey:** every pass 1 question is answered (2026-11-04): questions 1–11 and 5b, and the follow-up batch. The fix files carry the answers, and the design review has no open questions left; six Smaller lines are questions the sections ask Jeffrey themselves (New students 3, Black Belt 1, Finance 1, Color Belt 1). What was still to ask after question 10:
+  - (a) the in-list search's words, place and no-match line (v1.047 (14)): **answered as question 11, "A: Find a …"** (v1.050).
+  - (b) R2-07's open part: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open") and the load-failure words (S-2: Camps / Finance "then retry", Black Belt "then try again", Calendar "and try again"): **answered** (v1.051 (1) and (2)).
+  - (c) Finance's row chevrons (S-11): **answered** (v1.051 (3)).
+  - (d) Color Belt's weight-600 family-page text (`register.css:375, 394, 659`, which Star's and Camps' family pages load too, so Camps' page keeps 600 text after its own R4-06): **answered** (v1.051 (4)).
+  - (e) whether section toasts also drop their closing full stop (v1.046 (7) drops only the ✓): **answered** (v1.051 (5)).
+  - Jeffrey answered (b)–(e) together, as the follow-up batch: "Yes approved go ahead".
+  - The list he was shown:
+    1. "After an Undo: the toast says 'Undone' everywhere. When the Undo reopens something people depend on, it adds one short sentence: Finance 'Undone. The day is open again.'; Star 'Undone. Registration is open again.'"
+    2. "When a page can't load: 'Couldn't load. Check the connection, then retry.' with a Retry button, everywhere. Calendar, Forms, Prospects and Black Belt change their endings."
+    3. "Finance's History rows drop the '›' arrow at the end, like every other list whose rows open a page."
+    4. "Color Belt's family-page text (Star's and Camps' family pages use the same file) goes from weight 600 to 500, like all other screen text."
+    5. "Toasts: a one-sentence toast has no full stop at the end ('Ava Reed restored'); a two-sentence toast keeps them. Prospects, Forms, Finance and Calendar change."
+- **Next:** the Main session merges `design-review` when Jeffrey says so; then pass 2. This branch also removes the duplicate v0.737 row that main carries (392bc9e, lines 939 and 942); the merge keeps the copy with the notes.
+- **Pass 2:** what merged into `main` after pass 1's cut (e7fd75b):
+  - N15 + Calendar Event types (e640af5)
+  - Black Belt BB13 (2e806e7) and BB8 History (b428666)
+  - new students "(now)" 2–4 (7456636, 9b562b3)
+  - Dashboard core v1.118 (942cfdd) and v1.119–v1.121 (801b757)
+  - Color Belt Part 1 + 2 (84a6e7d)
+  - new students "(now)" 5–7 and its Part 2 start (2881413)
+  - Black Belt v0.974–v0.975 (392bc9e)
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.

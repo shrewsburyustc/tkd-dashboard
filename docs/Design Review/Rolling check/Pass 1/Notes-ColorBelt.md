@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 But pass 1 found problems in code you share with the merged sections, or that you and they copied from each other. They arrived on main with your merge, so they are fixes now. Pass 1's checkers looked at your branch for a few points (R2-02, R2-03, R2-10, R3-08). Where a read-only look at your branch (9dbb1ce, checked again at 5ae845c) adds something, it says so.
 
 - Each point keeps its finding id (R2-02, R2-10 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's unless marked "on your branch"; they may have moved. Points decided in v1.045–v1.049 cite main 84a6e7d's (your merged work).
+- **Line numbers** are main 5f1db41's unless marked "on your branch"; they may have moved. Points decided in v1.045–v1.049 cite main 84a6e7d's (your merged work), and points decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** a path starting with `event/`, `events/` or `private/` is in `src/screens/testing/`; `testing/text.js` is `src/screens/testing/text.js`; `components/…` is `src/components/…`.
 
 ### Rules (from your prompt)
@@ -53,7 +53,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 ### R2-10 — The Compare box's Keep buttons must keep "Keep this one" in their names · Low
 
 - **What pass 1 found:** Star passes your old helper `keepThisOneLabel` (`testing/text.js:689` on main) to the shared Compare box, so its buttons are named "Keep the first registration" for screen readers and voice control, without the visible "Keep this one" (WCAG 2.5.3, "label in name"). The checker also found your own dialog (`event/CompareDialog.jsx:48`) had the same names.
-- **What to check:** your 9dbb1ce switched the event roster to the shared `CompareDialog` (`event/EventPage.jsx:1720` on your branch at 5ae845c) and doesn't seem to pass `keepLabel`, so the shared default applies ("Keep this one: First registration"). Keep it that way. Your old helper (`testing/text.js:761` on your branch at 5ae845c) stays only while Star uses it; Star drops it with its own R2-10.
+- **What to check:** your 9dbb1ce switched the event roster to the shared `CompareDialog` (`event/EventPage.jsx:1787` on main 392bc9e) and doesn't seem to pass `keepLabel`, so the shared default applies ("Keep this one: First registration"). Keep it that way. Your old helper (`testing/text.js:761` on your branch at 5ae845c) stays only while Star uses it; Star drops it with its own R2-10.
 - **Check (preview mode):** open Review on a flagged pair and read the two buttons' accessible names.
 
 ### R1-02 — The Paying by hint · Medium (Star's), nothing to change here
@@ -78,7 +78,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 ### Shared fixes you get from Dashboard core · Low
 
-- **R4-07:** the history's gray "Payment history is hidden on this tablet." line shows only for people who had money changes (`HistoryLine.jsx:106`), so it tells paid from unpaid. Dashboard core shows it in every history while hidden; your CB7 line gets it. Check it after both merges.
+- **R4-07:** the history's gray "Payment history is hidden on this tablet." line shows only for people who had money changes (`HistoryLine.jsx:106`), so it tells paid from unpaid. Dashboard core shows it in every history while hidden; your CB7 line gets it. Check it once Dashboard core's R4-07 is on main.
 - **R4-09:** clickable tags (`.ev-tag-button`) are 22 px tall with a mouse. Dashboard core gives them a 24 px target in `testing-events.css`. Check your tags after.
 - **R3-13:** Dashboard core puts "Past days can't be chosen." and "Days after today can't be chosen." in `src/components/text.js`. If your CB11 date fields gray days, use those words and show the hint.
 
@@ -115,10 +115,24 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **What to do:** "… Ask an admin to reopen." → "… Ask an admin to open it." in both lines (the second keeps "Registration wasn't opened."). Camps doesn't re-export these two.
 - **Check (preview mode):** `__tkdPreview.setRole('staff')` and reload, then `__tkdPreview.setToday()` to a day after an event's closing date: the event's ⋯ reason reads "The closing date has passed. Ask an admin to open it."
 
+### R4-06 — Your family-page text drops from weight 600 to 500 · Low · decided 2026-11-04 (v1.051)
+
+- **Today:** three screen rules in your family-page stylesheet use weight 600, which §7 doesn't allow on screen (400 and 500 only): the fee amount (`src/styles/register.css:375`, `.reg-fee__amount b`), the bold start of the late-price warning (`:394`, `.reg-fwarn b`) and the total (`:659`, `.reg-total b`). None sits in a print block. Star's and Camps' family pages load this stylesheet too (`src/star-register/main.jsx:14`, `src/camp/main.jsx:10`): Camps' page draws the total (`src/camp/StepCheck.jsx:103`, `src/camp/SignedUp.jsx:90`); Star's draws none of the three today.
+- **Rule:** v1.051 (4) (Jeffrey, 2026-11-04: "Yes approved go ahead"): Color Belt's family-page text (`register.css`, which Star's and Camps' family pages load too) goes from weight 600 to 500, like all other screen text (§7; v1.048 (23)).
+- **What to do:** those three → 500. Three family pages load this stylesheet, so before you build it, show Jeffrey a picture of the three family pages (yours, Star's and Camps'), before and after, at 1280 and 390. Camps changes nothing for it (its own R4-06 changes only `camp.css:186`).
+- **Check (preview mode):** your family page (the fee, the late-price warning and, after sending, the total), Camps' family page (the family total) and Star's family page, at 1280 and 390: no text computes weight 600.
+
+### R2-07 (the words after an Undo) — Reopening registration says so · Low · decided 2026-11-04 (v1.051)
+
+- **Today:** the Undo of ⋯ Close registration opens registration again but says only "Undone" (`events/EventsTab.jsx:550–551`, `switchRegistration`'s `isUndo` branch), and so does Edit event's Undo when the edit had closed registration (`:504–506`, its toast at `:524`). Your other Undos say "Undone", as v1.051 asks.
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Finance "Undone. The day is open again.", Star "Undone. Registration is open again."; the same rule covers every Undo that opens registration, sign-up or a form again, in the same pattern: Color Belt and Black Belt "Undone. Registration is open again." (R2-07's open part).
+- **What to do:** when the Undo opened registration, show "Undone. Registration is open again." (Star's words). An Undo that closes it stays "Undone".
+- **Check (preview mode):** ⋯ Close registration on an open event → Undo → "Undone. Registration is open again."; ⋯ Open registration → Undo → "Undone".
+
 ### R1-06 — The Undo payment box takes Black Belt's words · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06
 
 - **Today:** your CB3 box uses Star's words, "Undo [Name]'s payment?" and "The $X [way] payment recorded on [date] is reversed …" (`testing/text.js:662–664`, and the private testing's at `:1078–1083`, on main 84a6e7d).
-- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; shared words are kept once in `src/components/text.js`.
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; v1.045: "Built by Dashboard core (the shared words) and by each section switching to them."
 - **What to do:** after Dashboard core's R1-06, take the title and "Paid on [date]" from `src/components/text.js`, and keep your consequence (what the row goes back to; both stay in the history).
 - **Check (preview mode):** mark a student paid, then ⋯ Undo payment: the box asks "Undo [Name]'s $X [way] payment?", and its line starts "Paid on".
 
@@ -153,12 +167,13 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **R3-08 is decided** (2026-11-04, v1.048 (13)): Star takes your `ti-calendar` for "Change private day or time". Nothing to do.
 - **R3-09 is decided** (2026-11-04, v1.047 (14)): your roster gets no search box; it relies on the planned top-bar people search (v1.031). Nothing to build.
 - **S-9 is decided** (2026-11-04, v1.047 (17)): a roster says its sort order only when it isn't by name. Black Belt's line stays, and no other roster adds one. Nothing to build.
+- **v1.051 (2) is decided** (2026-11-04): your load lines already end "Check the connection, then retry." with Retry. Nothing to build.
 
 ---
 
 ## Waits on Jeffrey (follow the answer later)
 
-- **R4-06** (Low) — should weight 600 go to 500? Yours: `register.css:375, 394, 659` (your family form, which Star's and Camps' forms load too). Don't change it unless Jeffrey says so. The design review asks Jeffrey; the answer reaches you through the Main session.
+Nothing now. Jeffrey answered R4-06 on 2026-11-04 (v1.051 (4)): it is a Fix now point above.
 
 ---
 
