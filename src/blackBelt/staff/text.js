@@ -1221,9 +1221,6 @@ export const CANT_UNDO_REGISTERED = "Can't undo: a family has already registered
 export const undoDanHasGrades = (name) => `Can't undo: grades were already entered for ${name}'s new Dan.`; // (new wording, not in the mockups)
 export const UNDO_CYCLE_HAS_GRADES = "Can't undo: grades were already entered on a testing day this save changed."; // (new wording, not in the mockups)
 export const UNDO_CYCLE_INVALID = "Can't undo this save any more (a date may be in the past now). Use Edit cycle to change it back."; // (new wording, not in the mockups)
-// Edit cycle's Undo put the registration switch back, then the other changes were refused and the
-// switch couldn't be set back either: says plainly what state the cycle is in (Retry = the rest of the Undo).
-export const undoHalfway = (open) => `Undo stopped halfway: registration is ${open ? 'open' : 'closed'} again, but the other changes are still saved. Check the cycle.`; // (new wording, not in the mockups)
 export const UNDO_KEEP_STALE = 'Someone else changed the keeping time just now, so nothing was done. Their change is shown.'; // (new wording, not in the mockups)
 export const UNDO_KEEP_DELETES = "Can't undo: the old numbers would delete personal details now. Use the Edit button to change them."; // (new wording, not in the mockups)
 export const UNDO_OPEN_TOO_LATE = "Couldn't undo: it's too late, or someone else changed this cycle just now."; // (new wording, not in the mockups)

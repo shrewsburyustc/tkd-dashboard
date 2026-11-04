@@ -2840,3 +2840,125 @@ Tested in PGlite on every run (`run.mjs` step0030: the undo file exactly as name
 - **The CSV log is written first, in the same call:** a download can't happen without its log row, and a failed call leaves neither.
 
 ---
+
+## Migration 0032: Black Belt — testing times every 5 minutes, candidate history, Edit cycle Undo in one call
+
+**Status: applied 2026-11-03** (0032a pre-check, 0032c fingerprints and security advisor, 0032d `0032_tests.sql` all passed; 0016/0024/0025/0026 tests not yet re-run on live — PGlite ran them after 0032). Built on `black-belt`, design-review items BB13 (rulebook v1.019 / S12), BB8 (v1.010, the History line) and the Edit cycle Undo race (BB5, v0.967).
+
+**Production order:** … 0025 → 0027 → 0026 → 0028 → 0029 → 0031 (live) → **0032**. It needs 0016, 0024 and 0025 (it stops with "0032 needs migration 0016 / 0024 / 0025 … first" if one is missing). **It must be live before the app version that calls `bb_candidate_history` or `bb_undo_cycle_edit`, or offers 5-minute testing times.** The app that is live today keeps working unchanged after it.
+
+**What it does** (`supabase/migrations/0032_black_belt_review.sql`):
+- **Testing-day times every 5 minutes (BB13).** Replaces **only** `public.bb_time_is_valid(p_time time)` (0016 section 1c; `create or replace`, same argument and answer type, `language sql`, `immutable`, `search_path = ''`, NULL → false, revoked from public, anon, authenticated and service_role). A testing day's start and end (and its second part's) were allowed 6:00 AM–10:00 PM every 15 minutes; after 0032 every **5** minutes, still no seconds. The table rules `bb_cycle_days_times_check` / `bb_cycle_days_second_times_check`, Add cycle and Edit cycle use it and are **not** replaced. **Only widens the rule:** every saved day stays valid.
+- **New `bb_history_strip(row jsonb)`** — internal helper (sql, immutable, `search_path = ''`, nobody may call it): takes every login-id key out of a history row (`created_by`, `updated_by`, `withdrawn_by`, `recorded_by`, `marked_by`, `undone_by`), plus `submission_id` and `makeup_of_candidate_id`; a date of birth, email, kept age, signature or signer's name that is not null shows as "on file" (the log triggers already write "on file" / "changed"; this is the second line of defence).
+- **New `bb_candidate_history(p_candidate_id uuid)`** (BB8) — the History line of one candidate: the change-log rows of the candidate and of its own payments, waivers, grades, extra-point counts, make-up subjects and "sent" marks, newest first, at most 500; each row only `occurred_at, actor_name, action, table_name, op, before, after`, with before / after through `bb_history_strip`. Any staff with data access. `no_access` → `invalid` (no id) → `not_found`. Security definer, `search_path = ''`, `authenticated` only. Written as two parts (the candidate's own rows, then its child rows) so each can use an index instead of reading the whole shared `change_log`.
+- **New index on the shared `change_log`:** `change_log_bb_candidate_child_idx` on `((after ->> 'candidate_id'))`, **partial** — only rows `where table_name in ('bb_payments', 'bb_candidate_waivers', 'bb_grades', 'bb_extra_counts', 'bb_makeup_subjects', 'bb_result_sends') and op = 'insert'`. It finds a candidate's child rows for the History line; the candidate's own rows use 0003's `change_log_table_record_idx`. Because it is partial it stays small and changes nothing for other sections (no other section's fingerprints or tests list `change_log`'s indexes). Building it holds writes to `change_log` for a moment (a few seconds at most on the school's data) — every section waits, nothing fails.
+- **New `bb_undo_cycle_edit(p_cycle_id, p_expected_version, p_payload, p_open, p_known_ids uuid[])`** — Edit cycle's "Changes saved · Undo" in one transaction. Admins only (`no_access` → `not_allowed` → `invalid`). It locks the cycle first; a candidate who came through the **family form** and isn't in `p_known_ids` (the roster the app read before the save) → `registered`, nothing written. Otherwise the switch back (`bb_set_registration`, only when `p_open` isn't empty) and then the old values (`bb_update_cycle`); if either refuses, both are undone and that refusal is answered as it came (`stale`, `has_grades`, `duplicate_name`, `invalid`, `part_without_day`, `finished`, `waiver_needed` …). Writes no history row of its own. Security definer, `search_path = ''`, `authenticated` only.
+- No table column, rule or data changes (one new index, above). Nothing is granted to anon. No destructive words — Supabase should not warn.
+
+**Each step needs Jeffrey's OK.**
+
+### 0032a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0032_preapply_check.sql` (one read-only SELECT, connector-safe) must answer `body_is_0016 = true`, `body_is_0032 = false`, `new_functions = 0`, `history_index = false`, `times_bad_new = 0`, `times_bad_old = 0`. `body_is_0016 = false` with `body_is_0032 = false` means someone changed the function since 0016 — stop and tell Claude.
+2. Claude runs `supabase/tests/0016_fingerprints.sql` and keeps the result (the "before" record for 0032c and the undo).
+
+### 0032b. Apply 0032 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0032_black_belt_review.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+3. **Running it again is safe** (tested: no fingerprint changes). **Re-running 0016 after this** puts 0016's 15-minute rule back → re-run 0032 straight after (0025's warning about re-running 0016 applies anyway).
+
+### 0032c. Read-only checks (Claude, through the connection)
+
+1. `supabase/tests/0032_fingerprints.sql` — the five lines must match what `supabase/tests/pglite/run.mjs` printed ("0032 fingerprints"): `bb_time_is_valid` and `bb_history_strip` with `lang=sql volatility=i … definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`; `bb_candidate_history` (`volatility=s`) and `bb_undo_cycle_edit` (`volatility=v`) with `lang=plpgsql … returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`; and the `index  change_log.change_log_bb_candidate_child_idx` line with its full definition. The file contains neither of the words the connection refuses.
+2. `supabase/tests/0016_fingerprints.sql`: **only** the `bb_time_is_valid(p_time time)` line differs from 0032a's record (its body md5), and the three new functions' lines are added. Every other migration's fingerprints: unchanged (`run.mjs` step0032 checks exactly that).
+3. `0032_preapply_check.sql` again: `body_is_0032 = true`, `new_functions = 3`, `history_index = true`, both counts 0.
+4. **Security advisor:** nothing new.
+
+### 0032d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0032_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0032 TESTS PASSED**. It checks the time rule (and through Add cycle, Edit cycle and the table rules), who may read the history and what it shows (no date of birth, email, signature, signer's name or login id anywhere; exactly the candidate's own rows, newest first), and the Undo (every refusal; a family that registered after the save → `registered` with nothing changed; the switch and the values back together, or neither). It makes its own `zz test …` cycles and candidates (and saves a test waiver if the current one is still the placeholder) and rolls everything back.
+2. Then `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql` and `0026_tests.sql` again — all must still pass.
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0032e. Undo 0032 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that calls neither `bb_candidate_history` nor `bb_undo_cycle_edit` and offers testing times only every 15 minutes.
+2. Claude runs `supabase/tests/0032_preapply_check.sql`: `times_bad_old` must be **0**. Above 0 → testing days were saved with a 5-minute time (e.g. 12:05); change them in the app first. (Postgres does not re-check saved rows when the function inside a table rule changes, so such a day would stay — and every later save of its cycle would be refused as "invalid".)
+3. Paste **the whole file** `supabase/manual/0032u_undo.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0032 undo refused: …") while any saved time breaks 0016's rule, then puts back 0016's exact `bb_time_is_valid` (section 1c, word for word) with its revoke and removes `bb_undo_cycle_edit`, `bb_candidate_history`, `bb_history_strip` and the index `change_log_bb_candidate_child_idx` (they hold no data; the history rows stay in `change_log`). One transaction. Supabase warns about destructive operations (the three functions and the index are really removed). Confirm only if you mean it. If it reports a **deadlock** (a staff save hit the same tables at that moment), nothing was changed: run it again.
+4. Claude checks `supabase/tests/0016_fingerprints.sql` (must equal 0032a's record again) and `0032_preapply_check.sql` (`body_is_0016 = true`, `new_functions = 0`, `history_index = false`). Then run `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql`, `0026_tests.sql`.
+5. To redo: paste 0032 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0032: the History line on a seeded `change_log` of tens of thousands of rows answers within its time limit and its plan uses both indexes; with a 12:05 testing day planted the undo file refuses; on the clean database the undo file exactly as named here gives back every fingerprint file as it was before 0032, the Black Belt tests pass, and 0032 again gives the tested fingerprints and `0032_tests.sql` passes).
+
+**Why:**
+- **The Undo in the database, not in the app:** a registration doesn't change the cycle's version, so the app could only compare rosters — and a family could register between that read and the writes. Locking the cycle first means a family registers either before the Undo (refused) or after it. One transaction also means an Undo never stops halfway.
+- **A new function, not a 4th argument on `bb_update_cycle`:** an argument with a default would make the web API's choice between two versions of `bb_update_cycle` ambiguous.
+- **The history through a reader, never the table:** `change_log` stays unreadable for the app; the reader decides what leaves the database (names, never login ids or private values).
+
+---
+
+## Migration 0033: Camps design review (Mark paid with a way to pay, Camper history)
+
+**Status: APPLIED 2026-11-03** (Jeffrey, SQL Editor; 0033a pre-check ready, 0033c fingerprints match the file, 0033d advisor nothing new, 0033e all seven test files passed). Built on `camps` (rulebook v0.735 = C2, the shared Mark paid box; v0.736 = C7, the history line; plan `docs/Camps/TKD-Camps-0033-Plan.md`). Apply it **before** the app version that sends the way to pay or shows the History line is deployed. The app from before 0033 keeps working with 0033 applied (its 3-input Mark paid call is covered by the new input's default — tested).
+
+**Production order:** … 0022 → 0027 (live) → 0026, 0028, 0029, 0031 (live) → **0033**. It needs 0013, 0017, 0022 and 0027 — it stops with "0033 needs migration 00NN … first" if one is missing.
+
+**What it does** (`supabase/migrations/0033_camps_design_review.sql`):
+- **New column `camp_campers.paying_by_on_form`** (cash / check / card, never empty): the way the family chose **on the form**. A new trigger (`camp_campers_before_form_choice` → `camp_campers_keep_form_choice()`) copies `paying_by` into it when a camper is added and keeps the old value on every update, so no function can change it. The family form's functions are **not** changed. Existing campers get the `paying_by` of **their own history insert row** (what the family form sent when the camper was added), so a Paying by already changed at the desk is not taken for the form's choice; a camper with no such row gets its current `paying_by` (0033a counts those). That fill writes no history row and moves no version. Readable by `authenticated` (column right); shown as the **last** column of `camp_roster`, so Camper detail (`camp_camper_detail`, which copies the roster row) has it too. The Mark paid box's hint: `paying_by = paying_by_on_form` → "on the form", else "at the desk".
+- **New column `camp_payments.paying_by_before`** (empty except when Mark paid or Edit payment also changed Paying by: the old Paying by, so Undo payment can put it back). Rule: empty, or a payment (never a reversal) with cash / check / card that isn't its own method. **Not** readable by the app; Finance names its columns, so it never sees it.
+- **`camp_mark_paid(p_camper_id, p_expected_version, p_school, p_method text default null)`** replaces 0013's 3-input version, which is **removed** in the same file (two versions would make every 3-input call "ambiguous"). No way sent = the camper's Paying by (as before). Another way → the payment is that way, Paying by becomes it (same batch, logged) and the payment remembers the old one. A bad way → `{"status":"invalid","field":"method"}`. The answer gains `"paying_by"`.
+- **`camp_undo_payment`** (0013) — same arguments: also puts Paying by back when the payment remembered one and Paying by is still that payment's method.
+- **`camp_edit_payment`** (0022) — same arguments: Paying by follows an edit that changes the way, **exactly as Color Belt's 0030 `testing_edit_payment`** (the new payment remembers the family's choice; Undo of it puts it back).
+- **New `camp_camper_history(p_camper_id uuid)`** (staff and admins; `no_access` / `invalid` / `not_found`): newest first, at most 500 change_log rows of the camper, their days, extras and payments (check-ins left out) and their **sign-up** (shared by brothers and sisters, so a family change shows in every child's history). Each row: `occurred_at`, `actor_name`, `action`, `table_name`, `op`, `batch_id`, `before`, `after` — no login ids (helper `camp_history_strip`, nobody may call it), the signature only "on file".
+- **New index `change_log_camp_camper_idx`** (only the insert rows of those three camper tables, by the camper id inside "after"). The reader is three parts joined with `union all` — the camper's rows and the sign-up's rows through 0003's `(table_name, record_id)` index, the days / extras / payments through this partial index and then 0003's index — so it never reads all of change_log. **Measured in PGlite** (`run.mjs` step0033, about 30,000 history rows): EXPLAIN shows every part using an index (no full scan), both as a generic and a custom plan; one call took about 8–20 ms over several runs. At that size a full scan was only a few ms slower, so the index matters as the history grows, not today.
+- Every function: security definer (except the two helpers), `search_path = ''`, `has_data_access()` first, revoked from public, anon, authenticated and service_role, granted to `authenticated` only (the helpers to nobody). Nothing for anon or camps_registrar.
+
+### 0033a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0033_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `mark_paid_3_inputs true`, `mark_paid_4_inputs false`, `replaced_as_tested 3`, `new_columns 0`, `history_function false`, `campers_without_insert_row 0`; `campers` = how many campers the fill touches; `campers_desk_changed` (information only) = campers whose Paying by was already changed at the desk — the fill still takes their form choice from their history insert row. **`campers_without_insert_row` above 0** → tell Jeffrey first: only those campers get today's Paying by as "the form's choice" (Claude can list them). Anything else (e.g. `replaced_as_tested` below 3) → **stop**: a function changed since 0033 was built, and 0033 must be rebuilt on the newer code first. `false / true / 0 / 2 / true` = already applied.
+2. Claude runs `0013_fingerprints.sql`, `0022_fingerprints.sql` and `0033_fingerprints.sql` and keeps the results (the "before" record for 0033c and the undo).
+
+### 0033b. Apply 0033 (you, in the SQL Editor)
+
+1. **Paste at a quiet time** (nobody at the desk): the file briefly locks `camp_campers` for the fill and `change_log` while it builds the new index, so a save made at that moment waits a few seconds.
+2. Copy **the whole file** `supabase/migrations/0033_camps_design_review.sql`, **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about destructive operations. **One** line is real on the first run: `drop function if exists public.camp_mark_paid(uuid, integer, text)` — the old 3-input Mark paid, made again with 4 inputs right after it in the same transaction. The other `drop … if exists` lines only make re-running safe. No data is removed. Confirm.
+4. "Success." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint, row or history change). **If 0022 is ever re-run after 0033, re-run 0033 straight after it** (0022 puts the old Edit payment back). **0013 can't be re-run cleanly after 0033:** its `camp_roster` has one column fewer, so its `create or replace view` fails and nothing of it is kept — run the undo (0033f) first if 0013 ever has to be re-run, then 0033 again. (Were it to run, it would bring back the 3-input `camp_mark_paid` **next to** the 4-input one, and every Mark paid would fail as "ambiguous".)
+
+### 0033c. Fingerprints (Claude runs these through the connection)
+
+1. `supabase/tests/0033_fingerprints.sql` must match what `run.mjs` printed ("0033 fingerprints"): 13 lines — the 6 functions (`camp_mark_paid` with 4 inputs, `camp_undo_payment`, `camp_edit_payment`, `camp_camper_history`: `definer=true`, `settings=search_path=""`, `rights=authenticated:EXECUTE,postgres:EXECUTE`; `camp_history_strip`, `camp_campers_keep_form_choice`: `definer=false`, `rights=postgres:EXECUTE`), the 2 columns (`paying_by_on_form text notnull=true rights=authenticated:SELECT`; `paying_by_before text notnull=false rights=`), the 2 rules, the trigger, the index, and the view (`options=security_invoker=true rights=authenticated:SELECT`). The file contains neither of the words the connection refuses.
+2. `0013_fingerprints.sql` and `0022_fingerprints.sql` differ from 0033a **only** in: `camp_mark_paid` (3 → 4 inputs, same rights, owner and settings), `camp_undo_payment` and `camp_edit_payment` (body md5 only), the `camp_roster` view line (new md5, still `security_invoker=true`), the `camp_campers` table line (one more column right: `paying_by_on_form>authenticated:SELECT`), the new trigger line, and the two new rules in 0022's list. Every other migration's fingerprints: unchanged (`run.mjs` step0033 checks exactly that).
+3. The pre-apply check again: `false / true / 0 / 2 / true`.
+
+### 0033d. Security advisor
+
+Supabase dashboard → **Advisors → Security advisor** → refresh: nothing new (the view is still security invoker; the new functions all have `search_path = ''`).
+
+### 0033e. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0033_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0033 TESTS PASSED**. It makes its own `zz test …` camp (Mon–Wed of a week 15–21 days from now) and rolls everything back.
+2. Then `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql` and `0027_tests.sql` again — all must still pass (`0013_tests.sql` T16a knows 0033's three new functions).
+3. Put the placeholders back afterwards.
+
+### 0033f. Undo 0033 (only with Jeffrey's OK)
+
+1. The app version that sends the way to pay or reads the history / `paying_by_on_form` must **not** be live.
+2. Paste **the whole file** `supabase/manual/0033u_undo_camps_design_review.sql` in the SQL Editor → **Run**. It removes `camp_camper_history`, `camp_history_strip`, the index, the trigger and its function, the view (made again right away exactly as 0013 made it, with its rights) and the two new columns **with their values** (each camper's form choice is still in their history; payments keep everything else); then it puts back 0013's 3-input `camp_mark_paid` and `camp_undo_payment` and 0022's `camp_edit_payment`, word for word. Paying by values changed by Mark paid / Edit payment stay. One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. Claude checks: `0013_fingerprints.sql` and `0022_fingerprints.sql` match 0033a's record; the pre-apply check answers `true / false / 3 / 0 / false` again. Then run `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql`, `0027_tests.sql`.
+4. To redo: paste 0033 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as named here; afterwards every fingerprint file equals the one before 0033 and the camps and Finance tests pass; 0033 again gives the tested fingerprints and `0033_tests.sql` passes).
+
+**Why:**
+- **The form's choice stored, not a yes/no:** the hint is worked out as "Paying by = form's choice", so every Undo (of a payment, or of Change how they'll pay) gives the right words with nothing extra to put back (plan §1a).
+- **A trigger, not a change to the sign-up functions:** the public (anon) path stays exactly as it is.
+- **The old Mark paid removed in the same file:** a 3-input and a 4-input version side by side would make the server refuse every 3-input call as ambiguous; with one 4-input version and a default, the live app's named 3-input call keeps working (tested as role authenticated, named and positional).
+- **Edit payment copies Color Belt 0030 exactly** (plan §1c): Paying by follows any edit that changes the way, not only an edit of the newest payment.
+- **A partial index:** the reader finds a camper's days, extras and payments by the camper id inside the history rows; the index covers only those insert rows, so other history writes cost nothing extra. EXPLAIN in PGlite shows it used.
+- **The form's choice from the history:** every camper since 0013 has an insert row in change_log written by the family form, which holds the way they chose; today's Paying by is only the fallback.
+
+---

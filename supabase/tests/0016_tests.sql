@@ -202,6 +202,9 @@ declare
   v_has_0024 boolean := to_regclass('public.bb_default_rubric') is not null;
   -- 0025 (grading and results) installed? (CONTRACT-0025 12.4)
   v_has_0025 boolean := to_regclass('public.bb_grades') is not null;
+  -- 0032 (history reader, Edit cycle's Undo in one call) installed? Its 3 new functions
+  v_has_0032 boolean := to_regprocedure('public.bb_candidate_history(uuid)') is not null;
+  v_review_fns text[] := array['bb_history_strip', 'bb_candidate_history', 'bb_undo_cycle_edit'];
   -- the 42 functions 0025 adds (CONTRACT-0025 17: 15 staff, 16 helpers, 11 trigger functions)
   v_grading_fns text[] := array[
     'bb_set_grade', 'bb_set_measured', 'bb_set_extra_count', 'bb_set_makeup_subjects', 'bb_add_makeup',
@@ -1234,7 +1237,7 @@ begin
     jsonb_set(v_p, '{days,0,end_time}', '"12:00"')::text,                              -- end before start
     jsonb_set(v_p, '{days,1,start_time}', '"05:45"')::text,                            -- before 6:00 AM
     jsonb_set(v_p, '{days,1,end_time}', '"22:15"')::text,                              -- after 10:00 PM
-    jsonb_set(v_p, '{days,2,start_time}', '"10:10"')::text,                            -- not on 15 minutes
+    jsonb_set(v_p, '{days,2,start_time}', '"10:07"')::text,                            -- not on a 5-minute step (0032; 15 before it)
     jsonb_set(v_p, '{days,2,start_time}', '"25:00"')::text,                            -- not a time
     jsonb_set(v_p, '{days,1,place}', '{"code": "worcester", "other": "x"}')::text,     -- two places
     jsonb_set(v_p, '{days,1,place}', '{"code": "boston"}')::text,                      -- not a school
@@ -3487,7 +3490,8 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'bb\_%' and not (p.proname = any (v_staff_fns || v_public_fns || v_helper_fns))
      and not (v_has_0024 and p.proname = any (v_rubric_fns))
-     and not (v_has_0025 and p.proname = any (v_grading_fns));
+     and not (v_has_0025 and p.proname = any (v_grading_fns))
+     and not (v_has_0032 and p.proname = any (v_review_fns));
   if v_txt is not null then raise exception 'TEST FAILED: C4 unexpected bb_ function(s): %', v_txt; end if;
   -- after 0025 exactly its 42 new functions are there too, one version each (CONTRACT-0025 12.4)
   if v_has_0025 and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

@@ -401,15 +401,17 @@ export default function CampPage({
     setBanner((current) => (current?.kind === 'row' ? null : current));
   }
 
-  // ===== Mark paid: one click, the full amount owed (Color Belt plan answer 6) =====
+  // ===== Mark paid: the full amount owed (Color Belt plan answer 6), the way picked in the shared box =====
   // The payment goes to the Daily report of THIS DEVICE's home school (account menu "This device",
   // owner decision 2026-10-19) — whatever the top switcher shows and whatever the camp. Never asked.
-  function doMarkPaid(row) {
-    doMarkPaidAt(row, paymentSchoolFor(deviceLocation));
+  // method = the way picked in the Mark paid box (v0.735); another way than Paying by also changes
+  // Paying by (the database does it in the same save; the toast's Undo puts it back).
+  function doMarkPaid(row, method = null) {
+    doMarkPaidAt(row, paymentSchoolFor(deviceLocation), method);
   }
-  async function doMarkPaidAt(row, school) {
+  async function doMarkPaidAt(row, school, method = null) {
     if (!begin()) return;
-    const result = await markPaid(row.id, row.version, school);
+    const result = await markPaid(row.id, row.version, school, method);
     end(result.status);
     const name = T.camperLabel(row);
     if (result.status === 'invalid' && result.field === 'school') {
@@ -417,11 +419,21 @@ export default function CampPage({
       return;
     }
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school) }, true);
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school, method) }, true);
       return;
     }
     rowDone();
-    reloadQuiet();
+    const reloaded = reloadQuiet();
+    // The "$X due" tag (where focus went back when the box closed) turns into a plain "Paid" with
+    // the payment, so once the roster has reloaded focus moves to the row, as Star does: the tag if
+    // the camper still owes ("Owes $X"), else the camper's name, else the row's ⋯. Only when focus
+    // is still on that tag or fell to the page — never away from something else (e.g. the toast's Undo).
+    reloaded.then(() => focusSoon(() => {
+      const tag = document.querySelector(`[data-pay-tag="${row.id}"]`);
+      const active = document.activeElement;
+      if (active && active !== document.body && active.isConnected && active !== tag) return null;
+      return tag ?? document.querySelector(`[data-nav-row="${row.id}"]`) ?? document.querySelector(`[data-camper-more="${row.id}"]`);
+    }));
     const paymentId = result.paymentId;
     // Hide private details switched on while this was saving: "Leo Kim marked paid", no amount or
     // method (picture 03b keeps the Undo; a failed Undo then gets the general words, no Retry).
@@ -876,6 +888,12 @@ export default function CampPage({
           days={days}
           prices={prices}
           extras={extras}
+          // History's "(whole family)" (v0.736): how many campers share this camper's sign-up (one
+          // family form) — counted from the roster, which has every camper of the camp.
+          familySize={(() => {
+            const signupId = roster.find((r) => r.id === dialog.camperId)?.signupId;
+            return signupId ? roster.filter((r) => r.signupId === signupId).length : 1;
+          })()}
           isPhone={isPhone}
           hidden={hidden}
           detailsHidden={detailsHidden}
@@ -1215,7 +1233,7 @@ export default function CampPage({
         handlers={{
           onOpen: (row, el) => openCamper(row, el),
           onMore: (row, anchor) => openMenu('camper', row, anchor),
-          onMarkPaid: (row) => doMarkPaid(row),
+          onMarkPaid: (row, method) => doMarkPaid(row, method),
           onReview: (row, anchor) => openCompareFor(row, anchor),
           onReviewPair: (pair, opener) => openDialog({ type: 'compare', pair, saving: false, failed: false, opener }),
           onCheckIn: doCheckIn,

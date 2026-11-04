@@ -62,7 +62,6 @@ export const {
   TAG_POSSIBLE_DUPLICATE,
   TAG_REMOVED,
   TAG_DUPLICATE_COPY,
-  MARK_PAID,
   removedGroup,
   NOT_IN_COUNTS,
   removedBy,
@@ -548,12 +547,10 @@ export const undoCheckInFailed = (name) => `${name}'s check-in wasn't undone. Ch
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
 // "Pizza party today: 15" — the number is drawn big. Another day: "Pizza party: 12" (not in the mockups).
 export const extraTodayLine = (name, isToday = true) => (isToday ? `${name} today:` : `${name}:`);
-export const notePopoverLine = (name, kind, cents) => (kind === 'owes' ? `${name} owes ${formatMoney(cents)}` : `${name} · not paid · ${formatMoney(cents)}`); // (not in the mockups)
-export const PAYMENT_NOTE_LABEL = (name) => `Payment for ${name}`; // (not in the mockups) screen readers
-
-// Paid tags, Mark paid, the camper menu
+// Paid tags, the camper menu. The tag opens the shared Mark paid box (components/MarkPaidBox.jsx,
+// rulebook v0.735), whose own words ("Paid by", "Mark paid $166", "They chose Cash on the form.")
+// are in components/text.js.
 export const tagOwes = (cents) => `Owes ${formatMoney(cents)}`;
-export const markPaidAmount = (cents) => `Mark paid ${formatMoney(cents)}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
@@ -779,3 +776,44 @@ export const updatedAtLine = (ms) => `Updated ${new Date(ms).toLocaleTimeString(
 // "Hidden on this tablet" (a value that keeps its row, gray) and "Payment details are hidden on
 // this tablet." (a whole payment part) — the dashboard-wide words, so every section says the same.
 export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../lib/privateDetails.js';
+
+// ----- History in Camper detail (design review C7, rulebook v0.736; Star's style, v0.518) -----
+// The line itself ("History · 5 changes", "Oct 13 · Jeffrey Berg", Loading…, the amber bar, "no
+// changes yet", "Payment history is hidden on this tablet.") is the shared part's
+// (components/HistoryLine.jsx). These are Camps' words for each change, "what: before → after".
+// One save that changes several things is one entry, its parts joined with "; "
+// (screens/camps/camperHistoryWords.js puts them together).
+export const HISTORY_STAFF = 'Staff'; // the "who" when the log has no name (Star's word)
+export const HISTORY_JOIN = '; ';
+export const historySignedUp = (reference) => `Signed up on the family form${reference ? ` · ${reference}` : ''}`;
+export const historyChange = (label, before, after) => `${label}: ${before} → ${after}`;
+export const HISTORY_EMPTY_VALUE = '—'; // a value that was blank (not in v0.736)
+export const HISTORY_DAYS = 'Days';
+export const historyDayList = (isoDays) => isoDays.map(dayLong).join(' · '); // "Wed, Nov 25 · Fri, Nov 27"
+export const historyExtraAdded = (name) => `${name} added`;
+export const historyExtraRemoved = (name) => `${name} removed`;
+export const HISTORY_AN_EXTRA = 'Extra (no longer offered)'; // an extra the camp no longer has (not in v0.736)
+export const HISTORY_FIRST_NAME = 'First name';
+export const HISTORY_LAST_NAME = 'Last name';
+export const HISTORY_AGE = 'Age';
+export const HISTORY_MEMBER = 'Member';
+export const historyYesNo = (value) => (value ? 'Yes' : 'No');
+export const HISTORY_PAYING_BY = 'Paying by';
+export const historyMarkedPaid = (cents, method) => `Marked paid ${formatMoney(cents)} ${payingByLower(method)}`;
+export const historyPaymentUndone = (cents, method) => `Payment undone: ${formatMoney(cents)} ${payingByLower(method)}`;
+export const historyPaymentChanged = (oldCents, oldMethod, newCents, newMethod) =>
+  `Payment changed: ${formatMoney(oldCents)} ${payingByLower(oldMethod)} → ${formatMoney(newCents)} ${payingByLower(newMethod)}`;
+export const HISTORY_WITHDRAWN = 'Withdrawn';
+export const HISTORY_RESTORED = 'Restored';
+export const HISTORY_DUPLICATE_FOUND = 'Possible duplicate found';
+export const HISTORY_KEPT_BOTH = 'Kept both';
+export const HISTORY_DUPLICATE_COPY = 'Removed as a duplicate copy';
+// The family part (the sign-up). With more than one child on the form the entry ends "(whole family)".
+export const HISTORY_PARENT = 'Parent';
+export const HISTORY_PARENT_PHONE = 'Parent phone';
+export const HISTORY_PARENT_RELATION = 'Parent relationship'; // (not in v0.736)
+export const HISTORY_EMERGENCY = 'Emergency contact';
+export const HISTORY_EMERGENCY_PHONE = 'Emergency contact phone';
+export const HISTORY_EMERGENCY_RELATION = 'Emergency contact relationship'; // (not in v0.736)
+export const HISTORY_SIGNATURE_DELETED = 'Signature deleted (3 years after the camp)';
+export const HISTORY_WHOLE_FAMILY = ' (whole family)';
