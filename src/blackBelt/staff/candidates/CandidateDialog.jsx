@@ -10,7 +10,8 @@
 //   - Payments: Plan · Kukkiwon certificate · every payment (Date · For · How · Amount · Note ·
 //     Recorded by; phones: two lines each) with a ⋯ per line for admins · the totals
 //   - Close · Print receipt · Record payment (primary), and ⋯: Edit details · Change plan or
-//     Kukkiwon · Remove candidate / Restore / Delete permanently (admins)
+//     Kukkiwon — (admins) Withdraw · Delete permanently, or on a withdrawn candidate Restore ·
+//     Delete permanently (v1.007 / v0.963: no "Remove candidate" choice box any more)
 // Edit details (Star v0.112) turns the same dialog into fields with Cancel and Save.
 // A make-up from an earlier cycle (contract 0025 §14.5, G 27): the gray "Make-up" tag and the line
 // "Make-up from Spring 2027 · retests Free sparring" under the title, its earlier BB reference,
@@ -23,7 +24,7 @@
 // useCandidateActions only while this dialog is open.
 // Focus: Edit details puts the cursor in First name; back from it, or from a dialog opened here,
 // focus returns to the button that opened it (its data-focus-key).
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
@@ -33,6 +34,7 @@ import { formatCents } from '../../../lib/blackBelt/money.js';
 import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
+import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
 import { detailsProblems } from './checks.js';
 import { ICONS } from './icons.js';
 import { MoneyTag } from './RosterRows.jsx';
@@ -203,7 +205,7 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
 }
 
 // ----- Edit details -----
-function EditFields({ edit, data, isAdmin, today, onChange }) {
+function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
   const id = useId();
   const v = edit.values;
   const c = data.candidate;
@@ -234,11 +236,31 @@ function EditFields({ edit, data, isAdmin, today, onChange }) {
         {lastMsg ? <Notice id={err('last')}>{lastMsg}</Notice> : <p id={`${id}-last-hint`} className="field-hint">{T.LAST_NAME_HINT}</p>}
       </div>
       <div className="field">
-        <label htmlFor={`${id}-dob`}>{T.DOB}</label>
         {purged ? (
-          <p id={`${id}-dob`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
+          <>
+            <label htmlFor={`${id}-dob`}>{T.DOB}</label>
+            <p id={`${id}-dob`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
+          </>
         ) : (
-          <DateField id={`${id}-dob`} value={v.dob} readOnly={ro} invalid={Boolean(dobMsg)} describedBy={dobMsg ? err('dob') : undefined} onChange={(dob) => onChange({ dob })} />
+          <>
+            {/* A span, not a <label>: the field is a button (the calendar), named by its own label */}
+            <span className="field-label">{T.DOB}</span>
+            {/* Star's staff birthday field (v1.018): future days gray, the Year list back 80 years */}
+            <DateField
+              id={`${id}-dob`}
+              label={T.DOB}
+              value={v.dob}
+              today={today}
+              max={today}
+              years={dobYears(today)}
+              hint={T.DOB_CALENDAR_HINT}
+              isPhone={isPhone}
+              disabled={ro}
+              invalid={Boolean(dobMsg)}
+              describedBy={dobMsg ? err('dob') : undefined}
+              onChange={(dob) => onChange({ dob })}
+            />
+          </>
         )}
         {dobMsg && <Notice id={err('dob')}>{dobMsg}</Notice>}
       </div>
@@ -294,6 +316,76 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   const withdrawn = c?.status === 'withdrawn';
   const moreButtonElement = () => moreRef.current?.querySelector('button') ?? null;
 
+  // A problem while this detail is open (v0.966, BB4): the shared amber bar INSIDE the detail —
+  // under its header on the PC and tablet, at the top of the full-screen page on phones — never
+  // the tab's bar behind the dialog. It stays until × (or a Retry that works) and goes away with
+  // the detail. Retry clears it first; a retry that fails puts it back.
+  const banner = d.banner ?? null;
+  // A new problem is brought into view: the detail may be scrolled down to the ⋯ that was used, and
+  // the bar sits near its top, so the part of the dialog that scrolls goes back to the top.
+  const bannerRef = useRef(null);
+  useEffect(() => {
+    if (!banner) return;
+    let box = bannerRef.current?.parentElement ?? null;
+    while (box && box.scrollHeight <= box.clientHeight) box = box.parentElement;
+    if (box && box !== document.documentElement && box !== document.body) box.scrollTop = 0;
+  }, [banner]);
+  const bannerElement = banner && (
+    <div ref={bannerRef}>
+      <ErrorBanner
+      text={banner.text}
+      onRetry={
+        banner.retry
+          ? () => {
+              actions.dismissDetailBanner();
+              banner.retry();
+            }
+          : undefined
+      }
+      retrying={actions.busy}
+      onDismiss={actions.dismissDetailBanner}
+      />
+    </div>
+  );
+
+  // Phones (BB5, v0.967): the toast ("Changes saved · Undo") must sit ABOVE the detail's bottom
+  // buttons, never over Record payment (a tap meant for it could hit Undo). The buttons' height
+  // changes (one or two buttons, the safe area), so it is measured here and handed to the CSS as
+  // --bb-toast-lift (blackBelt.css moves the toast up by it while the buttons are on screen).
+  // The buttons' bar as an element in state (a "callback ref"): when it appears — the detail
+  // finished loading, Edit details closed — the effect below runs again and measures it at once.
+  const [phoneButtons, setPhoneButtons] = useState(null);
+  useEffect(() => {
+    const root = document.documentElement;
+    const clear = () => root.style.removeProperty('--bb-toast-lift');
+    if (!isPhone) return clear;
+    const update = () => {
+      const element = phoneButtons;
+      if (!element?.isConnected) {
+        clear();
+        return;
+      }
+      // from the bottom of the window up to the top edge of the buttons' bar (at least the bar's
+      // own height: it is stuck to the bottom of the page)
+      const box = element.getBoundingClientRect();
+      const lift = Math.max(box.height, window.innerHeight - box.top);
+      root.style.setProperty('--bb-toast-lift', `${Math.round(lift)}px`);
+    };
+    update();
+    const frame = window.requestAnimationFrame(update); // again once the page has settled
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null;
+    if (observer && phoneButtons) observer.observe(phoneButtons);
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true); // true: the full-screen page scrolls, not the window
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+      clear();
+    };
+  }, [isPhone, phoneButtons]);
+
   // Edit details turns this same dialog into fields (React keeps the same dialog box, so its
   // "focus the first field on open" doesn't run again): put the cursor in First name, so typing
   // and Esc work at once. Back from Edit details: focus returns to the ⋯ it was opened from.
@@ -316,14 +408,16 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
     if (!focusKey || !hasData) return;
     window.requestAnimationFrame(() =>
       window.requestAnimationFrame(() => {
-        const target = document.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`);
+        // (not on screen, e.g. the ⋯ while Edit details shows: the dialog's first button instead,
+        // so focus never ends up outside the open dialog)
+        const target = document.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`) ?? document.querySelector('[role="dialog"] button');
         if (target) target.focus();
       }),
     );
     clearFocusKey();
   }, [focusKey, hasData, clearFocusKey]);
 
-  // ----- The detail's ⋯ (Edit details · Change plan · Remove / Restore / Delete) -----
+  // ----- The detail's ⋯ (Edit details · Change plan — Withdraw or Restore · Delete permanently) -----
   function detailItems() {
     // Hide payments on (mat-side): Edit details would show the date of birth and email, so it is
     // grayed with its reason, like Add candidate.
@@ -349,13 +443,18 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
       });
     }
     const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0, hasGrades: c.hasGrades };
-    if (isAdmin && !withdrawn) items.push({ key: 'remove', label: T.REMOVE_CANDIDATE, Icon: ICONS.remove, separatorBefore: true, onSelect: () => actions.openRemove(target, moreButtonElement()) });
-    if (isAdmin && withdrawn) {
-      items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target) });
-      // The database refuses a delete while ANY payment row exists (even an undone one); the
-      // detail only sees live lines, so it may offer Delete and get has_payments back.
-      // …and (0025, Q-G3) while they have grades
-      const reason = data.payments.length > 0 ? T.hasPaymentRecordsShort(T.candidateName(c)) : c.hasGrades ? T.hasGradesShort(T.candidateName(c)) : null;
+    if (isAdmin) {
+      // The last group (v1.007): Withdraw (plain, at once, with Undo) or Restore, then Delete
+      // permanently — red and it asks first. The database refuses a delete while ANY payment row
+      // exists (even an undone one); the detail only sees live lines, so it may offer Delete and
+      // get has_payments back. …and (0025, Q-G3) while they have grades. An active candidate's
+      // reason says what to do instead (v0.904); a withdrawn one's only why.
+      const name = T.candidateName(c);
+      if (withdrawn) items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target, moreButtonElement()) });
+      else items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: ICONS.withdraw, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.withdraw(target, moreButtonElement()) });
+      const reason = data.payments.length > 0
+        ? (withdrawn ? T.hasPaymentRecordsShort(name) : T.hasPaymentRecords(name))
+        : c.hasGrades ? (withdrawn ? T.hasGradesShort(name) : T.hasGrades(name)) : null;
       items.push({
         key: 'delete',
         label: reason ? <TwoLines label={T.DELETE_PERMANENTLY} reason={reason} /> : T.DELETE_PERMANENTLY,
@@ -433,6 +532,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   if (!data) {
     return (
       <Dialog title={title} size="wide" fullScreen={isPhone} onRequestClose={actions.requestCloseDetail}>
+        {bannerElement}
         {d.status === 'error' ? (
           <ErrorBanner text={T.LOAD_FAILED} onRetry={() => actions.refreshDetail()} />
         ) : (
@@ -473,6 +573,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
     return (
       <Dialog title={T.EDIT_DETAILS} size="medium" fullScreen={isPhone} onRequestClose={actions.requestCloseDetail}>
         <p className="tdialog-sub">{T.editDetailsSub(T.candidateName(c), cycle.name, c.dan, c.locationCode)}</p>
+        {bannerElement}
         <form
           noValidate
           onSubmit={(event) => {
@@ -481,7 +582,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
           }}
         >
           {e.failed && <ErrorBanner text={T.SAVE_FAILED} onRetry={() => actions.saveEdit()} retrying={e.saving} />}
-          <EditFields edit={e} data={data} isAdmin={isAdmin} today={today} onChange={actions.changeEdit} />
+          <EditFields edit={e} data={data} isAdmin={isAdmin} today={today} isPhone={isPhone} onChange={actions.changeEdit} />
           {isPhone ? (
             <>
               {note}
@@ -540,11 +641,15 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   return (
     <Dialog title={title} size="wide" fullScreen={isPhone} onRequestClose={actions.requestCloseDetail}>
       {isPhone && moreButton}
+      {/* phones: the amber bar at the top of the full-screen page */}
+      {isPhone && bannerElement}
       <div className="bb-detail-head">
         {tag}
         <p className="tdialog-sub bb-detail-sub">{T.detailSub(cycle.name, c.dan, c.locationCode)}</p>
         {c.isMakeup && <p className="bb-cline bb-makeup-line bb-detail-makeup">{T.makeupLine(c.makeupOfCycleName, c.retestNames)}</p>}
       </div>
+      {/* PC and tablet: the amber bar under the header, above the first section */}
+      {!isPhone && bannerElement}
 
       {data.needsParentSignature && !withdrawn && (
         <div className="bb-parent-box" role="status">
@@ -614,7 +719,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
 
       {isPhone ? (
         (recordButton || printButton) && (
-          <div className="dialog-page-submit bb-detail-phone-buttons">
+          <div ref={setPhoneButtons} className="dialog-page-submit bb-detail-phone-buttons">
             {recordButton}
             {printButton}
           </div>

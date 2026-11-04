@@ -48,7 +48,8 @@ asks only what is its own.
 **P1 approved 2026-11-03** (Jeffrey: "OK as drawn"; `Design Review mockups/p1/p1.png`). Nothing new decided, so no
 rulebook row.
 P2 answers (one rulebook row when both are in): **Q1 (2026-11-03): B** — "B: gray": the Paid card's "1 owes more" note
-is gray like every card note (shared CountCards unchanged); the row's amber "⚠ Paid $X · $Y more to collect" line stays.
+is gray like every card note (shared CountCards unchanged); the row's amber "⚠ Paid $X · $Y more to collect" line stays. **Q2 (2026-11-03): A** — a Paid / Not paid filter stays on when switching Upcoming / Past (as the event
+roster's class switch); a side with nobody left says "Every past private testing is paid." **P2 approved → rulebook v0.420.**
 
 No mockup (nothing visible): the imports (v1.030) and CB16 (`formatMoney`).
 Build order after the OKs: imports + CB16 → P4 → P1 → P2 → P3, each reviewed (design, code; security where 0030's

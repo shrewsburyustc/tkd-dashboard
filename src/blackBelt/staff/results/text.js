@@ -1,5 +1,5 @@
 // text.js — every word of Black Belt testing's Results tab, its printed results sheet, its CSV
-// toast, and the "Result emails" block + "Edit result email" dialog on Rubric and prices
+// toast, and the "Result emails" block + "Edit result email" dialog on Rubric and waiver
 // (migration 0025, contract 0025 §14.3 / §14.4).
 // Why it exists: wording lives in one place, never inline in the screens (the house rule). The
 // sentences are copied from Star testing's Results (src/lib/star/resultsText.js) with Black Belt's
@@ -199,7 +199,7 @@ export function stillToGrade(names, total) {
 export const sheetFootLeft = (cycleName, printedText) => `${sheetTitle(cycleName)} · printed ${printedText}`;
 export const sheetPage = (n, of) => `Page ${n} of ${of}`;
 
-// ===== The "Result emails" block on Rubric and prices (R03, proposals 21–28) =====
+// ===== The "Result emails" block on Rubric and waiver (R03, proposals 21–28) =====
 export const RESULT_EMAILS_TITLE = 'Result emails';
 export const RESULT_EMAILS_SUB = 'What Email result copies for each family (Results tab). Blanks in {braces} fill in for each candidate.';
 export const SUBJECT_LABEL = 'Subject';
@@ -238,7 +238,7 @@ export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const DISCARD_CHANGES = 'Discard changes';
 export const TEXT_STALE = 'Someone else changed this just now. Your change wasn’t saved. Cancel, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
 export const TEXT_STALE_PHONE = 'Someone else changed this just now. Your change wasn’t saved. Discard changes, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
-export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubric and prices. Your change wasn’t saved.'; // new wording, not in the mockups (Star's)
+export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubric and waiver. Your change wasn’t saved.'; // new wording, not in the mockups (Star's)
 export const TEXT_INVALID = 'This text can’t be saved. Check the message under the box.'; // new wording, not in the mockups
 export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then try again.';
 export const UNDO_FAILED = 'Undo didn’t save. Check the connection, then retry.';

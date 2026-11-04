@@ -9,7 +9,7 @@
 import { IconPlus, IconX } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
-import ChoiceGroup from '../../testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { MAX_EXTRAS } from './campForm.js';
 import * as T from '../text.js';
 

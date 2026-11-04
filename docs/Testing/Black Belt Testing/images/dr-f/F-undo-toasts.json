@@ -1,0 +1,841 @@
+{
+  "title": "Black Belt · Mockup F — Undo for 5 seconds after Edit details, Restore and cycle saves (BB5)",
+  "subtitle": "Rule 1.4 / v1.006: every change that can be reversed shows <b>Undo</b> for 5 seconds. Drawn on the real preview (fake data) with the app’s own toast markup, copied from the real \"Owen Price withdrawn · Undo\". Today these saves end in a plain toast. After, they get the same <b>\"· Undo\"</b> button Withdraw already has — except a Dan change that cleared grades (2), which can’t be undone and stays as today.",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "pc-ed-today.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            400,
+            1188,
+            400
+          ],
+          "scale": 0.8,
+          "caption": "<b>1 · Edit details saved</b> (Mia Chen’s detail): <b>\"Changes saved\"</b>, no Undo.",
+          "marks": [
+            [
+              1146,
+              741,
+              110,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-ed-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                640,
+                820,
+                540
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  686,
+                  1121,
+                  110,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-ed-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                380,
+                390,
+                464
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b> — <b>flag:</b> the toast sits over Record payment, so a tap meant for it could hit Undo. The build must fix this (e.g. on phones the toast sits above the detail’s bottom button).",
+              "marks": [
+                [
+                  140,
+                  741,
+                  110,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-ed-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                200,
+                320,
+                440
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b> — same overlap.",
+              "marks": [
+                [
+                  105,
+                  537,
+                  110,
+                  36
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-dan.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            400,
+            1188,
+            400
+          ],
+          "scale": 0.8,
+          "caption": "<b>2 · Edit details that changed the Dan and cleared grades</b> (Sam Lee): <b>\"Changes saved\"</b>, no Undo.",
+          "marks": [
+            [
+              1146,
+              741,
+              110,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-dan.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                640,
+                820,
+                540
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  686,
+                  1121,
+                  110,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-dan.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                380,
+                390,
+                464
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  140,
+                  741,
+                  110,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-dan.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                200,
+                320,
+                440
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  105,
+                  537,
+                  110,
+                  36
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-rs-today.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            330,
+            1188,
+            470
+          ],
+          "scale": 0.8,
+          "caption": "<b>3 · Restore</b> (row ⋯ → Restore on Owen Price): <b>\"Owen Price restored\"</b>, no Undo.",
+          "marks": [
+            [
+              1116,
+              741,
+              140,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rs-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                500,
+                820,
+                680
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  656,
+                  1121,
+                  140,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-rs-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  125,
+                  741,
+                  140,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-rs-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  90,
+                  741,
+                  140,
+                  36
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-add-today.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>4 · Add cycle</b> (back on the Cycles list): <b>\"Cycle added\"</b>, no Undo.",
+          "marks": [
+            [
+              1162,
+              741,
+              94,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-add-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  702,
+                  1121,
+                  94,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-add-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  148,
+                  741,
+                  94,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-add-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  113,
+                  537,
+                  94,
+                  36
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-ec-today.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>5 · Edit cycle</b> (from the cycle page’s ⋯): <b>\"Changes saved\"</b>, no Undo.",
+          "marks": [
+            [
+              1146,
+              741,
+              110,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-ec-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  686,
+                  1121,
+                  110,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-ec-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  140,
+                  741,
+                  110,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-ec-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  105,
+                  537,
+                  110,
+                  36
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Amber: the toast. Its 5-second timer pauses while the pointer or keyboard focus is on it (as today)."
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        {
+          "src": "pc-ed-after.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            400,
+            1188,
+            400
+          ],
+          "scale": 0.8,
+          "caption": "<b>1 · \"Changes saved · Undo\"</b> — Undo puts the old name, date of birth, email, school and Dan back. If grades were entered for the new Dan meanwhile, Undo is refused in the amber bar (it never opens the \"Change Dan and clear\" box).",
+          "marks": [
+            [
+              1077,
+              736,
+              179,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-ed-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                640,
+                820,
+                540
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  617,
+                  1112,
+                  179,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-ed-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                380,
+                390,
+                464
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b> — <b>flag:</b> the toast sits over Record payment, so a tap meant for it could hit Undo. The build must fix this (e.g. on phones the toast sits above the detail’s bottom button).",
+              "marks": [
+                [
+                  105,
+                  732,
+                  179,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-ed-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                200,
+                320,
+                440
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b> — same overlap.",
+              "marks": [
+                [
+                  70,
+                  528,
+                  179,
+                  44
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-danbox.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            0,
+            1188,
+            400
+          ],
+          "scale": 0.8,
+          "caption": "<b>2 · stays as today</b> (\"Changes saved\", no Undo): the box before the save already says <b>\"This can’t be undone.\"</b>",
+          "marks": [
+            [
+              444,
+              132,
+              392,
+              39
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-dan.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                640,
+                820,
+                540
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": []
+            },
+            {
+              "src": "phone-dan.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                380,
+                390,
+                464
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": []
+            },
+            {
+              "src": "p320-dan.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                200,
+                320,
+                440
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "src": "pc-rs-after.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            330,
+            1188,
+            470
+          ],
+          "scale": 0.8,
+          "caption": "<b>3 · \"Owen Price restored · Undo\"</b> — Undo withdraws him again (like Withdraw’s own Undo).",
+          "marks": [
+            [
+              1047,
+              736,
+              209,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rs-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                500,
+                820,
+                680
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  587,
+                  1112,
+                  209,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-rs-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  90,
+                  732,
+                  209,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-rs-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  55,
+                  732,
+                  209,
+                  44
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-add-after.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>4 · \"Cycle added · Undo\"</b> — Undo deletes the new cycle. A family registered meanwhile → refused: \"Can’t undo: a family has already registered.\"; a candidate added at the desk → the \"someone else changed\" refusal.",
+          "marks": [
+            [
+              1092,
+              736,
+              164,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-add-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  632,
+                  1112,
+                  164,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-add-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  113,
+                  732,
+                  164,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-add-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  78,
+                  528,
+                  164,
+                  44
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-ec-after.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>5 · \"Changes saved · Undo\"</b> — Undo puts back everything that save changed, the registration open / closed switch included. Refused (amber bar) if a family registered after the save.",
+          "marks": [
+            [
+              1077,
+              736,
+              179,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-ec-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  617,
+                  1112,
+                  179,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-ec-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  105,
+                  732,
+                  179,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-ec-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  70,
+                  528,
+                  179,
+                  44
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Green: the toast with Undo. After Undo: <b>\"Undone\"</b>. Every refusal shows in the <b>amber bar</b> (v1.004): Undo’s own connection failure → the amber bar with <b>Retry</b>; someone else changed the same candidate or cycle in those 5 seconds → \"Someone else changed … just now, so nothing was done. Their change is shown.\""
+    }
+  ],
+  "footer": "<b>No new words</b> apart from the Undo button. Every toast fits at 320 (the widest, \"Owen Price restored · Undo\", is 209 px wide). <b>2:</b> the app knows grades were cleared because that save goes through the \"Change Sam Lee to 3rd Dan?\" box (the database answered has_grades, then the red \"Change Dan and clear …\" button saves) — only that path keeps the plain toast."
+}

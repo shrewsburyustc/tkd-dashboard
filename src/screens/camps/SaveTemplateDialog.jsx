@@ -3,16 +3,22 @@
 // everything about a camp except its dates and campers, so the next one is name + days + Save.
 // One field: the template name, starting as the camp's name and kept exactly as typed. The note
 // says what is kept. A name already used shows the amber line "A template with this name exists.
-// Choose another name." (database answer duplicate_name). Saved → toast "Template saved · <name>".
+// Choose another name." (database answer duplicate_name). Saved → toast "Template saved · <name>"
+// with Undo for 5 seconds, which deletes the new template (rulebook v0.726).
 // A small dialog on every device (the C2b phone frame: "small dialogs stay dialogs on phones").
+// Keeps your typing (rulebook v0.728, C18): once the name differs from the camp's, Esc, a click
+// outside or Back keep it open with "Unsaved changes. Save or cancel first." under the buttons;
+// on phones the note adds "Discard changes" — the same guard as Camps' other dialogs.
 //
-// Props: camp, onClose, onSaved(name), onNoAccess, onRefreshProfile
+// Props: camp, onClose, onSaved(name, { id, version }) (the new template — the toast's Undo deletes
+//        it, rulebook v0.726), onNoAccess, onRefreshProfile
 import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { saveTemplate } from '../../lib/camps/campsApi.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
+import { PHONE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import * as T from './text.js';
 
 const NAME_PROBLEMS = { empty: T.ENTER_TEMPLATE_NAME, tooLong: T.NAME_TOO_LONG, badCharacter: T.NAME_BAD_CHARACTER };
@@ -25,6 +31,9 @@ export default function SaveTemplateDialog({ camp, onClose, onSaved, onNoAccess,
   const [duplicate, setDuplicate] = useState(null); // the name the database refused
   const [note, setNote] = useState(null); // a text for the amber box at the bottom
   const [blocked, setBlocked] = useState(false);
+  const [unsaved, setUnsaved] = useState(false); // the "Unsaved changes" note is showing
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const dirty = normalizeName(name) !== normalizeName(camp.name); // extra spaces alone are no change
 
   const problem = nameProblem(name);
   const nameError =
@@ -37,10 +46,11 @@ export default function SaveTemplateDialog({ camp, onClose, onSaved, onNoAccess,
     if (!canSave || nameError) return;
     setSaving(true);
     setNote(null);
+    setUnsaved(false);
     const clean = normalizeName(name);
     const result = await saveTemplate(camp.id, clean);
     setSaving(false);
-    if (result.status === 'ok') onSaved(clean);
+    if (result.status === 'ok') onSaved(clean, { id: result.id, version: result.version });
     else if (result.status === 'duplicate_name') setDuplicate(clean);
     else if (result.status === 'no_access') onNoAccess();
     else if (result.status === 'not_allowed') {
@@ -54,8 +64,19 @@ export default function SaveTemplateDialog({ camp, onClose, onSaved, onNoAccess,
     else setNote(T.SAVE_FAILED);
   }
 
+  // Esc, a click outside or Back. A changed name stays (the note says why), unless a note already
+  // says this can't be saved — then there is nothing to keep.
+  function requestClose() {
+    if (saving) return;
+    if (!dirty || blocked) onClose();
+    else {
+      setNote(null); // a "couldn't save" note gives way to the unsaved one (one note at a time)
+      setUnsaved(true);
+    }
+  }
+
   return (
-    <Dialog title={T.SAVE_TEMPLATE_TITLE} onRequestClose={() => !saving && onClose()}>
+    <Dialog title={T.SAVE_TEMPLATE_TITLE} onRequestClose={requestClose}>
       <p className="tdialog-sub">{T.fromCamp(camp.name)}</p>
       <form onSubmit={handleSubmit} noValidate>
         <div className="field">
@@ -70,7 +91,10 @@ export default function SaveTemplateDialog({ camp, onClose, onSaved, onNoAccess,
             value={name}
             aria-invalid={nameError ? true : undefined}
             aria-describedby={nameError ? `${idBase}-error` : `${idBase}-hint`}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              setUnsaved(false);
+            }}
           />
           {nameError && <Notice id={`${idBase}-error`}>{nameError}</Notice>}
         </div>
@@ -91,6 +115,18 @@ export default function SaveTemplateDialog({ camp, onClose, onSaved, onNoAccess,
           {note && (
             <div className="tdialog-note">
               <Notice>{note}</Notice>
+            </div>
+          )}
+          {unsaved && !note && (
+            <div className="tdialog-note">
+              <Notice>
+                {T.UNSAVED}
+                {isPhone && (
+                  <button type="button" className="note-action" onClick={onClose}>
+                    {T.DISCARD_CHANGES}
+                  </button>
+                )}
+              </Notice>
             </div>
           )}
         </div>

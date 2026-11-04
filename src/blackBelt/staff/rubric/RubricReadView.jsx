@@ -1,5 +1,5 @@
 // RubricReadView.jsx — one Dan of a rubric, shown read-only (mockups R1, R2, R12, R13).
-// Why it exists: CONTRACT-0024 §10.3. The default rubric (Rubric and prices) and a cycle's own
+// Why it exists: CONTRACT-0024 §10.3. The default rubric (Rubric and waiver) and a cycle's own
 // copy (the cycle's Rubric tab) are drawn the same way, for admins and staff:
 //   - To pass: one pass mark per age bracket ("17 and under 275 points · 18 and over 293 points ·
 //     no D in any subject"), the most points per bracket before extra points, and the make-up

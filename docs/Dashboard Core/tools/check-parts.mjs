@@ -5,7 +5,11 @@
 //     minutes with the 2px ring, Enter chooses, Esc closes the list only (also inside a dialog),
 //     Home / End, "6" → 6:00 AM, "6" again → 6:00 PM, "1" then "0" → 10:00 AM, "10" again →
 //     10:00 PM, Finance's "11" twice → 11:00 AM / 11:00 PM, "12" twice, Finance's 146 choices,
-//     read-only while saving;
+//     read-only while saving; turned off (`disabled`, v1.116 / v0.823): Tab skips it, Chrome's
+//     accessibility tree says "disabled" (screen readers: "unavailable" / "dimmed"), no click, tap
+//     or key opens it, a click or tap leaves the focus where it was, the list closes when it is
+//     turned off while open, and its gray look, also with nothing chosen and in Windows High
+//     Contrast (each "does nothing" check next to the same press opening an enabled field);
 //   - the "are you sure?" box on top of a dialog: Esc, a click outside and Back close only the box,
 //     focus goes back to its opener (also when the opener never took the focus, as in Safari), and
 //     while it works all three wait;
@@ -14,7 +18,9 @@
 //     dialog's busy button is heard as "Keeping…";
 //   - the Mark paid box's keys, first focus and Tab out (also inside a dialog); the count cards'
 //     pressed state and their two-line note (v1.115: each line under the one before, at the four
-//     sizes, heard after the number); the history line;
+//     sizes, heard after the number); Show all inside the gray line (v1.117, option a: on touch as
+//     tall as on PC and right after the dot, with an invisible box of exactly 44 px that a finger
+//     finds, covering neither the cards above nor the control under the line); the history line;
 //   - Download QR code's hidden name: with two schools its own words first, then the school
 //     ("Download QR code, Worcester", v1.111); with one school none;
 //   - a real Download QR code: the file's name and that it is 1024 × 1024 pixels.
@@ -172,6 +178,144 @@ await withChrome(async (tab) => {
     await ev(`[...document.querySelectorAll('[role=combobox]')][0].focus()`);
     await key('ArrowDown');
     assert.equal(await expanded(), 'false');
+  });
+
+  // Turned off (the `disabled` prop, rulebook v1.116 / v0.823): Finance's reminder times while the
+  // reminder is Off. #M8/off: a sample switch, the two fields (turned off), a sample button.
+  const isOpen = (n = 0) => ev(`[...document.querySelectorAll('[role=combobox]')][${n}].getAttribute('aria-expanded') === 'true' || Boolean(document.querySelector('.fa-list:not([hidden])'))`);
+  // What Chrome's accessibility tree (what a screen reader reads) says about the first field.
+  async function axField() {
+    const { root } = await tab.cdp('DOM.getDocument', { depth: 0 });
+    const { nodeId } = await tab.cdp('DOM.querySelector', { nodeId: root.nodeId, selector: '[role=combobox]' });
+    const { nodes } = await tab.cdp('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+    return { role: nodes[0].role?.value, name: nodes[0].name?.value, states: Object.fromEntries((nodes[0].properties ?? []).map((p) => [p.name, p.value?.value])) };
+  }
+  // A real tap on the first time field (tapAt, the finger's touch events, is with DP's checks below).
+  async function tapFirstField() {
+    const box = await ev(`(() => { const r = document.querySelector('[role=combobox]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+    await tapAt(box.x, box.y);
+  }
+  await open('M8/off', 600);
+  await check('M8 turned off: not a Tab stop — Tab from the switch skips both fields, Shift+Tab too', async () => {
+    await ev(`document.querySelector('[role=switch]').focus()`);
+    await key('Tab');
+    assert.equal(await focused(), 'Copy Monday to Tue–Fri');
+    await key('Tab', { shift: true });
+    assert.equal(await focused(), 'Reminder: Off');
+  });
+  await check('M8 turned off: aria-disabled="true", tabIndex -1, no data-autofocus (the first has autoFocus); the accessibility tree says combobox "Monday · Shrewsbury", disabled', async () => {
+    const attrs = await ev(`[...document.querySelectorAll('[role=combobox]')].map((f) => ({ ariaDisabled: f.getAttribute('aria-disabled'), tabIndex: f.tabIndex, autofocus: f.hasAttribute('data-autofocus') }))`);
+    assert.deepEqual(attrs, [1, 2].map(() => ({ ariaDisabled: 'true', tabIndex: -1, autofocus: false })));
+    const node = await axField();
+    assert.equal(node.role, 'combobox');
+    assert.equal(node.name, 'Monday · Shrewsbury');
+    assert.equal(node.states.disabled, true, JSON.stringify(node.states));
+    assert.equal(node.states.expanded, false);
+  });
+  await check('M8 turned off: a click opens nothing and leaves the focus on the switch; no key opens it', async () => {
+    await ev(`document.querySelector('[role=switch]').focus()`);
+    await click('[role=combobox]');
+    assert.equal(await isOpen(), false, 'a click opened it');
+    assert.equal(await focused(), 'Reminder: Off', 'a click moved the focus');
+    await ev(`[...document.querySelectorAll('[role=combobox]')][0].focus()`); // as a screen reader's browse mode could
+    assert.equal(await ev(`document.activeElement === document.querySelector('[role=combobox]')`), true, 'the keys would not reach the field');
+    for (const name of ['ArrowDown', 'ArrowUp', 'Enter', ' ', 'Home', 'End', '8']) {
+      await key(name);
+      assert.equal(await isOpen(), false, `${JSON.stringify(name)} opened it`);
+    }
+    await key('ArrowDown', { alt: true });
+    assert.equal(await isOpen(), false, 'Alt+↓ opened it');
+    assert.equal(await fieldText('Monday · Shrewsbury'), '8:45 PM');
+  });
+  await check('M8 turned off: the look — #F7F7F5 box, #8A8A85 words and chevron (also "Choose a time"), the plain cursor (Finance F2 picture, option C)', async () => {
+    const look = await ev(`(() => { const f = document.querySelector('[role=combobox]'); const cs = getComputedStyle(f); return [cs.backgroundColor, getComputedStyle(f.querySelector('.fa-value')).color, getComputedStyle(f.querySelector('.fa-chevron')).color, cs.cursor].join(' / '); })()`);
+    assert.equal(look, 'rgb(247, 247, 245) / rgb(138, 138, 133) / rgb(138, 138, 133) / default');
+    // Nothing chosen: the gray placeholder rule (.sel-field.is-empty, further down shared.css) must
+    // not win over the turned-off gray. (That nothing chosen gives .is-empty is checked on #M8/empty.)
+    const empty = await ev(`(() => { const f = document.querySelector('[role=combobox]'); f.classList.add('is-empty'); const color = getComputedStyle(f.querySelector('.fa-value')).color; f.classList.remove('is-empty'); return color; })()`);
+    assert.equal(empty, 'rgb(138, 138, 133)', 'with nothing chosen the words are not the turned-off gray');
+  });
+  await check('M8 turned off, Windows High Contrast (forced colors): words, chevron and border in GrayText, as the browser’s own disabled dropdown; a field that works keeps its usual colours', async () => {
+    const MOUSE = [{ name: 'pointer', value: 'fine' }, { name: 'hover', value: 'hover' }]; // as tab.size sets for 1280
+    await tab.cdp('Emulation.setEmulatedMedia', { features: [...MOUSE, { name: 'forced-colors', value: 'active' }] });
+    try {
+      await sleep(200);
+      // The browser's own disabled dropdown, drawn for a moment for its colour; then the first field.
+      const colours = () => ev(`(() => {
+        const native = document.createElement('select');
+        native.disabled = true;
+        native.innerHTML = '<option>8:45 PM</option>';
+        document.body.append(native);
+        const grayText = getComputedStyle(native).color;
+        native.remove();
+        const f = document.querySelector('[role=combobox]');
+        const words = getComputedStyle(f.querySelector('.fa-value')).color;
+        f.classList.add('is-empty');
+        const empty = getComputedStyle(f.querySelector('.fa-value')).color;
+        f.classList.remove('is-empty');
+        return { forced: matchMedia('(forced-colors: active)').matches, grayText, words, empty, chevron: getComputedStyle(f.querySelector('.fa-chevron')).color, border: getComputedStyle(f).borderTopColor };
+      })()`);
+      const off = await colours();
+      assert.equal(off.forced, true, 'forced colors are not on');
+      assert.deepEqual([off.words, off.empty, off.chevron, off.border], [off.grayText, off.grayText, off.grayText, off.grayText], JSON.stringify(off));
+      await click('[role=switch]'); // on: the control
+      const on = await colours();
+      assert.notEqual(on.words, on.grayText, 'a field that works is GrayText too');
+      await click('[role=switch]'); // off again
+    } finally {
+      await tab.cdp('Emulation.setEmulatedMedia', { features: MOUSE });
+    }
+  });
+  await check('M8 turned on again (the switch): a Tab stop again, autoFocus back; each key, and a click, that did nothing while off opens it (the controls)', async () => {
+    await click('[role=switch]');
+    await key('Tab');
+    assert.equal(await ev(`document.activeElement === document.querySelector('[role=combobox]')`), true, 'Tab did not stop on the first field');
+    assert.equal(await ev(`[...document.querySelectorAll('[role=combobox]')].map((f) => f.hasAttribute('aria-disabled') || f.classList.contains('is-disabled') || f.tabIndex !== 0).join()`), 'false,false');
+    assert.equal(await ev(`document.querySelector('[role=combobox]').hasAttribute('data-autofocus')`), true, 'autoFocus is back once it is on');
+    for (const name of ['ArrowDown', 'ArrowUp', 'Enter', ' ', 'Home', 'End', '8']) {
+      await key(name);
+      assert.equal(await isOpen(), true, `${JSON.stringify(name)} did not open it`);
+      await key('Escape');
+      assert.equal(await isOpen(), false, `Esc after ${JSON.stringify(name)} did not close it`);
+    }
+    await key('ArrowDown', { alt: true });
+    assert.equal(await isOpen(), true, 'Alt+↓ did not open it');
+    await key('Escape');
+    assert.equal(await fieldText('Monday · Shrewsbury'), '8:45 PM', 'Esc changed the time');
+    // A click, with the focus on the switch first (as in the turned-off check): it opens, and the focus moves to the field.
+    await ev(`document.querySelector('[role=switch]').focus()`);
+    await click('[role=combobox]');
+    assert.equal(await isOpen(), true, 'a click did not open it');
+    assert.equal(await ev(`document.activeElement === document.querySelector('[role=combobox]')`), true, 'a click did not put the focus on it');
+    await key('Escape');
+  });
+  await check('M8 turned off, on a touch screen (390): a tap opens nothing; the same tap on an enabled field opens it', async () => {
+    await tab.size({ w: 390, h: 844, touch: true, scale: 1 });
+    try {
+      await open('M8/off', 600);
+      await tapFirstField();
+      assert.equal(await isOpen(), false, 'a tap opened it');
+      assert.equal(await ev(`document.activeElement?.getAttribute('role')`), null, 'a tap put the focus on it');
+      await open('M8/closed', 600);
+      await tapFirstField();
+      assert.equal(await isOpen(), true, 'the control: a tap on an enabled field did not open it');
+      assert.equal(await ev(`document.activeElement?.getAttribute('role')`), 'combobox', 'the control: a tap on an enabled field did not put the focus on it');
+    } finally {
+      await tab.size({ w: 1280, h: 800, touch: false, scale: 1 }); // the next checks are at 1280, also when this one fails
+    }
+  });
+  await check('M8: turned off while its list is open (another admin turns the reminder Off) — the list closes', async () => {
+    await open('M8/offwhileopen', 0);
+    let wasOpen = false;
+    for (let i = 0; i < 20 && !wasOpen; i += 1) {
+      wasOpen = await isOpen(1);
+      if (!wasOpen) await sleep(50);
+    }
+    assert.ok(wasOpen, 'the list never opened');
+    await sleep(1500); // the sample turns the fields off 1 s after the press
+    assert.equal(await ev(`document.querySelectorAll('[role=combobox].is-disabled').length`), 2, 'not turned off');
+    assert.equal(await isOpen(1), false, 'the list is still open');
+    assert.equal(await ev(`[...document.querySelectorAll('[role=combobox]')][1].hasAttribute('aria-activedescendant')`), false);
   });
   // Two-digit hours typed twice (design review D1): each number typed quickly ("1" then "0"), then a
   // pause longer than the half second the list keeps what was typed.
@@ -583,6 +727,111 @@ await withChrome(async (tab) => {
     const notes = await ev(`[...document.querySelectorAll('.ev-card')].map((c) => [...c.querySelectorAll('.ev-card-note')].map((n) => n.textContent + (n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) + 0.5 ? ' (more than one line)' : '')))`);
     assert.deepEqual(notes, [[], [], ['$1,355'], []]);
   });
+  // Show all inside the gray line (v1.117, option a): on touch the line is as tall as on PC and the
+  // words sit as close after the dot; its invisible box is exactly 44 px tall; a finger finds the
+  // link in a 44×44 area at least (stepping out from its middle in 1/8 px steps until another
+  // element is there, so a covered part of the box doesn't count); and the box takes no taps from
+  // another control (guidelines 2.5: tap areas don't overlap):
+  //   - no point inside a card above, or inside the class switch under the line (the sample's real
+  //     control), finds Show all;
+  //   - the neighbours' own tap areas, invisible boxes included, are untouched: in the columns of
+  //     Show all's box (its left edge + 1, its middle, its right edge − 1), the card above and the
+  //     switch's button under it are exactly as tall for a finger with Show all's box as without it.
+  const showAll = () => ev(`(() => {
+    const line = document.querySelector('.ev-filter-line');
+    line.scrollIntoView({ block: 'center' });
+    const link = line.querySelector('button');
+    const text = [...line.childNodes].find((n) => n.nodeType === 3 && n.textContent.includes('·'));
+    const at = text.textContent.indexOf('·');
+    const dot = document.createRange();
+    dot.setStart(text, at);
+    dot.setEnd(text, at + 1);
+    const words = document.createRange();
+    words.selectNodeContents(link);
+    const b = link.getBoundingClientRect();
+    const s = 0.125;
+    // How tall an element is for a finger at (x, y): up and down until another element is there.
+    const fingerHeight = (el, x, y, reach = 60) => {
+      const on = (yy) => el.contains(document.elementFromPoint(x, yy));
+      let [top, bottom] = [y, y];
+      while (on(top - s) && top > y - reach) top -= s;
+      while (on(bottom + s) && bottom < y + reach) bottom += s;
+      return bottom - top + s;
+    };
+    const cx = (b.left + b.right) / 2;
+    const cy = (b.top + b.bottom) / 2;
+    const hits = (x, y) => link.contains(document.elementFromPoint(x, y));
+    let [left, right] = [cx, cx];
+    while (hits(left - s, cy) && left > cx - 200) left -= s;
+    while (hits(right + s, cy) && right < cx + 200) right += s;
+    // Points inside another control (a card, a button of the class switch) where Show all is found.
+    const others = [...document.querySelectorAll('button, [role=radio], a[href]')].filter((e) => e !== link);
+    const taken = new Set();
+    for (let y = b.top - 30; y <= b.bottom + 30; y += 0.5) {
+      for (let x = b.left - 30; x <= b.right + 30; x += 0.5) {
+        if (!hits(x, y)) continue;
+        for (const o of others) {
+          const r = o.getBoundingClientRect();
+          if (x >= r.left && x < r.right && y >= r.top && y < r.bottom) taken.add(o.textContent.trim());
+        }
+      }
+    }
+    const after = getComputedStyle(link, '::after');
+    const hasBox = after.content !== 'none';
+    // The neighbours in the columns of Show all's box: the nearest control above the link and the
+    // nearest under it, each measured for a finger from its own middle (cards are tall: reach 150).
+    const boxLeft = b.left - (hasBox ? -parseFloat(after.left) : 0);
+    const boxRight = b.right + (hasBox ? -parseFloat(after.right) : 0);
+    const columns = [boxLeft + 1, cx, boxRight - 1];
+    const neighbourTaps = () => columns.flatMap((x) => {
+      const inColumn = others.map((e) => ({ e, r: e.getBoundingClientRect() })).filter(({ r }) => r.width > 0 && r.left <= x && r.right > x);
+      const above = inColumn.filter(({ r }) => r.bottom <= b.top).sort((p, q) => q.r.bottom - p.r.bottom)[0];
+      const below = inColumn.filter(({ r }) => r.top >= b.bottom).sort((p, q) => p.r.top - q.r.top)[0];
+      return [above, below].filter(Boolean).map(({ e, r }) => ({ name: e.textContent.trim(), x: Math.round(x), height: fingerHeight(e, x, (r.top + r.bottom) / 2, 150) }));
+    });
+    const withBox = neighbourTaps();
+    const noBox = document.createElement('style'); // Show all's box away for a moment
+    noBox.textContent = '.inline-link::after { content: none !important; }';
+    document.head.append(noBox);
+    const withoutBox = neighbourTaps();
+    noBox.remove();
+    return {
+      line: Math.round(line.getBoundingClientRect().height),
+      gap: Math.round(words.getBoundingClientRect().left - dot.getBoundingClientRect().right),
+      box: hasBox ? parseFloat(after.height) : null,
+      tap: [right - left + s, fingerHeight(link, cx, cy)],
+      taken: [...taken],
+      neighbours: { withBox, withoutBox },
+    };
+  })()`);
+  let showAllOnPc = null;
+  for (const size of FOUR_SIZES) {
+    await tab.size({ w: size.w, h: size.h, touch: size.touch, scale: 1 });
+    await open('M6/filtered', 0);
+    // The sample taps Not paid a moment after it opens: wait for the gray line, then one more frame.
+    for (let i = 0; i < 60 && !(await ev(`Boolean(document.querySelector('.ev-filter-line'))`)); i += 1) await sleep(50);
+    await sleep(100);
+    await check(`M6 Show all at ${size.label}: in the gray line, right after the dot${size.touch ? ', as tall as on PC; its invisible box 44 px; a finger finds it in 44×44 at least; it covers neither the cards nor the class switch under the line' : ''}`, async () => {
+      const found = await showAll();
+      assert.deepEqual(found.taken, [], `Show all takes taps from: ${found.taken.join(', ')}`);
+      if (!size.touch) {
+        showAllOnPc = found;
+        assert.ok(found.line <= 24, `the line is ${found.line} px tall`);
+        assert.ok(found.gap <= 6, `${found.gap} px after the dot`);
+        return;
+      }
+      assert.equal(found.line, showAllOnPc.line, `the line is ${found.line} px tall (on PC ${showAllOnPc.line})`);
+      assert.ok(Math.abs(found.gap - showAllOnPc.gap) <= 1, `${found.gap} px after the dot (on PC ${showAllOnPc.gap})`);
+      assert.equal(found.box, 44, `its invisible box is ${found.box} px tall`);
+      // 1/8 px steps can come up to 2 steps short of the true edge, so 43.75 means "44".
+      assert.ok(found.tap[0] >= 44 && found.tap[1] >= 43.75, `a finger finds it in ${found.tap.join('×')}`);
+      const { withBox, withoutBox } = found.neighbours;
+      assert.ok(withBox.some((n) => /Students|Paid|Not paid|Payments/.test(n.name)), `no card above Show all: ${JSON.stringify(withBox)}`);
+      assert.ok(withBox.some((n) => /All classes|Little Tigers|Group A/.test(n.name)), `no class switch button under Show all: ${JSON.stringify(withBox)}`);
+      assert.deepEqual(withBox, withoutBox, 'Show all’s box takes tap area from a neighbour (with the box, then without it)');
+    });
+  }
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
   await open('M7/closed');
   await check('M7: the line is a button heard as collapsed/expanded; Enter opens the list newest first, "Oct 22 · Jeffrey Berg"', async () => {
     assert.equal(await ev(`document.querySelector('.hist-btn').getAttribute('aria-expanded')`), 'false');

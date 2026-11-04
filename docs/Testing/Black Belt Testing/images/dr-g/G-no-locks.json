@@ -1,0 +1,46 @@
+{
+  "title": "Black Belt · G — no lock icons on Close / Open registration",
+  "subtitle": "The two ⋯ menus (Cycles list row and cycle page) keep the words <b>Close registration</b> and <b>Open registration</b> but lose the lock icons, because a lock means “Lock now” elsewhere. The words stay lined up with the other items, as in Color Belt and Star. Nothing to decide: this was approved in the design review (v1.016). OK to build?",
+  "width": 1000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "list-pc-today.png", "crop": [880, 300, 376, 236], "scale": 1, "caption": "<b>Cycles list, PC</b>: Fall 2027 row ⋯", "marks": [[1048, 451, 198, 32]] },
+        { "src": "cyc-pc-today.png", "crop": [876, 120, 384, 154], "scale": 1, "caption": "<b>Cycle page, PC</b>: Spring 2027 header ⋯", "marks": [[1057, 231, 198, 32]] },
+        { "src": "list-tab-today.png", "shotWidth": 820, "crop": [420, 340, 376, 242], "scale": 1, "caption": "<b>Tablet 820</b>: Cycles list", "marks": [[588, 475, 198, 44]] },
+        { "src": "cyc-tab-today.png", "shotWidth": 820, "crop": [540, 105, 262, 205], "scale": 1, "caption": "<b>Tablet</b>: cycle page (the menu opens over Add candidate, as today)", "marks": [[597, 255, 198, 44]] },
+        { "row": [
+          { "src": "list-phone-today.png", "shotWidth": 390, "crop": [0, 486, 230, 300], "scale": 1, "caption": "<b>Phone 390</b>: list", "marks": [[4, 634, 222, 44]] },
+          { "src": "list-p320-today.png", "shotWidth": 320, "crop": [0, 282, 200, 300], "scale": 1, "caption": "<b>320</b>: list", "marks": [[4, 430, 192, 44]] }
+        ] },
+        { "row": [
+          { "src": "cyc-phone-today.png", "shotWidth": 390, "crop": [0, 568, 230, 217], "scale": 1, "caption": "<b>Phone</b>: cycle page", "marks": [[4, 731, 222, 44]] },
+          { "src": "cyc-p320-today.png", "shotWidth": 320, "crop": [0, 365, 200, 212], "scale": 1, "caption": "<b>320</b>: cycle page", "marks": [[4, 527, 192, 44]] }
+        ] }
+      ],
+      "note": "Amber: a closed lock on Close registration, an open lock on Open registration."
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "list-pc-after.png", "crop": [880, 300, 376, 236], "scale": 1, "caption": "<b>Cycles list, PC</b>: same words, no icon", "marks": [[1048, 451, 198, 32]] },
+        { "src": "cyc-pc-after.png", "crop": [876, 120, 384, 154], "scale": 1, "caption": "<b>Cycle page, PC</b>", "marks": [[1057, 231, 198, 32]] },
+        { "src": "list-tab-after.png", "shotWidth": 820, "crop": [420, 340, 376, 242], "scale": 1, "caption": "<b>Tablet 820</b>: Cycles list", "marks": [[588, 475, 198, 44]] },
+        { "src": "cyc-tab-after.png", "shotWidth": 820, "crop": [540, 105, 262, 205], "scale": 1, "caption": "<b>Tablet</b>: cycle page (the menu opens over Add candidate, as today)", "marks": [[597, 255, 198, 44]] },
+        { "row": [
+          { "src": "list-phone-after.png", "shotWidth": 390, "crop": [0, 486, 230, 300], "scale": 1, "caption": "<b>Phone 390</b>: list", "marks": [[4, 634, 222, 44]] },
+          { "src": "list-p320-after.png", "shotWidth": 320, "crop": [0, 282, 200, 300], "scale": 1, "caption": "<b>320</b>: list", "marks": [[4, 430, 192, 44]] }
+        ] },
+        { "row": [
+          { "src": "cyc-phone-after.png", "shotWidth": 390, "crop": [0, 568, 230, 217], "scale": 1, "caption": "<b>Phone</b>: cycle page", "marks": [[4, 731, 222, 44]] },
+          { "src": "cyc-p320-after.png", "shotWidth": 320, "crop": [0, 365, 200, 212], "scale": 1, "caption": "<b>320</b>: cycle page", "marks": [[4, 527, 192, 44]] }
+        ] }
+      ],
+      "note": "Green: the words only. The icon's space stays empty (Color Belt's and Star's blank icon slot), so the words line up with the items above."
+    }
+  ],
+  "footer": "Drawn on the real preview (fake data, admin) by hiding the two icons; nothing in the app changed. Fall 2027's registration was opened in the fake data so both words show. The rubric's own lock line is not part of this item and stays."
+}

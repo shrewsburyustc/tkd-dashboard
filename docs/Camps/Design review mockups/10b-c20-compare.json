@@ -1,0 +1,305 @@
+{
+  "title": "Camps C20 — the Compare dialog switches to the shared CompareDialog",
+  "subtitle": "Rule v1.102 (approved M1). “Ava Thompson is signed up twice” stops using Camps’ own copy (<code>camps/CompareDialog.jsx</code>) and uses <code>components/CompareDialog.jsx</code>. Camps keeps its own rows, words and order. What changes: <b>(a)</b> each differing value also says <b>“⚠ different”</b> in small amber words (today only the amber background; the word is for screen readers only); <b>(b) while it works</b> the pressed button says <b>“Keeping…”</b> (“Keeping both…”) and every button grays, on phones the ← too (today nothing changes on screen); <b>(c)</b> on PC and tablet the buttons and the failure note share the pinned bottom area, so the note is always in sight (today it slides under the pinned buttons, or out of sight on a short screen). Admin, April Vacation Camp → Review. Amber = what changes.",
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/c20-cmp-pc-today.png",
+              "crop": [
+                250,
+                70,
+                780,
+                580
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  396,
+                  314,
+                  600,
+                  146
+                ]
+              ],
+              "caption": "<b>PC 1280×800.</b> Differences: amber background only."
+            },
+            {
+              "src": "shots/c20-cmp-pc-today-busy.png",
+              "crop": [
+                250,
+                70,
+                780,
+                580
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  400,
+                  465,
+                  510,
+                  36
+                ],
+                [
+                  686,
+                  578,
+                  314,
+                  38
+                ]
+              ],
+              "caption": "After pressing Keep this one, while it works: looks the same; every button still looks pressable."
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/c20-cmp-pc-today-failed.png",
+              "crop": [
+                250,
+                60,
+                780,
+                640
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  284,
+                  616,
+                  712,
+                  46
+                ]
+              ],
+              "caption": "<b>Saving failed, PC 1280×800:</b> the note starts under the pinned buttons — its top is hidden behind them."
+            },
+            {
+              "src": "shots/c20-cmp-1280x600-today-failed.png",
+              "crop": [
+                250,
+                40,
+                780,
+                555
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  270,
+                  515,
+                  740,
+                  70
+                ]
+              ],
+              "caption": "<b>Short screen 1280×600:</b> the note is out of sight below the buttons; you’d have to scroll to find it."
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/c20-cmp-ph-today.png",
+              "crop": [
+                0,
+                0,
+                390,
+                844
+              ],
+              "scale": 0.74,
+              "shotWidth": 390,
+              "marks": [
+                [
+                  130,
+                  243,
+                  236,
+                  152
+                ],
+                [
+                  130,
+                  618,
+                  236,
+                  132
+                ]
+              ],
+              "caption": "<b>Phone 390×844</b> (full-screen page)."
+            },
+            {
+              "src": "shots/c20-cmp-390x640-today-failed.png",
+              "crop": [
+                0,
+                380,
+                390,
+                260
+              ],
+              "scale": 1.0,
+              "shotWidth": 390,
+              "marks": [],
+              "caption": "<b>Short phone 390×640</b>, saving failed, scrolled down: the note already follows the button and shows. Stays as it is."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "After (mockup)",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/c20-cmp-pc-after.png",
+              "crop": [
+                250,
+                70,
+                780,
+                580
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  396,
+                  314,
+                  600,
+                  164
+                ]
+              ],
+              "caption": "<b>PC.</b> Each difference says <b>“⚠ different”</b>."
+            },
+            {
+              "src": "shots/c20-cmp-pc-after-busy.png",
+              "crop": [
+                250,
+                70,
+                780,
+                580
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  400,
+                  485,
+                  510,
+                  36
+                ],
+                [
+                  686,
+                  598,
+                  314,
+                  38
+                ]
+              ],
+              "caption": "While it works: <b>“Keeping…”</b>, every button gray. Esc, a click outside and Back wait."
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/c20-cmp-1280x800-after-failed.png",
+              "crop": [
+                250,
+                60,
+                780,
+                640
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  284,
+                  592,
+                  712,
+                  88
+                ]
+              ],
+              "caption": "<b>Saving failed, PC:</b> the note sits with the buttons in the bottom area, fully shown."
+            },
+            {
+              "src": "shots/c20-cmp-1280x600-after-failed.png",
+              "crop": [
+                250,
+                40,
+                780,
+                555
+              ],
+              "scale": 0.74,
+              "marks": [
+                [
+                  284,
+                  478,
+                  712,
+                  88
+                ]
+              ],
+              "caption": "<b>Short screen 1280×600:</b> the note is pinned with the buttons; the table scrolls above them."
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/c20-cmp-ph-after.png",
+              "crop": [
+                0,
+                0,
+                390,
+                844
+              ],
+              "scale": 0.74,
+              "shotWidth": 390,
+              "marks": [
+                [
+                  130,
+                  243,
+                  236,
+                  152
+                ],
+                [
+                  130,
+                  618,
+                  236,
+                  154
+                ]
+              ],
+              "caption": "<b>Phone:</b> “⚠ different” on each card."
+            },
+            {
+              "src": "shots/c20-cmp-ph-after-busy.png",
+              "crop": [
+                0,
+                0,
+                390,
+                844
+              ],
+              "scale": 0.74,
+              "shotWidth": 390,
+              "marks": [
+                [
+                  6,
+                  6,
+                  36,
+                  36
+                ],
+                [
+                  27,
+                  405,
+                  108,
+                  38
+                ],
+                [
+                  27,
+                  780,
+                  108,
+                  40
+                ]
+              ],
+              "caption": "<b>Phone,</b> while it works: “Keeping…”, the other buttons and ← gray."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "footer": "The After pictures are Camps’ real Compare dialog in the preview with the shared part’s own markup swapped in (read from <code>components/CompareDialog.jsx</code>: <code>.cmp-diff</code> with the 12px ti-alert-triangle, <code>.cmp-dialog</code> + <code>is-unavailable</code>, and <code>.dialog-footer</code> around the buttons and note on PC / tablet), so the app’s real <code>shared.css</code> draws them. On phones the shared part keeps today’s order (button, then note), as the short-phone shot shows. “Today, while it works” and both “Saving failed” shots are real, made with the preview’s slowed-down and failing saves. Hide private details keeps C1’s gray “Hidden on this tablet” rows (already built). <b>Script:</b> <code>mock-c20-compare.js</code>.",
+  "width": 2400
+}

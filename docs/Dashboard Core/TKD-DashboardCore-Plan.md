@@ -666,3 +666,83 @@ Where it stands: the status file.
 - **Pictures:** the side-by-side `Proof/parts/M6-two-lines-vs-Q5.png`, Star's Q5 B next to the built card at the four sizes, plus the one card on PC and phone. The lines are 18 px tall, so the card is about 4 px taller than in Q5, the same as Star's screen today.
 
 Where it stands: the status file.
+
+## 13. After step 1: a turned-off state for the dropdown and time list (Finance's v0.823)
+
+**Asked** by Finance, 2026-10-29. Jeffrey answered Finance's F2 question with **"C, via Dashboard core"** (Finance's v0.823; picture `docs/Finance/images/Finance-DR-F2-Settings-Off.png` on branch `finance`, option C). While Finance → Settings' reminder switch is Off, its 14 time boxes (7 days × 2 schools) must stay as they are today: gray, they can't open, and Tab skips them. F2 switches those boxes to the shared time list, which until now had only `readOnly` ("busy saving": still a Tab stop, with the busy cursor).
+
+**The change** (shared `src/components/Select.jsx`, passed on by `src/components/TimeList.jsx`):
+- **`disabled`** defaults to false, so every current use is unchanged. When it is on, the field is turned off:
+  - it is not a Tab stop (tabIndex -1, no `data-autofocus`);
+  - a click or tap doesn't move the focus there either (its `mousedown` is cancelled, as a browser's disabled dropdown);
+  - it has `aria-disabled="true"`, so Chrome's accessibility tree says "disabled" and screen readers say "unavailable" / "dimmed";
+  - no click, tap or key opens it;
+  - if its list is open when it is turned off, the list closes before the screen is painted.
+- **The look** is `.fa-field.is-disabled` in `shared.css`, right after `.is-readonly`:
+  - background `--color-surface`;
+  - words and chevron in `--color-disabled-text`, including the gray "Choose a time";
+  - the plain cursor, and the usual border.
+  That is Finance's picture C exactly. Today's real boxes look a shade lighter only because the browser draws a disabled dropdown at 70 %.
+- **In Windows High Contrast** (forced colors), the words, the chevron and the border use the theme's GrayText, as the browser's own disabled dropdown does. Without it, the theme's colours made a turned-off field look like one that works (found by the review).
+- **When both are on** (saving while turned off), turned off wins: its CSS comes after `.is-readonly`, and `aria-readonly` is left off.
+- **It follows existing patterns.** The shared `ChoiceGroup.jsx` handles `disabled` the same way. The dialog's Tab wrap (`Dialog.jsx`) already skips tabindex -1, so a turned-off field inside a dialog is skipped too.
+
+**Proof:** parts page `M8`.
+- **Samples:**
+  - `off`, listed apart because no M8 mockup draws it: a sample "Reminder: Off / On" switch, Monday's two times turned off (the first has autoFocus, which a turned-off field must ignore) and a sample button after them;
+  - `offwhileopen`, a behaviour check: it opens the second list, then turns both fields off a second later.
+- **Checks:** 8 new behaviour checks in `check-parts.mjs`. Each "does nothing" check sits next to the same press opening an enabled field.
+  - Tab and Shift+Tab skip both fields.
+  - The attributes and Chrome's accessibility tree: combobox, its name, disabled.
+  - A click opens nothing and leaves the focus on the switch; no key opens it.
+  - The look's colours and cursor, also with nothing chosen.
+  - In Windows High Contrast, GrayText as the browser's own disabled dropdown; a field that works keeps its colours.
+  - Turned on again, it is a Tab stop and its autoFocus is back; every key that did nothing while off opens it, and a click opens it and takes the focus.
+  - A real tap at 390 opens nothing, while the same tap on an enabled field opens it and takes the focus.
+  - Turned off while open, the list closes.
+- **Pictures:** `Proof/parts/M8-off-vs-F2.png`, the built state at the four sizes next to Finance's picture C and today's boxes, plus Windows High Contrast. The parts picture tool (`shoot-parts.mjs`) photographs only states with a mockup, so these were taken with a scratch script.
+
+Where it stands: the status file.
+
+## 14. After step 1: "Show all" inside its gray line on touch screens (v1.117)
+
+**Asked** by Star's design reviewer through the Main session, 2026-10-28, as a SHOULD for the shared part.
+- On touch screens, the shared count cards' "Showing not paid only · Show all" drew Show all as a plain touch link button. `app.css` gives every touch link button a visible 44 px box with 8 px of side padding, so Show all sat 12 px after the dot and its line was 44 px tall.
+- Star's own "… · Show both schools" just under it (`.st-inline-link`) has a 20 px line with 4 px after the dot.
+- The approved M6 mockup draws the same as the built part, so Jeffrey was asked first. Picture: `Questions/M6-show-all-on-touch.png`, Star's Candidates tab today next to the fix put on the page.
+- Jeffrey, 2026-10-29: **A, inline**.
+
+**The first build didn't fit.** It made the invisible box 12 px above and below the words, but the room around the line is only 8 px above, the ~20 px line and 12 px below.
+- The box took a 4.5 px strip off the card above: a tap on the bottom edge of "Not paid" cleared the filter.
+- On Star's Both view, the Dan switch under the line cut Show all to 39.5 px for a finger. §2.5 requires at least 44×44, and tap areas don't overlap.
+
+Jeffrey chose **(a), room for the box** (2026-10-29; picture `Questions/M6-show-all-tap-area.png`, left column), over (b) a tall line with no gap and (c) a named exception in §2.5.
+
+**The change (option a):**
+- `CountCards.jsx`: Show all has the class `inline-link`. Its gray line also has `cards-showing`, so only the shared part's line gets the room; Star's and Color Belt's own `.ev-filter-line` lines don't change.
+- `shared.css`, M6 section:
+  - `.inline-link` is copied from Star's `.st-inline-link`, with `position: relative` on the link itself. On touch, Show all keeps the line's height (20 px) and sits 4 px after the dot, as on PC.
+  - On touch, the invisible box is exactly 44 px tall (`--tap-size`), starts 11 px above the words, and is 4 px wider at each side. Star's own box is the same idea but 43.5 px, with no room made for it.
+  - The touch rules work only inside the shared line (`.cards-showing .inline-link`). Anywhere else, a link button keeps app.css's own 44 px touch box, so reusing the class can't bring the overlap back.
+  - On touch, `.ev-filter-line.cards-showing` has no −4 px pull-up toward the cards (so it sits 12 px from them) and 24 px under it. The box starts in the gap above the line and ends inside the space under it.
+  - What comes under the line sits 16 px lower than in the first build, and 8 px higher than before the change (when the line itself was 44 px tall).
+  - PC is unchanged.
+- Color Belt's own line keeps its gap until Color Belt moves to the shared cards in its own prompt; at that point, check what sits under its line (its class switch).
+- Star's "Show both schools" keeps its own class. Its tap area measures 118×39, which is Star's code.
+
+**Proof:**
+- **Sample:** M6's `filtered` state has a real control under the line: a class switch (the shared segmented ChoiceGroup), as Color Belt's and Star's rosters have one there.
+- **Checks:** 4 in `check-parts.mjs`, at 1280 and the three touch sizes. They wait for the gray line rather than a fixed time.
+  - At every size, Show all takes no taps from another control: no point inside a card or a button of the class switch finds it.
+  - On touch:
+    - the line's height and the gap after the dot match PC;
+    - the invisible box is exactly 44 px;
+    - a finger finds Show all in at least 44×44, measured in 1/8 px steps;
+    - the neighbours' own tap areas, their invisible boxes included, are untouched. In the columns of Show all's box (its left edge + 1, its middle, its right edge − 1), the card above and the switch's button under it measure the same for a finger with Show all's box as without it.
+  - With broken CSS put on the page, they fail at every touch size:
+    - the first build's layout: a 43.5 px box, a 39.5 px finger height, taps taken from "Not paid", and the card's area cut;
+    - a 48 px box and a 56 px box;
+    - a 44 px box moved down and drawn above the switch: the switch's buttons lose 3/8 px.
+- **Pictures:** Star's real Candidates tab with the built code (Both at tablet, phone and 320; one school at phone) is pixel-identical to option (a) in Jeffrey's picture. Side by side: `Proof/parts/M6-show-all-built-vs-a.png`.
+
+Where it stands: the status file.

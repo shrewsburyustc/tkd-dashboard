@@ -1,0 +1,71 @@
+{
+  "title": "Camps C3 — Print receipt",
+  "subtitle": "Rules v1.002 (Print receipt in every section: the person’s ⋯ menu and their detail), v1.105 / v1.112 (the shared receipt, <code>components/Receipt.jsx</code>), v1.011 / v0.724 (⋯ groups: Print receipt is <b>last in the money group</b>), v1.100 (<code>onTop</code>). Model: Star’s build (v0.518). Today Camps has no receipt at all. After: <b>(1)</b> the camper’s ⋯ gains <b>Print receipt</b> (ti-printer) after Undo payment for admins; staff, who see no money items today, get a money group holding only Print receipt (as Star). <b>(2)</b> Camper detail: on PC an outline <b>Print receipt</b> at the end of Payments (Star’s place); on touch screens it is in <b>More</b>, in the same spot as the ⋯ menu, and only there (rule 1.1). <b>(3)</b> It opens the shared Receipt box (on top of Camper detail when opened from there); phones get the full-screen page with ← and Print full width. <b>(4)</b> Hide private details: the item is gone (see the question); a receipt already open when the switch goes on shows the one gray line and no Print. <b>(5)</b> The printed US Letter page. Sample: Jack Rivera, Thanksgiving Camp — his $186 check was changed with Edit payment to $100 cash, then $86 was marked paid today, so the receipt shows two lines and leaves out the old payment and its reversal. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c03-pc-today-menu-admin.png", "crop": [840, 380, 440, 270], "scale": 0.62,
+          "caption": "<b>PC 1280×800, admin.</b> Jack’s ⋯: Edit details — Edit payment · Undo payment — Withdraw · Delete permanently. No receipt." },
+        { "src": "shots/c03-pc-today-menu-staff.png", "crop": [840, 380, 440, 270], "scale": 0.62,
+          "caption": "<b>Staff.</b> Edit details — Withdraw. No money group." }
+      ] },
+      { "src": "shots/c03-pc-today-detail.png", "crop": [420, 410, 440, 250], "scale": 0.7,
+        "caption": "<b>PC Camper detail.</b> Payments lists every row, the old one and its reversal included; nothing to print." },
+      { "row": [
+        { "src": "shots/c03-tab-today-more.png", "crop": [190, 860, 440, 240], "scale": 0.62, "shotWidth": 820,
+          "caption": "<b>Tablet 820×1180 touch, admin.</b> Camper detail → More." },
+        { "src": "shots/c03-tab-today-more-staff.png", "crop": [190, 860, 440, 240], "scale": 0.62, "shotWidth": 820,
+          "caption": "<b>Staff:</b> More holds only Withdraw." }
+      ] },
+      { "row": [
+        { "src": "shots/c03-ph-today-more.png", "crop": [0, 560, 390, 284], "scale": 0.6, "shotWidth": 390,
+          "caption": "<b>Phone 390×844 touch</b>, admin, More." },
+        { "src": "shots/c03-320-today-more.png", "crop": [0, 440, 320, 260], "scale": 0.6, "shotWidth": 320,
+          "caption": "<b>320 wide.</b> Same." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/c03-pc-after-menu-admin.png", "crop": [840, 380, 440, 270], "scale": 0.62, "marks": [[1048, 527, 198, 28]],
+          "caption": "<b>Admin:</b> Print receipt last in the money group." },
+        { "src": "shots/c03-pc-after-menu-staff.png", "crop": [840, 380, 440, 270], "scale": 0.62, "marks": [[1048, 459, 198, 36]],
+          "caption": "<b>Staff:</b> a money group with only Print receipt (Star v0.518)." },
+        { "src": "shots/c03-pc-after-absent-owen.png", "crop": [840, 540, 440, 140], "scale": 0.62,
+          "caption": "<b>Absent:</b> Owen Reed has paid nothing → no item (staff shown)." }
+      ] },
+      { "row": [
+        { "src": "shots/c03-pc-after-detail.png", "crop": [420, 410, 440, 250], "scale": 0.7, "marks": [[444, 615, 120, 28]],
+          "caption": "<b>PC Camper detail:</b> outline Print receipt at the end of Payments; it opens the receipt <b>on top</b> (v1.100)." },
+        { "src": "shots/c03-pc-after-receipt.png", "crop": [360, 80, 560, 704], "scale": 0.52, "marks": [[401, 246, 478, 152], [497, 444, 120, 58]],
+          "caption": "<b>The receipt</b> (the real shared box): Camps’ facts, “Camp fee” lines, the two schools, “Printed Oct 29, 2026 by Jeffrey Berg.”" }
+      ] },
+      { "row": [
+        { "src": "shots/c03-tab-after-more.png", "crop": [190, 860, 440, 240], "scale": 0.62, "shotWidth": 820, "marks": [[214, 1005, 120, 36]],
+          "caption": "<b>Tablet touch, admin:</b> in More only, after Undo payment." },
+        { "src": "shots/c03-tab-after-more-staff.png", "crop": [190, 860, 440, 240], "scale": 0.62, "shotWidth": 820, "marks": [[214, 961, 120, 36]],
+          "caption": "<b>Staff:</b> Print receipt · Withdraw (no line: More never starts with one)." },
+        { "src": "shots/c03-tab-after-receipt.png", "crop": [120, 90, 580, 1000], "scale": 0.36, "shotWidth": 820, "marks": [[130, 96, 560, 714]],
+          "caption": "On top of Camper detail." }
+      ] },
+      { "row": [
+        { "src": "shots/c03-ph-after-more.png", "crop": [0, 560, 390, 284], "scale": 0.55, "shotWidth": 390, "marks": [[16, 718, 120, 36]],
+          "caption": "<b>Phone:</b> More." },
+        { "src": "shots/c03-ph-after-receipt.png", "crop": [0, 0, 390, 844], "scale": 0.4, "shotWidth": 390, "marks": [[16, 687, 358, 36]],
+          "caption": "Full screen, ←, Print full width." },
+        { "src": "shots/c03-320-after-more.png", "crop": [0, 440, 320, 260], "scale": 0.55, "shotWidth": 320, "marks": [[16, 574, 120, 36]],
+          "caption": "<b>320:</b> More." },
+        { "src": "shots/c03-320-after-receipt.png", "crop": [0, 0, 320, 700], "scale": 0.45, "shotWidth": 320, "marks": [[16, 648, 288, 36]],
+          "caption": "Print pinned at the foot while the page scrolls." }
+      ] },
+      { "row": [
+        { "src": "shots/c03-pc-after-hidden.png", "crop": [340, 70, 600, 440], "scale": 0.5, "marks": [[384, 168, 512, 21]],
+          "caption": "<b>Hide private details on</b> while a receipt is open: one gray line, no Print (v1.105). Camper detail behind it is already hidden." },
+        { "src": "shots/c03-ph-after-hidden.png", "crop": [0, 0, 390, 300], "scale": 0.5, "shotWidth": 390, "marks": [[16, 64, 300, 21]],
+          "caption": "Phone: the same line." },
+        { "src": "shots/c03-print.png", "crop": [-67, -58, 816, 1056], "scale": 0.3, "shotWidth": 682,
+          "caption": "<b>Printed</b> (US Letter, 0.6 / 0.7 in margins, black on white)." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>Choices this picture makes (not fixed by a rule):</b> <b>(a) Menu:</b> last in the money group (v1.011; v0.724 left the spot for C3); staff get a money group with only Print receipt — Camps’ staff see no money items today, the same structure Star had, so Star v0.518 is copied. <b>(b) When it shows:</b> an active camper with money paid that still stands (paid &gt; $0) — Star’s rule (<code>canPrintReceipt</code>, v0.518). Absent for a camper who has paid nothing, a <b>removed</b> camper (Star’s rule; Black Belt does show it for a withdrawn candidate — say if Camps should follow Black Belt instead), and while Hide private details is on (see the question). <b>(c) Camper detail:</b> PC — outline button at the end of Payments (Star’s place); touch — only in More’s money group, because Camps’ More <i>is</i> the ⋯ list (v0.724), so the Payments part doesn’t repeat it (rule 1.1). <b>(d) Words:</b> kind line “Camp · payment receipt” (Color Belt’s and Star’s pattern); sub line “Jack Rivera · Thanksgiving Camp” (Star’s); <b>For = “Camp fee”</b> on every line — a Camps payment row doesn’t say which days or extras it paid for, and Edit details re-prices, so naming them would guess (Star’s reason for “Testing fee”). Camps has no refunds, so no minus lines. <b>(e) Facts:</b> Camper · Camp with its dates · School (Camps’ own line: “Worcester”, or “Both schools · held at Worcester”) · Days and Extras in Camper detail’s words (Extras left out when none) · Reference (the sign-up’s CP number; Black Belt v0.220 prints its reference). Never age, date of birth, parent, phones, email, notes, signature or links. <b>(f) Lines:</b> payments that still stand, oldest first by the day paid; the payment Edit payment or Undo payment replaced and its reversal are left out (Star’s rule). Total due = the camper’s total now; Paid to date = what still stands; Balance has no extra word (Camps has no “next due”). <b>(g) Name:</b> from <code>get_my_profile</code> when the receipt opens (Star’s Q7 A, which the brief says serves every section) — no App.jsx prop, no shared file touched. <b>Question for Jeffrey (one):</b> with Hide private details on, should Print receipt <b>A</b> disappear from the ⋯ menu and More, like Star (v0.518 Q8 B) and like Camps’ other money items (v0.722) — the gray line then only shows on a receipt already open when the switch goes on (drawn); or <b>B</b> stay in the menu and open the box with just the gray line and no Print? <b>Recommend A</b>: same as Star and Black Belt, and a mat-side tablet gets no item that does nothing. <b>Drawn:</b> the receipt boxes and printed page are the <b>real</b> shared <code>ReceiptDialog</code> / <code>ReceiptPrint</code>, filled from the preview’s own <code>camp_camper_detail</code>, camp and schools; the preview has no school streets or phones saved, so the parts page’s sample lines (M4) stand in. The menu items and buttons are copies of the real ones with the printer icon. Seen built: the phone’s Print button follows the page when the receipt is short (390) and pins at the foot when it scrolls (320) — the shared part’s sticky rule. <b>Script:</b> <code>mock-c03-receipt.js</code>."
+}

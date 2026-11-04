@@ -1,7 +1,7 @@
 // ChangePlanDialog.jsx — "Change plan or Kukkiwon" (staff before anything is paid; admins always).
 // Why it exists: approved mockup Candidates 6, contract CONTRACT-0016-B2 §3.6 (rulebook v0.217).
 // "Rina Patel · 1st Dan · Worcester"; Plan: one radio card per plan of the cycle (a round radio dot
-// at the left, as drawn), in the order set on the cycle (Rubric and prices / Add cycle), the
+// at the left, as drawn), in the order set on the cycle (Rubric and waiver / Add cycle), the
 // current one tagged "Current", each with this Dan's amounts and the PLAN's own due dates ("3
 // payments · 3 × $290 · Mar 27, Apr 24, May 29 · $870" — mockup 7: a late family's cards still
 // show the plan's dates; what they owe today is in the total line under the cards);

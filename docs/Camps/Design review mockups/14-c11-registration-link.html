@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps C11 — Registration link</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1840px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps C11 — Registration link</h1>
+<p class="sub">Rules v1.015 (one “Registration link” button with its words on every screen; Camps keeps its blue, its phone button gets words) and v1.106 / v1.111 (the shared box <code>components/RegistrationLinkBox.jsx</code> + <code>lib/qr.js</code>). Three changes: <b>(a)</b> phones: the icon-only blue square becomes the blue <b>Registration link</b> button with its words, on its own line under the camp’s name and line, as Color Belt’s buttons go under the title on phones; ⋯ stays beside it. <b>(b)</b> the box becomes the shared one (Camps’ card heading “Both schools · held at Worcester”, one link, no flyer): a failed copy or download now shows its amber note <i>inside</i> the box, in the shared words, until the box closes or the action works. Today it is a bar on the page behind the box — on phones the full-screen box hides it until you go back. <b>(c)</b> the QR file’s name (card at the bottom). PC and tablet buttons don’t change. Amber = what changes.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:320px">
+    <div class="shot" style="width:320px;height:55px">
+      <img src="shots/c11-pc-today-head.png" style="left:-320px;top:-50px;width:640px">
+      <div class="mark" style="left:211px;top:11px;width:83px;height:24px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> The blue button (stays as it is).</figcaption>
+  </figure><figure style="width:344.4px">
+    <div class="shot" style="width:344.4px;height:226.79999999999998px">
+      <img src="shots/c11-pc-today-copyfail.png" style="left:-25.2px;top:-33.6px;width:537.6px">
+      <div class="mark" style="left:2.7199999999999998px;top:39.68px;width:503.59999999999997px;height:23.119999999999997px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Copy fails: the bar appears on the page, <i>behind</i> the dimmed box.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:333px">
+    <div class="shot" style="width:333px;height:238.5px">
+      <img src="shots/c11-tab-today-copyfail.png" style="left:-36px;top:-40.5px;width:369px">
+      <div class="mark" style="left:3.2px;top:54.050000000000004px;width:323px;height:33.2px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet 820×1180 touch.</b> Same: the bar is behind the box.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:234px">
+    <div class="shot" style="width:234px;height:72px">
+      <img src="shots/c11-ph-today-head.png" style="left:0px;top:-84px;width:234px">
+      <div class="mark" style="left:170px;top:8px;width:29.599999999999998px;height:29.599999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390×844 touch.</b> Icon-only blue square (its name only in a tooltip / screen reader).</figcaption>
+  </figure><figure style="width:175.5px">
+    <div class="shot" style="width:175.5px;height:198px">
+      <img src="shots/c11-ph-today-copyfail.png" style="left:0px;top:0px;width:175.5px">
+      
+    </div>
+    <figcaption>Copy fails: nothing shows — the bar is under the full-screen box.</figcaption>
+  </figure><figure style="width:234px">
+    <div class="shot" style="width:234px;height:108px">
+      <img src="shots/c11-ph-today-copyfail-closed.png" style="left:0px;top:-84px;width:234px">
+      <div class="mark" style="left:5.6px;top:61.39999999999999px;width:222.79999999999998px;height:43.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Only after Back: the bar, Camps’ words (“copy it by hand”).</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:192px">
+    <div class="shot" style="width:192px;height:72px">
+      <img src="shots/c11-320-today-head.png" style="left:0px;top:-84px;width:192px">
+      <div class="mark" style="left:128px;top:8px;width:29.599999999999998px;height:29.599999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>320 wide.</b> Same square.</figcaption>
+  </figure><figure style="width:192px">
+    <div class="shot" style="width:192px;height:108px">
+      <img src="shots/c11-320-today-copyfail-closed.png" style="left:0px;top:-84px;width:192px">
+      <div class="mark" style="left:5.6px;top:61.39999999999999px;width:180.79999999999998px;height:43.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>The bar after Back.</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After (mockup)</div>
+  <div class="row"><figure style="width:201.6px">
+    <div class="shot" style="width:201.6px;height:218.4px">
+      <img src="shots/c11-pc-after-box.png" style="left:-168px;top:-29.4px;width:537.6px">
+      
+    </div>
+    <figcaption><b>PC.</b> The shared box: looks as today’s (Camps’ was copied from the same design).</figcaption>
+  </figure><figure style="width:201.6px">
+    <div class="shot" style="width:201.6px;height:235.2px">
+      <img src="shots/c11-pc-after-copyfail.png" style="left:-168px;top:-29.4px;width:537.6px">
+      <div class="mark" style="left:14.48px;top:177.44px;width:172.64px;height:22.28px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Copy fails: the amber note <b>inside</b> the box, under the card, shared words.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:216px">
+    <div class="shot" style="width:216px;height:261px">
+      <img src="shots/c11-tab-after-copyfail.png" style="left:-76.5px;top:-36px;width:369px">
+      <div class="mark" style="left:15.8px;top:196.70000000000002px;width:184.4px;height:23.3px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet touch.</b> Same, inside the box.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:234px">
+    <div class="shot" style="width:234px;height:90px">
+      <img src="shots/c11-ph-after-head.png" style="left:0px;top:-84px;width:234px">
+      <div class="mark" style="left:5.6px;top:53.599999999999994px;width:98px;height:29.599999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone.</b> Blue, with its words, on its own line under the name; ⋯ beside it.</figcaption>
+  </figure><figure style="width:175.5px">
+    <div class="shot" style="width:175.5px;height:216px">
+      <img src="shots/c11-ph-after-copyfail.png" style="left:0px;top:0px;width:175.5px">
+      <div class="mark" style="left:3.2px;top:191.3px;width:169.1px;height:23.3px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Copy fails: the note shows in the full-screen box.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:192px">
+    <div class="shot" style="width:192px;height:90px">
+      <img src="shots/c11-320-after-head.png" style="left:0px;top:-84px;width:192px">
+      <div class="mark" style="left:5.6px;top:53.599999999999994px;width:98px;height:29.599999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>320 wide.</b> Fits on one line.</figcaption>
+  </figure><figure style="width:134.4px">
+    <div class="shot" style="width:134.4px;height:226.79999999999998px">
+      <img src="shots/c11-320-after-copyfail.png" style="left:0px;top:0px;width:134.4px">
+      <div class="mark" style="left:2.7199999999999998px;top:196.76px;width:128.95999999999998px;height:29.84px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Buttons stack; the note wraps to two lines.</figcaption>
+  </figure></div>
+<figure style="width:302.40000000000003px">
+    <div class="shot" style="width:302.40000000000003px;height:214.20000000000002px">
+      <img src="shots/c11-names.png" style="left:-14.4px;top:-14.4px;width:1152px">
+      <div class="mark" style="left:6.800000000000001px;top:154.4px;width:294.2px;height:47.6px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>(c) The QR file’s name — question for Jeffrey.</b> A both-schools camp gets “April Vacation Camp QR code.png” either way. A one-school camp: <b>A</b> no school, or <b>B</b> “… - Worcester QR code.png”. <b>B matches</b> the rule v1.106 wrote (“[event] - [school] QR code.png”), its approved M5 one-school Color Belt sample (“November Children Testing - Worcester QR code.png”) and Star (v0.518: “[event] - Worcester QR code.png”). <b>Recommend B.</b></figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>Words that change:</b> copy failure “Couldn't copy the link. Select the link and copy it <i>by hand</i>.” (Camps) → “… copy it <i>yourself</i>.” (shared <code>COPY_FAILED</code>); download failure “Couldn't make the QR code <i>file</i>. Try again.” → “Couldn't make the QR code <i>picture</i>. Try again.” (shared <code>QR_FAILED</code>; same note place, not shot). Camps passes: title “Registration link”, the camp name, today’s line, one link <code>{ url: campLink(code), school: null (both-schools) or the school (option B), heading: “Both schools · held at Worcester” / “Worcester” }</code> (a one-school camp keeps its heading “Worcester”, not the default “Worcester school”); no flyer. With one link the buttons never name a school. <b>Phone button:</b> Color Belt and Star have no ⋯, so ⋯ beside the button is Camps’ own — the same pair as Camps’ PC header. Color Belt hasn’t switched to the shared box yet on any branch; Star has (v0.518). The link shows “localhost:5791” because this is the preview. <b>Drawn:</b> the After box is the <b>real</b> shared box mounted with Camps’ words (a failing <code>copy</code> passed in, as the parts page does); the phone header is the real one re-arranged (button’s words added, its square class removed); the file-name card is drawn, its names worked out by the real <code>qrFileName</code> helpers (Camps’ today and the shared one). <b>Script:</b> <code>mock-c11-link.js</code>.</div>
+</body></html>

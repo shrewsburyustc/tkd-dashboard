@@ -7,7 +7,7 @@
 //   School (Worcester, Shrewsbury or Both — starts with the school in the switcher), and notes
 //   under "More details". Save stays gray until there's a title, a type and good dates.
 // Edit has Remove (instant, with Undo — no confirmation, v0.234).
-// Staff see the same fields read-only, with "View only — ask an admin to change this."
+// Staff see the same fields read-only, with "View only. Ask an admin to change this."
 // Like the Schedule's dialogs, the typed values live in the parent (Calendar.jsx) so they
 // survive the screen locking while the dialog is open.
 import { IconCheck, IconChevronDown, IconChevronRight, IconTrash } from '@tabler/icons-react';

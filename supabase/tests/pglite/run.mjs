@@ -398,6 +398,14 @@
 //       tests (0013, 0017, 0022) after it, re-run safety, and the Undo of
 //       SETUP.md 0027e (manual/0027u) - see step0027 below. Run only this
 //       step with   node run.mjs --only-step0027
+//   step0029. 0029 (Finance: close-the-day reminder in 5-minute steps,
+//       design-review F2 / M8) on its own database in the production
+//       order with every live migration (0025's order, then 0027, then
+//       0026): the guard refuses a changed function; only the
+//       finance_reminder_time_is_valid line moves (body md5 only) in every
+//       fingerprints file; a stored 15-minute time stays valid; 0029's
+//       tests and the Finance tests after it; re-run safety - see step0029
+//       below. Run only this step with   node run.mjs --only-step0029
 //   step0028. 0028 (Star start times 6:00 AM - 10:00 PM every 5 minutes,
 //       v1.019 / S12) on its own database in the production order with
 //       every live migration (0025's order, then 0027 and 0026): the
@@ -464,6 +472,7 @@ const useFixtureSeed = process.argv.includes('--fixture-seed');
 const onlyStep0022 = process.argv.includes('--only-step0022');
 const onlyStep0026 = process.argv.includes('--only-step0026');
 const onlyStep0027 = process.argv.includes('--only-step0027');
+const onlyStep0029 = process.argv.includes('--only-step0029');
 const onlyStep0028 = process.argv.includes('--only-step0028');
 const onlyStep0031 = process.argv.includes('--only-step0031');
 const onlyStep0030 = process.argv.includes('--only-step0030');
@@ -477,6 +486,15 @@ const results = [];
 function record(name, ok, detail = '') {
   results.push({ name, ok, detail });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -  ' + detail : ''}`);
+}
+
+// Warnings: a check that is over its target but under its hard limit, where
+// Jeffrey accepted the miss. It counts as passed, but is printed again in the
+// summary so the number is seen on every run.
+const warnings = [];
+function warn(name, detail) {
+  warnings.push({ name, detail });
+  console.log(`WARN  ${name}  -  ${detail}`);
 }
 
 // Runs one SQL file / snippet; a failure is recorded instead of crashing,
@@ -630,6 +648,15 @@ async function main() {
     if (prints27) {
       console.log('\n0027 fingerprints (kind  item  detail):');
       for (const line of prints27) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0029: just the Finance reminder 5-minute step (0029)
+  if (onlyStep0029) {
+    const prints29 = await step0029();
+    if (prints29) {
+      console.log('\n0029 fingerprints (kind  item  detail):');
+      for (const line of prints29) console.log('  ' + line);
     }
     return finish();
   }
@@ -911,6 +938,9 @@ async function main() {
   // step0027: Edit camp refuses changes that break campers' extras (its own database, production order)
   console.log('\nMigration 0027 (Edit camp refuses changes that break campers\' extras):');
   const after27 = after5 ? await step0027() : null;
+  // step0029: Finance reminder in 5-minute steps (its own database, production order)
+  console.log('\nMigration 0029 (Finance: close-the-day reminder in 5-minute steps):');
+  const after29 = after5 ? await step0029() : null;
   // step0028: Star start times 6:00 AM - 10:00 PM every 5 minutes (its own database, production order)
   console.log('\nMigration 0028 (Star start times 6:00 AM - 10:00 PM every 5 minutes):');
   const after28 = after5 ? await step0028() : null;
@@ -1002,6 +1032,10 @@ async function main() {
   if (after27) {
     console.log('\n0027 fingerprints (kind  item  detail):');
     for (const line of after27) console.log('  ' + line);
+  }
+  if (after29) {
+    console.log('\n0029 fingerprints (kind  item  detail):');
+    for (const line of after29) console.log('  ' + line);
   }
   if (after28) {
     console.log('\n0028 fingerprints (kind  item  detail):');
@@ -5197,15 +5231,22 @@ async function speed0025(main, claims) {
       }
       return t.sort((a, b) => a - b)[1];
     };
-    for (const [label, sql, limit] of [
+    for (const [label, sql, limit, hardLimit] of [
       ['bb_grading_grid (one Dan, 60 rows)', `select public.bb_grading_grid('${newest}', 1) as r`, 200],
       ['bb_cycle_results (one Dan)', `select public.bb_cycle_results('${newest}', 1) as r`, 200],
       ['bb_cycle_results (every Dan)', `select public.bb_cycle_results('${newest}', null) as r`, 200],
-      ['bb_makeup_list (11 earlier cycles)', `select public.bb_makeup_list('${newest}') as r`, 300],
+      // Target 300 ms; this huge seed takes ~1.2-1.4 s. Jeffrey accepted that
+      // (rulebook v0.962): over 300 ms is a warning, over 3 s still fails.
+      ['bb_makeup_list (11 earlier cycles)', `select public.bb_makeup_list('${newest}') as r`, 300, 3000],
       ['one bb_set_grade', `select public.bb_set_grade((select id from public.bb_candidates where cycle_id = '${newest}' and source = 'desk' limit 1), 1, '88de8004', 'B') as r`, 50]]) {
       try {
         const ms = await time(sql);
-        record(`${S}${label} <= ${limit} ms`, ms <= limit, `${ms.toFixed(1)} ms (median of 3)`);
+        // Only rows with a hard limit can warn; the others pass or fail at their limit.
+        if (hardLimit && ms > limit && ms <= hardLimit) {
+          warn(`${S}${label} <= ${limit} ms`, `${ms.toFixed(1)} ms (median of 3); accepted miss, fails above ${hardLimit} ms (v0.962), re-time with real data`);
+        }
+        const max = hardLimit ?? limit;
+        record(`${S}${label} <= ${max} ms`, ms <= max, `${ms.toFixed(1)} ms (median of 3)`);
       } catch (error) {
         record(`${S}${label} <= ${limit} ms`, false, error.message);
       }
@@ -6274,6 +6315,129 @@ async function step0027() {
 }
 
 // =====================================================================
+// step0029: Finance - close-the-day reminder in 5-minute steps (0029,
+// design-review F2 / M8)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, then 0026 - the order they
+// were pasted):
+//   a. 0029_fingerprints.sql is connector-safe (no "delete" / "drop")
+//   b. the guard: 0029 stops - and changes nothing - when the live
+//      function is not 0011's (a changed copy is planted, rolled back)
+//   c. a 15-minute time (Worcester Wednesday 19:45) is stored before 0029
+//   d. apply 0029: in every fingerprints file only the
+//      finance_reminder_time_is_valid(...) line moves, and only its body
+//      md5 (definer, settings, owner, rights stay); the md5 goes from
+//      0011's to 0029's (the two the guard names); the stored 19:45 and
+//      every other stored time still pass the new rule
+//   e. 0029_tests.sql, then 0011's, camps' 0017's, 0018's and 0026's
+//      tests again
+//   f. 0029 applied a SECOND time: no fingerprint and no row changes
+// Run only this step with   node run.mjs --only-step0029
+// =====================================================================
+const MD5_0011_REMINDER = '893a4a82cd923c9e81c0a35f48de403f';
+const MD5_0029_REMINDER = '956cf7ae3a12ff432ead67bafd2631c0';
+
+async function step0029() {
+  const L = '[0029] ';
+  record(`${L}0029_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0029_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (Edit camp guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Black Belt in Finance)', '0026_finance_black_belt.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  const migration = read('migrations', '0029_finance_reminder_5min.sql');
+  const fnMd5 = `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                   from pg_proc p where p.oid = to_regprocedure('public.finance_reminder_time_is_valid(time)')`;
+  record(`${L}before 0029 the function is 0011's (md5 ${MD5_0011_REMINDER})`, (await one(db, fnMd5)) === MD5_0011_REMINDER);
+
+  // b. the guard refuses a function that isn't 0011's (planted in a transaction, rolled back)
+  {
+    let message = '';
+    try {
+      await db.exec(`begin;
+        create or replace function public.finance_reminder_time_is_valid(p_time time)
+        returns boolean language sql immutable set search_path = '' as $$ select p_time is not null; $$;
+        ${migration}`);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0029 over a changed function (it stops, nothing changes)`,
+      message.includes('rebuild 0029 first') && (await one(db, fnMd5)) === MD5_0011_REMINDER, message || 'it ran');
+  }
+
+  // c. a 15-minute time stored before 0029 (as an admin would have saved it)
+  await run(db, `${L}store a 15-minute time before 0029 (Worcester Wednesday 19:45)`,
+    `update public.finance_reminder_times set remind_at = time '19:45' where location_code = 'worcester' and weekday = 3;`);
+
+  // d. apply: only finance_reminder_time_is_valid's body moves
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0029']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const rowsSql = `select coalesce(string_agg(location_code || ':' || weekday || ':' || coalesce(remind_at::text, 'off'), ','
+                     order by location_code, weekday), '') from public.finance_reminder_times`;
+  const rowsBefore = await one(db, rowsSql);
+  if (!(await run(db, `${L}apply 0029_finance_reminder_5min.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isFn = (line) => /^function {2}finance_reminder_time_is_valid\(/.test(line);
+  const wrong = [];
+  const movedIn = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (!gone.length && !added.length) continue;
+    if (gone.length !== 1 || added.length !== 1 || !isFn(gone[0]) || !isFn(added[0])) {
+      wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      continue;
+    }
+    movedIn.push(n);
+    // only the 32-character body md5 may differ; it must go from 0011's to 0029's
+    const g = gone[0].replace(MD5_0011_REMINDER, '<md5>');
+    const a = added[0].replace(MD5_0029_REMINDER, '<md5>');
+    if (g === gone[0] || a === added[0] || g !== a) {
+      wrong.push(`${n}: more than the body md5 changed, or not 0011's -> 0029's: ${gone[0]} => ${added[0]}`);
+    }
+  }
+  record(`${L}fingerprints: only finance_reminder_time_is_valid's body md5 moved (0011's -> 0029's), every other line of every file byte-identical`,
+    wrong.length === 0 && movedIn.includes('0029') && movedIn.includes('0011'),
+    wrong.join('; ') || `moved in ${movedIn.join(', ')}; ${numbers.length} files checked`);
+  const prints29 = after['0029_fingerprints.sql'];
+  record(`${L}0029 fingerprints: the function (not definer, search_path="", only postgres may run it, immutable sql boolean) + the unchanged table rule`,
+    prints29.length === 3
+      && prints29.some((l) => isFn(l) && l.includes('definer=false') && l.includes('settings=search_path=""') && l.endsWith('rights=postgres:EXECUTE'))
+      && prints29.some((l) => l.startsWith('function-kind') && l.endsWith('volatility=i language=sql returns=boolean'))
+      && prints29.some((l) => l.startsWith('rule') && l.includes('finance_reminder_time_is_valid(remind_at)')),
+    prints29.join(' | '));
+  record(`${L}the stored times are unchanged and all still pass the new rule (19:45 kept)`,
+    (await one(db, rowsSql)) === rowsBefore && rowsBefore.includes('worcester:3:19:45:00')
+      && (await one(db, `select count(*)::integer from public.finance_reminder_times
+                          where remind_at is not null and not public.finance_reminder_time_is_valid(remind_at)`)) === 0,
+    rowsBefore);
+
+  // e. the tests
+  const testFiles = [['0029_tests.sql', 'ALL 0029 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
+    [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED']];
+  for (const [file, ok] of testFiles) {
+    if (existsSync(path.join(supabaseDir, 'tests', file))) await runTestFile(db, `${L}${file} (after 0029)`, file, ok);
+  }
+
+  // f. re-run safety
+  await run(db, `${L}apply 0029 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0029 re-run: no fingerprint and no stored time changed`,
+    movedAgain.length === 0 && (await one(db, rowsSql)) === rowsBefore, movedAgain.join(', '));
+  await runTestFile(db, `${L}0029_tests.sql (after the re-run)`, '0029_tests.sql', 'ALL 0029 TESTS PASSED');
+  await db.close().catch(() => {});
+  return prints29;
+}
+
+// =====================================================================
 // step0028: Star start times 6:00 AM - 10:00 PM every 5 minutes (0028,
 // rulebook v1.019, design-review S12)
 // ---------------------------------------------------------------------
@@ -6823,7 +6987,11 @@ async function step0030() {
 
 function finish() {
   const failed = results.filter((r) => !r.ok);
-  console.log(`\n${results.length - failed.length} passed, ${failed.length} failed.`);
+  console.log(`\n${results.length - failed.length} passed, ${failed.length} failed, ${warnings.length} warning(s).`);
+  if (warnings.length) {
+    console.log('WARNINGS (accepted, not failures):');
+    for (const w of warnings) console.log(`  - ${w.name}: ${w.detail}`);
+  }
   if (failed.length) {
     console.log('FAILED:');
     for (const f of failed) console.log(`  - ${f.name}: ${f.detail}`);

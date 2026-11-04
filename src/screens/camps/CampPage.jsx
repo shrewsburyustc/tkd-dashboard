@@ -5,8 +5,10 @@
 // browser Back returns to the Camps list; the old tab addresses (…/checkin, /payments, /attendance)
 // still work and are tidied to the plain address. Top to bottom:
 //   - "← Camps", the camp name and its status tag, and one line: days · hours · school · campers
-//   - header buttons: Registration link (the one blue button, ti-qrcode → CampLinkDialog) and ⋯
-//     (Edit camp (admin) · Close / Reopen sign-up · Save as template (admin) · Print roster ·
+//   - header buttons: Registration link (the one blue button, ti-qrcode → the dashboard's shared
+//     Registration link box, components/RegistrationLinkBox.jsx, rulebook v0.733 / design review
+//     C11) and ⋯ (on phones the button keeps its words and sits on its own line under the name)
+//     (Edit camp (admin) · Close / Open sign-up · Save as template (admin) · Print roster ·
 //     Delete camp (admin) — CampRowMenu.jsx)
 //   - the roster (CampRoster.jsx): summary line, Find a camper, possible duplicates, the week switch
 //     for camps longer than one calendar week, one row per child with Paid and a column per day,
@@ -18,14 +20,40 @@
 // above the roster, so the page never just looks frozen (live test 2026-10-21); the roster's
 // summary line also says when it was last updated. Every change goes to the database
 // (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
-// toast; permanent ones ask first (rule 1.4). Staff and admins see different ⋯ items
+// toast — since rulebook v0.726 also Edit camp, Edit details and Edit payment ("Payment changed");
+// permanent ones ask first (rule 1.4), and so does Undo payment (rulebook v0.730). Staff and admins see different ⋯ items
 // (CamperRowMenu.jsx); the database enforces the same rules.
 //
 // There is no Add camper button: campers only come in through the family form (C4).
+//
+// "Hide private details" (the top-bar switch, src/lib/privateDetails.js; rulebook v0.722, design
+// review C1) — copied from Color Belt's built event page (v0.412). While it is on, Camps hides
+// money: no Paid column / "to collect" / Mark paid (CampRoster), gray "Hidden on this tablet" in
+// Camper detail, Compare and Edit details, no money items in ⋯ / "More", "any recorded payment" in
+// the delete sentences, no amounts in toasts. Turning it on closes the payment dialogs (Change how
+// they'll pay, Edit payment, the Undo payment box), the ⋯ menu, the toast and every banner (they may name money or carry
+// a Retry that records money). Camp and template prices are settings: they stay.
+// Naming: `detailsHidden` is that switch; `hidden` below means "the screen is locked".
+// Print receipt (design review C3, rulebook v0.734; Star's build, v0.518, is the model): the camper's
+// ⋯ (last in the money group), Camper detail's button (PC / tablet without touch) and "More" (touch)
+// open the dashboard's shared receipt (components/Receipt.jsx). It reads camp_camper_detail, both
+// schools (Settings → Schools: street and phone) and the reader's name (get_my_profile) when it
+// opens, and campReceipt.js turns them into the plain receipt. From Camper detail it opens on top of
+// it (v1.100) and focus goes back to the button; from ⋯ on its own. While it loads, can't load
+// (amber bar with Retry) or the camper was deleted meanwhile, the shared box shows that. A receipt
+// already open when Hide private details turns on stays open and shows only the gray line, no Print.
+// The delete box (Delete permanently), the Undo payment box (v0.730) and the possible-duplicate compare are the dashboard's shared
+// parts (components/ConfirmBox.jsx, components/CompareDialog.jsx; rulebook v0.729, design review
+// C6 / C20). This page keeps their state, words and rows (duplicates.js) and does the writes.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconQrcode } from '@tabler/icons-react';
+import { IconArrowBackUp, IconArrowLeft, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
+import CompareDialog from '../../components/CompareDialog.jsx';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
+import RegistrationLinkBox from '../../components/RegistrationLinkBox.jsx';
+import ReceiptDialog from '../../components/Receipt.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
+import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import {
@@ -35,6 +63,7 @@ import {
   editPayment,
   loadCamp,
   loadCamperDetail,
+  loadMyName,
   markPaid,
   resolveDuplicate,
   restoreCamper,
@@ -43,23 +72,25 @@ import {
   withdrawCamper,
   campToday,
 } from '../../lib/camps/campsApi.js';
-import { campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
+import { campLink, campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
+import { buildCampReceipt } from '../../lib/camps/campReceipt.js';
+import { loadSchools } from '../../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
-import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import CampDialog from './CampDialog.jsx';
-import CampLinkDialog from './CampLinkDialog.jsx';
 import CampRoster, { byFirstName } from './CampRoster.jsx';
 import CamperDialog from './CamperDialog.jsx';
 import { camperMenuItems } from './CamperRowMenu.jsx';
 import { useCampActions } from './CampRowMenu.jsx';
-import CompareDialog from './CompareDialog.jsx';
-import { findPairs } from './DuplicateBox.jsx';
+import { compareRows, findPairs } from './duplicates.js';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
 import * as T from './text.js';
 
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
 const OLD_TABS = ['checkin', 'payments', 'attendance'];
+// The dialogs that show or change money: they close when Hide private details is switched on
+// (the Undo payment box names the payment's amount, v0.730).
+const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment'];
 // The chosen week and the Removed group open / closed, per camp, while the page is open.
 const weekByCamp = new Map();
 const removedOpenByCamp = new Map();
@@ -122,6 +153,7 @@ export default function CampPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  const [detailsHidden] = usePrivateDetailsHidden(); // Hide private details (v0.506 / v0.722)
 
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor, row, kind: 'camper' | 'header' }
@@ -133,6 +165,10 @@ export default function CampPage({
   const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
   const busyRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false); // the "Couldn't refresh" bar's Retry is on its way
+  // The receipt (C3, v0.734): { key, camperId, opener, onTop, data, failed, notFound } or null.
+  // onTop = opened from Camper detail, drawn on top of it (Dialog onTop, v1.100); from ⋯ on its own.
+  const [receipt, setReceipt] = useState(null);
+  const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
 
   function setRemovedOpen(open) {
     removedOpenByCamp.set(campId, open);
@@ -206,7 +242,7 @@ export default function CampPage({
   useEffect(() => {
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
-  const modalShown = (dialog !== null || actions.dialogOpen) && !screenLocked;
+  const modalShown = (dialog !== null || receipt !== null || actions.dialogOpen) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -216,7 +252,74 @@ export default function CampPage({
     if (live.status !== 'notFound') return;
     setDialog(null);
     setMenu(null);
+    setReceipt(null);
   }, [live.status]);
+
+  // ===== Hide private details (as Color Belt's EventPage, v0.412) =====
+  // The open dialog RIGHT NOW: a payment dialog's save that finishes after the switch closed it
+  // must not close (or patch) whatever dialog is open by then.
+  const dialogRef = useRef(dialog);
+  dialogRef.current = dialog;
+  const stillOpen = (d) => dialogRef.current !== null && dialogRef.current.key === d.key;
+  // The switch's value RIGHT NOW (updated on every drawing). A save that was already on its way
+  // when the switch turned on reads this when its answer arrives, so its toast or banner follows
+  // the current value, not the one from when it started.
+  const hiddenNowRef = useRef(detailsHidden);
+  hiddenNowRef.current = detailsHidden;
+  // A money save's answer that arrives while hidden: the general words only — no amount, no paid
+  // status, no Retry that would record money (Mark paid / Undo payment).
+  function hiddenMoneyProblem(status) {
+    if (status === 'no_access') onNoAccess();
+    else if (status === 'not_allowed') {
+      setBanner({ text: T.ROSTER_NOT_ALLOWED });
+      onRefreshProfile();
+      reloadQuiet();
+    } else if (status === 'error') {
+      setBanner({ text: T.SAVE_FAILED });
+    } else {
+      setBanner({ text: T.ROSTER_STALE });
+      reloadQuiet();
+    }
+  }
+  // A payment dialog's save that failed AFTER the dialog was closed (the switch turned on mid-save):
+  // the dialog can't show its note any more, so the page says it (as Color Belt's EventPage).
+  function closedPaymentProblem(status) {
+    if (hiddenNowRef.current) hiddenMoneyProblem(status);
+    else if (status === 'no_access') onNoAccess();
+    else {
+      setBanner({ text: status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
+      if (status !== 'error') reloadQuiet();
+    }
+  }
+  // Switched on: no payment dialog, ⋯ menu, toast or banner may stay (the roster closes its own
+  // Mark paid box). Only when the switch changes, not on the first drawing.
+  const hiddenBeforeRef = useRef(detailsHidden);
+  useEffect(() => {
+    const switchedOn = detailsHidden && !hiddenBeforeRef.current;
+    hiddenBeforeRef.current = detailsHidden;
+    if (!switchedOn) return;
+    const d = dialogRef.current;
+    // (Even mid-save: the save still finishes, and its toast names no amount.)
+    if (d && PAYMENT_DIALOGS.includes(d.type)) {
+      setDialog(null);
+      if (d.opener) focusSoon(d.opener);
+    }
+    // The ⋯ menu closes; focus goes back to the button that opened it (the row's ⋯ or the header's),
+    // or to "← Camps" if that button is gone — never to the page body.
+    if (menu) {
+      const anchor = menu.anchor;
+      setMenu(null);
+      focusSoon(() => (anchor?.isConnected ? anchor : document.querySelector('.ev-back')));
+    }
+    // A toast may name money ("marked paid · $15 cash") or carry a payment Undo: it goes too.
+    clearToast();
+    // So does every banner: a failed Mark paid keeps a Retry that records money, and "already
+    // marked paid" names paid status. The row's Not saved mark goes with it.
+    setBanner(null);
+    setNotSavedId(null);
+    // (only when the switch changes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailsHidden]);
 
   // ===== Derived =====
   const active = roster.filter((r) => r.status === 'active').sort(byFirstName);
@@ -240,11 +343,20 @@ export default function CampPage({
   }
 
   // ===== Undo and row problems (as Color Belt's event page) =====
+  // options.money: the Undo of a payment — while hidden on arrival, the general words, no Retry.
+  // A call may add `undoText` to its answer: the reason it was refused, in words (Edit camp's and
+  // Edit details' Undo, rulebook v0.726) — shown in the amber bar instead of "Couldn't undo.
+  // Someone else changed this just now." The toast is gone once Undo is pressed and begin() lets
+  // only one change run at a time, so a double press can't run it twice.
   async function runUndo(call, options = {}) {
     if (!begin()) return;
     const result = await call();
     end(result.status);
     const status = result.status;
+    if (options.money && hiddenNowRef.current && status !== 'ok') {
+      hiddenMoneyProblem(status);
+      return;
+    }
     if (status === 'ok') {
       setBanner((current) => (current?.kind === 'undo' ? null : current));
       showToast(T.TOAST_UNDONE, { icon: false });
@@ -256,13 +368,15 @@ export default function CampPage({
     } else if (status === 'error') {
       setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, options) });
     } else {
-      setBanner({ text: T.UNDO_STALE });
+      setBanner({ text: result.undoText ?? T.UNDO_STALE });
       reloadQuiet();
     }
   }
-  function rowProblem(status, row, retry) {
+  // money: Mark paid / Undo payment — while hidden on arrival, the general words, no Retry.
+  function rowProblem(status, row, retry, money = false) {
     const name = T.camperLabel(row);
-    if (status === 'no_access') onNoAccess();
+    if (money && hiddenNowRef.current) hiddenMoneyProblem(status);
+    else if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: retry.notAllowedText ?? T.ROSTER_NOT_ALLOWED });
       onRefreshProfile();
@@ -303,16 +417,19 @@ export default function CampPage({
       return;
     }
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school) });
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school) }, true);
       return;
     }
     rowDone();
     reloadQuiet();
     const paymentId = result.paymentId;
-    showToast(T.markedPaidToast(name, result.amountCents, result.method), {
+    // Hide private details switched on while this was saving: "Leo Kim marked paid", no amount or
+    // method (picture 03b keeps the Undo; a failed Undo then gets the general words, no Retry).
+    const text = hiddenNowRef.current ? T.markedPaidToastHidden(name) : T.markedPaidToast(name, result.amountCents, result.method);
+    showToast(text, {
       icon: false,
       // Staff may undo their own payment within 10 seconds (§1.14); after that it's an admin's job.
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE }) },
+      action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE, money: true }) },
     });
   }
 
@@ -337,18 +454,72 @@ export default function CampPage({
     });
   }
 
-  // ===== Undo payment from ⋯ (admins, any time) =====
-  async function doUndoPayment(row) {
+  // ===== Undo payment from ⋯ (admins, any time): asks first (rulebook v0.730, v1.003) =====
+  // The box names the payment it reverses — amount, way to pay and date — and what is owed after.
+  // The roster row knows only WHICH payment (lastPaymentId: the latest one not reversed), not its
+  // amount, so Camper detail (camp_camper_detail) is read first, as Edit payment and Delete
+  // permanently do; the payment undone is the one that counts right now in that fresh read
+  // (activePayment — the same rule as the row's lastPaymentId), so the box names exactly the
+  // payment that is reversed. From Camper detail (`from`) the box takes the detail's place in one
+  // update, as Delete permanently does.
+  async function startUndoPayment(row, opener, from = null) {
     if (!row.lastPaymentId || !begin()) return;
-    const result = await undoPayment(row.lastPaymentId);
+    const result = await loadCamperDetail(row.id);
+    end(result.status === 'ok' ? 'ok' : result.status);
+    if (result.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (detailGone(from)) return;
+    // Hide private details was switched on while this loaded: the box (it names money) doesn't open.
+    if (hiddenNowRef.current) return;
+    const payment = result.status === 'ok' ? activePayment(result.payments) : null;
+    if (!payment) {
+      leaveDetail(from);
+      setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
+      reloadQuiet();
+      return;
+    }
+    openDialog({
+      type: 'undoPayment',
+      row,
+      name: T.camperLabel(result.camper),
+      payment,
+      // What the camper owes once this payment is reversed.
+      owedAfterCents: (result.breakdown.owesCents ?? 0) + payment.amountCents,
+      saving: false,
+      failed: false,
+      opener,
+    });
+  }
+  async function confirmUndoPayment() {
+    const d = dialog;
+    if (!d || d.saving || !begin()) return;
+    setDialog({ ...d, saving: true, failed: false });
+    const result = await undoPayment(d.payment.id);
     end(result.status);
+    // Closed meanwhile (Hide private details switched on mid-save): the page says how it went.
+    const open = stillOpen(d);
+    if (result.status === 'error' && open) {
+      // Didn't reach the database: the box stays open with its amber note; pressing again retries.
+      setDialog((current) => (current ? { ...current, saving: false, failed: true } : current));
+      return;
+    }
+    if (open) {
+      setDialog(null);
+      if (d.opener) focusSoon(d.opener);
+    }
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) });
+      // Other refusals: today's handling (amber bar, reload; the general words while hidden). No
+      // Retry: 'error' (the only status that offers one) was handled above, inside the box.
+      if (open) rowProblem(result.status, d.row, { text: T.actionFailed }, true);
+      else closedPaymentProblem(result.status);
       return;
     }
     rowDone();
     reloadQuiet();
-    showToast(T.paymentUndoneToast(T.camperLabel(row)), { icon: false });
+    // Today's toast, no Undo. Hidden now: the general words ("Payment undone" would say they had paid).
+    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(d.name), { icon: false });
   }
 
   // ===== Check in / Undo check-in (any day, v0.706): a day cell of the roster =====
@@ -367,10 +538,10 @@ export default function CampPage({
       icon: false,
       action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn(row.id, day.dayId)) },
     });
-    // Keyboard: stay on the same day cell (it turns from Check in into ✓ time).
+    // Keyboard: stay on the same day cell (it turns from Check in into the came icon + time).
     focusSoon(() => document.querySelector(`[data-day-cell="${row.id}:${day.dayId}"]`));
   }
-  // Tapping a ✓ undoes that check-in at once, with an Undo toast that checks the child in again.
+  // Tapping a came cell (user-check icon + time) undoes that check-in at once, with an Undo toast that checks the child in again.
   async function doUndoCheckIn(row, day) {
     if (!day || !begin()) return;
     const result = await undoCheckIn(row.id, day.dayId);
@@ -397,7 +568,22 @@ export default function CampPage({
     const pair = pairs.find((p) => p.first.id === row.id || p.second.id === row.id);
     if (pair) openDialog({ type: 'compare', pair, saving: false, failed: false, opener });
   }
-  async function startEditPayment(row, opener) {
+  // Edit payment and Delete permanently read the camper fresh first. `from` = the open Camper
+  // detail when they were pressed under its "More" (touch screens), else null (the ⋯ menu). The
+  // detail stays open while this loads, and the new dialog then takes its place in ONE drawing:
+  // Dialog.jsx hands the detail's browser Back step straight to it. (Closing the detail first let
+  // its Back step land after the new dialog had opened, which closed that one at once — phones.)
+  // Closed meanwhile (back arrow, Esc): nothing opens. Loading failed: the detail closes, so the
+  // banner isn't hidden behind it.
+  function detailGone(from) {
+    return from !== null && !stillOpen(from);
+  }
+  function leaveDetail(from) {
+    if (from === null || !stillOpen(from)) return;
+    setDialog(null);
+    if (from.opener) focusSoon(from.opener);
+  }
+  async function startEditPayment(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
     const result = await loadCamperDetail(row.id);
     end(result.status === 'ok' ? 'ok' : result.status);
@@ -405,15 +591,19 @@ export default function CampPage({
       onNoAccess();
       return;
     }
+    if (detailGone(from)) return;
+    // Hide private details was switched on while this loaded: the money dialog doesn't open.
+    if (hiddenNowRef.current) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
+      leaveDetail(from);
       setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
       reloadQuiet();
       return;
     }
     openDialog({ type: 'payment', row, payment, opener });
   }
-  async function startDeleteCamper(row, opener) {
+  async function startDeleteCamper(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
     const result = await loadCamperDetail(row.id);
     end(result.status === 'ok' ? 'ok' : result.status);
@@ -421,7 +611,9 @@ export default function CampPage({
       onNoAccess();
       return;
     }
+    if (detailGone(from)) return;
     if (result.status !== 'ok') {
+      leaveDetail(from);
       setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
       reloadQuiet();
       return;
@@ -433,7 +625,9 @@ export default function CampPage({
       type: 'deleteCamper',
       name,
       title: T.deleteCamperTitle(name),
-      body: T.deleteCamperBody(camp.name, counted ? [counted] : []),
+      // The sentence is written when drawn, so it follows Hide private details even if the switch
+      // changes while the box is open.
+      counted: counted ? [counted] : [],
       args: [row.id, result.camper.version, payments.map((p) => p.id)],
       saving: false,
       failed: false,
@@ -462,10 +656,13 @@ export default function CampPage({
   }
 
   // ===== Possible duplicate: keep one / keep both (C4b) =====
-  async function keepOne(keep, other) {
+  // `pressed` is the shared Compare dialog's busy value ('keep-first' / 'keep-second'): that
+  // button says "Keeping…" while it works (v1.102). The compare's `saving` holds it (false =
+  // nothing working), and keep both's is 'keep-both'.
+  async function keepOne(keep, other, pressed) {
     const d = dialog;
     if (!d || d.saving || !begin()) return;
-    setDialog({ ...d, saving: true, failed: false });
+    setDialog({ ...d, saving: pressed, failed: false });
     const result = await resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
     end(result.status);
     if (result.status === 'error') {
@@ -492,7 +689,7 @@ export default function CampPage({
     const d = dialog;
     if (!d || d.saving || !begin()) return;
     const { first, second } = d.pair;
-    setDialog({ ...d, saving: true, failed: false });
+    setDialog({ ...d, saving: 'keep-both', failed: false });
     const result = await resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
     end(result.status);
     if (result.status === 'error') {
@@ -510,15 +707,48 @@ export default function CampPage({
     showToast(T.TOAST_KEPT_BOTH, { icon: false });
   }
 
-  // ===== Copy link =====
-  async function copyLink(link) {
-    try {
-      if (!link || !navigator.clipboard) throw new Error('No clipboard');
-      await navigator.clipboard.writeText(link);
-      showToast(T.TOAST_LINK_COPIED, { icon: false });
-    } catch {
-      setBanner({ text: T.COPY_FAILED });
+  // ===== Print receipt (design review C3, rulebook v0.734; Star's openReceipt, v0.518) =====
+  // The shared receipt, filled from camp_camper_detail + both schools + the reader's name
+  // (get_my_profile, called when it opens; a failed call just leaves the name out — Star's Q7 A).
+  function openReceipt(camperId, opener, onTop) {
+    setMenu(null);
+    const key = Date.now();
+    setReceipt({ key, camperId, opener, onTop, data: null, failed: false, notFound: false });
+    readReceipt(camperId, key);
+  }
+  async function readReceipt(camperId, key) {
+    const schoolsRead = schoolsRef.current ? Promise.resolve({ status: 'ok', schools: schoolsRef.current }) : loadSchools();
+    const [detail, schools, name] = await Promise.all([loadCamperDetail(camperId), schoolsRead, loadMyName()]);
+    if (detail.status === 'no_access') {
+      onNoAccess();
+      return;
     }
+    if (schools.status === 'ok') schoolsRef.current = schools.schools;
+    // The camp as the page has it now (read from the live load, so a reload since opening counts).
+    const current = liveRef.current.data;
+    setReceipt((open) => {
+      if (!open || open.key !== key) return open; // closed, or another receipt opened meanwhile
+      if (detail.status === 'not_found') return { ...open, notFound: true };
+      if (detail.status !== 'ok' || !current?.camp) return { ...open, failed: true };
+      // Offline for the schools only: the receipt shows without the schools' lines (as Star).
+      const data = buildCampReceipt({
+        detail,
+        camp: current.camp,
+        campDays: current.days ?? [],
+        campExtras: current.extras ?? [],
+        schools: schools.status === 'ok' ? schools.schools : [],
+        printedOn: campToday(), // today at the school
+        printedByName: name,
+      });
+      return { ...open, data };
+    });
+  }
+  function closeReceipt() {
+    const r = receipt;
+    setReceipt(null);
+    // On top of Camper detail, the shared dialog puts focus back on its opener (returnFocusTo).
+    // From ⋯: back to the row's ⋯ (or the "← Camps" link, if that ⋯ is gone).
+    if (r && !r.onTop) focusSoon(() => (r.opener?.isConnected ? r.opener : document.querySelector('.ev-back')));
   }
 
   // ===== Menus =====
@@ -539,9 +769,34 @@ export default function CampPage({
     onWithdraw: (row) => doWithdraw(row),
     onRestore: (row) => doWithdraw(row, true),
     onEditPayment: (row, anchor) => startEditPayment(row, anchor),
-    onUndoPayment: (row) => doUndoPayment(row),
+    onUndoPayment: (row, anchor) => startUndoPayment(row, anchor),
+    onPrintReceipt: (row, anchor) => openReceipt(row.id, anchor, false),
     onDelete: (row, anchor) => startDeleteCamper(row, anchor),
   };
+  // The same items under Camper detail's "More" (touch screens, CP5; `from` = that open detail).
+  // An item with a dialog of its own opens it in the detail's place in one step (openDialog swaps
+  // them, so the detail's Back step goes straight to the new dialog); the others close the detail
+  // and make their change. Focus comes back to the name that opened the detail.
+  function detailHandlers(from) {
+    const opener = from.opener ?? null;
+    const closeThen = (change) => (row) => {
+      leaveDetail(from);
+      change(row);
+    };
+    return {
+      onPayingBy: (row) => camperHandlers.onPayingBy(row, opener),
+      onEdit: (row) => camperHandlers.onEdit(row, opener),
+      onReview: (row) => camperHandlers.onReview(row, opener),
+      onWithdraw: closeThen((row) => doWithdraw(row)),
+      onRestore: closeThen((row) => doWithdraw(row, true)),
+      onUndoPayment: (row) => startUndoPayment(row, opener, from),
+      onEditPayment: (row) => startEditPayment(row, opener, from),
+      // Print receipt opens ON TOP of the detail (v1.100), which stays open; focus goes back to the
+      // pressed "More" button when the receipt closes.
+      onPrintReceipt: (row, button) => openReceipt(row.id, button ?? null, true),
+      onDelete: (row) => startDeleteCamper(row, opener, from),
+    };
+  }
   function menuContent() {
     if (!menu || screenLocked || !camp) return null;
     if (menu.kind === 'header') {
@@ -559,8 +814,10 @@ export default function CampPage({
     }
     const row = menu.row;
     const name = T.camperLabel(row);
-    const items = camperMenuItems(row, { isAdmin, busy, anchor: menu.anchor, h: camperHandlers });
-    return { title: name, subtitle: T.camperPayLine(T.camperDaysText(row, days), row.payingBy), label: T.moreFor(name), items };
+    const items = camperMenuItems(row, { isAdmin, busy, anchor: menu.anchor, h: camperHandlers, detailsHidden });
+    // The phone sheet's subtitle: "All days · cash" — only the days while hidden (how they pay is a payment detail).
+    const daysText = T.camperDaysText(row, days);
+    return { title: name, subtitle: detailsHidden ? daysText : T.camperPayLine(daysText, row.payingBy), label: T.moreFor(name), items };
   }
 
   // ===== Drawing =====
@@ -621,18 +878,24 @@ export default function CampPage({
           extras={extras}
           isPhone={isPhone}
           hidden={hidden}
+          detailsHidden={detailsHidden}
           startInEdit={dialog.startInEdit}
           // Touch screens have no ⋯ on the roster: its items are in the detail instead (CP5).
           actions={(() => {
             if (!isTouch) return null;
             const row = roster.find((r) => r.id === dialog.camperId);
-            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: camperHandlers }) : null;
+            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: detailHandlers(dialog), detailsHidden }) : null;
           })()}
+          // PC / tablet without touch: the Print receipt button at the end of Payments (v0.734);
+          // on touch it is only in "More" (the actions above), never twice.
+          onPrintReceipt={isTouch ? null : (opener) => openReceipt(dialog.camperId, opener, true)}
           onClose={closeDialog}
-          onSaved={() => {
+          // Undo (v0.726, option A): saves the old details again — every time, also after a
+          // change that re-priced the camper (the total then follows the camp's current prices).
+          onSaved={(undo) => {
             closeDialog();
             reloadQuiet();
-            showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+            showToast(T.TOAST_CHANGES_SAVED, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo) } : null });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -648,10 +911,12 @@ export default function CampPage({
           isPhone={isPhone}
           hidden={hidden}
           onClose={closeDialog}
-          onSaved={() => {
+          // Undo (v0.726): saves the camp's old values again; refused → why, in the amber bar.
+          onSaved={(result) => {
             closeDialog();
             reloadQuiet();
-            showToast(T.TOAST_CAMP_SAVED, { icon: false });
+            const undo = result?.undo ?? null;
+            showToast(T.TOAST_CAMP_SAVED, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo, { notAllowedText: T.CAMPS_NOT_ALLOWED }) } : null });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -659,18 +924,29 @@ export default function CampPage({
         />
       );
     } else if (!hidden && dialog.type === 'link') {
+      // Registration link (rulebook v0.733, design review C11): the dashboard's shared box with
+      // Camps' parts — the camp's name, Camps' line (can families sign up now?), ONE link for the
+      // camp with Camps' heading ("Both schools · held at Worcester", or just "Worcester" for a
+      // one-school camp), no flyer. The box copies the link and saves the QR picture itself: a
+      // failure shows its amber note INSIDE the box (shared words), and the PNG is named
+      // "April Vacation Camp QR code.png" (both schools) or "Veterans Day Camp - Worcester QR
+      // code.png" (one school: the box adds the school when `school` is set — option B).
+      const url = campLink(camp.publicCode); // '' for a damaged code: then no card is offered
       dialogElement = (
-        <CampLinkDialog
+        <RegistrationLinkBox
           key={dialog.key}
-          camp={camp}
-          state={state}
-          isPhone={isPhone}
-          onCopy={copyLink}
-          onDownloadFailed={() => setBanner({ text: T.DOWNLOAD_FAILED })}
+          title={T.REGISTRATION_LINK}
+          eventName={camp.name}
+          intro={T.linkDialogLine(state, camp)}
+          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.campSchoolLine(camp) }] : []}
+          onCopied={() => showToast(T.TOAST_LINK_COPIED, { icon: false })}
           onClose={closeDialog}
+          isPhone={isPhone}
         />
       );
-    } else if (!hidden && dialog.type === 'paying') {
+    } else if (!hidden && !detailsHidden && dialog.type === 'paying') {
+      // (Never while private details are hidden: switching them on closes it.)
+      const d = dialog;
       const row = dialog.row;
       dialogElement = (
         <PayingByDialog
@@ -682,20 +958,28 @@ export default function CampPage({
           onSave={async (payingBy) => {
             const result = await changePayingBy(row.id, row.version, payingBy);
             if (result.status === 'ok') {
-              closeDialog();
+              if (stillOpen(d)) closeDialog();
               reloadQuiet();
               const newVersion = result.version;
+              // Hidden meanwhile: no Undo (how they pay is a payment item, hidden while on).
+              if (hiddenNowRef.current) {
+                showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+                return result.status;
+              }
               showToast(T.TOAST_CHANGES_SAVED, {
                 icon: false,
-                action: { label: T.UNDO, onAction: () => runUndo(() => changePayingBy(row.id, newVersion, row.payingBy)) },
+                action: { label: T.UNDO, onAction: () => runUndo(() => changePayingBy(row.id, newVersion, row.payingBy), { money: true }) },
               });
-            } else if (result.status === 'no_access') onNoAccess();
+            } else if (!stillOpen(d)) closedPaymentProblem(result.status);
+            else if (result.status === 'no_access') onNoAccess();
             else if (result.status !== 'error') reloadQuiet();
             return result.status;
           }}
         />
       );
-    } else if (!hidden && dialog.type === 'payment') {
+    } else if (!hidden && !detailsHidden && dialog.type === 'payment') {
+      // (Never while private details are hidden: switching them on closes it.)
+      const d = dialog;
       dialogElement = (
         <EditPaymentDialog
           key={dialog.key}
@@ -705,13 +989,30 @@ export default function CampPage({
           isPhone={isPhone}
           onClose={closeDialog}
           onSave={async (values) => {
-            const result = await editPayment(dialog.payment.id, values);
-            if (result.status === 'invalid' && result.field === 'school') return 'invalid_school';
+            const result = await editPayment(d.payment.id, values);
+            if (result.status === 'invalid' && result.field === 'school' && stillOpen(d)) return 'invalid_school';
             if (result.status === 'ok') {
-              closeDialog();
+              if (stillOpen(d)) closeDialog();
               reloadQuiet();
-              showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
-            } else if (result.status === 'no_access') onNoAccess();
+              // Hidden now (switched on while this saved): the general words ("Payment changed"
+              // would say there is a payment) and no Undo — as Change how they'll pay.
+              if (hiddenNowRef.current) {
+                showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+                return result.status;
+              }
+              // "Payment changed" · Undo (v0.726, Black Belt's words and way): the save reversed the
+              // old payment and recorded a new one, so Undo runs the same edit again on the NEW one
+              // with the old way to pay, amount, date and school. Someone else editing or undoing
+              // it meanwhile → 'stale' ("Couldn't undo. Someone else changed this just now.").
+              const old = d.payment;
+              const newPaymentId = result.paymentId;
+              const back = { method: old.method, amountCents: old.amountCents, paidOn: old.paidOn, school: old.school ?? values.school };
+              showToast(T.TOAST_PAYMENT_CHANGED, {
+                icon: false,
+                action: { label: T.UNDO, onAction: () => runUndo(() => editPayment(newPaymentId, back), { money: true }) },
+              });
+            } else if (!stillOpen(d)) closedPaymentProblem(result.status);
+            else if (result.status === 'no_access') onNoAccess();
             else if (result.status === 'not_allowed') onRefreshProfile();
             return result.status;
           }}
@@ -721,48 +1022,110 @@ export default function CampPage({
       const first = roster.find((r) => r.id === dialog.pair.first.id) ?? dialog.pair.first;
       const second = roster.find((r) => r.id === dialog.pair.second.id) ?? dialog.pair.second;
       const last = lastDay(days);
+      // After the camp's last day, keeping one is admin-only (Color Belt v0.194).
+      const canKeepOne = isAdmin || last === null || today <= last;
       dialogElement = (
+        // The shared Compare dialog (rulebook v0.729 / v1.102) with Camps' own rows, words and
+        // order (duplicates.js compareRows; C1's "Hidden on this tablet" rows while hidden).
         <CompareDialog
           key={dialog.key}
-          first={first}
-          second={second}
-          campDays={days}
+          title={T.compareTitle(T.camperLabel(first))}
+          sub={T.COMPARE_SUB}
+          heads={[T.FIRST_SIGNUP, T.SECOND_SIGNUP]}
+          rows={compareRows(first, second, days, detailsHidden)}
+          canKeepOne={canKeepOne}
+          note={canKeepOne ? T.COMPARE_NOTE : T.KEEP_ONE_ADMIN_ONLY}
           isPhone={isPhone}
-          saving={dialog.saving}
-          failed={dialog.failed}
-          // After the camp's last day, keeping one is admin-only (Color Belt v0.194).
-          canKeepOne={isAdmin || last === null || today <= last}
-          onKeep={keepOne}
+          busy={dialog.saving || null}
+          failed={dialog.failed ? T.SAVE_FAILED : null}
+          onKeep={(index) => (index === 0 ? keepOne(first, second, 'keep-first') : keepOne(second, first, 'keep-second'))}
           onKeepBoth={keepBoth}
           onClose={closeDialog}
         />
       );
     } else if (!hidden && dialog.type === 'deleteCamper') {
       dialogElement = (
-        <ConfirmDeleteDialog
+        // The shared "are you sure?" box (rulebook v0.729): "Keep camper" · red "Delete
+        // permanently", "Deleting…" while it works. It draws through the shared Dialog like the
+        // camper detail, so from the phone's More it takes the detail's place in one update.
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={dialog.body}
           hint={T.DELETE_CAMPER_HINT}
           keepLabel={T.KEEP_CAMPER}
-          deleteLabel={T.DELETE_PERMANENTLY}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDeleteCamper}
-          onCancel={() => !dialog.saving && closeDialog()}
-        />
+          actionLabel={T.DELETE_PERMANENTLY}
+          actionIcon={IconTrash} // ti-trash = delete (red: deleting only)
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDeleteCamper}
+          onKeep={closeDialog} // ConfirmBox ignores it while the delete works
+        >
+          {T.deleteCamperBody(camp.name, dialog.counted, detailsHidden)}
+        </ConfirmBox>
+      );
+    } else if (!hidden && !detailsHidden && dialog.type === 'undoPayment') {
+      dialogElement = (
+        // Undo payment asks first (rulebook v0.730): the shared "are you sure?" box with loses
+        // 'something' — blue action (the history keeps both lines), first focus on "Keep
+        // payment", "Undoing…" while it works; a failure keeps the box open with its amber note.
+        // From the phone's More it takes the detail's place in one update, as Delete does.
+        <ConfirmBox
+          key={dialog.key}
+          title={T.undoPaymentTitle(dialog.name)}
+          keepLabel={T.KEEP_PAYMENT}
+          actionLabel={T.UNDO_PAYMENT}
+          actionIcon={IconArrowBackUp} // ti-arrow-back-up, the menu item's icon
+          busyLabel={T.UNDOING}
+          loses="something"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.UNDO_PAYMENT_FAILED : null}
+          onConfirm={confirmUndoPayment}
+          onKeep={closeDialog} // ConfirmBox ignores it while the Undo works
+        >
+          {T.undoPaymentBody(dialog.payment, dialog.owedAfterCents)}
+        </ConfirmBox>
       );
     }
   }
 
   const content = menuContent();
 
+  // The receipt (C3): on its own (from ⋯) or on top of Camper detail. Never while locked (it comes
+  // back after the PIN, as the dialogs do). `hidden` = Hide private details: the shared box then
+  // shows the one gray line and no Print (v1.105).
+  let receiptElement = null;
+  if (receipt && !screenLocked) {
+    const row = roster.find((r) => r.id === receipt.camperId) ?? null;
+    const name = row ? T.camperLabel(row) : null;
+    receiptElement = (
+      <ReceiptDialog
+        receipt={receipt.data}
+        sub={name ? T.receiptSub(name, camp.name) : camp.name}
+        loadError={receipt.failed}
+        onRetry={() => {
+          setReceipt((open) => (open ? { ...open, failed: false } : open));
+          readReceipt(receipt.camperId, receipt.key);
+        }}
+        notFound={receipt.notFound ? T.receiptNotFound(name ?? T.THIS_CAMPER) : null}
+        hidden={detailsHidden}
+        onClose={closeReceipt}
+        isPhone={isPhone}
+        onTop={receipt.onTop && dialog?.type === 'camper'}
+        returnFocusTo={receipt.onTop ? receipt.opener : null}
+      />
+    );
+  }
+
   return (
     <>
       {backLink}
       {isPhone ? (
-        // Phones (option A's phone frame): the name with Registration link and ⋯ beside it, and one
-        // short line (days · hours · tag), so the check-in list starts without scrolling.
+        // Phones (option A's phone frame): the name and one short line (days · hours · tag), then the
+        // blue Registration link button WITH its words on its own line, ⋯ beside it (rulebook v0.733,
+        // design review C11, picture 14; it was an icon-only square beside the name). The check-in
+        // list still starts without scrolling.
         <div className="cp-phone-head">
           <div className="phead-titles">
             <h1 className="ptitle">{camp.name}</h1>
@@ -772,16 +1135,10 @@ export default function CampPage({
             </p>
           </div>
           <div className="cp-phone-buttons">
-            {/* The one blue button, icon only on phones (its name is read out and shown as a tooltip). */}
-            <button
-              type="button"
-              className="btn btn-primary cp-link-icon"
-              aria-label={T.REGISTRATION_LINK}
-              title={T.REGISTRATION_LINK}
-              data-camp-link
-              onClick={(event) => openDialog({ type: 'link', opener: event.currentTarget })}
-            >
+            {/* The one blue button, with its words as on PC (ti-qrcode = registration link / QR code). */}
+            <button type="button" className="btn btn-primary" data-camp-link onClick={(event) => openDialog({ type: 'link', opener: event.currentTarget })}>
               <IconQrcode size={16} aria-hidden="true" />
+              {T.REGISTRATION_LINK}
             </button>
             <IconButton
               label={T.MORE_CAMP_ACTIONS}
@@ -854,6 +1211,7 @@ export default function CampPage({
         menuFor={menu?.kind === 'camper' ? menu.id : null}
         notSavedId={notSavedId}
         updatedAt={live.updatedAt}
+        detailsHidden={detailsHidden}
         handlers={{
           onOpen: (row, el) => openCamper(row, el),
           onMore: (row, anchor) => openMenu('camper', row, anchor),
@@ -867,6 +1225,7 @@ export default function CampPage({
 
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {dialogElement}
+      {receiptElement}
       {actions.elements}
     </>
   );

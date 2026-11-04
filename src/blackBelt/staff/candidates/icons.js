@@ -23,7 +23,7 @@ import {
   IconSearch, // ti-search — Search candidates
   IconSwitchHorizontal, // ti-switch-horizontal — Change plan or Kukkiwon
   IconTrash, // ti-trash — Delete permanently
-  IconUserMinus, // ti-user-minus — Remove candidate / Withdraw
+  IconUserMinus, // ti-user-minus — Withdraw
   IconUserPlus, // ti-user-plus — New candidate (0025, G 24)
   IconX, // ti-x — clear the search
 } from '@tabler/icons-react';
@@ -39,7 +39,6 @@ export const ICONS = {
   undo: IconArrowBackUp,
   restore: IconArrowBackUp,
   print: IconPrinter,
-  remove: IconUserMinus,
   withdraw: IconUserMinus,
   deleteForever: IconTrash,
   more: IconDots,

@@ -12,7 +12,7 @@
 //     its text (PC / tablet: one line, cut with "…"; phone: up to two lines under the name) and an
 //     Edit icon (ti-edit) for admins
 //   - the foot line: Email result uses the text as it is when it's clicked
-// It is self-contained, so Rubric and prices only needs to place it: it loads the texts on its own
+// It is self-contained, so Rubric and waiver only needs to place it: it loads the texts on its own
 // (a problem reading them shows only here — the waiver, keeping and rubric blocks keep working),
 // keeps the "Edit result email" dialog's typing (so a screen lock while it is open brings it back
 // with the text still there), saves with the version the dialog opened with, and shows the toast
@@ -22,7 +22,7 @@
 // as React text — never as HTML.
 //
 // Props: isAdmin, isPhone, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast,
-//        onModalChange(open) — true while its dialog is open (Rubric and prices makes the page inert)
+//        onModalChange(open) — true while its dialog is open (Rubric and waiver makes the page inert)
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconEdit } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
