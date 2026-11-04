@@ -62,6 +62,36 @@ export function clearKiosk() {
   removeStorage(KEY);
 }
 
+// The kiosk's look stays on the page until it reloads: KioskApp brings the family page's stylesheet
+// (forms-public.css), which has its own .btn, .input, .notice … for the whole page, and a loaded
+// stylesheet can't be taken back. Leaving with the right PIN reloads; App.jsx also reloads after any
+// sign-out on a page where the kiosk was loaded ("(now)" point 4), keeping the sign-in screen's
+// message for that one reload (this tab only, sessionStorage).
+let kioskLoadedOnPage = false;
+export function markKioskLoaded() {
+  kioskLoadedOnPage = true;
+}
+export const kioskLoaded = () => kioskLoadedOnPage;
+
+const NOTICE_KEY = 'tkd.signin.notice';
+export function carryNotice(text) {
+  try {
+    if (text) sessionStorage.setItem(NOTICE_KEY, text);
+  } catch {
+    // no storage (private window): the sign-in screen just shows no message
+  }
+}
+// The message carried over the reload (once), or null. App.jsx shows it only if it is one of its own.
+export function takeCarriedNotice() {
+  try {
+    const text = sessionStorage.getItem(NOTICE_KEY);
+    sessionStorage.removeItem(NOTICE_KEY);
+    return text;
+  } catch {
+    return null;
+  }
+}
+
 // 'on' | 'ending' (the last 30 minutes) | 'ended' (12 hours are over)
 export function kioskState(entry, now = Date.now()) {
   if (now >= entry.expiresAt) return 'ended';

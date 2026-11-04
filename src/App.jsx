@@ -82,7 +82,7 @@ import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
-import { clearKiosk, readKiosk } from './lib/kiosk.js';
+import { carryNotice, clearKiosk, kioskLoaded, readKiosk, takeCarriedNotice } from './lib/kiosk.js';
 import KioskLoadGuard from './screens/kiosk/KioskLoadGuard.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
@@ -176,7 +176,12 @@ function clearSavedSupabaseSession() {
 export default function App() {
   const [phase, setPhase] = useState('loading');
   const [profile, setProfile] = useState(null); // the signed-in staff row
-  const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
+  // { id, text } for the sign-in screen — after a sign-out from the kiosk, carried over its reload
+  // (only one of the NOTICES above is shown)
+  const [notice, setNotice] = useState(() => {
+    const text = takeCarriedNotice();
+    return Object.values(NOTICES).includes(text) ? { id: Date.now(), text } : null;
+  });
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
   // Which page is open: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' |
@@ -277,6 +282,12 @@ export default function App() {
     if (error) clearSavedSupabaseSession();
     // Cleared AFTER signing out so other open tabs don't briefly unlock first.
     setLockedFlag(false);
+    // The kiosk's stylesheet (forms-public.css) is on this page and only a reload removes it, so
+    // start fresh, keeping the sign-in screen's message ("(now)" point 4, src/lib/kiosk.js).
+    if (kioskLoaded()) {
+      carryNotice(noticeText);
+      window.location.reload();
+    }
   }, []);
 
   // ----- Entering the dashboard with a session (on page load, or right after sign-in) -----
@@ -378,9 +389,13 @@ export default function App() {
           setEventId(null);
           setPrivateId(null);
         }
+        clearKiosk(); // a signed-out tablet is never a kiosk any more (as in signOut() above)
         setProfile(null);
         setAccountDialog(null);
         setPhase('signedOut');
+        // Signed out elsewhere while this page had the kiosk: reload to drop its stylesheet
+        // (our own signOut() above does that itself).
+        if (kioskLoaded() && !signingOutHereRef.current) window.location.reload();
       }
       // Rule: password every 7 days — also for a tab left open for days. Supabase refreshes
       // the sign-in about once an hour; each time, re-check the password age.
