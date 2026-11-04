@@ -13,8 +13,10 @@ export const DAY_COLUMNS = 'id, camp_id, day';
 export const PRICE_COLUMNS = 'camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents, nonmember_regular_cents';
 export const EXTRA_COLUMNS = 'id, camp_id, name, price_cents, per, not_for_all_days, only_on, sort';
 export const TEMPLATE_COLUMNS = 'id, name, location_code, both_schools, day_count, start_time, end_time, opens_days_before, closes_days_before, early_days_before, min_age, max_age, description, waiver_text, prices, extras, version';
-// The camp_roster view (one row per camper; no phones, no signature).
-export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at';
+// The camp_roster view (one row per camper; no phones, no signature). paying_by_on_form (migration
+// 0033): the way the family chose on the form — the Mark paid box's hint says "on the form" while
+// Paying by still matches it, "at the desk" once staff changed it (rulebook v0.735).
+export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form';
 
 // ----- Converting database rows to the §5.1 shapes -----
 

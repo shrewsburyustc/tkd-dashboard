@@ -1,0 +1,30 @@
+{
+  "title": "Black Belt · H1a — Star's calendar for a candidate's date of birth",
+  "subtitle": "In Add candidate, the date of birth stops being the browser's own “mm/dd/yyyy” box and becomes the dashboard's calendar, set up like Star's staff birthday field: future days gray, Year list back 80 years, the hint “Pick the month and year first, then tap the day. Future dates can’t be chosen.” Edit details uses the same dialog and the same field, so it changes the same way. Nothing to decide: this was approved in the design review (v1.018). OK to build?",
+  "width": 1000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "cand-pc-today.png", "crop": [396, 342, 318, 60], "scale": 1.4, "caption": "<b>PC</b> (zoomed 1.4×)", "marks": [[404, 363, 240, 32]] },
+        { "src": "cand-tab-today.png", "shotWidth": 820, "crop": [166, 362, 344, 75], "scale": 1.3, "caption": "<b>Tablet 820</b> (1.3×)", "marks": [[174, 393, 240, 36]] },
+        { "src": "cand-phone-today.png", "shotWidth": 390, "crop": [0, 342, 390, 72], "scale": 1.14, "caption": "<b>Phone 390</b>", "marks": [[16, 368, 358, 36]] },
+        { "src": "cand-p320-today.png", "shotWidth": 320, "crop": [0, 342, 320, 72], "scale": 1.38, "caption": "<b>320</b> (1.38×)", "marks": [[16, 368, 288, 36]] }
+      ],
+      "note": "Amber: the browser's own date box. It is typed, or opened with the small icon; phones show their own wheel or sheet."
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "cand-pc-after.png", "crop": [396, 236, 318, 376], "scale": 1.4, "caption": "<b>PC</b>: “Choose…”; the calendar floats under the field, days after today gray (the field itself is wider, cut off on the right here)", "marks": [[404, 259, 306, 32], [404, 295, 304, 312]] },
+        { "src": "cand-tab-after.png", "shotWidth": 820, "crop": [166, 366, 344, 420], "scale": 1.3, "caption": "<b>Tablet 820</b>", "marks": [[174, 387, 332, 36], [174, 428, 336, 354]] },
+        { "src": "cand-phone-after.png", "shotWidth": 390, "crop": [0, 44, 390, 430], "scale": 1.14, "caption": "<b>Phone 390</b>: in the page, edge to edge", "marks": [[16, 70, 358, 36], [3, 116, 384, 352]] },
+        { "src": "cand-p320-after.png", "shotWidth": 320, "crop": [0, 44, 320, 420], "scale": 1.38, "caption": "<b>320</b>: all seven days fit", "marks": [[16, 70, 288, 36], [3, 116, 314, 350]] }
+      ],
+      "note": "Green: the field and its open calendar. Drawn by switching Black Belt's date field to the calendar for the pictures only (put back afterwards)."
+    }
+  ],
+  "footer": "<b>Limits:</b> date of birth: Jan 1, 1900 to today (the rule today: checks.js dobProblem). The Year list copies Star's 80 years back, so a birth year before 1947 isn't in the list; the rule still allows it. <b>Width:</b> the field fills the dialog's width (240 → 472 px on PC), as Star's does."
+}

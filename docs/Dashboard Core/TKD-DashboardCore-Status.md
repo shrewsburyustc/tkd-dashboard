@@ -1,8 +1,8 @@
 # Dashboard core — status
 
-**Updated:** 2026-10-28 (Dashboard core worktree session, branch `dashboard-core`)
-**Rulebook at this update:** 0.816 on `main`; **1.113** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6) and **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), all 2026-10-28 — block **1.100–1.199**, next free **1.114** (`git merge main` before any rulebook edit).
-**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); then the fact fixes (v1.113). Never pushed.
+**Updated:** 2026-10-29 (Dashboard core worktree session, branch `dashboard-core`)
+**Rulebook at this update:** 0.823 on `main` (Finance's merge; its newest Dashboard core row is v1.116); **1.117** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6), **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), **v1.114** (the date picker opened from a button) and **v1.115** (a count card's note of two lines), all 2026-10-28; **v1.116** (the dropdown and time list turned off, Finance's v0.823) and **v1.117** (Show all inside its gray line on touch, option (a)), both 2026-10-29 — block **1.100–1.199**, next free **1.118** (`git merge main` before any rulebook edit).
+**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); **fc3bea6** — the fact fixes (v1.113). **Merged into `main` as 95a9601** (2026-10-28, the Main session); this branch then moved forward to `main` 4c15146, and later to a3ff7ca (both fast-forwards; the second brought New students' N17 merge, rulebook v0.616). Then the date picker opener option (v1.114, committed as 1bb2683); `main` merged in up to 50022cf (2026-10-28, merge commit **bd3847e**: New students' N1, N2, Undone, class ages and classes taught together, with migration 0031 and rulebook v0.617–v0.620; the rulebook's three same-spot conflicts kept both sides, main's first); then the count cards' two-line note (v1.115, committed as 5628133). Both **merged into `main` as a287ee5** (2026-10-28, the Main session, no conflicts); this branch then moved forward to it, and later to c975428 (both fast-forwards; the second brought Star's merge, with Star's count cards on the shared part). The Main session pushed `main` c975428 on 2026-10-28, so all of this branch's work is live; `dashboard-core` itself is never pushed. On 2026-10-29 this branch moved forward to `main` 3fdbc0b (a fast-forward: New students' N4–N6 with rulebook v0.621–v0.623, and CLAUDE.md's 0030 notes); then the turned-off dropdown and time list (v1.116) was committed as cc92332, merged into `main` as e3e46d4 (the Main session; pushed and live 2026-10-29), and this branch moved forward to it (fast-forward). Later the same day it moved forward to `main` 5f28ed9 (a fast-forward: Finance's design review F1–F7 with migration 0029's files and rulebook v0.817–v0.823, and CLAUDE.md's 0029 and 0032 notes; none of it touches this branch's files), and Show all on touch (v1.117) was committed.
 
 > Read `CLAUDE.md` first. This file says where the Dashboard core work stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -57,6 +57,7 @@
 7. ~~D6 — M4's 600 weights vs §7~~ — **decided 2026-10-28: A, weight 500, as §7 says** (rulebook v1.112). Nothing changes in Chrome on Windows; on Apple devices the two lines are a shade lighter.
 8. ~~The step 1 commit~~ — **done 2026-10-28** on `dashboard-core` (Jeffrey: "Yes, commit"): 83 files, **2a9b8bc**. Not pushed.
 9. ~~The fact fixes from the Design Review session~~ — **made and committed 2026-10-28** (plan, status, rulebook v1.113; Jeffrey: "Yes, commit"). Not pushed.
+10. ~~Merge into `main`~~ — **done 2026-10-28: 95a9601**, by the Main session. Step 1 is on `main` (not pushed).
 
 ## 3. Log
 
@@ -349,6 +350,221 @@
   - **`git merge main` first**, twice, because main moved during the work: **93fca25** (the Design Review's section prompts, CLAUDE.md) and **eff1fe4** (CLAUDE.md: 0029 live). No conflicts.
   - Recorded as rulebook **v1.113**, a housekeeping change like v0.31 and v0.304: the two rows corrected in place (each marked "corrected v1.113"), a changelog line and the header. No new 10b row, since nothing new is decided. CRLF kept: 0 LF-only lines (1,327 lines); no changelog number used twice.
   - No code, mockup or question page stated these facts, so nothing else changes. No checks to re-run: only docs changed.
+- **2026-10-28 — step 1 is on `main`: 95a9601.** The Main session merged `dashboard-core` with `--no-ff` (no conflicts, not pushed) and added `src/styles/shared.css` and `src/components/text.js` to CLAUDE.md's shared-files list (4c15146).
+  - Main's checks: both builds pass, the live bundle has no fake-database or parts-page code, run-checks 19 of 19, database function tests 172 passed and 0 failed.
+  - Checked here: 95a9601's parents are ca02305 and fc3bea6, and its files are exactly this branch's. This branch then moved forward to `main` (4c15146) with `git merge --ff-only main`: no new commit.
+- **2026-10-28 — Finance → Dashboard core: the date picker opened from a button** (Jeffrey's message; Finance's v0.817 on branch `finance`; design review F1 / v1.018). Plan §11.
+  - **Asked:** a new option in the shared `src/components/DatePicker.jsx`: the calendar opens from the section's own button, with no field.
+    - The same calendar, with `max`, `today` and the hint "Days after today can't be chosen.".
+    - A pick calls `onChange` and closes; Esc or a click outside closes, with focus back on the button; the keyboard as today.
+    - Phones: in the page under the row.
+    - For Finance's Daily report day row; Prospects' follow-up date may use it too (check with the Prospects session). Export's From / To keep the field.
+  - **Built (not committed):** `opener` + `open` / `onOpenChange`, and `datePickerOpener()` for the button.
+    - The builder's choice: after a click outside, focus goes back to the button unless the click put it on another control.
+    - The field mode is unchanged.
+  - **Parts page `DP`:** `src/parts/DP.jsx` (registered in `PartsPage.jsx`, styles in `parts.css`).
+    - `shoot-parts.mjs` takes DP's states from the page and crops the floating calendar.
+    - `check-parts.mjs` gained 23 DP checks (16, then 7 for the review's cases), and its key helper gained ← →, Page Up / Down and Alt; four check-only states (`panel-in-box`, `panel-low`, `row-disabled`, `row-autoclose`).
+  - **Proof so far:**
+    - `check-parts.mjs` 71 of 71 (the 48 and 23 new);
+    - the check files 19 of 19. Two runs showed 1 failure: `src/forms/checks.mjs` reads `dist/` and fails when that holds a preview-mode build (`npm run build:preview-mode` writes there too); after a real build it passes. Confirmed both ways; the runs had come right after a preview-mode build. Noted in `run-checks.mjs`'s header: run the real build last;
+    - both builds pass with no parts-page words;
+    - DP pictured at the four sizes, and the side-by-side `Proof/parts/DP-built-vs-F1.png`;
+    - M1–M8 re-shot after the tool and `parts.css` changes: every picture matches `Proof/parts`;
+    - a real mouse click opens with no keyboard ring on the day, and the keyboard shows it (the ring in the pictures comes from the script's press).
+  - **Design and code review** (a separate reviewer agent, 2026-10-28; it reproduced each problem on the running preview):
+    - must-fix: on phones, after ‹ › the calendar opened with focus on the old day, and across a month the focus was lost (Esc and the arrow keys then did nothing). The calendar's first drawing still showed the old month;
+    - should-fix: opened above its button, a month with a 6th week grew over the button (Star's fields have it too);
+    - should-fix: "focus back on the button" after a click outside failed on touch and inside a box that can take the focus (the shared Dialog's box);
+    - minor: a disabled picker scrolled the phone page; the help text promised more than the code did.
+    - **All fixed:** the opening starts while drawing (React's "adjusting state while rendering"); the box is placed again whenever its size changes (a ResizeObserver; Star's fields get it too); after a click or tap outside, the target decides (another control keeps the focus, anywhere else the button gets it back once the click is over); focus goes back to the button whenever the calendar closes with the focus lost; a disabled picker never draws (and `datePickerOpener` takes `{ disabled }`); Esc on the button closes it; the help text rewritten.
+    - The review also confirmed: the field mode unchanged line by line, Esc one step at a time inside a real Dialog, no React warnings, the placement and look as F1.
+    - For Jeffrey: while open, the calendar button has the app's gray "pressed" look (the ⋯ menus' rule), which F1 doesn't draw.
+    - **Re-check by the same reviewer:** every finding fixed (its probes re-run, also under React's StrictMode); no new problem (no leaking refocus listener, no ResizeObserver loop). Its one leftover is fixed too: a box above its button covered it for 1–2 frames when a 6th week appeared. The box is now placed again before the screen is drawn when the month changes; its frame-by-frame probe measures a 4px gap on every frame, in both modes.
+    - **Final:** `check-parts.mjs` 71 of 71, the check files 19 of 19 (the real build last), both builds pass, no parts-page words. The DP pictures and `DP-built-vs-F1.png` were taken after the review's fixes (the last change only moves a box when the month changes, which no picture shows).
+  - **The Prospects check:** the message to the Prospects session was held there and expired undelivered (the two sessions run in different permission modes). Jeffrey has the text to paste.
+- **2026-10-28 — Jeffrey: the date picker option is OK** ("OK: record and commit").
+  - `git merge main` first: a fast-forward to a3ff7ca (New students' N17 merge with rulebook v0.616, and CLAUDE.md notes; nothing overlaps this work).
+  - Recorded as rulebook **v1.114**: a 10b row above the v0.26 row, a pointer at the start of the v1.018 row, a changelog line, the header. CRLF kept: 0 LF-only lines (1,331 lines); no changelog number used twice.
+  - Committed on `dashboard-core` (the hash is in `git log`): the picker, the parts page's DP sample, the tools, the plan and this file, the rulebook, and the side-by-side `Proof/parts/DP-built-vs-F1.png`. The single DP pictures and the sheet's `.html` stay on this PC (v1.110). Not pushed.
+- **2026-10-28 — Star's request, passed on by the Main session: a two-line note in the shared count cards.**
+  - Star's Candidates card on Both shows "Shrewsbury 5" / "Worcester 8" on two lines; the shared `CountCards.jsx` drew only one line under the number.
+  - Jeffrey decided it in Star's Part 2 questions: **Q5 B**, keep the two lines; **Q5b A**, Dashboard core makes the change. Picture: Star's `docs/Testing/Star Testing/DR2 images/StarDR2-Q5.png` (since committed on `star-testing`). Star recorded it in its rulebook row **v0.518** (committed on `star-testing` as 6d47c29, not on `main` yet). That row says Dashboard core records the two lines in its own row, which changes v1.107's "one small line".
+  - It wasn't in this branch's rows or plans, so asked first. Jeffrey: **"Yes, build it"**.
+  - **Built (not committed):**
+    - a card's `note` may be an array of two lines, each its own small gray line under the one before, as Star draws them today (same tags and styles, so the same look);
+    - the parts page's M6 gained two extra states: `twolines` (Star's four on Both) and `twolines-hidden` (Hide private details on: the one card);
+    - `check-parts.mjs` gained 6 checks: the lines stack at the four sizes, the cards beside it are as tall, a screen reader hears "Candidates 13 Shrewsbury 5 Worcester 8", Camps' one-line note is unchanged.
+  - **Proof so far:**
+    - `check-parts.mjs` 77 of 77, the check files 19 of 19 (the real build last), both builds pass;
+    - M6's 24 step-1 pictures are byte-identical after the change;
+    - the side-by-side `Proof/parts/M6-two-lines-vs-Q5.png`: Star's Q5 option B next to the built card at the four sizes.
+  - **Design and code review** (a separate reviewer agent, 2026-10-28): **approve**, nothing that must be fixed.
+    - Should-fix, done: this log called Star's plan uncommitted, but Star had meanwhile committed v0.518. The v1.115 row must cite v0.518 and say it changes v1.107; the draft does, and it waits for Jeffrey's OK.
+    - Minor 1: screen readers hear the card's parts separated by spaces only, so "13 Shrewsbury" can run together. Star's screen does the same today. A hidden pause would change every count card, so it is left to Jeffrey.
+    - Minor 2, done: the comment now says a blank note (0 and false too) draws nothing, and that the rulebook allows two lines.
+    - Minor 3, done: the sheet now says why the cards are a little wider than in Q5 (the parts page has no side rail) and that each line is 18 px tall.
+    - Minor 4, done: two more checks, Hide private details' one card (PC and phone), and Camps' note measured as one line on screen.
+    - The reviewer also confirmed:
+      - a selected filter card with two lines: the blue edge, and the lines stay inside;
+      - the edge cases: blank values draw nothing, one or two lines draw as given;
+      - no console warnings, and no other caller or look changes.
+  - **Final:**
+    - `check-parts.mjs` 79 of 79;
+    - the check files 19 of 19 (the real build last);
+    - both builds pass;
+    - `git diff --check` clean;
+    - the sheet remade.
+  - Next: Jeffrey's OK, then rulebook **v1.115** and a commit; then a note to Main. Main merges on Jeffrey's go and tells Star.
+- **2026-10-28 — Jeffrey: the two-line note is OK** ("OK: record and commit"). Minor 1 (the screen readers' pause) stays as it is.
+  - `git merge main` first. Main had moved on to 50022cf: New students' merge (N1, N2, Undone, class ages and classes taught together, migration 0031, rulebook v0.617–v0.620) and CLAUDE.md notes. Merge commit **bd3847e**.
+    - The rulebook conflicted only where both sides had added lines at the same spot: the header's Version line (kept this branch's 1.114), the 10b rows above the v0.26 row, and the end of the changelog (kept both, main's first).
+    - Checked: the merged rulebook is main's plus exactly this branch's v1.114 changes. Nothing else overlapped, and Star's branch doesn't touch the count-card files.
+  - Recorded as rulebook **v1.115**:
+    - a 10b row above the v0.26 row (it cites Star's picture by its full path);
+    - a pointer at the start of the v1.107 row;
+    - a §8 line under Black Belt's phones line;
+    - a changelog line and the header.
+    - CRLF kept: 0 LF-only lines (1,342 lines); no changelog number used twice.
+  - Plan §12 written.
+  - **Re-checked after the merge:**
+    - both builds pass, with no parts-page words in `dist/` or `dist-preview/`;
+    - the check files 19 of 19 (the real build last);
+    - `check-parts.mjs` 79 of 79.
+  - Committed on `dashboard-core` (the hash is in `git log`): the count cards, the parts page's M6 samples, the checks, the plan and this file, the rulebook, and the side-by-side `Proof/parts/M6-two-lines-vs-Q5.png`. The single M6 pictures stay on this PC (v1.110). Not pushed.
+  - The note to Main was held by Main's session and expired undelivered (the two sessions run in different permission modes). Jeffrey passed it on himself.
+- **2026-10-28 — the date picker opener and the two-line note merged into `main` as a287ee5** (the Main session; no conflicts; not pushed).
+  - Main reported: both builds pass, no preview code in `dist`, the check files 19 of 19, the Functions tests 173 of 173.
+  - Checked here: `main` holds 1bb2683 and 5628133, and its files are the same as this branch's. This branch moved forward to a287ee5 (fast-forward, no new commit).
+  - Notes for Finance (how to use the opener, with `DP.jsx`'s stand-in of its day row) and Star (how to pass two lines; its date fields' re-placement fix) were held by both sessions and not delivered (different permission modes). Jeffrey has both texts to paste.
+- **2026-10-28 — live:** the Main session pushed `main` c975428 (a287ee5 plus Star's merge) and reported that the Cloudflare deploy succeeded. Checked here: GitHub's `main` (`origin/main`) is c975428 and holds 95a9601, 1bb2683 and 5628133.
+- **2026-10-28 — Star's design reviewer, passed on by Main (a SHOULD for the shared part): "Show all" on touch screens.**
+  - On touch, the shared cards' "Showing not paid only · Show all" has a gap after the dot, and its line is taller than Star's own "… · Show both schools" just under it (Star's `st-inline-link`).
+  - The cause: `app.css` gives every touch link button a visible 44 px box with 8 px of side padding. Star's inline links keep the line's height and get their 44 px tap area from an invisible box (§2.5's "invisible padding").
+  - The approved M6 mockup draws today's look, so a fix changes v1.107's picture on touch: asked Jeffrey first.
+  - `main` merged in up to c975428 first: a fast-forward, bringing Star's merge with Star's count cards on the shared part (b2ec07f).
+  - Measured on Star's Candidates tab (preview, fake data), with the fix put on the page from outside (nothing in the files changed):
+    - on touch, the line 44 → 20 px tall and the gap after the dot 12 → 4 px, the same as Star's line;
+    - Show all's tap area 64×44 → 56×44, with no overlap with Show both schools' tap area;
+    - PC unchanged.
+  - Picture: `Questions/M6-show-all-on-touch.png`.
+  - Seen on the way (not this part's code):
+    - Color Belt's own line (`EventPage.jsx`) has the same gap, until it switches to the shared cards;
+    - Star's "Show both schools" tap area measures 118×39: what sits under it covers the bottom of its invisible box.
+- **2026-10-29 — Jeffrey: A, "make it inline".**
+  - **Built (not committed):**
+    - `CountCards.jsx`: Show all gets the class `inline-link`;
+    - `shared.css` (M6 section): `.inline-link`, copied from Star's `.st-inline-link`. On touch it drops app.css's 44 px box and side padding, and adds an invisible box 12 px above and below the words and 4 px at the sides (a 20 px line + 24 = a 44 px tap height);
+    - `check-parts.mjs`: 4 checks. At 1280 they record the line's height and the gap after the dot; at the three touch sizes they require the same height and gap as on PC and a tap area of at least 44×44, found as a finger would.
+  - **Proof:**
+    - `check-parts.mjs` 83 of 83;
+    - the new checks fail on the old look (390 touch with the class removed: a 44 px line, 12 px after the dot);
+    - Star's screen with the built code is pixel-identical to the right column of the approved picture, at all four sizes;
+    - of M6's pictures, only `filtered` at tablet, phone and 320 changed (24 px shorter); the other 21 are byte-identical;
+    - both builds pass, with no parts-page words; the check files 19 of 19; `git diff --check` clean.
+  - Rulebook **v1.116** drafted, not applied. The header shows Star's 0.518 since Star's merge, so the row script takes the header's number separately.
+  - **Review** (a separate reviewer agent): **changes needed**. Checked again here with my own measurements; all of it holds.
+    - On touch, Show all's invisible box is taller than the room around its line: 8 px above + the 19.5 px line + 8 px below = 35.5 px.
+    - It reaches 4.5 px into the card above: a real touch on the bottom edge of "Not paid" cleared the filter.
+    - On Star's default Both view, the Dan switch under the line leaves Show all 39.5 px tall.
+    - The box is 43.5 px, not 44 (a 19.5 px line + 24).
+    - The 4 new checks couldn't see it: the finger scan only finds what covers Show all, and the parts page has no control under the line.
+  - **To fix whatever Jeffrey picks** (the review's smaller points):
+    - `position: relative` on `.inline-link` itself;
+    - drop `display: inline`, which does nothing on a button;
+    - the checks wait for the line instead of a fixed 500 ms;
+    - the checks gain a "takes no taps from another control" test and the exact box height;
+    - M6's filtered sample gets a real control under the line.
+  - **Question to Jeffrey,** with `Questions/M6-show-all-tap-area.png` (Star's tab, each option put on the page, tap areas drawn):
+    - (a) room for the box: on touch, a line holding the shared link gets no −4 px top margin and 24 px under it, and the box is exactly 44 px. It takes no taps; things below sit 16 px lower than in the approved picture. **Recommended.**
+    - (b) a tall line with no gap: app.css's 44 px box stays, only the side padding goes. Things below sit 25 px lower.
+    - (c) as approved, plus a named exception in §2.5.
+  - For later, not this part's code: Star's own "Show both schools" has the same flaw (118×39). When Color Belt moves to the shared cards, check what sits under its line (its class switch has the same 5 px boxes).
+- **2026-10-29 — Finance → Dashboard core: a turned-off ("disabled") state for the shared dropdown and time list** (Jeffrey's message; Finance's v0.823, "C, via Dashboard core"; picture `docs/Finance/images/Finance-DR-F2-Settings-Off.png` on branch `finance`, option C). Plan §13.
+  - **Set aside first:** the unfinished Show all work (5 files) went into a `git stash` entry (plus a copy in the scratchpad), so this commit holds only the turned-off state; it goes back after the commit. Then `main` 3fdbc0b came in as a fast-forward (New students' N4–N6, rulebook v0.621–v0.623).
+  - **Built:**
+    - `Select.jsx`, the `disabled` prop (default false): tabIndex -1, no `data-autofocus`, `aria-disabled="true"`; its `mousedown` is cancelled, so a click or tap doesn't focus it; no click, tap or key opens it; a list that is open when it is turned off closes before the screen is painted; `aria-readonly` is left off when both are on;
+    - `TimeList.jsx` passes it on;
+    - `shared.css`: `.fa-field.is-disabled` next to `.is-readonly`, where Finance asked: the `--color-surface` box, `--color-disabled-text` words and chevron (also with nothing chosen), the plain cursor; in Windows High Contrast, GrayText;
+    - parts page: `M8/off` (listed apart, as it has no mockup) and `M8/offwhileopen`;
+    - `check-parts.mjs`: 8 checks.
+  - **Measured:** the look is Finance's picture C exactly (#F7F7F5 box, #8F8F8A border, #8A8A85 words and chevron, read from both). Today's real boxes look a shade lighter only because Chrome draws a disabled `<select>` at 70 % opacity; picture C was drawn at full strength.
+  - **Review** (a separate reviewer agent): **ready**, nothing must-fix. It ran the new checks against 12 broken copies of the code.
+    - Should-fixes, all done:
+      - the rulebook row;
+      - tighter checks: an empty + turned-off check, the focus asserted before the keys, and a control for every key, a click and a tap;
+      - Windows High Contrast: a turned-off field looked like one that works; it now uses GrayText, as the browser's own does.
+    - Minor, done: the CSS comment cites picture C and says why the rule sits next to `.is-readonly`; the M8 section points to it.
+    - Minor, left: a field turned off while it has the focus keeps it. Keys do nothing and Tab moves on; native Chrome drops the focus instead. Inside a dialog, Shift+Tab from such a field, when it is the dialog's first field, leaves the dialog, because `Dialog.jsx`'s wrap starts only from the first item or the box. This is rare (only when the screen redraws under a focused field), and its fix would be in `Dialog.jsx`.
+    - Checked after the fixes: removing either new CSS rule from the live page makes its check fail.
+    - **Re-review of the fixes** (the same reviewer): **ready**. Its mutants of the two new CSS rules all fail their checks, every claim in the rulebook row matches its measurements, and check-parts gives 87 of 87. Its one nit is done: a pointer on the v1.100 row too.
+  - **Proof:**
+    - `check-parts.mjs` 87 of 87 (79 + 8);
+    - both builds pass, with no parts-page code; the check files 19 of 19 (the real build last);
+    - `git diff --check` clean; CRLF kept in `shared.css`, the plan and the rulebook;
+    - picture: `Proof/parts/M8-off-vs-F2.png` (the four sizes, Finance's C and today's boxes, High Contrast).
+  - Recorded as rulebook **v1.116**: a 10b row, pointers on the v1.100 and v1.109 rows, the changelog line and the header. Show all's drafted v1.116 becomes **v1.117**.
+  - Committed on `dashboard-core` (the hash is in `git log`); not pushed. Shared files touched: `src/styles/shared.css` and the rulebook.
+- **2026-10-29 — committed as cc92332** (on `main` 3fdbc0b; not pushed). Then the Show all work went back into the worktree from the stash.
+  - `CountCards.jsx`, `shared.css` and `check-parts.mjs` merged cleanly. The status file kept the committed version (it already held Show all's log). The plan kept both sections: §13 is the turned-off state, and Show all is now §14.
+  - Show all's mentions are renumbered to **v1.117** (2 lines each in `CountCards.jsx`, `shared.css` and `check-parts.mjs`; the plan's §14 title; the scratch row draft).
+  - Compared with the copies saved before the stash, nothing else differs. The stash entry was dropped by its tag.
+  - `check-parts.mjs` on the combined worktree: 91 of 91 (87 + Show all's 4). Show all stays uncommitted until Jeffrey picks (a), (b) or (c).
+- **2026-10-29 — merged into `main` as e3e46d4** (the Main session; no conflicts; not pushed). Main's checks on `main`:
+  - both builds pass, and the dist scan finds 0;
+  - the forms checks pass; 19 of 19 check files;
+  - 173 of 173 functions tests.
+
+  Checked here: e3e46d4's parents are 3fdbc0b and cc92332, and its files are the same as cc92332's. This branch moved forward to it (fast-forward; Show all's uncommitted work untouched). Main told Finance it can merge `main` and build F2. The what's-left note to Main wasn't delivered (Main didn't pick it up in time); Jeffrey has it to paste.
+- **2026-10-29 — live:** the Main session pushed `main` e3e46d4 with Jeffrey's OK, and the Cloudflare Pages deploy succeeded. Checked here: GitHub's `main` (`git ls-remote`) is e3e46d4 and holds cc92332. Nothing on screen changes until Finance's F2 uses `disabled`.
+- **2026-10-29 — Main's new standing rule** (relayed by Main, quoting Jeffrey: "Whenever something is done have the sessions report to you…"): every finished step, ready merge or needed decision is reported to Main as Done / Needs Jeffrey / Next.
+  - This session's status was sent at once, but it wasn't delivered: Main didn't pick it up within 20 s.
+  - Main's addition, that Jeffrey's words quoted by Main count as his answer, was put to Jeffrey here to confirm; no answer yet.
+- **2026-10-29 — Jeffrey: (a), "Room for box".**
+  - **Built (not committed):**
+    - `CountCards.jsx`: the gray line also has the class `cards-showing`.
+    - `shared.css` (M6 section):
+      - `.inline-link` has `position: relative` on the link itself, and `display: inline` is gone;
+      - on touch, inside `.cards-showing` only, the invisible box is exactly 44 px (`--tap-size`) from 11 px above the words, 4 px past each side;
+      - `.ev-filter-line.cards-showing` is 12 px under the cards with 24 px under it.
+    - Parts page M6 `filtered`: a real control under the line, a class switch (the shared segmented ChoiceGroup); `parts.css` `.parts-under`.
+    - `check-parts.mjs`: the 4 Show all checks wait for the gray line rather than a fixed time.
+  - **Proof:**
+    - Star's real Candidates tab (Both at 820, 390 and 320; one school at 390) is pixel-identical to option (a) in the question's picture. A finger finds Show all in 56.6×44.9, and it takes taps from nothing.
+    - Side by side: `Proof/parts/M6-show-all-built-vs-a.png`.
+    - Both builds pass, with no parts-page code; the check files 19 of 19; `git diff --check` clean; CRLF kept in `shared.css` and the plan.
+  - **Review** (a fresh reviewer agent): **changes needed, all in the checks and the rulebook; none in the app code** ("The CSS and JSX produce option (a) exactly").
+    - Should-fixes, all done:
+      - the box assert is now exactly 44 (a 48 or 56 px box passed `>= 44`);
+      - the class switch was measured only at each button's middle, so a box covering a neighbour's invisible strip passed. Now the card above and the switch's button under it are measured in the box's columns, with and without Show all's box, and must be the same;
+      - rulebook v1.117 waits on Jeffrey's OK (drafted).
+    - Minor, done:
+      - the touch rules are scoped to `.cards-showing` (reusing `.inline-link` elsewhere can't bring the overlap back);
+      - the comments no longer say "as Star's own inline links": Star's box is 43.5 px with no room made for it.
+    - FYI, left as they are:
+      - in the one-school view, Show all's box and "Show both schools"' box share a 5.5 px band, kept apart sideways (19.4 px at the closest);
+      - Chrome's touch adjustment sends a tap up to about 9 px inside the bottom of the plain "Payments recorded" card to Show all at 390 and 320 (about 1 px on `main`). That is not an overlap, and §2.5 is met.
+    - Its other results:
+      - real taps on Show all clear the filter, and taps 1–2 px inside a card's bottom go to the card;
+      - PC is unchanged (0 of 267 boxes moved with the new classes taken away);
+      - Star's and Color Belt's own lines are unchanged;
+      - the 20 non-filtered M6 pictures are byte-identical.
+  - **After the fixes:**
+    - `check-parts.mjs` 91 of 91;
+    - the checks' own measuring code catches 4 broken layouts at 820, 390 and 320: the first build's, a 48 px box, a 56 px box, and a 44 px box moved down over the switch's strip (the switch's buttons lose 3/8 px);
+    - both builds, 19 of 19, Star's screen still pixel-identical to option (a).
+  - **Re-review** (the same reviewer): **ready**.
+    - Its 16 broken layouts are all caught at 820, 390 and 320, including a box covering only the class switch's invisible 5 px strip, drawn on top or underneath. Built passes.
+    - Scoping confirmed: a line without `.cards-showing` keeps app.css's touch box.
+    - Geometry and PC are the same as in its first review.
+    - Only rulebook v1.117 remains, waiting on Jeffrey's OK.
+  - Plan §14 rewritten; rulebook **v1.117** drafted (scratch), not applied.
+- **2026-10-29 — Jeffrey: "Yes, record it"** (record rulebook v1.117 and commit Show all (a)).
+  - `git merge main` first: a fast-forward to `main` 5f28ed9 (31 commits: Finance's design review F1–F7, migration 0029's files, rulebook v0.817–v0.823, CLAUDE.md's 0029 and 0032 notes). None of them touch Show all's files, so the uncommitted work stayed as it was.
+  - Recorded as rulebook **v1.117**: a 10b row, a pointer on the v1.107 row, a §8 line under v1.115's, the changelog line and the header (it showed Finance's 0.823). No number is used twice; CRLF kept.
+  - Checked again on 5f28ed9: `check-parts.mjs` 91 of 91; both builds pass (exit 0, the real build last); the check files 19 of 19.
+  - Committed on `dashboard-core` (the hash is in `git log`); not pushed. Shared files touched: `src/styles/shared.css` and the rulebook.
+- **2026-10-29 — new item from Jeffrey, passed on by Main:** "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster". It is §4 item 10, its own item rather than part of step 2: its questions can start now, while step 2 waits on its starter. Next: check what the rulebook, the approved mockups and the code already say about the side panel, then ask Jeffrey one question at a time, with pictures at the four sizes. Nothing is built before he OKs the mockup.
 
 ## 4. Next
 
@@ -359,4 +575,10 @@
    Every design review point is now settled.
 2. ~~**Commit on `dashboard-core`**~~ — **done 2026-10-28**, not pushed. Shared files touched: `src/App.jsx`, and the rulebook (v1.110, v1.111, v1.112; v1.100–v1.109 were in 712e3a6). The merge commits 524bd6b and 6626920 hold only main's work.
 3. ~~**Commit the fact fixes** (v1.113)~~ — **done 2026-10-28**, not pushed.
-4. **A ready-to-paste prompt for the Main session**, to merge `dashboard-core` into `main` when Jeffrey asks. It also adds `src/styles/shared.css` and `src/components/text.js` to CLAUDE.md's shared-files list (code review N6).
+4. ~~**Merge `dashboard-core` into `main`**~~ — **done 2026-10-28: 95a9601** (the Main session, `--no-ff`, no conflicts; pushed later, live). The request was sent on Jeffrey's "Send it to Main"; it queued without reaching Main until Jeffrey pointed Main to it. CLAUDE.md's shared-files list gained `src/styles/shared.css` and `src/components/text.js` (4c15146, code review N6).
+5. **The date picker opener option** (§11, Finance's v0.817): ~~Jeffrey reviews `Proof/parts/DP-built-vs-F1.png`~~ **OK'd 2026-10-28** ("OK: record and commit"), rulebook **v1.114**, committed on `dashboard-core` as 1bb2683, **merged into `main` as a287ee5** and **live** (pushed with `main` c975428, 2026-10-28). The notes to Finance ("Daily report finance tab": how to use the opener) and Star (its date fields get the re-placement fix) were held by those sessions and not delivered (different permission modes); Jeffrey has the texts to paste.
+6. **The count cards' two-line note** (Star's v0.518: Q5 B / Q5b A, passed on by Main; Jeffrey: "Yes, build it"): built and reviewed (approve), 79 of 79 checks; **OK'd 2026-10-28** ("OK: record and commit"), rulebook **v1.115** (§12), committed on `dashboard-core` as 5628133 (not pushed). The note to Main that it is committed and reviewed was held by Main's session and expired undelivered (the two run in different permission modes); Jeffrey passed it on. **Merged into `main` as a287ee5** and **live** (pushed with `main` c975428, 2026-10-28). The note to Star (how to pass two lines) was held too; Jeffrey has the text to paste. Star's switch to the shared card is Star's own work.
+7. **"Show all" on touch screens** (Star's design reviewer, passed on by Main; `Questions/M6-show-all-on-touch.png`): Jeffrey chose **A, inline** (2026-10-29). The first build's invisible tap box didn't fit, and Jeffrey then chose **(a) room for the box** (2026-10-29, "Room for box"; `Questions/M6-show-all-tap-area.png`). Built (§14): 91 of 91 checks, pixel-identical to his option (a) on Star's screen (`Proof/parts/M6-show-all-built-vs-a.png`). Reviewed: **ready** after its fixes (re-review, 2026-10-29). **OK'd 2026-10-29** ("Yes, record it"), rulebook **v1.117**, committed on `dashboard-core` on top of `main` 5f28ed9 (not pushed). Next: Main merges it into `main` on Jeffrey's go; Star gets it with `git merge main`.
+8. **The dropdown and time list turned off** (Finance's v0.823, "C, via Dashboard core"; §13): built, reviewed (ready; its should-fixes done), 87 of 87 checks; rulebook **v1.116**; committed on `dashboard-core` as **cc92332**, **merged into `main` as e3e46d4** (2026-10-29, the Main session, no conflicts) and **live** (pushed with Jeffrey's OK the same day; the Cloudflare deploy succeeded). Main told Finance it can merge `main` and build F2 with `<TimeList disabled={!on} … />`.
+9. **Step 2 — the dashboard's own screens** (`docs/Design Review/End review/Prompts/2-DashboardCore-step2-main-screens.md`): the top bar, Home, the account dialogs and menu, Staff accounts and Settings (design review M12–M14, M17; M15 with Color Belt; M16 later). Waits on: Jeffrey pasting its starter here. `git merge main` first; rulebook rows take the next free number in 1.100–1.199.
+10. **A larger side panel for the Grandmaster** (Jeffrey via Main, 2026-10-29: "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster"). Not started. Its own item, not part of step 2, so its questions can start now; if its switch lives in Settings or the account menu, step 2's designs of those include it. First: what the rulebook, the approved mockups and the code already say about the side panel (rail and labels, touch sizes, per-device vs per-account settings, Hide private details as a per-tablet switch). Then the open questions to Jeffrey, one at a time, with pictures at the four sizes. Nothing is built before he OKs the mockup.

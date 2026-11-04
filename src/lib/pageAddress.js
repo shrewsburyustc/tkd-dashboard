@@ -41,7 +41,7 @@
 //   #testing/star/event/<id>/results        its Results tab (Star phase 6)
 // Black Belt testing (C2, rulebook v0.937) — the same addresses with the switch on or off:
 //   #testing/black-belt                       Black Belt testing, Cycles tab
-//   #testing/black-belt/rubric                its Rubric and prices tab
+//   #testing/black-belt/rubric                its Rubric and waiver tab
 //   #testing/black-belt/cycle/<id>            a cycle's page (its Candidates tab)
 //   #testing/black-belt/cycle/<id>/rubric     that cycle's Rubric tab
 //   #testing/black-belt/cycle/<id>/grading    that cycle's Grading tab (contract 0025 §14.1)

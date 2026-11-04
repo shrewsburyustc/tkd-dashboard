@@ -8,7 +8,7 @@
 //     "Days per week" (1–7; weekly pricing v0.717), which sets the size of the price grid.
 // A refusal from the database ("Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it …")
 // shows under Days (errors.days).
-import ChoiceGroup from '../../testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import Notice from '../../../components/Notice.jsx';
 import DayCalendar from './DayCalendar.jsx';
 import { MAX_DAYS, MAX_WEEK_DAYS } from './campForm.js';

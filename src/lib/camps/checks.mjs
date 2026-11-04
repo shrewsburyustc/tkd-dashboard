@@ -14,13 +14,24 @@ import {
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
   gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
-  campWeeks, defaultWeekIndex, paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
+  yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
-import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
+import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
+// The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
+import { qrFileName } from '../qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
+// Print receipt's plain receipt (rulebook v0.734, design review C3).
+import { buildCampReceipt, canPrintReceipt, receiptPayments } from './campReceipt.js';
+// The History words (migration 0033, rulebook v0.736; the Mark paid box's hint is campRules' payingByChoiceWhere).
+import { groupCamperHistory, describeCamperBatch } from '../../screens/camps/camperHistoryWords.js';
 import {
   createCampsBackend, defaultCampsData, md5, schoolClockToIso, DEFAULT_CAMP_CODES, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_TABLES,
 } from '../mockCamps.js';
+// The Camps words (the screens' text.js): only to check the "Hide private details" sentences and
+// the v0.725 / v0.726 words.
+import * as CampText from '../../screens/camps/text.js';
+// The Edit camp form's pure Undo helpers (rulebook v0.726).
+import { campUndoRefusal, undoAddsPastDay, undoCampPayload } from '../../screens/camps/sections/campForm.js';
 
 let count = 0;
 function check(label, fn) {
@@ -288,14 +299,15 @@ check('toCamel on a sample roster row, toSnake back', () => {
 
 // ======================= qr.js =======================
 
-check('qrFileName, campLink and the QR picture', () => {
-  assert.equal(qrFileName('April Vacation Camp'), 'april-vacation-camp-qr.png');
-  assert.equal(qrFileName('  Thanksgiving Camp!! (2026) '), 'thanksgiving-camp-2026-qr.png');
-  assert.equal(qrFileName('Été'), 't-qr.png'); // only a–z and 0–9 are kept
-  assert.equal(qrFileName(''), 'camp-qr.png');
-  assert.equal(qrFileName('!!!'), 'camp-qr.png');
-  assert.equal(qrFileName(null), 'camp-qr.png');
-  assert.equal(qrFileName('x'.repeat(50)), `${'x'.repeat(40)}-qr.png`);
+check('the QR file name (shared, v0.733 option B), campLink and the QR picture', () => {
+  // The camp page passes school null for a both-schools camp and the school's name for a
+  // one-school camp; the shared box names the file with the shared qrFileName.
+  assert.equal(qrFileName('April Vacation Camp', null), 'April Vacation Camp QR code.png');
+  assert.equal(qrFileName('Veterans Day Camp', 'Worcester'), 'Veterans Day Camp - Worcester QR code.png');
+  assert.equal(CampText.schoolName('worcester'), 'Worcester'); // the school the camp page passes
+  // The card's heading: Camps' words, not the shared default "Worcester school".
+  assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools · held at Worcester');
+  assert.equal(CampText.campSchoolLine({ bothSchools: false, locationCode: 'worcester' }), 'Worcester');
   assert.equal(campLink('k7m2qp4x'), 'https://tkd-dashboard.pages.dev/camp/k7m2qp4x');
   assert.equal(qrCampLink, campLink); // the one definition
   assert.equal(campLink('k7m2qp'), ''); // 6 characters: not a code
@@ -481,10 +493,11 @@ check('mock: the default data matches the approved mockups', () => {
   const { backend: b2 } = makeBackend({ today: '2026-10-19' });
   const roster2 = toCamel(rows(b2, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]));
   assert.equal(roster2.filter((r) => r.days.some((d) => d.checkedInAt)).length, 0);
-  // Columbus Day (Oct 12, past): 9 campers, all checked in. Veterans 16, Thanksgiving 12, Winter 0,
-  // April 19, Two-Week Summer Camp 6 (added 2026-10-21 for the roster's week switcher).
+  // Columbus Day (Oct 12, past): 9 campers, all checked in. Veterans 16, Thanksgiving 13 (Jack
+  // Rivera's sister Sofia joined his sign-up for C7's history, 0033), Winter 0, April 19, Two-Week
+  // Summer Camp 6 (added 2026-10-21 for the roster's week switcher).
   const counts = campCounts(toCamel(rows(b2, 'camp_roster', 'camp_id, status')));
-  assert.deepEqual(camps.map((c) => counts[c.id] ?? 0), [9, 16, 12, 0, 19, 6]);
+  assert.deepEqual(camps.map((c) => counts[c.id] ?? 0), [9, 16, 13, 0, 19, 6]);
   const columbus = toCamel(rows(b2, 'camp_roster', ROSTER, [{ col: 'camp_id', value: camps[0].id }]));
   assert.equal(columbus.every((r) => r.days[0].checkedInAt), true);
   assert.equal(rows(b2, 'camp_templates', 'name').length, 4);
@@ -1350,6 +1363,449 @@ await (async () => {
     throw error;
   }
 })();
+
+// ======================= Hide private details (rulebook v0.722, design review C1) =======================
+// While the switch is on, the delete sentences and the Mark paid toast never name an amount, a
+// method or whether anything was paid; with it off they read exactly as before.
+check('Hide private details: delete sentences and toast name no money (v0.722)', () => {
+  const T = CampText;
+  const camp = 'April Vacation Camp';
+  const pay = [{ amountCents: 33500, method: 'card', paidOn: '2027-03-25' }];
+  // Delete camper: one sentence, paid or not (picture 03b).
+  const hiddenCamper = 'The sign-up and any recorded payment are deleted from April Vacation Camp. This can’t be undone.';
+  assert.equal(T.deleteCamperBody(camp, pay, true), hiddenCamper);
+  assert.equal(T.deleteCamperBody(camp, [], true), hiddenCamper);
+  assert.equal(T.deleteCamperBody(camp, [], false), 'The sign-up is deleted from April Vacation Camp. This can’t be undone.');
+  assert.match(T.deleteCamperBody(camp, pay, false), /\$335 card payment recorded on Mar 25/);
+  // Delete camp: with and without removed campers; an empty camp has no payment to mention.
+  assert.equal(T.deleteCampBody(camp, 19, 1, 379500, true), 'April Vacation Camp, its 19 campers and 1 removed, and any recorded payment are deleted. This can’t be undone.');
+  assert.equal(T.deleteCampBody(camp, 19, 0, 0, true), 'April Vacation Camp, its 19 campers and any recorded payment are deleted. This can’t be undone.');
+  assert.equal(T.deleteCampBody(camp, 0, 0, 0, true), 'April Vacation Camp is deleted. This can’t be undone.');
+  assert.match(T.deleteCampBody(camp, 19, 1, 379500, false), /\$3,795 in payments/);
+  for (const text of [T.deleteCamperBody(camp, pay, true), T.deleteCampBody(camp, 19, 1, 379500, true), T.markedPaidToastHidden('Leo Kim')]) {
+    assert.ok(!/\$|cash|check|card|\bpaid on\b/i.test(text), text);
+  }
+  assert.equal(T.markedPaidToastHidden('Leo Kim'), 'Leo Kim marked paid');
+  // The gray words are the dashboard-wide ones (src/lib/privateDetails.js).
+  assert.equal(T.HIDDEN_ON_THIS_TABLET, 'Hidden on this tablet');
+  assert.equal(T.PAYMENT_DETAILS_HIDDEN, 'Payment details are hidden on this tablet.');
+  assert.equal(`${T.TOTAL_NOW} ${T.HIDDEN_ON_THIS_TABLET}`, 'Total now Hidden on this tablet');
+});
+
+// ======================= Undo after Camps' saves (rulebook v0.726) and "Open sign-up" (v0.725) =======================
+// Edit camp's Undo sends the camp's OLD payload again: an extra the save removed goes without its
+// id (it no longer exists — the database would refuse the id), kept ones keep theirs, and the
+// refusal words name the reason. (The round trip itself is tried in the preview, in the browser.)
+check('Undo of Edit camp: old payload, refusal words (v0.726)', () => {
+  const T = CampText;
+  const before = { days: ['2027-04-19', '2027-04-20'], extras: [{ name: 'Pizza', extraId: 'x1' }, { name: 'Swim', extraId: 'x2' }] };
+  const saved = { days: ['2027-04-20', '2027-04-21'], extras: [{ name: 'Pizza', extraId: 'x1' }, { name: 'Art', extraId: null }] };
+  const back = undoCampPayload(before, saved);
+  assert.deepEqual(back.extras, [{ name: 'Pizza', extraId: 'x1' }, { name: 'Swim', extraId: null }]);
+  assert.deepEqual(back.days, before.days);
+  assert.equal(undoCampPayload(null, saved), null);
+  // A past day taken off can't be put back by Undo (the database refuses new past days).
+  assert.equal(undoAddsPastDay(before, saved, '2027-04-20'), true);
+  assert.equal(undoAddsPastDay(before, saved, '2027-04-19'), false);
+  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: true }), "Couldn’t undo. New days can’t be in the past.");
+  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: false }), null);
+  assert.equal(campUndoRefusal({ status: 'stale' }), null);
+  assert.equal(campUndoRefusal({ status: 'ok' }), null);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'day', day: '2027-04-21', firstName: 'Mia', lastName: 'Rossi', more: 0 }), /^Couldn’t undo\. Can’t remove .*Mia Rossi picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra', extraName: 'Art', count: 2 }), /^Couldn’t undo\. Can’t remove Art: 2 campers picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_per', extraName: 'Art', count: 1 }), /^Couldn’t undo\. Can’t switch Art/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_included', extraName: 'Art', count: 1 }), /^Couldn’t undo\. Can’t save: Art would become included/);
+  // The words (v0.725 / v0.726).
+  assert.equal(T.OPEN_SIGNUP, 'Open sign-up');
+  assert.equal(T.OPEN_NEEDS_ADMIN, 'The closing date has passed. Ask an admin to open it.');
+  assert.equal(T.TOAST_SIGNUP_OPEN, 'Sign-up open');
+  assert.equal(T.signupOpenUntil('2027-04-30'), 'Sign-up open until Apr 30');
+  assert.equal(T.signupNotOpened('April Camp'), "Sign-up for April Camp wasn't opened. Check the connection, then retry.");
+  assert.equal(T.linkDialogLine('closed', {}), 'Family sign-up is closed. Open it from the ⋯ menu to take more sign-ups.');
+  assert.equal(T.TOAST_PAYMENT_CHANGED, 'Payment changed');
+});
+
+check('date calendar Year list (v0.727)', () => {
+  assert.deepEqual(yearsAround('2027-04-21', ['2026-12-30', '']), [2026, 2027, 2028]);
+  assert.deepEqual(yearsAround('2027-04-21', ['2025-03-01'], false), [2025, 2026, 2027]);
+  assert.deepEqual(yearsAround('2027-04-21', [], false), [2027]);
+  assert.deepEqual(yearsAround('2027-04-21', ['2029-07-01']), [2027, 2028, 2029]);
+  assert.deepEqual(yearsAround('', ['nope']), []);
+});
+
+// ======================= money words (rulebook v0.732, design review C17) =======================
+check('Camps writes money with the shared formatMoney: whole dollars as before, a real minus sign', () => {
+  const T = CampText;
+  assert.equal(T.dueTag(35000), '$350 due');
+  assert.equal(T.tagOwes(1500), 'Owes $15');
+  // ("Mark paid $1,355" is the shared Mark paid box's own words since v0.735.)
+  assert.equal(T.markPaidAmount, undefined);
+  assert.equal(T.newTotalLine(0), 'Total now $0');
+  assert.equal(T.markedPaidToast('Leo Kim', 35000, 'cash'), 'Leo Kim marked paid · $350 cash'); // Camps' own copy
+  const pay = { amountCents: 33500, method: 'card', kind: 'payment', school: 'worcester', paidOn: '2027-04-19', recordedByName: 'Jeffrey' };
+  assert.equal(T.paymentLine(pay), '$335 card · Worcester · Apr 19 · Jeffrey');
+  // The one visible change: a reversed payment reads "−$335" (U+2212 before the $), not "$-335".
+  assert.equal(T.paymentLine({ ...pay, amountCents: -33500, kind: 'reversal' }), '\u2212$335 card (reversed) · Worcester · Apr 19 · Jeffrey');
+  assert.equal('dollars' in T, false); // Color Belt's helper is no longer re-exported
+});
+
+// ======================= Print receipt (rulebook v0.734, design review C3) =======================
+// The plain receipt campReceipt.js builds for the shared Receipt.jsx (Star's v0.518 as the model).
+{
+  const camp = { name: 'Thanksgiving Camp', locationCode: 'worcester', bothSchools: false };
+  const campDays = [{ dayId: 'd1', day: '2026-11-25' }, { dayId: 'd2', day: '2026-11-27' }];
+  const camper = {
+    id: 'c1', firstName: 'Jack', lastName: 'Rivera', status: 'active', age: 9, member: true,
+    days: [{ dayId: 'd1', day: '2026-11-25' }, { dayId: 'd2', day: '2026-11-27' }],
+    totalCents: 18600, paidCents: 18600, reference: 'CP-4821', payingBy: 'cash',
+    // private things a roster row can carry — none may reach the receipt
+    signedUpOn: '2026-10-01', signatureDeletedAt: null,
+  };
+  // The $186 check was changed with Edit payment to $100 cash (old payment + its reversal), then
+  // $86 was marked paid; the payments come in no particular order (jsonb_agg has none).
+  const payments = [
+    { id: 'p3', kind: 'payment', amountCents: 8600, method: 'cash', paidOn: '2026-10-29', recordedAt: '2026-10-29T15:00:00Z', reversesPaymentId: null },
+    { id: 'p1', kind: 'payment', amountCents: 18600, method: 'check', paidOn: '2026-10-20', recordedAt: '2026-10-20T14:00:00Z', reversesPaymentId: null },
+    { id: 'r1', kind: 'reversal', amountCents: -18600, method: 'check', paidOn: '2026-10-28', recordedAt: '2026-10-28T10:00:00Z', reversesPaymentId: 'p1' },
+    { id: 'p2', kind: 'payment', amountCents: 10000, method: 'cash', paidOn: '2026-10-20', recordedAt: '2026-10-28T10:00:01Z', reversesPaymentId: null },
+  ];
+  const detail = {
+    status: 'ok', camper,
+    family: { parentName: 'Ana Rivera', parentPhone: '5085551234', parentRelation: 'Mother', emergencyName: 'Luis Rivera', emergencyPhone: '5085559876', emergencyRelation: 'Uncle' },
+    breakdown: { extras: [{ name: 'Late pick-up', per: 'day', days: ['2026-11-25'], cents: 1000 }, { name: 'T-shirt', per: 'once', days: [], cents: 1500 }], totalCents: 18600 },
+    payments,
+  };
+  const schools = [
+    { code: 'worcester', name: 'Worcester', address: { street: '1141 Main St' }, phone: '(508) 767-1717' },
+    { code: 'shrewsbury', name: 'Shrewsbury', address: null, phone: null },
+  ];
+  const build = (over = {}) => buildCampReceipt({ detail, camp, campDays, campExtras: [], schools, printedOn: '2026-10-29', printedByName: 'Jeffrey Berg', ...over });
+
+  check('receipt: only payments that still stand, oldest first, each "Camp fee"', () => {
+    assert.deepEqual(receiptPayments(payments).map((p) => p.id), ['p2', 'p3']); // p1 + its reversal r1 left out
+    const r = build();
+    assert.deepEqual(r.lines, [
+      { date: '2026-10-20', forText: 'Camp fee', how: 'cash', amountCents: 10000 },
+      { date: '2026-10-29', forText: 'Camp fee', how: 'cash', amountCents: 8600 },
+    ]);
+    // same day: in the order recorded
+    const sameDay = receiptPayments([
+      { id: 'b', kind: 'payment', paidOn: '2026-10-20', recordedAt: '2026-10-20T12:00:00Z' },
+      { id: 'a', kind: 'payment', paidOn: '2026-10-20', recordedAt: '2026-10-20T09:00:00Z' },
+    ]);
+    assert.deepEqual(sameDay.map((p) => p.id), ['a', 'b']);
+    // Undo payment (a reversal with no replacement): nothing left
+    assert.deepEqual(receiptPayments([payments[1], payments[2]]), []);
+    assert.deepEqual(receiptPayments(undefined), []);
+  });
+
+  check('receipt: the words, facts, totals and footer (v0.734)', () => {
+    const r = build();
+    assert.equal(r.kindLine, 'Camp · payment receipt');
+    assert.deepEqual(r.facts, [
+      ['Camper', 'Jack Rivera'],
+      ['Camp', 'Thanksgiving Camp · Wed, Nov 25 & Fri, Nov 27, 2026'],
+      ['School', 'Worcester'],
+      ['Days', 'All days · 2 days'],
+      ['Extras', 'Late pick-up on Wed; T-shirt'],
+      ['Reference', 'CP-4821'],
+    ]);
+    assert.equal(r.totalDueCents, 18600);
+    assert.equal(r.paidCents, 18600);
+    assert.equal(r.balanceNote, null);
+    assert.deepEqual(r.schools, [
+      { name: 'Worcester', street: '1141 Main St', phone: '(508) 767-1717' },
+      { name: 'Shrewsbury', street: '', phone: '' },
+    ]);
+    assert.equal(r.printedOn, '2026-10-29');
+    assert.equal(r.printedByName, 'Jeffrey Berg');
+    // A both-schools camp: Camps' own line. An extra offered only on some days: Camper detail's words.
+    const both = build({ camp: { ...camp, bothSchools: true }, campExtras: [{ name: 'Late pick-up', onlyOn: ['2026-11-25'] }] });
+    assert.deepEqual(both.facts[2], ['School', 'Both schools · held at Worcester']);
+    assert.deepEqual(both.facts[4], ['Extras', 'Late pick-up — Wed; T-shirt']);
+    // Some days only, no extras: the Days line names them and there is no Extras line.
+    const some = build({ detail: { ...detail, camper: { ...camper, days: [camper.days[0]] }, breakdown: { extras: [] } } });
+    assert.deepEqual(some.facts.map(([label]) => label), ['Camper', 'Camp', 'School', 'Days', 'Reference']);
+    assert.equal(some.facts[3][1], 'Wed, Nov 25 · 1 day');
+    // The schools couldn't load: no footer lines.
+    assert.deepEqual(build({ schools: [] }).schools, []);
+  });
+
+  check('receipt: never a private field (age, parent, phones, notes, signature, links)', () => {
+    const text = JSON.stringify(build({ campExtras: [{ name: 'Late pick-up', onlyOn: [] }] }));
+    for (const secret of ['Ana', 'Luis', '5085551234', '508555', 'Mother', 'Uncle', 'member', 'Age', 'signed', 'waiver', 'http', '@', 'Rivera ·']) {
+      assert.equal(text.includes(secret), false, `receipt holds "${secret}"`);
+    }
+    const keys = Object.keys(build()).sort();
+    assert.deepEqual(keys, ['balanceNote', 'facts', 'kindLine', 'lines', 'paidCents', 'printedByName', 'printedOn', 'schools', 'totalDueCents']);
+    assert.deepEqual(Object.keys(build().lines[0]).sort(), ['amountCents', 'date', 'forText', 'how']);
+  });
+
+  check('receipt: no name when get_my_profile failed or gave none', () => {
+    assert.equal(build({ printedByName: null }).printedByName, null);
+    assert.equal(build({ printedByName: '   ' }).printedByName, null);
+    assert.equal(build({ printedByName: undefined }).printedByName, null);
+    assert.equal(build({ printedByName: '  Dana Ross ' }).printedByName, 'Dana Ross');
+  });
+
+  check('receipt: when Print receipt shows (active, money that still stands, not hidden)', () => {
+    assert.equal(canPrintReceipt({ status: 'active', paidCents: 100 }, false), true);
+    assert.equal(canPrintReceipt({ status: 'active', paidCents: 0 }, false), false); // nothing paid / undone
+    assert.equal(canPrintReceipt({ status: 'active' }, false), false);
+    assert.equal(canPrintReceipt({ status: 'withdrawn', paidCents: 100 }, false), false); // removed
+    assert.equal(canPrintReceipt({ status: 'active', paidCents: 100 }, true), false); // Hide private details
+    assert.equal(canPrintReceipt(null, false), false);
+    assert.equal(CampText.PRINT_RECEIPT, 'Print receipt');
+    assert.equal(CampText.receiptSub('Jack Rivera', 'Thanksgiving Camp'), 'Jack Rivera · Thanksgiving Camp');
+    assert.equal(CampText.receiptNotFound(CampText.THIS_CAMPER), 'This camper was deleted on another device, so there is no receipt.');
+  });
+
+  check('receipt: Edit payment keeps the replacement, drops the old payment and its reversal', () => {
+    // Mark paid, then Edit payment (as the preview database and migration 0013 record it).
+    const rows = [
+      { id: 'x1', kind: 'payment', amountCents: 5000, paidOn: '2026-10-01', recordedAt: '2026-10-01T10:00:00Z' },
+      { id: 'x2', kind: 'reversal', amountCents: -5000, paidOn: '2026-10-02', recordedAt: '2026-10-02T10:00:00Z', reversesPaymentId: 'x1' },
+      { id: 'x3', kind: 'payment', amountCents: 4000, paidOn: '2026-10-01', recordedAt: '2026-10-02T10:00:00Z' },
+    ];
+    assert.deepEqual(receiptPayments(rows).map((p) => p.id), ['x3']);
+  });
+}
+
+// ======================= migration 0033: the Mark paid box's hint and the History (C2 / C7) =======================
+check('Mark paid box hint (v0.735 option B): "on the form" until Paying by is changed at the desk', () => {
+  assert.equal(payingByChoiceWhere({ payingBy: 'cash', payingByOnForm: 'cash' }), 'form');
+  assert.equal(payingByChoiceWhere({ payingBy: 'card', payingByOnForm: 'cash' }), 'desk');
+  assert.equal(payingByChoiceWhere({ payingBy: 'cash' }), 'form'); // a database from before 0033
+});
+
+check('History words (v0.736): one entry per save, parts joined with "; ", family part, hidden money', () => {
+  const W = '00000000-0000-4000-8000-0000000000a1'; // Wed
+  const F = '00000000-0000-4000-8000-0000000000a2'; // Fri
+  const DROP_X = '00000000-0000-4000-8000-0000000000b1';
+  const PIZZA_X = '00000000-0000-4000-8000-0000000000b2';
+  const campDays = [{ dayId: W, day: '2026-11-25' }, { dayId: F, day: '2026-11-27' }];
+  const campExtras = [{ extraId: DROP_X, name: 'Early drop-off' }, { extraId: PIZZA_X, name: 'Pizza party' }];
+  const row = (batchId, at, who, tableName, op, before, after) => ({ batchId, occurredAt: at, actorName: who, tableName, op, before, after });
+  const say = (batch, opts = {}) => describeCamperBatch(batch, { campDays, campExtras, familySize: 1, ...opts });
+  // Newest first, as the reader sends them.
+  const rows = [
+    row('b6', '2026-10-14T15:00:00Z', 'Jeffrey Berg', 'camp_signups', 'update', { parentPhone: '5085550141' }, { parentPhone: '5085550109' }),
+    row('b5', '2026-10-13T21:00:00Z', 'Staff', 'camp_payments', 'insert', null, { kind: 'reversal', amountCents: -18600, method: 'card' }),
+    row('b5', '2026-10-13T21:00:00Z', 'Staff', 'camp_campers', 'update', { payingBy: 'card' }, { payingBy: 'cash' }),
+    row('b4', '2026-10-13T20:55:00Z', 'Staff', 'camp_payments', 'insert', null, { kind: 'payment', amountCents: 18600, method: 'card' }),
+    row('b4', '2026-10-13T20:55:00Z', 'Staff', 'camp_campers', 'update', { payingBy: 'cash', version: 2 }, { payingBy: 'card', version: 3 }),
+    row('b3', '2026-10-12T14:00:00Z', 'Dana Ross', 'camp_campers', 'update', { age: 10, member: false, version: 1 }, { age: 11, member: true, version: 2 }),
+    row('b2', '2026-10-11T14:20:00Z', 'Dana Ross', 'camp_camper_days', 'insert', null, { dayId: F, camperId: 'c' }),
+    row('b2', '2026-10-11T14:20:00Z', 'Dana Ross', 'camp_camper_extras', 'insert', null, { extraId: DROP_X, dayId: F }),
+    row('b2', '2026-10-11T14:20:00Z', 'Dana Ross', 'camp_camper_extras', 'insert', null, { extraId: PIZZA_X, dayId: F }),
+    row('b1', '2026-10-09T16:00:00Z', 'Family form', 'camp_signups', 'insert', null, { reference: 'CP-4409' }),
+    row('b1', '2026-10-09T16:00:00Z', 'Family form', 'camp_campers', 'insert', null, { firstName: 'Jack', duplicateState: 'none' }),
+    row('b1', '2026-10-09T16:00:00Z', 'Family form', 'camp_camper_days', 'insert', null, { dayId: W }),
+    row('b1', '2026-10-09T16:00:00Z', 'Family form', 'camp_camper_extras', 'insert', null, { extraId: DROP_X, dayId: W }),
+  ];
+  const batches = groupCamperHistory(rows, { dayIds: [W, F], extras: [{ extraId: DROP_X, dayId: W }, { extraId: DROP_X, dayId: F }, { extraId: PIZZA_X, dayId: F }] });
+  assert.deepEqual(batches.map((b) => b.key), ['b6', 'b5', 'b4', 'b3', 'b2', 'b1']);
+  const texts = batches.map((b) => say(b)?.text);
+  assert.deepEqual(texts, [
+    'Parent phone: (508) 555-0141 → (508) 555-0109',
+    'Payment undone: $186 card; Paying by: Card → Cash',
+    'Marked paid $186 card; Paying by: Cash → Card',
+    'Age: 10 → 11; Member: No → Yes',
+    // Drop-off on Fri only followed the new day (nothing of its own); pizza is new.
+    'Days: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27; Pizza party added',
+    'Signed up on the family form · CP-4409',
+  ]);
+  assert.deepEqual(say(batches[5]), { text: 'Signed up on the family form · CP-4409', at: '2026-10-09T16:00:00Z', who: 'Family form' });
+  assert.equal(say(batches[0], { familySize: 2 }).text, 'Parent phone: (508) 555-0141 → (508) 555-0109 (whole family)');
+  // Hidden: money saves are left out (counted by the shared line), the rest stays.
+  assert.deepEqual(say(batches[1], { hidden: true }), { hiddenPayment: true });
+  assert.deepEqual(say(batches[2], { hidden: true }), { hiddenPayment: true });
+  assert.equal(say(batches[3], { hidden: true }).text, 'Age: 10 → 11; Member: No → Yes');
+  // A save with money and something else, hidden: only the something else.
+  const mixed = { key: 'm', occurredAt: '2026-10-15T10:00:00Z', actorName: '', rows: [
+    row('m', '2026-10-15T10:00:00Z', '', 'camp_campers', 'update', { payingBy: 'cash', firstName: 'Jak' }, { payingBy: 'check', firstName: 'Jack' }),
+  ] };
+  assert.equal(say(mixed).text, 'Paying by: Cash → Check; First name: Jak → Jack');
+  assert.deepEqual(say(mixed, { hidden: true }), { text: 'First name: Jak → Jack', at: '2026-10-15T10:00:00Z', who: 'Staff' }); // no name → "Staff"
+  // Edit payment = an undo and a new payment in one save.
+  const one = (rowsOfBatch) => say(groupCamperHistory(rowsOfBatch)[0]);
+  assert.equal(one([
+    row('e', 't', 'Jeffrey Berg', 'camp_payments', 'insert', null, { kind: 'reversal', amountCents: -18600, method: 'check' }),
+    row('e', 't', 'Jeffrey Berg', 'camp_payments', 'insert', null, { kind: 'payment', amountCents: 10000, method: 'cash' }),
+  ]).text, 'Payment changed: $186 check → $100 cash');
+  // Withdrawn / Restored / duplicates.
+  const camper = (before, after) => one([row('x', 't', 'Staff', 'camp_campers', 'update', before, after)]).text;
+  assert.equal(camper({ status: 'active', withdrawnReason: null }, { status: 'withdrawn', withdrawnReason: 'withdrawn' }), 'Withdrawn');
+  assert.equal(camper({ status: 'withdrawn', withdrawnReason: 'withdrawn' }, { status: 'active', withdrawnReason: null }), 'Restored');
+  assert.equal(camper({ status: 'active', withdrawnReason: null, duplicateState: 'possible' }, { status: 'withdrawn', withdrawnReason: 'duplicate_copy', duplicateState: 'none' }), 'Removed as a duplicate copy');
+  assert.equal(camper({ duplicateState: 'none' }, { duplicateState: 'possible' }), 'Possible duplicate found');
+  assert.equal(camper({ duplicateState: 'possible' }, { duplicateState: 'kept_both' }), 'Kept both');
+  assert.equal(one([row('x', 't', 'Staff', 'camp_campers', 'update', { duplicateState: 'possible' }, { duplicateState: 'none' })]), null); // nothing to say
+  assert.equal(one([row('x', 't', 'Staff', 'camp_campers', 'update', { version: 1 }, { version: 2 })]), null); // only the version
+  assert.equal(camper({ firstName: 'Liam', lastName: 'Ortis' }, { firstName: 'Liam J', lastName: 'Ortiz' }), 'First name: Liam → Liam J; Last name: Ortis → Ortiz');
+  // A sign-up that was a possible duplicate from the start.
+  assert.equal(one([
+    row('s', 't', 'Family form', 'camp_campers', 'insert', null, { duplicateState: 'possible' }),
+    row('s', 't', 'Family form', 'camp_signups', 'insert', null, { reference: 'CP-4822' }),
+  ]).text, 'Signed up on the family form · CP-4822; Possible duplicate found');
+  // The family part.
+  const family = (before, after, familySize = 1) => describeCamperBatch(groupCamperHistory([row('f', 't', 'Jeffrey Berg', 'camp_signups', 'update', before, after)])[0], { campDays, campExtras, familySize })?.text;
+  assert.equal(family({ parentName: 'Lisa Rivera', parentRelation: 'Mother' }, { parentName: 'Ana Rivera', parentRelation: 'Aunt' }), 'Parent: Lisa Rivera → Ana Rivera; Parent relationship: Mother → Aunt');
+  assert.equal(family({ emergencyName: 'Mike', emergencyPhone: '5085550209', emergencyRelation: 'Uncle' }, { emergencyName: 'Tom', emergencyPhone: '5085550210', emergencyRelation: 'Father' }, 3),
+    'Emergency contact: Mike → Tom; Emergency contact relationship: Uncle → Father; Emergency contact phone: (508) 555-0209 → (508) 555-0210 (whole family)');
+  assert.equal(family({ signature: 'on file', signatureDeletedAt: null }, { signature: null, signatureDeletedAt: '2029-12-01T05:00:00Z' }, 2), 'Signature deleted (3 years after the camp) (whole family)');
+  // A save that changed the camper and the family: the family part last, "(whole family)" once.
+  assert.equal(describeCamperBatch(groupCamperHistory([
+    row('g', 't', 'Jeffrey Berg', 'camp_signups', 'update', { parentPhone: '5085550141' }, { parentPhone: '5085550109' }),
+    row('g', 't', 'Jeffrey Berg', 'camp_campers', 'update', { age: 10 }, { age: 11 }),
+  ])[0], { campDays, campExtras, familySize: 2 }).text, 'Age: 10 → 11; Parent phone: (508) 555-0141 → (508) 555-0109 (whole family)');
+  // Extras: removed; a per-day extra's own days changed (not following the camper's days).
+  assert.equal(say(groupCamperHistory([row('r', 't', 'Staff', 'camp_camper_extras', 'delete', { extraId: PIZZA_X, dayId: F }, null)],
+    { dayIds: [W, F], extras: [] })[0]).text, 'Pizza party removed');
+  assert.equal(say(groupCamperHistory([row('r', 't', 'Staff', 'camp_camper_extras', 'insert', null, { extraId: DROP_X, dayId: F })],
+    { dayIds: [W, F], extras: [{ extraId: DROP_X, dayId: W }, { extraId: DROP_X, dayId: F }] })[0]).text, 'Early drop-off: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27');
+  // A day taken off (its per-day extra follows it: one part).
+  assert.equal(say(groupCamperHistory([
+    row('d', 't', 'Staff', 'camp_camper_days', 'delete', { dayId: F }, null),
+    row('d', 't', 'Staff', 'camp_camper_extras', 'delete', { extraId: DROP_X, dayId: F }, null),
+  ], { dayIds: [W], extras: [{ extraId: DROP_X, dayId: W }] })[0]).text, 'Days: Wed, Nov 25 · Fri, Nov 27 → Wed, Nov 25');
+  // A row without a batch id is a save of its own.
+  assert.equal(groupCamperHistory([row(null, 't', 'x', 'camp_campers', 'update', { age: 1 }, { age: 2 }), row(null, 't', 'x', 'camp_campers', 'update', { age: 2 }, { age: 3 })]).length, 2);
+  assert.deepEqual(groupCamperHistory(null), []);
+  // An extra the camp no longer has.
+  assert.equal(say(groupCamperHistory([row('z', 't', 'Staff', 'camp_camper_extras', 'delete', { extraId: 'gone', dayId: null }, null)], { dayIds: [W], extras: [] })[0]).text, 'Extra (no longer offered) removed');
+});
+
+check('mock (0033): Mark paid with a way, Paying by follows, Undo puts it back, the history reader', () => {
+  const { backend: b, env, store } = makeBackend({ today: '2026-10-19', clock: Date.parse('2026-10-19T14:00:00Z') });
+  const camp = rows(b, 'camps', 'id, name').find((c) => c.name === 'Thanksgiving Camp');
+  const campDays = toCamel(rows(b, 'camp_days', 'id, day', [{ col: 'camp_id', value: camp.id }])).map((d) => ({ dayId: d.id, day: d.day }));
+  const campExtras = toCamel(rows(b, 'camp_extras', 'id, name, sort', [{ col: 'camp_id', value: camp.id }])).map((e) => ({ extraId: e.id, name: e.name, sort: e.sort }));
+  const COLS = `${ROSTER}, position, age, paying_by, paying_by_on_form`;
+  const roster = () => toCamel(rows(b, 'camp_roster', COLS, [{ col: 'camp_id', value: camp.id }]));
+  const find = (first, last) => roster().find((r) => r.firstName === first && r.lastName === last);
+  const history = (r, ctx = STAFF) => {
+    const answer = toCamel(rpcOk(b, 'camp_camper_history', { p_camper_id: r.id }, ctx));
+    assert.equal(answer.status, 'ok');
+    return answer.rows;
+  };
+  const words = (r, opts = {}) => {
+    const familySize = roster().filter((x) => x.signupId === r.signupId).length;
+    return groupCamperHistory(history(r), { dayIds: r.days.map((d) => d.dayId), extras: r.extras.map((e) => ({ extraId: e.extraId, dayId: e.dayId })) })
+      .map((batch) => describeCamperBatch(batch, { campDays, campExtras, familySize, ...opts }))
+      .filter(Boolean)
+      .map((w) => (w.hiddenPayment ? 'hidden' : `${w.text} | ${w.who}`));
+  };
+
+  // Picture 17's sample, Jack Rivera (his sister Sofia is on the same form).
+  const jack = find('Jack', 'Rivera');
+  assert.equal(jack.payingByOnForm, 'cash');
+  assert.equal(jack.payingBy, 'check');
+  assert.equal(payingByChoiceWhere(jack), 'desk');
+  assert.deepEqual(words(jack), [
+    'Marked paid $186 check | Jeffrey Berg',
+    'Paying by: Cash → Check | Jeffrey Berg',
+    'Parent phone: (508) 555-0141 → (508) 555-0109 (whole family) | Jeffrey Berg',
+    'Days: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27 | Dana Ross',
+    'Signed up on the family form · CP-4409 | Family form',
+  ]);
+  assert.deepEqual(words(jack, { hidden: true }), ['hidden', 'hidden',
+    'Parent phone: (508) 555-0141 → (508) 555-0109 (whole family) | Jeffrey Berg',
+    'Days: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27 | Dana Ross',
+    'Signed up on the family form · CP-4409 | Family form']);
+  const sofia = find('Sofia', 'Rivera');
+  assert.equal(sofia.signupId, jack.signupId);
+  assert.equal(sofia.position, 2);
+  assert.deepEqual(words(sofia), [
+    'Parent phone: (508) 555-0141 → (508) 555-0109 (whole family) | Jeffrey Berg',
+    'Signed up on the family form · CP-4409 | Family form',
+  ]);
+  // Owen: changes, withdrawn and restored, Mark paid by card and its Undo.
+  const owenTotal = find('Owen', 'Reed').totalCents;
+  assert.deepEqual(words(find('Owen', 'Reed')), [
+    `${CampText.historyPaymentUndone(owenTotal, 'card')}; Paying by: Card → Cash | Jeffrey Berg`,
+    `${CampText.historyMarkedPaid(owenTotal, 'card')}; Paying by: Cash → Card | Staff`,
+    'Restored | Jeffrey Berg',
+    'Withdrawn | Jeffrey Berg',
+    'Age: 9 → 10; Member: Yes → No | Dana Ross',
+    'Signed up on the family form · CP-4405 | Family form',
+  ]);
+  // Lily: an admin changed her cash payment to check; Paying by followed.
+  const lily = find('Lily', 'Brooks');
+  assert.equal(words(lily)[0], `${CampText.historyPaymentChanged(lily.totalCents, 'cash', lily.totalCents, 'check')}; Paying by: Cash → Check | Jeffrey Berg`);
+  assert.equal(CampText.historyPaymentChanged(18600, 'check', 10000, 'cash'), 'Payment changed: $186 check → $100 cash');
+  assert.equal(payingByChoiceWhere(lily), 'desk');
+  // No login ids anywhere in the answer (paying_by stays: it is the way to pay).
+  const raw = JSON.stringify(rpcOk(b, 'camp_camper_history', { p_camper_id: jack.id }, STAFF));
+  for (const key of ['"created_by"', '"updated_by"', '"recorded_by"', '"withdrawn_by"', '"checked_in_by"', '"actor_id"', '"session_id"', '"submission_id"', 'data:image']) assert.equal(raw.includes(key), false, key);
+  assert.equal(raw.includes('"paying_by"'), true);
+  assert.equal(raw.includes('"on file"'), true); // the signature only ever "on file"
+  // Refusals: locked, unknown camper; staff and admins may read.
+  assert.equal(rpcOk(b, 'camp_camper_history', { p_camper_id: jack.id }, LOCKED).status, 'no_access');
+  assert.equal(rpcOk(b, 'camp_camper_history', { p_camper_id: randomUUID() }, STAFF).status, 'not_found');
+  assert.equal(rpcOk(b, 'camp_camper_history', { p_camper_id: jack.id }, ADMIN).status, 'ok');
+  assert.equal(CAMP_RPC_NAMES.includes('camp_camper_history'), true);
+
+  // Mia (picture 16): chose Cash on the form; Mark paid by card.
+  let mia = find('Mia', 'Rossi');
+  assert.equal(payingByChoiceWhere(mia), 'form');
+  assert.deepEqual(rpcOk(b, 'camp_mark_paid', { p_camper_id: mia.id, p_expected_version: mia.version, p_school: 'worcester', p_method: 'bitcoin' }, STAFF), { status: 'invalid', field: 'method' });
+  env.clock += 1000;
+  const paid = rpcOk(b, 'camp_mark_paid', { p_camper_id: mia.id, p_expected_version: mia.version, p_school: 'worcester', p_method: 'card' }, STAFF);
+  assert.equal(paid.status, 'ok');
+  assert.equal(paid.method, 'card');
+  assert.equal(paid.paying_by, 'card');
+  mia = find('Mia', 'Rossi');
+  assert.equal(mia.payingBy, 'card');
+  assert.equal(mia.payingByOnForm, 'cash'); // never changes
+  assert.equal(payingByChoiceWhere(mia), 'desk');
+  assert.equal(mia.version, paid.version);
+  assert.equal(words(mia)[0], `${CampText.historyMarkedPaid(paid.amount_cents, 'card')}; Paying by: Cash → Card | Staff`);
+  // The toast's Undo (staff, within 10 seconds) puts Paying by back.
+  env.clock += 2000;
+  assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paid.payment_id }, STAFF).status, 'ok');
+  mia = find('Mia', 'Rossi');
+  assert.equal(mia.payingBy, 'cash');
+  assert.equal(payingByChoiceWhere(mia), 'form');
+  assert.equal(words(mia)[0], `${CampText.historyPaymentUndone(paid.amount_cents, 'card')}; Paying by: Card → Cash | Staff`);
+  // Paying by changed again after a card payment: Undo leaves it alone.
+  env.clock += 2000;
+  const paid2 = rpcOk(b, 'camp_mark_paid', { p_camper_id: mia.id, p_expected_version: mia.version, p_school: 'worcester', p_method: 'card' }, ADMIN);
+  const v2 = paid2.version;
+  // (Change how they'll pay is refused once paid, so the second change comes from an Edit payment.)
+  env.clock += 2000;
+  const edited = rpcOk(b, 'camp_edit_payment', { p_payment_id: paid2.payment_id, p_method: 'check', p_amount_cents: paid2.amount_cents, p_paid_on: '2026-10-19', p_school: 'worcester' }, ADMIN);
+  assert.equal(edited.status, 'ok');
+  assert.equal(edited.version, v2 + 1);
+  mia = find('Mia', 'Rossi');
+  assert.equal(mia.payingBy, 'check'); // follows the edit (Color Belt 0030 §4b)
+  env.clock += 2000;
+  assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: edited.payment_id }, ADMIN).status, 'ok');
+  assert.equal(find('Mia', 'Rossi').payingBy, 'cash'); // the family's choice comes back
+  // The same way as Paying by, or none: Paying by doesn't move; the 3-input call still works.
+  env.clock += 2000;
+  mia = find('Mia', 'Rossi');
+  const same = rpcOk(b, 'camp_mark_paid', { p_camper_id: mia.id, p_expected_version: mia.version, p_school: 'worcester' }, ADMIN);
+  assert.equal(same.paying_by, 'cash');
+  assert.equal(words(find('Mia', 'Rossi'))[0], `${CampText.historyMarkedPaid(same.amount_cents, 'cash')} | Jeffrey Berg`);
+  assert.equal(b.select('camp_payments', 'paying_by_before', [], [], ADMIN).error.code, '42501'); // not granted
+
+  // Check-ins never reach the history; a family sign-up does, by "Family form".
+  env.today = '2026-11-25';
+  const before = history(find('Ethan', 'Wu')).length;
+  assert.equal(rpcOk(b, 'camp_check_in', { p_camper_id: find('Ethan', 'Wu').id, p_day_id: campDays[0].dayId }, STAFF).status, 'ok');
+  assert.equal(history(find('Ethan', 'Wu')).length, before);
+  // At most 500 rows, newest first.
+  const saved = store();
+  const ethan = find('Ethan', 'Wu');
+  for (let i = 0; i < 600; i += 1) {
+    saved.camp_change_log.push({ occurred_at: new Date(Date.parse('2026-11-01T00:00:00Z') + i * 1000).toISOString(), actor_id: null, actor_name: 'Staff',
+      batch_id: randomUUID(), action: 'manual', table_name: 'camp_campers', record_id: ethan.id, op: 'update', before: { age: i }, after: { age: i + 1 } });
+  }
+  const many = history(ethan);
+  assert.equal(many.length, 500);
+  assert.equal(many[0].after.age, 600);
+});
 
 console.log(`${count} groups of checks ran.`);
 console.log('ALL CAMPS LIB CHECKS PASSED');

@@ -23,8 +23,11 @@
 // Keyboard (useRowArrowNav.js, as Color Belt): the list is ONE Tab stop; ↑ ↓ move between Dan
 // lines and category rows, Enter opens a row, ← → move between a row's own buttons.
 import { Fragment } from 'react';
-import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconDots, IconEdit, IconGripVertical, IconPlus } from '@tabler/icons-react';
-import IconButton, { placeTip } from '../../../components/IconButton.jsx';
+import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconDots, IconEdit, IconPlus } from '@tabler/icons-react';
+// The grip is the shared one (focusable for its tooltip; the keyboard way to move is ⋯ → Move up /
+// Move down) — Star's own copy switched to it in design review part 2 (rulebook v0.518).
+import Grip from '../../../components/Grip.jsx';
+import IconButton from '../../../components/IconButton.jsx';
 import { maxFor } from './rubricRules.js';
 import * as T from './text.js';
 
@@ -49,18 +52,6 @@ export function Tag({ kind, text }) {
     );
   }
   return <span className="ttag">{text}</span>;
-}
-
-// The grip: focusable for its tooltip; the keyboard way to move is ⋯ → Move up / Move down.
-function Grip({ label, gripProps, tabIndex }) {
-  return (
-    <button type="button" className="grip" aria-label={label} tabIndex={tabIndex} onPointerEnter={placeTip} onFocus={placeTip} {...gripProps}>
-      <IconGripVertical size={16} aria-hidden="true" />
-      <span className="grip-tip" aria-hidden="true">
-        {T.GRIP_TOOLTIP}
-      </span>
-    </button>
-  );
 }
 
 // The Dan line. `facts` = danFacts() (totals, max …).

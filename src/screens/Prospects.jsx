@@ -16,7 +16,7 @@
 //     Cancel a free class, Joined date, Delete (admins only)
 // Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
+import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
@@ -29,6 +29,7 @@ import { loadForms } from '../lib/forms/api.js';
 import { useProspects } from '../lib/prospects/useProspects.js';
 import { isDueToday, lastInitial } from '../lib/prospects/followUps.js';
 import { takeOpenProspect } from '../lib/prospects/openRequest.js';
+import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import {
   addNote, addStatus, bookTime, cancelTime, checkIn, deleteProspect, deleteStatus, getProspect, markOpened, openTimesFor, reorderStatuses,
   searchProspects, setFollowUp, setStatus, undoCheckIn, updateStatus,
@@ -67,6 +68,13 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   const [view, setViewState] = useState(() => savedView(staffId));
   const [boardCols, setBoardCols] = useState({}); // phone Board: code -> the stage shown
   const [search, setSearch] = useState('');
+  // This device's "Hide private details" switch: while on, + Add prospect is desk-only (v0.616),
+  // because its form always asks the parent's email and shows every answer as it is typed.
+  const [privateHidden] = usePrivateDetailsHidden();
+  // If the switch goes on (from another tab) while Add prospect's form chooser is open, close it.
+  useEffect(() => {
+    if (privateHidden) setDialog((d) => (d?.type === 'add' ? null : d));
+  }, [privateHidden]);
   const [found, setFound] = useState(null); // code -> Set of ids, while searching
   const [selected, setSelected] = useState(null); // { id, code, opener }
   const [detail, setDetail] = useState(null); // the panel's prospect
@@ -192,7 +200,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     }
   }
   // A follow-up tapped in the Calendar (v0.615): once the list has loaded, open that child. If it
-  // was deleted meanwhile (e.g. by the automatic clean-up), say so instead of an empty panel.
+  // was deleted meanwhile (e.g. by the automatic clean-up), say so instead of an empty panel —
+  // in the amber bar, which stays until closed (v1.004: a problem never goes in a toast; N1).
   // (The request is taken only once the list is ready, so it is used exactly once.)
   useEffect(() => {
     if (pros.status !== 'ready' || !pros.data) return;
@@ -201,7 +210,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     const code = codes.find((c) => (pros.data.lists[c] ?? []).some((p) => p.id === wanted));
     const item = code ? pros.data.lists[code].find((p) => p.id === wanted) : null;
     if (item) openProspect(item, code);
-    else showToast(T.PROSPECT_GONE);
+    else setBanner({ text: T.PROSPECT_GONE });
   }, [pros.status, pros.data]);
   function closePanel() {
     if (noteInTheWay(null)) return;
@@ -229,7 +238,23 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     else setBanner({ text: T.SAVE_FAILED });
     return false;
   }
+  // The end of every Undo: the same checks as any save, then a short "Undone" when it worked
+  // (v0.618 — no tick, no button, like Calendar, Schedule and the Testing sections).
+  async function afterUndo(result) {
+    if (await afterWrite(result)) showToast(T.UNDONE, { icon: false });
+  }
   const statusOfDetail = () => schools.find((s) => s.code === ref.current.selected?.code)?.statusById;
+
+  // Undo for a status change (v1.006, N2; Joined too, v0.617): puts the old status back — and the
+  // old joined date when the child was Joined before, otherwise none. Like the Board drop's Undo.
+  function statusUndo(p, wasJoined, savedVersion) {
+    return async () => {
+      if (ref.current.busy) return;
+      setBusy(true);
+      const u = await setStatus({ id: p.id, expectedVersion: savedVersion, statusId: p.statusId, joinedOn: wasJoined ? p.joinedOn : null });
+      afterUndo(u);
+    };
+  }
 
   async function changeStatus(statusId) {
     const d = ref.current.detail;
@@ -239,9 +264,10 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       setDialog({ type: 'joined', key: Date.now(), name: d.childFirstName, statusId, date: today, saving: false, note: null });
       return;
     }
+    const wasJoined = statusOfDetail()?.get(d.statusId)?.builtin === 'joined'; // before the save (the panel may change school)
     setBusy(true);
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId, joinedOn: null });
-    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''));
+    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''), statusUndo(d, wasJoined, r.version));
   }
   async function saveJoined() {
     const g = ref.current.dialog;
@@ -250,7 +276,10 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     setDialog({ ...g, saving: true });
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: g.date });
     setDialog(null);
-    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE))) && g.dropCode) flashStage(g.dropCode, g.statusId);
+    // the status it had before: from the dropped card's school on the Board, else the open panel's
+    const before = g.dropCode ? schools.find((s) => s.code === g.dropCode)?.statusById : statusOfDetail();
+    const wasJoined = before?.get(d.statusId)?.builtin === 'joined';
+    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE), statusUndo(d, wasJoined, r.version))) && g.dropCode) flashStage(g.dropCode, g.statusId);
   }
   async function changeFollowUp(date) {
     const d = ref.current.detail;
@@ -275,7 +304,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     const r = await checkIn({ id: d.id, expectedVersion: d.version, came, afterClass });
     return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), async () => {
       const u = await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn });
-      afterWrite(u);
+      afterUndo(u);
     });
   }
 
@@ -321,7 +350,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     afterWrite(r, T.CANCELLED_BOOKING(d.childFirstName), async () => {
       const c = r.cancelled;
       const again = await bookTime({ id: d.id, expectedVersion: r.version, formId: c.formId, classId: c.classId, date: c.date, start: c.start });
-      afterWrite(again.status === 'time_taken' ? { status: 'stale' } : again);
+      afterUndo(again.status === 'time_taken' ? { status: 'stale' } : again);
     });
   }
 
@@ -400,7 +429,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       if (ref.current.busy) return;
       setBusy(true);
       const u = await setStatus({ id: p.id, expectedVersion: r.version, statusId: p.statusId, joinedOn: from?.builtin === 'joined' ? p.joinedOn : null });
-      afterWrite(u);
+      afterUndo(u);
     });
   }
   // "Came": check the child in when there is a class to check in to, otherwise save the status
@@ -419,9 +448,11 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     // CameDialog only offers Cancel then)
     setDialog({ ...g, saving: true });
     setBusy(true);
+    const wasJoined = schools.find((s) => s.code === g.dropCode)?.statusById?.get(d.statusId)?.builtin === 'joined';
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: null });
     setDialog(null);
-    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME))) flashStage(g.dropCode, g.statusId);
+    // Undo like every other Board drop (v1.006)
+    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME), statusUndo(d, wasJoined, r.version))) flashStage(g.dropCode, g.statusId);
   }
   const drag = useCardDrag({ enabled: view === 'board' && !busy && !dialog && !screenLocked && !fill.isOpen, resetKey: location, onDrop: dropCard });
 
@@ -444,6 +475,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
 
   // ----- Add prospect -----
   async function openAdd(opener) {
+    if (privateHidden) return; // desk-only while private details are hidden (v0.616)
     clearToast();
     const school = both ? 'worcester' : codes[0];
     setDialog({ type: 'add', key: Date.now(), both, school, forms: null, allForms: null, opener });
@@ -453,6 +485,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
   function pickAddForm(form, opener) {
     setDialog(null);
+    if (privateHidden) return; // the switch went on while the form chooser was open (another tab)
     fill.open(form, opener ?? document.querySelector('[data-prospects-add]'), { mode: 'fill' });
   }
 
@@ -512,7 +545,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     else setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'not_allowed' ? 'NOT_ALLOWED' : r.status === 'stale' ? 'STALE' : 'SAVE_FAILED' } : x));
   }
 
-  useShortcutN({ enabled: !dialog && !selected && !screenLocked && pros.status === 'ready' && !fill.isOpen, onPress: () => openAdd(document.querySelector('[data-prospects-add]')) });
+  useShortcutN({ enabled: !privateHidden && !dialog && !selected && !screenLocked && pros.status === 'ready' && !fill.isOpen, onPress: () => openAdd(document.querySelector('[data-prospects-add]')) });
 
   // ===== What is on screen =====
   const stagesOf = (school) => school.statuses.filter((s) => s.kind === 'stage');
@@ -723,11 +756,26 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
         <button type="button" className="icon-button" aria-label={T.MORE_ACTIONS} aria-haspopup="menu" onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })}>
           <IconDots size={20} aria-hidden="true" />
         </button>
-        <button type="button" className="btn btn-primary" data-prospects-add onClick={(e) => openAdd(e.currentTarget)}>
+        {/* grayed but still focusable while private details are hidden (v0.616); the line below says why */}
+        <button
+          type="button"
+          className={`btn btn-primary${privateHidden ? ' is-unavailable' : ''}`}
+          data-prospects-add
+          aria-disabled={privateHidden ? 'true' : undefined}
+          aria-describedby={privateHidden ? 'prospects-add-at-desk' : undefined}
+          onClick={(e) => openAdd(e.currentTarget)}
+        >
           <IconPlus size={16} aria-hidden="true" />
           {isPhone ? T.ADD_SHORT : T.ADD_PROSPECT}
         </button>
       </div>
+      {privateHidden && (
+        <p className="phidden-line pdesk-line" id="prospects-add-at-desk">
+          {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
+          <IconCurrencyDollarOff size={16} aria-hidden="true" />
+          {T.ADD_AT_DESK}
+        </p>
+      )}
       {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
       {both && data && (
         // On Both, ONE search for the two schools (each section shows its own matches)

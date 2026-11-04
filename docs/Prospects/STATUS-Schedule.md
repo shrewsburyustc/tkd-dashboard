@@ -1,5 +1,7 @@
 # Schedule — status
 
+**Design review changes (N1–N17):** see `STATUS-DesignReview.md`.
+
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`. Rulebook v0.233. Approved mockup: `TKD-Class-Schedule-Mockups.html` rev 2.
 
 **Migration number (2026-10-17):** the Schedule migration is now **0007** (`0007_schedule.sql`, `0007_tests.sql`, `0007_fingerprints.sql`): 0005 belongs to Color Belt phase 2 and 0006 to Star testing (Jeffrey caught the clash before anything was pasted). New-students rulebook rows renumbered to v0.233–v0.238 after main (v0.130) and Color Belt's waiting v0.131–v0.136. Before S4: bring main in again once 0005 and 0006 are merged, then rerun PGlite with all of them.

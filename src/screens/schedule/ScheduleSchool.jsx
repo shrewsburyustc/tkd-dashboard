@@ -20,7 +20,8 @@ import Dialog from '../../components/Dialog.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
-import { addSlots, deleteVersion, planVersion, removeSlot, setClassColor, updateSlot, updateVersion } from '../../lib/schedule/api.js';
+import { addSlots, deleteVersion, planVersion, removeSlot, setClassAges, setClassColor, updateSlot, updateVersion } from '../../lib/schedule/api.js';
+import { agesToText } from '../../lib/schedule/ages.js';
 import { DEFAULT_COLOR } from '../../lib/schedule/colors.js';
 import { formatTime, toTimeText } from '../../lib/schedule/time.js';
 import { useSchedule } from '../../lib/schedule/useSchedule.js';
@@ -161,10 +162,12 @@ export default function ScheduleSchool({
       if (!d || d.saving) return d;
       const note = d.note && !BLOCKING_NOTES.includes(d.note) ? null : d.note;
       const values = { ...d.values, ...patch };
-      // A newly ticked class shows ITS saved color (color belongs to the class).
+      // A newly ticked class shows ITS saved color and ages (both belong to the class).
       if (what === 'class' && d.type === 'slot') {
         const saved = ref.current.loaded?.colors ?? {};
         values.colors = Object.fromEntries(patch.classIds.map((id) => [id, d.values.colors[id] ?? saved[id] ?? DEFAULT_COLOR]));
+        const savedAges = ref.current.loaded?.ages ?? {};
+        values.ages = Object.fromEntries(patch.classIds.map((id) => [id, d.values.ages?.[id] ?? agesToText(savedAges[id])]));
       }
       return { ...d, values, note };
     });
@@ -176,7 +179,7 @@ export default function ScheduleSchool({
     // A new slot starts at 4:00-4:40 PM (rulebook v0.600): classes are in the afternoon, and the
     // browser's time box would otherwise start on AM, so typing "4:20" saved 4:20 AM. Being the
     // starting values, they don't count as unsaved changes.
-    const values = { classIds: [], colors: {}, days: [], start: NEW_SLOT_START, end: NEW_SLOT_END };
+    const values = { classIds: [], colors: {}, ages: {}, days: [], start: NEW_SLOT_START, end: NEW_SLOT_END };
     openDialog({ type: 'slot', mode: 'add', values, initial: values, versionId: shown?.id ?? null, opener });
   }
   function openEditSlot(slot, opener) {
@@ -184,6 +187,7 @@ export default function ScheduleSchool({
     const values = {
       classIds: [...slot.classIds],
       colors: Object.fromEntries(slot.classIds.map((id) => [id, loaded.colors[id] ?? DEFAULT_COLOR])),
+      ages: Object.fromEntries(slot.classIds.map((id) => [id, agesToText(loaded.ages?.[id])])),
       day: slot.weekday,
       start: toTimeText(slot.start),
       end: toTimeText(slot.end),
@@ -270,11 +274,22 @@ export default function ScheduleSchool({
       const colorResult = await setClassColor({ classId, color: chosen });
       if (colorResult.status !== 'ok') colorFailed = true;
     }
+    // And each class whose ages were changed (v0.619; they belong to the class too).
+    let agesFailed = false;
+    for (const classId of p.classIds) {
+      const typed = p.ages[classId] ?? { from: null, to: null };
+      const saved = ref.current.loaded?.ages?.[classId] ?? { from: null, to: null };
+      if (typed.from === saved.from && typed.to === saved.to) continue;
+      const agesResult = await setClassAges({ classId, from: typed.from, to: typed.to });
+      if (agesResult.status !== 'ok') agesFailed = true;
+    }
     endWrite('ok');
     setDialog(null);
     if (d.mode === 'add' && d.versionId === null) setChosenId(result.versionId); // the school's first schedule
     reloadQuiet();
-    if (colorFailed) setBanner({ text: T.COLOR_FAILED });
+    if (colorFailed && agesFailed) setBanner({ text: T.COLOR_AND_AGES_FAILED });
+    else if (colorFailed) setBanner({ text: T.COLOR_FAILED });
+    else if (agesFailed) setBanner({ text: T.AGES_FAILED });
     if (d.mode === 'add') {
       const added = result.slots;
       showToast(T.toastSlotsAdded(added.length), {

@@ -4,7 +4,7 @@
 // section, like Calendar.jsx. It:
 //   - loads the forms (useForms) and shows the list (FormsList), filtered by the school switcher
 //   - admins: "New form" (NewFormDialog) → the builder (Builder.jsx); ⋯ → Fill in, Duplicate,
-//     Close form / Open form again, Delete (only without sign-ups)
+//     Close form / Open form, Delete (only without sign-ups)
 //   - staff: no building; a row opens a read-only Preview; "Fill in" and Share on each row
 //   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
@@ -12,11 +12,12 @@
 // address (rulebook v0.242). Admin vs staff only changes what is SHOWN — the database enforces
 // who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconCopy, IconDoorExit, IconDoorEnter, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconCopy, IconCurrencyDollarOff, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
+import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { loadSchedule } from '../lib/schedule/api.js';
@@ -30,6 +31,12 @@ import Builder from './forms/Builder.jsx';
 import ShareDialog from './forms/ShareDialog.jsx';
 import { useFillIn } from './forms/useFillIn.js';
 import * as T from './forms/text.js';
+
+// A menu item with no icon (Close form / Open form, rulebook v1.016 and v0.621), as in Star's, Color Belt's
+// and Camps' menus: a blank spot keeps the label lined up with the items that have an icon.
+function NoIcon() {
+  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
+}
 
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 
@@ -47,7 +54,15 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { anchor, form }
   const [banner, setBanner] = useState(null);
+  // This device's "Hide private details" switch: while on, Fill in is desk-only (v0.616), because
+  // its form always asks the parent's email and shows every answer as it is typed. Preview stays.
+  const [privateHidden] = usePrivateDetailsHidden();
   const [busy, setBusy] = useState(false);
+  // the latest busy for an Undo pressed later (a toast's button keeps the function it was given)
+  const busyRef = useRef(false);
+  useLayoutEffect(() => {
+    busyRef.current = busy;
+  });
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
@@ -94,6 +109,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   }
   function closeBuilder() {
     const id = builder?.formId;
+    clearToast(); // the builder's Undo (Close / Open) can't outlive the builder
     setBuilder(null);
     list.reload();
     focusBack(document.querySelector(`[data-form-row="${id}"]`), '[data-forms-new]');
@@ -149,6 +165,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
 
   // ----- Fill in and Preview -----
   function openFill(form, opener, opts = {}) {
+    if (privateHidden && opts.mode !== 'preview') return; // desk-only while private details are hidden (v0.616)
     clearToast();
     setMenu(null);
     if (!fill.open(form, opener, opts)) setBanner({ text: form.status === 'draft' ? T.DRAFT_NO_FILL : T.FORM_CLOSED });
@@ -173,7 +190,22 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     setBusy(false);
     if (res.status === 'ok') {
       await list.reload();
-      showToast(form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name));
+      // Undo for 5 seconds (v1.006, N2): sets the form back to how it was
+      const undo = async () => {
+        if (busyRef.current) return;
+        setBusy(true);
+        const u = await setFormStatus({ id: form.id, expectedVersion: res.version, status: form.status });
+        setBusy(false);
+        if (u.status === 'ok') {
+          list.reload();
+          showToast(T.UNDONE, { icon: false }); // v0.618
+        } else if (u.status === 'no_access') onNoAccess();
+        else if (u.status === 'stale') {
+          list.reload();
+          setBanner({ text: T.UNDO_STALE });
+        } else setBanner({ text: T.SAVE_FAILED_BAR });
+      };
+      showToast(form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name), { icon: false, action: { label: T.UNDO, onAction: undo } });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
       list.reload();
@@ -200,6 +232,25 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     } else patchDialog({ saving: false, note: T.SAVE_FAILED_BAR });
   }
 
+  // "Fill in for a family" in a form's ⋯ (admins; staff on phones). While private details are
+  // hidden it grays with the reason under its name (v0.616, the reason line of v1.004).
+  function fillItem(m) {
+    const live = m.form.status === 'live';
+    return {
+      key: 'fill',
+      // a draft or closed form keeps its own (status) reason, so the desk words show only on a live one
+      label: privateHidden && live ? (
+        <span className="ev-menu-two">
+          <span>{T.FILL_IN_ITEM}</span>
+          <span className="ev-menu-reason">{T.FILL_IN_AT_DESK}</span>
+        </span>
+      ) : T.FILL_IN_ITEM,
+      Icon: IconPlus,
+      disabled: privateHidden || !live,
+      onSelect: () => openFill(m.form, m.anchor),
+    };
+  }
+
   function openRow(form, opener) {
     if (isAdmin) openBuilder(form.id);
     else if (form.published) openFill(form, opener, { mode: 'preview' });
@@ -208,19 +259,19 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     ? []
     : isAdmin
       ? [
-          { key: 'edit', label: T.EDIT_FIELD, Icon: IconPencil, onSelect: () => openBuilder(menu.form.id) },
-          { key: 'fill', label: T.FILL_IN_ITEM, Icon: IconPlus, disabled: menu.form.status !== 'live', onSelect: () => openFill(menu.form, menu.anchor) },
+          { key: 'edit', label: T.EDIT_FIELD, Icon: IconEdit, onSelect: () => openBuilder(menu.form.id) },
+          fillItem(menu),
           { key: 'dup', label: T.DUPLICATE, Icon: IconCopy, disabled: busy, onSelect: () => duplicate(menu.form) },
           menu.form.status !== 'draft' && {
             key: 'close',
-            label: menu.form.status === 'live' ? T.CLOSE_FORM : T.REOPEN_FORM,
-            Icon: menu.form.status === 'live' ? IconDoorExit : IconDoorEnter,
+            label: menu.form.status === 'live' ? T.CLOSE_FORM : T.OPEN_FORM,
+            Icon: NoIcon,
             disabled: busy,
             onSelect: () => toggleClosed(menu.form),
           },
           { key: 'delete', label: T.DELETE_FORM, Icon: IconTrash, danger: true, separatorBefore: true, disabled: busy, onSelect: () => openDialog({ type: 'delete', form: menu.form, opener: menu.anchor }) },
         ].filter(Boolean)
-      : [{ key: 'fill', label: T.FILL_IN_ITEM, Icon: IconPlus, disabled: menu.form.status !== 'live', onSelect: () => openFill(menu.form, menu.anchor) }];
+      : [fillItem(menu)];
 
   useShortcutN({ enabled: isAdmin && !builder && !dialog && !busy && !screenLocked && list.status === 'ready', onPress: () => openNew(document.querySelector('[data-forms-new]')) });
 
@@ -278,6 +329,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
         onOpen={openRow}
         onShare={(form, opener) => openDialog({ type: 'share', form, opener })}
         onFillIn={(form, opener) => openFill(form, opener)}
+        fillAtDesk={privateHidden}
         onMore={(form, anchor) => setMenu(menu ? null : { form, anchor })}
       />
     );
@@ -345,6 +397,13 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
               </button>
             )}
           </div>
+          {privateHidden && (
+            <p className="phidden-line pdesk-line" id="forms-fill-at-desk">
+              {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
+              <IconCurrencyDollarOff size={16} aria-hidden="true" />
+              {T.FILL_IN_AT_DESK}
+            </p>
+          )}
           {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
         </>
       )}

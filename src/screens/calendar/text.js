@@ -7,7 +7,8 @@ import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Calendar';
-export const VIEW_ONLY_LINE = 'View only — ask an admin to make changes.';
+// The same words as Schedule and Testing (v1.021).
+export const VIEW_ONLY_LINE = 'View only. Ask an admin to make changes.';
 export const ADD = 'Add';
 export const ADD_EVENT = 'Event';
 export const ADD_CLOSURE = 'Closure';
@@ -148,6 +149,9 @@ export const startDate = 'Start date';
 export const endDate = 'End date';
 export const startTime = 'Start time';
 export const endTime = 'End time';
+// The dashboard's own calendar (components/DatePicker.jsx, design review N6 / v1.018)
+export const CHOOSE = 'Choose…'; // an empty date field
+export const END_DATE_HINT = 'Days before the start can’t be chosen.';
 export const SCHOOL = 'School';
 export const BOTH = 'Both';
 export const MORE_DETAILS = 'More details (notes)';
@@ -155,7 +159,8 @@ export const NOTES = 'Notes';
 export const NOTES_HINT = "Don't put student details here (names, health, phone numbers). Notes are kept in the change history.";
 export const NO_TYPES = 'Add an event type first: ⋯ → Event types.';
 export const CHOOSE_TYPE = 'Choose a type';
-export const VIEW_ONLY_DIALOG = 'View only — ask an admin to change this.';
+// Inside an event or closure box, "this" means that one event or closure (v0.625).
+export const VIEW_ONLY_DIALOG = 'View only. Ask an admin to change this.';
 
 // ----- Closure dialog -----
 export const ADD_CLOSURE_TITLE = 'Add closure';
@@ -165,6 +170,7 @@ export const REASON = 'Reason';
 export const REASON_HINT = 'Shown on the calendar, e.g. "Snow storm", "Thanksgiving"';
 export const FROM = 'From';
 export const TO = 'To';
+export const TO_HINT = 'Days before From can’t be chosen.'; // the To calendar's gray line
 export const WHATS_CANCELLED = "What's cancelled";
 export const ALL_CLASSES = 'All classes';
 export const SOME_CLASSES = 'Some classes';

@@ -9,6 +9,8 @@ import { addDays } from '../../lib/schedule/versions.js';
 export const PAGE_TITLE = 'Prospects';
 export const ADD_PROSPECT = 'Add prospect';
 export const ADD_SHORT = 'Add';
+// while Hide private details is on, + Add prospect is desk-only (v0.616): the line under the title
+export const ADD_AT_DESK = 'Add prospects at the desk. Email and form answers are hidden on this tablet.';
 export const LOADING = 'Loading prospects';
 export const LOAD_FAILED = "Couldn't load the prospects. Check the connection and try again.";
 export const BOTH_SCHOOLS = 'Both schools';
@@ -125,6 +127,7 @@ export const UNSAVED_NOTE = 'Unsaved note. Save it or cancel first.';
 export const CALL = 'Call';
 export const TEXT = 'Text';
 export const EMAIL = 'Email';
+export const EMAIL_OFF_WHILE_HIDDEN = 'Email is off while private details are hidden. Email the family at the desk.'; // v1.000 (D2a)
 export const COPY_NUMBER = 'Copy number';
 export const COPIED = 'Copied';
 export const callTitle = (name) => `Call ${name}`;
@@ -161,7 +164,6 @@ export const classLine = (b) => `${formatDate(b.date, { year: false })} · ${for
 export const checkedIn = (name, at) => `Checked in by ${name} · ${new Date(at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 export const DELETE_PROSPECT = 'Delete prospect';
 export const NO_FOLLOW_UP = 'No follow-up';
-export const SET_DATE = 'Set date';
 export const CURRENT = '(now)';
 export const EDIT_STATUSES = 'Edit statuses';
 export const signedLine = (signedAt, hasPicture) => (signedAt
@@ -223,6 +225,8 @@ export const INVALID = 'That was refused. Check the values and try again.';
 export const JOINED_TITLE = 'Joined';
 export const JOINED_DATE = 'Date joined';
 export const JOINED_HINT = 'Joined families are kept until a Students section exists.';
+export const JOINED_DATE_HINT = 'Days after today can’t be chosen.'; // the Joined calendar's gray line (N6)
+export const PAST_DAYS_HINT = 'Past days can’t be chosen.'; // the follow-up and note calendars' gray line (N6)
 
 // ----- Book a time -----
 export const bookTitle = (name, change) => (change ? `Change ${name}'s free class` : `Book a free class for ${name}`);
@@ -274,3 +278,4 @@ export const deleteBody = (name, siblings) => (siblings
 export const DELETE = 'Delete';
 export const DELETING = 'Deleting…';
 export const UNDO = 'Undo';
+export const UNDONE = 'Undone'; // after an Undo worked (v0.618), as the other sections say

@@ -34,6 +34,21 @@ import { addDays, isIsoDate, todayInSchoolTime, SCHOOL_TIME_ZONE } from '../test
 
 export { addDays, isIsoDate, todayInSchoolTime, SCHOOL_TIME_ZONE };
 
+// The Year list of a date calendar (the shared DatePicker, rulebook v0.727): every year from the
+// earliest to the latest of today's year, the next year (when nextYear is true) and the years of
+// the given dates. Non-dates ('' while nothing is chosen yet) are skipped.
+//   yearsAround('2027-04-21', ['2026-12-30', ''])       → [2026, 2027, 2028]
+//   yearsAround('2027-04-21', ['2025-03-01'], false)    → [2025, 2026, 2027]   (Date paid: no future)
+export function yearsAround(today, dates = [], nextYear = true) {
+  const found = [today, ...dates].filter(isIsoDate).map((iso) => Number(iso.slice(0, 4)));
+  if (found.length === 0) return [];
+  const first = Math.min(...found);
+  const last = Math.max(...found, nextYear && isIsoDate(today) ? Number(today.slice(0, 4)) + 1 : -Infinity);
+  const years = [];
+  for (let year = first; year <= last; year += 1) years.push(year);
+  return years;
+}
+
 // ----- Constants (§5.1) -----
 
 // Which waiver/confirmation wording the family ticked. Change it when that wording changes.
@@ -442,6 +457,15 @@ export const SCHOOLS = ['worcester', 'shrewsbury'];
 export function paymentSchoolFor(deviceLocation) {
   const code = typeof deviceLocation === 'string' ? deviceLocation.toLowerCase() : null;
   return SCHOOLS.includes(code) ? code : null;
+}
+
+// Where the family chose the way the Mark paid box's hint names (migration 0033, rulebook v0.735
+// option B): 'form' while Paying by is still the form's choice (paying_by_on_form), 'desk' once
+// staff changed it (Change how they'll pay, or Mark paid with another way). A row without
+// paying_by_on_form (a database from before 0033) says 'form', as before.
+export function payingByChoiceWhere(row) {
+  if (row?.payingByOnForm === null || row?.payingByOnForm === undefined) return 'form';
+  return row.payingBy === row.payingByOnForm ? 'form' : 'desk';
 }
 
 // ----- Check-in (§1.13 check-in day rule, v0.704) -----

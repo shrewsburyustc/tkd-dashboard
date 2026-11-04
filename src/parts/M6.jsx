@@ -3,8 +3,14 @@
 // Why it exists: the parts page (plan §4) shows every state with fake numbers (no database). A
 // sample roster keeps the chosen filter, as a section would; "A card tapped" taps Not paid the way a
 // finger does. Under the filtered row a few faint sample rows give the gray line its context.
-import { useState } from 'react';
+// After step 1: Star's four cards on Both schools, whose Candidates card has a two-line note
+// (rulebook v1.115; Star's Q5 picture, option B). No M6 mockup draws it, so it is listed apart.
+// And "A card tapped" has a real control under the gray line — a class switch, as Color Belt's
+// and Star's rosters have one there — so the checks can see that Show all's invisible tap area on
+// touch doesn't cover it (v1.117).
+import { useId, useState } from 'react';
 import { IconAlertTriangle, IconCalendar, IconCheck, IconCircleX, IconClock, IconSum, IconUsers } from '@tabler/icons-react';
+import ChoiceGroup from '../components/ChoiceGroup.jsx';
 import CountCards from '../components/CountCards.jsx';
 import { findByWords, pressLikeMouse, useLater } from './act.js';
 
@@ -31,12 +37,41 @@ const blackBelt = (late, notPaid) => [
 ];
 const BB_NOTE = 'The possible duplicate row isn’t counted in the cards until it’s resolved.';
 
-// A sample roster: the cards and the filter they set (plus faint rows, when `rows`).
-function SampleCards({ cards, showing = SHOWING, note = null, rows = false }) {
+// Star's four on Both schools: the Candidates card's note is two lines, one school each (v1.115)
+const STAR_BOTH = [
+  { key: 'all', Icon: IconUsers, label: 'Candidates', value: 13, note: ['Shrewsbury 5', 'Worcester 8'], kind: 'all' },
+  { key: 'paid', Icon: IconCheck, label: 'Paid', value: 6, kind: 'filter' },
+  { key: 'notPaid', Icon: IconCircleX, label: 'Not paid', value: 5, kind: 'filter' },
+  { key: 'money', Icon: IconSum, label: 'Payments recorded', value: '$930', kind: 'total' },
+];
+
+// A sample class switch (the shared segmented ChoiceGroup), for the control under the gray line.
+function ClassSwitch() {
+  const labelId = useId();
+  const [chosen, setChosen] = useState('all');
+  const options = [
+    { key: 'all', label: 'All classes' },
+    { key: 'tigers', label: 'Little Tigers' },
+    { key: 'a', label: 'Group A' },
+  ];
+  return (
+    <div className="parts-under">
+      <span id={labelId} className="visually-hidden">
+        Class
+      </span>
+      <ChoiceGroup labelId={labelId} variant="segmented" options={options} value={chosen} onChange={setChosen} />
+    </div>
+  );
+}
+
+// A sample roster: the cards and the filter they set (plus a control under them, when `below`, and
+// faint rows, when `rows`).
+function SampleCards({ cards, showing = SHOWING, note = null, below = null, rows = false }) {
   const [selected, setSelected] = useState(null);
   return (
     <div className="parts-frame" data-shot>
       <CountCards cards={cards} selected={selected} onSelect={setSelected} showingText={showing[selected] ?? ''} note={note} />
+      {below}
       {rows && (
         <div className="parts-ghost" aria-hidden="true">
           <div>Student</div>
@@ -50,7 +85,7 @@ function SampleCards({ cards, showing = SHOWING, note = null, rows = false }) {
 
 function FilteredState() {
   useLater(() => pressLikeMouse(findByWords('.ev-card', 'Not paid9')), 200);
-  return <SampleCards cards={COLOR_BELT} rows />;
+  return <SampleCards cards={COLOR_BELT} below={<ClassSwitch />} rows />;
 }
 
 // Black Belt's four, with the keyboard's focus ring on Late (as the mockup shows it)
@@ -70,5 +105,9 @@ export const PART = {
     { id: 'blackbelt', title: 'Black Belt’s four plan cards', render: () => <BlackBeltState /> },
     { id: 'hidden', title: 'Hide private details on', render: () => <SampleCards cards={COLOR_BELT.slice(0, 1)} /> },
     { id: 'bbphone', title: 'Black Belt on phones (2×2)', render: () => <SampleCards cards={blackBelt(2, 1)} /> },
+  ],
+  extra: [
+    { id: 'twolines', title: 'Star on Both schools: a two-line note (v1.115)', render: () => <SampleCards cards={STAR_BOTH} /> },
+    { id: 'twolines-hidden', title: 'The same with Hide private details on (one card)', render: () => <SampleCards cards={STAR_BOTH.slice(0, 1)} /> },
   ],
 };

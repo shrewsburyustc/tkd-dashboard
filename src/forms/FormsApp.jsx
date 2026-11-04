@@ -149,7 +149,7 @@ export default function FormsApp({ kiosk = null }) {
   function focusFirstProblem() {
     window.requestAnimationFrame(() => {
       const root = formRef.current;
-      const target = root?.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input:not([disabled]), select, textarea');
+      const target = root?.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input:not([disabled]), select, textarea, button.dp-field:not([aria-disabled="true"])');
       target?.focus();
       target?.scrollIntoView?.({ block: 'center' });
     });
@@ -324,6 +324,7 @@ export default function FormsApp({ kiosk = null }) {
         )}
         <form ref={formRef} onSubmit={onNext} onBlur={onLeave} noValidate autoComplete={kiosk ? 'off' : undefined}>
           <FormFields
+            inlineDates
             fields={current.fields}
             values={values}
             problems={shown}
@@ -351,7 +352,7 @@ export default function FormsApp({ kiosk = null }) {
               </button>
             )}
             <button type="submit" className="btn btn-primary fp-btn fp-btn--main" aria-disabled={sending ? 'true' : undefined}>
-              {last ? (sending ? T.SENDING : T.SUBMIT) : T.NEXT}
+              {last ? (sending ? T.SENDING : T.SEND) : T.CONTINUE}
             </button>
           </div>
           {last && <p className="fp-privacy">{T.PRIVACY}</p>}

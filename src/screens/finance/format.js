@@ -8,16 +8,18 @@
 // browser's own time zone.
 // Times: the school's clock is America/New_York (contract 0011 §1.1), whatever the device says.
 
+import { formatMoneyWithCents } from '../../lib/money.js';
+
 export const SCHOOL_TIME_ZONE = 'America/New_York';
 
 // ----- Money -----
-const DOLLARS = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 // 6500 → "$65.00", 123456 → "$1,234.56", -2000 → "−$20.00" (a real minus sign, as mocked up).
+// Since F5 (rulebook v1.026, v1.101) this is only Finance's short name for the dashboard's one
+// money rule, formatMoneyWithCents in src/lib/money.js, so Finance writes money exactly like
+// every other section. It takes whole CENTS; anything else (null, text, 290.5) gives ''.
+// (The CSV file is not this: src/lib/finance/csv.js keeps plain numbers, "-190.00".)
 export function money(cents) {
-  if (typeof cents !== 'number' || !Number.isFinite(cents)) return '';
-  const text = `$${DOLLARS.format(Math.abs(cents) / 100)}`;
-  return cents < 0 ? `−${text}` : text;
+  return formatMoneyWithCents(cents);
 }
 
 // The biggest count the database accepts: $100,000.00 (contract §1.2: ≤ 10 000 000 cents).
@@ -77,7 +79,6 @@ export const monthDayYear = (day) => fmt(day, { month: 'short', day: 'numeric', 
 export const monthYear = (day) => fmt(day, { month: 'long', year: 'numeric' }); // October 2026
 export const monthShortYear = (day) => fmt(day, { month: 'short', year: 'numeric' }); // Oct 2026 (phones)
 export const weekdayShort = (day) => fmt(day, { weekday: 'short' }); // Sat
-export const weekdayLong = (day) => fmt(day, { weekday: 'long' }); // Saturday
 
 // 'YYYY-MM-DD' of a Date, in the school's time zone ('en-CA' writes dates as YYYY-MM-DD).
 export function schoolDayOf(date) {
@@ -89,6 +90,13 @@ export function addDays(day, n) {
   const date = dateOf(day);
   date.setUTCDate(date.getUTCDate() + n);
   return date.toISOString().slice(0, 10);
+}
+
+// The Year list in Finance's calendars (Daily report, Export): this year and the two before it.
+// (The picker itself adds the year on show.)
+export function calendarYears(today) {
+  const thisYear = Number(String(today).slice(0, 4));
+  return [thisYear - 2, thisYear - 1, thisYear];
 }
 
 // The first day of the month a day is in: '2026-10-24' → '2026-10-01'.
@@ -141,17 +149,5 @@ export function printedWhen(date) {
   return `${monthDayYear(schoolDayOf(date))}, ${timeOfDay(date.toISOString())}`;
 }
 
-// The reminder times: Off, then every 15 minutes from 11:00 AM to 11:00 PM (v0.207 / D9).
-// Values are 'HH:MM' (what the data layer sends to the database), labels "7:30 PM".
-export const REMINDER_TIMES = (() => {
-  const list = [];
-  for (let minutes = 11 * 60; minutes <= 23 * 60; minutes += 15) {
-    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const mm = String(minutes % 60).padStart(2, '0');
-    list.push({ value: `${hh}:${mm}`, label: timeOfDay(`${hh}:${mm}`) });
-  }
-  return list;
-})();
-
-// '19:30:00' or '19:30' → '19:30' (the dropdown's value); null stays null (Off).
+// '19:30:00' or '19:30' → '19:30' (the Settings time list's value); null stays null (Off).
 export const shortTime = (value) => (value ? String(value).slice(0, 5) : null);

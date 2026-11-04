@@ -1156,12 +1156,16 @@ begin
   end if;
 
   -- T4b. Add event input rules and the name rule (across ALL Star events)
+  --      The refused times (05:55, 22:05, 10:03, 10:00:30 here; 10:32 in
+  --      T4c; 05:55 and 10:03 in T6e) are outside BOTH 0006's rule and
+  --      0028's (6:00 AM - 10:00 PM every 5 minutes), so this file passes
+  --      before and after 0028. 08:00 / 20:00 are valid under both.
   set local role authenticated;
   foreach v_txt in array array[
       format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b1', v_today - 1, '10:00', 'worcester'),
-      format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b2', v_today + 9, '07:45', 'worcester'),
-      format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b3', v_today + 9, '20:15', 'worcester'),
-      format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b4', v_today + 9, '10:10', 'worcester'),
+      format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b2', v_today + 9, '05:55', 'worcester'),
+      format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b3', v_today + 9, '22:05', 'worcester'),
+      format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b4', v_today + 9, '10:03', 'worcester'),
       format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b5', v_today + 9, '10:00:30', 'worcester'),
       format('public.star_add_event(%L, %L::date, %L::time, %L, false, null, null)', v_tag || ' b6', v_today + 9, '10:00', 'boston'),
       format('public.star_add_event(%L, %L::date, %L::time, %L, false, %L::date, null)', v_tag || ' b7', v_today + 9, '10:00', 'worcester', v_today + 10),
@@ -1202,7 +1206,7 @@ begin
      or public.star_update_event(v_ep, v_v + 1, v_tag || ' Main', v_today + 6, '10:30', 'shrewsbury', null, null) ->> 'status' <> 'duplicate_name'
      or public.star_update_event(v_ep, v_v + 1, v_tag || ' Past Renamed', v_today + 6, '10:30', 'shrewsbury', v_today + 7, null) ->> 'status' <> 'invalid'
      or public.star_update_event(v_ep, v_v + 1, v_tag || ' Past Renamed', v_today + 6, '10:30', 'shrewsbury', v_today - 1, null) ->> 'status' <> 'invalid'
-     or public.star_update_event(v_ep, v_v + 1, v_tag || ' Past Renamed', v_today + 6, '10:35', 'shrewsbury', null, null) ->> 'status' <> 'invalid' then
+     or public.star_update_event(v_ep, v_v + 1, v_tag || ' Past Renamed', v_today + 6, '10:32', 'shrewsbury', null, null) ->> 'status' <> 'invalid' then
     raise exception 'TEST FAILED: T4c update_event date / stale / name / closing date / time rules';
   end if;
   v_r := public.star_update_event(v_ep, v_v + 1, v_tag || ' Past Renamed', v_today + 6, '10:30', 'shrewsbury', v_today + 4, null);
@@ -1819,8 +1823,8 @@ begin
   v_x2 := (public.star_add_candidate(v_e1, 'Pia', 'Vate', v_adult, 'pv@example.com', 'worcester', 1, 0, 'cash') ->> 'id')::uuid;
   if public.star_set_private(v_x2, 1, v_today + 2, null) ->> 'status' <> 'invalid'
      or public.star_set_private(v_x2, 1, null, '10:00') ->> 'status' <> 'invalid'
-     or public.star_set_private(v_x2, 1, v_today + 2, '07:45') ->> 'status' <> 'invalid'
-     or public.star_set_private(v_x2, 1, v_today + 2, '10:10') ->> 'status' <> 'invalid' then
+     or public.star_set_private(v_x2, 1, v_today + 2, '05:55') ->> 'status' <> 'invalid'
+     or public.star_set_private(v_x2, 1, v_today + 2, '10:03') ->> 'status' <> 'invalid' then
     raise exception 'TEST FAILED: T6e set_private input rules';
   end if;
   v_r := public.star_set_private(v_x2, 1, v_today + 2, '10:00');   -- before the testing day

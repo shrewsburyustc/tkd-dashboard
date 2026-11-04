@@ -10,6 +10,8 @@
 //     app that shows them — they come from camp_camper_detail, never from the lists)
 //   - Sign-up: "Signed up on the family form, Mar 3, 2027 · waiver signed on the form · reference
 //     CP-4821" ("signature deleted after 3 years" after the purge)
+//   - History: the shared line "History · 5 changes ›" (CamperHistory.jsx; design review C7,
+//     rulebook v0.736) — on touch screens just above More, which stays last
 // Edit details turns the summary into fields (Star v0.112 / Color Belt): child (names, age 1–99,
 // member), days, extras (per-day extras ask which days), parent and emergency contact. Changing
 // days, member or extras prices the WHOLE camper again at the camp's current prices (v0.700,
@@ -21,20 +23,48 @@
 // A day the camper was already checked in on can't be taken off (Undo that check-in first).
 // PC / tablet: a centered dialog; phones: full screen with a back arrow.
 //
-// On touch screens the roster has no ⋯, so its items (Change how they'll pay, Withdraw / Restore,
-// and for admins Edit payment, Undo payment, Delete permanently) are listed here under "More" (CP5).
-// Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
-//        hidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
-import { useEffect, useId, useState } from 'react';
-import { IconCheck, IconEdit } from '@tabler/icons-react';
+// On touch screens the roster has no ⋯, so its items are listed here under "More" (CP5), in the
+// ⋯ menu's own order and groups (CamperRowMenu.jsx; rulebook v0.724, design review C8 / C9):
+// Change how they'll pay, Review possible duplicate — for admins Edit payment, Undo payment —
+// Withdraw / Restore, and for admins Delete permanently. Edit details is left out (it is the blue
+// button at the bottom). A thin full-width line starts each later group, like the menu's line;
+// there is no "Admin" label.
+// Pressing one does NOT close this dialog first: the camp page does that (CampPage.jsx). An item
+// with a dialog of its own (Delete permanently, Edit payment, …) takes this dialog's place in one
+// step, so the browser's Back step passes straight to it; closing first and opening the next
+// dialog a moment later let that Back step close the new dialog at once (design review, phones).
+//
+// "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
+// v0.412): Price and Paying by keep their rows but read gray "Hidden on this tablet"; the Payments
+// part is one gray line "Payment details are hidden on this tablet."; in Edit details each
+// extra's price and the total read "Hidden on this tablet" ("Total now Hidden on this tablet").
+// The money items leave "More" too (CamperRowMenu.jsx builds the list without them).
+//
+// Print receipt (design review C3, rulebook v0.734): on PC / tablet without touch, an outline
+// "Print receipt" button at the end of the Payments part (Star's place, v0.518), for an active
+// camper with money paid that still stands, never while Hide private details is on. On touch
+// screens it is only in "More" (rule 1.1: Camps' More list mirrors the ⋯ list), never twice. Either
+// way the shared receipt opens ON TOP of this dialog (v1.100) and focus goes back to the button.
+// (`hidden` is something else: the screen is locked — the dialog keeps its values but isn't drawn.)
+//
+// Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
+//        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones),
+//        familySize (how many campers are on this camper's sign-up — History's "(whole family)"), isPhone,
+//        hidden, detailsHidden, startInEdit, onClose(), onSaved(undo) (undo() = save the old details again — the toast's Undo, v0.726), onNoAccess, onRefreshProfile,
+//        onPrintReceipt(opener) (PC / tablet without touch only, else null — v0.734)
+import { Fragment, useEffect, useId, useState } from 'react';
+import { IconCheck, IconEdit, IconPrinter } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
+// Print receipt's one rule, the same as the ⋯ menu's (v0.734)
+import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
 import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { CamperTag } from './CampRoster.jsx';
-import { NoIcon } from './CampRowMenu.jsx';
+// The History line after Sign-up (design review C7, rulebook v0.736)
+import CamperHistory from './CamperHistory.jsx';
 import * as T from './text.js';
 
 const NOTES = {
@@ -117,7 +147,7 @@ function weekLines(b, myDayObjs, prices) {
   return weeks;
 }
 
-export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
+export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, familySize = 1, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile, onPrintReceipt = null }) {
   const idBase = useId();
   const [load, setLoad] = useState({ status: 'loading', detail: null });
   const [mode, setMode] = useState(startInEdit ? 'edit' : 'view');
@@ -153,6 +183,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
   const camper = detail?.camper ?? null;
   const name = camper ? T.camperLabel(camper) : (camperName ?? '');
   const campDayIsos = days.map((d) => d.day);
+  // A hidden value keeps its row and reads gray "Hidden on this tablet" (v0.507; .ev-hidden-value).
+  const hiddenValue = <span className="ev-hidden-value">{T.HIDDEN_ON_THIS_TABLET}</span>;
 
   // ----- Loading / failed -----
   if (load.status !== 'ready') {
@@ -216,7 +248,9 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           </Row>
           {b.totalCents !== undefined && (
             <Row label={T.DETAIL_PRICE}>
-              {weeks
+              {detailsHidden
+                ? hiddenValue
+                : weeks
                 ? [...weeks.map((w) => T.weekPriceLine(w)), T.priceBreakdownLine(b, allDays, weeks.length)].map((line) => (
                     <span key={line} className="ev-sum-line">
                       {line}
@@ -225,11 +259,16 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                 : T.priceBreakdownLine(b, allDays)}
             </Row>
           )}
-          <Row label={T.DETAIL_PAYING_BY}>{T.payingByText(camper.payingBy)}</Row>
+          <Row label={T.DETAIL_PAYING_BY}>{detailsHidden ? hiddenValue : T.payingByText(camper.payingBy)}</Row>
           {camper.status !== 'active' && <Row label={T.DETAIL_REMOVED}>{T.removedDetail(camper)}</Row>}
         </dl>
 
         <h3 className="cp-detail-head">{T.HEAD_PAYMENTS}</h3>
+        {detailsHidden ? (
+          // Hidden: the whole payment part is one gray line (no status tag, no list, no amounts).
+          <p className="cp-signup-line ev-hidden-value">{T.PAYMENT_DETAILS_HIDDEN}</p>
+        ) : (
+        <>
         <dl className="ev-sum">
           <Row label={T.DETAIL_STATUS}>
             <CamperTag row={camper} onReview={() => {}} />
@@ -252,6 +291,16 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           </Row>
         </dl>
         {owes < 0 && <p className="field-hint">{T.OVERPAID_ADMIN}</p>}
+        {/* PC / tablet without touch: Print receipt ends the Payments part (v0.734); it opens on top. */}
+        {onPrintReceipt && canPrintReceipt(camper, detailsHidden) && (
+          <button type="button" className="btn btn-sm cp-print-receipt" onClick={(event) => onPrintReceipt(event.currentTarget)}>
+            {/* ti-printer = print */}
+            <IconPrinter size={16} aria-hidden="true" />
+            {T.PRINT_RECEIPT}
+          </button>
+        )}
+        </>
+        )}
 
         <h3 className="cp-detail-head">{T.DETAIL_CHECKINS}</h3>
         <dl className="ev-sum">
@@ -271,38 +320,48 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
         <h3 className="cp-detail-head">{T.HEAD_SIGNUP}</h3>
         <p className="cp-signup-line">{T.signupLine(camper)}</p>
 
-        {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). */}
-        {actions && actions.some((item) => item.key !== 'edit' && !item.disabled) && (
+        {/* The shared one-line History ends the summary (C7, v0.736): after Sign-up, and on touch
+            just above More (More stays last). It reads the history itself when it appears. */}
+        <div className="cp-detail-history">
+          <CamperHistory camper={camper} campDays={days} campExtras={extras} familySize={familySize} hidden={detailsHidden} onNoAccess={onNoAccess} />
+        </div>
+
+        {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). Shown whenever
+            there is an item besides Edit details — even while one is loading and the items are
+            grayed, so the section (and the button that has focus) never vanishes mid-load. */}
+        {actions && actions.some((item) => item.key !== 'edit') && (
           <>
             <h3 className="cp-detail-head">{T.MORE_ACTIONS_HEAD}</h3>
             <div className="cp-detail-actions">
               {actions
                 .filter((item) => item.key !== 'edit')
-                .map((item) =>
-                  // "Admin": a small label over the admin-only items (review 8)
-                  item.key === 'admin-heading' ? (
-                    <p key={item.key} className="cp-detail-sublabel">
-                      {T.ADMIN_GROUP}
-                    </p>
-                  ) : (
-                  <button
-                    key={item.key}
-                    type="button"
-                    // Delete permanently: red words and outline, never a filled red button next to
-                    // the blue Edit details (review 8; red only for delete).
-                    className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
-                    aria-disabled={item.disabled ? 'true' : undefined}
-                    onClick={() => {
-                      if (item.disabled) return;
-                      onClose();
-                      item.onSelect();
-                    }}
-                  >
-                    {item.Icon && item.Icon !== NoIcon && <item.Icon size={16} aria-hidden="true" className="menu-icon" />}
-                    {item.label}
-                  </button>
-                  ),
-                )}
+                .map((item, index) => (
+                  <Fragment key={item.key}>
+                    {/* A new group (money, or taking someone off): a thin line across the whole row,
+                        as the ⋯ menu's line (v0.724). Never above the first button here — that one
+                        may start a group only because Edit details was left out above it. */}
+                    {item.separatorBefore && index > 0 && <span role="separator" className="cp-detail-break" />}
+                    <button
+                      type="button"
+                      // Delete permanently: red words and outline, never a filled red button next to
+                      // the blue Edit details (review 8; red only for delete).
+                      className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
+                      aria-disabled={item.disabled ? 'true' : undefined}
+                      // The page closes this dialog itself, or swaps it for the item's own dialog in
+                      // one step (CampPage.jsx detailHandlers) — closing it here first would let the
+                      // browser's Back step of this dialog close the next one too (phones).
+                      // The pressed button goes along: Print receipt opens on top of this dialog and
+                      // sends focus back to it when the receipt closes (v0.734); the others ignore it.
+                      onClick={(event) => {
+                        if (item.disabled) return;
+                        item.onSelect(event.currentTarget);
+                      }}
+                    >
+                      {item.Icon && <item.Icon size={16} aria-hidden="true" className="menu-icon" />}
+                      {item.label}
+                    </button>
+                  </Fragment>
+                ))}
             </div>
           </>
         )}
@@ -424,10 +483,48 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
       emergencyPhone: phoneDigits(values.emergencyPhone),
       emergencyRelation: normalizeName(values.emergencyRelation),
     };
+    // The OLD details in the same shape, for the toast's Undo (rulebook v0.726, option A): what the
+    // form loaded, sent as if typed again — days, member box and extras as savedChild (the same
+    // rules as `child` above), names, age and family as loaded.
+    const was = JSON.parse(initial);
+    const oldInput = {
+      firstName: normalizeName(was.firstName),
+      lastName: normalizeName(was.lastName),
+      age: Number(was.age),
+      member: savedChild.member,
+      dayIds: savedChild.dayIds,
+      extras: savedChild.extras,
+      parentName: normalizeName(was.parentName),
+      parentPhone: phoneDigits(was.parentPhone),
+      parentRelation: normalizeName(was.parentRelation),
+      emergencyName: normalizeName(was.emergencyName),
+      emergencyPhone: phoneDigits(was.emergencyPhone),
+      emergencyRelation: normalizeName(was.emergencyRelation),
+    };
     const result = await updateDetails(camperId, camper.version, camper.signupVersion, input);
     setSaving(false);
     const st = result.status;
-    if (st === 'ok') onSaved();
+    if (st === 'ok') {
+      // Undo = save the old details again on the versions this save made. If days, member or
+      // extras change back, the database prices the camper again at the camp's CURRENT prices
+      // (v0.700), so a total that changed with the camp's prices may not come back. Refusals the
+      // database names get words for the amber bar: a day put back off that was checked in
+      // meanwhile, or the camper withdrawn meanwhile. Anything else changed in between → 'stale'.
+      const { camperVersion, signupVersion } = result;
+      const undo = async () => {
+        const answer = await updateDetails(camperId, camperVersion, signupVersion, oldInput);
+        let undoText = null;
+        if (answer.status === 'checked_in') {
+          const day = days.find((d) => d.day === answer.day || d.dayId === answer.day);
+          undoText = T.undoRefused(T.checkedInCantRemoveNamed(T.camperLabel(camper), day?.day ?? answer.day));
+        } else if (answer.status === 'withdrawn') undoText = T.undoRefused(T.isWithdrawn(T.camperLabel(camper)));
+        // 'invalid': the old details no longer fit the camp — at today's prices the total would be over
+        // $10,000, or Edit camp removed an extra they had. Say so plainly instead of "someone else changed it".
+        else if (answer.status === 'invalid') undoText = T.undoRefused(T.UNDO_DETAILS_NO_LONGER_FIT);
+        return { ...answer, undoText };
+      };
+      onSaved(undo);
+    }
     else if (st === 'checked_in') {
       const day = days.find((d) => d.day === result.day || d.dayId === result.day);
       setCheckedInError(T.checkedInCantRemove(day?.day ?? result.day));
@@ -562,7 +659,7 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                   <label className="cbrow" htmlFor={tickId}>
                     <input id={tickId} type="checkbox" className="cb" checked={on} disabled={saving} onChange={(event) => toggleExtra(extra, event.target.checked)} />
                     <span>
-                      {extra.name} <span className="cp-age-text">· {T.extraPriceText(extra.priceCents, extra.per)}</span>
+                      {extra.name} <span className="cp-age-text">· {detailsHidden ? T.HIDDEN_ON_THIS_TABLET : T.extraPriceText(extra.priceCents, extra.per)}</span>
                     </span>
                   </label>
                   {on && extra.per === 'day' && (
@@ -586,7 +683,14 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
         )}
 
         <p className={`cp-newtotal${repriced ? ' is-changed' : ''}`} role="status">
-          {T.newTotalLine(total)}
+          {/* Hidden: the line stays, so staff see a total exists ("Total now Hidden on this tablet"). */}
+          {detailsHidden ? (
+            <>
+              {T.TOTAL_NOW} {hiddenValue}
+            </>
+          ) : (
+            T.newTotalLine(total)
+          )}
           {repriced && <span className="field-hint"> {T.REPRICE_NOTE}</span>}
         </p>
         {show('total') && <Notice>{show('total')}</Notice>}
@@ -603,7 +707,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           {textField('emergencyPhone', T.PHONE, { inputMode: 'tel' })}
           {textField('emergencyRelation', T.RELATIONSHIP)}
         </div>
-        <p className="field-hint">{T.PAYMENT_NOT_HERE}</p>
+        {/* Hidden: the ⋯ menu has no payment items then, so this pointer to it goes too. */}
+        {!detailsHidden && <p className="field-hint">{T.PAYMENT_NOT_HERE}</p>}
 
         {isPhone && noteBlock}
         {isPhone ? (

@@ -1,0 +1,37 @@
+{
+  "title": "Black Belt · H1b — Star's calendar for cycle dates and testing days",
+  "subtitle": "In Add / Edit cycle (Application due, Submissions due, each payment's due date) and in Add / Edit testing day, the browser's own “mm/dd/yyyy” box becomes the dashboard's calendar that Star's events use. Each field only grays out the days its save rule already refuses; no new rule. Nothing to decide: this was approved in the design review (v1.018). OK to build?",
+  "width": 1000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "cyc-pc-today.png", "crop": [276, 84, 318, 88], "scale": 1.4, "caption": "<b>1 · Add cycle, PC</b> (1.4×): Deadlines", "marks": [[284, 130, 240, 32]] },
+        { "src": "cyc-pc-today.png", "crop": [288, 296, 318, 66], "scale": 1.4, "caption": "<b>2 · Payment due date, PC</b>", "marks": [[369, 325, 152, 32]] },
+        { "src": "day-pc-today.png", "crop": [396, 256, 318, 62], "scale": 1.4, "caption": "<b>3 · Add testing day, PC</b>", "marks": [[404, 278, 240, 32]] },
+        { "src": "cyc-tab-today.png", "shotWidth": 820, "crop": [58, 340, 300, 60], "scale": 1.4, "caption": "<b>Tablet 820</b>: payment due date", "marks": [[139, 362, 152, 36]] },
+        { "src": "day-tab-today.png", "shotWidth": 820, "crop": [166, 280, 344, 62], "scale": 1.3, "caption": "<b>Tablet</b>: testing day", "marks": [[174, 298, 240, 36]] },
+        { "src": "day-phone-today.png", "shotWidth": 390, "crop": [0, 180, 390, 80], "scale": 1.14, "caption": "<b>Phone 390</b>: testing day", "marks": [[16, 208, 358, 40]] },
+        { "src": "cyc-p320-today.png", "shotWidth": 320, "crop": [0, 50, 320, 260], "scale": 1.38, "caption": "<b>320</b>: Add cycle deadlines", "marks": [[16, 106, 288, 40], [16, 176, 288, 40]] }
+      ],
+      "note": "Amber: the browser's own date box. It lets any date be typed; the save rule refuses a wrong one afterwards."
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "cyc-pc-after.png", "crop": [276, 92, 318, 88], "scale": 1.4, "caption": "<b>1 · Deadlines</b>: “Sat, Sep 25, 2027”. Application due gets wider (about 240 → 350 px) and Submissions due moves right, as in Star's events.", "marks": [[284, 138, 308, 32]] },
+        { "src": "due-pc-after.png", "crop": [355, 314, 318, 352], "scale": 1.4, "caption": "<b>2 · Payment due date</b>: still fits the 152 px column on PC; past days gray, “Past dates can’t be chosen.”", "marks": [[369, 330, 152, 32], [361, 366, 304, 295]] },
+        { "src": "day-pc-after.png", "crop": [396, 256, 318, 352], "scale": 1.4, "caption": "<b>3 · Add testing day</b>: past days gray, Star's hint “Past dates can’t be chosen.”", "marks": [[404, 278, 306, 32], [404, 314, 304, 293]] },
+        { "src": "cyc-tab-after.png", "shotWidth": 820, "crop": [58, 340, 300, 60], "scale": 1.4, "caption": "<b>Tablet 820</b>: <b>flag:</b> the due-date column is too narrow here, so the date is cut (“Sat, Sep 25, …”). The build should widen it or use a shorter date on tablets.", "marks": [[139, 362, 152, 36]] },
+        { "src": "day-tab-after.png", "shotWidth": 820, "crop": [166, 280, 344, 400], "scale": 1.3, "caption": "<b>Tablet</b>: testing day", "marks": [[174, 298, 332, 36], [174, 338, 336, 338]] },
+        { "src": "day-phone-after.png", "shotWidth": 390, "crop": [0, 44, 390, 404], "scale": 1.14, "caption": "<b>Phone 390</b>: testing day, in the page edge to edge", "marks": [[16, 70, 358, 36], [3, 114, 384, 334]] },
+        { "src": "cyc-p320-after.png", "shotWidth": 320, "crop": [0, 50, 320, 260], "scale": 1.38, "caption": "<b>320</b>: Add cycle deadlines", "marks": [[16, 106, 288, 40], [16, 176, 288, 40]] },
+        { "src": "due-phone-after.png", "shotWidth": 390, "crop": [0, 44, 390, 452], "scale": 1.0, "caption": "<b>Phone 390, flag:</b> a payment's due-date calendar opens INSIDE the narrow date cell and is squashed. The build must let it span the whole plan box (or the row) on phones." }
+      ],
+      "note": "Green: the field and its open calendar. Drawn by switching Black Belt's date field to the calendar for the pictures only (put back afterwards)."
+    }
+  ],
+  "footer": "<b>Limits, as the save rules already have them (rules.js, DayDialog):</b> Testing day: today or later (a saved day may keep its past date when edited), and after grading has started not before the first testing day (lock.minDate). Application due and Submissions due: any date up to the last testing day (no earliest date, as today). Payment due dates: today or later (a saved one may keep its past date when edited); no latest date, as today. Date of birth: see H1a."
+}

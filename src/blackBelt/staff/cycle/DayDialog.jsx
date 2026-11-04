@@ -11,13 +11,16 @@
 // gray while there is one (v0.57).
 // This file only draws; the values live in useCycleEditor.jsx (so a screen lock keeps them).
 // 0025 (S2), Edit cycle only — `lock` (useCycleEditor's dayLock): a past day with grades or the
-// frozen first day keeps its date (the field is read-only with the gray reason under it); a part
+// frozen first day keeps its date (the field is dimmed with the gray reason under it); a part
 // that already has grades on a past day stays ticked (its box is grayed, with a gray line); and
 // once grading started no day may come before the first day (an amber message, Save gray).
+// The Date is the dashboard's calendar (v1.018, design review BB12): it grays the days the save
+// rule refuses (before today, before the first day once grading started), so they can't be picked.
 import { useId } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Notice from '../../../components/Notice.jsx';
 import { TIME_OPTIONS, dayProblems, hasProblems, partsAlsoOnOtherDays } from '../../../lib/blackBelt/rules.js';
+import { cycleDateYears, pastHint, testingDayMin } from '../../../lib/blackBelt/dateLimits.js';
 import DateField from '../parts/DateField.jsx';
 import InnerDialog from '../parts/InnerDialog.jsx';
 import SelectField from '../parts/SelectField.jsx';
@@ -65,6 +68,8 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
   const sEndMsg = T.timeProblemText(check.show('secondEnd'));
   const sPlaceMsg = T.placeProblemText(check.show('secondPlace'));
   const partsMsg = check.show('parts') ? T.TICK_ONE_PART : null;
+  // The calendar's first day that can be picked (the save rule's own limit).
+  const dateMin = testingDayMin(today, state.originalDate ?? null, lock);
 
   function set(patch, touched) {
     onChange(patch);
@@ -183,11 +188,21 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
           )}
         </div>
         <div className="field">
-          <label htmlFor={`${id}-date`}>{T.DATE}</label>
+          {/* A span, not a <label>: the field is a button (the calendar), named by its own label */}
+          <span className="field-label">{T.DATE}</span>
+          {/* Today or later (a saved past day keeps its date); once grading has started, not
+              before lock.minDate — the save rule's own limits (v1.018). A locked date is dimmed.
+              "Past dates can't be chosen." only when no saved past date pulls the first day back. */}
           <DateField
             id={`${id}-date`}
+            label={T.DATE}
             value={v.date}
-            readOnly={Boolean(lock?.dateLocked)}
+            today={today}
+            min={dateMin}
+            years={cycleDateYears(today, { min: dateMin, value: v.date })}
+            hint={pastHint(today, dateMin, T.PAST_DATES_HINT)}
+            isPhone={isPhone}
+            disabled={Boolean(lock?.dateLocked)}
             invalid={Boolean(dateMsg)}
             describedBy={dateMsg ? err('date') : lock?.dateLocked ? `${id}-date-lock` : undefined}
             onChange={(value) => !lock?.dateLocked && set({ date: value }, 'date')}

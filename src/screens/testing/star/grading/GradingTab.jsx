@@ -51,7 +51,7 @@ import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../../lib/device.js';
 import { gradeLetters, judgedSubjects } from '../../../../lib/star/gradingApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
 import { ADD_CANDIDATE } from '../candidates/text.js';
 import GradeCard from './GradeCard.jsx';
 import GradeGrid from './GradeGrid.jsx';

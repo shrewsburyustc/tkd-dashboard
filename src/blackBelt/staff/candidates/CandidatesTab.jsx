@@ -15,6 +15,11 @@
 // items as a bottom sheet with Cancel. A make-up just added glows pale amber for a moment.
 // Make-up rows have no fee: they are left out of the four money cards and their filters, and
 // their ⋯ has no Record payment, Change plan or refund (G 27).
+// The row ⋯ (v0.963, mockup A option 2; the order of v1.011): three groups with a line between —
+// Edit details · Change plan or Kukkiwon — Record payment (tablets / phones) · Edit payment ·
+// Undo payment · Record refund · Print receipt — Withdraw · Delete permanently. A withdrawn row:
+// Record refund · Print receipt — Restore · Delete permanently. For an admin, a row with payment
+// rows is read first (Edit / Undo payment act on the LATEST payment, which the row doesn't carry).
 //
 // It follows the location switcher (v0.118): on Worcester or Shrewsbury the list, the cards and
 // the duplicate box show that school only; Both shows everyone. With the device's Hide payments
@@ -33,7 +38,7 @@ import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/us
 import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
 import ReceiptDialog from '../receipt/ReceiptDialog.jsx';
 import AddCandidateDialog from './AddCandidateDialog.jsx';
-import CandidateDialog from './CandidateDialog.jsx';
+import CandidateDialog, { lineWords } from './CandidateDialog.jsx';
 import ChangePlanDialog from './ChangePlanDialog.jsx';
 import CompareDialog from './CompareDialog.jsx';
 import DanChangeDialog from './DanChangeDialog.jsx';
@@ -43,7 +48,7 @@ import MakeupSubjectsDialog from '../grading/MakeupSubjectsDialog.jsx';
 import EditPaymentDialog from './EditPaymentDialog.jsx';
 import RecordPaymentDialog from './RecordPaymentDialog.jsx';
 import RefundDialog from './RefundDialog.jsx';
-import RemoveDialog, { DeleteConfirm } from './RemoveDialog.jsx';
+import DeleteConfirm from './DeleteConfirm.jsx';
 import ReturnedDialog from './ReturnedDialog.jsx';
 import RosterRows from './RosterRows.jsx';
 import SignatureDialog from './SignatureDialog.jsx';
@@ -57,6 +62,25 @@ import * as T from '../text.js';
 const load = (cycleId) => loadRoster({ cycleId });
 const SCHOOL_CODE = { Worcester: 'worcester', Shrewsbury: 'shrewsbury' };
 const FLASH_MS = 2500; // how long a just-added make-up row glows (G06 "pale amber for a moment")
+
+// The candidate's latest payment (v0.963): the live 'payment' line recorded most recently. The
+// detail's payments list holds live lines only. "Most recently recorded" is recordedAt (the moment
+// it was saved; an edited payment is a new row with a new recordedAt and the old paidOn), not
+// paidOn (the day the family paid, which an admin may have set to an earlier day). Ties: the later
+// paidOn, then the higher id, so the choice never depends on the list's order.
+function latestPayment(payments) {
+  const time = (p) => Date.parse(p.recordedAt) || 0;
+  let best = null;
+  for (const p of payments ?? []) {
+    if (p.kind !== 'payment') continue;
+    if (!best) best = p;
+    else {
+      const later = time(p) - time(best) || String(p.paidOn ?? '').localeCompare(String(best.paidOn ?? '')) || String(p.id).localeCompare(String(best.id));
+      if (later > 0) best = p;
+    }
+  }
+  return best;
+}
 
 // A grayed menu item with its reason under it ("$330 is already paid. Ask an admin.")
 function TwoLines({ label, reason }) {
@@ -80,6 +104,7 @@ export default function CandidatesTab({
   clearToast,
   onModalChange,
   onCandidatesChanged,
+  setPageBanner,
   actionsRef,
   panelId,
   tabId,
@@ -96,8 +121,20 @@ export default function CandidatesTab({
   const [search, setSearch] = useState('');
   const [card, setCard] = useState(null);
   const [removedOpen, setRemovedOpen] = useState(false);
-  const [menu, setMenu] = useState(null); // { row, anchor }
-  const [banner, setBanner] = useState(null);
+  const [menu, setMenu] = useState(null); // { row, anchor, data } — data: the candidate as read for an admin's ⋯, else null
+  // The amber bar (v0.966, BB4) is the cycle page's ONE bar (CyclePage.jsx draws it above the tab):
+  // one bar at a time, and changing tabs or cycles clears it. While the candidate detail is open,
+  // useCandidateActions puts its problems inside the detail instead. Retry clears the bar first and
+  // a retry that fails puts it back, so only × or a Retry that works closes it.
+  const setBanner = useCallback(
+    (next) => setPageBanner(next && typeof next === 'object' && next.retry ? { ...next, retry: () => { setPageBanner(null); next.retry(); } } : next),
+    [setPageBanner],
+  );
+  // Whether the screen is locked right now, for an answer that arrives later (the row ⋯'s read)
+  const lockedRef = useRef(screenLocked);
+  useLayoutEffect(() => {
+    lockedRef.current = screenLocked;
+  });
 
   const reloadRoster = useCallback(() => live.reload(), [live]);
   const actions = useCandidateActions({
@@ -124,7 +161,7 @@ export default function CandidatesTab({
     setFlashId(id);
     flashTimer.current = window.setTimeout(() => setFlashId(null), FLASH_MS);
   }, []);
-  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash });
+  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash, setBanner });
 
   // The page header's "+ Add candidate" (and N) open the Add candidate menu (G 24) through this.
   const schoolCode = SCHOOL_CODE[location] ?? null;
@@ -192,37 +229,35 @@ export default function CandidatesTab({
     },
   });
 
-  // ----- The row ⋯ menu (only what this person may do; contract §3.2) -----
-  function rowMenuItems(row) {
+  // ----- The row ⋯ menu (only what this person may do; contract §3.2, v0.963) -----
+  // Three groups in a fixed order; what doesn't apply is left out, the rest keep their order, and
+  // a group's first item gets the line above it only when an earlier group has items.
+  function rowMenuItems(row, loaded = null) {
     const name = T.candidateName(row);
     const m = row.money ?? {};
-    const items = [];
     const target = { id: row.id, firstName: row.firstName, lastName: row.lastName, version: row.version, hasPaymentRows: row.hasPaymentRows, hasGrades: row.hasGrades };
     const anchor = menu?.anchor;
     const makeup = row.isMakeup === true;
+    const about = [];
+    const money = [];
+    const off = [];
     if (row.status === 'withdrawn') {
-      if (isAdmin) items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, disabled: actions.busy, onSelect: () => actions.restore(target) });
-      if (isAdmin && !hidden && !makeup && m.paidCents > 0) items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
-      if (!hidden) items.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
+      if (isAdmin && !hidden && !makeup && m.paidCents > 0) money.push({ key: 'refund', label: T.RECORD_REFUND, Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
+      if (!hidden) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
       if (isAdmin) {
-        // Payment records, and (0025, Q-G3 v0.950) grades, block deleting
+        off.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, disabled: actions.busy, onSelect: () => actions.restore(target, anchor) });
+        // Payment records, and (0025, Q-G3 v0.950) grades, block deleting (the short reason: they
+        // are already withdrawn)
         const reason = row.hasPaymentRows ? T.hasPaymentRecordsShort(name) : row.hasGrades ? T.hasGradesShort(name) : null;
-        items.push({
-          key: 'delete',
-          label: reason ? <TwoLines label={T.DELETE_PERMANENTLY} reason={reason} /> : T.DELETE_PERMANENTLY,
-          Icon: ICONS.deleteForever,
-          danger: !reason,
-          disabled: Boolean(reason),
-          separatorBefore: items.length > 0,
-          onSelect: () => actions.openDelete(target, anchor),
-        });
+        off.push(deleteItem(reason, target, anchor));
       }
-      return items;
+      return joinGroups(about, money, off);
     }
-    if (!hidden && !makeup && !layout.isWide && m.balanceCents > 0) items.push({ key: 'record', label: T.RECORD_PAYMENT, Icon: ICONS.recordPayment, onSelect: () => actions.openRecordPayment(row.id, anchor) });
+
+    // (1) About the person.
     // Hide payments on (mat-side): Edit details shows the date of birth and email, so it waits
     // for the desk (grayed with its reason, like Add candidate).
-    items.push({
+    about.push({
       key: 'edit',
       label: hidden ? <TwoLines label={T.EDIT_DETAILS} reason={T.EDIT_AT_DESK} /> : T.EDIT_DETAILS,
       Icon: ICONS.editDetails,
@@ -238,7 +273,7 @@ export default function CandidatesTab({
     const planReason = hidden || !(m.paidCents > 0) ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(m.paidCents);
     // A make-up has no plan: no Change plan (G 27)
     if (!makeup) {
-      items.push({
+      about.push({
         key: 'plan',
         label: planLocked ? <TwoLines label={T.CHANGE_PLAN} reason={planReason} /> : T.CHANGE_PLAN,
         Icon: ICONS.changePlan,
@@ -246,12 +281,91 @@ export default function CandidatesTab({
         onSelect: () => actions.openChangePlan(row.id, anchor),
       });
     }
-    if (isAdmin && !hidden && !makeup && m.overpaidCents > 0) {
-      items.push({ key: 'refund', label: T.recordRefundOverpaid(m.overpaidCents), Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
+
+    // (2) Money. Record payment first — on tablets and phones only (on a PC it is the row's button).
+    if (!hidden && !makeup && !layout.isWide && m.balanceCents > 0) money.push({ key: 'record', label: T.RECORD_PAYMENT, Icon: ICONS.recordPayment, onSelect: () => actions.openRecordPayment(row.id, anchor) });
+    // Edit payment / Undo payment (admins): the LATEST live payment (older ones: each payment
+    // line's ⋯ in the detail), grayed with the detail's reasons (CandidateDialog lineItems).
+    const latest = isAdmin && !hidden && !makeup ? latestPayment(loaded?.payments) : null;
+    if (latest) {
+      const refundActive = loaded.payments.some((p) => p.kind === 'refund');
+      const editReason = latest.returned ? T.RETURNED_FIRST : refundActive ? T.REFUND_FIRST : null;
+      const what = lineWords(latest, loaded.payments, loaded.candidate.plan).what;
+      money.push({
+        key: 'editPayment',
+        label: editReason ? <TwoLines label={T.EDIT_PAYMENT} reason={editReason} /> : T.EDIT_PAYMENT,
+        Icon: ICONS.editPayment,
+        disabled: Boolean(editReason),
+        onSelect: () => actions.openEditPayment(latest, anchor, loaded),
+      });
+      money.push({
+        key: 'undoPayment',
+        label: latest.returned ? <TwoLines label={T.UNDO_PAYMENT} reason={T.RETURNED_FIRST} /> : T.UNDO_PAYMENT,
+        Icon: ICONS.undo,
+        disabled: latest.returned,
+        onSelect: () => actions.openUndoPayment(latest, what, anchor, loaded),
+      });
     }
-    if (!hidden) items.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
-    if (isAdmin) items.push({ key: 'remove', label: T.REMOVE_CANDIDATE, Icon: ICONS.remove, separatorBefore: true, onSelect: () => actions.openRemove(target, anchor) });
+    if (isAdmin && !hidden && !makeup && m.overpaidCents > 0) {
+      // bb-menu-fit: "Record refund · $50 overpaid" is a little wider than the 200 px menu (blackBelt.css)
+      money.push({ key: 'refund', label: <span className="bb-menu-fit">{T.RECORD_REFUND} <span className="bb-menu-keep">{T.overpaidPart(m.overpaidCents)}</span></span>, Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
+    }
+    if (!hidden) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
+
+    // (3) Taking someone off (admins, v1.007): Withdraw is plain and acts at once (with Undo);
+    // Delete permanently is red and asks first, grayed with what to do instead (v0.904, v0.950).
+    if (isAdmin) {
+      off.push({ key: 'withdraw', label: T.WITHDRAW, Icon: ICONS.withdraw, disabled: actions.busy, onSelect: () => actions.withdraw(target, anchor) });
+      const reason = row.hasPaymentRows ? T.hasPaymentRecords(name) : row.hasGrades ? T.hasGrades(name) : null;
+      off.push(deleteItem(reason, target, anchor));
+    }
+    return joinGroups(about, money, off);
+  }
+  // Delete permanently: red when it can be used, else grayed with its reason under it
+  function deleteItem(reason, target, anchor) {
+    return {
+      key: 'delete',
+      label: reason ? <TwoLines label={T.DELETE_PERMANENTLY} reason={reason} /> : T.DELETE_PERMANENTLY,
+      Icon: ICONS.deleteForever,
+      danger: !reason,
+      disabled: Boolean(reason),
+      onSelect: () => actions.openDelete(target, anchor),
+    };
+  }
+  // The groups one after the other, a line before each group that follows one with items
+  function joinGroups(...groups) {
+    const items = [];
+    for (const group of groups) {
+      group.forEach((item, index) => items.push(index === 0 && items.length > 0 ? { ...item, separatorBefore: true } : item));
+    }
     return items;
+  }
+
+  // Pressing a row's ⋯: pressing it again closes the menu. An admin's ⋯ for a candidate who may
+  // have payments (payment rows, payments shown, not a make-up) reads the candidate first
+  // (actions.loadForMenu, with the detail's problem handling) and opens when it arrives; while it
+  // loads the tab is busy, so another press does nothing. Everyone else's opens at once.
+  function openRowMenu(row, anchor) {
+    if (menu?.row?.id === row.id) {
+      setMenu(null);
+      return;
+    }
+    const needsLoad = isAdmin && row.status === 'active' && row.hasPaymentRows && !hidden && !row.isMakeup;
+    if (!needsLoad) {
+      setMenu({ row, anchor, data: null });
+      return;
+    }
+    // Only a menu that has to read first waits for another write to finish (the read uses the same
+    // busy guard); every other ⋯ opens at once, as before.
+    if (actions.busy) return;
+    setMenu(null);
+    actions.loadForMenu(row.id, (data) => {
+      if (lockedRef.current) return; // the screen locked meanwhile: no menu behind the lock
+      // the row left the screen meanwhile (a search, the school switch, Removed closed): no menu
+      // hanging off a button that isn't there, and no focus to give back
+      if (!anchor?.isConnected) return;
+      setMenu((current) => current ?? { row, anchor, data });
+    });
   }
 
   const ctx = {
@@ -263,7 +377,7 @@ export default function CandidatesTab({
     flashId,
     hasMenu: (row) => rowMenuItems(row).length > 0,
     onOpen: (row, element) => actions.openDetail(row.id, element),
-    onMore: (row, anchor) => setMenu((current) => (current?.row?.id === row.id ? null : { row, anchor })),
+    onMore: (row, anchor) => openRowMenu(row, anchor),
     onRecord: (row, opener) => actions.openRecordPayment(row.id, opener),
     onReview: (row, opener) => actions.openCompare(row, partnerOf(row), opener),
   };
@@ -300,7 +414,6 @@ export default function CandidatesTab({
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={tabId} className="tpanel bb-candidates">
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => { setBanner(null); banner.retry(); } : undefined} retrying={actions.busy} onDismiss={() => setBanner(null)} />}
       {schoolCode && (
         <p className="bb-school-line">
           {T.showingSchoolOnly(location)} ·{' '}
@@ -345,7 +458,7 @@ export default function CandidatesTab({
           title={T.candidateName(menu.row)}
           subtitle={T.phoneSubline(menu.row)}
           label={T.moreForCandidate(T.candidateName(menu.row))}
-          items={rowMenuItems(menu.row)}
+          items={rowMenuItems(menu.row, menu.data)}
           onClose={(reason) => {
             const anchor = menu.anchor;
             setMenu(null);
@@ -433,8 +546,6 @@ function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast, o
         return <ChangePlanDialog {...common} isAdmin={isAdmin} hidden={hidden} onSave={actions.saveChangePlan} />;
       case 'add':
         return <AddCandidateDialog {...common} hidden={hidden} onSave={actions.saveAdd} />;
-      case 'remove':
-        return <RemoveDialog {...common} onWithdraw={actions.withdraw} onDelete={actions.askDelete} />;
       case 'deleteConfirm':
         return <DeleteConfirm {...common} onConfirm={actions.confirmDelete} />;
       case 'danChange':

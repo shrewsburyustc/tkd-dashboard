@@ -2,7 +2,8 @@
 // Why it exists: the family form is a separate page in the same build (build plan §3). It loads
 // ONLY what families need: React, the page's own files in src/forms/, the shared field drawing
 // and rules (src/screens/forms/FormFields.jsx, SignaturePad.jsx, text.js, src/lib/forms/fields.js,
-// Notice.jsx) and the styles. It never loads the staff dashboard, supabase-js or any key.
+// Notice.jsx, and the shared calendar src/components/DatePicker.jsx with its own DatePicker.css for
+// a Date question, design review N6) and the styles. It never loads the staff dashboard, supabase-js or any key.
 //
 // Styles: tokens.css (colors, sizes), forms.css (the staff Forms look — its Fill in part draws the
 // same fields here: progress bar, children, time cards, waiver, signature) and forms-public.css

@@ -72,10 +72,10 @@ export const DISCARD_CHANGES = 'Discard changes'; // phones: the link inside the
 // ===== Statuses from the data layer (contract §1.2 "Status → what the staff screens say") =====
 export const NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const STALE_DIALOG = 'Someone else changed this cycle just now. Close and open it again to see their change.';
-export const STALE_SETTINGS = 'Someone else changed this just now. Close and open it again to see their change.'; // Rubric and prices (not in the mockups)
+export const STALE_SETTINGS = 'Someone else changed this just now. Close and open it again to see their change.'; // Rubric and waiver (not in the mockups)
 export const SWITCH_STALE = "Couldn't change registration. Someone else changed this cycle just now.";
 export const duplicateCycle = (name) => `There's already a cycle called ${name}. Try another name.`;
-export const WAIVER_NEEDED = "Save the school's waiver on Rubric and prices first.";
+export const WAIVER_NEEDED = "Save the school's waiver on the Rubric and waiver tab first.";
 export const FINISHED = "This cycle is finished, so registration can't change."; // (not in the mockups)
 export const HAS_PAYMENTS = 'Payments are recorded for this cycle.';
 export const HAS_WAIVERS = 'Families signed waivers on the form for this cycle.'; // (not in the mockups, OP-6)
@@ -121,7 +121,7 @@ export const BACK_TO_TESTING = 'Testing';
 export const PAGE_TITLE = 'Black Belt testing';
 export const ADD_CYCLE = 'Add cycle';
 export const TAB_CYCLES = 'Cycles';
-export const TAB_RUBRIC = 'Rubric and prices';
+export const TAB_RUBRIC = 'Rubric and waiver';
 export const STAFF_CYCLES_LINE =
   'Staff can open or close registration from ⋯ until the application date. Ask an admin to add or change cycles.';
 export const VIEW_ONLY = 'View only. Ask an admin to make changes.';
@@ -327,6 +327,9 @@ export const addDaySub = (cycleName, index) => `${cycleName || 'New cycle'} · d
 export const DAY_NAME = 'Name';
 export const DAY_NAME_HINT = 'Shown to families on the form and the confirmation page.';
 export const DATE = 'Date';
+// Every Black Belt date field is the dashboard's calendar (v1.018, design review BB12):
+export const CHOOSE_DATE = 'Choose…'; // an empty date field (as Star's)
+export const PAST_DATES_HINT = 'Past dates can’t be chosen.'; // the testing day's and the payment due dates' calendars
 export const START_TIME = 'Start time';
 export const END_TIME = 'End time';
 export const PLACE = 'Place';
@@ -360,9 +363,9 @@ export const dayLine = (day) => `${shortDate(day.date)} · ${timeRange(day.start
 // "Second part · 2:30–3:30 PM · Horgan Arena, Auburn"
 export const secondLine = (second) => `${SECOND_PART} · ${timeRange(second.start, second.end)} · ${placeText(second.place)}`;
 
-// ===== Cycles 6 · Rubric and prices =====
+// ===== Cycles 6 · Rubric and waiver =====
 export const RUBRIC_LINE = 'Same for both schools. Prices are set on each cycle.';
-export const LOADING_RUBRIC = 'Loading Rubric and prices';
+export const LOADING_RUBRIC = 'Loading Rubric and waiver';
 export const WAIVER = 'Waiver';
 export const versionLabel = (v) => `Version ${v}`;
 export const READ_ALL = 'Read all';
@@ -571,13 +574,21 @@ export const alreadyPaidAskAdmin = (cents) => `${money(cents)} is already paid. 
 export const PAYMENT_RECORDED_ASK_ADMIN = 'A payment is recorded. Ask an admin.';
 export const RECORD_REFUND = 'Record refund';
 export const recordRefundOverpaid = (cents) => `Record refund · ${money(cents)} overpaid`;
+// The same item in two parts, so the row ⋯ can keep "· $50 overpaid" together when it wraps
+export const overpaidPart = (cents) => `· ${money(cents)} overpaid`;
 export const PRINT_RECEIPT = 'Print receipt';
-export const REMOVE_CANDIDATE = 'Remove candidate';
 export const RESTORE = 'Restore';
 export const DELETE_PERMANENTLY = 'Delete permanently';
 
 // Statuses → words (B returns codes only)
-export const candidateStale = (name) => `Someone else changed ${name} just now. Close and open them again to see the change.`;
+// The someone-else-changed refusal (v0.966). Used where the screen has already reloaded, so
+// "Their change is shown" is true: a row's refusal, the detail's, a toast Undo of BB5 (v0.967).
+// The name can be a candidate's or a cycle's ("Someone else changed Spring 2027 …").
+export const candidateStale = (name) => `Someone else changed ${name} just now, so nothing was done. Their change is shown.`;
+// The same refusal as a NOTE inside an open dialog (Record payment, Edit details …): the dialog
+// still shows what was typed, not the other person's change, so it keeps the old words (v0.966:
+// "inside the open box these stay a note, as today").
+export const candidateStaleInDialog = (name) => `Someone else changed ${name} just now. Close and open them again to see the change.`;
 export const CANDIDATE_GONE = 'This candidate was deleted.'; // (not in the mockups)
 export const CANDIDATE_FINISHED = "This cycle is finished, so candidates can't be added.";
 export const PAPER_WAIVER_FINISHED = "This cycle is finished, so the waiver can't be recorded here."; // (not in the mockups)
@@ -777,13 +788,34 @@ export const TOAST_PAYMENT_CHANGED = 'Payment changed';
 export const UNDO_EDIT_REASON = 'Undo of the change just made'; // (not in the mockups)
 export const PAYMENT_GONE = 'This payment was already undone or changed.';
 
-// OP-B1 (working default): Undo payment asks first, then a toast WITHOUT Undo — kept here so the
-// wording can follow Jeffrey's choice at CP2.
-export const undoPaymentTitle = (what) => (/^Payment /.test(what) ? `Undo p${what.slice(1)}?` : 'Undo this payment?');
-export const undoPaymentBody = (cents, method, paidOn, name) =>
-  `${money(cents)} ${methodName(method).toLowerCase()} from ${monthDay(paidOn)} comes off ${name}'s balance. The history keeps it.`;
+// Undo payment asks first, then a toast WITHOUT Undo (OP-B1). The box names the person and the
+// payment (v0.964, mockup C option A): the title is Star's shape with the amount and how, never
+// built from the installments; the second line says when it was paid and what it was for (v0.965).
+// "Undo Mia Chen’s $870 card payment?"
+export const undoPaymentTitle = (name, cents, method) => `Undo ${name}’s ${money(cents)} ${methodName(method).toLowerCase()} payment?`;
+// What a payment was for, inside a sentence (v0.964, v0.965): "payment 1", "payments 1, 2 and 3",
+// "the full fee" (a one-payment plan's only payment), "the Kukkiwon certificate", "payment 2 and the
+// Kukkiwon certificate", "payments 1, 2 and the Kukkiwon certificate". '' when nothing is known.
+// paymentsCount: the number of payments in the candidate's plan (the detail's candidate.plan).
+export function forSentence(items, { paymentsCount = null } = {}) {
+  const list = Array.isArray(items) ? items : [];
+  const kukkiwon = list.includes('kukkiwon');
+  const nos = list.filter((x) => x !== 'kukkiwon').map((x) => Number(String(x).slice(1))).sort((a, b) => a - b);
+  let pays = '';
+  if (paymentsCount === 1 && nos.length === 1 && nos[0] === 1) pays = 'the full fee';
+  else if (nos.length === 1) pays = `payment ${nos[0]}`;
+  // "payments 1, 2 and 3" — with the Kukkiwon certificate too: "payments 1 and 2 and the Kukkiwon certificate"
+  else if (nos.length > 1) pays = `payments ${andList(nos.map(String))}`;
+  if (!kukkiwon) return pays;
+  return pays ? `${pays} and the Kukkiwon certificate` : 'the Kukkiwon certificate';
+}
+// "Paid on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
+// The date is the day the family paid (line.paidOn), not the day it was typed in.
+export const undoPaymentBody = (paidOn, what) =>
+  `Paid on ${monthDay(paidOn)}${what ? ` for ${what}` : ''}. It comes off the balance; the history keeps it.`;
 export const UNDO_PAYMENT_CONFIRM = 'Undo payment';
-export const toastPaymentUndone = (what, cents, name) => `${what} undone · ${money(cents)} · ${name}`;
+// The toast after it: "Payment undone · $870 card · Mia Chen"
+export const toastPaymentUndone = (cents, method, name) => `Payment undone · ${money(cents)} ${methodName(method).toLowerCase()} · ${name}`;
 export const UNDO_REFUND_TITLE = 'Undo the refund?'; // (not in the mockups)
 export const undoRefundBody = (cents, paidOn, name) => `The ${money(cents)} refund of ${monthDay(paidOn)} comes off ${name}'s history. The change log keeps it.`; // (not in the mockups)
 export const toastRefundUndone = (cents, name) => `Refund undone · ${money(cents)} · ${name}`; // (not in the mockups)
@@ -866,6 +898,8 @@ export const addSub = (cycleName) => `${cycleName} · for walk-ins and late fami
 export const addClosedSub = (date) => `Registration closed on ${weekdayMonthDay(date)}; staff can still add here.`;
 export const SCHOOL = 'School';
 export const DOB = 'Date of birth';
+// The date of birth's calendar (v1.018, design review BB12): Star's staff birthday wording.
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
 export const TESTING_FOR = 'Testing for';
 export const HOW_THEY_PAY = 'How they’ll pay';
 export const AMOUNTS_AFTER_DAN = 'Amounts show once you choose a Dan.';
@@ -915,11 +949,8 @@ export const toastKeptOne = (name) => `Kept one ${name} · the other is under Re
 export const TOAST_BOTH_KEPT = 'Both kept';
 export const DUPLICATE_CHANGED = 'These registrations changed just now. Close and open them again.';
 
-// ----- Remove (v0.113) -----
-export const removeTitle = (name) => `Remove ${name}?`;
+// ----- Withdraw / Delete permanently (v0.113; two menu items since v1.007 / v0.963) -----
 export const WITHDRAW = 'Withdraw';
-export const WITHDRAW_HINT = 'Kept under Removed, with their payments; can be restored.';
-export const DELETE_HINT = "Deletes the registration and its signed waiver. This can't be undone."; // (not in the mockups)
 export const hasPaymentRecords = (name) => `${name} has payment records, so they can't be deleted. Withdraw them instead.`;
 export const hasPaymentRecordsShort = (name) => `${name} has payment records, so they can't be deleted.`; // a candidate already withdrawn (not in the mockups)
 export const deleteTitle = (name) => `Delete ${name} permanently?`;
@@ -938,7 +969,7 @@ export const signatureDeleted = (stamp) => `The signature and signer's name were
 export const LOADING_SIGNATURE = 'Loading the signature'; // (not in the mockups)
 export const UNDO_STALE_CANDIDATE = "Couldn't undo. Someone else changed this candidate just now."; // (not in the mockups)
 
-// ===== The rubric: Rubric and prices' Default rubric card, and a cycle's Rubric tab =====
+// ===== The rubric: Rubric and waiver's Default rubric card, and a cycle's Rubric tab =====
 // (CONTRACT-0024 §10.3, mockups TKD-BlackBelt-Rubric-Mockups.html R1–R14, rulebook v0.921–v0.935.)
 // Wording not in those mockups is marked "new wording, not in the mockups".
 
@@ -1186,6 +1217,12 @@ export const lockedSince = (date) => `Locked since registration opened on ${date
 export const GO_TO_DEFAULT = 'Go to the default rubric';
 export const FIRST_OPEN_ADMIN = 'An admin opens it the first time (it locks the rubric).';
 export const CANT_UNDO_REGISTERED = "Can't undo: a family has already registered."; // (new wording, not in the mockups)
+// BB5 (v0.967): the refusals of the new Undos (Edit details, Add / Edit cycle, Keeping time)
+export const undoDanHasGrades = (name) => `Can't undo: grades were already entered for ${name}'s new Dan.`; // (new wording, not in the mockups)
+export const UNDO_CYCLE_HAS_GRADES = "Can't undo: grades were already entered on a testing day this save changed."; // (new wording, not in the mockups)
+export const UNDO_CYCLE_INVALID = "Can't undo this save any more (a date may be in the past now). Use Edit cycle to change it back."; // (new wording, not in the mockups)
+export const UNDO_KEEP_STALE = 'Someone else changed the keeping time just now, so nothing was done. Their change is shown.'; // (new wording, not in the mockups)
+export const UNDO_KEEP_DELETES = "Can't undo: the old numbers would delete personal details now. Use the Edit button to change them."; // (new wording, not in the mockups)
 export const UNDO_OPEN_TOO_LATE = "Couldn't undo: it's too late, or someone else changed this cycle just now."; // (new wording, not in the mockups)
 
 // ----- R14: Add cycle / Edit cycle -----

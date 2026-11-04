@@ -1,0 +1,671 @@
+{
+  "title": "Black Belt · Mockup E — why Add candidate is grayed: a gray line (BB4)",
+  "subtitle": "Drawn on the real preview cycle page (fake data, Spring 2027, admin). <b>What changes (rule v1.004):</b> a grayed button says why on the screen, not only in a toast after it's pressed. Add candidate is grayed in two cases: <b>Hide private details</b> is on (“Add new candidates at the desk.”) or <b>the cycle is finished</b> (“This cycle is finished, so candidates can't be added.”). It stays grayed and focusable (aria-disabled, never disabled; checked). Pressing it still does nothing. <b>One question: where does the gray line go, on the PC and on phones?</b>",
+  "width": 2400,
+  "columns": [
+    {
+      "label": "Today · only a toast when pressed",
+      "tone": "today",
+      "items": [
+        {
+          "src": "g-pc-hide-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.6,
+          "caption": "<b>PC</b>, Hide private details on: the grayed button, and a toast only after pressing it.",
+          "marks": [
+            [
+              1078,
+              130,
+              142,
+              32
+            ],
+            [
+              1046,
+              741,
+              210,
+              36
+            ]
+          ]
+        },
+        {
+          "src": "g-pc-past-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.6,
+          "caption": "<b>PC</b>, a finished cycle.",
+          "marks": [
+            [
+              1078,
+              130,
+              142,
+              32
+            ],
+            [
+              940,
+              741,
+              316,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-tab-hide-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>, Hide on",
+              "marks": [
+                [
+                  602,
+                  146,
+                  142,
+                  36
+                ],
+                [
+                  586,
+                  1121,
+                  210,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "g-tab-past-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>, finished",
+              "marks": [
+                [
+                  602,
+                  146,
+                  142,
+                  36
+                ],
+                [
+                  480,
+                  1121,
+                  316,
+                  36
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-phone-hide-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.45,
+              "caption": "<b>390</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  227,
+                  358,
+                  36
+                ],
+                [
+                  90,
+                  741,
+                  210,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "g-phone-past-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.45,
+              "caption": "<b>390</b>, finished",
+              "marks": [
+                [
+                  16,
+                  227,
+                  358,
+                  36
+                ],
+                [
+                  37,
+                  741,
+                  316,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-hide-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.45,
+              "caption": "<b>320</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  227,
+                  288,
+                  36
+                ],
+                [
+                  55,
+                  537,
+                  210,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-past-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.45,
+              "caption": "<b>320</b>, finished",
+              "marks": [
+                [
+                  16,
+                  227,
+                  288,
+                  36
+                ],
+                [
+                  16,
+                  517,
+                  288,
+                  55
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Amber: the grayed button gives no reason until it's pressed, and then only in a toast that disappears. A screen reader already hears the reason (a hidden line tied to the button)."
+    },
+    {
+      "label": "A · one line under the page title (recommended)",
+      "tone": "after",
+      "items": [
+        {
+          "src": "g-pc-hide-A.png",
+          "crop": [
+            52,
+            90,
+            1228,
+            190
+          ],
+          "scale": 0.6,
+          "caption": "<b>PC</b>, Hide on: with the top bar's “private details hidden” icon (ti-currency-dollar-off).",
+          "marks": [
+            [
+              76,
+              190,
+              210,
+              20
+            ]
+          ]
+        },
+        {
+          "src": "g-pc-past-A.png",
+          "crop": [
+            52,
+            90,
+            1228,
+            190
+          ],
+          "scale": 0.6,
+          "caption": "<b>PC</b>, finished: the line without an icon.",
+          "marks": [
+            [
+              76,
+              190,
+              292,
+              20
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-tab-hide-A.png",
+              "shotWidth": 820,
+              "crop": [
+                72,
+                100,
+                748,
+                190
+              ],
+              "scale": 0.48,
+              "caption": "<b>Tablet</b>, Hide",
+              "marks": [
+                [
+                  96,
+                  206,
+                  210,
+                  20
+                ]
+              ]
+            },
+            {
+              "src": "g-tab-past-A.png",
+              "shotWidth": 820,
+              "crop": [
+                72,
+                100,
+                748,
+                190
+              ],
+              "scale": 0.48,
+              "caption": "<b>Tablet</b>, finished",
+              "marks": [
+                [
+                  96,
+                  206,
+                  292,
+                  20
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-phone-hide-A.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                110,
+                390,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>390</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  235,
+                  210,
+                  20
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-hide-A.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                110,
+                320,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>320</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  235,
+                  210,
+                  20
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-phone-past-A.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                110,
+                390,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>390</b>, finished",
+              "marks": [
+                [
+                  16,
+                  235,
+                  292,
+                  20
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-past-A.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                110,
+                320,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>320</b>, finished: 2 lines",
+              "marks": [
+                [
+                  16,
+                  235,
+                  288,
+                  39
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-p320-hide-A.png",
+              "shotWidth": 320,
+              "crop": [
+                8,
+                226,
+                304,
+                70
+              ],
+              "scale": 1.15,
+              "caption": "<b>320, zoomed</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  235,
+                  210,
+                  20
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-past-A.png",
+              "shotWidth": 320,
+              "crop": [
+                8,
+                226,
+                304,
+                98
+              ],
+              "scale": 1.15,
+              "caption": "<b>320, zoomed</b>, finished",
+              "marks": [
+                [
+                  16,
+                  235,
+                  288,
+                  39
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Green: the new line. Class <b>.phidden-line.pdesk-line</b> (Prospects' own, 13px). <b>Pro:</b> the same place and look as Prospects' approved line (v0.616), so the two sections match. Full width, so it is never squeezed into the header on narrow screens. On phones it sits right above the full-width button anyway. <b>Con:</b> v1.004 says the reason is “a gray line next to it”; A puts it under the page title, so on the PC it is on the left, across the page from the button on the right. <b>Why still recommended:</b> Prospects already decided this place for the same kind of desk-only button (v0.616), and the sections should match."
+    },
+    {
+      "label": "B · a line right under the button",
+      "tone": "after",
+      "items": [
+        {
+          "src": "g-pc-hide-B.png",
+          "crop": [
+            52,
+            90,
+            1228,
+            190
+          ],
+          "scale": 0.6,
+          "caption": "<b>PC</b>, Hide on: right-aligned under the button.",
+          "marks": [
+            [
+              1049,
+              178,
+              171,
+              18
+            ]
+          ]
+        },
+        {
+          "src": "g-pc-past-B.png",
+          "crop": [
+            52,
+            90,
+            1228,
+            190
+          ],
+          "scale": 0.6,
+          "caption": "<b>PC</b>, finished.",
+          "marks": [
+            [
+              950,
+              178,
+              270,
+              18
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-tab-hide-B.png",
+              "shotWidth": 820,
+              "crop": [
+                72,
+                100,
+                748,
+                190
+              ],
+              "scale": 0.48,
+              "caption": "<b>Tablet</b>, Hide",
+              "marks": [
+                [
+                  573,
+                  194,
+                  171,
+                  18
+                ]
+              ]
+            },
+            {
+              "src": "g-tab-past-B.png",
+              "shotWidth": 820,
+              "crop": [
+                72,
+                100,
+                748,
+                190
+              ],
+              "scale": 0.48,
+              "caption": "<b>Tablet</b>, finished: tight against the summary line",
+              "marks": [
+                [
+                  474,
+                  194,
+                  270,
+                  18
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-phone-hide-B.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                110,
+                390,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>390</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  267,
+                  171,
+                  18
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-hide-B.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                110,
+                320,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>320</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  267,
+                  171,
+                  18
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-phone-past-B.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                110,
+                390,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>390</b>, finished",
+              "marks": [
+                [
+                  16,
+                  267,
+                  270,
+                  18
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-past-B.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                110,
+                320,
+                240
+              ],
+              "scale": 0.8,
+              "caption": "<b>320</b>, finished",
+              "marks": [
+                [
+                  16,
+                  267,
+                  270,
+                  18
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "g-p320-hide-B.png",
+              "shotWidth": 320,
+              "crop": [
+                8,
+                220,
+                304,
+                76
+              ],
+              "scale": 1.15,
+              "caption": "<b>320, zoomed</b>, Hide",
+              "marks": [
+                [
+                  16,
+                  267,
+                  171,
+                  18
+                ]
+              ]
+            },
+            {
+              "src": "g-p320-past-B.png",
+              "shotWidth": 320,
+              "crop": [
+                8,
+                220,
+                304,
+                76
+              ],
+              "scale": 1.15,
+              "caption": "<b>320, zoomed</b>, finished",
+              "marks": [
+                [
+                  16,
+                  267,
+                  270,
+                  18
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Green: the new line. Class <b>.bbe-gray-line</b> (Black Belt's own small gray line from the rubric editor, 12px, no icon). <b>Pro:</b> the reason sits right by the button on every screen. <b>Con:</b> it is not how Prospects does it. On the PC and tablet the header row has to make room under the button: on a tablet it runs into the cycle's summary line, and longer words would wrap there. On phones it sits between the button and the tabs."
+    }
+  ],
+  "footer": "<b>Same for both options:</b> the words are today's (Black Belt's text.js). Prospects' line adds a second sentence (“Email and form answers are hidden on this tablet.”). Black Belt could add one too, e.g. “Payments are hidden on this tablet.”, as a separate small change if you want it. With the line on screen, pressing the grayed button no longer shows a toast (v1.004: toasts only say something was done). The line goes away as soon as Hide private details is turned off. <b>When both reasons apply</b> (Hide private details on <b>and</b> the cycle finished), only one line shows: “Add new candidates at the desk.” (the order CyclePage.jsx already uses to pick the reason)."
+}

@@ -86,16 +86,15 @@ export default function StepDetails({
 
           {/* Date of birth */}
           <div className="bbf-field">
-            <label className="bbf-label" htmlFor="bbf-dob">
-              {T.DOB}
-            </label>
+            {/* A div, not a <label>: the field is a button (the calendar), named by its own label */}
+            <div className="bbf-label">{T.DOB}</div>
+            {/* Star's family birthday calendar (v1.018); ref.focus() still works for Continue */}
             <DateField
               ref={refs.dob}
               id="bbf-dob"
               value={form.dob}
               onChange={(dob) => update({ dob })}
-              min="1900-01-01"
-              max={today}
+              today={today}
               invalid={Boolean(err('dob'))}
               describedBy={describe('dob', 'bbf-dob-hint')}
             />

@@ -5,6 +5,7 @@
 //           change it, drag it by its grip to move it; click empty space for the form settings
 //   right   the chosen field's settings (FieldEditor, plus BookingSettings for Book a class),
 //           or the form's settings (FormSettings)
+// Header: "← Forms" above the form's name on every device (the back link of v0.59 / v1.020).
 // Tablet: the left panel becomes an "+ Add field" button. Phone: a list of fields; tap one to
 // change it full screen; ⋯ → Move up / Move down / Delete field.
 //
@@ -27,7 +28,7 @@ import { toTimeText } from '../../lib/schedule/time.js';
 import { emailOk, fieldsProblem, LOCKED_TYPES, longTextProblem, newField, nextFieldId, PALETTE, slugOk } from '../../lib/forms/fields.js';
 import { publishForm, saveDraft, setBooking, setFormStatus } from '../../lib/forms/api.js';
 import { Grip } from '../testing/RankRows.jsx';
-import BookingSettings, { bookingProblem, timeSlotKey } from './BookingSettings.jsx';
+import BookingSettings, { bookingProblem, groupSlotKey, timeSlotKey } from './BookingSettings.jsx';
 import FieldEditor from './FieldEditor.jsx';
 import FieldPalette, { addBlocked, FieldIcon } from './FieldPalette.jsx';
 import FormSettings from './FormSettings.jsx';
@@ -56,13 +57,17 @@ function settingsOk(s) {
 }
 
 // The booking settings as the screen edits them, from the database rows.
-function bookingDraftOf(offers, limits) {
+function bookingDraftOf(offers, limits, groupLimits = []) {
   const times = {};
   for (const l of limits) times[timeSlotKey(l.classId, l.weekday, l.start)] = { on: l.spotLimit > 0, spots: l.spotLimit > 0 ? l.spotLimit : 3 };
+  // classes taught together (v0.620): one spot number per combined time
+  const groups = {};
+  for (const g of groupLimits) groups[groupSlotKey(g.classIds, g.weekday, g.start)] = { on: g.spotLimit > 0, spots: g.spotLimit > 0 ? g.spotLimit : 3 };
   return {
     offered: offers.map((o) => o.classId),
     defaults: Object.fromEntries(offers.map((o) => [o.classId, o.defaultLimit])),
     times,
+    groups,
     daysAhead: offers[0]?.daysAhead ?? 14,
     minHoursAhead: offers[0]?.minHoursAhead ?? 3,
   };
@@ -80,8 +85,8 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   const [banner, setBanner] = useState(null);
   const [fieldNote, setFieldNote] = useState(null);
   const [slugTaken, setSlugTaken] = useState(false);
-  const [booking, setBookingDraft] = useState(() => bookingDraftOf(detail.offers, detail.limits));
-  const [bookingSaved, setBookingSaved] = useState(() => bookingDraftOf(detail.offers, detail.limits));
+  const [booking, setBookingDraft] = useState(() => bookingDraftOf(detail.offers, detail.limits, detail.groupLimits));
+  const [bookingSaved, setBookingSaved] = useState(() => bookingDraftOf(detail.offers, detail.limits, detail.groupLimits));
   const [bookingSaving, setBookingSaving] = useState(false);
   const [bookingNote, setBookingNote] = useState(null);
   const [publishing, setPublishing] = useState(false);
@@ -105,10 +110,10 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     setSettings(form.settings);
     versionRef.current = form.version;
     savedRef.current = JSON.stringify({ fields: tidy(form.draft), name: form.name, slug: form.slug, settings: form.settings });
-    const b = bookingDraftOf(detail.offers, detail.limits);
+    const b = bookingDraftOf(detail.offers, detail.limits, detail.groupLimits);
     setBookingDraft(b);
     setBookingSaved(b);
-  }, [form, detail.offers, detail.limits]);
+  }, [form, detail.offers, detail.limits, detail.groupLimits]);
 
   // ----- Saving as you go -----
   function enqueue(job) {
@@ -251,11 +256,31 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   // ----- Booking -----
   const classes = school?.classes ?? [];
   const versionToday = useMemo(() => (school ? versionInEffect(school.versions, school.today) : null), [school]);
-  const timesFor = (classId) => {
+  // Times taught together (v0.620): a slot of today's schedule with 2+ classes this form offers is
+  // ONE combined time, with one spot number — and it leaves those classes' own lists.
+  const groups = useMemo(() => {
+    if (!versionToday) return [];
+    const seen = new Map();
+    for (const s of school.slots) {
+      if (s.versionId !== versionToday.id) continue;
+      const classIds = s.classIds.filter((id) => booking.offered.includes(id)); // the slot's own order
+      if (classIds.length < 2) continue;
+      const start = toTimeText(s.start);
+      const key = groupSlotKey(classIds, s.weekday, start);
+      if (!seen.has(key)) seen.set(key, { key, classIds, weekday: s.weekday, start, end: toTimeText(s.end) });
+    }
+    return [...seen.values()].sort((a, b) => a.weekday - b.weekday || (a.start < b.start ? -1 : 1));
+  }, [school, versionToday, booking.offered]);
+  // A combined time with no row of its own yet starts with the largest usual number of its classes.
+  const groupDefault = (classIds) => Math.max(...classIds.map((id) => booking.defaults[id] ?? 3));
+  const inGroup = (classId, weekday, start) => groups.some((g) => g.weekday === weekday && g.start === start && g.classIds.includes(classId));
+  // all = also the times taught together (only for saving, so each class keeps its own number)
+  const timesFor = (classId, all = false) => {
     if (!versionToday) return [];
     const seen = new Map();
     for (const s of school.slots) {
       if (s.versionId !== versionToday.id || !s.classIds.includes(classId)) continue;
+      if (!all && inGroup(classId, s.weekday, toTimeText(s.start))) continue; // listed once, under "Taught together"
       const start = toTimeText(s.start);
       const key = `${s.weekday}|${start}`;
       if (!seen.has(key)) seen.set(key, { weekday: s.weekday, start, end: toTimeText(s.end) });
@@ -272,12 +297,16 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       const offers = booking.offered.map((classId) => ({ classId, defaultLimit: booking.defaults[classId] ?? 3, daysAhead: booking.daysAhead, minHoursAhead: booking.minHoursAhead }));
       const limits = [];
       for (const classId of booking.offered) {
-        for (const t of timesFor(classId)) {
+        for (const t of timesFor(classId, true)) {
           const v = booking.times[timeSlotKey(classId, t.weekday, t.start)] ?? { on: true, spots: booking.defaults[classId] ?? 3 };
           limits.push({ classId, weekday: t.weekday, start: t.start, spotLimit: v.on ? v.spots : 0 });
         }
       }
-      const res = await setBooking({ id: form.id, expectedVersion: versionRef.current, offers, limits });
+      const groupRows = groups.map((g) => {
+        const v = booking.groups?.[g.key] ?? { on: true, spots: groupDefault(g.classIds) };
+        return { classIds: g.classIds, weekday: g.weekday, start: g.start, spotLimit: v.on ? v.spots : 0 };
+      });
+      const res = await setBooking({ id: form.id, expectedVersion: versionRef.current, offers, limits, groups: groupRows });
       if (res.status === 'ok') versionRef.current = res.version;
       return res;
     });
@@ -324,7 +353,9 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       onReload();
     } else setBanner({ kind: 'save', text: T.SAVE_FAILED_BAR });
   }
-  async function setAccepting(on) {
+  // The "Accepting sign-ups (Live)" switch. `quiet` = the Undo of an earlier flip: no Undo again,
+  // just "Undone".
+  async function setAccepting(on, quiet = false) {
     setStatusBusy(true);
     await saveNow();
     const res = await enqueue(async () => {
@@ -334,11 +365,13 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     });
     setStatusBusy(false);
     if (res.status === 'ok') {
-      showToast(on ? T.reopenedToast(cleanText(name)) : T.closedToast(cleanText(name)));
+      // Undo for 5 seconds (v1.006, N2): flips the switch back
+      if (!quiet) showToast(on ? T.reopenedToast(cleanText(name)) : T.closedToast(cleanText(name)), { icon: false, action: { label: T.UNDO, onAction: () => setAccepting(!on, true) } });
+      else showToast(T.UNDONE, { icon: false }); // the Undo worked (v0.618)
       onReload();
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
-      setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: quiet ? T.UNDO_STALE : T.STALE_BUILDER });
       onReload();
     } else setBanner({ kind: 'save', text: T.SAVE_FAILED_BAR });
   }
@@ -347,13 +380,16 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   const line = T.statusLine(form, { dirty: unpublished, saving: saveState.saving || saveState.pending, failed: saveState.failed });
   const header = (
     <div className="fhead">
-      <button type="button" className="icon-button" aria-label={T.BACK_TO_FORMS} data-builder-back onClick={async () => {
-        await saveNow();
-        onBack();
-      }}>
-        <IconArrowLeft size={20} aria-hidden="true" />
-      </button>
       <div className="fhead-titles">
+        {/* "← Forms": saves the draft first, then goes back to the list (v1.020, v0.624) */}
+        <button type="button" className="link-button fb-back" aria-label={T.BACK_TO_FORMS} data-builder-back onClick={async () => {
+          await saveNow();
+          onBack();
+        }}>
+          {/* ti-arrow-left = back */}
+          <IconArrowLeft size={16} aria-hidden="true" />
+          {T.FORMS_LINK}
+        </button>
         <h1 className="ptitle">{cleanText(name) || form.name}</h1>
         <p className="psub" aria-live="polite">
           {line.text}
@@ -422,6 +458,9 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
             dirty={bookingDirty}
             classes={classes}
             timesFor={timesFor}
+            groups={groups}
+            groupDefault={groupDefault}
+            agesOf={(classId) => school?.ages?.[classId] ?? { from: null, to: null }}
             readOnly={false}
             saving={bookingSaving}
             note={bookingNote}

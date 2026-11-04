@@ -7,7 +7,8 @@ import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Forms';
-export const VIEW_ONLY_LINE = 'View only — ask an admin to create or change forms.';
+// Staff can fill in and share forms, so the line says what they can do first (the second pattern in v1.021).
+export const VIEW_ONLY_LINE = 'Staff can fill in and share forms. Ask an admin to create or change forms.';
 export const NEW_FORM = 'New form';
 export const NEW_SHORT = 'New';
 export const LOADING = 'Loading forms';
@@ -20,7 +21,7 @@ export const CLOSE = 'Close';
 export const SAVE = 'Save';
 export const SAVING = 'Saving…';
 export const BACK = 'Back';
-export const NEXT = 'Next';
+export const CONTINUE = 'Continue'; // Fill in uses the family page's words (rulebook v0.622)
 export const MORE_ACTIONS = 'More actions';
 
 // ----- List -----
@@ -36,10 +37,12 @@ export const NO_FORMS = 'No forms yet.';
 export const NO_FORMS_ADMIN = 'No forms yet. Start one with "New form".';
 export const FILL_IN = 'Fill in';
 export const FILL_IN_ITEM = 'Fill in for a family';
+// while Hide private details is on, Fill in is desk-only (v0.616): the page line and the menu item's reason
+export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answers are hidden on this tablet.';
 export const SHARE = 'Share';
 export const DUPLICATE = 'Duplicate';
 export const CLOSE_FORM = 'Close form';
-export const REOPEN_FORM = 'Open form again';
+export const OPEN_FORM = 'Open form';
 export const DELETE_FORM = 'Delete';
 export const shareLabel = (name) => `Share ${name}`;
 export const moreLabel = (name) => `More actions for ${name}`;
@@ -47,6 +50,9 @@ export const openLabel = (name) => `Open ${name}`;
 export const duplicated = (name) => `Copied as "${name}" (a Draft).`;
 export const closedToast = (name) => `${name} is closed — the link now says so.`;
 export const reopenedToast = (name) => `${name} is taking sign-ups again.`;
+export const UNDO = 'Undo'; // on the Close / Open toasts (v1.006, N2)
+export const UNDONE = 'Undone'; // after an Undo worked (v0.618)
+export const UNDO_STALE = "Couldn't undo. Someone else changed this form just now."; // like Schedule's and Star's
 export const deletedToast = (name) => `${name} was deleted.`;
 export const DELETE_TITLE = 'Delete this form?';
 export const deleteText = (name) => `"${name}" and its booking settings will be deleted. This can't be undone.`;
@@ -71,7 +77,8 @@ export const NAME_TOO_LONG = 'Keep the name to 80 characters or fewer.';
 export const NAME_BAD = 'The name has a character that can\'t be used. Retype it.';
 
 // ----- Builder -----
-export const BACK_TO_FORMS = 'Back to Forms';
+export const BACK_TO_FORMS = 'Back to Forms'; // the back link's name for screen readers
+export const FORMS_LINK = 'Forms'; // the back link's visible words: "← Forms" (v1.020, v0.624)
 export const PREVIEW = 'Preview';
 export const PUBLISH = 'Publish';
 export const PUBLISHING = 'Publishing…';
@@ -153,6 +160,11 @@ export const BOOK_A_CLASS = 'Book a class';
 export const CLASSES_OFFERED = 'Classes offered';
 export const NO_CLASSES = 'This school has no classes yet (Testing → Classes and ranks).';
 export const timesAndSpots = (name) => `Times and spots · ${name}`;
+// classes taught together (rulebook v0.620)
+export const TOGETHER_TITLE = 'Taught together · times and spots';
+export const togetherHint = (example) =>
+  `One spot number for the whole time${example ? `. On the forms: “${example}”` : ''}. These times aren’t in the classes’ own lists; to offer one to a single class, untick the other class above.`;
+export const togetherTime = (weekdayTimeText, names) => `${weekdayTimeText} · ${names}`;
 export const SPOTS_HINT = 'Spots = free-class students per class. Untick a time to hide it.';
 export const NO_TIMES = 'This class isn\'t on the schedule yet.';
 export const SHOW_NEXT = 'Show the next';
@@ -246,7 +258,7 @@ export const AGREE = 'I have read and agree to the waiver';
 export const SIGN_HERE = 'Signature';
 export const SIGN_HINT = 'Sign with a finger, pen or mouse.';
 export const CLEAR = 'Clear';
-export const SUBMIT = 'Submit';
+export const SEND = 'Send';
 export const SUBMITTING = 'Sending…';
 export const PICK = 'Choose…';
 export const FIELD_PROBLEM = {
@@ -271,7 +283,7 @@ export const ANOTHER = 'Fill in another';
 export const TIME_TAKEN = 'A picked time just filled up or was cancelled. Pick another time.';
 export const FORM_CHANGED = 'The form was published again while you were filling it in. It was reloaded — check the answers and send again.';
 export const FORM_CLOSED = 'This form was closed meanwhile, so it can\'t take sign-ups.';
-export const SEND_FAILED = "It wasn't sent. Check the connection and press Submit again (it won't be saved twice).";
+export const SEND_FAILED = "It wasn't sent. Check the connection and press Send again (it won't be saved twice).";
 export const SEND_INVALID = 'Some answers were refused. Check them and send again.';
 export const timeOption = (t) => `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`;
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';

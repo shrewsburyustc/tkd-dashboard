@@ -393,15 +393,18 @@ export function timeToMinutes(text) {
   return h < 24 && min < 60 ? h * 60 + min : null;
 }
 
-// Reminder times are Off or 11:00 AM–11:00 PM in 15-minute steps (finance_set_reminder_time).
+// Reminder times are Off or 11:00 AM–11:00 PM in 5-minute steps (finance_set_reminder_time, migration 0029).
 export function isReminderTime(text) {
   const minutes = timeToMinutes(text);
-  return minutes !== null && minutes % 15 === 0 && minutes >= 11 * 60 && minutes <= 23 * 60;
+  // Like the database, refuse seconds ('19:30:30'); 'HH:MM:00' is fine.
+  const seconds = typeof text === 'string' ? /^\d{2}:\d{2}:(\d{2}(?:\.\d+)?)$/.exec(text)?.[1] : undefined;
+  const noSeconds = seconds === undefined || Number(seconds) === 0;
+  return minutes !== null && noSeconds && minutes % 5 === 0 && minutes >= 11 * 60 && minutes <= 23 * 60;
 }
 
 // Every choice of the reminder time dropdown, 'HH:MM', 11:00 → 23:00 (Off is null, not listed).
-export const REMINDER_TIME_CHOICES = Array.from({ length: (23 - 11) * 4 + 1 }, (_, i) => {
-  const minutes = 11 * 60 + i * 15;
+export const REMINDER_TIME_CHOICES = Array.from({ length: (23 - 11) * 12 + 1 }, (_, i) => {
+  const minutes = 11 * 60 + i * 5;
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 });
 

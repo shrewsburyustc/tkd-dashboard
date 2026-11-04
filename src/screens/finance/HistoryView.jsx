@@ -2,13 +2,15 @@
 // Why it exists: an overview so a day nobody closed is found at once, instead of one day at a
 // time. Each row: the day, its total, who closed it and when, and ONE tag (warnings first:
 // Changed after closing · Cash short / over · Not closed; then Closed; then No payments; today
-// shows "Today · open" until it is closed). An amber line at the top counts this month's days
-// that weren't closed. Clicking a row opens that day's report. ‹ › change the month.
+// shows "Today · open" until it is closed). An amber line at the top can count this month's days
+// that weren't closed. Both warnings are switched off for now (SHOW_UNCLOSED, v0.821, v0.822).
+// Clicking a row opens that day's report. ‹ › change the month.
 // On Both, both schools' days are listed with a School column (v0.207).
 // Address: #finance/history (App.jsx). The database refuses staff (contract §1.4).
 //
 // Layouts: PC table (Day · Total · Closed by · Status) · tablet (Closed by under the day) ·
-// phone stacked rows with a back arrow.
+// phone stacked rows. On every size "← Back to the day" is a text link above the heading
+// (v0.820, the back link the Testing and Camps pages use).
 //
 // Props: location, today, month ('YYYY-MM-01'), onMonth(month), onBack(), onOpenDay(day, schoolName),
 //        screenLocked, onNoAccess, wide, isPhone, isTouch
@@ -18,12 +20,18 @@ import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../lib/device.js';
 import { financeHistory } from '../../lib/finance/financeApi.js';
+import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import { useLiveLoad } from '../testing/events/useLiveLoad.js';
 import { addMonths, dayShort, money, monthShortYear, monthStart, monthYear } from './format.js';
 import * as T from './text.js';
 
-// The tag of a day row: { text, kind: 'warn' | 'ok' | 'neutral' }.
+// The "weren't closed" warnings: the amber "N days this month weren't closed: …" line above the
+// list (v0.821) and each day's "Not closed" tag (v0.822). Off for now: the school still closes
+// the drawer on paper, so every day would be flagged. A day that wasn't closed then shows no
+// tag. To bring both back when the school starts closing days in the dashboard, set this to true.
+const SHOW_UNCLOSED = false;
+
+// The tag of a day row: { text, kind: 'warn' | 'ok' | 'neutral' }, or null for no tag.
 function dayTag(row) {
   const diff = row.diff_cents ?? 0;
   // Only the number of checks was off (no cents): "Checks short".
@@ -42,7 +50,7 @@ function dayTag(row) {
     case 'over':
       return { text: part === 'cash' ? T.cashOverTag(diff) : part === 'checks' ? T.checksOverTag(diff) : part === 'card' ? T.cardOverTag(diff) : T.overTag(diff), kind: 'warn' };
     case 'not_closed':
-      return { text: T.TAG_NOT_CLOSED, kind: 'warn' };
+      return SHOW_UNCLOSED ? { text: T.TAG_NOT_CLOSED, kind: 'warn' } : null;
     case 'closed':
       return { text: T.CLOSED_TAG, kind: 'ok' };
     // A day with only Black Belt returned checks (mockup B7, v0.815): nothing to close, so not
@@ -57,6 +65,7 @@ function dayTag(row) {
 }
 
 function Tag({ tag }) {
+  if (!tag) return null;
   if (tag.kind === 'warn') {
     return (
       <span className="ttag ttag--warn">
@@ -97,32 +106,29 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
   const unclosedCount = live.data?.unclosed_count ?? unclosed.length;
 
   const top = (
-    <div className="fin-dayrow">
-      {isPhone ? (
-        <button type="button" className="icon-button fin-back" aria-label={T.BACK_TO_DAY} onClick={onBack}>
-          <IconArrowLeft size={20} aria-hidden="true" />
-        </button>
-      ) : (
-        <button type="button" className="btn" onClick={onBack}>
-          <IconArrowLeft size={16} aria-hidden="true" />
-          {T.BACK_TO_DAY}
-        </button>
-      )}
-      <h2 className="fin-day">{T.HISTORY}</h2>
-      <span className="fin-grow" />
-      <IconButton label={T.PREVIOUS_MONTH} Icon={IconChevronLeft} className="fin-ibtn" onClick={() => onMonth(addMonths(month, -1))} />
-      {/* Phones: "Oct 2026", so the row fits on one line at 320px */}
-      <strong className="fin-month">{isPhone ? monthShortYear(month) : monthYear(month)}</strong>
-      <IconButton
-        label={T.NEXT_MONTH}
-        Icon={IconChevronRight}
-        className={`fin-ibtn${atThisMonth ? ' is-unavailable' : ''}`}
-        aria-disabled={atThisMonth ? 'true' : undefined}
-        onClick={() => {
-          if (!atThisMonth) onMonth(addMonths(month, 1));
-        }}
-      />
-    </div>
+    <>
+      <button type="button" className="link-button fin-back-link" onClick={onBack}>
+        {/* ti-arrow-left = back */}
+        <IconArrowLeft size={16} aria-hidden="true" />
+        {T.BACK_TO_DAY}
+      </button>
+      <div className="fin-dayrow">
+        <h2 className="fin-day">{T.HISTORY}</h2>
+        <span className="fin-grow" />
+        <IconButton label={T.PREVIOUS_MONTH} Icon={IconChevronLeft} className="fin-ibtn" onClick={() => onMonth(addMonths(month, -1))} />
+        {/* Phones: "Oct 2026", so the row fits on one line at 320px */}
+        <strong className="fin-month">{isPhone ? monthShortYear(month) : monthYear(month)}</strong>
+        <IconButton
+          label={T.NEXT_MONTH}
+          Icon={IconChevronRight}
+          className={`fin-ibtn${atThisMonth ? ' is-unavailable' : ''}`}
+          aria-disabled={atThisMonth ? 'true' : undefined}
+          onClick={() => {
+            if (!atThisMonth) onMonth(addMonths(month, 1));
+          }}
+        />
+      </div>
+    </>
   );
 
   let body;
@@ -204,7 +210,7 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
   return (
     <>
       {top}
-      {unclosedCount > 0 && (
+      {SHOW_UNCLOSED && unclosedCount > 0 && (
         <div className="fin-banner" role="status">
           <IconAlertTriangle size={16} aria-hidden="true" />
           <span>

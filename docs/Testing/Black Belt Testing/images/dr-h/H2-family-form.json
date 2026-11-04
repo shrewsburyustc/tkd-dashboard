@@ -1,0 +1,204 @@
+{
+ "title": "Black Belt · H2 — Star's calendar for the family form's date of birth",
+ "subtitle": "On the public registration page, the date of birth becomes the same calendar Star's family page uses for birthdays: it reads “Mar 4, 2012”, opens on the Month list, the Year list runs from this year back 100 years (newest first), and future days are gray. It opens in the page under the field; on phones edge to edge. Nothing to decide: this was approved in the design review (v1.018). OK to build?",
+ "width": 1000,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "form-pc-today.png",
+     "crop": [
+      385,
+      100,
+      510,
+      110
+     ],
+     "scale": 0.88,
+     "caption": "<b>PC</b>",
+     "marks": [
+      [
+       393,
+       130,
+       494,
+       32
+      ]
+     ]
+    },
+    {
+     "src": "form-tab-today.png",
+     "shotWidth": 820,
+     "crop": [
+      155,
+      531,
+      510,
+      115
+     ],
+     "scale": 0.88,
+     "caption": "<b>Tablet 820</b>",
+     "marks": [
+      [
+       163,
+       561,
+       494,
+       36
+      ]
+     ]
+    },
+    {
+     "src": "form-phone-today.png",
+     "shotWidth": 390,
+     "crop": [
+      0,
+      567,
+      390,
+      120
+     ],
+     "scale": 1,
+     "caption": "<b>Phone 390</b>",
+     "marks": [
+      [
+       33,
+       597,
+       324,
+       40
+      ]
+     ]
+    },
+    {
+     "src": "form-p320-today.png",
+     "shotWidth": 320,
+     "crop": [
+      0,
+      669,
+      320,
+      120
+     ],
+     "scale": 1,
+     "caption": "<b>320</b>",
+     "marks": [
+      [
+       33,
+       699,
+       254,
+       40
+      ]
+     ]
+    }
+   ],
+   "note": "Amber: the browser's own date box (“mm/dd/yyyy”). Phones show their own wheel or sheet, so families see something different on each phone."
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "form-pc-after.png",
+     "crop": [
+      385,
+      100,
+      510,
+      390
+     ],
+     "scale": 0.88,
+     "caption": "<b>PC</b>: a bordered box in the page, under the field",
+     "marks": [
+      [
+       393,
+       130,
+       494,
+       32
+      ],
+      [
+       393,
+       170,
+       494,
+       307
+      ]
+     ]
+    },
+    {
+     "src": "form-tab-after.png",
+     "shotWidth": 820,
+     "crop": [
+      155,
+      185,
+      510,
+      435
+     ],
+     "scale": 0.88,
+     "caption": "<b>Tablet 820</b>: bigger days for fingers",
+     "marks": [
+      [
+       163,
+       210,
+       494,
+       38
+      ],
+      [
+       163,
+       258,
+       494,
+       353
+      ]
+     ]
+    },
+    {
+     "src": "form-phone-after.png",
+     "shotWidth": 390,
+     "crop": [
+      0,
+      100,
+      390,
+      460
+     ],
+     "scale": 1,
+     "caption": "<b>Phone 390</b>: edge to edge",
+     "marks": [
+      [
+       33,
+       130,
+       324,
+       40
+      ],
+      [
+       3,
+       178,
+       384,
+       370
+      ]
+     ]
+    },
+    {
+     "src": "form-p320-after.png",
+     "shotWidth": 320,
+     "crop": [
+      0,
+      100,
+      320,
+      460
+     ],
+     "scale": 1,
+     "caption": "<b>320</b>: all seven days fit",
+     "marks": [
+      [
+       33,
+       130,
+       254,
+       40
+      ],
+      [
+       3,
+       178,
+       314,
+       350
+      ]
+     ]
+    }
+   ],
+   "note": "Green: the field and its open calendar. While the calendar is open its own hint replaces “Opens a calendar.”, as on Star's page."
+  }
+ ],
+ "footer": "Drawn by switching the form's date field to the calendar for the pictures only (put back afterwards). <b>Earliest date of birth:</b> moves from Jan 1, 1900 (today's rule) to 100 years back (Star's Year list; 1927 in 2027). <b>Build notes:</b> the family page doesn't load the dashboard's styles, so it also needs the calendar's few style rules copied from Star's family page (star-register.css), or the calendar draws broken. That includes Star's rule that hides the field's error while the calendar is open (.sreg-dob:has(.dp-pop) + .reg-ferr), not just the hint, so an error never sits under the calendar, away from its field."
+}

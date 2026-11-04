@@ -1,0 +1,27 @@
+{
+  "title": "Camps C13 — the shared date picker for Camps’ dates (the camp-days calendar stays)",
+  "subtitle": "Rule v1.018: Star’s date picker (<code>src/components/DatePicker.jsx</code>) for every date staff pick. In Camps that is Add / Edit camp’s <b>Family sign-up opens</b>, <b>Family sign-up closes</b> and <b>Early price until</b> (section 2, Times), and Edit payment’s <b>Date paid</b>. The pictures show the <b>real shared part</b>, mounted over the page (not a drawing). It opens under the field on PC and tablet and in the page on phones, as in Star. Section 1’s camp-days calendar (several days at once) stays. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/c13-camp-pc-today.png", "crop": [260, 80, 760, 570], "scale": 1.0, "marks": [[296, 338, 688, 34]],
+        "caption": "<b>Edit camp, PC 1280×800.</b> The browser’s own date boxes (“05/03/2027” — each browser draws its own calendar)." },
+      { "row": [
+        { "src": "shots/c13-camp-ph-today.png", "crop": [0, 0, 390, 844], "scale": 0.55, "shotWidth": 390, "marks": [[28, 398, 334, 176]],
+          "caption": "<b>Phone 390×844.</b> Same three boxes." },
+        { "src": "shots/c13-pay-pc-today.png", "crop": [460, 80, 360, 460], "scale": 0.9, "marks": [[484, 322, 240, 32]],
+          "caption": "<b>Edit payment</b> (admin): Date paid is a browser box too." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "src": "shots/c13-camp-pc-after.png", "crop": [260, 80, 760, 570], "scale": 1.0, "marks": [[296, 338, 688, 34], [530, 374, 304, 272]],
+        "caption": "<b>PC.</b> Each date is the shared field (“Sun, Jul 4, 2027”); “Family sign-up closes” is open: Month and Year lists, Su–Sa, the chosen day tinted." },
+      { "row": [
+        { "src": "shots/c13-camp-ph-after.png", "crop": [0, 0, 390, 844], "scale": 0.55, "shotWidth": 390, "marks": [[28, 108, 334, 106], [12, 220, 366, 316]],
+          "caption": "<b>Phone.</b> The calendar opens in the page under the field, as Star’s does." },
+        { "src": "shots/c13-pay-pc-after.png", "crop": [460, 80, 360, 560], "scale": 0.9, "marks": [[484, 322, 312, 308]],
+          "caption": "<b>Edit payment.</b> Date paid uses the same picker; days after today can’t be picked (as today’s box)." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>For the build (not a new decision):</b> the pickers take the dialog’s existing rules as gray days where they apply — Date paid: nothing after today (as today); the sign-up dates keep their checks as they are now (opens ≤ closes ≤ last camp day, early price ≤ closes), shown as the field’s amber error line. The 320-wide phone was checked (no sideways scroll). Templates use day counts, not dates, so the template editor has no picker. <b>Script:</b> <code>mock-c13-datepicker.js</code> (mounts the real component with the page’s own React)."
+}

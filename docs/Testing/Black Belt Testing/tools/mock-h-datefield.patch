@@ -1,0 +1,126 @@
+# For the review pictures only (mockup H, BB12): temporary DatePicker DateFields with the existing date limits. Apply with git apply, take the pictures, then git checkout the files. Never commit to src.
+diff --git a/src/blackBelt/form/DateField.jsx b/src/blackBelt/form/DateField.jsx
+index d11d6ad..c7f542d 100644
+--- a/src/blackBelt/form/DateField.jsx
++++ b/src/blackBelt/form/DateField.jsx
+@@ -6,22 +6,15 @@
+ // only talks to this wrapper (value = 'YYYY-MM-DD' or ''), so switching it to DatePicker later
+ // changes this one file.
+ import { forwardRef } from 'react';
++import DatePicker from '../../components/DatePicker.jsx';
++import { monthDayYear } from '../../star-register/parts.jsx';
+ 
+-const DateField = forwardRef(function DateField({ id, value, onChange, min, max, invalid, describedBy }, ref) {
++const DateField = forwardRef(function DateField({ id, value, onChange, max, invalid, describedBy }, ref) {
++  const y = Number(String(max).slice(0, 4)); const years = []; for (let v = y; v >= y - 100; v -= 1) years.push(v);
+   return (
+-    <input
+-      ref={ref}
+-      id={id}
+-      type="date"
+-      className={`bbf-input bbf-input--date${invalid ? ' is-invalid' : ''}`}
+-      value={value}
+-      min={min}
+-      max={max}
+-      onChange={(e) => onChange(e.target.value)}
+-      aria-invalid={invalid || undefined}
+-      aria-describedby={describedBy}
+-      autoComplete="off"
+-    />
++    <DatePicker id={id} label="Date of birth" value={value} onChange={onChange} today={max} max={max} years={years} yearsNewestFirst
++      hint="Pick the month and year first, then tap the day. Future dates can’t be chosen." placeholder="Choose…"
++      invalid={invalid} describedBy={describedBy} inline emptyFocus="month" formatValue={monthDayYear} />
+   );
+ });
+ 
+diff --git a/src/blackBelt/staff/cycle/CycleDialog.jsx b/src/blackBelt/staff/cycle/CycleDialog.jsx
+index 7dd6308..fe988b8 100644
+--- a/src/blackBelt/staff/cycle/CycleDialog.jsx
++++ b/src/blackBelt/staff/cycle/CycleDialog.jsx
+@@ -209,7 +209,7 @@ export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf
+             <div className="field">
+               <label htmlFor={`${id}-app`}>{T.APPLICATION_DUE}</label>
+               <DateField
+-                id={`${id}-app`}
++                id={`${id}-app`} max={(v.days ?? []).map((d) => d.date).filter(Boolean).sort().at(-1) ?? null}
+                 value={v.applicationDue}
+                 readOnly={readOnly}
+                 invalid={Boolean(appMsg)}
+@@ -224,7 +224,7 @@ export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf
+             <div className="field">
+               <label htmlFor={`${id}-sub`}>{T.SUBMISSIONS_DUE}</label>
+               <DateField
+-                id={`${id}-sub`}
++                id={`${id}-sub`} max={(v.days ?? []).map((d) => d.date).filter(Boolean).sort().at(-1) ?? null}
+                 value={v.submissionsDue}
+                 readOnly={readOnly}
+                 invalid={Boolean(subMsg)}
+diff --git a/src/blackBelt/staff/cycle/DayDialog.jsx b/src/blackBelt/staff/cycle/DayDialog.jsx
+index 529219e..67961d0 100644
+--- a/src/blackBelt/staff/cycle/DayDialog.jsx
++++ b/src/blackBelt/staff/cycle/DayDialog.jsx
+@@ -186,6 +186,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
+           <label htmlFor={`${id}-date`}>{T.DATE}</label>
+           <DateField
+             id={`${id}-date`}
++            min={lock?.minDate && lock.minDate > today ? lock.minDate : today} hint="Past dates can’t be chosen."
+             value={v.date}
+             readOnly={Boolean(lock?.dateLocked)}
+             invalid={Boolean(dateMsg)}
+diff --git a/src/blackBelt/staff/cycle/PricesSection.jsx b/src/blackBelt/staff/cycle/PricesSection.jsx
+index 2cd5f55..86d9e17 100644
+--- a/src/blackBelt/staff/cycle/PricesSection.jsx
++++ b/src/blackBelt/staff/cycle/PricesSection.jsx
+@@ -21,6 +21,7 @@ import RowMenu from '../../../components/RowMenu.jsx';
+ import { formatDollars } from '../../../lib/money.js';
+ import { effectiveDueOn, planTotals } from '../../../lib/blackBelt/rules.js';
+ import { useReorderDrag } from '../../../lib/useReorderDrag.js';
++import { schoolToday } from '../../../lib/blackBelt/api.js';
+ import DateField from '../parts/DateField.jsx';
+ import Grip from '../parts/Grip.jsx';
+ import { DANS, priceTextProblem } from './formValues.js';
+@@ -100,7 +101,7 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
+ 
+     const dueField = (pay, i) => (
+       <DateField
+-        value={dueOf(pay)}
++        value={dueOf(pay)} min={schoolToday()} hint="Past dates can’t be chosen."
+         label={T.dueDateLabel(plan.name, pay.paymentNo)}
+         invalid={Boolean(dueShown[i])}
+         readOnly={readOnly}
+diff --git a/src/blackBelt/staff/parts/DateField.jsx b/src/blackBelt/staff/parts/DateField.jsx
+index 6d78c5e..21c4086 100644
+--- a/src/blackBelt/staff/parts/DateField.jsx
++++ b/src/blackBelt/staff/parts/DateField.jsx
+@@ -9,21 +9,16 @@
+ //
+ // Props: id, value, onChange(text), label (aria-label when there is no visible <label>),
+ //        describedBy, invalid, readOnly, autoFocus, className
+-export default function DateField({ id, value, onChange, label, describedBy, invalid = false, readOnly = false, autoFocus = false, className = '' }) {
++import DatePicker from '../../../components/DatePicker.jsx';
++import { schoolToday } from '../../../lib/blackBelt/api.js';
++export default function DateField({ id, value, onChange, label, describedBy, invalid = false, readOnly = false, min = null, max = null, hint }) {
++  const today = schoolToday(); const y = Number(today.slice(0, 4)); const dob = String(id).endsWith('-dob');
++  const years = []; for (let v = dob ? y - 80 : y - 1; v <= (dob ? y : y + 3); v += 1) years.push(v);
++  const isPhone = window.matchMedia('(max-width: 767px)').matches;
+   return (
+-    <input
+-      id={id}
+-      className={`input bb-date ${className}`.trim()}
+-      type="date"
+-      min="2000-01-01"
+-      max="2100-12-31"
+-      value={value ?? ''}
+-      readOnly={readOnly}
+-      aria-label={label}
+-      aria-describedby={describedBy}
+-      aria-invalid={invalid ? 'true' : undefined}
+-      data-autofocus={autoFocus ? true : undefined}
+-      onChange={(event) => onChange(event.target.value)}
+-    />
++    <DatePicker id={id} label={label ?? (dob ? 'Date of birth' : 'Date')} value={value} onChange={onChange} today={today}
++      min={dob ? '1900-01-01' : min} max={dob ? today : max} years={years}
++      hint={dob ? 'Pick the month and year first, then tap the day. Future dates can’t be chosen.' : hint}
++      placeholder="Choose…" disabled={readOnly} invalid={invalid} describedBy={describedBy} inline={isPhone} />
+   );
+ }

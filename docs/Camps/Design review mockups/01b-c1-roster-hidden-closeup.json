@@ -1,0 +1,16 @@
+{
+  "title": "Camps C1 · close-up (PC 1280×800, sharp) — the roster while “Hide private details” is on",
+  "subtitle": "The top of picture 1, at full size. Left: today. Right: the mockup — no “6 to collect · $1,355”, no Paid column, “Possible duplicate” on the name’s line. Amber = what changes.",
+  "dsf": 2,
+  "width": 1840,
+  "columns": [
+    { "label": "Today · switch on", "tone": "today", "items": [
+      { "src": "shots/c1-roster-pc-today-2x.png", "shotWidth": 2560, "crop": [150, 356, 1740, 1084], "scale": 0.5, "marks": [[424, 372, 270, 56], [1090, 656, 304, 784]],
+        "caption": "Paid column and “to collect” on a screen that says “Private details hidden”." }
+    ] },
+    { "label": "After · switch on (mockup)", "tone": "after", "items": [
+      { "src": "shots/c1-roster-pc-after-2x.png", "shotWidth": 2560, "crop": [150, 356, 1740, 1084], "scale": 0.5, "marks": [[144, 368, 880, 64], [380, 816, 280, 56]],
+        "caption": "Attendance, check-in and the duplicate warning stay." }
+    ] }
+  ]
+}

@@ -20,6 +20,14 @@
 // Props: mode 'add' | 'edit' | 'template', campId (edit), template (edit template),
 //        startTemplate (Add camp from a template's Use), defaultLocation, isPhone, hidden,
 //        onClose(), onSaved({ kind, undo? }), onNoAccess, onRefreshProfile, onUndoResult(status)
+//
+// Undo (rulebook v0.726, design review C5): every save hands the page an `undo` for its toast.
+//   - Add camp: undo() deletes the new, empty camp and reports through onUndoResult(status).
+//   - Edit camp / Edit template: undo() saves the OLD values again — the payload this dialog would
+//     have sent with nothing changed, worked out from what it loaded — on the version the save
+//     returned, and RETURNS the database's answer plus `undoText` (the amber bar's words when the
+//     database refused for a reason it named, else null). The page shows the result. A change by
+//     someone else in between makes it 'stale' (the version no longer matches).
 import { useEffect, useId, useState } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
@@ -34,10 +42,13 @@ import {
   applyBlank,
   applyTemplate,
   blankValues,
+  campUndoRefusal,
   checkForm,
   formSnapshot,
   gridSize,
   newExtraKey,
+  undoAddsPastDay,
+  undoCampPayload,
   valuesFromCamp,
   valuesFromTemplate,
   withAutoDates,
@@ -113,6 +124,9 @@ export default function CampDialog({
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState(null);
   const [server, setServer] = useState({});
+  // The payload of the values as loaded (Edit camp / Edit template): what the toast's Undo sends
+  // back. null when they don't pass the form's checks (then no Undo is offered).
+  const [undoBase, setUndoBase] = useState(() => (mode === 'template' ? checkForm(values, { mode, today, server: {} }).payload : null));
 
   // ----- Loading what the dialog needs -----
   useEffect(() => {
@@ -145,6 +159,7 @@ export default function CampDialog({
         const loaded = valuesFromCamp(result.camp, days, result.prices ?? [], result.extras ?? []);
         if (result.today) setToday(result.today);
         setRecord({ camp: result.camp, days });
+        setUndoBase(checkForm(loaded, { mode, today: result.today ?? today, initialDays: days.map((d) => d.day), server: {} }).payload);
         setValues(loaded);
         setInitial(formSnapshot(loaded));
         setStatus('ready');
@@ -336,7 +351,31 @@ export default function CampDialog({
         onUndoResult(back.status);
       };
       onSaved({ kind: 'added', id: newId, undo });
-    } else onSaved({ kind: mode === 'edit' ? 'camp' : 'template' });
+    } else if (mode === 'edit') {
+      // Undo = save the camp's old values again, on the version this save made.
+      const newVersion = result.version;
+      const back = undoCampPayload(undoBase, payload);
+      const addsPastDay = undoAddsPastDay(undoBase, payload, today);
+      const undo = back
+        ? async () => {
+            const answer = await updateCamp(campId, newVersion, back);
+            return { ...answer, undoText: campUndoRefusal(answer, { addsPastDay }) };
+          }
+        : null;
+      onSaved({ kind: 'camp', undo });
+    } else {
+      // Undo = save the template's old values again. If another template took the old name in the
+      // meantime ('duplicate_name'), the amber bar says so in the editor's own words.
+      const newVersion = result.version;
+      const back = undoBase;
+      const undo = back
+        ? async () => {
+            const answer = await updateTemplate(template.id, newVersion, back);
+            return { ...answer, undoText: answer.status === 'duplicate_name' ? T.undoRefused(T.DUPLICATE_TEMPLATE) : null };
+          }
+        : null;
+      onSaved({ kind: 'template', undo });
+    }
   }
 
   if (hidden) return null;
@@ -452,6 +491,8 @@ export default function CampDialog({
                   mode={mode}
                   {...common}
                   show={showFor(2)}
+                  today={today}
+                  isPhone={isPhone}
                   onChange={(patch) => change(2, patch, 'offsets')}
                   onDateChange={(patch) => change(2, { ...patch, datesEdited: true })}
                 />

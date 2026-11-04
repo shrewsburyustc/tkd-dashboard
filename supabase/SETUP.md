@@ -2621,3 +2621,281 @@ Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as name
 - **A new migration, not an edit of 0022:** 0022 is live; replacing one function in a later file keeps the history clear and the undo simple.
 
 ---
+
+## Migration 0029: Finance — close-the-day reminder in 5-minute steps
+
+**What it does** (`supabase/migrations/0029_finance_reminder_5min.sql`; design-review F2 / M8, item 14b): the Home "close the day" reminder time may be any **5-minute** step from 11:00 AM to 11:00 PM (11:00, 11:05 … 22:55, 23:00), no seconds; **Off** stays NULL. Until now only 15-minute steps were allowed. It replaces **one** function from 0011, `finance_reminder_time_is_valid(time)` — the rule used by Settings' save (`finance_set_reminder_time`) and by the table rule `finance_reminder_times_time_check`. The only change in its text is `% 15` → `% 5`; name, argument, `language sql immutable`, `search_path = ''`, owner and rights stay as 0011 made them (revoked from public, anon, authenticated and service_role; granted to nobody — only the database itself calls it). No table, table rule, other function, right or row changes.
+
+**Existing times stay valid:** every time saved today is on a 15-minute step, which is also a 5-minute step. (Replacing a function that a table rule uses does not make Postgres re-check the rows already stored — fine here, because the new rule only allows *more*.)
+
+**Order:** after 0011 (live). Nothing later (0017, 0018, 0026 …) replaces or calls this function. It must be live **before** Dashboard core's new Settings time list (5-minute steps) is deployed — until then the screen still offers only the 15-minute list, so nothing visible changes. A **guard** at the top stops it — and changes nothing — if 0011 is missing or if the live function is not exactly 0011's text (or 0029's, on a re-run), compared by the md5 of its code without comments and white space. **Forward-only** — no undo file (going back would need a new migration that first moves any 5-minute times saved meanwhile). Each step needs Jeffrey's OK.
+
+### 0029a. Before you apply 0029 (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0029_fingerprints.sql` and keeps the result (3 rows). The `function` line's md5 must be **`893a4a82cd923c9e81c0a35f48de403f`** (0011's text — the one the guard accepts); `definer=false`, `settings=search_path=""`, `rights=postgres:EXECUTE`. A different md5: stop — 0029 must be rebuilt (the guard would refuse it anyway).
+
+### 0029b. Apply 0029 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0029_finance_reminder_5min.sql`, **SQL Editor → New query**, paste, **Run**.
+2. This file removes nothing, so Supabase should not show a destructive-operations warning.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: no fingerprint or row changes).
+4. Don't re-run 0011 after this (it would put the 15-minute rule back; since 0026 a 0011 re-run is refused anyway — see 0026b). If it ever runs, re-run 0029 straight after.
+
+### 0029c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0029_fingerprints.sql` must match what `run.mjs` printed ("0029 fingerprints"): the `function` line md5 **`956cf7ae3a12ff432ead67bafd2631c0`** with `definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`; `function-kind` `volatility=i language=sql returns=boolean`; the `rule` line unchanged (`CHECK (((remind_at IS NULL) OR finance_reminder_time_is_valid(remind_at)))`). The file contains neither of the words the connection refuses.
+2. `0011_fingerprints.sql` and camps' `0017_fingerprints.sql` (both list every `finance_` function): **only** the `finance_reminder_time_is_valid(...)` line differs from before — its body md5, `893a4a82…` → `956cf7ae…`; rights, owner and settings the same. Every other migration's fingerprints: unchanged (`run.mjs` step0029 checks exactly that).
+3. **Security advisor:** nothing new (no new function or table; this one can't be called from the app).
+
+### 0029d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0029_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** (a second) → **ALL 0029 TESTS PASSED**. It checks the rule (11:00, 11:05, 22:55, 23:00 allowed; 10:55, 23:05, 11:07, 11:05:30 and NULL refused; exactly 145 allowed times a day), that nobody but the owner can call the function, Settings' save as an admin (11:05 and 22:55 saved, 11:07 / 23:05 / 10:55 / 11:05:30 refused and nothing saved) and as the front desk (refused), and the table rule (13:35 and Off stored, 13:37 refused). It changes Worcester's and Shrewsbury's **Monday** reminder times inside the test only — everything is rolled back.
+2. Then `0011_tests.sql` again — it must still pass.
+3. Put the placeholders back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0029, or `node run.mjs --only-step0029`): a database built in the production order with every live migration (… 0025 → 0027 → 0026), the guard refusing a changed function, a 15-minute time stored before 0029 still valid after it, the fingerprint comparison above, `0029_tests.sql` then `0011_tests.sql`, camps' `0017_tests.sql`, `0018_tests.sql` and `0026_tests.sql`, and a second run of 0029.
+
+**Why:**
+- **The database first:** it is what really enforces the rule; the screen's new 5-minute list would be refused ("invalid") until this is live.
+- **A new migration, not an edit of 0011:** 0011 is live; replacing one function in a later file keeps the history clear.
+
+---
+
+## Migration 0028: Star start times 6:00 AM–10:00 PM every 5 minutes
+
+**Status: applied 2026-10-28** (pasted by Jeffrey; 0028b fingerprint `d0548ce9…` matches, the other 142 Star fingerprints unchanged, security advisor nothing new, `0028_tests.sql` and `0006_tests.sql` pass). Built on `star-testing`, design-review item S12, rulebook v1.019; contract `docs/Dashboard Docs/Build contracts/CONTRACT-0028.md`).
+
+**Production order:** … 0023 → 0025 → 0027 → 0026 (live) → **0028**. It needs 0006 (it stops with "0028 needs migration 0006 (Star testing) first" if 0006 is missing). **It must be live before the app offers the new times** (the shared time list, a later step) — until then the app keeps offering 8:00 AM–8:00 PM every 15 minutes, which 0028 still accepts.
+
+**What it does** (`supabase/migrations/0028_star_start_times.sql`):
+- Star start times — an event's **start time** and a candidate's **private testing time** — were allowed from 8:00 AM to 8:00 PM on a 15-minute step. After 0028: **6:00 AM to 10:00 PM on a 5-minute step** (6:00, 6:05 … 10:00 PM), still with no seconds.
+- Replaces **only** `public.star_start_time_is_valid(p_time time)` (0006 section 1a; `create or replace`, same argument and answer type, `language sql`, `immutable`, `search_path = ''`, NULL → false, revoked from public, anon, authenticated and service_role — nobody in the app calls it). The places that use it pick up the new rule by themselves and are **not** replaced: the table rule `star_events_start_time_check`, `star_add_event`, `star_update_event` (0023's version) and `star_set_private`.
+- **Only widens the rule:** every old time (8:00 AM–8:00 PM every 15 minutes) is also a new one, so every saved event and private testing time stays valid. No table, other function or data changes. No destructive words — Supabase should not warn.
+
+**Each step needs Jeffrey's OK.**
+
+### 0028a. Apply 0028 (you, in the SQL Editor)
+
+1. **First (Claude, read-only through the connection):** `supabase/tests/0028_preapply_check.sql` (one read-only SELECT, connector-safe) must answer `body_is_0006 = true`, `body_is_0028 = false` and **0** in all four counts (`events_bad_new`, `privates_bad_new`, `events_bad_old`, `privates_bad_old`). `body_is_0006 = false` means someone changed the function since 0006 — stop and tell Claude. Claude also runs `supabase/tests/0006_fingerprints.sql` and `supabase/tests/0028_fingerprints.sql` and keeps both results (the "before" record for 0028b and the undo).
+2. Copy **the whole file** `supabase/migrations/0028_star_start_times.sql`, **SQL Editor → New query**, paste, **Run**.
+3. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested: no fingerprint changes). **Re-running 0006 after this** puts 0006's old rule back → re-run 0028 straight after.
+
+### 0028b. Fingerprints (Claude, read-only through the connection)
+
+1. `supabase/tests/0028_fingerprints.sql` — the one line must match what `supabase/tests/pglite/run.mjs` printed ("0028 fingerprints"): body md5 `d0548ce90322fdb063bb02bd3e8b77d1`, `lang=sql volatility=i returns=boolean definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+2. `supabase/tests/0006_fingerprints.sql`: **only** the `star_start_time_is_valid(p_time time)` line differs from 0028a's record (its body md5; rights, owner and settings the same). Every other migration's fingerprints: unchanged (`run.mjs` step0028 checks exactly that).
+3. `0028_preapply_check.sql` again: `body_is_0028 = true`, all four counts still 0.
+
+### 0028c. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection): **nothing new.** The function is not security definer, has `search_path = ''` and nobody in the app may call it.
+
+### 0028d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0028_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0028 TESTS PASSED**. It checks the rule (6:00, 6:05, 9:55 PM and 10:00 PM fine; 5:55, 10:05 PM, 6:03, 6:00:30 and empty refused; exactly 193 times a day; all 49 old times still fine), the function's settings and rights, and Add event / Edit event / Set private testing / the table rule on its own `zz test …` events. Everything is rolled back.
+2. Then `supabase/tests/0006_tests.sql` again — all must still pass (its refused times are outside both the old and the new rule, so it passes before and after 0028).
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0028e. Undo 0028 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that offers only 8:00 AM–8:00 PM every 15 minutes.
+2. Claude runs `supabase/tests/0028_preapply_check.sql`: `events_bad_old` and `privates_bad_old` must be **0**. Above 0 → events or private testings were saved with a new time (e.g. 6:05 AM, 9:30 PM, 10:10); change them in the app first. (Postgres does not re-check saved rows when the function inside a table rule changes, so such an event would stay — and every later save of it would be refused as "invalid".)
+3. Paste **the whole file** `supabase/manual/0028u_undo_star_start_time.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0028 undo refused: …") while any saved time breaks 0006's rule, then puts back 0006's exact `star_start_time_is_valid` (section 1a, word for word) with its revoke (one transaction).
+4. Claude checks `supabase/tests/0006_fingerprints.sql` (must equal 0028a's record again) and `0028_preapply_check.sql` (`body_is_0006 = true`). Then run `0006_tests.sql`.
+5. To redo: paste 0028 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0028: with a 6:05 AM event planted the undo file refuses; on the clean database the undo file exactly as named here gives back every fingerprint file as it was before 0028, the Star tests pass, and 0028 again gives the tested fingerprints and `0028_tests.sql` passes).
+
+**Why:**
+- **One function, not four:** the rule lives in one place; the table rule and the three functions call it, so replacing it changes all of them together and nothing else.
+- **A new migration, not an edit of 0006:** 0006 is live; a later file keeps the history clear and the undo simple.
+
+---
+
+## Migration 0031: Class ages on the booking forms, and classes taught together as one time
+
+**Status: APPLIED 2026-10-28** (Jeffrey, SQL Editor: Success; 0031c checks matched: pre-apply true / true / true / 10 / 0, all 13 function fingerprints as tested, security advisor nothing new; 0031d: ALL 0031 TESTS PASSED). Built on `claude/prospect-form-system-cd893d`, rulebook v0.619 and v0.620. Apply it **before** the app version that shows and sets class ages and combined times is deployed (that app reads the new tables and keys, and sends `p_groups`).
+
+**Production order:** … 0025 → 0027 (live) → **0031**. It needs 0007 (Schedule), 0009 (Forms) and 0012 (Prospects) — it stops with "0031 needs migration 0007 / 0009 / 0012 … first" if one is missing.
+
+**What it does** (`supabase/migrations/0031_class_ages.sql`):
+- **New table `public.schedule_class_ages`** — one row per class that has an age range (no row = no ages shown): `class_id` (unique; with `location_code` it points at `testing_classes`, so a row always belongs to the class's own school; deleting the class in Testing removes the row, logged as `delete_class`), `age_from` (0–99), `age_to` (empty = "and up", else From–99), plus version and who/when. Built exactly like 0007's `schedule_class_colors`: same bookkeeping trigger, history in `change_log`, no truncate, RLS on with one SELECT policy for signed-in, unlocked staff (`has_data_access()`), read rights on the listed columns for `authenticated` only (never the login-id columns), **nothing for anon, service_role or forms_registrar**, no direct writes.
+- **New function `schedule_set_class_ages(p_class_id uuid, p_age_from integer, p_age_to integer)`** — the only way to write; admins only (`has_data_access()` first → `no_access`, then `is_admin()` → `not_allowed`). `invalid` for no class, To without From, From outside 0–99, To outside From–99; `not_found` for an unknown class. Both empty = remove the row (fine when there is none). The same values again write nothing. Answer: `{"status":"ok","class_id":…,"age_from":n|null,"age_to":n|null,"version":n|null}`. Security definer, `search_path = ''`, revoked from public, anon, authenticated and service_role, granted to `authenticated` only.
+- **Part 2 (v0.620) — classes taught together.** A Schedule time slot with several classes (v0.237), of which a form offers **2 or more**, is **one** bookable time on that form: `class_id` = the first of them in the slot's own order (the "representative"), `class_ids` = all of them (slot order), `class_name` = their names joined with " + " ("White + Little Tiger"), `age_from` = the youngest From, `age_to` = the oldest To (`null` when one of them has ages without a To; both `null` when none has ages). **Spots:** this form's group row for that weekday + start + set of classes, else the **largest** `default_limit` of the group's offers on this form (not shared with other forms' limits); 0 = not offered. **Booked** = every booked `class_bookings` row at that school, date and start for any of the group's classes, from any form. **Booking window** (days ahead, hours ahead) = the representative's offer. A form offering only one class of the slot shows it as an ordinary single time (0009's rules, unchanged, including the shared lowest limit).
+- **New table `public.form_booking_group_limits`** — a combined time's own spot number on one form, built exactly like 0009's `form_booking_limits` (same bookkeeping trigger `forms_before_write`, history in `change_log`, no truncate, RLS on with one SELECT policy using `has_data_access()`, read rights on the listed columns for `authenticated` only, nothing for anon, service_role or forms_registrar, no direct writes): `form_id` + `location_code` (deleting the form removes its rows, logged), `class_ids uuid[]` (2–10 distinct ids, stored **sorted** — checked by the internal `forms_group_class_ids_ok`), `weekday` 1–7, `starts_at`, `spot_limit` 0–20, unique (form, weekday, start, classes).
+- **New internal helpers** (security invoker, `search_path = ''`, nobody may call them): `forms_group_class_ids_ok(uuid[])` (the table's check) and `forms_booking_lock_class(school, class, date, start)` — the `class_booking_slots` row a booking locks: the **slot's first class** (for a one-class slot: the class itself, exactly as before), so a combined time and a single class of the same slot on another form take turns.
+- **Ten functions replaced**, word for word except the lines marked "0031" (same owner, security definer/invoker, `search_path = ''` and rights):
+  - `schedule_before_write()` (0007) — one line: an ages row's class can never change, like a color row's.
+  - `forms_times` (0009, internal) — **dropped and made again**: it groups classes taught together and returns three more columns (`class_ids`, `age_from`, `age_to`).
+  - `forms_set_booking` (0009) — **new 5th argument `p_groups jsonb default '[]'`**: `[{ "class_ids": [uuid,…], "weekday": n, "starts_at": "HH:MM", "spot_limit": n }]` (0–100 items). Replaces the form's group rows exactly like `p_limits` replaces its limit rows; `invalid` for a bad item (not an object, unknown key, fewer than 2 or more than 10 classes, a class twice, a class the form doesn't offer — so never another school's —, bad weekday / time / limit, the same group + weekday + start twice). The 4-argument version is **dropped** and the new one made with the same rights (`authenticated` only). Calls without `p_groups` still work — and remove the form's group rows (like an empty `p_limits`).
+  - `forms_duplicate` (0009) — the copy gets the group rows too. (`forms_delete` is unchanged: the rows go with the form.)
+  - `forms_submit_core` (0009) and `prospects_book_time` (0012) — lock `forms_booking_lock_class`'s row, in that row's order. They already look the time up in `forms_times` by class + start, so a combined time is booked with the representative's `class_id`, saved with the joined name, counted over the group; a member class's own time is `time_taken`.
+  - `forms_open_times` (0009, builder preview and Fill in), `forms_public_get` (0009, the public page and kiosk), `forms_public_submit` (0009, the fresh times sent back on `time_taken`) and `prospects_open_times` (0012, Prospects → Book a free class): every time item gains **`"class_ids"`** (`[class_id]` for a single class), **`"age_from"`** and **`"age_to"`** (whole numbers, or `null`; `age_to` null with `age_from` set = "7+"), all from `forms_times`, whose order (date, start, class name) is kept. `prospects_open_times` keeps one time per (classes, date, start). Display only: no time is hidden or refused because of a child's age.
+- Nothing new is granted to anon; `forms_registrar` keeps exactly its public functions.
+
+### 0031a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0031_preapply_check.sql` (one read-only SELECT, connector-safe). The answer must be `ages_table = false`, `set_function = false`, `groups_table = false`, `replaced_found = 10`, `replaced_as_tested = 10` — nothing of 0031 is there yet and the ten functions it replaces still have exactly the code it was tested against (0007's, 0009's and 0012's). **Anything else → stop**: a function changed since, and 0031 must be rebuilt on the newer code first (pasting it would undo that change). `true / true / true / 10 / 0` = already applied.
+2. Claude runs `supabase/tests/0007_fingerprints.sql`, `0009_fingerprints.sql`, `0012_fingerprints.sql` and `0031_fingerprints.sql` and keeps the results (the "before" record for 0031c and the undo).
+
+### 0031b. Apply 0031 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0031_class_ages.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about destructive operations. Two `drop function` lines are real on the first run: the old `forms_times` and the old 4-argument `forms_set_booking`, each made again right after it in the same transaction. The other `drop … if exists` lines only make re-running safe, and the removals inside the functions run only later (an admin clearing a class's ages or saving booking settings; a family sending a form). No data is removed. Confirm.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint changes). **If 0007, 0009 or 0012 is ever re-run after 0031, re-run 0031 straight after it** — re-running those puts their older functions back (the times lose their ages and groups; 0007's older trigger function no longer protects an ages row's class). **0009 can't even run cleanly after 0031:** its `create or replace` of `forms_times` fails (different columns) and it would add a second, 4-argument `forms_set_booking` — run the undo (0031e) first if 0009 ever has to be re-run.
+
+### 0031c. Read-only checks (Claude runs these through the connection)
+
+1. **Pre-apply check again:** `true / true / true / 10 / 0`.
+2. **Fingerprints:** `supabase/tests/0031_fingerprints.sql` must match what `run.mjs` printed ("0031 fingerprints"): the two tables (rls=true, columns readable by `authenticated` only), their triggers, constraints and policies, and the thirteen functions — `schedule_set_class_ages`, `forms_open_times`, `prospects_open_times`, `forms_set_booking` (5 arguments), `forms_duplicate`, `prospects_book_time` with `rights=authenticated:EXECUTE,postgres:EXECUTE`; `forms_public_get`, `forms_public_submit` with `rights=forms_registrar:EXECUTE,postgres:EXECUTE`; `schedule_before_write`, `forms_times`, `forms_submit_core`, `forms_booking_lock_class`, `forms_group_class_ids_ok` with `rights=postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+3. `0007_fingerprints.sql`, `0009_fingerprints.sql`, `0012_fingerprints.sql` differ from 0031a **only** in: the `function` lines of the nine functions replaced in place (body md5; rights, owner and settings the same); `forms_times`' `function-kind` line (three more columns); `forms_set_booking`'s two lines, now with `p_groups jsonb` (same rights and kind); and the new `schedule_set_class_ages`, `forms_booking_lock_class`, `forms_group_class_ids_ok` (two lines each). Every other migration's fingerprints: unchanged (`run.mjs` step0031 checks exactly that).
+4. **Security advisor:** nothing new.
+
+### 0031d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0031_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0031 TESTS PASSED**. It makes its own `zz test …` classes, Worcester time slots three days from now (5:00, 6:00, 7:00 and a 9:00 slot of three classes taught together) and test forms, and rolls everything back. Supabase may warn about destructive operations (a test class is really deleted inside the rolled-back transaction). Confirm.
+2. Then `0007_tests.sql`, `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql` and `0019_tests.sql` again — all must still pass (`0007_tests.sql` now expects 20 `schedule_*` functions once 0031 is there).
+3. Put the placeholders back afterwards.
+
+### 0031e. Undo 0031 (only with Jeffrey's OK)
+
+1. The app version that shows class ages must **not** be live (it would fail to load the Schedule's ages).
+2. Paste **the whole file** `supabase/manual/0031u_undo_class_ages.sql` in the SQL Editor → **Run**. It puts back the exact earlier `schedule_before_write` (0007), `forms_open_times`, `forms_public_get`, `forms_public_submit`, `forms_times`, `forms_submit_core`, `forms_duplicate`, the 4-argument `forms_set_booking` (0009), `prospects_open_times` and `prospects_book_time` (0012) with their rights, then removes `schedule_set_class_ages`, the two helpers and the two tables **with every age range and combined-time spot number entered** (their history rows stay in `change_log`, so they can be re-entered). Bookings already made for a combined time stay (under its first class, with the joined name). One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. Claude checks: the pre-apply check answers `false / false / false / 10 / 10` again; `0007_fingerprints.sql`, `0009_fingerprints.sql` and `0012_fingerprints.sql` match 0031a's record. Then run `0007_tests.sql`, `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0019_tests.sql`.
+4. To redo: paste 0031 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as named here; afterwards every fingerprint file equals the one before 0031 and the tests pass; 0031 again gives the tested fingerprints and `0031_tests.sql` passes).
+
+**Why:**
+- **A table like the colors, not columns on Testing's classes:** Testing's tables and functions stay untouched (the same reason 0007 kept the colors apart), and deleting a class still cleans up by itself.
+- **`forms_times` rebuilt (part 2):** grouping has to happen where the times are made, so every caller (the four lists, both booking functions) sees the same combined time with the same spots. Its new columns mean dropping and re-making it; nothing depends on it in the catalog, and the functions that read it are replaced in the same file. The ages moved into it at the same time, so the four lists only copy its columns.
+- **Locking the slot's first class:** a group's spots are counted over several classes, so two bookings that share a count must lock the same row. For a one-class slot nothing changes.
+- **`p_groups` with a default:** the app calls `forms_set_booking` by argument names, so old calls keep working; the 4-argument version has to go, or a 4-argument call would match two functions.
+- **Display only:** the rulebook (v0.619) says a form never hides or blocks a class because of a child's age, so no booking rule reads this table.
+
+---
+
+## Migration 0032: Black Belt — testing times every 5 minutes, candidate history, Edit cycle Undo in one call
+
+**Status: applied 2026-11-03** (0032a pre-check, 0032c fingerprints and security advisor, 0032d `0032_tests.sql` all passed; 0016/0024/0025/0026 tests not yet re-run on live — PGlite ran them after 0032). Built on `black-belt`, design-review items BB13 (rulebook v1.019 / S12), BB8 (v1.010, the History line) and the Edit cycle Undo race (BB5, v0.967).
+
+**Production order:** … 0025 → 0027 → 0026 → 0028 → 0029 → 0031 (live) → **0032**. It needs 0016, 0024 and 0025 (it stops with "0032 needs migration 0016 / 0024 / 0025 … first" if one is missing). **It must be live before the app version that calls `bb_candidate_history` or `bb_undo_cycle_edit`, or offers 5-minute testing times.** The app that is live today keeps working unchanged after it.
+
+**What it does** (`supabase/migrations/0032_black_belt_review.sql`):
+- **Testing-day times every 5 minutes (BB13).** Replaces **only** `public.bb_time_is_valid(p_time time)` (0016 section 1c; `create or replace`, same argument and answer type, `language sql`, `immutable`, `search_path = ''`, NULL → false, revoked from public, anon, authenticated and service_role). A testing day's start and end (and its second part's) were allowed 6:00 AM–10:00 PM every 15 minutes; after 0032 every **5** minutes, still no seconds. The table rules `bb_cycle_days_times_check` / `bb_cycle_days_second_times_check`, Add cycle and Edit cycle use it and are **not** replaced. **Only widens the rule:** every saved day stays valid.
+- **New `bb_history_strip(row jsonb)`** — internal helper (sql, immutable, `search_path = ''`, nobody may call it): takes every login-id key out of a history row (`created_by`, `updated_by`, `withdrawn_by`, `recorded_by`, `marked_by`, `undone_by`), plus `submission_id` and `makeup_of_candidate_id`; a date of birth, email, kept age, signature or signer's name that is not null shows as "on file" (the log triggers already write "on file" / "changed"; this is the second line of defence).
+- **New `bb_candidate_history(p_candidate_id uuid)`** (BB8) — the History line of one candidate: the change-log rows of the candidate and of its own payments, waivers, grades, extra-point counts, make-up subjects and "sent" marks, newest first, at most 500; each row only `occurred_at, actor_name, action, table_name, op, before, after`, with before / after through `bb_history_strip`. Any staff with data access. `no_access` → `invalid` (no id) → `not_found`. Security definer, `search_path = ''`, `authenticated` only. Written as two parts (the candidate's own rows, then its child rows) so each can use an index instead of reading the whole shared `change_log`.
+- **New index on the shared `change_log`:** `change_log_bb_candidate_child_idx` on `((after ->> 'candidate_id'))`, **partial** — only rows `where table_name in ('bb_payments', 'bb_candidate_waivers', 'bb_grades', 'bb_extra_counts', 'bb_makeup_subjects', 'bb_result_sends') and op = 'insert'`. It finds a candidate's child rows for the History line; the candidate's own rows use 0003's `change_log_table_record_idx`. Because it is partial it stays small and changes nothing for other sections (no other section's fingerprints or tests list `change_log`'s indexes). Building it holds writes to `change_log` for a moment (a few seconds at most on the school's data) — every section waits, nothing fails.
+- **New `bb_undo_cycle_edit(p_cycle_id, p_expected_version, p_payload, p_open, p_known_ids uuid[])`** — Edit cycle's "Changes saved · Undo" in one transaction. Admins only (`no_access` → `not_allowed` → `invalid`). It locks the cycle first; a candidate who came through the **family form** and isn't in `p_known_ids` (the roster the app read before the save) → `registered`, nothing written. Otherwise the switch back (`bb_set_registration`, only when `p_open` isn't empty) and then the old values (`bb_update_cycle`); if either refuses, both are undone and that refusal is answered as it came (`stale`, `has_grades`, `duplicate_name`, `invalid`, `part_without_day`, `finished`, `waiver_needed` …). Writes no history row of its own. Security definer, `search_path = ''`, `authenticated` only.
+- No table column, rule or data changes (one new index, above). Nothing is granted to anon. No destructive words — Supabase should not warn.
+
+**Each step needs Jeffrey's OK.**
+
+### 0032a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0032_preapply_check.sql` (one read-only SELECT, connector-safe) must answer `body_is_0016 = true`, `body_is_0032 = false`, `new_functions = 0`, `history_index = false`, `times_bad_new = 0`, `times_bad_old = 0`. `body_is_0016 = false` with `body_is_0032 = false` means someone changed the function since 0016 — stop and tell Claude.
+2. Claude runs `supabase/tests/0016_fingerprints.sql` and keeps the result (the "before" record for 0032c and the undo).
+
+### 0032b. Apply 0032 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0032_black_belt_review.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+3. **Running it again is safe** (tested: no fingerprint changes). **Re-running 0016 after this** puts 0016's 15-minute rule back → re-run 0032 straight after (0025's warning about re-running 0016 applies anyway).
+
+### 0032c. Read-only checks (Claude, through the connection)
+
+1. `supabase/tests/0032_fingerprints.sql` — the five lines must match what `supabase/tests/pglite/run.mjs` printed ("0032 fingerprints"): `bb_time_is_valid` and `bb_history_strip` with `lang=sql volatility=i … definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`; `bb_candidate_history` (`volatility=s`) and `bb_undo_cycle_edit` (`volatility=v`) with `lang=plpgsql … returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`; and the `index  change_log.change_log_bb_candidate_child_idx` line with its full definition. The file contains neither of the words the connection refuses.
+2. `supabase/tests/0016_fingerprints.sql`: **only** the `bb_time_is_valid(p_time time)` line differs from 0032a's record (its body md5), and the three new functions' lines are added. Every other migration's fingerprints: unchanged (`run.mjs` step0032 checks exactly that).
+3. `0032_preapply_check.sql` again: `body_is_0032 = true`, `new_functions = 3`, `history_index = true`, both counts 0.
+4. **Security advisor:** nothing new.
+
+### 0032d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0032_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0032 TESTS PASSED**. It checks the time rule (and through Add cycle, Edit cycle and the table rules), who may read the history and what it shows (no date of birth, email, signature, signer's name or login id anywhere; exactly the candidate's own rows, newest first), and the Undo (every refusal; a family that registered after the save → `registered` with nothing changed; the switch and the values back together, or neither). It makes its own `zz test …` cycles and candidates (and saves a test waiver if the current one is still the placeholder) and rolls everything back.
+2. Then `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql` and `0026_tests.sql` again — all must still pass.
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0032e. Undo 0032 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that calls neither `bb_candidate_history` nor `bb_undo_cycle_edit` and offers testing times only every 15 minutes.
+2. Claude runs `supabase/tests/0032_preapply_check.sql`: `times_bad_old` must be **0**. Above 0 → testing days were saved with a 5-minute time (e.g. 12:05); change them in the app first. (Postgres does not re-check saved rows when the function inside a table rule changes, so such a day would stay — and every later save of its cycle would be refused as "invalid".)
+3. Paste **the whole file** `supabase/manual/0032u_undo.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0032 undo refused: …") while any saved time breaks 0016's rule, then puts back 0016's exact `bb_time_is_valid` (section 1c, word for word) with its revoke and removes `bb_undo_cycle_edit`, `bb_candidate_history`, `bb_history_strip` and the index `change_log_bb_candidate_child_idx` (they hold no data; the history rows stay in `change_log`). One transaction. Supabase warns about destructive operations (the three functions and the index are really removed). Confirm only if you mean it. If it reports a **deadlock** (a staff save hit the same tables at that moment), nothing was changed: run it again.
+4. Claude checks `supabase/tests/0016_fingerprints.sql` (must equal 0032a's record again) and `0032_preapply_check.sql` (`body_is_0016 = true`, `new_functions = 0`, `history_index = false`). Then run `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql`, `0026_tests.sql`.
+5. To redo: paste 0032 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0032: the History line on a seeded `change_log` of tens of thousands of rows answers within its time limit and its plan uses both indexes; with a 12:05 testing day planted the undo file refuses; on the clean database the undo file exactly as named here gives back every fingerprint file as it was before 0032, the Black Belt tests pass, and 0032 again gives the tested fingerprints and `0032_tests.sql` passes).
+
+**Why:**
+- **The Undo in the database, not in the app:** a registration doesn't change the cycle's version, so the app could only compare rosters — and a family could register between that read and the writes. Locking the cycle first means a family registers either before the Undo (refused) or after it. One transaction also means an Undo never stops halfway.
+- **A new function, not a 4th argument on `bb_update_cycle`:** an argument with a default would make the web API's choice between two versions of `bb_update_cycle` ambiguous.
+- **The history through a reader, never the table:** `change_log` stays unreadable for the app; the reader decides what leaves the database (names, never login ids or private values).
+
+---
+
+## Migration 0033: Camps design review (Mark paid with a way to pay, Camper history)
+
+**Status: APPLIED 2026-11-03** (Jeffrey, SQL Editor; 0033a pre-check ready, 0033c fingerprints match the file, 0033d advisor nothing new, 0033e all seven test files passed). Built on `camps` (rulebook v0.735 = C2, the shared Mark paid box; v0.736 = C7, the history line; plan `docs/Camps/TKD-Camps-0033-Plan.md`). Apply it **before** the app version that sends the way to pay or shows the History line is deployed. The app from before 0033 keeps working with 0033 applied (its 3-input Mark paid call is covered by the new input's default — tested).
+
+**Production order:** … 0022 → 0027 (live) → 0026, 0028, 0029, 0031 (live) → **0033**. It needs 0013, 0017, 0022 and 0027 — it stops with "0033 needs migration 00NN … first" if one is missing.
+
+**What it does** (`supabase/migrations/0033_camps_design_review.sql`):
+- **New column `camp_campers.paying_by_on_form`** (cash / check / card, never empty): the way the family chose **on the form**. A new trigger (`camp_campers_before_form_choice` → `camp_campers_keep_form_choice()`) copies `paying_by` into it when a camper is added and keeps the old value on every update, so no function can change it. The family form's functions are **not** changed. Existing campers get the `paying_by` of **their own history insert row** (what the family form sent when the camper was added), so a Paying by already changed at the desk is not taken for the form's choice; a camper with no such row gets its current `paying_by` (0033a counts those). That fill writes no history row and moves no version. Readable by `authenticated` (column right); shown as the **last** column of `camp_roster`, so Camper detail (`camp_camper_detail`, which copies the roster row) has it too. The Mark paid box's hint: `paying_by = paying_by_on_form` → "on the form", else "at the desk".
+- **New column `camp_payments.paying_by_before`** (empty except when Mark paid or Edit payment also changed Paying by: the old Paying by, so Undo payment can put it back). Rule: empty, or a payment (never a reversal) with cash / check / card that isn't its own method. **Not** readable by the app; Finance names its columns, so it never sees it.
+- **`camp_mark_paid(p_camper_id, p_expected_version, p_school, p_method text default null)`** replaces 0013's 3-input version, which is **removed** in the same file (two versions would make every 3-input call "ambiguous"). No way sent = the camper's Paying by (as before). Another way → the payment is that way, Paying by becomes it (same batch, logged) and the payment remembers the old one. A bad way → `{"status":"invalid","field":"method"}`. The answer gains `"paying_by"`.
+- **`camp_undo_payment`** (0013) — same arguments: also puts Paying by back when the payment remembered one and Paying by is still that payment's method.
+- **`camp_edit_payment`** (0022) — same arguments: Paying by follows an edit that changes the way, **exactly as Color Belt's 0030 `testing_edit_payment`** (the new payment remembers the family's choice; Undo of it puts it back).
+- **New `camp_camper_history(p_camper_id uuid)`** (staff and admins; `no_access` / `invalid` / `not_found`): newest first, at most 500 change_log rows of the camper, their days, extras and payments (check-ins left out) and their **sign-up** (shared by brothers and sisters, so a family change shows in every child's history). Each row: `occurred_at`, `actor_name`, `action`, `table_name`, `op`, `batch_id`, `before`, `after` — no login ids (helper `camp_history_strip`, nobody may call it), the signature only "on file".
+- **New index `change_log_camp_camper_idx`** (only the insert rows of those three camper tables, by the camper id inside "after"). The reader is three parts joined with `union all` — the camper's rows and the sign-up's rows through 0003's `(table_name, record_id)` index, the days / extras / payments through this partial index and then 0003's index — so it never reads all of change_log. **Measured in PGlite** (`run.mjs` step0033, about 30,000 history rows): EXPLAIN shows every part using an index (no full scan), both as a generic and a custom plan; one call took about 8–20 ms over several runs. At that size a full scan was only a few ms slower, so the index matters as the history grows, not today.
+- Every function: security definer (except the two helpers), `search_path = ''`, `has_data_access()` first, revoked from public, anon, authenticated and service_role, granted to `authenticated` only (the helpers to nobody). Nothing for anon or camps_registrar.
+
+### 0033a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0033_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `mark_paid_3_inputs true`, `mark_paid_4_inputs false`, `replaced_as_tested 3`, `new_columns 0`, `history_function false`, `campers_without_insert_row 0`; `campers` = how many campers the fill touches; `campers_desk_changed` (information only) = campers whose Paying by was already changed at the desk — the fill still takes their form choice from their history insert row. **`campers_without_insert_row` above 0** → tell Jeffrey first: only those campers get today's Paying by as "the form's choice" (Claude can list them). Anything else (e.g. `replaced_as_tested` below 3) → **stop**: a function changed since 0033 was built, and 0033 must be rebuilt on the newer code first. `false / true / 0 / 2 / true` = already applied.
+2. Claude runs `0013_fingerprints.sql`, `0022_fingerprints.sql` and `0033_fingerprints.sql` and keeps the results (the "before" record for 0033c and the undo).
+
+### 0033b. Apply 0033 (you, in the SQL Editor)
+
+1. **Paste at a quiet time** (nobody at the desk): the file briefly locks `camp_campers` for the fill and `change_log` while it builds the new index, so a save made at that moment waits a few seconds.
+2. Copy **the whole file** `supabase/migrations/0033_camps_design_review.sql`, **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about destructive operations. **One** line is real on the first run: `drop function if exists public.camp_mark_paid(uuid, integer, text)` — the old 3-input Mark paid, made again with 4 inputs right after it in the same transaction. The other `drop … if exists` lines only make re-running safe. No data is removed. Confirm.
+4. "Success." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint, row or history change). **If 0022 is ever re-run after 0033, re-run 0033 straight after it** (0022 puts the old Edit payment back). **0013 can't be re-run cleanly after 0033:** its `camp_roster` has one column fewer, so its `create or replace view` fails and nothing of it is kept — run the undo (0033f) first if 0013 ever has to be re-run, then 0033 again. (Were it to run, it would bring back the 3-input `camp_mark_paid` **next to** the 4-input one, and every Mark paid would fail as "ambiguous".)
+
+### 0033c. Fingerprints (Claude runs these through the connection)
+
+1. `supabase/tests/0033_fingerprints.sql` must match what `run.mjs` printed ("0033 fingerprints"): 13 lines — the 6 functions (`camp_mark_paid` with 4 inputs, `camp_undo_payment`, `camp_edit_payment`, `camp_camper_history`: `definer=true`, `settings=search_path=""`, `rights=authenticated:EXECUTE,postgres:EXECUTE`; `camp_history_strip`, `camp_campers_keep_form_choice`: `definer=false`, `rights=postgres:EXECUTE`), the 2 columns (`paying_by_on_form text notnull=true rights=authenticated:SELECT`; `paying_by_before text notnull=false rights=`), the 2 rules, the trigger, the index, and the view (`options=security_invoker=true rights=authenticated:SELECT`). The file contains neither of the words the connection refuses.
+2. `0013_fingerprints.sql` and `0022_fingerprints.sql` differ from 0033a **only** in: `camp_mark_paid` (3 → 4 inputs, same rights, owner and settings), `camp_undo_payment` and `camp_edit_payment` (body md5 only), the `camp_roster` view line (new md5, still `security_invoker=true`), the `camp_campers` table line (one more column right: `paying_by_on_form>authenticated:SELECT`), the new trigger line, and the two new rules in 0022's list. Every other migration's fingerprints: unchanged (`run.mjs` step0033 checks exactly that).
+3. The pre-apply check again: `false / true / 0 / 2 / true`.
+
+### 0033d. Security advisor
+
+Supabase dashboard → **Advisors → Security advisor** → refresh: nothing new (the view is still security invoker; the new functions all have `search_path = ''`).
+
+### 0033e. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0033_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0033 TESTS PASSED**. It makes its own `zz test …` camp (Mon–Wed of a week 15–21 days from now) and rolls everything back.
+2. Then `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql` and `0027_tests.sql` again — all must still pass (`0013_tests.sql` T16a knows 0033's three new functions).
+3. Put the placeholders back afterwards.
+
+### 0033f. Undo 0033 (only with Jeffrey's OK)
+
+1. The app version that sends the way to pay or reads the history / `paying_by_on_form` must **not** be live.
+2. Paste **the whole file** `supabase/manual/0033u_undo_camps_design_review.sql` in the SQL Editor → **Run**. It removes `camp_camper_history`, `camp_history_strip`, the index, the trigger and its function, the view (made again right away exactly as 0013 made it, with its rights) and the two new columns **with their values** (each camper's form choice is still in their history; payments keep everything else); then it puts back 0013's 3-input `camp_mark_paid` and `camp_undo_payment` and 0022's `camp_edit_payment`, word for word. Paying by values changed by Mark paid / Edit payment stay. One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. Claude checks: `0013_fingerprints.sql` and `0022_fingerprints.sql` match 0033a's record; the pre-apply check answers `true / false / 3 / 0 / false` again. Then run `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql`, `0027_tests.sql`.
+4. To redo: paste 0033 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as named here; afterwards every fingerprint file equals the one before 0033 and the camps and Finance tests pass; 0033 again gives the tested fingerprints and `0033_tests.sql` passes).
+
+**Why:**
+- **The form's choice stored, not a yes/no:** the hint is worked out as "Paying by = form's choice", so every Undo (of a payment, or of Change how they'll pay) gives the right words with nothing extra to put back (plan §1a).
+- **A trigger, not a change to the sign-up functions:** the public (anon) path stays exactly as it is.
+- **The old Mark paid removed in the same file:** a 3-input and a 4-input version side by side would make the server refuse every 3-input call as ambiguous; with one 4-input version and a default, the live app's named 3-input call keeps working (tested as role authenticated, named and positional).
+- **Edit payment copies Color Belt 0030 exactly** (plan §1c): Paying by follows any edit that changes the way, not only an edit of the newest payment.
+- **A partial index:** the reader finds a camper's days, extras and payments by the camper id inside the history rows; the index covers only those insert rows, so other history writes cost nothing extra. EXPLAIN in PGlite shows it used.
+- **The form's choice from the history:** every camper since 0013 has an insert row in change_log written by the family form, which holds the way they chose; today's Paying by is only the fallback.
+
+---

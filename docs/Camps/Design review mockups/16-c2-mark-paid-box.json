@@ -1,0 +1,227 @@
+{
+  "title": "Camps C2 — the shared Mark paid box",
+  "subtitle": "Rules v1.001 (one small box for taking a payment everywhere) and v1.104 (the shared box, <code>components/MarkPaidBox.jsx</code>, approved as M3). Today the “$X due” / “Owes $X” tag opens Camps’ own small box: the name, “not paid · $166”, and <b>Mark paid</b>, which always records the camper’s Paying by. After: the same tag opens the <b>shared box</b>: the name and the amount, <b>Paid by</b> Cash / Check / Card preset to the family’s choice with the gray hint, then <b>Mark paid $166</b> (first focus, so Enter does the usual thing). One tap picks another way. The school still comes from This device (v0.708). The amount is shown, never typed. Sample: Mia Rossi, Thanksgiving Camp, $166 due, chose Cash on the form. Amber = what changes.",
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/c02-pc-today.png",
+          "crop": [
+            600,
+            590,
+            600,
+            160
+          ],
+          "scale": 0.8,
+          "marks": [
+            [
+              883,
+              645,
+              176,
+              82
+            ]
+          ],
+          "caption": "<b>PC 1280×800.</b> Mia’s “$166 due” opens Camps’ own box: no way to choose how she paid."
+        },
+        {
+          "src": "shots/c02-tab-today.png",
+          "crop": [
+            300,
+            620,
+            500,
+            160
+          ],
+          "scale": 0.8,
+          "shotWidth": 820,
+          "marks": [
+            [
+              514,
+              672,
+              176,
+              90
+            ]
+          ],
+          "caption": "<b>Tablet 820×1180 touch.</b> The same box."
+        },
+        {
+          "row": [
+            {
+              "src": "shots/c02-ph-today.png",
+              "crop": [
+                0,
+                300,
+                390,
+                260
+              ],
+              "scale": 0.62,
+              "shotWidth": 390,
+              "marks": [
+                [
+                  206,
+                  419,
+                  176,
+                  90
+                ]
+              ],
+              "caption": "<b>Phone 390×844 touch.</b>"
+            },
+            {
+              "src": "shots/c02-320-today.png",
+              "crop": [
+                0,
+                240,
+                320,
+                260
+              ],
+              "scale": 0.62,
+              "shotWidth": 320,
+              "marks": [
+                [
+                  136,
+                  347,
+                  176,
+                  90
+                ]
+              ],
+              "caption": "<b>320 wide.</b>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "After (mockup)",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/c02-pc-after.png",
+              "crop": [
+                600,
+                430,
+                600,
+                210
+              ],
+              "scale": 0.62,
+              "marks": [
+                [
+                  710,
+                  449,
+                  240,
+                  166
+                ]
+              ],
+              "caption": "<b>PC.</b> The shared box (above the tag here: no room below). Cash preset; “They chose Cash on the form.”"
+            },
+            {
+              "src": "shots/c02-pc-after-card.png",
+              "crop": [
+                600,
+                430,
+                600,
+                210
+              ],
+              "scale": 0.62,
+              "marks": [
+                [
+                  710,
+                  449,
+                  240,
+                  166
+                ]
+              ],
+              "caption": "<b>One tap on Card.</b> The hint still says what the family chose. Mark paid $166 records <b>card</b>, and Mia’s Paying by becomes Card (Color Belt’s rule, Jeffrey v0.418; logged; Undo payment puts Cash back)."
+            }
+          ]
+        },
+        {
+          "src": "shots/c02-tab-after.png",
+          "crop": [
+            300,
+            630,
+            500,
+            240
+          ],
+          "scale": 0.8,
+          "shotWidth": 820,
+          "marks": [
+            [
+              341,
+              672,
+              240,
+              178
+            ]
+          ],
+          "caption": "<b>Tablet touch.</b> Under the tag; its right edge under the tag’s."
+        },
+        {
+          "row": [
+            {
+              "src": "shots/c02-ph-after.png",
+              "crop": [
+                0,
+                300,
+                390,
+                320
+              ],
+              "scale": 0.62,
+              "shotWidth": 390,
+              "marks": [
+                [
+                  134,
+                  419,
+                  240,
+                  178
+                ]
+              ],
+              "caption": "<b>Phone.</b> The same small box (v1.104)."
+            },
+            {
+              "src": "shots/c02-320-after-card.png",
+              "crop": [
+                0,
+                240,
+                320,
+                320
+              ],
+              "scale": 0.62,
+              "shotWidth": 320,
+              "marks": [
+                [
+                  64,
+                  347,
+                  240,
+                  178
+                ]
+              ],
+              "caption": "<b>320</b>, Card picked. Kept 8px inside the screen."
+            }
+          ]
+        },
+        {
+          "src": "shots/c02-pc-after-desk.png",
+          "crop": [
+            600,
+            430,
+            600,
+            210
+          ],
+          "scale": 0.62,
+          "marks": [
+            [
+              722,
+              550,
+              170,
+              16
+            ]
+          ],
+          "caption": "<b>Option B only</b> (the question): Paying by was changed to Card at the desk earlier, so Card is preset and the hint reads “They chose Card at the desk.”"
+        }
+      ]
+    }
+  ],
+  "footer": "<b>Settled by copying (no question):</b> <b>(a)</b> Picking a different way in the box <b>also changes the camper’s Paying by</b>, logged, and Undo payment puts the old one back — Color Belt’s rule in Jeffrey’s words (v0.418: “If they change how they pay the dashboard should reflect that”). <b>(b)</b> Camps never has the box’s “no choice on record” state: every camper comes from the family form (paper or phone), which always asks Cash / Check / Card. <b>(c)</b> Saving, the “Mia Rossi marked paid · $166 card” toast with Undo, and a failure stay as today. Staff and admins see the same box. Not shown while Hide private details is on (no tags then, v0.722). <b>(d)</b> The database: <code>camp_mark_paid</code> gets a 4th input, the way (blank = Paying by, so today’s app keeps working until the new one is live); one migration with C7’s history reader, number from Main. <b>Question for Jeffrey (one):</b> the hint’s last words after Paying by was changed <b>at the desk</b> (with Change how they’ll pay, or by marking paid a different way). <b>A</b> — always “They chose Cash <b>on the form</b>.” Nothing extra stored. After a desk change it is wrong: staff see “They chose Card on the form.” when the family actually wrote Cash. <b>B</b> — “They chose Card <b>at the desk</b>.” once Paying by was changed at the desk (drawn last in the After column); “on the form” until then. Needs one yes/no saved on the camper in the same migration (set by Change how they’ll pay and Mark paid; Undo payment puts it back). <b>Recommend B</b>: the hint is there so staff trust the preset; a hint that names the wrong place makes them doubt it, and the extra cost is one column in a migration we are writing anyway. Star says “at the desk” only for desk entries (Star has no Change how they’ll pay on paid rows), so this matches Star’s words. <b>Script:</b> <code>mock-c02-markpaid.js</code> mounts the <b>real</b> shared box, filled from the preview’s own camp."
+}

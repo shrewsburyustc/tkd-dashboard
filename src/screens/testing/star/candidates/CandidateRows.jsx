@@ -4,21 +4,23 @@
 // candidate, in belt order (v0.117, the order loadCandidates returns):
 //   PC (1024px and wider):  Candidate ("Registered Oct 12" beside the name with a mouse, under it on
 //                            touch) · School · Testing for · Paying by ·
-//                            Payment (one tag) · Paid on · Record payment · ⋯
+//                            Payment (one tag) · Paid on · ✓ Mark paid · ⋯
 //   Tablet:                  Candidate (+ "Shrewsbury · Registered Oct 12") · Testing for ·
-//                            Paying by · Payment · Record payment · ⋯   (Paid on is in the detail)
-//   Phone:                   stacked: name + registered; stars · school; payment; tag + Record payment
+//                            Paying by · Payment · ✓ Mark paid · ⋯   (Paid on is in the detail)
+//   Phone:                   stacked: name + registered; stars · school; payment; tag + Mark paid
 // The School column / the school in the second line is left out with one school selected (G12).
 // Make-up rows (v0.116, G14): a gray line "Make-up · retests …", "No fee", the Make-up tag, no
-// Record payment. Private students (G15): a plain gray line "Private · Tue, Dec 1, 4:00 PM · $160".
+// Mark paid. Private students (G15): a plain gray line "Private · Tue, Dec 1, 4:00 PM · $160".
 // One tag per row (rule 8): Not saved > Removed / Duplicate copy > Possible duplicate (amber, a
 // button that opens the compare) > Make-up > Paid / Not paid.
-// While "Hide private details" is on (v0.506, G4): no Paying by, Payment, Paid on or Record payment;
+// "✓ Mark paid" (S1, DR2-P3, v0.518; was "Record payment") opens the shared Mark paid box under it
+// (CandidatesTab draws it); its screen-reader name is "Mark paid for Lily Brooks".
+// While "Hide private details" is on (v0.506, G4): no Paying by, Payment, Paid on or Mark paid;
 // the Payment column becomes Status with only the tags that aren't about money, and it is left out
 // when no shown row has one; "No fee" and the private line's fee are hidden; removed rows drop the
 // payment.
 // Withdrawn candidates sit in a Removed group at the bottom of the Dan, collapsed by default (G13).
-import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../../components/IconButton.jsx';
 import * as T from './text.js';
 
@@ -53,7 +55,7 @@ function Tag({ row, ctx }) {
         aria-label={T.reviewDuplicateLabel(T.candidateName(row))}
         onClick={(event) => {
           event.stopPropagation();
-          ctx.handlers.onReview(row);
+          ctx.handlers.onReview(row, event.currentTarget); // focus comes back here when the compare closes
         }}
       >
         <IconAlertTriangle size={12} aria-hidden="true" />
@@ -121,15 +123,20 @@ function CandidateRow({ row, ctx }) {
     <button
       type="button"
       className="btn btn-sm st-record"
-      aria-label={T.recordPaymentLabel(name)}
+      aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
+      aria-haspopup="dialog"
+      aria-expanded={ctx.markPaidFor === row.id ? 'true' : 'false'}
+      data-star-mark-paid={row.id}
       tabIndex={nav.itemTabIndex(row.id)}
       onClick={(event) => {
         event.stopPropagation();
-        if (!ctx.busy) handlers.onRecordPayment(row, event.currentTarget);
+        if (!ctx.busy) handlers.onMarkPaid(row, event.currentTarget);
       }}
     >
-      {T.RECORD_PAYMENT}
+      {/* ti-check: Mark paid (Color Belt's and the shared box's icon) */}
+      <IconCheck size={16} aria-hidden="true" />
+      {T.MARK_PAID}
     </button>
   ) : null;
   const more = showMenu ? (
@@ -264,7 +271,7 @@ function columnsFor(ctx) {
   if (!hidden) cols.push('64px');
   if (ctx.showStatusCol) cols.push(hidden ? '148px' : '176px');
   if (!hidden && layout.isWide) cols.push('64px');
-  // Record payment + ⋯ (touch: 44px ⋯); hidden: the ⋯ only
+  // Mark paid + ⋯ (touch: 44px ⋯); hidden: the ⋯ only
   const more = layout.isTouch ? 44 : 28;
   cols.push(hidden ? `${more}px` : `${more + 4 + (layout.isTouch ? 132 : 124)}px`);
   return cols.join(' ');

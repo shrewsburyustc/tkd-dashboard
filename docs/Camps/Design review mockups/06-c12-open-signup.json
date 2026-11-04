@@ -1,0 +1,27 @@
+{
+  "title": "Camps C12 — “Reopen sign-up” becomes “Open sign-up”",
+  "subtitle": "Rule v1.016: one verb pair with each section’s own noun and no icons — <b>Close sign-up / Open sign-up</b> in Camps (Color Belt, Star and Black Belt say Close / Open registration; Forms Close / Open form). The camp’s ⋯ menu (on the Camps list and in the camp page header). Camps’ items already have no icon. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c12-admin-today.png", "crop": [1000, 300, 270, 196], "scale": 1.3, "marks": [[1052, 344, 190, 32]],
+          "caption": "<b>Admin, PC.</b> Sign-up is closed: “Reopen sign-up”." },
+        { "src": "shots/c12-staff-today.png", "crop": [1000, 320, 270, 176], "scale": 1.3, "marks": [[1052, 360, 190, 82]],
+          "caption": "<b>Staff, PC</b>, after the closing date: grayed, with the reason “… Ask an admin to reopen.”" }
+      ] },
+      { "src": "shots/c12-staff-ph-today.png", "crop": [0, 600, 390, 244], "scale": 1, "shotWidth": 390, "marks": [[14, 686, 362, 46]],
+        "caption": "<b>Staff, phone 390×844</b> (the menu is a bottom sheet)." }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/c12-admin-after.png", "crop": [1000, 300, 270, 196], "scale": 1.3, "marks": [[1052, 344, 190, 32]],
+          "caption": "<b>Admin.</b> “Open sign-up”, same place, no icon." },
+        { "src": "shots/c12-staff-after.png", "crop": [1000, 320, 270, 176], "scale": 1.3, "marks": [[1052, 360, 190, 82]],
+          "caption": "<b>Staff.</b> Still grayed with an “Ask an admin” reason (v1.012): “The closing date has passed. Ask an admin to open it.”" }
+      ] },
+      { "src": "shots/c12-staff-ph-after.png", "crop": [0, 600, 390, 244], "scale": 1, "shotWidth": 390, "marks": [[14, 686, 362, 46]],
+        "caption": "<b>Phone.</b> Same words in the sheet." }
+    ] }
+  ],
+  "footer": "<b>Related words to settle (proposals, not drawn):</b> the toast “Sign-up reopened” → <b>“Sign-up open”</b> and “Sign-up reopened until Apr 30” → <b>“Sign-up open until Apr 30”</b> (Color Belt’s toast says “Registration open”); “Sign-up for X wasn’t reopened. …” → <b>“… wasn’t opened. …”</b>; the Registration link box’s “Family sign-up is closed. Reopen it from the ⋯ menu …” → <b>“Open it from the ⋯ menu …”</b>; the reason line “Ask an admin to reopen.” → <b>“Ask an admin to open it.”</b> (drawn; Color Belt and Star use the same “reopen” words today, so they may want the same change). <b>Script:</b> <code>mock-c12-open-signup.js</code>."
+}

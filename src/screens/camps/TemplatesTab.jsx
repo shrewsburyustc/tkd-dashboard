@@ -7,15 +7,17 @@
 //   - the location switcher doesn't filter this tab (templates are shared by both schools)
 //   - empty: one line, no button — templates are made from a camp's ⋯ → Save as template
 //   - a gray note under the list says how templates are made
+//   - Delete template asks first in the shared "are you sure?" box (components/ConfirmBox.jsx,
+//     "Keep template" · red "Delete template", "Deleting…" while it works; rulebook v0.729)
 // Admins only: staff don't see this tab (C1, 2026-10-19).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconDots } from '@tabler/icons-react';
+import { IconDots, IconTrash } from '@tabler/icons-react';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { deleteTemplate, loadTemplates } from '../../lib/camps/campsApi.js';
-import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
-import { useLiveLoad } from '../testing/events/useLiveLoad.js';
+import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { templateMenuItems } from './TemplateRowMenu.jsx';
 import * as T from './text.js';
 
@@ -210,16 +212,20 @@ export default function TemplatesTab({
         />
       )}
       {confirmShown && (
-        <ConfirmDeleteDialog
+        <ConfirmBox
           title={T.deleteTemplateTitle(confirm.template.name)}
-          body={T.DELETE_TEMPLATE_BODY}
           keepLabel={T.KEEP_TEMPLATE}
-          deleteLabel={T.DELETE_TEMPLATE}
-          failed={confirm.failed}
-          deleting={confirm.deleting}
-          onDelete={confirmDelete}
-          onCancel={() => !confirm.deleting && closeConfirm()}
-        />
+          actionLabel={T.DELETE_TEMPLATE}
+          actionIcon={IconTrash} // ti-trash = delete (red: deleting only)
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={confirm.deleting}
+          failed={confirm.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={closeConfirm} // ConfirmBox ignores it while the delete works
+        >
+          {T.DELETE_TEMPLATE_BODY}
+        </ConfirmBox>
       )}
     </>
   );

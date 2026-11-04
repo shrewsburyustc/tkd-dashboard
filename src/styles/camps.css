@@ -1,8 +1,10 @@
 /*
   camps.css — the styles for the Camps section (contract 0013 §6, mockups C1–C6, option A).
   Why it exists: Camps reuses Color Belt's built pieces and their styles (testing.css for .phead,
-  .ttabs, .ttag, .clist, .tdialog …; testing-events.css for the event list, the roster rows, the
-  compare dialog and the link dialog). This file adds only what Camps needs on top, with the same
+  .ttabs, .ttag, .clist, .tdialog …; testing-events.css for the event list, the roster rows and
+  the link dialog). The delete boxes, the possible-duplicate box and the compare dialog are the
+  dashboard's shared parts, styled by shared.css (rulebook v0.729; Camps' own duplicate-box phone
+  rules went with them). This file adds only what Camps needs on top, with the same
   tokens (tokens.css) and the 4px spacing grid. Class names start with "cp-" (camps) so they never
   clash with Color Belt's "ev-" and "gr-" classes.
 
@@ -77,15 +79,15 @@
   margin-top: var(--space-12);
 }
 
+/* The roster legend's two icons (v0.723, C16): sit on the text line, a hair of space before their word. */
+.cp-legend-icon {
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+
 .cp-empty-box {
   padding: var(--space-32) var(--space-16);
   text-align: center;
-}
-
-/* A gray heading inside a ⋯ menu ("Admin"): not a choice */
-.cp-menu-heading {
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
 }
 
 /* ===== C3 Add / Edit camp: folded sections ===== */
@@ -94,7 +96,6 @@
 .cp-select,
 .cp-cal-month,
 .cp-cal-year,
-.cp-time,
 .cp-count {
   font-family: inherit;
 }
@@ -169,6 +170,13 @@
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
   border-radius: 0 0 var(--radius-control) var(--radius-control);
+}
+
+/* Phones: the shared date picker opens in the page (C13, v0.727) and pulls itself 16px wider on
+   each side to meet a full-screen dialog's edges. Inside a section card the padding is 12px, so
+   it reaches only the card's inner edges instead of poking 3px past its border. */
+.cp-fold-body .dp-pop.is-inline {
+  margin-inline: calc(-1 * var(--space-12));
 }
 
 /* School | Held at side by side (they wrap on narrow screens) */
@@ -443,27 +451,6 @@
   padding-left: 36px;
 }
 
-/* The small box with Mark paid under a Not paid / Owes note */
-.cp-popover {
-  position: fixed;
-  z-index: 45;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
-  max-width: 280px;
-  padding: var(--space-12);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.cp-popover-line {
-  margin: 0;
-  font-size: var(--text-13);
-}
-
 /* ===== C6 Camper detail / Edit details ===== */
 .cp-detail-head {
   margin: var(--space-16) 0 var(--space-4);
@@ -480,6 +467,13 @@
 .cp-signup-line {
   margin: 0 0 var(--space-8);
   font-size: var(--text-13);
+}
+
+/* The History line after Sign-up (C7, rulebook v0.736): 12px above it in all (the Sign-up line's 8px
+   + 4px), as Star's summary parts (.st-detail-part + .st-detail-part); the line and its list are
+   the shared part's (shared.css .hist-*). */
+.cp-detail-history {
+  margin-top: var(--space-4);
 }
 
 .cp-chips {
@@ -519,6 +513,11 @@
   font-weight: 500;
 }
 
+/* Hide private details on (v0.722): "Total now Hidden on this tablet" — the gray words not bold */
+.cp-newtotal .ev-hidden-value {
+  font-weight: 400;
+}
+
 /* The re-price hint: its own line, normal weight */
 .cp-newtotal .field-hint {
   display: block;
@@ -532,16 +531,19 @@
   font-size: var(--text-13);
 }
 
-/* Phone camp page: name and the two header buttons on one row, one short line under it */
+/* Phone camp page: the name and one short line under it, then the two header buttons on their
+   own line — the blue "Registration link" with its words, ⋯ beside it (rulebook v0.733, design
+   review C11; they used to sit beside the name, the blue one an icon-only square) */
 .cp-phone-head {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--space-8);
   margin-bottom: var(--space-8);
 }
 
+/* The header is a column on phones (v0.733), so the titles just keep long words from overflowing. */
 .cp-phone-head .phead-titles {
-  flex: 1;
   min-width: 0;
 }
 
@@ -566,12 +568,6 @@
   flex: none;
   align-items: center;
   gap: var(--space-4);
-}
-
-.cp-link-icon {
-  width: var(--control-height-touch);
-  padding: 0;
-  justify-content: center;
 }
 
 /* ===== The one roster (CP5, 2026-10-21: Camps-one-roster.html, multi-week option A) ===== */
@@ -712,6 +708,12 @@
   vertical-align: middle;
 }
 
+/* Hide private details on (v0.722): "Possible duplicate" sits on the name's line, as Not saved */
+.cp-namedup {
+  margin-left: var(--space-8);
+  vertical-align: middle;
+}
+
 /* "All paid" in the summary line when nothing is owed */
 .cp-allpaid {
   font-weight: 500;
@@ -746,7 +748,7 @@
   cursor: pointer;
 }
 
-/* One day of one child: ✓ time · Check in · ✗ · — */
+/* One day of one child: came (user-check icon + time) · Check in · didn't come (user-x icon) · — */
 .cp-dc {
   position: relative;
   display: inline-flex;
@@ -910,6 +912,12 @@ button.cp-dc:focus-visible {
   font-weight: 400;
 }
 
+/* Camper detail's outline "Print receipt" at the end of Payments (PC / tablet without touch;
+   design review C3, rulebook v0.734) — Star's spacing (.st-print-receipt) */
+.cp-print-receipt {
+  margin-top: var(--space-8);
+}
+
 /* Camper detail on touch screens: the roster's ⋯ items as buttons */
 .cp-detail-actions {
   display: flex;
@@ -918,11 +926,12 @@ button.cp-dc:focus-visible {
   margin-bottom: var(--space-8);
 }
 
-.cp-detail-sublabel {
+/* A line between two groups of those buttons (money; taking someone off), like the ⋯ menu's
+   line (rulebook v0.724): full width, so the next group starts on a new row. */
+.cp-detail-break {
   flex-basis: 100%;
-  margin: var(--space-4) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
+  height: 0;
+  border-top: 1px solid var(--color-border);
 }
 
 /* Red only for delete: red words and outline, not a filled red button (review 8) */
@@ -1069,15 +1078,6 @@ button.cp-dc:focus-visible {
 
   .cp-search {
     max-width: none;
-  }
-
-  /* The duplicate box on phones: the count on its own line, no leading "·" */
-  .cp-dup-count {
-    display: block;
-  }
-
-  .cp-dup-sep {
-    display: none;
   }
 }
 
