@@ -18,6 +18,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCalendar, IconCalendarEvent, IconCalendarPlus, IconDots, IconEdit, IconHistory, IconMapPin, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { addSlots, deleteVersion, planVersion, removeSlot, setClassAges, setClassColor, updateSlot, updateVersion } from '../../lib/schedule/api.js';
@@ -499,16 +500,13 @@ export default function ScheduleSchool({
         )}
         {hasAnything && isPhone && (
           // Phone: Plan a change lives under ⋯ next to "+ Add" (mockup screen 1).
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={T.MORE_ACTIONS}
+          <IconButton
+            label={T.MORE_ACTIONS}
             aria-haspopup="menu"
             aria-expanded={menu?.kind === 'page' ? 'true' : 'false'}
             onClick={(e) => setMenu(menu ? null : { kind: 'page', anchor: e.currentTarget })}
-          >
-            <IconDots size={20} aria-hidden="true" />
-          </button>
+            Icon={IconDots}
+          />
         )}
         {editable && (
           <button
@@ -557,16 +555,13 @@ export default function ScheduleSchool({
         )}
       </select>
       {isAdmin && shown?.state === 'planned' && (
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={T.SCHEDULE_MORE(shown)}
+        <IconButton
+          label={T.SCHEDULE_MORE(shown)}
           aria-haspopup="menu"
           aria-expanded={menu?.kind === 'version' ? 'true' : 'false'}
           onClick={(e) => setMenu(menu ? null : { kind: 'version', anchor: e.currentTarget })}
-        >
-          <IconDots size={20} aria-hidden="true" />
-        </button>
+          Icon={IconDots}
+        />
       )}
       {!isPhone && planned.length > 0 && <span className="psub spicker-count">{T.plannedCount(planned.length)}</span>}
     </div>

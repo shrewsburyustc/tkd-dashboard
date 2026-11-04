@@ -4,9 +4,10 @@
 //   - one school: the page header ("Schedule", the school, Plan a change, + Add time slot) and
 //     that school's schedule (schedule/ScheduleSchool.jsx does the rest)
 //   - "Both": the two schools one above the other, each with its own heading and schedule picker
-//     (decided v0.233 — schedules are never mixed into one grid). The page header keeps ONE
-//     "Plan a change" and ONE blue "+ Add time slot"; they first ask which school (mockup
-//     screen 8), then that school opens its dialog.
+//     (decided v0.233 — schedules are never mixed into one grid). The page header says "Both
+//     schools" under the title (v1.022) and keeps ONE "Plan a change" and ONE blue
+//     "+ Add time slot"; they first ask which school (mockup screen 8), then that school opens
+//     its dialog.
 //   - for staff, the line "View only. Ask an admin to make changes."
 //
 // Props (from App.jsx), the same as Testing's:
@@ -15,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconCalendarPlus, IconDots, IconPlus } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
+import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -101,16 +103,13 @@ export default function Schedule({ location, isAdmin, onModalOpenChange, ...rest
     const buttons = isAdmin ? (
       <div className="sactions">
         {isPhone ? (
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={T.MORE_ACTIONS}
+          <IconButton
+            label={T.MORE_ACTIONS}
             aria-haspopup="menu"
             aria-expanded={menuAnchor ? 'true' : 'false'}
             onClick={(e) => setMenuAnchor(menuAnchor ? null : e.currentTarget)}
-          >
-            <IconDots size={20} aria-hidden="true" />
-          </button>
+            Icon={IconDots}
+          />
         ) : (
           <button type="button" className="btn" onClick={(e) => ask('plan', e.currentTarget)}>
             <IconCalendarPlus size={16} aria-hidden="true" />
@@ -126,7 +125,7 @@ export default function Schedule({ location, isAdmin, onModalOpenChange, ...rest
 
     return (
       <div className="schedule">
-        <PageHeader buttons={buttons} />
+        <PageHeader subtitle={T.BOTH_SCHOOLS} buttons={buttons} />
         {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
         {LOCATIONS.map((school) => (
           <ScheduleSchool
