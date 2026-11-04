@@ -41,6 +41,7 @@ import {
   EVENT_TABLES,
 } from '../mockTestingEvents.js';
 import * as PR from './privateRules.js'; // phase 4: the Private testing tab's rules
+import { buildColorBeltReceipt, eventTotalDueCents, standingPayments } from './receipt.js'; // CB2
 
 let count = 0;
 function check(label, fn) {
@@ -3219,6 +3220,270 @@ check('private mock: Change how they\'ll pay is refused after a Pass / Not passe
   // The screen agrees: privateMenu hides it after a Pass / Not passed (L5).
   assert.equal(PR.privateMenu({ status: 'active', paid: false, amountDueCents: 8500, result: 'pass' }, { today: PT, isAdmin: true }).changePayingBy, false);
 });
+
+// ======================= receipt.js (CB2, rulebook v0.420 / v0.421, mockup P3) =======================
+
+// Payment rows as loadEvent / the private load give them (a reversal is negative and points at the
+// payment it undoes).
+const rPay = (id, amountCents, paidOn, recordedAt, method = 'cash') => ({ id, kind: 'payment', amountCents, method, paidOn, recordedAt, reversesPaymentId: null });
+const rRev = (id, of, amountCents, paidOn, recordedAt) => ({ id, kind: 'reversal', amountCents: -amountCents, method: 'cash', paidOn, recordedAt, reversesPaymentId: of });
+const R_SCHOOLS = [
+  { name: 'Worcester', address: { street: '1 Main St' }, phone: '508-555-0101' },
+  { name: 'Shrewsbury', address: { street: '2 Elm St' }, phone: '508-555-0202' },
+];
+
+check('receipt: an event registration (P3 "Owen") — facts, one line, paid in full', () => {
+  const r = buildColorBeltReceipt({
+    firstName: 'Owen', lastName: 'Reed', rankName: 'White', testingForName: 'Yellow',
+    event: { name: 'November Children Testing', testingDate: '2026-11-20' },
+    className: 'White', classStart: '16:00', classEnd: '17:00', locationCode: 'worcester', reference: 'CB-3104',
+    payments: [rPay('p1', 6500, '2026-11-01', '2026-11-01T15:00:00Z')],
+    totalDueCents: 6500, schools: R_SCHOOLS, printedOn: '2026-11-03', printedByName: '  Jeffrey Berg ',
+  });
+  assert.equal(r.kindLine, 'Color belt testing · payment receipt');
+  assert.deepEqual(r.facts, [
+    ['Student', 'Owen Reed · White → Yellow'],
+    ['Event', 'November Children Testing · Nov 20, 2026'],
+    ['Class', 'White · 4:00 – 5:00 PM'],
+    ['School', 'Worcester'],
+    ['Reference', 'CB-3104'],
+  ]);
+  assert.deepEqual(r.lines, [{ date: '2026-11-01', forText: 'Testing fee', how: 'cash', amountCents: 6500 }]);
+  assert.equal(r.totalDueCents, 6500);
+  assert.equal(r.paidCents, 6500);
+  assert.equal(r.balanceNote, null);
+  assert.deepEqual(r.schools, [
+    { name: 'Worcester', street: '1 Main St', phone: '508-555-0101' },
+    { name: 'Shrewsbury', street: '2 Elm St', phone: '508-555-0202' },
+  ]);
+  assert.equal(r.printedOn, '2026-11-03');
+  assert.equal(r.printedByName, 'Jeffrey Berg'); // trimmed
+  // Never a date of birth, an email, notes, a signature or a link.
+  assert.doesNotMatch(JSON.stringify(r), /@|https?:|signature|"notes?"|birth|email/i);
+});
+
+check('receipt: undone and edited payments leave out the payment and its reversal; oldest first', () => {
+  const payments = [
+    rPay('p1', 5000, '2026-10-20', '2026-10-20T15:00:00Z'), // undone
+    rRev('x1', 'p1', 5000, '2026-10-21', '2026-10-21T15:00:00Z'),
+    rPay('p3', 6000, '2026-10-25', '2026-10-25T15:00:00Z', 'check'), // edited → reversal + p4
+    rRev('x3', 'p3', 6000, '2026-10-26', '2026-10-26T15:00:00Z'),
+    rPay('p4', 6500, '2026-10-24', '2026-10-26T15:00:01Z', 'card'), // the edit's new payment (dated earlier)
+  ];
+  assert.deepEqual(standingPayments(payments).map((p) => p.id), ['p4']);
+  const r = buildColorBeltReceipt({
+    firstName: 'Ava', lastName: 'Chen', rankName: 'LT White', testingForName: null,
+    event: { name: 'Fall', testingDate: '2026-11-20' }, className: 'Little Tiger', classStart: '16:00', classEnd: '17:00',
+    locationCode: 'shrewsbury', reference: null, payments, totalDueCents: 6500, schools: [], printedOn: '2026-11-03', printedByName: null,
+  });
+  assert.deepEqual(r.lines, [{ date: '2026-10-24', forText: 'Testing fee', how: 'card', amountCents: 6500 }]);
+  assert.equal(r.paidCents, 6500);
+  assert.deepEqual(r.facts[0], ['Student', 'Ava Chen · LT White']); // no new rank: just the belt
+  assert.deepEqual(r.facts.at(-1), ['School', 'Shrewsbury']); // no reference → no Reference line
+  assert.deepEqual(r.schools, []); // schools couldn't load: no footer lines
+  assert.equal(r.printedByName, null); // get_my_profile failed: the name is left out
+  assert.equal(buildColorBeltReceipt({ firstName: 'A', lastName: 'B', locationCode: 'worcester', printedOn: '2026-11-03', printedByName: '   ' }).printedByName, null);
+  // Everything undone: no lines, nothing paid.
+  const none = buildColorBeltReceipt({ firstName: 'A', lastName: 'B', locationCode: 'worcester', payments: payments.slice(0, 2), totalDueCents: 5000, printedOn: '2026-11-03' });
+  assert.deepEqual(none.lines, []);
+  assert.equal(none.paidCents, 0);
+  // Same day: by when it was recorded.
+  const sameDay = standingPayments([rPay('b', 1, '2026-11-01', '2026-11-01T16:00:00Z'), rPay('a', 1, '2026-11-01', '2026-11-01T15:00:00Z')]);
+  assert.deepEqual(sameDay.map((p) => p.id), ['a', 'b']);
+});
+
+check('receipt: a private testing (P3 "Ava", v0.421 Q A) — Moved from, a top-up as a second line', () => {
+  const base = {
+    firstName: 'Ava', lastName: 'Chen', rankName: 'Yellow', testingForName: 'Orange', className: 'Group A',
+    classStart: '16:00', classEnd: '17:00', locationCode: 'worcester', reference: null,
+    payments: [rPay('m1', 6500, '2026-10-27', '2026-11-01T15:00:00Z'), rPay('t1', 2000, '2026-11-03', '2026-11-03T15:00:00Z')],
+    totalDueCents: 8500, schools: [], printedOn: '2026-11-03', printedByName: 'Jeffrey Berg',
+  };
+  const moved = buildColorBeltReceipt({ ...base, privateTesting: { privateOn: '2026-12-01', privateTime: '16:00', movedFromEventName: 'November Children Testing' } });
+  assert.deepEqual(moved.facts, [
+    ['Student', 'Ava Chen · Yellow → Orange'],
+    ['Private testing', 'Tue, Dec 1, 4:00 PM'],
+    ['Moved from', 'November Children Testing'],
+    ['Class', 'Group A'], // a private testing: no class time
+    ['School', 'Worcester'],
+  ]);
+  assert.deepEqual(moved.lines.map((l) => [l.date, l.forText, l.amountCents]), [['2026-10-27', 'Testing fee', 6500], ['2026-11-03', 'Testing fee', 2000]]);
+  assert.equal(moved.paidCents, 8500);
+  assert.equal(moved.totalDueCents, 8500);
+  // Added at the desk: no Moved from line; a reference shows when it has one.
+  const desk = buildColorBeltReceipt({ ...base, reference: 'CB-9001', privateTesting: { privateOn: '2026-12-01', privateTime: '16:00', movedFromEventName: null } });
+  assert.deepEqual(desk.facts.map((f) => f[0]), ['Student', 'Private testing', 'Class', 'School', 'Reference']);
+});
+
+check('receipt: Total due for an event registration (the price the database charges)', () => {
+  const rank = { earlyCents: 5000, dayCents: 6000 };
+  // Not paid: today's price — early before the testing day, the testing-day price on and after it.
+  assert.equal(eventTotalDueCents(rank, [], '2026-11-19', '2026-11-20'), 5000);
+  assert.equal(eventTotalDueCents(rank, [], '2026-11-20', '2026-11-20'), 6000);
+  assert.equal(eventTotalDueCents(rank, [], '2026-11-21', '2026-11-20'), 6000);
+  // Paid early, printed on the testing day: the early price (no false "$10 owed").
+  assert.equal(eventTotalDueCents(rank, [rPay('p', 5000, '2026-11-10', '2026-11-10T12:00:00Z')], '2026-11-20', '2026-11-20'), 5000);
+  // Paid on the day: the testing-day price.
+  assert.equal(eventTotalDueCents(rank, [rPay('p', 6000, '2026-11-20', '2026-11-20T12:00:00Z')], '2026-11-20', '2026-11-20'), 6000);
+  // An undone payment doesn't count: back to today's price.
+  assert.equal(eventTotalDueCents(rank, [rPay('p', 5000, '2026-11-10', 'a'), rRev('x', 'p', 5000, '2026-11-11', 'b')], '2026-11-20', '2026-11-20'), 6000);
+  assert.equal(eventTotalDueCents(null, [], '2026-11-20', '2026-11-20'), 0); // no rank: nothing, never NaN
+});
+
+// ======================= Mark paid with a way to pay (CB1, migration 0030 §3a, rulebook v0.418) =======================
+
+// The preview database's testing_mark_paid_by must follow 0030 §3a: refused in the order
+// no_access → invalid → not_found → stale → withdrawn → already_paid → price_changed (which writes
+// nothing); a way other than "Paying by" changes "Paying by" and the payment remembers the old one
+// (paying_by_before); Undo payment (0030 §3c) puts it back while "Paying by" is still the payment's way.
+check('events mock: Mark paid with a way to pay (testing_mark_paid_by, 0030 §3a)', () => {
+  evReset();
+  const zoe = () => regBy('CB-3112'); // Group A Yellow, not paid: early $65, testing-day $75
+  const by = (over = {}, ctx = E_DESK) => evCall('testing_mark_paid_by', {
+    p_registration_id: zoe().id, p_expected_version: zoe().version, p_method: 'card', p_expected_cents: 6500, ...over,
+  }, ctx);
+  const familyChoice = zoe().paying_by;
+  const other = ['cash', 'check', 'card'].find((m) => m !== familyChoice); // a different way than "Paying by"
+  // invalid: a bad way, a missing way, a negative expected amount, a missing id or version.
+  assert.equal(by({ p_method: 'venmo' }).status, 'invalid');
+  assert.equal(by({ p_method: null }).status, 'invalid');
+  assert.equal(by({ p_expected_cents: -1 }).status, 'invalid');
+  assert.equal(by({ p_expected_cents: null }).status, 'invalid');
+  assert.equal(by({ p_expected_version: null }).status, 'invalid');
+  assert.equal(by({ p_registration_id: '00000000-0000-4000-8000-00000000dead' }).status, 'not_found');
+  assert.equal(by({}, E_LOCKED).status, 'no_access'); // has_data_access first
+  // stale comes before price_changed (an old version AND a wrong amount → stale).
+  assert.equal(by({ p_expected_version: zoe().version + 1, p_expected_cents: 1 }).status, 'stale');
+  // price_changed: the box showed the testing-day price before the testing day → the early price
+  // comes back and NOTHING is saved (same data, same version, same "Paying by").
+  const before = JSON.stringify(evDb());
+  assert.deepEqual(by({ p_expected_cents: 7500 }), { status: 'price_changed', amount_cents: 6500 });
+  assert.equal(JSON.stringify(evDb()), before);
+  // The box opened before midnight and the testing day began: the testing-day price comes back.
+  evToday = '2026-11-20';
+  assert.deepEqual(by({ p_expected_cents: 6500, p_method: other }), { status: 'price_changed', amount_cents: 7500 });
+  assert.equal(JSON.stringify(evDb()), before);
+  evToday = '2026-10-17';
+  // ok, a different way than "Paying by": "Paying by" becomes that way, the old one is remembered.
+  const v0 = zoe().version;
+  const paid = by({ p_method: other });
+  assert.deepEqual({ ...paid, payment_id: 'x' }, {
+    status: 'ok', payment_id: 'x', amount_cents: 6500, method: other, paid_on: '2026-10-17', paying_by: other, version: v0 + 1,
+  });
+  const pay = evDb().payments.find((p) => p.id === paid.payment_id);
+  assert.deepEqual([pay.kind, pay.amount_cents, pay.method, pay.paid_on, pay.paying_by_before], ['payment', 6500, other, '2026-10-17', familyChoice]);
+  assert.equal(zoe().paying_by, other);
+  const row = rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === zoe().id);
+  assert.deepEqual([row.paid, row.paid_cents, row.paid_method], [true, 6500, other]);
+  // A double click (the old version) → stale; the new version → already_paid, which comes before
+  // price_changed (a wrong amount on a paid registration is still already_paid).
+  assert.equal(by({ p_expected_version: v0, p_method: other }).status, 'stale');
+  assert.equal(by({ p_method: other }).status, 'already_paid');
+  assert.equal(by({ p_method: other, p_expected_cents: 1 }).status, 'already_paid');
+  // Undo payment (same desk, inside 10 seconds) puts the family's "Paying by" back.
+  const undone = evCall('testing_undo_payment', { p_payment_id: paid.payment_id }, E_DESK);
+  assert.deepEqual(undone, { status: 'ok', version: v0 + 2 });
+  assert.equal(zoe().paying_by, familyChoice);
+  assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === zoe().id).paid, false);
+  // Paying the family's own way: nothing remembered, "Paying by" unchanged — and Undo leaves it.
+  const same = by({ p_method: familyChoice });
+  assert.equal(same.status, 'ok');
+  assert.equal(same.paying_by, familyChoice);
+  assert.equal(evDb().payments.find((p) => p.id === same.payment_id).paying_by_before, null);
+  assert.equal(zoe().paying_by, familyChoice);
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: same.payment_id }, E_DESK), 'ok');
+  assert.equal(zoe().paying_by, familyChoice);
+  // Withdrawn students can't be paid (withdrawn comes before price_changed too).
+  const leo = regBy('CB-3116');
+  assert.equal(evStatus('testing_mark_paid_by', { p_registration_id: leo.id, p_expected_version: leo.version, p_method: 'cash', p_expected_cents: 1 }, E_DESK), 'withdrawn');
+  evReset();
+});
+
+// eventsApi.js's markPaidBy imports the app's ONE connection (../supabase.js), which needs Vite.
+// Here a Node module hook swaps that one import for a tiny stand-in whose rpc() calls cbRpc below:
+// by default the preview database above (so the wrapper is checked end to end), or a hand-made
+// answer (cbRaw) to check how the wrapper reads answers the database should never give.
+let cbRpcCtx = E_DESK;
+let cbRaw = null; // null = ask the preview database; otherwise the { data, error } to answer, or a function that throws
+let cbLastCall = null;
+globalThis.__cbChecksRpc = (name, args) => {
+  cbLastCall = { name, args };
+  if (typeof cbRaw === 'function') return cbRaw();
+  return cbRaw ?? ev.rpc(name, args, cbRpcCtx);
+};
+const SUPABASE_STUB = `data:text/javascript,${encodeURIComponent(
+  'export const isPreview = false; export const supabase = { rpc: async (n, a) => globalThis.__cbChecksRpc(n, a) };',
+)}`;
+const { registerHooks } = await import('node:module');
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    const found = nextResolve(specifier, context);
+    return found.url.endsWith('/src/lib/supabase.js') ? { url: SUPABASE_STUB, shortCircuit: true } : found;
+  },
+});
+const eventsApi = await import('./eventsApi.js');
+
+await (async () => {
+  const label = 'eventsApi: markPaidBy reads ok, price_changed and the other answers';
+  try {
+    evReset();
+    cbRaw = null;
+    const zoe = () => regBy('CB-3112');
+    const args = (over = {}) => ({ registrationId: zoe().id, expectedVersion: zoe().version, method: 'card', expectedCents: 6500, ...over });
+    // It calls testing_mark_paid_by with exactly 0030's argument names.
+    const changed = await eventsApi.markPaidBy(args({ expectedCents: 7500 }));
+    assert.equal(cbLastCall.name, 'testing_mark_paid_by');
+    assert.deepEqual(cbLastCall.args, { p_registration_id: zoe().id, p_expected_version: zoe().version, p_method: 'card', p_expected_cents: 7500 });
+    // price_changed from the preview database: the database's amount, as amountCents.
+    assert.deepEqual(changed, { status: 'price_changed', amountCents: 6500 });
+    // ok: camelCase, with the day and the new "Paying by".
+    const v0 = zoe().version;
+    const paid = await eventsApi.markPaidBy(args());
+    assert.equal(typeof paid.paymentId, 'string');
+    assert.deepEqual({ ...paid, paymentId: 'x' }, { status: 'ok', paymentId: 'x', amountCents: 6500, method: 'card', paidOn: '2026-10-17', payingBy: 'card', version: v0 + 1 });
+    // Refusals from the preview database come through as just { status }.
+    assert.deepEqual(await eventsApi.markPaidBy(args({ expectedVersion: v0 })), { status: 'stale' });
+    assert.deepEqual(await eventsApi.markPaidBy(args()), { status: 'already_paid' });
+    cbRpcCtx = E_LOCKED;
+    assert.deepEqual(await eventsApi.markPaidBy(args()), { status: 'no_access' });
+    cbRpcCtx = E_DESK;
+    // How the ok answer is read (hand-made answers).
+    const answer = (data) => { cbRaw = { data, error: null }; return eventsApi.markPaidBy(args()); };
+    const okRow = { status: 'ok', payment_id: 'p1', amount_cents: 6500, method: 'cash', paid_on: '2026-10-17', paying_by: 'cash', version: 4 };
+    assert.deepEqual(await answer(okRow), { status: 'ok', paymentId: 'p1', amountCents: 6500, method: 'cash', paidOn: '2026-10-17', payingBy: 'cash', version: 4 });
+    // No paid_on / paying_by: the day is unknown (null) and "Paying by" is the way they paid.
+    assert.deepEqual(await answer({ ...okRow, paid_on: undefined, paying_by: undefined }), { status: 'ok', paymentId: 'p1', amountCents: 6500, method: 'cash', paidOn: null, payingBy: 'cash', version: 4 });
+    // A wrong shape is an error, never a guess.
+    for (const bad of [{ payment_id: '' }, { payment_id: undefined }, { amount_cents: '6500' }, { amount_cents: 65.5 }, { method: '' }, { version: null }, { version: '4' }]) {
+      assert.equal((await answer({ ...okRow, ...bad })).status, 'error', JSON.stringify(bad));
+    }
+    // price_changed needs a whole-cents amount_cents; missing or not an integer → error.
+    assert.deepEqual(await answer({ status: 'price_changed', amount_cents: 7500 }), { status: 'price_changed', amountCents: 7500 });
+    assert.deepEqual(await answer({ status: 'price_changed', amount_cents: 0 }), { status: 'price_changed', amountCents: 0 });
+    for (const bad of [undefined, null, '7500', 75.5, NaN, true, {}]) {
+      const r = await answer({ status: 'price_changed', amount_cents: bad });
+      assert.equal(r.status, 'error', String(bad));
+      assert.ok(r.error instanceof Error);
+      assert.equal('amountCents' in r, false);
+    }
+    // Every other status the database can give comes back as just { status } (extra fields dropped).
+    for (const s of ['already_paid', 'withdrawn', 'stale', 'not_found', 'invalid', 'no_access', 'not_allowed']) {
+      assert.deepEqual(await answer({ status: s, amount_cents: 6500 }), { status: s });
+    }
+    // Not a known status, no status, no answer, a connection error, a throw: 'error', never a throw.
+    for (const data of [{ status: 'weird' }, { status: 'error' }, {}, null, 'ok']) assert.equal((await answer(data)).status, 'error', JSON.stringify(data));
+    cbRaw = { data: null, error: { message: 'Failed to fetch' } };
+    assert.equal((await eventsApi.markPaidBy(args())).status, 'error');
+    cbRaw = () => { throw new Error('network down'); };
+    assert.equal((await eventsApi.markPaidBy(args())).status, 'error');
+    cbRaw = null;
+    evReset();
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
 
 check('sanity: these checks catch a broken rule (break on purpose)', () => {
   // The comparison helper must FAIL when the rule it compares with is wrong.

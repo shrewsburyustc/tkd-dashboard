@@ -7,6 +7,7 @@
 //   'duplicate_name' · 'invalid' · 'not_empty' · 'final_award_not_set' (+ className) ·
 //   'not_open' · 'closed' · 'finished' · 'already_paid' · 'withdrawn' · 'rate_limited' ·
 //   'has_results' (phase 3: Edit event can't move the date of an event that has results) ·
+//   'price_changed' (0030, Mark paid: + amountCents, the amount the database works out) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -33,6 +34,7 @@ export const EVENT_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty',
   'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'has_results',
   'moved', // phase 4: Restore of a registration that was moved to a private testing
+  'price_changed', // 0030 (CB1): Mark paid's amount isn't the one the box showed (+ amountCents)
   'error',
 ];
 const SERVER_STATUSES = new Set(EVENT_STATUSES.filter((s) => s !== 'error'));
@@ -363,6 +365,24 @@ export async function loadResult(registrationId) {
   }
 }
 
+// The signed-in person's name, for the receipt's "Printed … by [name]" (design review CB2, rulebook
+// v0.421; a Color Belt copy of Star's loadMyName, v0.518 Q7 A, so the sections stay apart). Reads
+// get_my_profile (migration 0001: the caller's own staff row; App.jsx calls it at sign-in and the
+// preview answers it) when a receipt opens. → the full name, or null when the call fails or there
+// is no name — the receipt then just leaves the name out. Never throws.
+export async function loadMyName() {
+  try {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc('get_my_profile');
+    if (error) return null;
+    const row = Array.isArray(data) ? data[0] : data; // the function returns 0 or 1 rows
+    const name = row?.full_name;
+    return typeof name === 'string' && name.trim() !== '' ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 // ----- Writing (one database function each, contract 0005 §1.8) -----
 
 const isText = (v) => typeof v === 'string' && v.length > 0;
@@ -380,6 +400,8 @@ async function callRpc(name, args, readOk) {
     const status = data?.status;
     if (typeof status !== 'string' || !SERVER_STATUSES.has(status)) return unexpected(name);
     if (status === 'final_award_not_set') return { status, className: typeof data.class_name === 'string' ? data.class_name : null };
+    // 0030 (CB1): nothing was saved; the database's amount comes back so the box can show it.
+    if (status === 'price_changed') return isInt(data.amount_cents) ? { status, amountCents: data.amount_cents } : unexpected(name);
     if (status !== 'ok') return { status };
     const result = readOk(data);
     return result ? { status: 'ok', ...result } : unexpected(name);
@@ -512,16 +534,27 @@ export async function changePayingBy({ registrationId, expectedVersion, payingBy
   );
 }
 
-// Mark paid: one click pays in full. The DATABASE decides the amount (early price before the
-// testing day, testing-day price on it) and the date (today). → { status:'ok', paymentId,
-// amountCents, method, version } · 'already_paid' · 'withdrawn' · 'stale' (e.g. a double click)
-export async function markPaid({ registrationId, expectedVersion } = {}) {
+// Mark paid with a way to pay (migration 0030, design review CB1, rulebook v0.418 / v0.420): the
+// shared Mark paid box shows the amount and asks Paid by Cash / Check / Card.
+//   method          'cash' | 'check' | 'card' — how they paid
+//   expectedCents   the amount the box SHOWED. The DATABASE still works out the amount (the early
+//                   price before the testing day, the testing-day price on it and after) and the
+//                   date (today); if its amount is different (the testing day began at midnight
+//                   while the box was open) it saves nothing and answers 'price_changed' with
+//                   amountCents, so the page can name the new amount (v0.423).
+// A way that isn't the family's "Paying by" changes "Paying by" too (v0.418 Q2); Undo payment puts
+// the family's choice back. (It replaces the old one-click testing_mark_paid, which the database
+// keeps until a later small migration removes it; nothing in the app calls that one any more.)
+// → { status:'ok', paymentId, amountCents, method, paidOn, payingBy, version } · 'price_changed'
+//   (+ amountCents) · 'already_paid' · 'withdrawn' · 'stale' (e.g. a double click) · 'not_found' ·
+//   'invalid' · 'no_access' · 'error'
+export async function markPaidBy({ registrationId, expectedVersion, method, expectedCents } = {}) {
   return callRpc(
-    'testing_mark_paid',
-    { p_registration_id: registrationId, p_expected_version: expectedVersion },
+    'testing_mark_paid_by',
+    { p_registration_id: registrationId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents },
     (d) =>
       isText(d.payment_id) && isInt(d.amount_cents) && isText(d.method) && isInt(d.version)
-        ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, version: d.version }
+        ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, paidOn: d.paid_on ?? null, payingBy: d.paying_by ?? d.method, version: d.version }
         : null,
   );
 }

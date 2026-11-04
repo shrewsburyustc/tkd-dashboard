@@ -652,6 +652,33 @@ export const UNDO_PAYMENT_TOO_LATE = 'Too late to undo here. Ask an admin to und
 // Staff Undo of "keep this one" after the database's 10-second window (R7)
 export const UNDO_DUPLICATE_TOO_LATE = 'Too late to undo here. Ask an admin to restore the copy from Removed.';
 export const actionFailed = "That didn't save. Check the connection, then retry.";
+
+// ----- Design review part 2 (rulebook v0.420 / v0.421, mockups P1 and P3; Star's words, v0.518) -----
+// CB1, the Mark paid box: the testing-day price started while the box was open. Nothing was
+// saved; the box stays closed and staff press Mark paid again (v0.423, option B).
+export const priceChangedNote = (name, cents) =>
+  `The price for ${name} is now ${formatMoney(cents)} (the testing-day price). Nothing was saved. Tap Mark paid again.`;
+// CB3, second half: Undo payment asks first (Star's words, v0.518; blue, Keep payment focused)
+export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
+export const undoPaymentBody = (cents, method, iso) =>
+  `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to Not paid. Both stay in the history.`;
+export const KEEP_PAYMENT = 'Keep payment';
+export const UNDOING = 'Undoing…';
+export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // Star's Q2 B
+// CB2, Print receipt (the receipt's own lines: src/lib/testing/receipt.js)
+export const PRINT_RECEIPT = 'Print receipt';
+export const THIS_STUDENT = 'This student'; // the receipt's not-found line when the row is gone too
+export const receiptSub = (name, where) => `${name} · ${where}`;
+export const receiptNotFound = (name) => `${name} was deleted on another device, so there is no receipt.`; // Star's words
+export const RECEIPT_KIND = 'Color belt testing · payment receipt';
+export const RECEIPT_STUDENT = 'Student';
+export const RECEIPT_EVENT = 'Event';
+export const RECEIPT_PRIVATE = 'Private testing';
+export const RECEIPT_MOVED_FROM = 'Moved from'; // v0.421 Q A
+export const RECEIPT_CLASS = 'Class';
+export const RECEIPT_SCHOOL = 'School';
+export const RECEIPT_REFERENCE = 'Reference';
+export const RECEIPT_FOR_FEE = 'Testing fee';
 export const EVENT_FINISHED_ADD = "This testing has finished, so students can't be added any more.";
 
 // R4: Add student
