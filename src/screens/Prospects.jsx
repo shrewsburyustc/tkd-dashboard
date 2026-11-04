@@ -803,9 +803,17 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           <span className="visually-hidden">{T.SEARCH_LABEL}</span>
           <input type="search" className="psearch-input" placeholder={T.SEARCH} value={search} maxLength={80} onChange={(e) => setSearch(e.target.value)} />
           {search && (
-            <button type="button" className="psearch-clear" aria-label={T.CLEAR_SEARCH} onClick={() => setSearch('')}>
-              <IconX size={14} aria-hidden="true" />
-            </button>
+            // the shared icon button: 28px, "Clear search" tooltip, 44px on touch (rulebook v0.631);
+            // it disappears when pressed, so focus goes back into the search box
+            <IconButton
+              label={T.CLEAR_SEARCH}
+              Icon={IconX}
+              onClick={(e) => {
+                const input = e.currentTarget.closest('label')?.querySelector('input');
+                setSearch('');
+                input?.focus();
+              }}
+            />
           )}
         </label>
       )}

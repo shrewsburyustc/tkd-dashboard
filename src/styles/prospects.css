@@ -186,16 +186,6 @@
   display: none;
 }
 
-.psearch-clear {
-  display: inline-flex;
-  padding: 2px;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
 /* Phone: tiles */
 .ptiles {
   display: grid;
@@ -1400,16 +1390,6 @@ body.is-card-dragging * {
 
   .pstatus-btn {
     min-height: var(--tap-size);
-  }
-
-  .psearch-clear {
-    position: relative;
-  }
-
-  .psearch-clear::after {
-    position: absolute;
-    inset: -13px;
-    content: '';
   }
 
   .plist-row:not(.plist-head) {
