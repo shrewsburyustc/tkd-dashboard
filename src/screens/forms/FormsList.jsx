@@ -28,8 +28,9 @@ export default function FormsList({ forms, monthCounts, both, isAdmin, isPhone, 
     const live = f.status === 'live';
     // Fill in can't be used on a Draft / Closed form, nor anywhere while desk-only: it grays in the
     // approved "unavailable" look (v0.616; a Draft's too since "(now)" point 1, rulebook v0.628), stays
-    // focusable (aria-disabled, never disabled) and pressing it does nothing. A Draft / Closed form
-    // keeps its own "publish first" title; a live one points at the page's desk-only line.
+    // focusable (aria-disabled, never disabled) and pressing it does nothing. A Draft's title says
+    // "publish first", a Closed form's "an admin can open it again" (v0.629); a live one points at
+    // the page's desk-only line.
     const unavailable = fillAtDesk || !live;
     return (
       <span className="flist-acts">
@@ -37,7 +38,7 @@ export default function FormsList({ forms, monthCounts, both, isAdmin, isPhone, 
           <button
             type="button"
             className={`btn btn-sm${unavailable ? ' is-unavailable' : ''}`}
-            title={live ? undefined : T.DRAFT_NO_FILL}
+            title={live ? undefined : f.status === 'closed' ? T.CLOSED_NO_FILL : T.DRAFT_NO_FILL}
             aria-disabled={unavailable ? 'true' : undefined}
             aria-describedby={fillAtDesk && live ? 'forms-fill-at-desk' : undefined}
             onClick={(e) => !unavailable && onFillIn(f, e.currentTarget)}

@@ -238,7 +238,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     const live = m.form.status === 'live';
     return {
       key: 'fill',
-      // a draft or closed form keeps its own (status) reason, so the desk words show only on a live one
+      // a draft or closed form's item just grays (its status tag says why), so the desk words show only on a live one
       label: privateHidden && live ? (
         <span className="ev-menu-two">
           <span>{T.FILL_IN_ITEM}</span>
