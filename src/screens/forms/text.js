@@ -127,6 +127,9 @@ export const SHOW_IF_ORDER = 'A "Show only if" question must stay below the ques
 export const MOVE_UP = 'Move up';
 export const MOVE_DOWN = 'Move down';
 export const DELETE_FIELD = 'Delete field';
+// The toast after deleting a field, with Undo (rulebook v0.630)
+export const UNDO_FIELD_CHANGED = "Couldn't undo — the form has changed since.";
+export const fieldDeleted = (label) => (String(label ?? '').trim() ? `“${String(label).trim()}” deleted` : 'Field deleted');
 export const EDIT_FIELD = 'Edit';
 export const FORM_SETTINGS = 'Form settings';
 export const NO_FIELD_HINT = 'Click a field to change it, or empty space for the form settings.';
