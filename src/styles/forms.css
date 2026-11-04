@@ -548,7 +548,9 @@
   margin-top: var(--space-16);
 }
 
-.fwaiver-edit {
+/* Two classes, so it beats calendar.css's .ctextarea (88px) whatever order the files load in:
+   in the real build forms.css loads first ("(now)" point 3). */
+.ctextarea.fwaiver-edit {
   min-height: 160px;
 }
 
@@ -618,7 +620,9 @@
   font-size: var(--text-13);
 }
 
-.fslot-spots {
+/* Two classes, so it beats app.css's .input (full width) whatever order the files load in:
+   in the real build forms.css loads first ("(now)" point 3). */
+.input.fslot-spots {
   width: 64px;
 }
 

@@ -5,6 +5,8 @@
 // Prints "ALL PROGRESS CHECKS PASSED", or stops at the first failed check.
 import assert from 'node:assert/strict';
 import { localDay, progressOf, progressWords } from './progress.js';
+import { signedLine, whenLine } from './text.js';
+import { statusLine } from '../forms/text.js';
 
 const TODAY = '2026-10-19';
 const st = (builtin, kind = 'stage', name = builtin) => ({ builtin, kind, name });
@@ -67,6 +69,10 @@ assert.equal(r.short.tone, 'warn');
 // A sign-up at 9 pm in Massachusetts is that day, not the next (UTC) day
 assert.equal(localDay('2026-10-19T01:30:00Z'), '2026-10-18');
 assert.equal(localDay('2026-10-19'), '2026-10-19');
+// "(now)" point 2: a note, the waiver's "signed" date and "last published" at 9:30 pm show that day too
+assert.equal(whenLine('2026-10-19T01:30:00Z', 'Staff'), 'Oct 18 · Staff');
+assert.equal(signedLine('2026-10-19T01:30:00Z', true), 'waiver signed Oct 18');
+assert.ok(statusLine({ status: 'live', publishedAt: '2026-10-19T01:30:00Z' }, {}).text.includes('last published Oct 18'));
 
 // A cancelled class gets no countdown
 r = progressOf({ ...base, booking: booking('2026-10-26', { classRunning: false }) }, st('booked'), TODAY);
