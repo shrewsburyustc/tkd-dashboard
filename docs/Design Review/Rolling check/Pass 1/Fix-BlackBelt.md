@@ -102,6 +102,15 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 - **Change:** in `useCandidateActions.js:1069–1090`, when the restored row was a Duplicate copy, the toast says "[Name] restored" with no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
 - **Check (preview mode):** `__tkdPreview.bbSampleEdge()` → Review the Noah Silva pair → Keep this one: the copy sits in Removed as "Duplicate copy" → ⋯ Restore → no Undo in the toast. Withdraw and restore an ordinary candidate → Undo is still there.
 
+### R3-01 — Past-due "Not paid" turns amber · Medium · decided 2026-11-04 (v1.044)
+
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-paid.png`.
+
+- **What's wrong:** once a due date has passed, the roster's "Not paid" tag is drawn in the Delete red (measured rgb(163, 45, 45) on rgb(252, 235, 235); `text.js:558–559`, `RosterRows.jsx:61`, `blackBelt.css:1024–1029`). §7 (v1.007) keeps red for "gone for good".
+- **Rule:** v1.044 (Jeffrey, 2026-11-04: "A: amber"): amber, like your own "Late · $X since [date]". The timing (v0.224) and the Not paid card and filter stay as they are.
+- **Change:** in `text.js:559`, change the past-due Not paid's `kind: 'red'` to `'warn'` (Late's amber), then remove the red kind and `.bb-tag--red` (`blackBelt.css:1024–1029`) if nothing else uses them. Don't just recolor the red class. The tag is drawn only through `MoneyTag`: the roster row (phones included) and the candidate detail's title (`CandidateDialog.jsx:626`). Show Jeffrey a small picture first.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` + `__tkdPreview.setToday('2027-04-26')`: Rina Patel's "Not paid" is amber, the same as Sam Lee's "Late", at 1280, 820, 390 and 320. Nothing on the roster is red except Delete permanently.
+
 ### R2-05 (your part) — An Undo pressed during another save is dropped without a word · Medium · after Dashboard core's R2-05
 
 - **What's wrong:** the shared Toast removes itself before it runs Undo (`components/Toast.jsx:73–77`), and your Undo returns early while another save runs (`useCandidateActions.js:342`). So the toast vanishes, nothing happens and nothing is said. Staff believe it was undone.
@@ -175,7 +184,6 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 ## Waits on Jeffrey (don't build yet)
 
 - **R4-03, the words** (Medium) — "Hidden on this tablet" and "Payment details are hidden on this tablet." from `src/lib/privateDetails.js` instead of "… on this device" (`text.js:494, 619–620`), and the Results line worded as Star's (`results/text.js:103`). v1.036 and v1.037 already use "Hidden on this tablet" (`HIDDEN_ON_THIS_TABLET`, `src/lib/privateDetails.js:47`) for the plan and Edit details, and v1.037 settled the desk line. Until this is answered your screens would show both words, so it is asked before R4-01 and R4-04 are built (recommended: the shared words everywhere, v0.507 Q2 "the same words on every screen"). Your prompt's question, never asked. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-01** (Medium) — the past-due "Not paid" tag in the Delete red (`text.js:557–558`, `RosterRows.jsx:61`, `blackBelt.css:1024–1029`): amber like your own "Late" (recommended), gray like Star's, or red written into §7 as a named exception (v0.224 chose red; v1.007 says red means only "gone for good"). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section: yours (v0.964 / v0.965, recommended) or Star's with "recorded on" → "paid on" (then your title changes back). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment: Camps' and Color Belt's words (recommended; yours change: `text.js:774, 818`) or yours. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed": your v0.966 shape for everyone (recommended) or the older shape. The design review asks Jeffrey; the answer reaches you through the Main session.
