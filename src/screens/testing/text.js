@@ -1222,6 +1222,60 @@ export const PRIVATE_IS_CANCELLED = 'This private testing was cancelled. An admi
 export const RESTORE_TOO_LATE = 'Its day has passed, so it can’t be restored. Add a new private testing instead.';
 
 // =====================================================================================
+// History (design review CB7, rulebook v1.010 / v1.108, Color Belt v0.421, mockup P3) — the words
+// of each change in the History line at the end of both summaries. lib/testing/history.js picks
+// the words for each change-log row; these are Star's words (v0.518) in Color Belt's terms. Words
+// the mockup drew are marked P3; the rest were approved as listed (v0.425, history-words.png).
+// =====================================================================================
+export const HISTORY_STAFF = 'Staff'; // the "who" when the log has no name
+export const HISTORY_REGISTERED_FORM = 'Registered on the family form'; // P3
+export const HISTORY_ADDED_DESK = 'Added at the desk';
+// P3: "Added at the desk (Sat, Oct 31, 4:00 PM)" — a private testing, with its day and time
+export const historyAddedPrivate = (dayTime) => `Added at the desk (${dayTime})`;
+// P3: "Moved to private testing from November Children Testing (Tue, Dec 1, 4:00 PM)"
+export const historyMovedIn = (eventName, dayTime) => `Moved to private testing from ${eventName} (${dayTime})`;
+// The private testing's day and time inside those lines: "Tue, Dec 1, 4:00 PM"
+export const historyDayTime = (dateIso, hhmm) => `${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}`;
+export const HISTORY_MOVED_OUT = 'Moved to private testing'; // the event registration's side
+export const HISTORY_MOVE_UNDONE = 'Move to private testing undone';
+// P3: "Payment recorded: $65 check, paid Nov 1"
+export const historyPaymentRecorded = (cents, method, iso) => `Payment recorded: ${formatMoney(cents)} ${payingByLower(method)}, paid ${monthDay(iso)}`;
+// P3: "Payment undone: $65"
+export const historyPaymentUndone = (cents) => `Payment undone: ${formatMoney(cents)}`;
+// P3: "Payment changed: check → cash" — only the parts the edit changed (amount, way, day)
+export const historyPaymentChanged = (from, to) => `Payment changed: ${from} → ${to}`;
+export const HISTORY_PAYMENT_CHANGED = 'Payment changed';
+export const historyPaidOn = (iso) => `paid ${monthDay(iso)}`; // the day part of a changed payment
+export const historyPaymentMovedOut = (cents, method) => `Payment moved to private testing: ${formatMoney(cents)} ${payingByLower(method)}`;
+export const historyPaymentMovedIn = (cents, method, iso) => `Payment moved from the event: ${formatMoney(cents)} ${payingByLower(method)}, paid ${monthDay(iso)}`;
+export const historyPaymentMovedBack = (cents, method, iso) =>
+  `Payment moved back from private testing: ${formatMoney(cents)} ${payingByLower(method)}, paid ${monthDay(iso)}`;
+// P3: "Paying by changed: Check → Cash"
+export const historyPayingBy = (before, after) => `Paying by changed: ${payingByText(before)} → ${payingByText(after)}`;
+// One edited detail: "First name: Owen → Owen J." (Star's "what: before → after")
+export const historyField = (label, before, after) => `${label}: ${before || '—'} → ${after || '—'}`;
+export const HISTORY_BELT = 'Belt';
+export const HISTORY_CLASS = 'Class';
+export const HISTORY_PRICE = 'Price';
+// P3: "Day or time changed: Tue, Dec 1, 4:00 PM → Tue, Dec 1, 4:30 PM"
+export const historyDayChanged = (before, after) => `Day or time changed: ${before} → ${after}`;
+export const HISTORY_CANCELLED = 'Cancelled';
+export const HISTORY_RESTORED = 'Restored';
+export const HISTORY_WITHDRAWN = 'Withdrawn';
+export const HISTORY_DUPLICATE_COPY = 'Moved to Removed as a duplicate copy';
+export const HISTORY_DUPLICATE_FOUND = 'Possible duplicate found';
+export const HISTORY_KEPT_BOTH = 'Possible duplicate: kept both registrations';
+export const HISTORY_KEPT_THIS = 'Possible duplicate: kept this registration';
+export const HISTORY_SIGNATURE_DELETED = 'Signature deleted (90 days after the testing day)';
+export const HISTORY_DELETED = 'Deleted';
+// P3: "Result: Passed"; a change "Result: Not passed → Passed"; cleared "Result cleared (was No show)"
+export const historyResult = (code) => `Result: ${resultTagText(code)}`;
+export const historyResultChanged = (before, after) => `Result: ${resultTagText(before)} → ${resultTagText(after)}`;
+export const historyResultCleared = (before) => (before ? `Result cleared (was ${resultTagText(before)})` : 'Result cleared');
+export const historyNote = (note) => `Grading note: ${note}`;
+export const HISTORY_NOTE_REMOVED = 'Grading note removed';
+
+// =====================================================================================
 // "Hide private details" (rulebook v0.506, words v0.507 Q2). Color Belt keeps no date of birth or
 // email, so on its screens the switch hides MONEY: payment columns, tags, amounts, prices, Mark
 // paid, the payment items of the ⋯ menus and the money cards. The two placeholder sentences come

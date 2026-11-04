@@ -16,7 +16,7 @@
 // private price, day and time, payments and result. Times: the database sends '16:00:00'; this
 // file turns it into '16:00'. Dates stay 'YYYY-MM-DD'. Money is whole cents (8500 = $85).
 import { supabase } from '../supabase.js';
-import { schoolToday } from './eventsApi.js';
+import { schoolToday, readHistoryRows } from './eventsApi.js';
 import { shortTime, isIsoDate } from './eventRules.js';
 import { RESULTS } from './gradingRules.js';
 import { owesMore, privateSide } from './privateRules.js';
@@ -406,6 +406,14 @@ export async function moveToPrivate({ registrationId, expectedVersion, privateDa
       ? { privateId: d.private_id, version: d.version, registrationVersion: d.registration_version, amountDueCents: d.amount_due_cents, resultCleared: d.result_cleared }
       : null),
   );
+}
+
+// History (design review CB7, migration 0030 §5c): a private testing's change-log rows for the
+// History line of its summary — ONLY its own rows (a moved one starts at the move, v0.418 Q4).
+// Same answer as eventsApi.loadRegistrationHistory: { status:'ok', rows } · 'no_access' ·
+// 'invalid' · 'not_found' · 'stale' · 'error'. Never throws.
+export async function loadPrivateHistory(privateId) {
+  return callRpc('testing_private_history', { p_private_id: privateId }, readHistoryRows);
 }
 
 // Undo move (the toast's Undo): only the mover, within 10 seconds, while nothing changed.

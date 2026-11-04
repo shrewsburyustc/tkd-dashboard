@@ -1330,3 +1330,17 @@
 .ev-roster.is-hidden.is-wide.no-status .ev-srow:not(.is-phone) {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 44px;
 }
+
+/* ===== Part 2, P3: the two summaries' Print receipt and History (design review CB2 / CB7,
+   rulebook v0.421) =====
+   The outline Print receipt ends the Payment row (StudentDialog / PrivateSummaryDialog), on its own
+   line under the payment words, 8px down (Star's .st-print-receipt, Camps' .cp-print-receipt).
+   The History line follows the summary's list, 12px down (as drawn in P3); the line and its list
+   are the shared part's (shared.css .hist-*). */
+.ev-print-receipt {
+  margin-top: var(--space-8);
+}
+
+.ev-sum-history {
+  margin-top: var(--space-12);
+}

@@ -64,6 +64,8 @@
 //     ones from what is stored (registered, paid, undone, withdrawn, cancelled, graded).
 //   testing_results_csv (CB18, admins): one event's active students for the CSV, and a row in
 //     the list `downloads` (the table testing_downloads) for every download.
+//   Preview only (CB7): a store value `fail_history_reads` (a number) makes that many History reads
+//     fail like a dropped connection, to see the History line's amber bar with Retry (see rpc).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { RESULTS, normalizeGradingNote, gradingNoteProblem } from './testing/gradingRules.js';
 import { defaultTestingData } from './mockTesting.js';
@@ -2270,7 +2272,20 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     if (ADMIN_ONLY.has(name) && !ctx.isAdmin) return ok(st('not_allowed'));
     const db = read(); // a private copy = a transaction: only an 'ok' is saved
     const callCtx = { actorName: ctx.actorName ?? 'Database admin', userId: ctx.userId ?? null, isAdmin: Boolean(ctx.isAdmin) };
-    if (READ_ONLY_RPCS.has(name)) return ok(handlers[name](db, parsed, callCtx)); // reads save nothing
+    if (READ_ONLY_RPCS.has(name)) {
+      // CB7's failed History read in the preview (failNextSave never fails a read): while the
+      // store's `fail_history_reads` is above 0, each History read fails like a dropped connection
+      // and counts it down — so Retry works once it reaches 0. Set it from the browser console
+      // (2, because the dev preview's React "strict mode" reads the history twice when it appears):
+      //   s = JSON.parse(localStorage['tkd.preview.testing']); s.fail_history_reads = 2;
+      //   localStorage['tkd.preview.testing'] = JSON.stringify(s)
+      if (Number.isInteger(db.fail_history_reads) && db.fail_history_reads > 0) {
+        db.fail_history_reads -= 1;
+        write(db);
+        return { data: null, error: { message: 'Failed to fetch (preview: fail_history_reads)' }, count: null, status: 0, statusText: '' };
+      }
+      return ok(handlers[name](db, parsed, callCtx)); // reads save nothing
+    }
     // 0030: what the data looked like before the call, so its history rows get before / after.
     const beforeRows = loggedRows(db);
     const fromSeq = lastLogSeq(db);

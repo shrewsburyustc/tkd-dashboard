@@ -15,11 +15,22 @@
 // Price, Paying by and Payment lines become one gray "Payment details are hidden on this tablet."
 // line — no amount, no paid status.
 // Like the other dialogs it only DRAWS; PrivateTestingTab decides what the buttons do.
+//
+// Design review Part 2, mockup P3 (rulebook v0.421), as the event roster's summary:
+//   - an outline "Print receipt" ends the Payment row (CB2) — staff and admins, on a private testing
+//     with a payment that still stands, never while Hide private details is on (the ⋯ menu's rule,
+//     privateMenu's printReceipt); it opens the same receipt as ⋯ → Print receipt, on top of this;
+//   - the shared History line ends the summary (CB7): only this private testing's own changes — a
+//     moved one starts at the move, which names the event (v0.418 Q4); money changes are left out
+//     while Hide private details is on.
 import { IconEdit } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
+import HistoryLine from '../../../components/HistoryLine.jsx';
 import { formatMoney } from '../../../lib/money.js';
+import { loadPrivateHistory } from '../../../lib/testing/privateApi.js';
+import { describeHistoryRow, historyReader } from '../../../lib/testing/history.js';
 import { ResultTag } from '../event/ResultButtons.jsx';
-import { TestingForCell } from '../event/StudentDialog.jsx';
+import { PrintReceiptButton, TestingForCell } from '../event/StudentDialog.jsx';
 import { rankViewOf } from './PrivateRows.jsx';
 import * as T from '../text.js';
 
@@ -33,8 +44,21 @@ function SummaryRow({ label, children }) {
   );
 }
 
-// record: the private testing's row (privateApi.loadPrivateTestings) · canEdit: show Edit details
-export default function PrivateSummaryDialog({ record, isPhone, canEdit, hidden = false, onEdit, onCancel, onRequestClose }) {
+// record: the private testing's row (privateApi.loadPrivateTestings) · canEdit: show Edit details ·
+// canPrintReceipt: show Print receipt (the ⋯ menu's rule) · onPrintReceipt(opener): open the receipt ·
+// onNoAccess: the History reader's no_access (the lock screen)
+export default function PrivateSummaryDialog({
+  record,
+  isPhone,
+  canEdit,
+  hidden = false,
+  canPrintReceipt = false,
+  onPrintReceipt = null,
+  onNoAccess = null,
+  onEdit,
+  onCancel,
+  onRequestClose,
+}) {
   const name = T.studentLabel(record);
   const editButton = canEdit ? (
     <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}`} onClick={onEdit}>
@@ -52,6 +76,7 @@ export default function PrivateSummaryDialog({ record, isPhone, canEdit, hidden 
       <>
         <span className="ttag ttag--ok">{T.TAG_PAID}</span> · {T.paidDetail(record.paidCents, record.paidMethod, record.paidOn)}
         {record.owesMore && ` · ${T.moreToCollect(record.amountDueCents)}`}
+        {canPrintReceipt && !hidden && onPrintReceipt && <PrintReceiptButton onPrint={onPrintReceipt} />}
       </>
     );
   } else {
@@ -96,6 +121,15 @@ export default function PrivateSummaryDialog({ record, isPhone, canEdit, hidden 
           <SummaryRow label={T.DETAIL_STATUS}>{T.cancelledDetail(record.cancelledAt, record.cancelledByName)}</SummaryRow>
         )}
       </dl>
+      {/* CB7: the shared History line ends the summary; it reads the history itself when it
+          appears (testing_private_history). */}
+      <section className="ev-sum-history">
+        <HistoryLine
+          load={historyReader(loadPrivateHistory, record.id, onNoAccess)}
+          describe={describeHistoryRow}
+          hidden={hidden}
+        />
+      </section>
       {isPhone ? (
         editButton && <div className="dialog-page-submit">{editButton}</div>
       ) : (

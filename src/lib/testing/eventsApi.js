@@ -595,6 +595,26 @@ export async function restoreStudent({ registrationId, expectedVersion } = {}) {
   return callRpc('testing_restore_student', { p_registration_id: registrationId, p_expected_version: expectedVersion }, readVersion);
 }
 
+// ----- History (design review CB7, migration 0030 §5b, rulebook v1.010 / v0.421) -----
+// A registration's change-log rows, for the History line at the end of its summary:
+// testing_registration_history (staff and admins): newest first, at most 500 rows — the
+// registration's own rows, its result's and its payments' — each { occurred_at, actor_name,
+// action, table_name, op, before, after } (database names; login ids taken out by the database,
+// a signature only "on file"). lib/testing/history.js turns them into words.
+// → { status:'ok', rows } · 'no_access' · 'invalid' · 'not_found' · 'stale' · 'error'.
+// (Like everything here it never throws; history.js's historyReader throws for HistoryLine.)
+export async function loadRegistrationHistory(registrationId) {
+  return callRpc('testing_registration_history', { p_registration_id: registrationId }, readHistoryRows);
+}
+
+// Shared by eventsApi and privateApi: checks the reader's rows (each one an object with a time, a
+// table and an operation); a wrong shape → null (→ 'error', not a guess).
+export function readHistoryRows(d) {
+  if (!Array.isArray(d.rows)) return null;
+  const okRow = (r) => r !== null && typeof r === 'object' && typeof r.occurred_at === 'string' && typeof r.table_name === 'string' && typeof r.op === 'string';
+  return d.rows.every(okRow) ? { rows: d.rows } : null;
+}
+
 // Delete permanently (admin). expectedPaymentIds = the ids of ALL payment rows of this student
 // (payments and reversals) the warning was built from; 'stale' if they differ now.
 export async function deleteStudent({ registrationId, expectedVersion, expectedPaymentIds } = {}) {

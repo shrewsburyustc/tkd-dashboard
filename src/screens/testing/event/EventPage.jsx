@@ -663,10 +663,12 @@ export default function EventPage({
   // already loaded), both schools (loadSchools, read once) and the reader's name (get_my_profile,
   // called when it opens; a failed call just leaves the name out, as Star's v0.518 Q7 A). Built by
   // lib/testing/receipt.js, which the private testing tab reuses.
-  function openReceipt(row, opener) {
+  // From the summary's Print receipt (P3) it opens on top of the summary (onTop, Star's v0.518);
+  // from ⋯ on its own.
+  function openReceipt(row, opener, onTop = false) {
     setMenu(null);
     const key = Date.now();
-    setReceipt({ key, rowId: row.id, opener, data: null, notFound: false });
+    setReceipt({ key, rowId: row.id, opener, onTop, data: null, notFound: false });
     readReceipt(row.id, key);
   }
   async function readReceipt(rowId, key) {
@@ -707,7 +709,8 @@ export default function EventPage({
   function closeReceipt() {
     const r = receipt;
     setReceipt(null);
-    if (r) focusLater(() => r.opener, () => moreEl(r.rowId) ?? rowEl(r.rowId));
+    // On top of the summary, the shared dialog puts focus back on the summary's button (returnFocusTo).
+    if (r && !r.onTop) focusLater(() => r.opener, () => moreEl(r.rowId) ?? rowEl(r.rowId));
   }
 
   // ----- Phase 4: Move to private testing (P5) -----
@@ -1669,6 +1672,11 @@ export default function EventPage({
           today={today}
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
+          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — an active student
+          // with a payment that still stands, money shown; staff and admins.
+          canPrintReceipt={record?.status === 'active' && record?.paid === true && !hidden}
+          onPrintReceipt={(opener) => record && openReceipt(record, opener, true)}
+          onNoAccess={onNoAccess}
           graded={dialog.graded ?? null}
           beltLocked={dialog.mode === 'edit' && Boolean(dialog.graded?.graded) && dayWindow === 'after' && !isAdmin}
           hidden={hidden}
@@ -1824,7 +1832,7 @@ export default function EventPage({
     }
   }
 
-  // CB2: the receipt, on its own (from ⋯). Never while locked (it comes back after unlocking).
+  // CB2: the receipt, in its own dialog (from ⋯ or from the student's summary). Never while locked (it comes back after unlocking).
   let receiptElement = null;
   if (receipt && !screenLocked) {
     const row = roster.find((r) => r.id === receipt.rowId);
@@ -1836,6 +1844,8 @@ export default function EventPage({
         hidden={hidden}
         onClose={closeReceipt}
         isPhone={isPhone}
+        onTop={Boolean(receipt.onTop && dialog)}
+        returnFocusTo={receipt.onTop ? receipt.opener : null}
       />
     );
   }

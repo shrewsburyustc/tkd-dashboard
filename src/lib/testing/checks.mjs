@@ -42,7 +42,9 @@ import {
 } from '../mockTestingEvents.js';
 import * as PR from './privateRules.js'; // phase 4: the Private testing tab's rules
 import { buildColorBeltReceipt, eventTotalDueCents, standingPayments } from './receipt.js'; // CB2
+import { combineHistoryRows, describeHistoryRow, historyReader } from './history.js'; // CB7
 import * as CBT from '../../screens/testing/text.js'; // the Private testing tab's new words (CB1, CB3)
+const { payingByText } = CBT; // CB7's checks
 
 let count = 0;
 function check(label, fn) {
@@ -3725,6 +3727,312 @@ check('text: the private Undo payment box names the latest payment and what the 
   assert.match(CBT.privateUndoPaymentBody(1000, 'check', '2026-11-03', { paidCents: 9000, dueCents: 0 }), /goes back to Paid\. Both/);
   assert.match(CBT.privateUndoPaymentBody(1000, 'check', '2026-11-03', null), /goes back to Not paid\./);
   assert.equal(CBT.privatePriceChangedNote('Ava Chen', 2000), 'The amount owed for Ava Chen is now $20. Nothing was saved. Tap Mark paid again.');
+});
+
+// ======================= history.js (CB7, migration 0030 §5, rulebook v0.421, mockup P3) =======================
+// Every change-log action Color Belt writes (0005, 0010, 0014, 0030) gets words; money rows are
+// left out while Hide private details is on; Edit payment is one entry; the reader throws unless ok.
+
+// A change-log row as the readers give it (database names).
+const hRow = (table, op, action, before = null, after = null, at = '2026-11-01T19:00:00Z', who = 'Dana Ross') => ({
+  occurred_at: at, actor_name: who, action, table_name: table, op, before, after,
+});
+const words = (row, ctx = {}) => describeHistoryRow(row, ctx);
+const textOf = (row, ctx = {}) => words(row, ctx)?.text ?? null;
+
+check('history: event registration rows — every action has words (CB7)', () => {
+  const R = 'testing_registrations';
+  // public_register / add_student (the insert row); a possible duplicate found at once
+  assert.deepEqual(words(hRow(R, 'insert', 'public_register', null, { source: 'form', duplicate_state: 'none' }, '2026-10-26T22:00:00Z', 'Family form')),
+    { text: 'Registered on the family form', at: '2026-10-26T22:00:00Z', who: 'Family form' });
+  assert.equal(textOf(hRow(R, 'insert', 'add_student', null, { source: 'staff', duplicate_state: 'possible' })), 'Added at the desk; Possible duplicate found');
+  // update_student: names and the belt, one entry joined with "; " (names the event's ranks)
+  const rankName = (id) => ({ r1: 'White', r2: 'Yellow' })[id] ?? '';
+  assert.equal(textOf(hRow(R, 'update', 'update_student', { first_name: 'Owen', event_rank_id: 'r1', version: 2 }, { first_name: 'Owen J.', event_rank_id: 'r2', version: 3 }), { rankName }),
+    'First name: Owen → Owen J.; Belt: White → Yellow');
+  assert.equal(textOf(hRow(R, 'update', 'update_student', { last_name: 'Reed' }, { last_name: 'Reid' })), 'Last name: Reed → Reid');
+  assert.equal(textOf(hRow(R, 'update', 'update_student', { event_rank_id: 'x' }, { event_rank_id: 'y' })), 'Belt changed'); // ranks unknown
+  // change_paying_by / Mark paid or Edit payment by another way (money)
+  const paying = hRow(R, 'update', 'change_paying_by', { paying_by: 'check', version: 3 }, { paying_by: 'cash', version: 4 });
+  assert.equal(textOf(paying), 'Paying by changed: Check → Cash');
+  assert.deepEqual(words(paying, { hidden: true }), { hiddenPayment: true });
+  // Mark paid's own registration update (version only) says nothing: one entry per change
+  assert.equal(words(hRow(R, 'update', 'mark_paid', { version: 4, updated_at: 'a' }, { version: 5, updated_at: 'b' })), null);
+  // withdraw_student / restore_student / resolve_duplicate
+  assert.equal(textOf(hRow(R, 'update', 'withdraw_student', { status: 'active' }, { status: 'withdrawn', withdrawn_reason: 'withdrawn' })), 'Withdrawn');
+  assert.equal(textOf(hRow(R, 'update', 'restore_student', { status: 'withdrawn', withdrawn_reason: 'withdrawn' }, { status: 'active', withdrawn_reason: null })), 'Restored');
+  assert.equal(textOf(hRow(R, 'update', 'resolve_duplicate', { status: 'active', duplicate_state: 'possible' }, { status: 'withdrawn', withdrawn_reason: 'duplicate_copy', duplicate_state: 'none' })),
+    'Moved to Removed as a duplicate copy');
+  assert.equal(textOf(hRow(R, 'update', 'resolve_duplicate', { duplicate_state: 'possible' }, { duplicate_state: 'none' })), 'Possible duplicate: kept this registration');
+  assert.equal(textOf(hRow(R, 'update', 'resolve_duplicate', { duplicate_state: 'possible' }, { duplicate_state: 'kept_both' })), 'Possible duplicate: kept both registrations');
+  assert.equal(textOf(hRow(R, 'update', 'public_register', { duplicate_state: 'none' }, { duplicate_state: 'possible' })), 'Possible duplicate found');
+  // move_to_private / undo_move_to_private (the registration's side)
+  assert.equal(textOf(hRow(R, 'update', 'move_to_private', { status: 'active', duplicate_state: 'none' }, { status: 'withdrawn', withdrawn_reason: 'withdrawn' })), 'Moved to private testing');
+  assert.equal(textOf(hRow(R, 'update', 'undo_move_to_private', { status: 'withdrawn' }, { status: 'active' })), 'Move to private testing undone');
+  // purge_old_signatures (the signature only ever "on file")
+  assert.equal(textOf(hRow(R, 'update', 'purge_old_signatures', { signature: 'on file', signature_deleted_at: null }, { signature: null, signature_deleted_at: 'x' })),
+    'Signature deleted (90 days after the testing day)');
+  // delete_student (the reader answers not_found afterwards, but the words exist)
+  assert.equal(textOf(hRow(R, 'delete', 'delete_student', { status: 'active' }, null)), 'Deleted');
+  // Kept while hidden: registered / added (Star's Q4 A)
+  assert.equal(textOf(hRow(R, 'insert', 'public_register', null, { source: 'form' }), { hidden: true }), 'Registered on the family form');
+  // who: the log's name, or "Staff" when it has none
+  assert.equal(words(hRow(R, 'insert', 'add_student', null, { source: 'staff' }, '2026-11-01T19:00:00Z', null)).who, 'Staff');
+});
+
+check('history: payment rows — recorded, undone, changed, moved (money; CB7)', () => {
+  const P = 'testing_payments';
+  const pay = (action, after) => hRow(P, 'insert', action, null, after);
+  assert.equal(textOf(pay('mark_paid', { id: 'p1', kind: 'payment', amount_cents: 6500, method: 'check', paid_on: '2026-11-01' })), 'Payment recorded: $65 check, paid Nov 1'); // P3
+  assert.equal(textOf(pay('undo_payment', { kind: 'reversal', amount_cents: -6500, method: 'check', paid_on: '2026-10-30', reverses_payment_id: 'p1' })), 'Payment undone: $65'); // P3
+  assert.equal(textOf(pay('move_to_private', { kind: 'reversal', amount_cents: -6500, method: 'cash', reverses_payment_id: 'p1' })), 'Payment moved to private testing: $65 cash');
+  assert.equal(textOf(pay('undo_move_to_private', { kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-10-30' })), 'Payment moved back from private testing: $65 cash, paid Oct 30');
+  assert.equal(textOf(pay('manual', { kind: 'payment', amount_cents: 13050, method: 'card', paid_on: '2026-10-30' })), 'Payment recorded: $130.50 card, paid Oct 30'); // cents show
+  // Every payment row is money: left out while hidden
+  for (const action of ['mark_paid', 'undo_payment', 'edit_payment', 'move_to_private', 'undo_move_to_private']) {
+    assert.deepEqual(words(pay(action, { kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-10-30' }), { hidden: true }), { hiddenPayment: true }, action);
+  }
+  // Edit payment = a reversal + a new payment in one save → ONE entry with only what changed
+  const orig = hRow(P, 'insert', 'mark_paid', null, { id: 'p1', kind: 'payment', amount_cents: 6500, method: 'check', paid_on: '2026-11-01' }, '2026-11-01T19:00:00Z');
+  const rev = hRow(P, 'insert', 'edit_payment', null, { id: 'p2', kind: 'reversal', amount_cents: -6500, method: 'check', paid_on: '2026-11-01', reverses_payment_id: 'p1' }, '2026-11-01T21:30:00Z', 'Jeffrey Berg');
+  const fresh = hRow(P, 'insert', 'edit_payment', null, { id: 'p3', kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-11-01' }, '2026-11-01T21:30:00Z', 'Jeffrey Berg');
+  const joined = combineHistoryRows([fresh, rev, orig]);
+  assert.equal(joined.length, 2);
+  assert.deepEqual(joined.map((r) => textOf(r)), ['Payment changed: check → cash', 'Payment recorded: $65 check, paid Nov 1']); // P3
+  // amount and day too; the old payment's own row gives its day
+  const fresh2 = { ...fresh, after: { ...fresh.after, amount_cents: 5000, paid_on: '2026-10-31' } };
+  assert.equal(textOf(combineHistoryRows([fresh2, rev, orig])[0]), 'Payment changed: $65 check, paid Nov 1 → $50 cash, paid Oct 31');
+  // without the old payment's row: the reversal's amount and way (no day)
+  assert.equal(textOf(combineHistoryRows([fresh2, rev])[0]), 'Payment changed: $65 check → $50 cash');
+  // nothing different (an edit that kept everything) and a lone half
+  assert.equal(textOf(combineHistoryRows([{ ...fresh, after: { ...fresh.after, method: 'check' } }, rev, orig])[0]), 'Payment changed');
+  assert.deepEqual(combineHistoryRows([rev]).map((r) => textOf(r)), ['Payment changed']);
+  assert.deepEqual(combineHistoryRows([fresh]).map((r) => textOf(r)), ['Payment changed']);
+  assert.deepEqual(combineHistoryRows(null), []);
+  // a second edit later pairs with its own reversal (nearest time, same action)
+  const rev2 = { ...rev, occurred_at: '2026-11-02T10:00:00Z', after: { ...rev.after, id: 'p4', method: 'cash', reverses_payment_id: 'p3' } };
+  const fresh3 = { ...fresh, occurred_at: '2026-11-02T10:00:00Z', after: { ...fresh.after, id: 'p5', method: 'card' } };
+  assert.deepEqual(combineHistoryRows([fresh3, rev2, fresh, rev, orig]).map((r) => textOf(r)),
+    ['Payment changed: cash → card', 'Payment changed: check → cash', 'Payment recorded: $65 check, paid Nov 1']);
+});
+
+check('history: result rows (event and private; CB7)', () => {
+  for (const T_ of ['testing_results', 'testing_private_results']) {
+    const set = T_ === 'testing_results' ? 'set_result' : 'private_set_result';
+    const note = T_ === 'testing_results' ? 'set_result_note' : 'private_set_result_note';
+    assert.equal(textOf(hRow(T_, 'insert', set, null, { result: 'pass', note: null })), 'Result: Passed'); // P3
+    assert.equal(textOf(hRow(T_, 'update', set, { result: 'not_passed' }, { result: 'pass' })), 'Result: Not passed → Passed');
+    assert.equal(textOf(hRow(T_, 'update', set, { result: 'no_show' }, { result: null })), 'Result cleared (was No show)');
+    assert.equal(textOf(hRow(T_, 'insert', note, null, { result: null, note: 'Kicks need height' })), 'Grading note: Kicks need height');
+    assert.equal(textOf(hRow(T_, 'update', note, { note: 'a' }, { note: null })), 'Grading note removed');
+    assert.equal(textOf(hRow(T_, 'update', note, { note: 'a' }, { note: 'b' })), 'Grading note: b');
+    // clear_result (a belt change, a new day or a move): the row goes
+    assert.equal(textOf(hRow(T_, 'delete', 'clear_result', { result: 'no_show', note: 'late' }, null)), 'Result cleared (was No show); Grading note removed');
+    assert.equal(textOf(hRow(T_, 'delete', 'clear_result', { result: null, note: 'late' }, null)), 'Grading note removed');
+    assert.equal(textOf(hRow(T_, 'delete', 'delete_student', { result: null, note: null }, null)), 'Result cleared');
+    // not money: shown while hidden
+    assert.equal(textOf(hRow(T_, 'insert', set, null, { result: 'pass' }), { hidden: true }), 'Result: Passed');
+  }
+});
+
+check('history: private testing rows — added, moved in, day, cancel, restore, edits, payments (CB7)', () => {
+  const PV = 'testing_private';
+  const PP = 'testing_private_payments';
+  // private_add / move_to_private (the insert names the event, v0.418 Q4, P3)
+  assert.equal(textOf(hRow(PV, 'insert', 'private_add', null, { private_date: '2026-10-31', private_time: '16:00:00', moved_from_event_name: null })),
+    'Added at the desk (Sat, Oct 31, 4:00 PM)'); // P3
+  assert.equal(textOf(hRow(PV, 'insert', 'move_to_private', null, { private_date: '2026-12-01', private_time: '16:00:00', moved_from_event_name: 'November Children Testing' })),
+    'Moved to private testing from November Children Testing (Tue, Dec 1, 4:00 PM)'); // P3
+  // private_change_day: the day, the time, or both
+  assert.equal(textOf(hRow(PV, 'update', 'private_change_day', { private_date: '2026-12-01', private_time: '16:00:00' }, { private_date: '2026-12-01', private_time: '16:30:00' })),
+    'Day or time changed: Tue, Dec 1, 4:00 PM → Tue, Dec 1, 4:30 PM'); // P3
+  assert.equal(textOf(hRow(PV, 'update', 'private_change_day', { private_date: '2026-12-01', private_time: '16:00:00' }, { private_date: '2026-12-03', private_time: '16:00:00' })),
+    'Day or time changed: Tue, Dec 1, 4:00 PM → Thu, Dec 3, 4:00 PM');
+  // A real update row holds only what changed (a new time alone has no date): on its own it says
+  // what it has; with the insert row in the list, combineHistoryRows fills in both sides (P3's words).
+  const addRow = hRow(PV, 'insert', 'private_add', null, { private_date: '2026-12-01', private_time: '16:00:00', moved_from_event_name: null }, '2026-11-01T10:00:00Z');
+  const timeOnly = hRow(PV, 'update', 'private_change_day', { private_time: '16:00:00', version: 1 }, { private_time: '16:30:00', version: 2 }, '2026-11-02T18:00:00Z');
+  const dayOnly = hRow(PV, 'update', 'private_change_day', { private_date: '2026-12-01', version: 2 }, { private_date: '2026-12-03', version: 3 }, '2026-11-03T18:00:00Z');
+  assert.equal(textOf(timeOnly), 'Day or time changed: 4:00 PM → 4:30 PM');
+  assert.equal(textOf(dayOnly), 'Day or time changed: Tue, Dec 1 → Thu, Dec 3');
+  assert.deepEqual(combineHistoryRows([dayOnly, timeOnly, addRow]).map((r) => textOf(r)), [
+    'Day or time changed: Tue, Dec 1, 4:30 PM → Thu, Dec 3, 4:30 PM',
+    'Day or time changed: Tue, Dec 1, 4:00 PM → Tue, Dec 1, 4:30 PM', // P3
+    'Added at the desk (Tue, Dec 1, 4:00 PM)',
+  ]);
+  // private_cancel / private_restore
+  assert.equal(textOf(hRow(PV, 'update', 'private_cancel', { status: 'active', cancelled_at: null }, { status: 'cancelled', cancelled_at: 'x', cancelled_by_name: 'Dana Ross' })), 'Cancelled');
+  assert.equal(textOf(hRow(PV, 'update', 'private_restore', { status: 'cancelled' }, { status: 'active' })), 'Restored');
+  // private_update: names, the belt, the class and the price (the price is money)
+  const edit = hRow(PV, 'update', 'private_update',
+    { first_name: 'Ava', rank_name: 'Yellow', class_name: 'Group A', private_cents: 8500, to_name: 'Orange' },
+    { first_name: 'Eva', rank_name: 'Orange', class_name: 'Group B', private_cents: 9500, to_name: 'Green' });
+  assert.equal(textOf(edit), 'First name: Ava → Eva; Belt: Yellow → Orange; Class: Group A → Group B; Price: $85 → $95');
+  assert.equal(textOf(edit, { hidden: true }), 'First name: Ava → Eva; Belt: Yellow → Orange; Class: Group A → Group B'); // the price part goes
+  assert.deepEqual(words(hRow(PV, 'update', 'private_update', { private_cents: 8500 }, { private_cents: 9500 }), { hidden: true }), { hiddenPayment: true });
+  // private_change_paying_by / private_mark_paid (version only) / private_delete
+  assert.equal(textOf(hRow(PV, 'update', 'private_change_paying_by', { paying_by: 'card' }, { paying_by: 'check' })), 'Paying by changed: Card → Check');
+  assert.equal(words(hRow(PV, 'update', 'private_mark_paid', { version: 1 }, { version: 2 })), null);
+  assert.equal(textOf(hRow(PV, 'delete', 'private_delete', { status: 'cancelled' }, null)), 'Deleted');
+  // payments: private_mark_paid, private_undo_payment, private_edit_payment, moved in with the student
+  assert.equal(textOf(hRow(PP, 'insert', 'private_mark_paid', null, { kind: 'payment', amount_cents: 8500, method: 'card', paid_on: '2026-10-31' })), 'Payment recorded: $85 card, paid Oct 31'); // P3
+  assert.equal(textOf(hRow(PP, 'insert', 'private_undo_payment', null, { kind: 'reversal', amount_cents: -2000, method: 'card' })), 'Payment undone: $20');
+  assert.equal(textOf(hRow(PP, 'insert', 'move_to_private', null, { kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-10-30', moved_from_payment_id: 'p1' })),
+    'Payment moved from the event: $65 cash, paid Oct 30');
+  const pRev = hRow(PP, 'insert', 'private_edit_payment', null, { id: 'q2', kind: 'reversal', amount_cents: -8500, method: 'card', reverses_payment_id: 'q1' });
+  const pNew = hRow(PP, 'insert', 'private_edit_payment', null, { id: 'q3', kind: 'payment', amount_cents: 8500, method: 'cash', paid_on: '2026-10-31' });
+  assert.deepEqual(combineHistoryRows([pNew, pRev]).map((r) => textOf(r)), ['Payment changed: card → cash']);
+  // a row from a table History doesn't know says nothing
+  assert.equal(words(hRow('testing_events', 'update', 'update_event', { name: 'a' }, { name: 'b' })), null);
+  assert.equal(words(null), null);
+});
+
+// The reader throws unless ok; no_access calls the lock path (async, so it runs on its own).
+await (async () => {
+  const label = 'history: historyReader throws unless ok; no_access locks (CB7)';
+  try {
+    let locked = 0;
+    const ok = historyReader(async (id) => ({ status: 'ok', rows: [hRow('testing_registrations', 'insert', 'add_student', null, { source: 'staff', id })] }), 'r1');
+    assert.equal((await ok()).length, 1);
+    for (const status of ['no_access', 'invalid', 'not_found', 'stale', 'error']) {
+      const read = historyReader(async () => ({ status }), 'r1', () => { locked += 1; });
+      await assert.rejects(read(), new RegExp(status));
+    }
+    assert.equal(locked, 1); // only no_access locks
+    await assert.rejects(historyReader(async () => undefined, 'r1')(), /no answer/);
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+check('history: the preview readers end to end — Mark paid, Undo, Edit payment, a result; hidden (CB7, P3)', () => {
+  evReset();
+  const zoe = () => regBy('CB-3112'); // Group A Yellow, not paid
+  const family = zoe().paying_by;
+  const other = ['cash', 'check', 'card'].find((m) => m !== family);
+  const tick = () => { evClock += 60_000; };
+  const read = (ctx = E_DESK) => evCall('testing_registration_history', { p_registration_id: zoe().id }, ctx);
+  // refusals (the shapes historyReader turns into the amber bar)
+  assert.equal(evStatus('testing_registration_history', { p_registration_id: zoe().id }, E_LOCKED), 'no_access');
+  assert.equal(evStatus('testing_registration_history', { p_registration_id: '00000000-0000-4000-8000-00000000dead' }, E_DESK), 'not_found');
+  // Mark paid by another way → Paying by follows (v0.418); Undo (admin) puts it back; Mark paid
+  // again; Edit payment (admin) to another way; a result on the testing day.
+  tick();
+  const paid = evCall('testing_mark_paid_by', { p_registration_id: zoe().id, p_expected_version: zoe().version, p_method: other, p_expected_cents: 6500 }, E_DESK);
+  tick();
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: paid.payment_id }, E_ADMIN), 'ok');
+  tick();
+  const again = evCall('testing_mark_paid_by', { p_registration_id: zoe().id, p_expected_version: zoe().version, p_method: family, p_expected_cents: 6500 }, E_DESK);
+  tick();
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: again.payment_id, p_method: other, p_amount_cents: 6500, p_paid_on: '2026-10-17' }, E_ADMIN), 'ok');
+  evToday = '2026-11-20';
+  tick();
+  assert.equal(evStatus('testing_set_result', { p_registration_id: zoe().id, p_result: 'pass' }, E_DESK), 'ok');
+  const answer = read();
+  assert.equal(answer.status, 'ok');
+  // login ids never reach the app (0030's strip)
+  for (const r of answer.rows) {
+    for (const v of [r.before, r.after]) for (const key of ['created_by', 'updated_by', 'withdrawn_by', 'recorded_by', 'submission_id']) assert.ok(!v || !(key in v), key);
+  }
+  const rows = combineHistoryRows(answer.rows);
+  const P = (m) => payingByText(m);
+  const list = rows.map((r) => describeHistoryRow(r, {})).filter(Boolean).map((e) => e.text);
+  // (Rows of one save share a moment; their order inside it is the reader's, so compare the set —
+  // newest first is checked by the first and last entries.)
+  assert.equal(list[0], 'Result: Passed');
+  assert.deepEqual([...list].sort(), [
+    'Result: Passed',
+    `Paying by changed: ${P(family)} → ${P(other)}`,
+    `Payment changed: ${payingByText(family).toLowerCase()} → ${payingByText(other).toLowerCase()}`,
+    `Payment recorded: $65 ${payingByText(family).toLowerCase()}, paid Oct 17`,
+    `Paying by changed: ${P(other)} → ${P(family)}`,
+    'Payment undone: $65',
+    `Paying by changed: ${P(family)} → ${P(other)}`,
+    `Payment recorded: $65 ${payingByText(other).toLowerCase()}, paid Oct 17`,
+    zoe().source === 'form' ? 'Registered on the family form' : 'Added at the desk',
+  ].sort());
+  // Hide private details: only the result and the registration stay; 7 money entries hidden
+  const hiddenWords = rows.map((r) => describeHistoryRow(r, { hidden: true })).filter(Boolean);
+  assert.deepEqual(hiddenWords.filter((w) => !w.hiddenPayment).map((w) => w.text), ['Result: Passed', list[list.length - 1]]);
+  assert.equal(hiddenWords.filter((w) => w.hiddenPayment).length, 7);
+  // who: the person who did it
+  assert.equal(describeHistoryRow(rows[0], {}).who, 'Staff');
+  assert.equal(describeHistoryRow(rows.find((r) => r.action === 'edit_payment'), {}).who, 'Jeffrey Berg');
+  evReset();
+});
+
+check('history: a moved private testing starts at the move, which names the event (v0.418 Q4, P3)', () => {
+  pStart();
+  const reg = regBy('CB-3107'); // Mia: $65 cash paid at the event
+  const m = pMove('CB-3107').private_id;
+  const answer = evCall('testing_private_history', { p_private_id: m }, E_DESK);
+  assert.equal(answer.status, 'ok');
+  // the move is ONE entry (P3, Ava's History): its moved-in payment says nothing of its own
+  assert.ok(answer.rows.some((r) => r.table_name === 'testing_private_payments' && r.action === 'move_to_private')); // the row is there …
+  const list = combineHistoryRows(answer.rows).map((r) => describeHistoryRow(r, {})).filter(Boolean).map((e) => e.text);
+  assert.deepEqual(list, ['Moved to private testing from November Children Testing (Tue, Dec 1, 4:00 PM)']); // … and folded
+  // the registration's side: ONE "Moved to private testing" entry (its payment's reversal folded in);
+  // its own earlier entries (registered, the event payment) stay on the registration
+  const regRows = evCall('testing_registration_history', { p_registration_id: reg.id }, E_DESK).rows;
+  assert.ok(regRows.some((r) => r.table_name === 'testing_payments' && r.action === 'move_to_private'));
+  const regMove = combineHistoryRows(regRows).filter((r) => r.action === 'move_to_private')
+    .map((r) => describeHistoryRow(r, {})).filter(Boolean).map((e) => e.text);
+  assert.deepEqual(regMove, ['Moved to private testing']);
+  assert.ok(!combineHistoryRows(regRows).some((r) => /Payment moved/.test(describeHistoryRow(r, {})?.text ?? '')));
+  // hidden: the same one entry (nothing left over to say "Payment history is hidden")
+  const hiddenWords = combineHistoryRows(answer.rows).map((r) => describeHistoryRow(r, { hidden: true })).filter(Boolean);
+  assert.deepEqual(hiddenWords.map((w) => w.text), ['Moved to private testing from November Children Testing (Tue, Dec 1, 4:00 PM)']);
+  // the preview's failed read (fail_history_reads): one read fails like a dropped connection, then it works
+  pAsPostgres((s) => { s.fail_history_reads = 1; });
+  assert.match(ev.rpc('testing_private_history', { p_private_id: m }, E_DESK).error.message, /Failed to fetch/);
+  assert.equal(evStatus('testing_private_history', { p_private_id: m }, E_DESK), 'ok');
+  // refusals
+  assert.equal(evStatus('testing_private_history', { p_private_id: m }, E_LOCKED), 'no_access');
+  assert.equal(evStatus('testing_private_history', { p_private_id: '00000000-0000-4000-8000-00000000dead' }, E_DESK), 'not_found');
+  evReset();
+});
+
+check('history: Undo move is ONE entry on the registration, its payment back folded in (P3)', () => {
+  pStart();
+  const reg = regBy('CB-3107'); // Mia: $65 cash paid at the event
+  const move = pMove('CB-3107');
+  evClock += 4000;
+  assert.equal(pUndoMove(move.private_id).status, 'ok');
+  const rows = evCall('testing_registration_history', { p_registration_id: reg.id }, E_DESK).rows;
+  assert.ok(rows.some((r) => r.table_name === 'testing_payments' && r.action === 'undo_move_to_private')); // the payment back is logged …
+  const entries = combineHistoryRows(rows).filter((r) => r.action === 'move_to_private' || r.action === 'undo_move_to_private')
+    .map((r) => describeHistoryRow(r, {})).filter(Boolean).map((e) => e.text);
+  // … one entry each, newest first (Mia's duplicate pair comes back with the Undo: the same entry says so)
+  assert.deepEqual(entries, ['Move to private testing undone; Possible duplicate found', 'Moved to private testing']);
+  // the private testing is gone after the Undo (its reader answers not_found)
+  assert.equal(evStatus('testing_private_history', { p_private_id: move.private_id }, E_DESK), 'not_found');
+  evReset();
+});
+
+check('history: a move folds only its own payment rows (same action, same moment); a lone one keeps its words', () => {
+  const at = '2026-11-01T19:00:00Z';
+  const later = '2026-11-01T19:00:09Z'; // more than 5 seconds after
+  // private side: the insert + its moved-in payments → one entry
+  const pIns = hRow('testing_private', 'insert', 'move_to_private', null, { private_date: '2026-12-01', private_time: '16:00:00', moved_from_event_name: 'November Children Testing' }, at);
+  const pPay = (id, cents) => hRow('testing_private_payments', 'insert', 'move_to_private', null, { id, kind: 'payment', amount_cents: cents, method: 'cash', paid_on: '2026-10-30', moved_from_payment_id: 'p' + id }, at);
+  assert.deepEqual(combineHistoryRows([pPay('a', 6500), pPay('b', 2000), pIns]).map((r) => textOf(r)),
+    ['Moved to private testing from November Children Testing (Tue, Dec 1, 4:00 PM)']);
+  // event side: the registration update + its reversal → one entry
+  const rUpd = hRow('testing_registrations', 'update', 'move_to_private', { status: 'active' }, { status: 'withdrawn', withdrawn_reason: 'withdrawn' }, at);
+  const rRev = hRow('testing_payments', 'insert', 'move_to_private', null, { kind: 'reversal', amount_cents: -6500, method: 'cash', reverses_payment_id: 'p1' }, at);
+  assert.deepEqual(combineHistoryRows([rRev, rUpd]).map((r) => textOf(r)), ['Moved to private testing']);
+  // Undo move: the registration update + the payment back → one entry
+  const uUpd = hRow('testing_registrations', 'update', 'undo_move_to_private', { status: 'withdrawn' }, { status: 'active' }, later);
+  const uPay = hRow('testing_payments', 'insert', 'undo_move_to_private', null, { kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-10-30' }, later);
+  assert.deepEqual(combineHistoryRows([uPay, uUpd, rRev, rUpd]).map((r) => textOf(r)), ['Move to private testing undone', 'Moved to private testing']);
+  // the record's own row of that action not in the list (the 500-row limit) → the payment keeps its words
+  assert.deepEqual(combineHistoryRows([uPay, rUpd]).map((r) => textOf(r)), ['Payment moved back from private testing: $65 cash, paid Oct 30', 'Moved to private testing']);
+  assert.deepEqual(combineHistoryRows([pPay('a', 6500)]).map((r) => textOf(r)), ['Payment moved from the event: $65 cash, paid Oct 30']);
+  // other payment rows next to a move are not touched
+  const marked = hRow('testing_payments', 'insert', 'mark_paid', null, { kind: 'payment', amount_cents: 2000, method: 'cash', paid_on: '2026-11-01' }, at);
+  assert.deepEqual(combineHistoryRows([rRev, rUpd, marked]).map((r) => textOf(r)), ['Moved to private testing', 'Payment recorded: $20 cash, paid Nov 1']);
 });
 
 check('sanity: these checks catch a broken rule (break on purpose)', () => {

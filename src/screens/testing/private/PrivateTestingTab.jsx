@@ -944,10 +944,12 @@ export default function PrivateTestingTab({
   // lib/testing/receipt.js, as the event roster's: Private testing (day and time), "Moved from ·
   // [event]" only for one moved from an event (v0.421 Q A), Class, School; each payment that still
   // stands is its own "Testing fee" line; Total due = the private price.
-  function openReceipt(row, opener) {
+  // From the summary's Print receipt (P3) it opens on top of the summary (onTop, Star's v0.518);
+  // from ⋯ on its own.
+  function openReceipt(row, opener, onTop = false) {
     setMenu(null);
     const key = Date.now();
-    setReceipt({ key, rowId: row.id, opener, data: null, notFound: false });
+    setReceipt({ key, rowId: row.id, opener, onTop, data: null, notFound: false });
     readReceipt(row.id, key);
   }
   async function readReceipt(rowId, key) {
@@ -982,7 +984,8 @@ export default function PrivateTestingTab({
   function closeReceipt() {
     const r = receipt;
     setReceipt(null);
-    if (r) focusLater(() => r.opener, () => moreEl(r.rowId) ?? rowEl(r.rowId));
+    // On top of the summary, the shared dialog puts focus back on the summary's button (returnFocusTo).
+    if (r && !r.onTop) focusLater(() => r.opener, () => moreEl(r.rowId) ?? rowEl(r.rowId));
   }
 
   // ===== Cancel (confirm, P7) =====
@@ -1284,6 +1287,10 @@ export default function PrivateTestingTab({
           isPhone={isPhone}
           canEdit={Boolean(can.editDetails)}
           hidden={hidden}
+          // CB2 (P3): the summary's Print receipt follows the ⋯ item (privateMenu's printReceipt)
+          canPrintReceipt={Boolean(can.printReceipt)}
+          onPrintReceipt={(opener) => record && openReceipt(record, opener, true)}
+          onNoAccess={onNoAccess}
           onEdit={editFromView}
           onCancel={cancelDialog}
           onRequestClose={requestClose}
@@ -1385,6 +1392,8 @@ export default function PrivateTestingTab({
         hidden={hidden}
         onClose={closeReceipt}
         isPhone={isPhone}
+        onTop={Boolean(receipt.onTop && dialog)}
+        returnFocusTo={receipt.onTop ? receipt.opener : null}
       />
     );
   }

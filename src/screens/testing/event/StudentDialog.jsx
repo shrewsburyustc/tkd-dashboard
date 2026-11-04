@@ -17,11 +17,22 @@
 // and Payment lines become one gray "Payment details are hidden on this tablet." line, and Add /
 // Edit show no fee (the Paying by choice of Add stays: it records how they'll pay, not money).
 //
+// Design review Part 2, mockup P3 (rulebook v0.421): the summary
+//   - ends its Payment row with an outline "Print receipt" (CB2) — staff and admins, on a student
+//     with a payment that still stands, never while Hide private details is on (EventPage decides
+//     with `canPrintReceipt`); it opens the same receipt as ⋯ → Print receipt, on top of the summary;
+//   - ends with the shared History line (CB7, components/HistoryLine.jsx): "History · N changes",
+//     newest first, one entry per change, in lib/testing/history.js's words. While Hide private
+//     details is on the money changes are left out ("Payment history is hidden on this tablet.").
+//
 // Like the other dialogs, this only DRAWS the form; the values live in EventPage (`state`), so a
 // screen lock hides the dialog and brings it back with everything still filled in.
-import { IconCheck, IconEdit } from '@tabler/icons-react';
+import { IconCheck, IconEdit, IconPrinter } from '@tabler/icons-react';
 import Belt from '../../../components/Belt.jsx';
 import Dialog from '../../../components/Dialog.jsx';
+import HistoryLine from '../../../components/HistoryLine.jsx';
+import { loadRegistrationHistory } from '../../../lib/testing/eventsApi.js';
+import { historyDescriber, historyReader } from '../../../lib/testing/history.js';
 import Notice from '../../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
@@ -123,8 +134,23 @@ function SummaryRow({ label, children }) {
   );
 }
 
+// CB2 (P3): the outline "Print receipt" that ends a summary's Payment row, on its own line. It hands
+// itself to onPrint, so focus goes back to it when the receipt closes. (The private testing summary
+// uses it too.)
+export function PrintReceiptButton({ onPrint }) {
+  return (
+    <span className="ev-sum-line">
+      <button type="button" className="btn btn-sm ev-print-receipt" onClick={(e) => onPrint(e.currentTarget)}>
+        {/* ti-printer = print */}
+        <IconPrinter size={16} aria-hidden="true" />
+        {T.PRINT_RECEIPT}
+      </button>
+    </span>
+  );
+}
+
 // The read-only summary (R6).
-function Summary({ row, cls, rank, event, today, hidden }) {
+function Summary({ row, cls, rank, event, today, hidden, onPrintReceipt }) {
   const time = cls ? classTimeLabel(cls.startTime, cls.endTime) : '';
   let signed;
   if (row.source !== 'form') signed = T.NOT_SIGNED_DESK;
@@ -163,6 +189,7 @@ function Summary({ row, cls, rank, event, today, hidden }) {
             {row.paid ? (
               <>
                 <span className="ttag ttag--ok">{T.TAG_PAID}</span> · {T.paidDetail(row.paidCents, row.paidMethod, row.paidOn)}
+                {onPrintReceipt && <PrintReceiptButton onPrint={onPrintReceipt} />}
               </>
             ) : (
               <>
@@ -200,6 +227,9 @@ export default function StudentDialog({
   graded = null, // edit: { graded, result, note } as last read — warns that a belt change clears it
   beltLocked = false, // edit: staff after the testing day, graded student → class and belt locked
   hidden = false, // Hide private details (v0.506): no payment details, no fee
+  canPrintReceipt = false, // view: show Print receipt (CB2) — EventPage's rule, as its ⋯ item
+  onPrintReceipt = null, // view: (opener) => the receipt, on top of the summary (CB2)
+  onNoAccess = null, // view: the History reader's no_access (the lock screen)
   onChange,
   onTouch,
   onSave,
@@ -229,7 +259,24 @@ export default function StudentDialog({
     return (
       <Dialog title={name} size="detail" fullScreen={isPhone} onRequestClose={onRequestClose}>
         <p className="tdialog-sub">{event.name}</p>
-        <Summary row={record} cls={cls} rank={rank} event={event} today={today} hidden={hidden} />
+        <Summary
+          row={record}
+          cls={cls}
+          rank={rank}
+          event={event}
+          today={today}
+          hidden={hidden}
+          onPrintReceipt={canPrintReceipt && !hidden && onPrintReceipt ? onPrintReceipt : null}
+        />
+        {/* CB7: the shared History line ends the summary; it reads the history itself when it
+            appears (testing_registration_history) and names a belt change by the event's ranks. */}
+        <section className="ev-sum-history">
+          <HistoryLine
+            load={historyReader(loadRegistrationHistory, record.id, onNoAccess)}
+            describe={historyDescriber((id) => rankById.get(id)?.name ?? '')}
+            hidden={hidden}
+          />
+        </section>
         {isPhone ? (
           editButton && <div className="dialog-page-submit">{editButton}</div>
         ) : (
