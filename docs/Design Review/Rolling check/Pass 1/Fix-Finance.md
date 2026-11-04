@@ -62,12 +62,14 @@ Most severe first.
   - Color Belt's payments need a second, later Finance migration of the same function: event and private payments read Color Belt's stored school. It comes after Color Belt's migration is live and before Color Belt's app push; the Color Belt session tells the Main session when.
 - **Check (preview mode):** after Star's change and your R1-09: This device = Shrewsbury, top bar Worcester, mark a Worcester Star candidate paid → Shrewsbury's Daily report lists it, Worcester's doesn't. Edit the candidate's school → nothing moves.
 
-### R4-12 (= R3-06's Finance part) — "← Back to the day" is 28 px and pushes the heading down on touch · Low
+### R4-05 — Home's "earlier days weren't closed" line follows History's switch · Medium · decided 2026-11-04 (v1.041)
 
-- **What's wrong:** History's back link (`.fin-back-link`) is 28 px tall, not v0.820's 24 px. On touch it becomes a plain 44 px box that pushes the "History" heading down: R4 measured the heading's top at 224 px at 1280, 250 at 820 touch, and 260 at 390 and 320 (16 px of the 26 px jump is the link; the rest is the taller month arrows on touch, which stay). Forms' builder copied `.tc-back`, whose touch box is pulled back with negative margins, so its title stays at 124 px on both PC and tablet. (Your status says the style question "settled itself", status line 204: that was the session's call, not Jeffrey's.)
-- **Rule:** v0.820 ("blue text, 16 px arrow, 24 px tall, 44 px tap area on touch"); v1.020 (the v0.59 back link everywhere); v0.624.
-- **Change:** `finance.css:98–105, 948–952` take `.tc-back`'s numbers (24 px tall, and the touch margins that pull the 44 px tap box back so the heading doesn't move), as Forms' `.fb-back` did (`forms.css:196–210`, copied from `src/screens/testing/chooser/chooser.css:90–104`). If Jeffrey later picks one shared back link (R3-06, below), switch to it then.
-- **Check (preview mode):** History at 1280, 820 touch, 390 touch and 320: the link is 24 px tall with a mouse, its tap area is 44 px on touch, and the History row (`.fin-dayrow`) starts at the same height at 1280 and 820. The heading itself still sits a few px lower on touch, because the month arrows beside it grow from 32 to 44 px; that is right and stays.
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q6-home-not-closed-line.png`.
+
+- **What's wrong:** Home tells admins "20 earlier days at Worcester weren't closed …", but History, where Open History leads, marks none of them while `SHOW_UNCLOSED` is off (v0.821, v0.822). The line also comes back after every day with payments.
+- **Rule:** v1.041 (Jeffrey, 2026-11-04: "A: hide warning"): while History's "Not closed" marks are off, Home's earlier-days line is hidden too, and the same switch brings all three back. Today's own "drawer isn't closed yet" reminder keeps its own control (Off in Finance → Settings).
+- **Change:** move `SHOW_UNCLOSED` (`HistoryView.jsx:32`) into one exported constant in your own files, read by both `HistoryView.jsx` and `HomeReminders.jsx`. In `HomeReminders.jsx`, add the earlier-days line (`:131–134`) only when it is on; while it is off, also skip the History read (`:83`) and keep `pending` false (`:135`), so Home doesn't hold back "Nothing on Home yet" waiting for it. Today's reminder (`:119–129`) stays as it is. No database change.
+- **Check (preview mode):** as an admin on Home, no "earlier days weren't closed" line while the switch is off. Today's "drawer isn't closed yet" line still shows when it is due, and hides when the reminder time is Off. Set the constant to true on your machine only: Home's line and History's line and tags all come back. Then set it back to false and confirm with `git diff` that it isn't changed before you commit.
 
 ### R1-05 — List camp refunds like the others · Medium · decided 2026-11-04 (v1.039) · after Camps' R1-05
 
@@ -78,6 +80,13 @@ Most severe first.
   - If a migration turns out to be needed, Jeffrey applies it after Camps' and before Camps' app push.
   - R1-09's preview reader lists camp refunds too (`readCamps` in `mockFinance.js`).
 - **Check (preview mode):** after Camps' change, record a $66 cash camp refund today → today's Daily report shows it in Refunds with "after $66.00 refunds" under the total, and Close the day expects $66 less cash. The payment's original day doesn't change.
+
+### R4-12 (= R3-06's Finance part) — "← Back to the day" is 28 px and pushes the heading down on touch · Low
+
+- **What's wrong:** History's back link (`.fin-back-link`) is 28 px tall, not v0.820's 24 px. On touch it becomes a plain 44 px box that pushes the "History" heading down: R4 measured the heading's top at 224 px at 1280, 250 at 820 touch, and 260 at 390 and 320 (16 px of the 26 px jump is the link; the rest is the taller month arrows on touch, which stay). Forms' builder copied `.tc-back`, whose touch box is pulled back with negative margins, so its title stays at 124 px on both PC and tablet. (Your status says the style question "settled itself", status line 204: that was the session's call, not Jeffrey's.)
+- **Rule:** v0.820 ("blue text, 16 px arrow, 24 px tall, 44 px tap area on touch"); v1.020 (the v0.59 back link everywhere); v0.624.
+- **Change:** `finance.css:98–105, 948–952` take `.tc-back`'s numbers (24 px tall, and the touch margins that pull the 44 px tap box back so the heading doesn't move), as Forms' `.fb-back` did (`forms.css:196–210`, copied from `src/screens/testing/chooser/chooser.css:90–104`). If Jeffrey later picks one shared back link (R3-06, below), switch to it then.
+- **Check (preview mode):** History at 1280, 820 touch, 390 touch and 320: the link is 24 px tall with a mouse, its tap area is 44 px on touch, and the History row (`.fin-dayrow`) starts at the same height at 1280 and 820. The heading itself still sits a few px lower on touch, because the month arrows beside it grow from 32 to 44 px; that is right and stays.
 
 ### R1-09 — Preview only: Star payments never reach the Daily report · Low (preview only)
 
@@ -90,7 +99,6 @@ Most severe first.
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R4-05** (Medium) — while History's "not closed" marks are off (v0.821, v0.822), should Home's "N earlier days weren't closed" line go too? Today it leads to a History that shows nothing (`HomeReminders.jsx:131–135` doesn't read `SHOW_UNCLOSED`, `HistoryView.jsx:32, 53, 213`). Recommended: yes, the same switch. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours: `finance/text.js:200, 209`; "Close undone. The day is open again.", `:198`, is folded in). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-09** (Low) — the ✓ and the full stop only on the account toasts (recommended: your "✓ Today's drawer is closed." and "✓ CSV downloaded", `DayReport.jsx:378, 689`, lose theirs, although your approved Daily report mockup draws the ✓), or on every success toast. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R3-06** (Low) — one shared back link made by Dashboard core, which every section then uses (yours, after R4-12's fix, would switch to it). The design review asks Jeffrey; the answer reaches you through the Main session.
