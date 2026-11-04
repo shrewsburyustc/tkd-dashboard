@@ -1,13 +1,12 @@
-// history.js — the reader a Black Belt candidate's History line will use (design review BB8,
-// rulebook v1.010; migration 0032's bb_candidate_history).
+// history.js — the reader a Black Belt candidate's History line uses (design review BB8,
+// rulebook v1.010 / v0.972; migration 0032's bb_candidate_history, + record_id from 0034).
 // Why it exists: the shared History line (src/components/HistoryLine.jsx) takes a `load()` that
 // gives back the rows or THROWS — on a throw it shows its amber bar with Retry. api.js never
 // throws (every call there answers { status }), so this small wrapper turns a refusal into a
 // thrown error, exactly as Star's CandidateHistory.jsx does with its own reader.
 //
-// NOT USED ON SCREEN YET: the history line inside the candidate's summary (CandidateDialog) and
-// the words for each row come in their own step, after Jeffrey has seen the mockup. Until then
-// nothing imports this file (the preview store's bb_candidate_history is checked in checks.mjs).
+// Used by src/blackBelt/staff/candidates/CandidateHistory.jsx (the line at the end of the
+// candidate's details), which groups the rows and words them with historyWords.js.
 //
 //   historyReader(candidateId, onNoAccess) → an async function: the candidate's HistoryRow[]
 //     (api.js loadCandidateHistory; newest first), or a thrown Error. A no_access answer also

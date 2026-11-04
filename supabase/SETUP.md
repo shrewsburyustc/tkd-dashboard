@@ -2835,6 +2835,48 @@ Tested in PGlite on every run (`run.mjs` step0032: the History line on a seeded 
 
 ---
 
+## Migration 0034: Black Belt History names the subject of a correction (record_id)
+
+**Status: not applied yet.** Built on `black-belt`, design-review item BB8 (rulebook v0.971 / v0.972).
+
+**Production order:** … 0032 → 0033 (live) → **0034**. It needs 0032 (it stops with "0034 needs migration 0032 … first" otherwise). **It must be live before the app version that reads `record_id` from the History line.** The app that is live today keeps working unchanged after it (it ignores the new key).
+
+**What it does** (`supabase/migrations/0034_black_belt_history_ids.sql`): replaces **only** `public.bb_candidate_history(uuid)` (0032 section 3c; `create or replace`, same argument, answer type, checks, rows, order, 500 limit, `bb_history_strip`, rights). The one change: every row also has **`record_id`** — the `change_log` row's `record_id`, the logged row's own id. A grade's UPDATE row holds only the changed columns (the letter), its INSERT row names the subject; both have the same `record_id`, so the app can show "Free sparring: A → B". `record_id` is a row id, not a login id — nothing private. No table, rule, index, right or data changes; nothing for anon; no destructive words.
+
+**Each step needs Jeffrey's OK.**
+
+### 0034a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0034_preapply_check.sql` must answer `body_is_0032 = true`, `body_is_0034 = false`, `versions = 1`, `strip_helper = true`. Both bodies false → someone changed the function since 0032 — stop and tell Claude.
+2. Claude runs `supabase/tests/0032_fingerprints.sql` and `0016_fingerprints.sql` and keeps the result (the "before" record for 0034c and the undo).
+
+### 0034b. Apply 0034 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0034_black_belt_history_ids.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept.
+2. Running it again is safe. **Re-running 0032 after this** puts 0032's reader back → re-run 0034 straight after.
+
+### 0034c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0034_fingerprints.sql` — the one line must match what `run.mjs` printed ("0034 fingerprints"): `bb_candidate_history(p_candidate_id uuid)` with `lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0032_fingerprints.sql` and `0016_fingerprints.sql`: **only** the `bb_candidate_history` line differs from 0034a's record (its body md5). Every other file unchanged (`run.mjs` step0034 checks exactly that).
+3. `0034_preapply_check.sql` again: `body_is_0034 = true`.
+4. **Security advisor:** nothing new.
+
+### 0034d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0034_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0034 TESTS PASSED**. It checks who may read the history (unchanged), that every row has `record_id` and it is the logged row's own id (the candidate, a payment, a grade's insert **and** its later correction), and that no date of birth, email or login id appears. It rolls everything back.
+2. Then `0032_tests.sql` (it now accepts the extra `record_id` key), `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql`, `0026_tests.sql` — all must still pass. Put the placeholders back afterwards.
+
+### 0034e. Undo 0034 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that doesn't need `record_id`.
+2. Paste **the whole file** `supabase/manual/0034u_undo.sql` → **Run**. It puts back 0032's exact `bb_candidate_history` (word for word, same revoke and grant). Nothing is removed, so Supabase should not warn.
+3. Claude checks `0032_fingerprints.sql` and `0016_fingerprints.sql` (must equal 0034a's record) and `0034_preapply_check.sql` (`body_is_0032 = true`). Then run `0032_tests.sql`. To redo: paste 0034 again.
+
+Tested in PGlite on every run (`run.mjs` step0034: pre-apply check, only the reader's md5 moves, the tests, re-run safety, the undo file exactly as named here, then the redo).
+
+---
+
 ## Migration 0033: Camps design review (Mark paid with a way to pay, Camper history)
 
 **Status: APPLIED 2026-11-03** (Jeffrey, SQL Editor; 0033a pre-check ready, 0033c fingerprints match the file, 0033d advisor nothing new, 0033e all seven test files passed). Built on `camps` (rulebook v0.735 = C2, the shared Mark paid box; v0.736 = C7, the history line; plan `docs/Camps/TKD-Camps-0033-Plan.md`). Apply it **before** the app version that sends the way to pay or shows the History line is deployed. The app from before 0033 keeps working with 0033 applied (its 3-input Mark paid call is covered by the new input's default — tested).
