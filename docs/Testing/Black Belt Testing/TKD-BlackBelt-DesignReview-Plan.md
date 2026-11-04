@@ -60,3 +60,53 @@
 5. The database half alongside: design, number from Main, build, tests, security review; the paste only with Jeffrey's OK.
 
 Each step: build in preview mode, design reviewer (rulebook + the OK'd mockups, four sizes, §4's six WCAG 2.2 checks), code reviewer, `npm run build` + `build:preview-mode` + the check files, commit on `black-belt`, no push.
+
+---
+
+## 5. Part 2 + the rolling check's pass 1 fixes (added 2026-11-04)
+
+**Sources:** `docs/Design Review/End review/Prompts/5-BlackBelt.md` Part 2 (BB1, BB2, BB7, BB10, BB14, BB15, BB19) and `docs/Design Review/Rolling check/Pass 1/Fix-BlackBelt.md` (finding ids R1-01 … R4-15). **Status:** plan only; Jeffrey OKs it, then each screen's mockup one at a time, then code.
+
+**Already done since the fix list was written:** R4-03's words ("Hidden on this tablet" etc., v0.974, live); BB8's History on the shared `HistoryLine` (R4-07's first half, live); BB13's time list (live); BB20 (v0.975).
+
+### Step 1 — Privacy at the mat (High; screen only, no database)
+
+| Id | What changes | Files |
+|---|---|---|
+| R1-04 | With Hide private details on, the row ⋯ and detail ⋯ read the same on every row: Delete permanently and (staff's) Change plan grayed with a desk line that names no payment. | `CandidatesTab.jsx`, `CandidateDialog.jsx`, `text.js` |
+| R4-01 | Plan hidden while the switch is on (v1.036): Plan column / phone line read gray "Hidden on this tablet"; Compare's Plan row too; Change plan or Kukkiwon desk-only for everyone; its dialog can't open (and closes if the switch turns on). | `RosterRows.jsx`, `text.js`, `CompareDialog.jsx`, `CandidatesTab.jsx`, `CandidateDialog.jsx`, `useCandidateActions.js` |
+| R4-03 (gray) | Hidden values drawn in the shared gray (`.ev-hidden-value`), not black. | `CandidateDialog.jsx`, `CompareDialog.jsx` |
+| R4-04 | Work like Star while hidden (v1.037): Add candidate opens its menu (New candidate grayed with Star's reason, Make-up works); Edit details opens with DOB / email gray and Star's hint, staff's Dan grayed on every row "Change the Dan at the desk.", the admin's "already paid" line left out. | `cycle/CyclePage.jsx`, `CandidatesTab.jsx`, `CandidateDialog.jsx` (`EditFields`), `useCandidateActions.js`, `text.js` |
+
+**Screens:** J. Roster and both ⋯ with the switch on · K. Edit details with the switch on · L. Add candidate menu with the switch on.
+**Questions in them:** the desk lines' words (recommended: "Delete candidates at the desk." / "Change the plan at the desk."); the History's plan and Kukkiwon lines while hidden (v0.972 keeps them; recommended: hidden too).
+
+### Step 2 — Payments count at the desk's school (R1-01, High; database)
+
+- One migration (number from Main): `bb_record_payment` and `bb_record_refund` take This device's school (blank = today's rule, so the live app keeps working); undo / edit / returned keep copying from the payment they correct (v0.903). Tests, fingerprints, SETUP "Migration 00NN", `step00NN`, security review; Jeffrey applies it before the app that uses it is pushed.
+- The app passes This device's school: `src/App.jsx` and `src/screens/Testing.jsx` (shared files) plus the preview store.
+- **No screen changes, so no mockup.** Check: a Worcester candidate's payment taken on a Shrewsbury device shows in Shrewsbury's Daily report.
+
+### Step 3 — Part 2: switch to the shared parts (BB15 with BB1, BB2, BB7, BB10, BB14, BB19)
+
+| Id | What changes |
+|---|---|
+| BB15 | Black Belt's own copies → the shared parts (Dialog, ConfirmBox, CompareDialog + DuplicateBox, CountCards, Receipt, RegistrationLinkBox, Select / TimeList, ChoiceGroup, PaidByField, Grip, usePrivateDetailsHidden, useLiveLoad, formatMoney). Old copies deleted once unused. |
+| BB1 | Record payment / Edit payment say **"Paid by"**; Record refund **"Refunded by"** (as Star and Finance). |
+| BB2 | The shared receipt; Print receipt only on a row with a payment (as Star). |
+| BB7 | Every confirm box: the safe button left ("Keep …"), the action right (red when it loses something), "Deleting…" while it works. |
+| BB10 | "Registration link" button in the cycle page header (Star's button); its box is the shared one; 1024-px QR download. |
+| BB14 | One money helper; on screen only the Add cycle grid's "12.5" preview changes ("$12.50"). |
+| BB19 | Discard: Keep editing left, Discard right and red; the Dan-change box as the shared small box on phones. |
+| Small | R3-05 (the "Showing … only" line as the shared inline link), R3-07 (make-up icon `ti-repeat`), R4-11 (Retry on a failed ⋯ read), R4-14 (one sentence for a refused Undo), the clear-search ✕ as the shared `IconButton`, the empty roster's line naming "Add candidate". |
+
+**Screens:** M. Paid by / Refunded by · N. Receipt · O. Confirm boxes · P. Cycle page header (Registration link; how the header fits on phones) · Q. Count cards on phones (2×2) · R. Discard and the Dan-change box · S. the small ones together.
+**Questions in them:** the "Keep …" words (Undo Mark as sent, Delete personal details, agreed with Star's S5); whether Black Belt's own looks passed to the shared choice buttons may stay (`bb-segmented--fill` etc.); the phone header's full-width Add candidate (keep or its own size).
+
+### Step 4 — after another session's fix lands
+
+R2-05 (Undo pressed during another save, after Dashboard core), R3-13 ("Past days can't be chosen.", after Dashboard core), R4-07's gray line in every hidden History (after Dashboard core), R4-08 (Email result's grayed look for screen readers, after Star). The "Waits on Jeffrey" items (R3-01, R2-03, R2-04, R1-06, R1-07, R2-07, R3-02, R3-06, R3-09, R3-10, R4-02, R4-06, R4-13 and two more) are asked by the Design Review session; answers reach Black Belt through Main.
+
+**Docs at the next rulebook edit:** R4-15's four "(See …)" notes. **Status-file checks:** the chooser check (passed in the checker's preview), BB3's Finance check after Edit payment + Undo (to run).
+
+**Each step:** mockups OK'd one screen at a time → build in preview mode → design reviewer (four sizes, §4's WCAG checks) + code reviewer (+ security reviewer for privacy and database work) → both builds + check files + Function tests → commit on `black-belt` → report to Main. Never push.
