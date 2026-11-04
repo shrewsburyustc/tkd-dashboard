@@ -13,7 +13,8 @@
 //     (admins; hidden while Hide payments is on) — phones: the buttons under the switch (proposal 2)
 //   the summary line "1st Dan · 5 candidates · 1 passed · 3 make-ups · 1 not finished" (proposal 3)
 //   "No grades yet. Results fill in …" while nothing is graded in this Dan (proposal 32)
-//   Hide payments on: "Email result is off on this device. Email results at the desk." (proposal 36)
+//   Hide private details on: "Email result is off while private details are hidden. Email results
+//   at the desk." (Star's words, v0.974)
 //   the rows (ResultRows.jsx), or the empty-Dan line (proposal 31)
 //
 // What the buttons do:

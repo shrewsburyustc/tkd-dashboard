@@ -101,7 +101,7 @@ export const menuSubtitle = (dan, school) => `${danLabel(dan)} · ${school}`; //
 // ----- Lines above the list (proposals 32, 35, 36) -----
 export const NO_GRADES_YET = 'No grades yet. Results fill in as grades are entered on the Grading tab.';
 export const OFFLINE = 'You’re offline. These results may be out of date. Email result, Mark as sent, Print results and Download CSV need a connection.';
-export const EMAIL_OFF_HIDDEN = 'Email result is off on this device. Email results at the desk.';
+export const EMAIL_OFF_HIDDEN = 'Email result is off while private details are hidden. Email results at the desk.'; // Star's words (v0.974)
 
 // ----- Loading and empty (proposals 31, 37) -----
 export const LOADING_RESULTS = 'Loading results…'; // screen readers
