@@ -30,7 +30,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **One decision at a time,** with pictures: each option drawn, its pros and cons, and a recommendation.
 - **Reviews:** a separate design reviewer (the rulebook, the approved mockups, screenshots at the four sizes, and §4's six WCAG 2.2 checks, v1.033); a separate code reviewer; a separate security reviewer for anything touching the database (handoff §6).
 - **Order (a push to main deploys):** the migration is live before the push that brings the app that uses it. A step whose app calls a new or changed database function is merged only after Jeffrey has applied its migration and the checks passed (fingerprints, security advisor, tests file — CLAUDE.md). Screen-only steps can go first.
-- **Migrations:** R1-02 and R2-02 each need a database change (one migration can hold both if you plan them together). Ask the Main session for a migration number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`). Add a SETUP section "## Migration 00NN: …" with steps `### 00NNa.` …, a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
+- **Migrations:** R1-01, R1-02 and R2-02 each need a database change (one migration can hold several if you plan them together). Ask the Main session for a migration number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`). Add a SETUP section "## Migration 00NN: …" with steps `### 00NNa.` …, a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
 - **Don't change a shared part on your own** (`src/components/…`, the shared helpers in `src/lib/`, `src/styles/shared.css`): every section uses them. If you need something a part can't do, ask Jeffrey first. He decides whether you change it in your branch (then list it as a shared file) or the Dashboard core session does.
 - List every CLAUDE.md shared file you touch (`src/styles/shared.css` and `src/components/text.js` are on that list).
   - Star's fake database is in `src/lib/mockStar*.js`.
@@ -69,6 +69,18 @@ High, though rare: it needs the connection to drop between two quick calls.
   - **Before the migration is live (two steps):** `__tkdPreview.setTestingDelay(1500)` → Undo → `__tkdPreview.failNextSave('star')` about 2 s later (it fails the second step) → the bar says "Undo didn't save…" with Retry, never "someone else". Retry → "Undone", with the name and the switch both back.
   - **With the one-step function:** `__tkdPreview.failNextSave('star')` → Undo (its one call fails) → the bar says "Undo didn't save…" with Retry, and nothing changed: the new name and Open both stay. Retry → "Undone", with the name and the switch both back.
 
+### R1-01 — Count each payment at the desk that took it · High · decided 2026-11-04 (v1.035)
+
+- **What's wrong:** Finance counts a Star payment for the candidate's *current* school (`0026_finance_black_belt.sql:597–602`), and `star_payments` has no school column (`0006:708–718`). So a Worcester family's cash taken at the Shrewsbury desk counts in Worcester's report and drawer, and editing a candidate's school later moves money already counted, even on closed days.
+- **Rule:** v1.035 (Jeffrey, 2026-11-04): every payment counts at the school of the desk that took it, the school set under This device in the account menu, as Camps does (v0.708). The school is stored on the payment when it is recorded, and an undo, edit or returned check copies it from the payment it corrects (v0.903's chain rule). Which school a refund counts at is still open (v1.035). Money booked to the wrong school is moved by undoing it and recording it again on a device set to the right school.
+- **Change:**
+  - One Star migration: `star_payments` gets a school column. Existing rows take the candidate's school as it is when the migration runs (the school Finance shows for them today). `star_record_payment` takes the device's school and stores it. Undo and Edit payment (its reversal *and* its new payment row, `star_edit_payment`) copy it from the payment they correct. `star_record_refund`'s school waits on Jeffrey's answer (v1.035's open point): don't write that part before it. Ask the Main session for a migration number. Jeffrey applies it. The new input has a default (blank = the candidate's school, as 0033 did for `camp_mark_paid`), so the live app keeps working. The migration is live before the push that brings the app that uses it, and that push also waits until Finance's R1-01 migration is live. Otherwise a payment taken at the other desk shows at the candidate's school, then moves when Finance switches, and a closed day reads "Changed after closing".
+  - If R1-02's migration isn't written yet, plan the two together: both replace `star_record_payment`.
+  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1102–1103`); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
+  - The fake twin (`src/lib/mockStarCandidates.js`) changes too, or the check below can't pass.
+  - Finance then reads the stored school (Finance's R1-01, after yours). Tell the Main session when your migration is live.
+- **Check (preview mode):** This device = Shrewsbury (account menu), top bar on Worcester: mark a Worcester candidate paid → the fake payment row stores Shrewsbury. Edit that candidate's school → the payment's school doesn't change. Undo the payment → the reversal row has Shrewsbury too.
+
 ### R1-02 — The Mark paid box says "They chose Check on the form" after the desk changed it · Medium
 
 - **What's wrong:** Lily Brooks registered on the family form with Cash. ⋯ Change how they'll pay → Check. The Mark paid box then says "They chose Check on the form." She paid by Card: the roster says "Card", but her summary keeps "Paying by: Check (chosen on the form)". The box puts words in the family's mouth. The hint is worked out from where the candidate came from (`row.source === 'form'`), not from where Paying by was chosen. Camps (v0.735) and Color Belt (v0.418, on its branch) already do it right.
@@ -86,6 +98,15 @@ High, though rare: it needs the connection to drop between two quick calls.
 - **Rule:** v0.518 (S6), v1.108: the history lists what changed.
 - **Change:** skip the bookkeeping columns by name instead (`created_by`, `updated_by`, `withdrawn_by`, and anything ending in `_by_name`), move the column skip and `linesFor` from `CandidateHistory.jsx` into a plain `.js` file under `src/lib/star/`, then add a Star check (e.g. in `src/lib/star/candidatesChecks.mjs`) that a `star_change_paying_by` row gives "Paying by: Cash → Check". While Hide private details is on it must stay out: `historyPrivacy` in `src/lib/star/candidatesCore.js:117–123` already treats it as a payment row.
 - **Check (preview mode):** Change how they'll pay on a fresh candidate → History shows the line; turn Hide private details on → the line is left out and the gray line shows.
+
+### R5-05 — Payments recorded drops a withdrawn candidate's payment · Medium · decided 2026-11-04 (v1.038)
+
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-card.png`.
+
+- **What's wrong:** your Payments recorded card adds up only the candidates still on the roster (`CandidatesTab.jsx:261`, `active` only). After a paid candidate withdraws it drops (Noah Chen's $140 → $0), though the payment is still on record.
+- **Rule:** v1.038 (Jeffrey, 2026-11-04: "Money received should be counted reguardless of removed status. If we refunded and undid the payment then it should go down. Clear cut and dry."): the card adds up all money received for the event, withdrawn candidates included; undone payments and refunds come off. When part of it belongs to removed candidates, the gray line "includes $X from removed candidates" sits under the number (Color Belt's line).
+- **Change:** `CandidatesTab.jsx:256–262`: `payments` adds the removed rows' `paidCents` (with the same school filter as the roster), and a removed-payments figure feeds the Payments recorded card's `note` (`:1489–1500`); the shared `CountCards` already draws a note. Hide private details: unchanged (the card isn't drawn).
+- **Check (preview mode):** Fall Star Testing → withdraw Noah Chen (paid $140) → Payments recorded stays $140 with "includes $140 from removed candidates". Restore → the line goes. Undo a payment → the total goes down. On Both the total covers both schools.
 
 ### R2-05 (your part) — An Undo pressed during another save is dropped without a word · Medium · after Dashboard core's R2-05
 
@@ -143,7 +164,6 @@ High, though rare: it needs the connection to drop between two quick calls.
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R1-01** (High) — which school's Daily report counts a payment taken at one school's desk (today Finance books Star's money to the candidate's *current* school, so editing the school moves money already counted: `star_payments` has no school column, `0006:708–718`). The checkers recommend storing the school with each payment whatever the answer. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-03** (Medium) — Undo after restoring a "Duplicate copy": your no-Undo rule (v0.517 G3, `CandidatesTab.jsx:900–910`) everywhere, which is recommended, or a real Undo everywhere (then Star gains one too). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section: Black Belt's words ("Undo [Name]'s $X [way] payment?" + "Paid on [date]", recommended), or yours with "recorded on" → "paid on" (today `candidates/text.js:172–174` is fed the paid-on date, `CandidatesTab.jsx:1278`). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment (yours, "Payment recorded", `candidates/text.js:141`, names no one and no amount). The design review asks Jeffrey; the answer reaches you through the Main session.
@@ -155,7 +175,6 @@ High, though rare: it needs the connection to drop between two quick calls.
 - **R4-02** (Low) — what an open New candidate form does when Hide private details turns on in another tab (today it keeps the typed birthday and email: `CandidateDialog.jsx:415, 456`, `hidden && !isNew`; recommended: leave it and record it in a row). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R4-10 = R3-08** (Low) — the icon for "Back to the testing day" (your DR plan question 5, still open; today Undo's arrow, `CandidatesTab.jsx:1147`), and for "Change private day or time": your pencil or Color Belt's calendar (`ti-calendar`, recommended). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R4-13** (Low) — "Ask an admin to open it." (Camps, recommended) or "… to reopen." (yours, `lib/star/eventsText.js:98–99`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R5-05, with R5-04** (Medium, pass 1b) — what Payments recorded adds up. Today your card leaves out a withdrawn candidate's payment (`CandidatesTab.jsx:261` sums `active` only), so it reads $0 after a paid candidate withdraws, though the payment is still on record. Recommended: all recorded money, with "includes $X from removed candidates" under the card (Color Belt's line; the shared `CountCards` already draws a note). The design review asks Jeffrey; the answer reaches you through the Main session.
 
 ---
 
@@ -168,7 +187,7 @@ High, though rare: it needs the connection to drop between two quick calls.
 
 ## Done when
 
-- Every Fix now item is built, reviewed and approved by Jeffrey in the preview: a design reviewer at the four sizes for visual changes, a code reviewer, and a security reviewer for anything touching the database or privacy (R1-02's and R2-02's migrations; R1-03's history while Hide private details is on).
+- Every Fix now item is built, reviewed and approved by Jeffrey in the preview: a design reviewer at the four sizes for visual changes, a code reviewer, and a security reviewer for anything touching the database or privacy (R1-01's, R1-02's and R2-02's migrations; R1-03's history while Hide private details is on).
 - Each migration's PGlite tests pass, Jeffrey has applied it, and the after-apply checks passed (fingerprints, security advisor, tests file).
 - Both builds pass (`npm run build` and `npm run build:preview-mode`), and so do Star's eight check files (`node src/lib/star/<name>Checks.mjs`) and `node src/lib/shared/checks.mjs`.
 - Jeffrey's decisions are rows from your block.

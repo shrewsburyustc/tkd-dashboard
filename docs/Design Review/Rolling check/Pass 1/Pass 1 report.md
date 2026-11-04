@@ -28,7 +28,7 @@
 
 ### The four Highs (pictures in `pictures/`)
 
-1. **Money counted at different schools** (R1-01, needs Jeffrey: question 1).
+1. **Money counted at different schools** (R1-01). **Decided 2026-11-04: A** (rulebook v1.035): every section counts a payment at the desk that took it. Fix items now go to Star, Black Belt, Finance and Color Belt.
    - A camp payment taken at the Shrewsbury desk counts in Shrewsbury's report.
    - A Black Belt payment taken at the same desk counts in the family's school's report, so that school's Close the day expects cash that sits in the other drawer.
    - Picture: `Q1-payment-school.png`.
@@ -38,7 +38,7 @@
    - Straight fix for Star, with a database change. Color Belt has the same code.
    - Picture: `H3-star-event-undo-half-done.png`.
 
-Also High if Jeffrey decides a family's payment plan is a payment detail: Black Belt's Plan column stays visible while private details are hidden (R4-01, question 2).
+A fifth High, decided 2026-11-04 (question 2: A, rulebook v1.036): a family's payment plan is a payment detail, so Black Belt's Plan column hides while private details are hidden (R4-01). It is now a fix item for Black Belt.
 
 ## Fix files: ready to pass on
 
@@ -46,34 +46,34 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Star | `Fix-Star.md` | 6 + 4 after another session's fix | 13 | 2 |
+| Star | `Fix-Star.md` | 8 + 4 after another session's fix | 11 | 2 |
 | New students | `Fix-NewStudents.md` | 5 + 1 after another session's fix | 9 | 12 |
-| Black Belt | `Fix-BlackBelt.md` | 7 + 4 after another session's fix | 19 | 8 |
-| Camps | `Fix-Camps.md` | 0 + 3 after another session's fix | 16 | 8 |
-| Finance | `Fix-Finance.md` | 2 | 7 | 2 |
+| Black Belt | `Fix-BlackBelt.md` | 10 + 4 after another session's fix | 16 | 8 |
+| Camps | `Fix-Camps.md` | 2 + 3 after another session's fix | 13 | 9 |
+| Finance | `Fix-Finance.md` | 2 + 2 after another session's fix | 5 | 2 |
 | Dashboard core | `Fix-DashboardCore.md` | 6 | 11 | 8 |
 | Color Belt | `Notes-ColorBelt.md` | check before its merge | (follows the answers) | — |
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.035). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.040). The sections it changes hear it through the Main session.
 
-1. **Money: which school's report counts a payment taken at one school's desk?** (R1-01, High.)
+1. **Money: which school's report counts a payment taken at one school's desk?** (R1-01, High.) **Answered 2026-11-04: A** (v1.035).
    - **A (recommended):** the desk that took it, for every section, as Camps does. The report then always matches the drawer.
    - **B:** the family's school, for every section.
    - **C:** keep each section's own rule.
    - Whichever is picked, Star also saves the school with each payment, so a later edit never moves counted money.
    - Picture: `Q1-payment-school.png`.
-2. **Black Belt's payment plan while private details are hidden** (R4-01, High if yes).
+2. **Black Belt's payment plan while private details are hidden** (R4-01, High if yes). **Answered 2026-11-04: A** (v1.036).
    - **A (recommended):** the Plan column and plan words hide, and Change plan becomes desk-only, as Camps hides how a family pays.
    - **B:** keep the approved v0.900 roster, where the plan stays visible.
-3. **Black Belt's desk-only items while hidden** (R4-04, Medium).
+3. **Black Belt's desk-only items while hidden** (R4-04, Medium). **Answered 2026-11-04: A** (v1.037).
    - **A (recommended):** work like Star. Only New candidate is desk-only, Make-up keeps working, and Edit details opens with the birthday and email hidden.
    - **B:** keep Black Belt as built, and record "Edit details at the desk" in a row.
-4. **What every "Payments recorded" card adds up** (R5-04 + R5-05, Medium).
+4. **What every "Payments recorded" card adds up** (R5-04 + R5-05, Medium). **Answered 2026-11-04: A** (v1.038): "Money received should be counted reguardless of removed status. If we refunded and undid the payment then it should go down."
    - **A (recommended):** all recorded money, as Finance counts it, with Color Belt's gray line "includes $X from removed …". Star stops dropping a withdrawn candidate's payment, and Camps adds the line.
    - **B:** only the people still on the roster.
-5. **Camp money handed back** (R1-05, Medium).
+5. **Camp money handed back** (R1-05, Medium). **Answered 2026-11-04: A** (v1.039).
    - **A (recommended):** Camps gets a "Record refund" like Star's, dated the day the money goes out.
    - **B:** keep Edit payment, which changes the payment's original, already-counted day.
 6. **Home's "N earlier days weren't closed" line** (R4-05, Medium).
@@ -118,6 +118,6 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 
 ## Next
 
-- **Jeffrey:** question 1, then the rest in order.
+- **Jeffrey:** question 6, then the rest in order (questions 1–5 answered 2026-11-04).
 - **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13, Dashboard core's v1.118), and Color Belt when it merges.
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.

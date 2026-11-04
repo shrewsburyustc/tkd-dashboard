@@ -82,18 +82,24 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **R4-09:** clickable tags (`.ev-tag-button`) are 22 px tall with a mouse. Dashboard core gives them a 24 px target in `testing-events.css`. Check your tags after.
 - **R3-13:** Dashboard core puts "Past days can't be chosen." and "Days after today can't be chosen." in `src/components/text.js`. If your CB11 date fields gray days, use those words and show the hint.
 
+### R1-01 — Count each payment at the desk that took it · High · decided 2026-11-04 (v1.035)
+
+- **Today:** Finance books your payments to the event's school (a private testing's payments to the private testing's school), so a family that pays at the other school's desk is counted in the wrong drawer.
+- **Rule:** v1.035 (Jeffrey, 2026-11-04): every payment counts at the school of the desk that took it, the school set under This device in the account menu, as Camps does (v0.708). The school is stored on the payment when it is recorded, and an undo, edit or returned check copies it from the payment it corrects (v0.903's chain rule). Which school a refund counts at is still open (v1.035). Money booked to the wrong school is moved by undoing it and recording it again on a device set to the right school.
+- **What to do:** after your merge, or in your Part 2 if it fits, `testing_payments` and `testing_private_payments` get a school column. Existing rows take the school Finance shows for them today: the event's, or the private testing's (`0026:602`). The old 2-argument functions the live site still calls store that same school. `testing_mark_paid_by` / `testing_private_mark_paid_by` (your 0030 functions) take the device's school and store it. Undo, Edit payment, `testing_move_to_private` and `testing_private_undo_move` (0030) copy it from the payment they correct or move, so a Move stays a transfer (v0.407) and never changes a counted day. That needs a migration: ask the Main session for a number; Jeffrey applies it. Finance then reads your stored school in a step of its own, so say in your report when yours is live. Order: your migration, then Finance's reader migration, then your app push. The app passes This device's school through `src/App.jsx` and `src/screens/Testing.jsx`, both CLAUDE.md shared files: list them.
+
 ### Smaller lines for you
 
 - **Add student while hidden** (out of pass 1, for your own review): on main, Add student stays usable while Hide private details is on and shows "Paying by Cash · Check · Card". It asks no birthday or email, so it isn't desk-only, but Paying by is a payment detail that Camps hides. Check how your branch handles it, and ask Jeffrey if it needs a rule.
 - **The shared `DeleteDialog`:** the checker found it used only by your Classes and ranks (`ClassesRanksTab.jsx:63` on main), planned to go with CB5. A read-only look at 9dbb1ce shows your Classes and ranks now uses the shared ConfirmBox, so after your merge nothing uses `src/components/DeleteDialog.jsx` or its old address `src/screens/testing/DeleteDialog.jsx`. Removing a shared part is Dashboard core's call (the shared-part rule): say so in your report.
 - **Camps re-exports your words:** Camps re-exports about 75 words from your `testing/text.js` (allowed), so your word changes reach Camps' screens at your merge without a Camps review. In your merge report, list which re-exported words you changed, so Camps can check them.
 - Your count cards still draw Not paid with the clock (`EventPage.jsx:1413`, `PrivateTestingTab.jsx:841`), where Star and Camps use `ti-circle-x`. That's your planned CB15. Pass 1b.
+- **R5-04 is decided** (2026-11-04, v1.038): Payments recorded counts all money received, removed people included, with your own line "includes $X from removed students". Nothing changes for you.
 
 ---
 
 ## Waits on Jeffrey (follow the answer later)
 
-- **R1-01** (High) — which school's Daily report counts a payment taken at one school's desk. Recommended: the desk's school for every section; then `testing_mark_paid_by` / `testing_private_mark_paid_by` (your 0030 functions, the ones your app calls) take the device's school (a migration). Today Finance books your payments to the event's school. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-03** (Medium) — Undo after restoring a "Duplicate copy" withdraws it as a plain "Removed" (`event/EventPage.jsx:1087–1096` on main; :1120 on your branch). Recommended: Star's rule everywhere, no Undo there. You follow Camps' answer. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section. Your CB3 second half uses Star's approved words ("… recorded on Nov 3 …"); the recommended answer, Black Belt's, says "Paid on [date]". The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment. Recommended: yours and Camps' ("[Name] marked paid · $X [way]", `testing/text.js:599`; "Payment undone for [Name]", `:605`). The design review asks Jeffrey; the answer reaches you through the Main session.
@@ -105,7 +111,6 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **R3-10** (Low) — one order for what sits above a roster (recommended: Star's — duplicate box, count cards, their "Showing … only" line, one-school line, search, switches, table; today yours puts the cards first). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R4-06** (Low) — should weight 600 go to 500? Yours: `register.css:375, 394, 659` (your family form, which Star's and Camps' forms load too). Don't change it unless Jeffrey says so. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R4-13** (Low) — "Ask an admin to open it." (Camps, recommended) or "… to reopen." (yours, `testing/text.js:406, 419`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R5-04** (Medium, pass 1b) — what every "Payments recorded" card adds up. The recommended answer is your own line, "includes $X from removed students", everywhere; if Jeffrey picks it, nothing changes for you.
 
 ---
 

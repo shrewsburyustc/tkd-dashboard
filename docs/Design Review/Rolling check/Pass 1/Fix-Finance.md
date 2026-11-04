@@ -14,8 +14,8 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in your merged work (F1–F7; F8 was live already) and in how the other sections' payments reach your Daily report.
 
-- **Fix now:** straight fixes. Plan them, show Jeffrey, then build.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet. The biggest one, R1-01, is your rule.
+- **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
+- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (R4-12, R1-09 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 5f1db41's; they may have moved.
@@ -31,7 +31,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **Reviews:** a separate design reviewer (the rulebook, the approved mockups, screenshots at the four sizes, and §4's six WCAG 2.2 checks, v1.033); a separate code reviewer; a separate security reviewer for anything touching the database (handoff §6).
 - **Don't change a shared part on your own** (`src/components/…`, the shared helpers in `src/lib/`, `src/styles/shared.css`): every section uses them. If you need something a part can't do, ask Jeffrey first. He decides whether you change it in your branch (then list it as a shared file) or the Dashboard core session does.
 - **Order (a push to main deploys):** the migration is live before the push that brings the app that uses it. A step whose app calls a new or changed database function is merged only after Jeffrey has applied its migration and the checks passed (fingerprints, security advisor, tests file — CLAUDE.md). Screen-only steps can go first.
-- **Migrations:** only the Export smaller line needs one. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`), with a SETUP section "## Migration 00NN: …" and a `step00NN` in `supabase/tests/pglite/run.mjs`. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
+- **Migrations:** R1-01 and the Export smaller line each need one; R1-05 only if its test finds a gap. Ask the Main session for each number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`), with a SETUP section "## Migration 00NN: …" and a `step00NN` in `supabase/tests/pglite/run.mjs`. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
 - Keep `docs/Finance/TKD-Finance-Status.md` current (§18 onward), with a short "Rolling check, pass 1" part.
 - Commit on `finance` after each reviewed step. Never push.
 - List every CLAUDE.md shared file you touch (`src/styles/shared.css` and `src/components/text.js` are on that list).
@@ -51,6 +51,17 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 
 Most severe first.
 
+### R1-01 — Read Star's stored school · High · decided 2026-11-04 (v1.035) · after Star's R1-01
+
+- **What's wrong:** your read functions take a Star payment's school from the candidate's current school (`0026_finance_black_belt.sql:597–602`). Star money therefore never follows the desk, and it moves when a candidate's school is edited, even on closed days.
+- **Rule:** v1.035 (Jeffrey, 2026-11-04): every payment counts at the school of the desk that took it (This device), stored on the payment when it is recorded. Camps already stores it (v0.708). Black Belt stores a school you already read (v0.808), and switches it to the desk's school in its own R1-01.
+- **Change:**
+  - After Star's migration adds a school to `star_payments` (Star's R1-01), one Finance migration replaces only `finance_money_rows_core`, starting from 0026's version (the live one). The Star school is worked out only there (`0026:602`, `:689`); it then reads the stored school. Add a tests file, a fingerprints file and a `step00NN`.
+  - Ask the Main session for a migration number. Jeffrey applies it after Star's, and it is live before Star's app change that passes This device's school is pushed. Until that push, Star stores the candidate's school, so nothing moves.
+  - R1-09's preview reader uses the stored school too.
+  - Color Belt's payments need a second, later Finance migration of the same function: event and private payments read Color Belt's stored school. It comes after Color Belt's migration is live and before Color Belt's app push; the Color Belt session tells the Main session when.
+- **Check (preview mode):** after Star's change and your R1-09: This device = Shrewsbury, top bar Worcester, mark a Worcester Star candidate paid → Shrewsbury's Daily report lists it, Worcester's doesn't. Edit the candidate's school → nothing moves.
+
 ### R4-12 (= R3-06's Finance part) — "← Back to the day" is 28 px and pushes the heading down on touch · Low
 
 - **What's wrong:** History's back link (`.fin-back-link`) is 28 px tall, not v0.820's 24 px. On touch it becomes a plain 44 px box that pushes the "History" heading down: R4 measured the heading's top at 224 px at 1280, 250 at 820 touch, and 260 at 390 and 320 (16 px of the 26 px jump is the link; the rest is the taller month arrows on touch, which stay). Forms' builder copied `.tc-back`, whose touch box is pulled back with negative margins, so its title stays at 124 px on both PC and tablet. (Your status says the style question "settled itself", status line 204: that was the session's call, not Jeffrey's.)
@@ -58,19 +69,27 @@ Most severe first.
 - **Change:** `finance.css:98–105, 948–952` take `.tc-back`'s numbers (24 px tall, and the touch margins that pull the 44 px tap box back so the heading doesn't move), as Forms' `.fb-back` did (`forms.css:196–210`, copied from `src/screens/testing/chooser/chooser.css:90–104`). If Jeffrey later picks one shared back link (R3-06, below), switch to it then.
 - **Check (preview mode):** History at 1280, 820 touch, 390 touch and 320: the link is 24 px tall with a mouse, its tap area is 44 px on touch, and the History row (`.fin-dayrow`) starts at the same height at 1280 and 820. The heading itself still sits a few px lower on touch, because the month arrows beside it grow from 32 to 44 px; that is right and stays.
 
+### R1-05 — List camp refunds like the others · Medium · decided 2026-11-04 (v1.039) · after Camps' R1-05
+
+- **What's wrong:** camp money handed back shows today as an edit on the payment's original day; there is no camp refund for you to list.
+- **Rule:** v1.039 (Jeffrey, 2026-11-04: "A: Record refund"): camp refunds are recorded on the day the money goes out, and you show them like Star's and Black Belt's refunds (v0.209): the Refunds group, "after $X refunds", Close the day's cash line, History, Export and payment detail.
+- **Change:**
+  - After Camps' migration adds camp refunds (kind `refund`), prove with a PGlite test that the live 0026 functions already list them: `finance_chain_steps_core` reads camp rows with their own kind (`0026:331`) and starts a chain at any refund (`:453`); `finance_money_rows_core` takes the refund row's own school (`:597`); refund totals go by kind (`:1025`, `:1257–1259`). The test: a camp refund shows in Refunds on its own day, Close the day expects that much less cash, and the payment's day doesn't change. Only if a check fails, one Finance migration replaces just that function from its live version (number from the Main session), with a tests file, a fingerprints file and a `step00NN`.
+  - If a migration turns out to be needed, Jeffrey applies it after Camps' and before Camps' app push.
+  - R1-09's preview reader lists camp refunds too (`readCamps` in `mockFinance.js`).
+- **Check (preview mode):** after Camps' change, record a $66 cash camp refund today → today's Daily report shows it in Refunds with "after $66.00 refunds" under the total, and Close the day expects $66 less cash. The payment's original day doesn't change.
+
 ### R1-09 — Preview only: Star payments never reach the Daily report · Low (preview only)
 
 - **What's wrong:** Finance's preview keeps its own made-up Star candidates (`mockFinance.js:26–29`; its comment "Star testing has no preview database in this branch" is no longer true) and never reads Star's preview store `tkd.preview.star`. So a Star payment marked in the preview never reaches the Daily report: Lily Brooks's $140 card (Worcester, Nov 3) was missing from Worcester's Nov 3, while Shrewsbury listed the made-up Liam Walsh, Ava Rossi and Mason Hill for a "Star testing · Nov 24" that doesn't exist in Star's preview. It also hides Star's half of R1-01 from every preview check.
 - **Rule:** the file's own promise: "What you see in preview is what the real dashboard will do" (live 0026 reads `star_payments`).
-- **Change:** add a `readStar()` input next to `readCamps` / `readBlackBelt` (`mockFinance.js:367–414`) that reads Star's candidates, events and payments, with the school worked out the way live 0026 does (or the way R1-01's answer says, once it comes); keep the old sample only when Star's store has no payments. It is passed in where `src/lib/mockClient.js` creates the Finance backend (`:770–775`, next to `readCamps` / `readBlackBelt`). mockClient.js is a CLAUDE.md shared file: list it.
+- **Change:** add a `readStar()` input next to `readCamps` / `readBlackBelt` (`mockFinance.js:367–414`) that reads Star's candidates, events and payments, with the school worked out the way live 0026 does until Star stores a school on each payment, then from that stored school (R1-01, v1.035); keep the old sample only when Star's store has no payments. It is passed in where `src/lib/mockClient.js` creates the Finance backend (`:770–775`, next to `readCamps` / `readBlackBelt`). mockClient.js is a CLAUDE.md shared file: list it.
 - **Check (preview mode):** mark Lily Brooks paid $140 by card on Worcester → Finance, Worcester, today lists "Star testing · [the Fall event's date] · $140.00" under Card.
 
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R1-01** (High) — when a family pays at one school's desk, which school's Daily report and drawer count the money? Today Camps books it to the desk's school, Black Belt to the candidate's school when paid, and Star to the candidate's *current* school (`0026:597–602`). Recommended: the desk that took it (This device), for every section. You own the rule; Star and Black Belt then change their record functions, and your read functions and R1-09's preview reader follow the answer. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R1-05** (Medium) — camp money handed back: a Camps "Record refund" dated the day the money goes out, which you would read like Star's and Black Belt's refunds (recommended), or Camps' Edit payment as today, shown on the payment's original, already-counted day (v0.199). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R4-05** (Medium) — while History's "not closed" marks are off (v0.821, v0.822), should Home's "N earlier days weren't closed" line go too? Today it leads to a History that shows nothing (`HomeReminders.jsx:131–135` doesn't read `SHOW_UNCLOSED`, `HistoryView.jsx:32, 53, 213`). Recommended: yes, the same switch. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours: `finance/text.js:200, 209`; "Close undone. The day is open again.", `:198`, is folded in). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-09** (Low) — the ✓ and the full stop only on the account toasts (recommended: your "✓ Today's drawer is closed." and "✓ CSV downloaded", `DayReport.jsx:378, 689`, lose theirs, although your approved Daily report mockup draws the ✓), or on every success toast. The design review asks Jeffrey; the answer reaches you through the Main session.
@@ -88,8 +107,8 @@ Most severe first.
 
 ## Done when
 
-- Every Fix now item is built, reviewed and approved by Jeffrey in the preview: a design reviewer at the four sizes for visual changes, a code reviewer, and a security reviewer for anything touching the database or privacy (the Export migration).
-- After the migration, its PGlite tests pass, Jeffrey has applied it, and the after-apply checks passed (fingerprints, security advisor, tests file).
+- Every Fix now item is built, reviewed and approved by Jeffrey in the preview: a design reviewer at the four sizes for visual changes, a code reviewer, and a security reviewer for anything touching the database or privacy (R1-01's and the Export migrations, and R1-05's if its test finds a gap).
+- After each migration, its PGlite tests pass, Jeffrey has applied it, and the after-apply checks passed (fingerprints, security advisor, tests file).
 - `npm run build` and `npm run build:preview-mode` pass, and so does `node src/lib/finance/checks.mjs`.
 - What Jeffrey decided is recorded as rows from your block.
 - The status file is current, and each reviewed step is committed on `finance`. No push.
