@@ -42,6 +42,7 @@ import {
 } from '../mockTestingEvents.js';
 import * as PR from './privateRules.js'; // phase 4: the Private testing tab's rules
 import { buildColorBeltReceipt, eventTotalDueCents, standingPayments } from './receipt.js'; // CB2
+import * as CBT from '../../screens/testing/text.js'; // the Private testing tab's new words (CB1, CB3)
 
 let count = 0;
 function check(label, fn) {
@@ -2442,7 +2443,7 @@ check('privateRules: owesMore, showMarkPaid, canChangePayingBy, canMoveToPrivate
 });
 
 check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
-  const keys = ['editDetails', 'changePayingBy', 'changeDay', 'grade', 'editPayment', 'undoPayment', 'cancel', 'restore', 'delete'];
+  const keys = ['editDetails', 'changePayingBy', 'changeDay', 'grade', 'editPayment', 'undoPayment', 'printReceipt', 'cancel', 'restore', 'delete'];
   const menu = (row, isAdmin, today = PT) => {
     const m = PR.privateMenu(row, { today, isAdmin });
     assert.deepEqual(Object.keys(m).sort(), [...keys].sort());
@@ -2451,12 +2452,14 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   const row = (over = {}) => ({ status: 'active', paid: false, amountDueCents: 8500, result: null, privateDate: '2026-12-01', ...over });
   assert.equal(menu(row(), false), 'editDetails changePayingBy changeDay grade cancel');
   assert.equal(menu(row(), true), 'editDetails changePayingBy changeDay grade cancel delete');
-  assert.equal(menu(row({ paid: true, amountDueCents: 0 }), true), 'editDetails changeDay grade editPayment undoPayment cancel delete');
-  assert.equal(menu(row({ paid: true, amountDueCents: 2000 }), false), 'editDetails changePayingBy changeDay grade cancel');
+  assert.equal(menu(row({ paid: true, amountDueCents: 0 }), true), 'editDetails changeDay grade editPayment undoPayment printReceipt cancel delete');
+  assert.equal(menu(row({ paid: true, amountDueCents: 2000 }), false), 'editDetails changePayingBy changeDay grade printReceipt cancel');
+  // CB2: staff get Print receipt on a paid row too (their money group holds only it).
+  assert.equal(menu(row({ paid: true, amountDueCents: 0 }), false), 'editDetails changeDay grade printReceipt cancel');
   assert.equal(menu(row({ result: 'no_show' }), false), 'editDetails changePayingBy changeDay grade cancel');
   assert.equal(menu(row({ result: null, note: 'note only' }), false), 'editDetails changePayingBy changeDay grade cancel'); // a note never counts
   assert.equal(menu(row({ result: 'pass' }), false), 'grade'); // L5: no Change how they'll pay either
-  assert.equal(menu(row({ result: 'not_passed', paid: true, amountDueCents: 0 }), true), 'editDetails grade editPayment undoPayment delete'); // v0.405: admins can still edit a graded one
+  assert.equal(menu(row({ result: 'not_passed', paid: true, amountDueCents: 0 }), true), 'editDetails grade editPayment undoPayment printReceipt delete'); // v0.405: admins can still edit a graded one
   assert.equal(menu(row({ result: 'pass' }), true), 'editDetails grade delete');
   // Cancelled: staff nothing; admins Restore while the day is today or later, and Delete.
   assert.equal(menu(row({ status: 'cancelled' }), false), '');
@@ -2464,7 +2467,9 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   assert.equal(menu(row({ status: 'cancelled', privateDate: PT }), true), 'restore delete');
   assert.equal(menu(row({ status: 'cancelled', privateDate: '2026-10-16' }), true), 'delete');
   assert.equal(menu(null, true), '');
-  // Hide private details (v0.506): no payment items; everything else unchanged.
+  // A cancelled row keeps its payments, but has no money group (admins: Restore / Delete only).
+  assert.equal(menu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), true), 'restore delete');
+  // Hide private details (v0.506): no payment items (Print receipt included); everything else unchanged.
   const hiddenMenu = (r, isAdmin) => {
     const m = PR.privateMenu(r, { today: PT, isAdmin, hidden: true });
     return keys.filter((k) => m[k]).join(' ');
@@ -3409,10 +3414,34 @@ let cbLastCall = null;
 globalThis.__cbChecksRpc = (name, args) => {
   cbLastCall = { name, args };
   if (typeof cbRaw === 'function') return cbRaw();
-  return cbRaw ?? ev.rpc(name, args, cbRpcCtx);
+  if (cbRaw) return cbRaw;
+  // has_data_access lives in the shared preview client, not the events backend: answered here
+  // from cbRpcCtx (the reads in privateApi.loadPrivateTestings check it first).
+  if (name === 'has_data_access') return { data: cbRpcCtx.hasDataAccess === true, error: null };
+  return ev.rpc(name, args, cbRpcCtx);
 };
+// from(table).select(columns).eq(…).in(…) reads the preview database the same way (as cbRpcCtx);
+// cbFromFail = a table name whose reads answer a connection error instead.
+let cbFromFail = null;
+globalThis.__cbChecksFrom = (table) => ({
+  select(columns) {
+    const filters = [];
+    const query = {
+      eq(col, value) { filters.push({ col, value, op: 'eq' }); return query; },
+      in(col, value) { filters.push({ col, value, op: 'in' }); return query; },
+      then(resolve, reject) {
+        try {
+          resolve(cbFromFail === table ? { data: null, error: { message: 'Failed to fetch' } } : ev.select(table, columns, filters, [], cbRpcCtx));
+        } catch (error) {
+          reject(error);
+        }
+      },
+    };
+    return query;
+  },
+});
 const SUPABASE_STUB = `data:text/javascript,${encodeURIComponent(
-  'export const isPreview = false; export const supabase = { rpc: async (n, a) => globalThis.__cbChecksRpc(n, a) };',
+  'export const isPreview = false; export const supabase = { rpc: async (n, a) => globalThis.__cbChecksRpc(n, a), from: (t) => globalThis.__cbChecksFrom(t) };',
 )}`;
 const { registerHooks } = await import('node:module');
 registerHooks({
@@ -3484,6 +3513,219 @@ await (async () => {
     throw error;
   }
 })();
+
+// ======================= Private testing: Mark paid with a way to pay (CB1, migration 0030 §3b) =======================
+
+// The preview database's testing_private_mark_paid_by must follow 0030 §3b: refused in the order
+// no_access → invalid → not_found → stale → cancelled → already_paid → price_changed (which writes
+// nothing); the amount is what is still OWED (on a top-up only the rest); a way other than "Paying
+// by" changes "Paying by" and the payment remembers the old one; Undo payment puts it back.
+check('private mock: Mark paid with a way to pay (testing_private_mark_paid_by, 0030 §3b)', () => {
+  pStart();
+  const id = pAdd().id; // Liam Park, Group A Yellow: $85 private price, Paying by cash, not paid
+  const by = (over = {}, ctx = E_DESK) => pCall('testing_private_mark_paid_by', pArgs(id, { p_method: 'card', p_expected_cents: 8500, ...over }), ctx);
+  // invalid: a bad way, a missing way, a negative or missing amount, a missing id or version.
+  assert.equal(by({ p_method: 'venmo' }).status, 'invalid');
+  assert.equal(by({ p_method: null }).status, 'invalid');
+  assert.equal(by({ p_expected_cents: -1 }).status, 'invalid');
+  assert.equal(by({ p_expected_cents: null }).status, 'invalid');
+  assert.equal(by({ p_expected_version: null }).status, 'invalid');
+  assert.equal(by({ p_private_id: '00000000-0000-4000-8000-00000000dead' }).status, 'not_found');
+  assert.equal(by({}, E_LOCKED).status, 'no_access'); // has_data_access first
+  // stale comes before price_changed (an old version AND a wrong amount → stale).
+  assert.equal(by({ p_expected_version: privRow(id).version + 1, p_expected_cents: 1 }).status, 'stale');
+  // price_changed: the box showed another amount → the amount owed comes back, NOTHING is saved.
+  const before = JSON.stringify(evDb());
+  assert.deepEqual(by({ p_expected_cents: 9500 }), { status: 'price_changed', amount_cents: 8500 });
+  assert.equal(JSON.stringify(evDb()), before);
+  // ok, a different way than "Paying by" (cash → card): "Paying by" becomes card, cash is remembered.
+  const v0 = privRow(id).version;
+  const paid = by();
+  assert.deepEqual({ ...paid, payment_id: 'x' }, { status: 'ok', payment_id: 'x', amount_cents: 8500, method: 'card', paid_on: PT, paying_by: 'card', version: v0 + 1 });
+  const pay = evDb().private_payments.find((p) => p.id === paid.payment_id);
+  assert.deepEqual([pay.kind, pay.amount_cents, pay.method, pay.paid_on, pay.paying_by_before], ['payment', 8500, 'card', PT, 'cash']);
+  assert.equal(privRow(id).paying_by, 'card');
+  // A double click (the old version) → stale; then already_paid, which comes before price_changed.
+  assert.equal(by({ p_expected_version: v0 }).status, 'stale');
+  assert.equal(by().status, 'already_paid');
+  assert.equal(by({ p_expected_cents: 1 }).status, 'already_paid');
+  // Undo payment (same desk, inside 10 seconds) puts the family's "Paying by" back.
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: paid.payment_id }, E_DESK).status, 'ok');
+  assert.equal(privRow(id).paying_by, 'cash');
+  // A top-up (E2): Mia paid $65 cash at the event, so only the $20 still owed is asked for.
+  const m = pMove('CB-3107').private_id;
+  const mBy = (over = {}) => pCall('testing_private_mark_paid_by', pArgs(m, { p_method: 'cash', p_expected_cents: 2000, ...over }));
+  assert.deepEqual(mBy({ p_expected_cents: 8500 }), { status: 'price_changed', amount_cents: 2000 }); // the full price is wrong
+  const topUp = mBy();
+  assert.deepEqual([topUp.status, topUp.amount_cents, topUp.method], ['ok', 2000, 'cash']);
+  assert.equal(privNet(m), 8500);
+  assert.equal(mBy().status, 'already_paid');
+  // Cancelled comes before already_paid and price_changed.
+  const c = pAdd({ p_first: 'Cara' }).id;
+  assert.equal(pCall('testing_private_cancel', pArgs(c)).status, 'ok');
+  assert.equal(pCall('testing_private_mark_paid_by', pArgs(c, { p_method: 'cash', p_expected_cents: 1 })).status, 'cancelled');
+  evReset();
+});
+
+// privateApi.js's markPrivatePaidBy, checked end to end through the same stand-in connection as
+// eventsApi above (the module hook is already registered).
+const privateApi = await import('./privateApi.js');
+
+await (async () => {
+  const label = 'privateApi: markPrivatePaidBy reads ok, price_changed and the other answers';
+  try {
+    pStart();
+    cbRaw = null;
+    cbRpcCtx = E_DESK;
+    const id = pAdd().id;
+    const args = (over = {}) => ({ privateId: id, expectedVersion: privRow(id).version, method: 'check', expectedCents: 8500, ...over });
+    // It calls testing_private_mark_paid_by with exactly 0030's argument names.
+    const changed = await privateApi.markPrivatePaidBy(args({ expectedCents: 2000 }));
+    assert.equal(cbLastCall.name, 'testing_private_mark_paid_by');
+    assert.deepEqual(cbLastCall.args, { p_private_id: id, p_expected_version: privRow(id).version, p_method: 'check', p_expected_cents: 2000 });
+    assert.deepEqual(changed, { status: 'price_changed', amountCents: 8500 });
+    const v0 = privRow(id).version;
+    const paid = await privateApi.markPrivatePaidBy(args());
+    assert.deepEqual({ ...paid, paymentId: 'x' }, { status: 'ok', paymentId: 'x', amountCents: 8500, method: 'check', paidOn: PT, payingBy: 'check', version: v0 + 1 });
+    assert.deepEqual(await privateApi.markPrivatePaidBy(args({ expectedVersion: v0 })), { status: 'stale' });
+    assert.deepEqual(await privateApi.markPrivatePaidBy(args()), { status: 'already_paid' });
+    cbRpcCtx = E_LOCKED;
+    assert.deepEqual(await privateApi.markPrivatePaidBy(args()), { status: 'no_access' });
+    cbRpcCtx = E_DESK;
+    // Hand-made answers.
+    const answer = (data) => { cbRaw = { data, error: null }; return privateApi.markPrivatePaidBy(args()); };
+    const okRow = { status: 'ok', payment_id: 'p1', amount_cents: 2000, method: 'cash', paid_on: PT, paying_by: 'cash', version: 4 };
+    assert.deepEqual(await answer(okRow), { status: 'ok', paymentId: 'p1', amountCents: 2000, method: 'cash', paidOn: PT, payingBy: 'cash', version: 4 });
+    assert.deepEqual(await answer({ ...okRow, paid_on: undefined, paying_by: undefined }), { status: 'ok', paymentId: 'p1', amountCents: 2000, method: 'cash', paidOn: null, payingBy: 'cash', version: 4 });
+    for (const bad of [{ payment_id: '' }, { amount_cents: '2000' }, { amount_cents: 20.5 }, { method: '' }, { version: null }]) {
+      assert.equal((await answer({ ...okRow, ...bad })).status, 'error', JSON.stringify(bad));
+    }
+    assert.deepEqual(await answer({ status: 'price_changed', amount_cents: 2000 }), { status: 'price_changed', amountCents: 2000 });
+    for (const bad of [undefined, null, '2000', 20.5, true]) {
+      const r = await answer({ status: 'price_changed', amount_cents: bad });
+      assert.equal(r.status, 'error', String(bad));
+      assert.equal('amountCents' in r, false);
+    }
+    // Every other status 0030 §3b can give (cancelled included) comes back as just { status }.
+    for (const s of ['already_paid', 'cancelled', 'stale', 'not_found', 'invalid', 'no_access']) {
+      assert.deepEqual(await answer({ status: s, amount_cents: 2000 }), { status: s });
+    }
+    for (const data of [{ status: 'weird' }, { status: 'error' }, {}, null]) assert.equal((await answer(data)).status, 'error', JSON.stringify(data));
+    cbRaw = { data: null, error: { message: 'Failed to fetch' } };
+    assert.equal((await privateApi.markPrivatePaidBy(args())).status, 'error');
+    cbRaw = () => { throw new Error('network down'); };
+    assert.equal((await privateApi.markPrivatePaidBy(args())).status, 'error');
+    // The old one-click wrapper is gone (nothing in the app calls testing_private_mark_paid).
+    assert.equal('markPrivatePaid' in privateApi, false);
+    cbRaw = null;
+    evReset();
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+// The Mark paid box's "They chose … on the form / at the desk." for a private testing (CB1):
+// loadPrivateTestings reads each moved one's OLD event registration (testing_registrations.source,
+// still there — moving only withdraws it) and privateRules.markPaidChoiceWhere says 'form' only
+// for a registration the family made on the form. A failed read still loads the list ('desk').
+await (async () => {
+  const label = 'privateApi: loadPrivateTestings → movedFromSource; the Mark paid hint says "on the form" only for a form registration';
+  try {
+    pStart();
+    cbRaw = null;
+    cbFromFail = null;
+    cbRpcCtx = E_DESK;
+    // A family-form registration, moved.
+    assert.equal(regBy('CB-3107').source, 'form');
+    const formMove = pMove('CB-3107', '2026-12-01', '16:00');
+    assert.equal(formMove.status, 'ok');
+    // A student added at the desk (source 'staff'), then moved.
+    const added = evCall('testing_add_student', { p_event_id: DEFAULT_EVENT_ID, p_first: 'Dana', p_last: 'Desk', p_event_rank_id: eventRankByName('Group A', 'Yellow').id, p_stripes: true, p_paying_by: 'check' }, E_DESK);
+    assert.equal(added.status, 'ok');
+    assert.equal(regBy(added.reference).source, 'staff');
+    const deskMove = pMove(added.reference, '2026-12-01', '17:00');
+    assert.equal(deskMove.status, 'ok');
+    // One added here at the desk (never moved).
+    const here = pAdd({ p_first: 'Hana' }).id;
+    const load = async () => {
+      const res = await privateApi.loadPrivateTestings('worcester');
+      assert.equal(res.status, 'ok');
+      return (id) => res.rows.find((r) => r.id === id);
+    };
+    let rowOf = await load();
+    assert.deepEqual([rowOf(formMove.private_id).movedFromSource, PR.markPaidChoiceWhere(rowOf(formMove.private_id))], ['form', 'form']);
+    assert.deepEqual([rowOf(deskMove.private_id).movedFromSource, PR.markPaidChoiceWhere(rowOf(deskMove.private_id))], ['staff', 'desk']);
+    assert.deepEqual([rowOf(here).movedFromSource, PR.markPaidChoiceWhere(rowOf(here))], [null, 'desk']);
+    // The old way (moved → "on the form") was wrong for the desk student: both are moved.
+    assert.ok(rowOf(formMove.private_id).movedFromEventId && rowOf(deskMove.private_id).movedFromEventId);
+    // The registrations read failing doesn't stop the list: no source → "… at the desk."
+    cbFromFail = 'testing_registrations';
+    rowOf = await load();
+    assert.deepEqual([rowOf(formMove.private_id).movedFromSource, PR.markPaidChoiceWhere(rowOf(formMove.private_id))], [null, 'desk']);
+    cbFromFail = null;
+    // Pure: anything but 'form' (or no row) → 'desk'.
+    assert.equal(PR.markPaidChoiceWhere({ movedFromSource: 'form' }), 'form');
+    for (const source of ['staff', null, undefined, 'FORM']) assert.equal(PR.markPaidChoiceWhere({ movedFromSource: source }), 'desk');
+    assert.equal(PR.markPaidChoiceWhere(null), 'desk');
+    evReset();
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+// ======================= Private testing: the receipt and the Undo payment box (CB2, CB3) =======================
+
+check('receipt: a private testing as the tab builds it (CB2) — Total due = the private price; an undone top-up drops its line', () => {
+  pStart();
+  const m = pMove('CB-3107').private_id; // Mia: $65 cash at the event moved with her; $85 private price
+  const top = pCall('testing_private_mark_paid_by', pArgs(m, { p_method: 'card', p_expected_cents: 2000 }));
+  assert.equal(top.status, 'ok');
+  const row = privRow(m);
+  // The payments as privateApi gives them (camelCase), every row of this private testing.
+  const asApp = () => privPayments(m).map((p) => ({
+    id: p.id, kind: p.kind, amountCents: p.amount_cents, method: p.method, paidOn: p.paid_on, recordedAt: p.recorded_at, reversesPaymentId: p.reverses_payment_id ?? null,
+  }));
+  const build = () => buildColorBeltReceipt({
+    firstName: row.first_name, lastName: row.last_name, rankName: row.rank_name, testingForName: row.to_name ?? null,
+    privateTesting: { privateOn: row.private_date, privateTime: row.private_time.slice(0, 5), movedFromEventName: row.moved_from_event_name },
+    className: row.class_name, locationCode: row.location_code, reference: null,
+    payments: asApp(), totalDueCents: row.private_cents, schools: [], printedOn: PT, printedByName: 'Jeffrey Berg',
+  });
+  const r = build();
+  assert.deepEqual(r.facts.map((f) => f[0]), ['Student', 'Private testing', 'Moved from', 'Class', 'School']);
+  assert.equal(r.facts[2][1], row.moved_from_event_name);
+  assert.deepEqual(r.lines.map((l) => [l.forText, l.how, l.amountCents]), [['Testing fee', 'cash', 6500], ['Testing fee', 'card', 2000]]);
+  assert.equal(r.totalDueCents, 8500);
+  assert.equal(r.paidCents, 8500);
+  // An admin undoes the top-up: its line and its reversal are left out; $65 paid of $85.
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: top.payment_id }, E_ADMIN).status, 'ok');
+  const after = build();
+  assert.deepEqual(after.lines.map((l) => l.amountCents), [6500]);
+  assert.equal(after.paidCents, 6500);
+  assert.equal(after.totalDueCents - after.paidCents, 2000);
+  evReset();
+});
+
+check('text: the private Undo payment box names the latest payment and what the row becomes (CB3)', () => {
+  // A top-up undone: back to "Paid $65 · $20 more to collect".
+  assert.equal(
+    CBT.privateUndoPaymentBody(2000, 'cash', '2026-11-03', { paidCents: 6500, dueCents: 2000 }),
+    'The $20 cash payment recorded on Nov 3 is reversed and the row goes back to Paid $65 · $20 more to collect. Both stay in the history.',
+  );
+  // The only payment undone: back to Not paid (as the event roster's words).
+  assert.equal(
+    CBT.privateUndoPaymentBody(8500, 'card', '2026-11-03', { paidCents: 0, dueCents: 8500 }),
+    'The $85 card payment recorded on Nov 3 is reversed and the row goes back to Not paid. Both stay in the history.',
+  );
+  // Still paid in full after the undo (paid more than the price before): back to Paid.
+  assert.match(CBT.privateUndoPaymentBody(1000, 'check', '2026-11-03', { paidCents: 9000, dueCents: 0 }), /goes back to Paid\. Both/);
+  assert.match(CBT.privateUndoPaymentBody(1000, 'check', '2026-11-03', null), /goes back to Not paid\./);
+  assert.equal(CBT.privatePriceChangedNote('Ava Chen', 2000), 'The amount owed for Ava Chen is now $20. Nothing was saved. Tap Mark paid again.');
+});
 
 check('sanity: these checks catch a broken rule (break on purpose)', () => {
   // The comparison helper must FAIL when the rule it compares with is wrong.

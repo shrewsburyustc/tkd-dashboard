@@ -1044,6 +1044,28 @@ export const LOADING_PRIVATE = 'Loading private testings'; // screen readers onl
 export const PRIVATE_SWITCH_LABEL = 'Upcoming or past private testings'; // screen readers only: the Upcoming / Past switch
 export const LOAD_PRIVATE_FAILED = 'Couldn’t load private testings. Check the connection, then retry.'; // CP1
 
+// ----- Design review part 2 on the Private testing tab (rulebook v0.420 / v0.421 / v0.423, mockup P2) -----
+// CB9: a Paid / Not paid card is on and nobody on this side is left (v0.420 Q2 A; the event
+// roster's "Everyone in this class has paid." / "No paid students in this class.").
+export const EVERY_UPCOMING_PRIVATE_PAID = 'Every upcoming private testing is paid.';
+export const EVERY_PAST_PRIVATE_PAID = 'Every past private testing is paid.';
+export const NO_PAID_UPCOMING_PRIVATE = 'No paid upcoming private testings.';
+export const NO_PAID_PAST_PRIVATE = 'No paid past private testings.';
+// CB1: what is owed changed while the Mark paid box was open (an admin changed the belt and so the
+// price, or a payment was edited). Nothing was saved; the box stays closed (v0.423). A private
+// price doesn't depend on the day, so there is no "testing-day price" here.
+export const privatePriceChangedNote = (name, cents) =>
+  `The amount owed for ${name} is now ${formatMoney(cents)}. Nothing was saved. Tap Mark paid again.`;
+// CB3, second half: the Undo payment box's sentence. It names the LATEST payment (on a top-up, the
+// top-up) and what the row becomes: after = { paidCents, dueCents } once it is undone.
+//   "The $20 cash payment recorded on Nov 3 is reversed and the row goes back to Paid $65 · $20
+//    more to collect. Both stay in the history."
+export const privateUndoPaymentBody = (cents, method, iso, after) => {
+  let becomes = TAG_NOT_PAID;
+  if (after && after.paidCents > 0) becomes = after.dueCents > 0 ? owedLine(after.paidCents, after.dueCents) : TAG_PAID;
+  return `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to ${becomes}. Both stay in the history.`;
+};
+
 // ----- Add private testing / Edit details (P2) -----
 // "Testing for Blue → High Blue · Group B"
 export const privateTestingForLine = (fromName, toName, className) => `Testing for ${fromName} → ${toName} · ${className}`;

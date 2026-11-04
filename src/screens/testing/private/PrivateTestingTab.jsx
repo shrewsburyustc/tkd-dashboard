@@ -7,12 +7,13 @@
 //   - loads the school's private testings (useLiveLoad + privateApi.loadPrivateTestings — reloads
 //     quietly every 15 seconds, after every change, when the school changes, after unlocking)
 //   - shows them on an Upcoming / Past switch (opens on Upcoming, kept per school), with four
-//     cards over the side shown (count, Paid + "1 owes more", Not paid, Payments recorded +
-//     "includes $85 from cancelled") and the rows (PrivateRows.jsx)
-//   - Add private testing (all staff, the header button), Mark paid with a 5-second Undo, and the
-//     ⋯ menu: Edit details · Change day or time · Grade · Change how they'll pay (v1.011) | Edit
-//     payment · Undo payment (admins) | Cancel private testing · Delete permanently (admins); a
-//     cancelled row: Restore · Delete permanently (admins only)
+//     cards over the side shown (count, Paid + a gray "1 owes more", Not paid, Payments recorded +
+//     "includes $85 from cancelled"; Paid and Not paid filter, CB9) and the rows (PrivateRows.jsx)
+//   - Add private testing (all staff, the header button), Mark paid (its box, then a 5-second
+//     Undo), and the ⋯ menu: Edit details · Change day or time · Grade · Change how they'll pay
+//     (v1.011) | Edit payment · Undo payment (admins) · Print receipt (CB2) | Cancel private
+//     testing · Delete permanently (admins); a cancelled row: Restore · Delete permanently
+//     (admins only)
 //   - tapping a row opens its read-only summary (PrivateSummaryDialog.jsx, v1.009), with
 //     Close · Edit details
 //   - Undo for 5 seconds (v1.006, v0.413, v1.003) after Edit details ("Changes saved", not when the
@@ -24,11 +25,28 @@
 // database; the dialog's values live HERE, so a screen lock hides the dialog and brings it back;
 // "stale" = someone else changed it — nothing is overwritten, the person is told, the list reloads.
 // Admin vs staff only changes what is SHOWN — the database enforces who may do what.
+// The design review's part 2 (rulebook v0.420 / v0.421 / v0.423, mockups P2 and P3; the event
+// roster's step 3 and Star's v0.518 copied):
+//   - CB1: Mark paid opens the shared Mark paid box (what is still owed — on a top-up only the
+//     rest, "Ava Chen · $20" — and Paid by Cash / Check / Card preset to Paying by) and calls
+//     testing_private_mark_paid_by (migration 0030); a different way also changes Paying by; an
+//     amount that changed meanwhile saves nothing and the bar says to press Mark paid again
+//     (v0.423). The toast's Undo stays one tap;
+//   - CB3 (second half): ⋯ → Undo payment asks first on the shared confirm box, naming the LATEST
+//     payment and what the row becomes;
+//   - CB2: ⋯ → Print receipt (staff and admins, a row with a payment that still stands) opens the
+//     shared receipt, built by lib/testing/receipt.js ("Moved from · [event]" when it was moved);
+//   - CB9: the shared count cards. Private testings shows everyone; Paid and Not paid filter the
+//     rows ("Showing not paid only · Show all"); Payments recorded stays a total. The filter stays
+//     on when switching Upcoming / Past (v0.420 Q2 A) and is kept per school while the page is
+//     open, as the side is; the cards count the side shown.
 // Follows "Hide private details" (v0.506, v0.507 Q2), as Star's Candidates tab: while the device
-// switch is on, only the Private testings card shows, the rows have no price, Paying by, Payment,
-// Paid on, "Paid $65 · $20 more to collect" line or Mark paid, the ⋯ menu has no payment items
-// (privateMenu's `hidden`), and the dialogs name no amount. Turning it on closes an open payment
-// dialog, closes the ⋯ menu and clears the toast. (Color Belt keeps no date of birth or email.)
+// switch is on, only the Private testings card shows (no filter applies), the rows have no price,
+// Paying by, Payment, Paid on, "Paid $65 · $20 more to collect" line or Mark paid, the ⋯ menu has
+// no payment items (privateMenu's `hidden`, Print receipt included), and the dialogs name no
+// amount. Turning it on closes an open payment dialog and the Mark paid box, clears the Paid /
+// Not paid filter, closes the ⋯ menu and clears the toast. (Color Belt keeps no date of birth or
+// email.) An open receipt stays: it shows the shared receipt's gray "hidden" line.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconArrowBackUp,
@@ -39,20 +57,25 @@ import {
   IconCircleX,
   IconEdit,
   IconPlus,
+  IconPrinter,
   IconSchool,
   IconSum,
   IconSwitchHorizontal,
   IconTrash,
   IconUsers,
 } from '@tabler/icons-react';
+import CountCards from '../../../components/CountCards.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import MarkPaidBox from '../../../components/MarkPaidBox.jsx';
+import ReceiptDialog from '../../../components/Receipt.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
+import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { withTestingFor } from '../../../lib/testing/rankOrder.js';
-import { schoolToday } from '../../../lib/testing/eventsApi.js';
+import { loadMyName, schoolToday } from '../../../lib/testing/eventsApi.js';
 import {
   addPrivate,
   cancelPrivate,
@@ -61,12 +84,13 @@ import {
   deletePrivate,
   editPrivatePayment,
   loadPrivateTestings,
-  markPrivatePaid,
+  markPrivatePaidBy,
   restorePrivate,
   undoPrivatePayment,
   updatePrivate,
 } from '../../../lib/testing/privateApi.js';
-import { privateCards, privateMenu, splitPrivate } from '../../../lib/testing/privateRules.js';
+import { amountDue, markPaidChoiceWhere, privateCards, privateMenu, showMarkPaid, splitPrivate } from '../../../lib/testing/privateRules.js';
+import { buildColorBeltReceipt } from '../../../lib/testing/receipt.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
@@ -82,10 +106,13 @@ import '../../../styles/testing-private.css';
 
 // Upcoming / Past, per school, kept while the page is open (as the Events tab).
 const sideBySchool = new Map();
+// The Paid / Not paid card filter (CB9), per school, kept while the page is open, as the side is
+// (v0.420 Q2 A). null = everyone.
+const filterBySchool = new Map();
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'STUDENT_LOCKED', 'PRIVATE_GRADED', 'ALREADY_PAID'];
 // The dialogs that are about money: closed when Hide private details is switched on.
-const PAYMENT_DIALOGS = ['paying', 'payment'];
+const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment'];
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-private-row="${id}"]`);
@@ -158,6 +185,14 @@ export default function PrivateTestingTab({
   const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
   const [classes, setClasses] = useState(null); // live Classes and ranks for Add / Edit details
+  // CB9: the card filter — null | 'paid' | 'notPaid' (kept per school while the page is open)
+  const [filter, setFilterState] = useState(() => filterBySchool.get(locationCode) ?? null);
+  // CB1: the shared Mark paid box under a row's Mark paid — { key, rowId, anchor, snap, amountCents }
+  // or null. snap = the row as it was when the box opened (its version goes to the database).
+  const [markPaidBox, setMarkPaidBox] = useState(null);
+  // CB2: the receipt — { key, rowId, opener, data, notFound } or null (data null while it loads).
+  const [receipt, setReceipt] = useState(null);
+  const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
   const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
@@ -168,13 +203,20 @@ export default function PrivateTestingTab({
     sideBySchool.set(locationCode, next);
     setSideState(next);
   }
+  function setFilter(next) {
+    filterBySchool.set(locationCode, next);
+    setFilterState(next);
+  }
   const previousCodeRef = useRef(locationCode);
   useEffect(() => {
     if (previousCodeRef.current === locationCode) return;
     previousCodeRef.current = locationCode;
     setSideState(sideBySchool.get(locationCode) ?? 'upcoming');
+    setFilterState(filterBySchool.get(locationCode) ?? null);
     setBanner(null);
     setMenu(null);
+    setMarkPaidBox(null);
+    setReceipt(null);
     setNotSavedId(null);
   }, [locationCode]);
 
@@ -238,7 +280,7 @@ export default function PrivateTestingTab({
   useEffect(() => {
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
-  const modalShown = dialog !== null && !screenLocked;
+  const modalShown = (dialog !== null || receipt !== null) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -261,6 +303,8 @@ export default function PrivateTestingTab({
       focusAfterClose(d);
     }
     setMenu(null);
+    setFilter(null); // only the Private testings card shows, so no filter applies (CB9)
+    setMarkPaidBox(null); // no Mark paid while hidden (an open receipt stays: it shows v1.105's gray line)
     // A toast may name money ("marked paid · $85 cash") or carry a payment Undo: it goes too.
     clearToast();
     // So does every banner: a failed Mark paid / Undo payment keeps a Retry that records money,
@@ -271,10 +315,27 @@ export default function PrivateTestingTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden]);
 
-  // ===== The two sides and the cards =====
+  // ===== The two sides, the cards and the card filter =====
   const { upcoming, past } = splitPrivate(rows, today);
-  const shown = side === 'past' ? past : upcoming;
-  const cards = privateCards(shown);
+  const sideRows = side === 'past' ? past : upcoming;
+  const cards = privateCards(sideRows); // the cards count the side shown, never the filter
+  // CB9: Paid / Not paid show only the ACTIVE rows the card counts (a cancelled row is in neither).
+  // While Hide private details is on no filter applies (only the Private testings card shows).
+  const shownFilter = hidden ? null : filter;
+  let shown = sideRows;
+  if (shownFilter === 'paid') shown = sideRows.filter((r) => r.status === 'active' && r.paid);
+  if (shownFilter === 'notPaid') shown = sideRows.filter((r) => r.status === 'active' && !r.paid);
+
+  // CB1: a Mark paid box that can no longer show is forgotten (after drawing — never while
+  // drawing): its row has nothing left to collect (another device), was cancelled or deleted, left
+  // the view (the other side, a filter), or the screen locked / private details were hidden.
+  const markPaidBoxRow = markPaidBox ? rows.find((r) => r.id === markPaidBox.rowId) : null;
+  const markPaidGone =
+    markPaidBox !== null &&
+    (screenLocked || hidden || !markPaidBoxRow || !showMarkPaid(markPaidBoxRow) || !markPaidBox.anchor?.isConnected);
+  useEffect(() => {
+    if (markPaidGone) setMarkPaidBox(null);
+  }, [markPaidGone]);
 
   // ===== Dialogs =====
   function openDialog(next) {
@@ -482,6 +543,7 @@ export default function PrivateTestingTab({
       // No toast after Add: the new row is the confirmation (P2).
       setDialog(null);
       if (side !== 'upcoming') setSide('upcoming');
+      setFilter(null); // the new row shows even when a card filter was on (as the event roster)
       const reloaded = reloadQuiet();
       focusLater(() => rowEl(result.id), addEl, reloaded);
       return;
@@ -763,45 +825,164 @@ export default function PrivateTestingTab({
     setBanner((current) => (current?.kind === 'row' ? null : current));
   }
 
-  // ===== Mark paid: one click, what is owed (§1.3) =====
-  async function doMarkPaid(row) {
+  // ===== Mark paid: the shared Mark paid box (CB1, rulebook v0.418 / v0.420, mockup P2) =====
+  // The row's Mark paid opens the box under it (a second press closes it): the name and what is
+  // still owed (the private price, or on a top-up only the rest — "Ava Chen · $20"; the database
+  // works it out, it is shown, never typed), Paid by preset to the row's Paying by with "They chose
+  // … on the form." only for one moved from an event registration the family made on the event's
+  // form, otherwise "… at the desk." (added here, or moved from a student added at the desk —
+  // privateRules.markPaidChoiceWhere), then "Mark paid $X" (first focus). The box closes when
+  // pressed; the database records today's date. A different way also changes Paying by (the
+  // database does it; the reload shows it). Staff and admins see the same box.
+  function openMarkPaid(row, anchor) {
+    clearToast();
+    setMenu(null);
+    const amountCents = row.amountDueCents;
+    if (!Number.isInteger(amountCents) || amountCents <= 0) return;
+    setMarkPaidBox((current) => (current?.rowId === row.id ? null : { key: Date.now(), rowId: row.id, anchor, snap: row, amountCents }));
+  }
+  async function saveMarkPaid(rowId, snap, method, amountCents, anchor) {
     if (!beginWrite()) return;
-    const result = await markPrivatePaid({ privateId: row.id, expectedVersion: row.version });
-    endWrite(result.status);
+    const result = await markPrivatePaidBy({ privateId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents });
+    const row = (liveRef.current.data?.rows ?? []).find((r) => r.id === rowId) ?? snap;
     const name = T.studentLabel(row);
+    if (result.status === 'price_changed' && !hiddenNowRef.current) {
+      // v0.423 (changes v0.418 Q1): nothing was saved (what is owed changed while the box was
+      // open). The box stays closed and the amber bar says why; staff press Mark paid again and
+      // pick the way again, so a way picked before can't be recorded by a stray Enter.
+      setBanner({ kind: 'price', text: T.privatePriceChangedNote(name, result.amountCents) });
+      // The write stays "busy" until the reload lands: the rows' Mark paid is unavailable
+      // meanwhile, so a quick second press can't open the box with the OLD amount (and get
+      // price_changed again). Then focus goes back to the row's Mark paid (the row if it's gone).
+      await reloadQuiet();
+      endWrite(result.status);
+      focusLater(() => anchor, () => rowEl(rowId));
+      return;
+    }
+    endWrite(result.status);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaid(row) }, true);
+      // price_changed while Hide private details came on: the general "changed just now" words.
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => saveMarkPaid(rowId, snap, method, amountCents, anchor) }, true);
       return;
     }
     rowDone();
-    reloadQuiet();
+    setBanner((current) => (current?.kind === 'price' ? null : current));
+    const reloaded = reloadQuiet();
+    // The Mark paid button goes away with the payment: focus moves to the row (or, when a Not
+    // paid filter hides the row now, to Add private testing).
+    focusLater(() => rowEl(rowId), addEl, reloaded);
     const paymentId = result.paymentId;
     // Hide private details switched on while this was saving: the general words, no Undo payment.
     if (hiddenNowRef.current) {
       showToast(T.TOAST_CHANGES_SAVED, { icon: false });
       return;
     }
+    // The toast's Undo stays one tap (rule 1.4): it doesn't ask first, unlike ⋯ → Undo payment.
     showToast(T.markedPaidToast(name, result.amountCents, result.method), {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoPrivatePayment({ paymentId }), () => moreEl(row.id), T.UNDO_PAYMENT_TOO_LATE, true) },
+      action: { label: T.UNDO, onAction: () => runUndo(() => undoPrivatePayment({ paymentId }), () => moreEl(rowId), T.UNDO_PAYMENT_TOO_LATE, true) },
     });
   }
 
-  // ===== Undo payment from ⋯ (admins, any time: the most recent live payment) =====
-  async function doUndoPayment(row) {
+  // ===== Undo payment from ⋯ (admins, any time) — asks first (CB3 second half, v0.420) =====
+  // The shared confirm box with Star's words (v0.518): "Undo Ava Chen's payment?" / "The $20 cash
+  // payment recorded on Nov 3 is reversed and the row goes back to Paid $65 · $20 more to collect.
+  // …" · Keep payment (first focus) · Undo payment (blue: something is lost, but not for good);
+  // "Undoing…" while it works. It undoes the most recent payment that still stands (on a top-up,
+  // the top-up), as before. The toast's Undo right after Mark paid stays one tap (rule 1.4).
+  function openUndoPayment(row, opener) {
     const liveList = livePaymentsOf(payments, row.id);
     const payment = liveList[liveList.length - 1];
-    if (!payment || !beginWrite()) return;
-    const result = await undoPrivatePayment({ paymentId: payment.id });
+    if (!payment) return;
+    // What the row becomes once it is undone: what stays paid, and what is then owed.
+    const paidAfter = Math.max((row.paidCents ?? 0) - payment.amountCents, 0);
+    const after = { paidCents: paidAfter, dueCents: amountDue({ privateCents: row.privateCents, paidCents: paidAfter }) };
+    openDialog({ type: 'undoPayment', rowId: row.id, snapshot: row, payment, after, opener });
+  }
+  async function confirmUndoPayment() {
+    const d = dialogRef.current;
+    if (!d || d.saving || !beginWrite()) return;
+    patchDialog({ saving: true, failed: false });
+    const result = await undoPrivatePayment({ paymentId: d.payment.id });
     endWrite(result.status);
-    if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) }, true);
+    // Hide private details came on meanwhile: the box already closed (a payment dialog).
+    const open = stillOpen(d);
+    if (result.status === 'ok') {
+      if (open) {
+        setDialog(null);
+        focusAfterClose(d);
+      }
+      rowDone();
+      reloadQuiet();
+      // Hidden now: the general words ("Payment undone" would say they had paid).
+      showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.studentLabel(d.snapshot)), { icon: false });
       return;
     }
-    rowDone();
-    reloadQuiet();
-    // Hidden now: the general words ("Payment undone" would say they had paid).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.studentLabel(row)), { icon: false });
+    if (result.status === 'error' && open) {
+      // Star's Q2 B: the box stays open with "Couldn't undo. …"; pressing Undo payment tries again.
+      patchDialog({ saving: false, failed: true });
+      return;
+    }
+    if (result.status === 'no_access') {
+      if (open) patchDialog({ saving: false });
+      onNoAccess();
+      return;
+    }
+    // Refused (stale: already undone or changed elsewhere; cancelled; not_allowed …): the box
+    // closes and the page's bar says why, as before.
+    if (open) {
+      setDialog(null);
+      focusAfterClose(d);
+    }
+    rowProblem(result.status, d.snapshot, { text: T.actionFailed, run: () => openUndoPayment(d.snapshot, d.opener) }, true);
+  }
+
+  // ===== Print receipt (CB2, rulebook v0.420 / v0.421, mockups P2 and P3) =====
+  // The shared receipt, filled from this tab's data (the private testing and its payments — all
+  // already loaded), both schools (loadSchools, read once) and the reader's name (get_my_profile,
+  // called when it opens; a failed call just leaves the name out, as Star's v0.518 Q7 A). Built by
+  // lib/testing/receipt.js, as the event roster's: Private testing (day and time), "Moved from ·
+  // [event]" only for one moved from an event (v0.421 Q A), Class, School; each payment that still
+  // stands is its own "Testing fee" line; Total due = the private price.
+  function openReceipt(row, opener) {
+    setMenu(null);
+    const key = Date.now();
+    setReceipt({ key, rowId: row.id, opener, data: null, notFound: false });
+    readReceipt(row.id, key);
+  }
+  async function readReceipt(rowId, key) {
+    const schoolsRead = schoolsRef.current ? Promise.resolve({ status: 'ok', schools: schoolsRef.current }) : loadSchools();
+    const [schoolsResult, name] = await Promise.all([schoolsRead, loadMyName()]);
+    if (schoolsResult.status === 'ok') schoolsRef.current = schoolsResult.schools;
+    // The newest data (a background refresh may have come in while the name was read).
+    const current = liveRef.current.data;
+    const row = current?.rows?.find((r) => r.id === rowId) ?? null;
+    setReceipt((open) => {
+      if (!open || open.key !== key) return open;
+      if (!row) return { ...open, notFound: true };
+      const data = buildColorBeltReceipt({
+        firstName: row.firstName,
+        lastName: row.lastName,
+        rankName: row.rankName,
+        testingForName: row.testingFor?.kind === 'rank' ? row.testingFor.name : null,
+        privateTesting: { privateOn: row.privateDate, privateTime: row.privateTime, movedFromEventName: row.movedFromEventName },
+        className: row.className,
+        locationCode: row.locationCode,
+        reference: null, // a private testing has no reference number
+        payments: (current.payments ?? []).filter((p) => p.privateId === row.id),
+        totalDueCents: row.privateCents,
+        // Offline for the schools only: the receipt shows without the schools' lines.
+        schools: schoolsResult.status === 'ok' ? schoolsResult.schools : [],
+        printedOn: current.today,
+        printedByName: name,
+      });
+      return { ...open, data };
+    });
+  }
+  function closeReceipt() {
+    const r = receipt;
+    setReceipt(null);
+    if (r) focusLater(() => r.opener, () => moreEl(r.rowId) ?? rowEl(r.rowId));
   }
 
   // ===== Cancel (confirm, P7) =====
@@ -914,7 +1095,11 @@ export default function PrivateTestingTab({
       // ti-switch-horizontal = switch how they'll pay (v1.024)
       if (can.changePayingBy) groups[0].push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => openPayingBy(row, anchor) });
       if (can.editPayment) groups[1].push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, onSelect: () => openEditPayment(row, anchor) });
-      if (can.undoPayment) groups[1].push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
+      if (can.undoPayment) groups[1].push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => openUndoPayment(row, anchor) });
+      // CB2 (v0.420): Print receipt ends the money group, for staff and admins, on a row with a
+      // payment that still stands; hidden while Hide private details is on (privateMenu). Staff's
+      // money group holds only this item. ti-printer = print (as the event roster).
+      if (can.printReceipt) groups[1].push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor) });
       // ti-calendar-x = cancel the private testing (blue, not red: nothing is deleted)
       if (can.cancel) groups[2].push({ key: 'cancel', label: T.CANCEL_PRIVATE, Icon: IconCalendarX, onSelect: () => openCancel(row, anchor) });
     }
@@ -953,6 +1138,7 @@ export default function PrivateTestingTab({
     busy,
     isAdmin,
     menuFor: menu?.id ?? null,
+    markPaidFor: markPaidBox?.rowId ?? null, // CB1: the row whose Mark paid box is open
     // The row whose dialog is open stays highlighted (as the event roster)
     selectedId: dialog && !screenLocked && dialog.rowId ? dialog.rowId : null,
     notSavedId,
@@ -961,7 +1147,7 @@ export default function PrivateTestingTab({
     handlers: {
       onOpen: (row) => openView(row, rowEl(row.id)),
       onMore: (row, anchor) => openMenu(row, anchor),
-      onMarkPaid: (row) => doMarkPaid(row),
+      onMarkPaid: (row, anchor) => openMarkPaid(row, anchor),
     },
   };
 
@@ -982,13 +1168,24 @@ export default function PrivateTestingTab({
   } else if (live.status === 'noAccess') {
     body = null;
   } else {
+    // The shared count cards (CB9, v1.013 / v1.107, v0.420): Private testings shows everyone, Paid
+    // and Not paid filter the rows, Payments recorded is a plain total with its "includes $85 from
+    // cancelled" note. The Paid card's "1 owes more" is gray like every card note (v0.420 Q1 B);
+    // each row that owes more keeps its own amber line.
     const allCards = [
-      { key: 'count', label: T.CARD_PRIVATE, Icon: IconUsers, value: cards.count },
-      { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: cards.paid, note: cards.owesMore > 0 ? T.owesMoreCount(cards.owesMore) : null, warn: true },
-      { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: cards.notPaid }, // ti-circle-x = not paid (v1.024)
-      { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: formatMoney(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null }, // ti-sum = a money total (v0.303)
+      { key: 'all', label: T.CARD_PRIVATE, Icon: IconUsers, value: cards.count, kind: 'all' },
+      { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: cards.paid, kind: 'filter', note: cards.owesMore > 0 ? T.owesMoreCount(cards.owesMore) : null },
+      { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: cards.notPaid, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
+      {
+        key: 'money',
+        label: T.CARD_PAYMENTS,
+        Icon: IconSum, // ti-sum = a money total (v0.303)
+        value: formatMoney(cards.paymentsCents),
+        kind: 'total',
+        note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null,
+      },
     ];
-    // Hide private details: only the Private testings card (as Star's G4).
+    // Hide private details: only the Private testings card (as Star's G4; the shared row's one-card look).
     const cardList = hidden ? allCards.slice(0, 1) : allCards;
     const sideLabelId = `${panelId}-side`;
     let list;
@@ -996,26 +1193,27 @@ export default function PrivateTestingTab({
       // No private testings at all: the one plain line every list uses (v1.028); the header's
       // Add private testing is the one way to add.
       list = <p className="tempty">{T.NO_PRIVATE_TESTINGS}</p>;
-    } else if (shown.length === 0) {
+    } else if (sideRows.length === 0) {
       list = <p className="tempty ev-empty">{side === 'past' ? T.NO_PAST_PRIVATE : T.NO_UPCOMING_PRIVATE}</p>;
+    } else if (shown.length === 0) {
+      // A card filter is on and nobody on this side is left (v0.420 Q2 A; the event roster's
+      // "Everyone in this class has paid." / "No paid students in this class.").
+      let text = side === 'past' ? T.EVERY_PAST_PRIVATE_PAID : T.EVERY_UPCOMING_PRIVATE_PAID;
+      if (shownFilter === 'paid') text = side === 'past' ? T.NO_PAID_PAST_PRIVATE : T.NO_PAID_UPCOMING_PRIVATE;
+      list = <p className="tempty ev-empty">{text}</p>;
     } else {
       list = <PrivateRows rows={shown} label={side === 'past' ? T.PAST : T.UPCOMING} ctx={ctx} />;
     }
     body = (
       <>
         {rows.length > 0 && (
-          <div className={`ev-cards${hidden ? ' is-one' : ''}`}>
-            {cardList.map((card) => (
-              <div key={card.key} className="ev-card">
-                <span className="ev-card-label">
-                  <card.Icon size={16} aria-hidden="true" />
-                  {card.label}
-                </span>
-                <span className="ev-card-value">{card.value}</span>
-                {card.note && <span className={`ev-card-note${card.warn ? ' pv-card-warn' : ''}`}>{card.note}</span>}
-              </div>
-            ))}
-          </div>
+          <CountCards
+            cards={cardList}
+            selected={shownFilter}
+            onSelect={setFilter}
+            showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
+            showAllLabel={T.SHOW_ALL}
+          />
         )}
         <div className="ev-side">
           <span id={sideLabelId} className="visually-hidden">
@@ -1110,6 +1308,27 @@ export default function PrivateTestingTab({
       const name = T.studentLabel(dialog.snapshot);
       const subtitle = dialog.parts.length > 1 ? T.editPaymentSubTopUp(name, dialog.parts, dialog.editingCents) : null;
       dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={name} subtitle={subtitle} today={today} onTouch={touch} onSave={savePayment} {...common} />;
+    } else if (dialog.type === 'undoPayment' && !hidden) {
+      // CB3, second half (v0.420): Star's words; blue (not lost for good), Keep payment focused.
+      // The sentence names the latest payment and what the row becomes (a top-up: "Paid $65 ·
+      // $20 more to collect"; otherwise "Not paid").
+      dialogElement = (
+        <ConfirmBox
+          key={dialog.key}
+          title={T.undoPaymentTitle(T.studentLabel(dialog.snapshot))}
+          keepLabel={T.KEEP_PAYMENT}
+          actionLabel={T.UNDO_PAYMENT}
+          actionIcon={IconArrowBackUp}
+          busyLabel={T.UNDOING}
+          loses="something"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.UNDO_BOX_FAILED : null}
+          onConfirm={confirmUndoPayment}
+          onKeep={cancelDialog}
+        >
+          {T.privateUndoPaymentBody(dialog.payment.amountCents, dialog.payment.method, dialog.payment.paidOn, dialog.after)}
+        </ConfirmBox>
+      );
     } else if (dialog.type === 'cancel') {
       dialogElement = (
         // Cancel private testing (P7) on the shared confirm box (v1.008 / v1.103, v0.422): the record
@@ -1154,6 +1373,46 @@ export default function PrivateTestingTab({
     }
   }
 
+  // CB2: the receipt, on its own (from ⋯). Never while locked (it comes back after unlocking).
+  let receiptElement = null;
+  if (receipt && !screenLocked) {
+    const row = rows.find((r) => r.id === receipt.rowId);
+    receiptElement = (
+      <ReceiptDialog
+        receipt={receipt.data}
+        sub={T.receiptSub(row ? T.studentLabel(row) : T.THIS_STUDENT, T.RECEIPT_PRIVATE)}
+        notFound={receipt.notFound ? T.receiptNotFound(row ? T.studentLabel(row) : T.THIS_STUDENT) : null}
+        hidden={hidden}
+        onClose={closeReceipt}
+        isPhone={isPhone}
+      />
+    );
+  }
+
+  // CB1: the Mark paid box — only while its row still shows Mark paid (markPaidGone, above).
+  let markPaidElement = null;
+  if (markPaidBox && !markPaidGone) {
+    const { key, rowId, snap, anchor, amountCents } = markPaidBox;
+    markPaidElement = (
+      <MarkPaidBox
+        key={key}
+        anchor={anchor}
+        name={T.studentLabel(markPaidBoxRow)}
+        amountCents={amountCents}
+        familyChoice={markPaidBoxRow.payingBy}
+        // Moved from a registration made on the family form → "… on the form."; anything else
+        // (added at the desk, moved from a desk registration, old registration unreadable) →
+        // "… at the desk." (mockup P2)
+        choiceWhere={markPaidChoiceWhere(markPaidBoxRow)}
+        onMarkPaid={(method) => saveMarkPaid(rowId, snap, method, amountCents, anchor)}
+        onClose={(restoreFocus) => {
+          setMarkPaidBox(null);
+          if (restoreFocus) anchor.focus();
+        }}
+      />
+    );
+  }
+
   const content = menu && !screenLocked ? menuContent() : null;
 
   return (
@@ -1169,6 +1428,8 @@ export default function PrivateTestingTab({
         <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />
       )}
       {dialogElement}
+      {receiptElement}
+      {markPaidElement}
     </>
   );
 }

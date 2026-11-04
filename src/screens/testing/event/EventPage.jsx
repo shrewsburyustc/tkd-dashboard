@@ -1189,18 +1189,24 @@ export default function EventPage({
   async function saveMarkPaid(rowId, snap, method, amountCents, anchor) {
     if (!beginWrite()) return;
     const result = await markPaidBy({ registrationId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents });
-    endWrite(result.status);
     const row = roster.find((r) => r.id === rowId) ?? snap;
     const name = T.studentLabel(row);
     if (result.status === 'price_changed' && !hiddenNowRef.current) {
-      // v0.423 (changes v0.418 Q1): nothing was saved (the testing-day price started while the box
-      // was open). The box stays closed and the amber bar says why; staff press Mark paid again and
-      // pick the way again (the row's Mark paid now opens with the new price), so a way picked
-      // before can't be recorded by a stray Enter. Focus goes back to the row's Mark paid.
+      // v0.423 (changes v0.418 Q1): nothing was saved (the testing-day price started, or an admin
+      // changed the price, while the box was open). The box stays closed and the amber bar says
+      // why; staff press Mark paid again and pick the way again, so a way picked before can't be
+      // recorded by a stray Enter.
       setBanner({ kind: 'price', text: T.priceChangedNote(name, result.amountCents) });
-      if (anchor?.isConnected) anchor.focus();
+      // The box's amount is feeFor(rank, today, …) with `today` and the prices from the LAST load,
+      // so the page reloads first (a new `today` and the new prices) and the write stays "busy"
+      // until it lands: the rows' Mark paid is unavailable meanwhile, so a quick second press
+      // can't open the box with the old price. Then focus goes back to the row's Mark paid.
+      await reloadQuiet();
+      endWrite(result.status);
+      focusLater(() => anchor, () => rowEl(rowId));
       return;
     }
+    endWrite(result.status);
     if (result.status !== 'ok') {
       // price_changed while Hide private details came on: the general "changed just now" words.
       rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => saveMarkPaid(rowId, snap, method, amountCents, anchor) }, true);

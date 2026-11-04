@@ -45,7 +45,8 @@ function NotSavedTag() {
   );
 }
 
-// One private testing. ctx = { layout, busy, isAdmin, menuFor, selectedId, notSavedId, hidden, nav, handlers }
+// One private testing. ctx = { layout, busy, isAdmin, menuFor, markPaidFor, selectedId, notSavedId,
+// hidden, nav, handlers } (markPaidFor: the row whose Mark paid box is open, CB1)
 function PrivateRow({ row, ctx }) {
   const { layout, handlers, hidden, nav } = ctx;
   const name = T.studentLabel(row);
@@ -102,10 +103,13 @@ function PrivateRow({ row, ctx }) {
       className="btn btn-sm ev-markpaid"
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
+      aria-haspopup="dialog"
+      aria-expanded={ctx.markPaidFor === row.id ? 'true' : 'false'}
       tabIndex={nav.itemTabIndex(row.id)}
       onClick={(event) => {
         event.stopPropagation(); // the row's own click opens the summary; this button doesn't
-        if (!ctx.busy) handlers.onMarkPaid(row);
+        // CB1: opens the shared Mark paid box under this button (a second press closes it)
+        if (!ctx.busy) handlers.onMarkPaid(row, event.currentTarget);
       }}
     >
       {/* ti-check: as the event roster's Mark paid */}
