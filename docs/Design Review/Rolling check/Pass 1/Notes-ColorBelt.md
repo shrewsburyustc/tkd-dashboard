@@ -88,6 +88,12 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Rule:** v1.035 (Jeffrey, 2026-11-04): every payment counts at the school of the desk that took it, the school set under This device in the account menu, as Camps does (v0.708). The school is stored on the payment when it is recorded, and an undo, edit or returned check copies it from the payment it corrects (v0.903's chain rule). A refund counts at the desk that hands the money back (v1.040). Money booked to the wrong school is moved by undoing it and recording it again on a device set to the right school.
 - **What to do:** after your merge, or in your Part 2 if it fits, `testing_payments` and `testing_private_payments` get a school column. Existing rows take the school Finance shows for them today: the event's, or the private testing's (`0026:602`). The old 2-argument functions the live site still calls store that same school. `testing_mark_paid_by` / `testing_private_mark_paid_by` (your 0030 functions) take the device's school and store it. Undo, Edit payment, `testing_move_to_private` and `testing_private_undo_move` (0030) copy it from the payment they correct or move, so a Move stays a transfer (v0.407) and never changes a counted day. That needs a migration: ask the Main session for a number; Jeffrey applies it. Finance then reads your stored school in a step of its own, so say in your report when yours is live. Order: your migration, then Finance's reader migration, then your app push. The app passes This device's school through `src/App.jsx` and `src/screens/Testing.jsx`, both CLAUDE.md shared files: list them.
 
+### R2-03 — No Undo after restoring a Duplicate copy · Medium · decided 2026-11-04 (v1.043)
+
+- **Today:** your event page's Restore of a "Duplicate copy" has an Undo that puts the row back as a plain "Removed" (`event/EventPage.jsx:1087–1096` on main; `:1292–1313` on your branch at 5ae845c).
+- **Rule:** v1.043 (Jeffrey, 2026-11-04: "A: as Star"), Star's v0.517 G3 for every section: restoring a row set aside as a "Duplicate copy" shows "[Name] restored" with no Undo, because an Undo would put the row back as a plain "Removed" with a history that says Withdrawn. To change it back, an admin uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
+- **What to do:** before your merge, give that restore no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
+
 ### Smaller lines for you
 
 - **Add student while hidden** (out of pass 1, for your own review): on main, Add student stays usable while Hide private details is on and shows "Paying by Cash · Check · Card". It asks no birthday or email, so it isn't desk-only, but Paying by is a payment detail that Camps hides. Check how your branch handles it, and ask Jeffrey if it needs a rule.
@@ -100,7 +106,6 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 ## Waits on Jeffrey (follow the answer later)
 
-- **R2-03** (Medium) — Undo after restoring a "Duplicate copy" withdraws it as a plain "Removed" (`event/EventPage.jsx:1087–1096` on main; :1120 on your branch). Recommended: Star's rule everywhere, no Undo there. You follow Camps' answer. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section. Your CB3 second half uses Star's approved words ("… recorded on Nov 3 …"); the recommended answer, Black Belt's, says "Paid on [date]". The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment. Recommended: yours and Camps' ("[Name] marked paid · $X [way]", `testing/text.js:599`; "Payment undone for [Name]", `:605`). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours: `testing/text.js:252, 269`). The design review asks Jeffrey; the answer reaches you through the Main session.

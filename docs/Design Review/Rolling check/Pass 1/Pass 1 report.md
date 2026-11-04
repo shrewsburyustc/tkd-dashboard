@@ -46,17 +46,17 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Star | `Fix-Star.md` | 8 + 4 after another session's fix | 11 | 2 |
+| Star | `Fix-Star.md` | 8 + 4 after another session's fix | 10 | 3 |
 | New students | `Fix-NewStudents.md` | 5 + 1 after another session's fix | 9 | 12 |
-| Black Belt | `Fix-BlackBelt.md` | 10 + 5 after another session's fix | 15 | 8 |
-| Camps | `Fix-Camps.md` | 2 + 3 after another session's fix | 13 | 9 |
+| Black Belt | `Fix-BlackBelt.md` | 11 + 5 after another session's fix | 14 | 8 |
+| Camps | `Fix-Camps.md` | 3 + 3 after another session's fix | 12 | 9 |
 | Finance | `Fix-Finance.md` | 3 + 2 after another session's fix | 4 | 2 |
 | Dashboard core | `Fix-DashboardCore.md` | 7 | 10 | 8 |
 | Color Belt | `Notes-ColorBelt.md` | check before its merge | (follows the answers) | — |
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.043). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.044). The sections it changes hear it through the Main session.
 
 1. **Money: which school's report counts a payment taken at one school's desk?** (R1-01, High.) **Answered 2026-11-04: A** (v1.035).
    - **A (recommended):** the desk that took it, for every section, as Camps does. The report then always matches the drawer.
@@ -84,7 +84,7 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 7. **The 5-second toast covers buttons under it** (R2-04, Medium). **Answered 2026-11-04: A** (v1.042).
    - **A (recommended):** the toast gets its own room on every page and size.
    - **B:** only fixed things move. Lists then still scroll under the Undo on phones.
-8. **Undo after restoring a "Duplicate copy"** (R2-03, Medium).
+8. **Undo after restoring a "Duplicate copy"** (R2-03, Medium). **Answered 2026-11-04: A** (v1.043).
    - **A (recommended):** Star's rule everywhere: no Undo there.
    - **B:** a real Undo everywhere, which needs a database change per section.
 9. **Black Belt's past-due "Not paid" in the Delete red** (R3-01, Medium).
@@ -119,6 +119,6 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 
 ## Next
 
-- **Jeffrey:** question 8, then the rest in order (questions 1–7 and 5b answered 2026-11-04).
+- **Jeffrey:** question 9, then the batch of small ones (questions 1–8 and 5b answered 2026-11-04).
 - **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13 and BB8 History, new students' "(now)" 2 + 3, Dashboard core's v1.118), and Color Belt when it merges.
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.

@@ -164,7 +164,6 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R2-03** (Medium) — Undo after restoring a "Duplicate copy": your no-Undo rule (v0.517 G3, `CandidatesTab.jsx:900–910`) everywhere, which is recommended, or a real Undo everywhere (then Star gains one too). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section: Black Belt's words ("Undo [Name]'s $X [way] payment?" + "Paid on [date]", recommended), or yours with "recorded on" → "paid on" (today `candidates/text.js:172–174` is fed the paid-on date, `CandidatesTab.jsx:1278`). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment (yours, "Payment recorded", `candidates/text.js:141`, names no one and no amount). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours include "Couldn't undo. Someone else changed this just now."). The design review asks Jeffrey; the answer reaches you through the Main session.
@@ -182,6 +181,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 
 - Two classes for the same grayed-reason line: Star's own `.st-menu-why` is used only in `RubricsTab.jsx:792` (styled in `star.css:567–572`); everywhere else uses `.ev-menu-reason`. Use one. Low.
 - Stale status line: your status file's line 12 still says "being built … one merge into main" (`docs/Testing/Star Testing/TKD-StarTesting-Status.md`). Low.
+- **R2-03 is decided** (2026-11-04, v1.043): every section now follows your no-Undo rule for a restored Duplicate copy (v0.517 G3). Nothing to change.
 
 ---
 

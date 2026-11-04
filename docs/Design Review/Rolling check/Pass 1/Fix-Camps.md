@@ -14,7 +14,7 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in your merged work (C1, C2, C3, C4b, C6, C7, C11, C14, C17, C18, C20). Your C10 (the four count cards) merged after the cut (main e7fd75b); pass 2 checks it.
 
-Two straight fixes of your own came out of pass 1: R1-05 and R5-04 (Jeffrey's answers to questions 5 and 4, v1.039 and v1.038). The rest is three shared fixes you adopt after Dashboard core builds them, a few small things, unrecorded checks, and questions for Jeffrey.
+Three straight fixes of your own came out of pass 1: R1-05, R5-04 and R2-03 (Jeffrey's answers to questions 5, 4 and 8: v1.039, v1.038 and v1.043). The rest is three shared fixes you adopt after Dashboard core builds them, a few small things, unrecorded checks, and questions for Jeffrey.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
 - **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
@@ -49,7 +49,7 @@ Two straight fixes of your own came out of pass 1: R1-05 and R5-04 (Jeffrey's an
 
 ## Fix now
 
-Most severe first. R5-04 and R1-05 can be built now (R1-05's refund stores the desk's school, v1.040). The other three wait for Dashboard core.
+Most severe first. R1-05, R5-04 and R2-03 can be built now (R1-05's refund stores the desk's school, v1.040). The other three wait for Dashboard core.
 
 ### R1-05 — Hand money back with Record refund · Medium · decided 2026-11-04 (v1.039)
 
@@ -72,6 +72,15 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Rule:** v1.038 (Jeffrey, 2026-11-04: "Money received should be counted reguardless of removed status. If we refunded and undid the payment then it should go down. Clear cut and dry."): all money received, removed people included; undone payments and refunds come off. When part of it belongs to removed campers, the gray line "includes $X from removed campers" sits under the number.
 - **Change:** `campRules.js` `campCardCounts` (`:495–512`) also returns the removed rows' `paidCents`, tested in `src/lib/camps/checks.mjs`; `CampRoster.jsx:275` gives the Payments recorded card a `note` when that is above $0; `camps/text.js` adds "includes $X from removed campers". Hide private details: unchanged (the card isn't drawn).
 - **Check (preview mode):** April Vacation Camp → withdraw a paid camper → Payments recorded keeps the total, with "includes $… from removed campers" under it, at 1280, 820, 390 and 320. Restore → the line goes. Finance's Daily report for the payment's day still lists the payment, at the school whose desk took it (v1.035).
+
+### R2-03 — No Undo after restoring a Duplicate copy · Medium · decided 2026-11-04 (v1.043)
+
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-duplicate.png`.
+
+- **What's wrong:** after a "Duplicate copy" is restored, its Undo withdraws it again as a plain "Removed", and the history says Withdrawn (`CampPage.jsx:455–473` on main (448–466 at the cut) → `0013_camps.sql:4331–4337`).
+- **Rule:** v1.043 (Jeffrey, 2026-11-04: "A: as Star"), Star's v0.517 G3 for every section: restoring a row set aside as a "Duplicate copy" shows "[Name] restored" with no Undo, because an Undo would put the row back as a plain "Removed" with a history that says Withdrawn. To change it back, an admin uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
+- **Change:** in `CampPage.jsx:455–473` on main (448–466 at the cut), when the restored row was a Duplicate copy, the toast says "[Name] restored" with no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
+- **Check (preview mode):** April Vacation Camp → Review → Keep this one: First sign-up → the copy sits in Removed as "Duplicate copy" → ⋯ Restore → the toast "Ava Thompson restored" has no Undo. Withdraw and restore an ordinary camper → Undo is still there.
 
 ### R2-05 (your part) — An Undo pressed during another save is dropped without a word · Medium · after Dashboard core's R2-05
 
@@ -98,7 +107,6 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R2-03** (Medium) — Undo after restoring a "Duplicate copy" withdraws it as a plain "Removed" (`CampPage.jsx:448–466` → `0013_camps.sql:4331–4337`). Recommended: Star's rule everywhere, no Undo there. You own this one; Black Belt and Color Belt follow. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R3-04** (Low, plausible) — touch rows: keep v0.715 (no row ⋯; the actions sit in Camper detail's "More"; the name opens the camper), written into §8 as a named exception (recommended), or add the row ⋯ like Star and Black Belt. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section: Black Belt's words ("Paid on [date]", recommended; your "recorded on", `camps/text.js:583–585`, changes) or Star's with "paid on". The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment: yours and Color Belt's (recommended) or Black Belt's (then yours change). The design review asks Jeffrey; the answer reaches you through the Main session.
