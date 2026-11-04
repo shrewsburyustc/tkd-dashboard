@@ -3,7 +3,24 @@
 What: who builds which part of design review item CB14 (Color Belt) = M15 (Dashboard core), in which branch, and in what order.
 Why: the briefs (`docs/Design Review/End review/Prompts/3-ColorBelt.md` CB14, `2-DashboardCore-step2-main-screens.md` M15) say to agree this first, through Jeffrey, before any mockup.
 Rulebook: v1.023 (Classes and ranks move to Settings; Color Belt keeps a "Prices" tab), v0.36 / v0.38 / v0.40 (today's rules), D6 in the change list.
-Status: **proposal by Color Belt, 2026-11-04** — waiting for Dashboard core's view, then Jeffrey's OK.
+Status: **agreed 2026-11-04.** Dashboard core: "AGREE — Color Belt builds all of it on color-belt; Dashboard core reviews the
+Settings fit" (relayed by Jeffrey in the Color Belt session). Next: the Settings mockups, which go to Jeffrey and to Dashboard core for review.
+
+## Dashboard core's corrections and keeps (2026-11-04)
+
+- Nothing of Dashboard core's goes into `src/screens/Settings.jsx`; step 2 (M12–M14, M17) and the Design Review fix list don't touch it.
+- The panel size switch is in the account menu (v1.118), not in Settings.
+- If D6 gives staff a read-only view inside Settings, the **account-menu entry is Dashboard core's change** (`AccountMenu.jsx`; M17
+  changes it too). Color Belt builds the page side and lists any `App.jsx` route change.
+- **Keep:**
+  - the parts one under the other, each with its h2 heading and gray line;
+  - Settings keeps ignoring the location switcher, and names the school wherever the classes differ (the shared ChoiceGroup if it's a switch);
+  - dialogs report through `onModalOpenChange`;
+  - shared parts only;
+  - its own address (e.g. `#settings/classes-and-ranks`) if N11's hints become links.
+- **Fix-list overlap:**
+  - R2-05's Undo helper will land in ClassesRanksTab's four Undo handlers, so keep them as they are when moving;
+  - R1-08's page-wide gray must not give BeltPicker's stepper a gray box.
 
 ## Today
 
