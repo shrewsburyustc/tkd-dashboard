@@ -34,6 +34,18 @@ export function endsBefore(classified, version) {
   return later.length ? later[0].startsOn : null;
 }
 
+// The day something happened, in Massachusetts: a timestamp from the database is in UTC, so cutting
+// its first 10 characters gives the NEXT day for anything after 8 PM (7 PM in winter). Plain dates
+// ("2026-10-19") are kept as they are. Moved here from prospects/progress.js so Forms can use it too
+// ("(now)" point 2).
+const NY_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+export function localDay(value) {
+  const v = String(value ?? '');
+  if (v.length <= 10) return v;
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? v.slice(0, 10) : NY_DAY.format(new Date(t));
+}
+
 // 'YYYY-MM-DD' + n days → 'YYYY-MM-DD' (calendar days, no time zone surprises).
 export function addDays(dateText, days) {
   const d = new Date(`${dateText}T12:00:00Z`);

@@ -4,7 +4,7 @@
 // and to change it later. The data layer only returns codes; this file turns them into words.
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
-import { addDays } from '../../lib/schedule/versions.js';
+import { addDays, localDay } from '../../lib/schedule/versions.js';
 
 export const PAGE_TITLE = 'Prospects';
 export const ADD_PROSPECT = 'Add prospect';
@@ -167,7 +167,7 @@ export const NO_FOLLOW_UP = 'No follow-up';
 export const CURRENT = '(now)';
 export const EDIT_STATUSES = 'Edit statuses';
 export const signedLine = (signedAt, hasPicture) => (signedAt
-  ? `waiver signed ${shortDate(signedAt.slice(0, 10)).slice(4)}${hasPicture ? '' : ' (picture deleted after 90 days)'}`
+  ? `waiver signed ${shortDate(localDay(signedAt)).slice(4)}${hasPicture ? '' : ' (picture deleted after 90 days)'}`
   : 'no waiver');
 export const SHOW_SIGNATURE = 'Show signature';
 export const SIGNATURE = 'Signature';
@@ -204,7 +204,8 @@ export function activityText(a) {
       return a.kind;
   }
 }
-export const whenLine = (at, who) => `${shortDate(at.slice(0, 10)).slice(4)} · ${who}`;
+// the Massachusetts day of a note or change (not the UTC one, which is a day ahead in the evening)
+export const whenLine = (at, who) => `${shortDate(localDay(at)).slice(4)} · ${who}`;
 
 // ----- Toasts and problems -----
 export const STATUS_SAVED = (name) => `Status: ${name}`;
