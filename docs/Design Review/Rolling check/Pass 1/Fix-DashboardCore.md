@@ -53,6 +53,15 @@ Rulebook rows come from your block **1.100–1.199**, continuing after your last
 
 Most severe first.
 
+### R2-04 — The toast gets its own room · Medium · decided 2026-11-04 (v1.042)
+
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q7-toast-covers-buttons.png`.
+
+- **What's wrong:** the 5-second toast is drawn on top of the page (`styles/app.css:999–1005, 1228–1235` at the cut; `:1078` and `:1308` on main now), so its Undo covers whatever sits under it: "Delete permanently" in Star's phone ⋯ sheet, a row's ⋯ on the mat tablet, Camps' Check in buttons on phones (at 54 of 95 scroll positions at 390 wide), and the ⋯ column on the PC. Only Black Belt moves its toast (phones only, `blackBelt/staff/blackBelt.css:1559, 1592–1606`).
+- **Rule:** v1.042 (Jeffrey, 2026-11-04: "A: own room"): while a toast shows, the page's scrolling area and any open ⋯ sheet end above it, so nothing can sit under it, on every page and size; when it goes, the room goes too. The toast's place stays as v0.29. §4 check 3 (v1.033): keyboard focus is never hidden.
+- **Change:** build it once, in the shared toast (`src/components/Toast.jsx`) and the shared styles: while a toast is up, reserve its height at the bottom of the scrolling area and of any open ⋯ sheet (for example a CSS variable the toast sets, used as bottom room). These are your own shared files. Section files don't change, except that Black Belt removes its own ⋯ sheet rule afterwards (its R2-04 item). Not settled: a full-screen detail with its own bottom buttons (Black Belt's candidate detail keeps v0.967 (3)'s lift). Draw it both ways in the mockup, room or the toast lifted above the buttons, for Jeffrey. Mockup first: a picture of the short jump at each size.
+- **Check (preview mode):** at 390 touch, open a Star row's ⋯ sheet while a toast shows: Delete permanently sits above the toast. Camps' roster at 390 and 320: scroll through while a toast shows, and measure with the design review's `node "docs/Design Review/tools/cdp.mjs" rects …` (it reaches your worktree when `design-review` is merged), or check by eye on the screenshots, that no Check in or ⋯ is ever under the Undo. 820 touch: a Star row's ⋯ is never under the toast. 1280: the ⋯ column is clear. With the keyboard, Tab to the last control on the page: it is never hidden behind the toast.
+
 ### R2-05 — An Undo pressed while another save runs is dropped without a word · Medium
 
 - **What's wrong:** the shared Toast removes itself before it runs Undo (`components/Toast.jsx:73–77`), and every section's Undo returns early while another save runs (`CampPage.jsx:351`, `star/.../CandidatesTab.jsx:560`, `StarEventsTab.jsx:552`, `useCandidateActions.js:342`, `Calendar.jsx:594`, `Prospects.jsx:250`, `Forms.jsx:194`). So the toast vanishes and nothing happens. In the checker's run (Camps, `setTestingDelay(2500)`): Withdraw Zoe Park, Withdraw Sofia Nguyen, press Zoe's Undo during Sofia's save → the toast went, no bar, and both stayed withdrawn. Staff believe it was undone.
@@ -99,7 +108,6 @@ Most severe first.
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R2-04** (Medium) — how the 5-second toast stays off the buttons under it: (A, recommended) while it shows, the page's scroll area and any ⋯ sheet end above it, for every section and size; or (B) only fixed things move (Black Belt's two rules made shared). Today, on phones, Star's ⋯ sheet puts "Delete permanently" right under the toast's Undo, and Camps' rows scroll under it (`styles/app.css:999–1005, 1228–1235`). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one set of toast words after Mark paid and after Undo payment, kept once in `src/components/text.js` (four wordings today; R2's "Payment undone" line is part of this). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it", "Undo refused" and "Undo failed", kept once in `src/components/text.js` (seven and four wordings today). Folded in: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open"; R2's smaller line) and the load-failure words (R3's S-2). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-09** (Low) — the ✓ and the full stop only on the account toasts, as `Toast.jsx:6–10` already says (recommended), or on every success toast. The design review asks Jeffrey; the answer reaches you through the Main session.

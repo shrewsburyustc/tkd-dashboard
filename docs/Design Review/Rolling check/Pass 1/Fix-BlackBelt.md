@@ -144,6 +144,11 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 - **Change:** after Star's R4-08, copy it in your Part 2: v1.103's tokens (`--color-border-strong`, `not-allowed`) and `aria-describedby` pointing at the "Email result is off …" line.
 - **Check (preview mode):** Results tab, switch on, 820 touch: border rgb(207, 207, 202), cursor `not-allowed`, and the button's description is the line.
 
+### R2-04 (your part) — Your own toast rules go · Low · after Dashboard core's R2-04
+
+- **Change:** once the shared toast has its own room (v1.042), remove your ⋯ sheet rule for it (`blackBelt.css:1593–1598`, inside the phones block that starts at `:1559`). Keep the full-screen detail's lift (`:1600–1606`, v0.967 (3)) until Jeffrey answers v1.042's open point.
+- **Check (preview mode):** at 390 touch, a toast over your full-screen candidate detail leaves its bottom buttons clear, the same as before.
+
 ### R3-13 (your part) — The date hint says "dates" · Low · after Dashboard core's R3-13
 
 - **What's wrong:** your staff calendars say "Past dates can't be chosen." (`blackBelt/staff/text.js:332`), while the newest rows say "days".
@@ -163,7 +168,6 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 - **R4-03, the words** (Medium) — "Hidden on this tablet" and "Payment details are hidden on this tablet." from `src/lib/privateDetails.js` instead of "… on this device" (`text.js:494, 619–620`), and the Results line worded as Star's (`results/text.js:103`). v1.036 and v1.037 already use "Hidden on this tablet" (`HIDDEN_ON_THIS_TABLET`, `src/lib/privateDetails.js:47`) for the plan and Edit details, and v1.037 settled the desk line. Until this is answered your screens would show both words, so it is asked before R4-01 and R4-04 are built (recommended: the shared words everywhere, v0.507 Q2 "the same words on every screen"). Your prompt's question, never asked. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R3-01** (Medium) — the past-due "Not paid" tag in the Delete red (`text.js:557–558`, `RosterRows.jsx:61`, `blackBelt.css:1024–1029`): amber like your own "Late" (recommended), gray like Star's, or red written into §7 as a named exception (v0.224 chose red; v1.007 says red means only "gone for good"). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-03** (Medium) — Undo after restoring a "Duplicate copy" withdraws it as a plain "Removed" (`useCandidateActions.js:1069–1090` → `0016_black_belt.sql:4428–4436`). Recommended: Star's rule everywhere, no Undo there. You follow Camps' answer. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-04** (Medium) — how the 5-second toast stays off the buttons under it, for every section. Your own lift (`blackBelt.css:1559, 1592–1606`, phones only) would move into the shared rule. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-06** (Low) — one Undo payment box for every section: yours (v0.964 / v0.965, recommended) or Star's with "recorded on" → "paid on" (then your title changes back). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R1-07** (Low) — one toast after Mark paid and after Undo payment: Camps' and Color Belt's words (recommended; yours change: `text.js:774, 818`) or yours. The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed": your v0.966 shape for everyone (recommended) or the older shape. The design review asks Jeffrey; the answer reaches you through the Main session.
