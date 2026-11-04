@@ -349,9 +349,13 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
           onSave={createNew}
           onCancel={closeDialog}
           onRequestClose={() => {
+            // With something typed the dialog stays open until Create or Cancel: the first Esc /
+            // Back shows "Unsaved changes…" (or keeps the note already there), the next does
+            // nothing (rulebook v0.46 / v1.027, design review N15). Phones: "Discard changes".
             const d = dialogRef.current;
-            if (d && JSON.stringify(d.values) !== JSON.stringify(d.initial) && d.note !== T.UNSAVED) patchDialog({ note: T.UNSAVED });
-            else closeDialog();
+            if (!d || d.saving) return;
+            if (JSON.stringify(d.values) === JSON.stringify(d.initial)) closeDialog();
+            else if (!d.note) patchDialog({ note: T.UNSAVED });
           }}
         />
       );

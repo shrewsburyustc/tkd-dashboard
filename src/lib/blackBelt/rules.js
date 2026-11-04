@@ -49,9 +49,9 @@ export const KEEP_YEARS_MIN = 3; // keep-years settings: both empty, or both 3�
 export const KEEP_YEARS_MAX = 20;
 export const EMAIL_MAX = 254;
 export const WAIVER_GRACE_MS = 24 * 60 * 60 * 1000; // a replaced waiver can still be signed for 24 h
-export const FIRST_TIME = '06:00'; // the time dropdown (v0.51): 6:00 AM …
-export const LAST_TIME = '22:00'; // … to 10:00 PM, on 15-minute steps
-export const TIME_STEP_MINUTES = 15;
+export const FIRST_TIME = '06:00'; // the shared time list (v1.019, BB13): 6:00 AM …
+export const LAST_TIME = '22:00'; // … to 10:00 PM, on 5-minute steps (migration 0032)
+export const TIME_STEP_MINUTES = 5;
 // The family links' codes: 8 characters from a–z and 2–9 without the look-alikes i, l, o.
 export const CODE_PATTERN = /^[a-hjkmnp-z2-9]{8}$/;
 
@@ -82,8 +82,8 @@ export function minutesOf(text) {
   return h * 60 + min + s / 60;
 }
 
-// A testing day's start or end time: 6:00 AM to 10:00 PM on a 15-minute step, no seconds.
-// '07:45' ok · '22:15' no (too late) · '10:10' no (not on a step) · '05:45' no (too early).
+// A testing day's start or end time: 6:00 AM to 10:00 PM on a 5-minute step, no seconds.
+// '07:45' ok · '10:10' ok · '22:15' no (too late) · '10:07' no (not on a step) · '05:45' no (too early).
 export function timeIsValid(text) {
   const minutes = minutesOf(text);
   return minutes !== null && Number.isInteger(minutes) && minutes >= 360 && minutes <= 1320 && minutes % TIME_STEP_MINUTES === 0;
@@ -91,7 +91,8 @@ export function timeIsValid(text) {
 
 const hhmm = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
-// Every time the dropdown lists: '06:00', '06:15', … '22:00' (65 choices).
+// Every allowed time: '06:00', '06:05', … '22:00' (193 choices; the checks use it — the screen's
+// list comes from the shared TimeList, which makes the same times).
 export const TIME_OPTIONS = Array.from({ length: (1320 - 360) / TIME_STEP_MINUTES + 1 }, (_, i) => hhmm(360 + i * TIME_STEP_MINUTES));
 
 function clockParts(minutes) {
@@ -283,7 +284,7 @@ function timePairProblems(start, end, out, startKey, endKey) {
 //   name           'empty' | 'tooLong' | 'badCharacter'                    (names.js)
 //   date           'missing' | 'past' (before today — unless it is the day's saved date, so a
 //                  cycle under way can still be edited; options.originalDate)
-//   start, end     'missing' | 'badTime' (not on the 6 AM–10 PM, 15-minute list) |
+//   start, end     'missing' | 'badTime' (not on the 6 AM–10 PM, 5-minute list) |
 //                  end: 'notAfterStart'
 //   place          placeProblem codes
 //   secondStart    + 'beforeFirstEnd' (the second part must start at or after the first's end)
