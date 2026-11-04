@@ -26,13 +26,15 @@
 // chosen through its first class).
 // CB18 (v1.029, v0.416): "Print results" sits at the right of the class switch (its own line
 // under the switch on phones). It prints the WHOLE event — who passed, to which belt, a page per
-// class (ResultsSheet.jsx) — whatever class is chosen. Staff and admins both see it. The bar has
-// room for a second button (Download CSV, admins only), which waits for a database function.
+// class (ResultsSheet.jsx) — whatever class is chosen. Staff and admins both see it. Beside it,
+// Download CSV (v0.416, v0.418 Q3; migration 0030's testing_results_csv): admins only, not drawn
+// while Hide private details is on (EventPage passes csv = null then), the whole event too. It
+// says "Downloading…" while it works; EventPage runs the download and shows its toast / banner.
 // This file only DRAWS; EventPage owns the class choice and the dialogs, useGradingSaves the saves.
 // The one exception is Print results: this tab draws its sheet and opens the print window itself
 // (the same way EventPage prints the grading sheet), using the results already on screen.
 import { useEffect, useState } from 'react';
-import { IconAlertTriangle, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
+import { IconAlertTriangle, IconDownload, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
 import { placeTip } from '../../../components/IconButton.jsx';
 import { LOCATION_NAME } from '../../../lib/device.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
@@ -138,8 +140,9 @@ function GradingRow({ row, shown, rank, readOnlyTags, showNote, buttonsDisabled,
 
 // props: event, classes, rows (ACTIVE roster rows of the whole event, roster order), today,
 // isAdmin, layout, classSel (the chosen class id — its testing group shows), onClassSel, grading,
-// onOpenNote(row, opener), onPrint(opener), panelId, tabId
-export default function GradingTab({ event, classes, rows, today, isAdmin, layout, classSel, onClassSel, grading, onOpenNote, onPrint, panelId, tabId }) {
+// onOpenNote(row, opener), onPrint(opener), panelId, tabId,
+// csv ({ busy, onDownload } — Download CSV; null = no button: staff, or Hide private details on)
+export default function GradingTab({ event, classes, rows, today, isAdmin, layout, classSel, onClassSel, grading, onOpenNote, onPrint, panelId, tabId, csv = null }) {
   // Before / on / after the testing day ("dayWindow": the name `window` is the browser's own).
   const dayWindow = gradingWindow(today, event.testingDate);
   const showNote = canChangeResults(dayWindow, isAdmin); // the note button only when notes can change
@@ -249,6 +252,18 @@ export default function GradingTab({ event, classes, rows, today, isAdmin, layou
               <IconPrinter size={16} aria-hidden="true" />
               {T.PRINT_RESULTS}
             </button>
+            {csv && (
+              <button
+                type="button"
+                className="btn gr-download-csv"
+                aria-disabled={csv.busy ? 'true' : undefined}
+                onClick={() => csv.onDownload()}
+              >
+                {/* ti-download = download a file */}
+                <IconDownload size={16} aria-hidden="true" />
+                {csv.busy ? T.DOWNLOADING_CSV : T.DOWNLOAD_CSV}
+              </button>
+            )}
           </span>
         </div>
         {group && (

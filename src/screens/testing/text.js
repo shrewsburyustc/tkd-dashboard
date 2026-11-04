@@ -958,6 +958,23 @@ export const resultsSheetFoot = (eventName, printedAt) =>
   })}`;
 export const resultsSheetPage = (page, pages) => `Page ${page} of ${pages}`;
 
+// CB18 (v0.416, v0.418 Q3): Download CSV — admins only, hidden while Hide private details is on,
+// the whole event (lib/testing/resultsCsv.js builds the rows). Star's words where they fit
+// (star/resultsText.js).
+export const DOWNLOAD_CSV = 'Download CSV';
+export const DOWNLOADING_CSV = 'Downloading…'; // the button's words while it works
+export const cbCsvDownloaded = (fileName, n) =>
+  `Downloaded ${fileName} (${studentsCount(n)}). It has payments and graders’ notes — keep it private.`;
+export const CB_CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then try again.'; // + Retry
+export const CB_CSV_NOT_ALLOWED = 'Only an admin can download the CSV.';
+// The 15 column headings, exactly v0.418 Q3's, in order (the registration id last)
+export const CB_CSV_HEADINGS = [
+  'Reference', 'First name', 'Last name', 'Class', 'Class time', 'Belt', 'Testing for', 'Result', 'Grader’s note',
+  'Paying by', 'Paid', 'Amount paid', 'Paid on', 'Paid by', 'Registration id',
+];
+export const CB_CSV_YES = 'Yes';
+export const CB_CSV_NO = 'No';
+
 // G8: the Students tab
 export const DETAIL_RESULT = 'Result';
 // "· Nov 20, 5:41 PM by Staff"

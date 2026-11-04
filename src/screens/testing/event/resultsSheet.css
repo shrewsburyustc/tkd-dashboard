@@ -1,6 +1,6 @@
 /*
   resultsSheet.css — Color Belt's "Print results" (CB18, rulebook v1.029 / v0.416): the bar that
-  holds the class switch and Print results on the Grading tab (GradingTab.jsx), and the printed
+  holds the class switch, Print results and Download CSV on the Grading tab (GradingTab.jsx), and the printed
   results sheet (ResultsSheet.jsx).
   Why it exists: its own file, so this work doesn't edit the same lines of testing-events.css as
   other Color Belt work going on at the same time. Imported by ResultsSheet.jsx (which GradingTab
@@ -11,29 +11,40 @@
   (sheet.html, screen 4: a 612 × 792 page drawn at 72 per inch, here at 96 per inch).
 */
 
-/* ===== The bar: class switch · Print results (and later Download CSV) ===== */
-/* PC and tablet: the switch on the left, the buttons at the right. */
+/* ===== The bar: class switch · Print results · Download CSV (admins only) ===== */
+/* PC and tablet: the switch on the left, the buttons at the right. When the switch doesn't fit
+   beside the buttons (the upright tablet, or many classes), the SWITCH wraps onto more lines and
+   the buttons stay at the right, centered beside it (v0.416; screen4/grading-after-w820.png). */
 .gr-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-8) var(--space-12);
+  gap: var(--space-8); /* 8 beside the switch too: the approved 820 drawing */
   margin-bottom: var(--space-12);
 }
 
+/* flex-basis 0: the switch takes only the room the buttons leave (instead of its one-line width,
+   which pushed the buttons onto a line of their own). Its box (.segmented, inline-flex) still
+   only grows as wide as its segments need, so on a PC it looks the same as before. */
 .gr-bar .ev-class-switch {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   margin-bottom: 0;
 }
 
-/* Room for a second button (Download CSV, admins only) when it comes */
+/* Print results, and Download CSV beside it for admins (not while Hide private details is on) */
 .gr-bar-buttons {
   display: inline-flex;
   flex: none;
   flex-wrap: wrap;
   gap: var(--space-8);
+}
+
+/* Download CSV while it works: it says "Downloading…" and a second click does nothing.
+   aria-disabled (not disabled) keeps it focusable, so the keyboard doesn't lose its place. */
+.gr-download-csv[aria-disabled='true'] {
+  cursor: progress;
 }
 
 /* Phones: the buttons get their own line under the switch, sharing the width */
@@ -44,6 +55,7 @@
   }
 
   .gr-bar .ev-class-switch {
+    flex: none;
     width: 100%;
   }
 

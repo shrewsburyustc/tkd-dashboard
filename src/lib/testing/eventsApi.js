@@ -8,6 +8,7 @@
 //   'not_open' · 'closed' · 'finished' · 'already_paid' · 'withdrawn' · 'rate_limited' ·
 //   'has_results' (phase 3: Edit event can't move the date of an event that has results) ·
 //   'price_changed' (0030, Mark paid: + amountCents, the amount the database works out) ·
+//   (0030, CB18) downloadResultsCsv's ok carries fileName, rowCount, text — see the end ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -28,6 +29,9 @@ import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { eventState, eventCounts, testingFor, todayInSchoolTime, shortTime, isIsoDate, PREVIEW_TODAY_KEY } from './eventRules.js';
 import { RESULTS, isGraded, addedAfterDay } from './gradingRules.js';
+import { csvRows, csvFileName, isCsvRow } from './resultsCsv.js'; // CB18
+import { toCsv, saveCsvFile } from '../star/csv.js'; // CB18: Star's CSV writer, used as it is
+import { CB_CSV_HEADINGS } from '../../screens/testing/text.js'; // CB18
 
 // Every status a call here can return.
 export const EVENT_STATUSES = [
@@ -623,4 +627,35 @@ export async function deleteStudent({ registrationId, expectedVersion, expectedP
     { p_registration_id: registrationId, p_expected_version: expectedVersion, p_expected_payment_ids: expectedPaymentIds },
     readNothing,
   );
+}
+
+// ----- CB18: the results CSV (admins only, migration 0030 §6c) -----
+
+// Download CSV on the Grading tab: ONE testing_results_csv call for the whole event. The database
+// checks "admin only" itself and writes its download log BEFORE it answers. The rows are turned into
+// the 15 columns (resultsCsv.js) and written with Star's csv.js (quoting, = + - @ cells made safe,
+// the BOM); the file goes from memory straight to the browser's download, never into a web address.
+// testing_results_csv is volatile (it writes the log), so this is a normal call (POST).
+//   { eventId, eventName } → { status:'ok', fileName, rowCount, text } (the download is started) ·
+//   'not_allowed' (not an admin) · 'not_found' (no such event) · 'invalid' (no id) · 'no_access' ·
+//   'stale' (a rare lock problem; nothing was logged) · 'error' (no connection / a wrong shape) ·
+//   'skipped' (the app's own answer, never the database's: canSave said no — see below)
+// canSave (optional): asked once the database's ok ARRIVES, before the file is built or saved.
+// EventPage passes "Hide private details is still off and this is still an admin": the switch can
+// turn on (or the role change) while the call is on its way, and then the file must not be saved
+// at all — the rows (payments, graders' notes) are dropped and nothing goes to the browser.
+export async function downloadResultsCsv({ eventId, eventName, canSave = null } = {}) {
+  const answer = await callRpc('testing_results_csv', { p_event_id: eventId ?? null }, (d) =>
+    Array.isArray(d.rows) && d.rows.every(isCsvRow) ? { rows: d.rows } : null,
+  );
+  if (answer.status !== 'ok') return answer;
+  if (canSave && !canSave()) return { status: 'skipped' };
+  try {
+    const text = toCsv(CB_CSV_HEADINGS, csvRows(answer.rows));
+    const fileName = csvFileName(eventName, schoolToday());
+    saveCsvFile(fileName, text); // does nothing outside a browser (the checks)
+    return { status: 'ok', fileName, rowCount: answer.rows.length, text };
+  } catch (error) {
+    return failure(error);
+  }
 }

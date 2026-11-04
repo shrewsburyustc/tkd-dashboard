@@ -44,6 +44,9 @@
 //   - CB2: ⋯ → Print receipt (staff and admins, a row with a payment) opens the shared receipt,
 //     built by lib/testing/receipt.js;
 //   - CB9: the summary cards are the shared count cards (nothing changes on screen).
+// CB18 (v0.416, v0.418 Q3): the Grading tab's Download CSV (admins only, not drawn while Hide
+// private details is on) — this page runs it (downloadCsv below) because it owns the banner,
+// the toast and the profile refresh; GradingTab only draws the button.
 //
 // Follows "Hide private details" (v0.506, v0.507 Q2), the same way as Star's Candidates tab: while
 // the device switch is on, only the Students card shows (no Paid / Not paid / Payments recorded),
@@ -93,6 +96,7 @@ import {
   addStudent,
   changePayingBy,
   deleteStudent,
+  downloadResultsCsv,
   editPayment,
   loadEvent,
   loadMyName,
@@ -225,6 +229,9 @@ export default function EventPage({
   const [markPaidBox, setMarkPaidBox] = useState(null);
   // CB2: the receipt — { key, rowId, opener, data, notFound } or null (data null while it loads).
   const [receipt, setReceipt] = useState(null);
+  // CB18: true while Download CSV is working (the button says Downloading…).
+  const [csvBusy, setCsvBusy] = useState(false);
+  const csvBusyRef = useRef(false);
   const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
   // The open tab comes from the address (App.jsx); a local copy only if no App is listening.
   const [localTab, setLocalTab] = useState('students');
@@ -356,6 +363,9 @@ export default function EventPage({
   // toast or banner follows the current value, not the one from when it started.
   const hiddenNowRef = useRef(hidden);
   hiddenNowRef.current = hidden;
+  // The same for "is this sign-in an admin" (CB18: Download CSV reads it when its answer arrives).
+  const isAdminNowRef = useRef(isAdmin);
+  isAdminNowRef.current = isAdmin;
   // A money save's answer that arrives while hidden: the general words only — no amount, no paid
   // status, no Retry that would record money (Mark paid / Undo payment / Edit payment …).
   function hiddenMoneyProblem(status) {
@@ -781,6 +791,49 @@ export default function EventPage({
     } else {
       handleDialogProblem(status);
     }
+  }
+
+  // ----- Grading: Download CSV (CB18, v0.416 / v0.418 Q3; Star's Results tab download) -----
+  // Admins only (the database checks too), the WHOLE event, one click. The button is not drawn
+  // while Hide private details is on. Its answers, as Star's:
+  //   ok          the file downloads; a toast names it and says to keep it private
+  //   no_access   the sign-in can't see data right now → the app's no-access handling
+  //   not_allowed this sign-in isn't an admin (any more) → the banner says so and the profile is
+  //               read again, so the button goes away
+  //   anything else (error, not_found, stale, invalid) → "Couldn't download the CSV …" + Retry
+  // If Hide private details turned on, or this sign-in stopped being an admin, while the call was
+  // on its way: the file is NOT saved (eventsApi drops the rows; answer 'skipped'), no toast, and
+  // no "Couldn't download" banner with a Retry (the button isn't there any more either). Retry
+  // asks the same question before it calls again, and its button only shows while the answer is yes.
+  const canSaveCsv = () => !hiddenNowRef.current && isAdminNowRef.current;
+  async function downloadCsv() {
+    if (csvBusyRef.current || !event || !canSaveCsv()) return; // a second click while it works does nothing
+    csvBusyRef.current = true;
+    setCsvBusy(true);
+    setBanner(null);
+    const answer = await downloadResultsCsv({ eventId: event.id, eventName: event.name, canSave: canSaveCsv });
+    csvBusyRef.current = false;
+    setCsvBusy(false);
+    if (answer.status === 'no_access') {
+      onNoAccess();
+    } else if (answer.status === 'not_allowed') {
+      setBanner({ text: T.CB_CSV_NOT_ALLOWED });
+      onRefreshProfile();
+    } else if (answer.status === 'skipped' || !canSaveCsv()) {
+      // Hidden, or not an admin any more: stop quietly — no toast (it names the file) and no Retry.
+      // ('skipped' = eventsApi asked canSaveCsv when the rows arrived and saved nothing.)
+    } else if (answer.status === 'ok') {
+      showToast(T.cbCsvDownloaded(answer.fileName, answer.rowCount), { icon: false });
+    } else {
+      setBanner({ text: T.CB_CSV_FAILED, retry: retryCsv, csv: true });
+    }
+  }
+  function retryCsv() {
+    if (!canSaveCsv()) {
+      setBanner(null); // hidden or not an admin now: nothing to retry
+      return;
+    }
+    downloadCsv();
   }
 
   // ----- Grading: the note dialog (G2) -----
@@ -1917,7 +1970,7 @@ export default function EventPage({
         <ErrorBanner text={grading.banner.text} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />
       )}
       {banner && (
-        <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
+        <ErrorBanner text={banner.text} onRetry={banner.retry && !(banner.csv && (hidden || !isAdmin)) ? () => banner.retry() : undefined} retrying={busy || csvBusy} onDismiss={() => setBanner(null)} />
       )}
 
       {tab === 'grading' ? (
@@ -1933,6 +1986,7 @@ export default function EventPage({
           grading={grading}
           onOpenNote={openNote}
           onPrint={(opener) => setPrinting({ printedAt: new Date(), opener })}
+          csv={isAdmin && !hidden ? { busy: csvBusy, onDownload: downloadCsv } : null}
           panelId={tabIds.panel('grading')}
           tabId={tabIds.tab('grading')}
         />
