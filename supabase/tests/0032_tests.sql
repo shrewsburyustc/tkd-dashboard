@@ -462,11 +462,13 @@ begin
   if (select array_agg(k order by k) from jsonb_object_keys(v_r) as k) <> array['rows', 'status'] then
     raise exception 'TEST FAILED: H2 the answer has other keys than status and rows';
   end if;
-  -- every row: exactly these seven keys
+  -- every row: exactly these seven keys (plus record_id once 0034 is
+  -- applied - the logged row's own id, not a login id; 0034_tests.sql
+  -- checks it)
   if exists (select 1 from jsonb_array_elements(v_r -> 'rows') as x(e)
-              where (select array_agg(k order by k collate "C") from jsonb_object_keys(x.e) as k)
+              where (select array_agg(k order by k collate "C") from jsonb_object_keys(x.e) as k where k <> 'record_id')
                     <> array['action', 'actor_name', 'after', 'before', 'occurred_at', 'op', 'table_name']) then
-    raise exception 'TEST FAILED: H2 a history row has other keys than the seven';
+    raise exception 'TEST FAILED: H2 a history row has other keys than the seven (and record_id)';
   end if;
   -- exactly Kim's own rows: hers, and her payments', waiver's, grade's and send's
   select count(*) into v_n
