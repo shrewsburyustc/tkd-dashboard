@@ -58,6 +58,8 @@ export const DELETE_TITLE = 'Delete this form?';
 export const deleteText = (name) => `"${name}" and its booking settings will be deleted. This can't be undone.`;
 export const HAS_SIGNUPS = 'Families have signed up with this form, so it can\'t be deleted. Close it instead — every sign-up keeps its form.';
 export const DRAFT_NO_FILL = 'Publish the form first — then it can be filled in.';
+// A Closed form is already published: only an admin can open it again (rulebook v0.629)
+export const CLOSED_NO_FILL = 'This form is closed. An admin can open it again.';
 
 // ----- New form -----
 export const NEW_FORM_TITLE = 'New form';
