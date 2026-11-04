@@ -253,3 +253,5 @@ All the items below were applied to the plan.
 **2026-11-04: BB20 answered — keep "Worcester and Shrewsbury" on the printed results sheet (rulebook v0.975, Jeffrey: "A").** No code change. Both Part 1 wording questions are now settled.
 
 **2026-11-04: BB8 live.** Main merged black-belt up to 79dc13c (main b428666) and pushed main 301e7f1 (Jeffrey: "Merge and deploy"); Cloudflare Pages success. Full PGlite on main: 1982 passed, 0 failed (the two 0024 speed misses on this branch's run were machine load). Not merged yet: 5fcac55 (live tests), 81db899 / bb8e063 (v0.974 "tablet"), 94eb15d (v0.975) — waiting for Jeffrey's OK.
+
+**2026-11-04: v0.974 "tablet" wording live** (main 392bc9e, Jeffrey: "Merge and deploy"; Cloudflare success). black-belt = main 392bc9e. Done from the design review's Part 1 and BB8/BB13; Part 2 (the switch to the shared parts: BB1, BB2, BB7, BB10, BB14, BB15, BB19) is next, when Jeffrey says go.
