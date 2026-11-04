@@ -10,7 +10,7 @@
 
 ## The brief
 
-The design review decided 19 changes for Color Belt, CB1–CB19: rulebook rows **v1.000–v1.034**. Most of them use Dashboard core's shared parts, whose approved looks are rows **v1.100–v1.111** (on main once step 1 is merged). **Part 1** is what needs no shared part, so it starts now; **Part 2** is the rest. Keep each item's ID (CB3, CB7 …) in your plan, status file and commits, so Jeffrey can trace it.
+The design review decided 19 changes for Color Belt, CB1–CB19: rulebook rows **v1.000–v1.034**. Most of them use Dashboard core's shared parts, whose approved looks are rows **v1.100–v1.113** (on main since 2026-10-28, 95a9601). **Part 1** is what needs no shared part, so it starts now; **Part 2** is the rest. Keep each item's ID (CB3, CB7 …) in your plan, status file and commits, so Jeffrey can trace it.
 
 ### Rules
 
@@ -35,7 +35,7 @@ The design review decided 19 changes for Color Belt, CB1–CB19: rulebook rows *
 2. **The rulebook** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`:
    - rows v1.001–v1.003, v1.006, v1.008–v1.011, v1.013, v1.015, v1.018, v1.019, v1.022–v1.024, v1.026, v1.028–v1.030 (v1.004, v1.007 and v1.033 for background);
    - §8: "Are you sure?" boxes, Metric cards, Empty states;
-   - for Part 2, Dashboard core's rows v1.100–v1.111.
+   - for Part 2, Dashboard core's rows v1.100–v1.113.
 
    Each row names the older Color Belt rows it changes (e.g. v0.35, v0.136, v0.147, v0.181, v0.189, v0.192, v0.402, v0.403).
 3. **The change list** `docs/Design Review/End review/TKD-DesignReview-ChangeList.md`: §1, §2.2 (CB1–CB19), §4 (D5, and the change list's D6 (Classes and ranks in Settings)), §6 (D1a–D1d). Jeffrey's own words are in `docs/Design Review/Walkthrough/Decisions.md`, items 3, 3b, 4, 6, 8, 9a, 9b, 10a, 11, 12a, 14a, 14b, 15c, 15d, 16a, 17a, 17c, 18 and 19.
@@ -238,7 +238,7 @@ The shared parts' looks are already approved (v1.102–v1.109). Switching to one
 
 Check each in the preview. Where a fix would change the screen in a way no row decided, ask Jeffrey first (one question, with a picture).
 - **The ⋯ menu sometimes opens in the top-left corner on PC** right after a page loads (`src/components/RowMenu.jsx`, Dashboard core's part). If you see it, tell Jeffrey; don't fix it here.
-- **`src/styles/register.css`** (your family form; Star's and Camps' forms use it too) uses weight 600 three times (lines 375, 394, 659), against §7's 400 / 500. Dashboard core's D6 (the receipt's font weights) asks the same question about the receipt. Don't change it unless Jeffrey asks: it reaches three live public pages.
+- **`src/styles/register.css`** (your family form; Star's and Camps' forms use it too) uses weight 600 three times (lines 375, 394, 659), against §7's 400 / 500. Dashboard core's D6 is decided: the shared receipt uses 500, as §7 says (v1.112). Your own 600s are a separate question: ask Jeffrey once whether they go to 500 too (in Chrome on Windows the two look the same). Don't change it unless Jeffrey says so: it reaches three live public pages.
 
 ## Done when
 

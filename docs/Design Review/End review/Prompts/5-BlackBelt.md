@@ -14,7 +14,7 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 ## The brief (both parts)
 
-These are the design review's decided changes for Black Belt testing. The decisions are already rulebook rows: **v1.000–v1.034** (the walkthrough) and **v1.100–v1.111** (the shared parts, built by the Dashboard core session). Part 1 needs no shared part; Part 2 uses them. Each item keeps its change-list ID (BB1 …) so Jeffrey can trace it.
+These are the design review's decided changes for Black Belt testing. The decisions are already rulebook rows: **v1.000–v1.034** (the walkthrough) and **v1.100–v1.113** (the shared parts, built by the Dashboard core session). Part 1 needs no shared part; Part 2 uses them. Each item keeps its change-list ID (BB1 …) so Jeffrey can trace it.
 
 Line numbers were checked on main on 2026-10-28. Where paths start:
 - `staff/…` and `form/…` are under `src/blackBelt/`;
@@ -40,13 +40,13 @@ Line numbers were checked on main on 2026-10-28. Where paths start:
 - Run `git merge main` first, and re-read the rulebook right before editing.
 - The 10b row goes just above `| Approved 2026-10-16 (v0.26) |`; the changelog line goes at the end of §11; bump the header's Version / Last updated. Keep CRLF.
 - A row that changes an older one adds a "(See v0.9xx …)" note at the start of that row.
-- **Merging main for Part 2:** expect a rulebook conflict if your v0.961 / v0.962 (or newer rows) aren't on main yet. Main's v1.100–v1.111 sit at the same places: the 10b rows, the changelog and the Version line. Keep both sides, and explain each conflict to Jeffrey before resolving it (CLAUDE.md).
+- **Merging main for Part 2:** expect a rulebook conflict if your v0.961 / v0.962 (or newer rows) aren't on main yet. Main's v1.100–v1.113 sit at the same places: the 10b rows, the changelog and the Version line. Keep both sides, and explain each conflict to Jeffrey before resolving it (CLAUDE.md).
 
 ### Read first
 
 1. The rulebook, `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`:
    - §4 (the six WCAG 2.2 checks), §7, and §8's "Are you sure?" boxes, Metric cards, Toasts and errors;
-   - the 10b rows **v1.001–v1.008, v1.010, v1.011, v1.013–v1.016, v1.018, v1.019, v1.022, v1.023, v1.026, v1.030** and **v1.100–v1.111**;
+   - the 10b rows **v1.001–v1.008, v1.010, v1.011, v1.013–v1.016, v1.018, v1.019, v1.022, v1.023, v1.026, v1.030** and **v1.100–v1.113**;
    - the Black Belt rows they change: v0.218, v0.219, v0.220, v0.900, v0.902, v0.904, v0.911, v0.912, v0.914, v0.921, v0.928, v0.932, v0.937, v0.955;
    - also v0.507 (the words for hidden values) and your own v0.961.
 2. `docs/Dashboard Docs/TKD-Dashboard-Handoff.md` §6 (the rules for every database change).
@@ -271,7 +271,7 @@ The boxes:
 ## Waits for another session
 
 - **Font weight 600:** your CSS uses it 24 times (grading.css 13, blackBelt.css 6, form.css 2, receipt.css 2, results.css 1), but rulebook §7 allows 400 and 500 only.
-  - Not decided: Dashboard core's D6 (the receipt's font weights) was asked on 2026-10-28; the rest is a later question.
+  - Dashboard core's D6 is decided: the shared receipt uses 500, as §7 says (v1.112). Your own 600s are a separate question: ask Jeffrey once whether they go to 500 too (in Chrome on Windows the two look the same).
   - **Don't change weights unless Jeffrey decides.**
 - **Later:**
   - the top-bar people search (v1.031; the Dashboard core session) will read your candidates;
