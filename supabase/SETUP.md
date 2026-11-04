@@ -2837,7 +2837,7 @@ Tested in PGlite on every run (`run.mjs` step0032: the History line on a seeded 
 
 ## Migration 0034: Black Belt History names the subject of a correction (record_id)
 
-**Status: not applied yet.** Built on `black-belt`, design-review item BB8 (rulebook v0.971 / v0.972).
+**Status: applied 2026-11-04** (0034a pre-check as expected; 0034c: only `bb_candidate_history` changed — the other 541 public functions have the same checksum before and after — its line matches PGlite, security advisor nothing new; 0034d `0034_tests.sql` passed; 0032/0016/0024/0025/0026 tests not yet re-run on live — PGlite ran them after 0034). Built on `black-belt`, design-review item BB8 (rulebook v0.971 / v0.972).
 
 **Production order:** … 0032 → 0033 (live) → **0034**. It needs 0032 (it stops with "0034 needs migration 0032 … first" otherwise). **It must be live before the app version that reads `record_id` from the History line.** The app that is live today keeps working unchanged after it (it ignores the new key).
 
