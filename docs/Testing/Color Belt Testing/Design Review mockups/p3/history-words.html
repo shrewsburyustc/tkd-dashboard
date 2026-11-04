@@ -1,0 +1,150 @@
+<!doctype html>
+<!--
+  history-words.html — one page for Jeffrey: the History words Color Belt uses that the P3 mockup
+  did not draw (marked as proposals in src/screens/testing/text.js), each with an example, when it
+  shows, and Star's matching line. Amber = differs from Star, or wordy. Rendered to history-words.png
+  with docs/Design Review/tools/shoot.mjs. Colors and font from src/styles/tokens.css.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Belt History words</title>
+<style>
+  :root {
+    --color-bg: #ffffff; --color-surface: #f7f7f5; --color-border: #e5e5e2;
+    --color-text: #1f1f1f; --color-text-secondary: #6b6b6b; --color-blue: #003595; --color-blue-tint: #e6ebf4;
+    --color-warning-text: #633806; --color-warning-bg: #faeeda; --color-tag-warn-border: #f2d9b0;
+    --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-text); font: 14px/1.45 var(--font-family); }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 32px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 28px 0 8px; }
+  p { margin: 0 0 10px; }
+  .sub { color: var(--color-text-secondary); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; margin: 12px 0 16px; }
+  .chip { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--color-border); }
+  .chip.amber { background: var(--color-warning-bg); border-color: var(--color-tag-warn-border); }
+  .chip.money { background: var(--color-blue-tint); border-color: #c9d3e6; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+  td.ex { font-weight: 600; }
+  tr.amber td { background: var(--color-warning-bg); }
+  tr.amber td:first-child { box-shadow: inset 4px 0 0 #d99a2b; }
+  .why { display: block; font-weight: 400; color: var(--color-warning-text); font-size: 12px; margin-top: 3px; }
+  .star { color: var(--color-text); }
+  .none { color: var(--color-text-secondary); font-style: italic; }
+  .tag { display: inline-block; font-size: 12px; padding: 0 6px; border-radius: 6px; background: var(--color-blue-tint); color: var(--color-blue); margin-left: 4px; font-weight: 400; }
+  .group td { background: var(--color-surface); font-weight: 600; font-size: 12px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+
+  /* The history entry drawn as the shared line draws it */
+  .hist { border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; max-width: 460px; background: #fff; }
+  .hist .head { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .entry { padding: 6px 0; border-top: 1px solid var(--color-border); }
+  .entry:first-of-type { border-top: 0; }
+  .entry .what { font-size: 13px; }
+  .entry .when { font-size: 12px; color: var(--color-text-secondary); }
+  .pair { display: flex; flex-wrap: wrap; gap: 16px; }
+  .pair > div { flex: 1 1 300px; min-width: 0; }
+  .label { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 6px; }
+  .note { font-size: 13px; color: var(--color-text-secondary); margin-top: 8px; }
+
+  /* Phone: each table row becomes a small card */
+  @media (max-width: 640px) {
+    table, thead, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid var(--color-border); padding: 6px 0; }
+    td { border: 0; padding: 3px 10px; }
+    td::before { content: attr(data-l); display: block; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+    tr.group td::before { content: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Color Belt · History words the P3 mockup didn't draw</h1>
+  <p class="sub">Part 2, step 5 (CB7). P3 drew: Registered on the family form · Added at the desk (with day and time) · Moved to private testing from … (…) · Payment recorded · Payment undone · Payment changed: check → cash · Paying by changed · Day or time changed · Result: Passed. Everything below is a <b>proposal</b> in <code>src/screens/testing/text.js</code>, written in Star's style (v0.518).</p>
+  <div class="legend">
+    <span><span class="chip amber"></span>Amber: differs from Star, or wordy — worth a look</span>
+    <span><span class="chip"></span>White: same as Star, or Color Belt-only and short</span>
+    <span><span class="tag">money</span> hidden while Hide private details is on</span>
+  </div>
+
+  <table>
+    <thead><tr><th style="width:34%">Example, as it would appear</th><th style="width:36%">When it appears</th><th>Star's matching line</th></tr></thead>
+    <tbody>
+      <tr class="group"><td colspan="3">Adding, moving</td></tr>
+      <tr><td class="ex" data-l="Example">Added at the desk</td><td data-l="When">Event student added at the desk (the private one has its day and time, P3)</td><td data-l="Star" class="star">Added at the desk</td></tr>
+      <tr><td class="ex" data-l="Example">Moved to private testing</td><td data-l="When">Event student's History, on Move to private testing (ONE entry; the payments that moved are folded in)</td><td data-l="Star" class="none">none — Star's private is a field: "Private testing: Tue, Dec 1, 4:00 PM"</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Move to private testing undone<span class="why">wordy; Star has no move</span></td><td data-l="When">Event student's History, after the mover's Undo within 10 seconds (ONE entry; the payment coming back is folded in). Can add "; Possible duplicate found" when a duplicate pair comes back.</td><td data-l="Star" class="none">none — closest: "Back to the testing day"</td></tr>
+
+      <tr class="group"><td colspan="3">Money (only when the move's own row is cut off by the 500-row limit)</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Payment moved to private testing: $65 cash <span class="tag">money</span><span class="why">almost never shown now; Star has none</span></td><td data-l="When">Event side, a move's payment whose move entry isn't in the list</td><td data-l="Star" class="none">none</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Payment moved from the event: $65 cash, paid Oct 30 <span class="tag">money</span><span class="why">almost never shown now; wordy</span></td><td data-l="When">Private side, the same case</td><td data-l="Star" class="none">none</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Payment moved back from private testing: $65 cash, paid Oct 30 <span class="tag">money</span><span class="why">almost never shown now; wordy</span></td><td data-l="When">Event side, an Undo move's payment whose undo entry isn't in the list</td><td data-l="Star" class="none">none</td></tr>
+
+      <tr class="group"><td colspan="3">Money (other)</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Payment changed: $65 check, paid Nov 1 → $50 cash, paid Oct 31 <span class="tag">money</span><span class="why">longer than P3's "check → cash"; Star says only "Payment changed"</span></td><td data-l="When">Edit payment that changed the amount or the day too (only the parts that changed are named)</td><td data-l="Star" class="star">Payment changed</td></tr>
+      <tr><td class="ex" data-l="Example">Payment changed <span class="tag">money</span></td><td data-l="When">Edit payment where nothing differs, or half the pair is cut off</td><td data-l="Star" class="star">Payment changed</td></tr>
+      <tr><td class="ex" data-l="Example">Price: $85 → $95 <span class="tag">money</span></td><td data-l="When">Private testing: Edit details re-priced it</td><td data-l="Star" class="none">none</td></tr>
+
+      <tr class="group"><td colspan="3">Edit details</td></tr>
+      <tr><td class="ex" data-l="Example">First name: Owen → Owen J.</td><td data-l="When">Edit details (several changes = one entry, joined with "; ")</td><td data-l="Star" class="star">First name: Owen → Owen J.</td></tr>
+      <tr><td class="ex" data-l="Example">Last name: Reed → Reid</td><td data-l="When">Edit details</td><td data-l="Star" class="star">Last name: Reed → Reid</td></tr>
+      <tr><td class="ex" data-l="Example">Belt: White → Yellow</td><td data-l="When">Edit details changed the belt ("Belt changed" if the belt names are gone)</td><td data-l="Star" class="star">Current Dan: 1st Dan → 2nd Dan</td></tr>
+      <tr><td class="ex" data-l="Example">Class: Group A → Group B</td><td data-l="When">Private testing: the belt change moved the class</td><td data-l="Star" class="none">none</td></tr>
+      <tr><td class="ex" data-l="Example">Day or time changed: Tue, Dec 1 → Thu, Dec 3</td><td data-l="When">Private testing, when the first entry is cut off (only what the change itself holds; P3's full form otherwise)</td><td data-l="Star" class="star">Private testing: Thu, Dec 3, 4:00 PM</td></tr>
+
+      <tr class="group"><td colspan="3">Status</td></tr>
+      <tr><td class="ex" data-l="Example">Withdrawn</td><td data-l="When">Event student removed (Remove / withdraw)</td><td data-l="Star" class="star">Withdrawn</td></tr>
+      <tr><td class="ex" data-l="Example">Restored</td><td data-l="When">Event student or cancelled private testing restored</td><td data-l="Star" class="star">Restored</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Cancelled<span class="why">differs from Star (Color Belt's private testing has Cancel, not Withdraw)</span></td><td data-l="When">Private testing cancelled</td><td data-l="Star" class="star">Withdrawn</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Moved to Removed as a duplicate copy<span class="why">wordy (same as Star)</span></td><td data-l="When">Keep one in the duplicate check: the other copy</td><td data-l="Star" class="star">Moved to Removed as a duplicate copy</td></tr>
+      <tr><td class="ex" data-l="Example">Possible duplicate found</td><td data-l="When">Registration looks like another one (can join "Added at the desk; …")</td><td data-l="Star" class="star">Possible duplicate found</td></tr>
+      <tr><td class="ex" data-l="Example">Possible duplicate: kept both registrations</td><td data-l="When">Duplicate check: Keep both</td><td data-l="Star" class="star">Possible duplicate: kept both registrations</td></tr>
+      <tr><td class="ex" data-l="Example">Possible duplicate: kept this registration</td><td data-l="When">Duplicate check: this one was kept</td><td data-l="Star" class="star">Possible duplicate: kept this registration</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Signature deleted (90 days after the testing day)<span class="why">Star says "removed"; wordy</span></td><td data-l="When">The automatic 90-day signature clean-up</td><td data-l="Star" class="star">Signature removed (90 days after the testing day)</td></tr>
+      <tr><td class="ex" data-l="Example">Deleted</td><td data-l="When">Delete permanently (the History can't be opened afterwards, so it is rarely seen)</td><td data-l="Star" class="star">Deleted</td></tr>
+
+      <tr class="group"><td colspan="3">Results and the grading note</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Result: Not passed → Passed<span class="why">text.js marks it P3, but P3 drew only "Result: Passed"; Star names no grade</span></td><td data-l="When">A result changed</td><td data-l="Star" class="star">Grade changed</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Result cleared (was No show)<span class="why">same: drawn only as "Result: Passed"; Star names no grade. Also shows as its own entry when a No show is cleared by a move.</span></td><td data-l="When">Result cleared (by hand, a belt or day change, or a move)</td><td data-l="Star" class="star">Grade cleared</td></tr>
+      <tr class="amber"><td class="ex" data-l="Example">Grading note: Kicks need height<span class="why">prints the note text; Star has no grading note</span></td><td data-l="When">Grading note written or changed</td><td data-l="Star" class="none">none</td></tr>
+      <tr><td class="ex" data-l="Example">Grading note removed</td><td data-l="When">Grading note cleared</td><td data-l="Star" class="none">none</td></tr>
+
+      <tr class="group"><td colspan="3">Who</td></tr>
+      <tr><td class="ex" data-l="Example">Nov 1 · Staff</td><td data-l="When">The log has no name for who did it</td><td data-l="Star" class="star">Nov 1 · Staff</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Grading note in History</h2>
+  <p>Color Belt has a grading note per student (testing day and private testing). Star, Black Belt and Camps do not: Star's grades and Black Belt's grades have no note column, and Camps has no notes at all. So there is no other section to copy.</p>
+  <div class="pair">
+    <div>
+      <div class="label">Color Belt today — prints the note</div>
+      <div class="hist">
+        <div class="head">History · 3 changes</div>
+        <div class="entry"><div class="what">Grading note: Kicks need height</div><div class="when">Nov 20 · Dana Ross</div></div>
+        <div class="entry"><div class="what">Result: Passed</div><div class="when">Nov 20 · Dana Ross</div></div>
+        <div class="entry"><div class="what">Registered on the family form</div><div class="when">Oct 26 · Family form</div></div>
+      </div>
+      <p class="note">Not money, so it stays while Hide private details is on. A long note shows in full.</p>
+    </div>
+    <div>
+      <div class="label">Star's way — names the change, not the content</div>
+      <div class="hist">
+        <div class="head">History · 3 changes</div>
+        <div class="entry"><div class="what">Grade changed</div><div class="when">Nov 20 · Dana Ross</div></div>
+        <div class="entry"><div class="what">Grade changed</div><div class="when">Nov 20 · Dana Ross</div></div>
+        <div class="entry"><div class="what">Registered on the family form</div><div class="when">Oct 26 · Family form</div></div>
+      </div>
+      <p class="note">Star prints no grade and has no note. (Black Belt is the other way: "Grade changed: Push-ups 28 → 32".) In Star's style the note line would read "Grading note changed".</p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

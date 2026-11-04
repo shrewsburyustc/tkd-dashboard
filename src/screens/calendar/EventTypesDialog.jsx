@@ -16,7 +16,7 @@ import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
-import { Grip } from '../testing/RankRows.jsx';
+import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
 import { cleanText, MAX_TYPES, textProblem, TYPE_NAME_MAX } from '../../lib/calendar/rules.js';
 import * as T from './text.js';

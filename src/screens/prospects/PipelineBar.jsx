@@ -13,6 +13,7 @@
 //   - the Board always shows everyone, so "Follow up today" (chip / Today tile) is only in the List
 //     (Prospects difference C); a side-exit chip shows those children in the List
 import { IconClockHour4, IconLayoutKanban, IconList, IconSearch, IconX } from '@tabler/icons-react';
+import IconButton from '../../components/IconButton.jsx';
 import * as T from './text.js';
 
 export function ViewSwitch({ view, onView }) {
@@ -50,9 +51,17 @@ export default function PipelineBar({
       <span className="visually-hidden">{T.SEARCH_LABEL}</span>
       <input id={`${idBase}-search`} type="search" className="psearch-input" placeholder={T.SEARCH} value={search} maxLength={80} onChange={(e) => onSearch(e.target.value)} />
       {search && (
-        <button type="button" className="psearch-clear" aria-label={T.CLEAR_SEARCH} onClick={() => onSearch('')}>
-          <IconX size={14} aria-hidden="true" />
-        </button>
+        // the shared icon button: 28px, "Clear search" tooltip, 44px on touch (rulebook v0.631);
+        // it disappears when pressed, so focus goes back into the search box
+        <IconButton
+          label={T.CLEAR_SEARCH}
+          Icon={IconX}
+          onClick={(e) => {
+            const input = e.currentTarget.closest('label')?.querySelector('input');
+            onSearch('');
+            input?.focus();
+          }}
+        />
       )}
     </label>
   );

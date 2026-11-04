@@ -35,7 +35,7 @@ function Footer({ isPhone, onCancel, children }) {
   );
 }
 
-export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel }) {
+export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel, onTop = false }) {
   const times = state.times;
   const groups = [];
   if (Array.isArray(times)) {
@@ -50,7 +50,7 @@ export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel
   }
   const canSave = Boolean(state.pick) && !state.saving;
   return (
-    <Dialog title={T.bookTitle(state.name, state.change)} size="detail" fullScreen={isPhone} onRequestClose={onCancel}>
+    <Dialog title={T.bookTitle(state.name, state.change)} size="detail" fullScreen={isPhone} onTop={onTop} returnFocusTo={onTop ? state.opener ?? null : null} onRequestClose={onCancel}>
       {times === null && <p className="field-hint">{T.LOADING_TIMES}</p>}
       {times === 'error' && <Notice>{T.SAVE_FAILED}</Notice>}
       {Array.isArray(times) && times.length === 0 && <p className="fnotimes">{T.NO_TIMES}</p>}
@@ -91,10 +91,10 @@ export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel
   );
 }
 
-export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel }) {
+export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel, onTop = false }) {
   const ok = Boolean(state.date) && state.date <= today && !state.saving;
   return (
-    <Dialog title={T.JOINED_TITLE} size="small" fullScreen={isPhone} onRequestClose={onCancel}>
+    <Dialog title={T.JOINED_TITLE} size="small" fullScreen={isPhone} onTop={onTop} returnFocusTo={onTop ? state.opener ?? null : null} onRequestClose={onCancel}>
       <p className="tdialog-sub">{state.name}</p>
       <div className="field">
         {/* plain text, not a <label>: a label would open the calendar when clicked (as Star's fields) */}
@@ -198,9 +198,9 @@ export function AddProspectDialog({ state, isPhone, onPickSchool, onPick, onCanc
   );
 }
 
-export function DeleteDialog({ state, onConfirm, onCancel }) {
+export function DeleteDialog({ state, onConfirm, onCancel, onTop = false }) {
   return (
-    <Dialog title={T.deleteTitle(state.name)} variant="confirm" describedBy={`pdel-${state.key}`} onRequestClose={onCancel}>
+    <Dialog title={T.deleteTitle(state.name)} variant="confirm" describedBy={`pdel-${state.key}`} onTop={onTop} returnFocusTo={onTop ? state.opener ?? null : null} onRequestClose={onCancel}>
       <p id={`pdel-${state.key}`} className="tdialog-sub tdialog-body">
         {state.note ? NOTES[state.note] ?? state.note : T.deleteBody(state.name, state.siblings)}
       </p>

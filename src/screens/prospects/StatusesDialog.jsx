@@ -14,7 +14,7 @@ import RowMenu from '../../components/RowMenu.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
 import { cleanText, textProblem } from '../../lib/calendar/rules.js';
-import { Grip } from '../testing/RankRows.jsx';
+import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import * as T from './text.js';
 
 export const isStatusFormDirty = (state) => (state.step === 'add' || state.step === 'edit') && JSON.stringify(state.values) !== JSON.stringify(state.initial);
@@ -97,7 +97,25 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
               { key: 'edit', label: T.EDIT, Icon: IconEdit, onSelect: () => onStep('edit', menu.status) },
               { key: 'up', label: T.MOVE_UP, Icon: IconArrowUp, disabled: menu.index === 0, onSelect: () => onReorder(menu.status, menu.index - 1) },
               { key: 'down', label: T.MOVE_DOWN, Icon: IconArrowDown, disabled: menu.index === statuses.length - 1, onSelect: () => onReorder(menu.status, menu.index + 1) },
-              { key: 'delete', label: T.DELETE_STATUS, Icon: IconTrash, danger: true, separatorBefore: true, disabled: !isAdmin || Boolean(menu.status.builtin), onSelect: () => onStep('delete', menu.status) },
+              // Delete status (rulebook v0.632): staff never see it — only admins delete a status (v0.244 (5);
+              // §8: staff don't see what they can never do). On a built-in status it is grayed with its
+              // reason under it (v1.004).
+              ...(isAdmin
+                ? [{
+                  key: 'delete',
+                  label: menu.status.builtin ? (
+                    <span className="ev-menu-two">
+                      <span>{T.DELETE_STATUS}</span>
+                      <span className="ev-menu-reason">{T.BUILTIN_NO_DELETE}</span>
+                    </span>
+                  ) : T.DELETE_STATUS,
+                  Icon: IconTrash,
+                  danger: true,
+                  separatorBefore: true,
+                  disabled: Boolean(menu.status.builtin),
+                  onSelect: () => onStep('delete', menu.status),
+                }]
+                : []),
             ]}
             onClose={(reason) => {
               const anchor = menu.anchor;

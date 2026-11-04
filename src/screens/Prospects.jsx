@@ -257,12 +257,12 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     };
   }
 
-  async function changeStatus(statusId) {
+  async function changeStatus(statusId, opener = null) {
     const d = ref.current.detail;
     if (!d || busy || statusId === d.statusId) return;
     const st = statusOfDetail()?.get(statusId);
     if (st?.builtin === 'joined') {
-      setDialog({ type: 'joined', key: Date.now(), name: d.childFirstName, statusId, date: today, saving: false, note: null });
+      setDialog({ type: 'joined', key: Date.now(), name: d.childFirstName, statusId, date: today, saving: false, note: null, opener });
       return;
     }
     const wasJoined = statusOfDetail()?.get(d.statusId)?.builtin === 'joined'; // before the save (the panel may change school)
@@ -310,11 +310,11 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
 
   // ----- Book / change / cancel a free class -----
-  async function openBook(target = null, dropCode = null) {
+  async function openBook(target = null, dropCode = null, opener = null) {
     const d = target ?? ref.current.detail;
     if (!d) return;
     const change = Boolean(d.booking && d.booking.status === 'booked');
-    setDialog({ type: 'book', key: Date.now(), prospect: d, dropCode, name: d.childFirstName, change, times: null, pick: null, saving: false, note: null });
+    setDialog({ type: 'book', key: Date.now(), prospect: d, dropCode, name: d.childFirstName, change, times: null, pick: null, saving: false, note: null, opener });
     const res = await openTimesFor({ id: d.id, from: today, to: addDays(today, 60) });
     setDialog((g) => (g && g.type === 'book' ? { ...g, times: res.status === 'ok' ? res.times : 'error' } : g));
     if (res.status === 'no_access') onNoAccess();
@@ -593,10 +593,10 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
         onStatus={changeStatus}
         onFollowUp={changeFollowUp}
         onCheckIn={(came, afterClass) => doCheckIn(came, afterClass)}
-        onBook={() => openBook()}
+        onBook={(e) => openBook(null, null, e?.currentTarget ?? null)}
         onCancelBooking={doCancelBooking}
         onOpenSibling={(id, opener) => openProspect({ id, openedByMe: true }, school.code, opener)}
-        onDelete={() => setDialog({ type: 'delete', key: Date.now(), name: detail.childFirstName, siblings: detail.siblings.length > 0, saving: false, note: null })}
+        onDelete={(e) => setDialog({ type: 'delete', key: Date.now(), name: detail.childFirstName, siblings: detail.siblings.length > 0, saving: false, note: null, opener: e?.currentTarget ?? null })}
       />
     );
   };
@@ -710,11 +710,15 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
 
   let dialogElement = null;
+  // On phones the prospect panel is itself a full-screen dialog: a dialog opened from it (Book /
+  // Change time, Joined, Delete) is drawn ON TOP of it (rulebook v1.100), so Back closes only that
+  // one and focus goes back to the panel button that opened it.
+  const overPanel = Boolean(isPhone && selected && !screenLocked);
   if (dialog && !screenLocked) {
     if (dialog.type === 'book') {
-      dialogElement = <BookTimeDialog state={dialog} today={today} isPhone={isPhone} onPick={(pick) => setDialog((g) => ({ ...g, pick, note: pick ? null : 'PICK' }))} onSave={saveBook} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <BookTimeDialog state={dialog} today={today} isPhone={isPhone} onTop={overPanel} onPick={(pick) => setDialog((g) => ({ ...g, pick, note: pick ? null : 'PICK' }))} onSave={saveBook} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'joined') {
-      dialogElement = <JoinedDialog state={dialog} today={today} isPhone={isPhone} onChange={(date) => setDialog((g) => ({ ...g, date }))} onSave={saveJoined} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <JoinedDialog state={dialog} today={today} isPhone={isPhone} onTop={overPanel} onChange={(date) => setDialog((g) => ({ ...g, date }))} onSave={saveJoined} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'add') {
       dialogElement = (
         <AddProspectDialog
@@ -732,7 +736,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     } else if (dialog.type === 'came') {
       dialogElement = <CameDialog state={dialog} isPhone={isPhone} onSave={saveCame} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'delete') {
-      dialogElement = <DeleteDialog state={dialog} onConfirm={confirmDelete} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <DeleteDialog state={dialog} onTop={overPanel} onConfirm={confirmDelete} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'statuses' && statusSchool) {
       dialogElement = (
         <StatusesDialog
@@ -803,9 +807,17 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           <span className="visually-hidden">{T.SEARCH_LABEL}</span>
           <input type="search" className="psearch-input" placeholder={T.SEARCH} value={search} maxLength={80} onChange={(e) => setSearch(e.target.value)} />
           {search && (
-            <button type="button" className="psearch-clear" aria-label={T.CLEAR_SEARCH} onClick={() => setSearch('')}>
-              <IconX size={14} aria-hidden="true" />
-            </button>
+            // the shared icon button: 28px, "Clear search" tooltip, 44px on touch (rulebook v0.631);
+            // it disappears when pressed, so focus goes back into the search box
+            <IconButton
+              label={T.CLEAR_SEARCH}
+              Icon={IconX}
+              onClick={(e) => {
+                const input = e.currentTarget.closest('label')?.querySelector('input');
+                setSearch('');
+                input?.focus();
+              }}
+            />
           )}
         </label>
       )}

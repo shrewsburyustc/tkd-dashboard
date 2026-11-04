@@ -24,14 +24,25 @@
 // ("Group B · 3 students"), each in belt order. A class with its own time works as before.
 // The Students tab stays one class at a time; both tabs share the class choice (a group is
 // chosen through its first class).
+// CB18 (v1.029, v0.416): "Print results" sits at the right of the class switch (its own line
+// under the switch on phones). It prints the WHOLE event — who passed, to which belt, a page per
+// class (ResultsSheet.jsx) — whatever class is chosen. Staff and admins both see it. Beside it,
+// Download CSV (v0.416, v0.418 Q3; migration 0030's testing_results_csv): admins only, not drawn
+// while Hide private details is on (EventPage passes csv = null then), the whole event too. It
+// says "Downloading…" while it works; EventPage runs the download and shows its toast / banner.
 // This file only DRAWS; EventPage owns the class choice and the dialogs, useGradingSaves the saves.
-import { IconAlertTriangle, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
+// The one exception is Print results: this tab draws its sheet and opens the print window itself
+// (the same way EventPage prints the grading sheet), using the results already on screen.
+import { useEffect, useState } from 'react';
+import { IconAlertTriangle, IconDownload, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
 import { placeTip } from '../../../components/IconButton.jsx';
+import { LOCATION_NAME } from '../../../lib/device.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
 import { canChangeResults, gradingWindow, groupOfClass, resultCounts, testingGroups } from '../../../lib/testing/gradingRules.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ResultButtons, { ResultTag } from './ResultButtons.jsx';
 import { TestingForCell } from './StudentDialog.jsx';
+import ResultsSheet from './ResultsSheet.jsx';
 import * as T from '../text.js';
 
 // One student row.
@@ -129,16 +140,18 @@ function GradingRow({ row, shown, rank, readOnlyTags, showNote, buttonsDisabled,
 
 // props: event, classes, rows (ACTIVE roster rows of the whole event, roster order), today,
 // isAdmin, layout, classSel (the chosen class id — its testing group shows), onClassSel, grading,
-// onOpenNote(row, opener), onPrint(opener), panelId, tabId
-export default function GradingTab({ event, classes, rows, today, isAdmin, layout, classSel, onClassSel, grading, onOpenNote, onPrint, panelId, tabId }) {
+// onOpenNote(row, opener), onPrint(opener), panelId, tabId,
+// csv ({ busy, onDownload } — Download CSV; null = no button: staff, or Hide private details on)
+export default function GradingTab({ event, classes, rows, today, isAdmin, layout, classSel, onClassSel, grading, onOpenNote, onPrint, panelId, tabId, csv = null }) {
   // Before / on / after the testing day ("dayWindow": the name `window` is the browser's own).
   const dayWindow = gradingWindow(today, event.testingDate);
   const showNote = canChangeResults(dayWindow, isAdmin); // the note button only when notes can change
   const readOnlyTags = dayWindow === 'after' && !isAdmin;
   const buttonsDisabled = dayWindow === 'before';
 
-  // The values on screen (an unsaved tap counts as tapped, G5).
-  const shownRows = rows.map((r) => ({ ...r, ...grading.view(r) }));
+  // The values on screen (an unsaved tap counts as tapped, G5). loadedResult keeps the database's
+  // value as last loaded (Print results prints only saved results).
+  const shownRows = rows.map((r) => ({ ...r, loadedResult: r.result ?? null, ...grading.view(r) }));
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
   const countByClass = new Map(classes.map((c) => [c.id, 0]));
   for (const r of rows) countByClass.set(r.eventClassId, (countByClass.get(r.eventClassId) ?? 0) + 1);
@@ -150,6 +163,26 @@ export default function GradingTab({ event, classes, rows, today, isAdmin, layou
   const classRows = group ? shownRows.filter((r) => group.classIds.includes(r.eventClassId)) : [];
   const unsavedClasses = new Set(grading.unsavedClassIds);
   const classLabelId = `${panelId}-class-label`;
+
+  // ----- Print results (CB18): draw the sheet, print, remove it again -----
+  // printingResults = { printedAt, opener } while the results sheet is on the page.
+  const [printingResults, setPrintingResults] = useState(null);
+  useEffect(() => {
+    if (!printingResults) return undefined;
+    const done = () => {
+      setPrintingResults(null);
+      // Back to the button that was pressed (if it is still on the page).
+      const opener = printingResults.opener;
+      if (opener && opener.isConnected) opener.focus();
+    };
+    window.addEventListener('afterprint', done);
+    // Wait one frame so the sheet is on the page before the print window opens.
+    const frame = window.requestAnimationFrame(() => window.print());
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('afterprint', done);
+    };
+  }, [printingResults]);
 
   let lockLine = null;
   if (dayWindow === 'before') lockLine = T.gradingOpensLine(event.testingDate);
@@ -181,31 +214,57 @@ export default function GradingTab({ event, classes, rows, today, isAdmin, layou
         <span id={classLabelId} className="visually-hidden">
           {T.CLASS_SWITCH_LABEL}
         </span>
-        <div className="ev-class-switch">
-          <ChoiceGroup
-            labelId={classLabelId}
-            value={group?.id ?? null}
-            onChange={onClassSel}
-            options={groups.map((g) => {
-              const count = g.classIds.reduce((sum, id) => sum + (countByClass.get(id) ?? 0), 0);
-              const unsaved = g.classIds.some((id) => unsavedClasses.has(id));
-              const label = T.groupChoiceLabel(g.classes.map((c) => c.className));
-              return {
-                key: g.id,
-                label: `${label} ${count}${unsaved ? `, ${T.classUnsavedLabel}` : ''}`,
-                content: (
-                  <>
-                    <span className="ev-cs-name">
-                      {label}
-                      {/* ti-alert-triangle = this class has results not saved (G5) */}
-                      {unsaved && <IconAlertTriangle size={14} aria-hidden="true" className="gr-cs-warn" />}
-                    </span>
-                    <span className="ev-cs-count">{count}</span>
-                  </>
-                ),
-              };
-            })}
-          />
+        {/* The class switch, with Print results at its right (CB18; Star's Results bar) */}
+        <div className="gr-bar">
+          <div className="ev-class-switch">
+            <ChoiceGroup
+              labelId={classLabelId}
+              value={group?.id ?? null}
+              onChange={onClassSel}
+              options={groups.map((g) => {
+                const count = g.classIds.reduce((sum, id) => sum + (countByClass.get(id) ?? 0), 0);
+                const unsaved = g.classIds.some((id) => unsavedClasses.has(id));
+                const label = T.groupChoiceLabel(g.classes.map((c) => c.className));
+                return {
+                  key: g.id,
+                  label: `${label} ${count}${unsaved ? `, ${T.classUnsavedLabel}` : ''}`,
+                  content: (
+                    <>
+                      <span className="ev-cs-name">
+                        {label}
+                        {/* ti-alert-triangle = this class has results not saved (G5) */}
+                        {unsaved && <IconAlertTriangle size={14} aria-hidden="true" className="gr-cs-warn" />}
+                      </span>
+                      <span className="ev-cs-count">{count}</span>
+                    </>
+                  ),
+                };
+              })}
+            />
+          </div>
+          <span className="gr-bar-buttons">
+            <button
+              type="button"
+              className="btn gr-print-results"
+              onClick={(clickEvent) => setPrintingResults({ printedAt: new Date(), opener: clickEvent.currentTarget })}
+            >
+              {/* ti-printer = print */}
+              <IconPrinter size={16} aria-hidden="true" />
+              {T.PRINT_RESULTS}
+            </button>
+            {csv && (
+              <button
+                type="button"
+                className="btn gr-download-csv"
+                aria-disabled={csv.busy ? 'true' : undefined}
+                onClick={() => csv.onDownload()}
+              >
+                {/* ti-download = download a file */}
+                <IconDownload size={16} aria-hidden="true" />
+                {csv.busy ? T.DOWNLOADING_CSV : T.DOWNLOAD_CSV}
+              </button>
+            )}
+          </span>
         </div>
         {group && (
           <div className="gr-classline">
@@ -294,8 +353,36 @@ export default function GradingTab({ event, classes, rows, today, isAdmin, layou
       <span className="visually-hidden" role="status" aria-live="polite">
         {grading.announcement}
       </span>
+      {printingResults && (
+        <ResultsSheet
+          eventName={event.name}
+          subLine={T.resultsSheetSub(event.testingDate, LOCATION_NAME[event.locationCode] ?? '')}
+          classes={passedByClass(groups, shownRows, rankById)}
+          printedAt={printingResults.printedAt}
+        />
+      )}
     </div>
   );
+}
+
+// The results sheet's data (CB18): every class in class switch order, each with only its students
+// who PASSED and the belt they passed to. Only SAVED results count: a tap that is still saving or
+// didn't save (Saving… / Not saved) uses the database's value instead, so an unsaved Pass is never
+// printed. Nothing else about a student goes to the sheet — only the name and the new belt.
+function savedResult(r) {
+  // state null = no tap on this page (the loaded value); 'saved' = the database's answer.
+  return r.state === null || r.state === 'saved' ? r.result : (r.loadedResult ?? null);
+}
+function passedByClass(groups, shownRows, rankById) {
+  return groups
+    .flatMap((g) => g.classes)
+    .map((cls) => ({
+      id: cls.id,
+      name: cls.className,
+      rows: shownRows
+        .filter((r) => r.eventClassId === cls.id && savedResult(r) === 'pass')
+        .map((r) => ({ id: r.id, name: T.studentLabel(r), belt: rankById.get(r.eventRankId)?.testingFor ?? null })),
+    }));
 }
 
 // The sparring-gear tag(s) of a testing group's class line (Grading and Students, v0.193 /

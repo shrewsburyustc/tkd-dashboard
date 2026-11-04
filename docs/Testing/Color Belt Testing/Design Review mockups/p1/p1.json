@@ -1,0 +1,281 @@
+{
+ "title": "Color Belt · Part 2 · P1 · Event roster (CB1, CB2, CB3, CB9)",
+ "subtitle": "<b>Everything here was already decided</b>: Star's v0.518 answers and the shared parts' looks (v1.103–v1.107), landed on Color Belt's event roster. <span style=\"color:#6B6B6B\">(Preview screenshots, fake data. The “after” is drawn on top of the real page with the shared parts' real markup; nothing in the app is built yet.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "pc-today.png",
+     "crop": [
+      60,
+      230,
+      1210,
+      490
+     ],
+     "scale": 0.8,
+     "caption": "<b>1. Mark paid</b> records the payment at once, by the family's choice (Ava: Cash). If they pay another way, the desk has to fix it afterwards.",
+     "marks": [
+      [
+       1107,
+       525,
+       108,
+       28
+      ]
+     ]
+    },
+    {
+     "src": "pc-menu-today.png",
+     "crop": [
+      640,
+      400,
+      630,
+      320
+     ],
+     "scale": 0.9,
+     "caption": "<b>2.</b> ⋯ → <b>Undo payment</b> acts at once, with no question. There is no Print receipt.",
+     "marks": [
+      [
+       1048,
+       528,
+       198,
+       62
+      ]
+     ]
+    },
+    {
+     "src": "pc-filter-today.png",
+     "crop": [
+      60,
+      230,
+      1210,
+      250
+     ],
+     "scale": 0.8,
+     "caption": "<b>3. Count cards</b> (here Not paid is on). Already drawn like the shared cards.",
+     "marks": [
+      [
+       672,
+       240,
+       286,
+       72
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "pc-markpaid-after.png",
+     "crop": [
+      640,
+      500,
+      630,
+      240
+     ],
+     "scale": 0.9,
+     "caption": "<b>1. CB1 · Mark paid opens the shared box</b> under the button: name · amount (worked out by the database, shown, not typed), <b>Paid by</b> preset to the family's choice with “They chose Cash on the form.” (or “… at the desk.”), then <b>Mark paid $50</b>. Date = today. Picking Check or Card also changes “Paying by” (v0.418). “Payment recorded” + Undo stays.",
+     "marks": [
+      [
+       975,
+       557,
+       240,
+       166
+      ]
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w820-markpaid-after.png",
+       "shotWidth": 820,
+       "crop": [
+        96,
+        280,
+        700,
+        260
+       ],
+       "scale": 0.55,
+       "caption": "Tablet 820",
+       "marks": [
+        [
+         499,
+         340,
+         240,
+         178
+        ]
+       ]
+      },
+      {
+       "src": "w390-markpaid-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        190,
+        390,
+        350
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         8,
+         340,
+         240,
+         178
+        ]
+       ]
+      },
+      {
+       "src": "w320-markpaid-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        190,
+        320,
+        350
+       ],
+       "scale": 0.7,
+       "caption": "320 wide",
+       "marks": [
+        [
+         8,
+         340,
+         240,
+         178
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "src": "pc-menu-after.png",
+     "crop": [
+      640,
+      400,
+      630,
+      320
+     ],
+     "scale": 0.9,
+     "caption": "<b>2. CB2 · Print receipt</b> ends the ⋯ money group, for staff and admins, on a row with a payment. Hidden while Hide private details is on. (The receipt itself is mockup P3.)",
+     "marks": [
+      [
+       1048,
+       558,
+       198,
+       32
+      ]
+     ]
+    },
+    {
+     "src": "pc-confirm-after.png",
+     "crop": [
+      440,
+      60,
+      400,
+      230
+     ],
+     "scale": 1,
+     "caption": "<b>3. CB3 · Undo payment asks first</b> (Star's words): “Undo Owen Reed's payment?” · Keep payment (focused first) · <b>Undo payment</b> (blue: nothing is lost for good). “Undoing…” while it works. The toast's Undo right after Mark paid stays one tap.",
+     "marks": [
+      [
+       460,
+       80,
+       360,
+       183
+      ]
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w820-confirm-after.png",
+       "shotWidth": 820,
+       "crop": [
+        200,
+        70,
+        420,
+        240
+       ],
+       "scale": 0.75,
+       "caption": "Tablet 820",
+       "marks": [
+        [
+         230,
+         96,
+         360,
+         187
+        ]
+       ]
+      },
+      {
+       "src": "w390-confirm-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        60,
+        390,
+        240
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         16,
+         84,
+         358,
+         187
+        ]
+       ]
+      },
+      {
+       "src": "w320-confirm-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.7,
+       "caption": "320 wide: the buttons stack",
+       "marks": [
+        [
+         16,
+         64,
+         288,
+         231
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "src": "pc-filter-today.png",
+     "crop": [
+      60,
+      230,
+      1210,
+      250
+     ],
+     "scale": 0.8,
+     "caption": "<b>4. CB9 · Count cards: no visible change.</b> The roster's own cards are swapped for the shared CountCards in the code; they already look like v1.107 (blue edge on the card that's on, 16 px icons, Payments recorded a plain total, not a button).",
+     "marks": [
+      [
+       672,
+       240,
+       286,
+       72
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<b>Nothing to decide here</b> — all copied from Star (v0.518) and the shared parts (v1.103–v1.107). <b>OK as drawn?</b>"
+}

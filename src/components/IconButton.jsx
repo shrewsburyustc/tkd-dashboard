@@ -6,6 +6,10 @@
 //     keyboard focus (shared.css, ".tib-tip").
 // Writing it once here means no icon button can forget either.
 //
+// Turned off (`disabled`) or unavailable (`aria-disabled="true"`, still a Tab stop), the button is
+// drawn gray and doesn't react to the pointer, but the tooltip still shows its name (shared.css,
+// rulebook v1.120).
+//
 // The bubble normally sits ABOVE the button. If there's no room above (the row is at the top of
 // the scrolling area), placeTip() flips it BELOW, so it's never cut off.
 //

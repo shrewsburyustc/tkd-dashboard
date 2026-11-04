@@ -8,12 +8,27 @@
 // Follows "Hide private details" (v0.506): its words are at the end, and a few sentences take a
 // `hidden` input so they never name money while the switch is on.
 
+// Money in the sentences below is written by the dashboard’s one money helper (rulebook
+// v1.026): "$65", with cents only when there are some ("$290.50").
+import { formatMoney } from '../../lib/money.js';
+
 // ----- 7.1 Page, tabs, states -----
 export const PAGE_TITLE = 'Testing';
 export const ADD_CLASS = 'Add class';
 export const TAB_CLASSES_RANKS = 'Classes and ranks';
 export const VIEW_ONLY_LINE = 'View only. Ask an admin to make changes.';
-export const BLOCKED_ON_BOTH = 'Testing is kept separate for each school. Choose a school to see its testing.';
+
+// ----- Both: one box per school (CB13, rulebook v1.022 / v0.415 — testing/BothSummary.jsx) -----
+export const BOTH_SCHOOLS = 'Both schools'; // the line under the title (one wording everywhere, v1.022)
+export const BOTH_NO_EVENTS = 'No upcoming events.';
+export const BOTH_PRIVATE_HEADING = 'Private testings';
+export const BOTH_NO_PRIVATE = 'No upcoming private testings.';
+// "3 upcoming · next Tue, Dec 1, 4:00 PM" (no names, no money on Both)
+export const bothPrivateLine = (count, dateIso, hhmm) => `${count} upcoming · next ${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}`;
+export const bothOpenSchool = (school) => `Open ${school}`;
+export const BOTH_HINT = 'Each school’s testing is kept separate. Open a school to see all its events, students and payments.';
+export const BOTH_LOADING = 'Loading both schools’ testing'; // heard by screen readers only
+export const BOTH_LOAD_FAILED = 'Couldn’t load the schools’ testing. Check the connection, then retry.'; // NOT IN MOCKUPS
 export const LOADING = 'Loading Classes and ranks';
 
 export const emptySchoolAdmin = (school) => `No classes yet at ${school}.`;
@@ -96,6 +111,10 @@ export const SAVE = 'Save';
 export const SAVING = 'Saving…'; // on the Save button while the save is on its way
 export const CLOSE = 'Close';
 export const DELETE = 'Delete';
+export const DELETING = 'Deleting…'; // the pressed Delete … button while the delete is on its way (v1.008 D1a)
+// Classes and ranks' delete boxes (v1.008 rule 1, v0.422): the button that changes nothing says what stays.
+export const KEEP_RANK = 'Keep rank';
+export const KEEP_CLASS = 'Keep class';
 
 // "Group A · Worcester"
 export const classAtSchool = (className, school) => `${className} · ${school}`;
@@ -267,6 +286,11 @@ export const undoNotEmpty = (className) => `Couldn't undo. ${className} has rank
 export const undoAward = (rankName, className) =>
   `Couldn't undo. ${rankName} is now ${className}'s final award. Use ⋯ → Delete rank instead.`;
 export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry.";
+// Undo of Edit details / Change day or time when a result (or No show) was recorded in the
+// meantime — undoing could clear it. NOT IN MOCKUPS.
+export const UNDO_HAS_RESULT = "Couldn't undo. A result was recorded just now.";
+// Undo of Change day or time when the old day has passed since. NOT IN MOCKUPS.
+export const UNDO_PAST_DAY = "Couldn't undo. That day has passed, so it can't be put back.";
 
 export const TOAST_RANK_SAVED = 'Rank saved';
 export const TOAST_RANK_ADDED = 'Rank added';
@@ -338,6 +362,9 @@ export function timeLabel(hhmm) {
 
 // ----- Money -----
 // 6500 → "$65" (whole dollars; the same style as Classes and ranks)
+// Color Belt’s own screens and sentences use formatMoney (src/lib/money.js) since design
+// review CB16; this one stays, unchanged, because Camps imports it (src/screens/camps/text.js)
+// until Camps switches in its own prompt.
 export function dollars(cents) {
   if (typeof cents !== 'number' || !Number.isFinite(cents)) return '';
   const value = cents / 100;
@@ -447,6 +474,14 @@ export const CLOSE_AUTOMATICALLY = 'Close automatically at the end of';
 export const CLOSE_AUTOMATICALLY_LABEL = 'Close automatically at the end of the closing date';
 export const CLOSING_DATE_LABEL = 'Closing date';
 export const CLOSE_AUTOMATICALLY_HINT = '11:59 PM, Massachusetts time. You can open or close registration yourself at any time.';
+// The calendar (Star's date picker, v1.018 / v0.414 — words copied from Star's v0.503)
+export const CHOOSE = 'Choose…'; // an empty date field
+export const PAST_DATES_HINT = "Past dates can’t be chosen."; // under the days: testing date, private day
+export const MARKED_TESTING_DATE = 'Testing date.'; // after the dot, while the testing date's month is on show
+export const MARKED_TESTING_DATE_SR = 'testing date'; // what a screen reader adds to that day
+export const closingRangeHint = (testingDate) => `The closing date can be from today up to ${weekdayMonthDay(testingDate)}.`;
+export const CLOSING_PASSED_HINT = 'The testing day has passed, so a new closing date can’t be chosen. Move the testing date first.';
+export const CHOOSE_TESTING_DATE_FIRST = 'Choose the testing date first.';
 export const NOTE_FOR_FAMILIES = 'Note for families (optional)';
 export const NOTE_HINT = 'Shown on the registration form.';
 export const NO_CLASSES_YET = 'This school has no classes yet. Add them in Classes and ranks first.';
@@ -498,10 +533,10 @@ export function deleteEventBody({ activeCount, removedCount, paymentCents, resul
   }
   if (resultCount > 0) {
     const results = resultCount === 1 ? 'their 1 testing result' : `their ${resultCount} testing results`;
-    if (paymentCents > 0) return `Its ${who}, ${regs}, ${results} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
+    if (paymentCents > 0) return `Its ${who}, ${regs}, ${results} and ${formatMoney(paymentCents)} of payments are deleted too. ${tail}`;
     return `Its ${who}, ${regs} and ${results} are deleted too. ${tail}`; // CP1
   }
-  if (paymentCents > 0) return `Its ${who}, ${regs} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
+  if (paymentCents > 0) return `Its ${who}, ${regs} and ${formatMoney(paymentCents)} of payments are deleted too. ${tail}`;
   return `Its ${who} and ${regs} are deleted too. ${tail}`;
 }
 export const KEEP_EVENT = 'Keep event';
@@ -539,7 +574,7 @@ export const CARD_PAID = 'Paid';
 export const CARD_NOT_PAID = 'Not paid';
 export const CARD_PAYMENTS = 'Payments recorded';
 // R8: the small gray line under Payments recorded when removed students' payments are in it.
-export const includesRemoved = (cents) => `includes ${dollars(cents)} from removed students`;
+export const includesRemoved = (cents) => `includes ${formatMoney(cents)} from removed students`;
 export const SHOWING_PAID = 'Showing paid only';
 export const SHOWING_NOT_PAID = 'Showing not paid only';
 export const SHOW_ALL = 'Show all';
@@ -582,7 +617,6 @@ export function duplicateBoxLine(count) {
   return count === 1 ? '1 possible duplicate' : `${count} possible duplicates`;
 }
 export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
-export const REVIEW = 'Review';
 
 // ⋯ menu on a student (R8, plan answers 6 and 8)
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';
@@ -596,12 +630,14 @@ export const REVIEW_DUPLICATE = 'Review possible duplicate';
 export const moreForStudent = (name) => `More actions for ${name}`;
 
 // Toasts
-export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${dollars(cents)} ${payingByLower(method)}`;
+export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${formatMoney(cents)} ${payingByLower(method)}`;
 export const withdrawnToast = (name) => `${name} withdrawn`;
 export const restoredToast = (name) => `${name} restored`;
 export const studentAddedToast = (name) => `${name} added`;
 export const TOAST_CHANGES_SAVED = 'Changes saved';
-export const TOAST_PAYMENT_SAVED = 'Payment saved';
+export const TOAST_PAYMENT_SAVED = 'Payment saved'; // not used by Color Belt now; Camps reuses it (camps/text.js)
+// After Edit payment, with Undo for 5 seconds (v1.003, CB3 — Black Belt's words)
+export const TOAST_PAYMENT_CHANGED = 'Payment changed';
 export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
 export const TOAST_KEPT_BOTH = 'Kept both registrations';
@@ -616,6 +652,33 @@ export const UNDO_PAYMENT_TOO_LATE = 'Too late to undo here. Ask an admin to und
 // Staff Undo of "keep this one" after the database's 10-second window (R7)
 export const UNDO_DUPLICATE_TOO_LATE = 'Too late to undo here. Ask an admin to restore the copy from Removed.';
 export const actionFailed = "That didn't save. Check the connection, then retry.";
+
+// ----- Design review part 2 (rulebook v0.420 / v0.421, mockups P1 and P3; Star's words, v0.518) -----
+// CB1, the Mark paid box: the testing-day price started while the box was open. Nothing was
+// saved; the box stays closed and staff press Mark paid again (v0.423, option B).
+export const priceChangedNote = (name, cents) =>
+  `The price for ${name} is now ${formatMoney(cents)} (the testing-day price). Nothing was saved. Tap Mark paid again.`;
+// CB3, second half: Undo payment asks first (Star's words, v0.518; blue, Keep payment focused)
+export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
+export const undoPaymentBody = (cents, method, iso) =>
+  `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to Not paid. Both stay in the history.`;
+export const KEEP_PAYMENT = 'Keep payment';
+export const UNDOING = 'Undoing…';
+export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // Star's Q2 B
+// CB2, Print receipt (the receipt's own lines: src/lib/testing/receipt.js)
+export const PRINT_RECEIPT = 'Print receipt';
+export const THIS_STUDENT = 'This student'; // the receipt's not-found line when the row is gone too
+export const receiptSub = (name, where) => `${name} · ${where}`;
+export const receiptNotFound = (name) => `${name} was deleted on another device, so there is no receipt.`; // Star's words
+export const RECEIPT_KIND = 'Color belt testing · payment receipt';
+export const RECEIPT_STUDENT = 'Student';
+export const RECEIPT_EVENT = 'Event';
+export const RECEIPT_PRIVATE = 'Private testing';
+export const RECEIPT_MOVED_FROM = 'Moved from'; // v0.421 Q A
+export const RECEIPT_CLASS = 'Class';
+export const RECEIPT_SCHOOL = 'School';
+export const RECEIPT_REFERENCE = 'Reference';
+export const RECEIPT_FOR_FEE = 'Testing fee';
 export const EVENT_FINISHED_ADD = "This testing has finished, so students can't be added any more.";
 
 // R4: Add student
@@ -640,8 +703,8 @@ export const PICK_PAYING_BY = 'Choose how they’ll pay.';
 export const NEEDS_THREE_STRIPES = 'Every student needs 3 stripes on one side of their belt to test.';
 // "$65 ($75 on the testing day)" before the testing day; "$75" on it or after.
 export function feeText(earlyCents, dayCents, onOrAfterTestingDay) {
-  if (onOrAfterTestingDay || earlyCents === dayCents) return dollars(dayCents);
-  return `${dollars(earlyCents)} (${dollars(dayCents)} on the testing day)`;
+  if (onOrAfterTestingDay || earlyCents === dayCents) return formatMoney(dayCents);
+  return `${formatMoney(earlyCents)} (${formatMoney(dayCents)} on the testing day)`;
 }
 // "Testing for Orange → Green · Group A, 5:00 – 6:00 PM · $65 ($75 on the testing day)"
 // fee null (Hide private details, v0.506): the line ends after the class and time.
@@ -668,7 +731,7 @@ export const REFERENCE_WORD = 'reference';
 export const SIGNED_FORM = 'Parent or guardian, on the form';
 export const signatureDeleted = (stamp) => `Signed on the form, ${stampDay(stamp)} (the signature is deleted 90 days after testing)`;
 export const NOT_SIGNED_DESK = 'Not signed here (added at the desk)';
-export const paidDetail = (cents, method, paidOn) => `${dollars(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
+export const paidDetail = (cents, method, paidOn) => `${formatMoney(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
 export const removedDetail = (stamp, name, reason) =>
   `${reason === 'duplicate_copy' ? 'Duplicate copy, removed' : 'Withdrawn'} ${stampDay(stamp)}${name ? ` by ${name}` : ''}`;
 export const EDIT_DETAILS_TITLE = 'Edit details';
@@ -679,20 +742,25 @@ export const feeNow = (fee) => `The fee is now ${fee}.`;
 export const PAYMENT_STAYS = 'The payment already recorded stays as it is.';
 export const PAYMENT_NOT_HERE = 'Payment is changed with Mark paid or ⋯, not here.';
 
-// R7: compare
+// R7: compare. Its buttons' words ("Keep this one", "Not the same person — keep both", "⚠ different",
+// "Keeping…") and the duplicate box's "Review" are the shared parts' own now (src/components/text.js,
+// v1.102); so are the Registration link box's "Copy link", "Download QR code" and "Print flyer".
 export const compareTitle = (name) => `${name} is registered twice`;
 export const COMPARE_SUB = 'Same name in the same class. Differences are highlighted.';
 export const FIRST_REGISTRATION = 'First registration';
 export const SECOND_REGISTRATION = 'Second registration';
 export const COMPARE_REFERENCE = 'Reference';
-export const KEEP_THIS_ONE = 'Keep this one';
-export const keepThisOneLabel = (which) => `Keep the ${which.toLowerCase()}`;
 // The same note for staff and admins (R7): staff get the 5-second Undo too.
 export const COMPARE_NOTE =
   'Keeping one moves the other to Removed as “Duplicate copy” (Undo for 5 seconds; admins can Restore). Both are logged.';
+export const NO_REFERENCE = '—';
+// Kept only because Star's candidates text (src/screens/testing/star/candidates/text.js) still
+// reads them from here; Color Belt's own screens no longer use them. They can go once Star
+// takes them from the shared parts.
+export const KEEP_THIS_ONE = 'Keep this one';
+export const keepThisOneLabel = (which) => `Keep the ${which.toLowerCase()}`;
 export const KEEP_BOTH = 'Not the same person — keep both';
 export const DIFFERENT = 'different'; // read by screen readers after a highlighted value
-export const NO_REFERENCE = '—';
 
 // Change how they'll pay
 export const CHANGE_PAYING_BY_TITLE = 'Change how they’ll pay';
@@ -707,6 +775,11 @@ export const PAID_BY = 'Paid by';
 export const AMOUNT = 'Amount';
 export const DATE_PAID = 'Date paid';
 export const ENTER_DATE_PAID = 'Enter the date paid.';
+// Under the date paid calendar's days (v0.414, Star's paidDateHint). why: 'registered' (an event
+// registration from the family form), 'added' (one staff added, or a private testing) or null
+// (the saved date is earlier: no reason given).
+export const paidDateHint = (minIso, why) =>
+  `Not before ${monthDay(minIso)}${why ? ` (${why})` : ''} or after today.`;
 export const AMOUNT_ZERO = 'Enter more than $0. To remove the payment, use ⋯ → Undo payment.';
 export const EDIT_PAYMENT_HINT = 'The old payment is kept in the history and replaced by this one.';
 
@@ -728,13 +801,13 @@ export function deleteStudentBody(eventName, payment, graded = null, firstName =
     // "the testing result (Not passed, Nov 20)" — or "the grading note" when only a note exists.
     const what = graded.result ? `the testing result (${resultTagText(graded.result)}, ${stampDay(graded.resultAt)})` : 'the grading note';
     if (payment) {
-      const paid = `the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
+      const paid = `the ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
       return `${firstName}’s registration, ${paid} and ${what} are deleted. They won’t show in Payments recorded or on the Grading tab any more. This can’t be undone.`;
     }
     return `${firstName}’s registration and ${what} are deleted. They won’t show on the Grading tab any more. This can’t be undone.`; // CP1
   }
   if (!payment) return `The registration is deleted from ${eventName}. This can’t be undone.`;
-  return `The registration and the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
+  return `The registration and the ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
     payment.paidOn,
   )} are deleted from ${eventName}. The payment won’t show in Payments recorded any more. This can’t be undone.`;
 }
@@ -757,8 +830,6 @@ export function linkDialogLine(state, event) {
       return 'Registration is closed. The link tells families registration is closed.';
   }
 }
-export const COPY_LINK = 'Copy link';
-export const PRINT_FLYER = 'Print flyer';
 export const qrAlt = (link) => `QR code for ${link}`;
 
 // R3: the flyer (letter size, black and white)
@@ -792,7 +863,7 @@ export const PRINT_GRADING_SHEET = 'Print grading sheet';
 export const COL_RESULT = 'Result';
 
 // The three result buttons
-export const RESULT_PASS = 'Pass';
+export const RESULT_PASS = 'Passed'; // was "Pass" (CB18, v1.029)
 export const RESULT_NOT_PASSED = 'Not passed';
 export const RESULT_NO_SHOW = 'No show';
 const RESULT_BUTTON_TEXT = { pass: RESULT_PASS, not_passed: RESULT_NOT_PASSED, no_show: RESULT_NO_SHOW };
@@ -867,6 +938,43 @@ export const SHEET_COL_NOTE = 'Note';
 export const SHEET_ADDED_ON_DAY = 'Added on the day:';
 export const SHEET_FOOTER = 'Type the results into the Grading tab the same day.';
 
+// CB18 (v1.029, v0.416): Print results — the printed results sheet (event/ResultsSheet.jsx),
+// a page per class, only the students who passed.
+export const PRINT_RESULTS = 'Print results';
+export const resultsSheetTitle = (eventName) => `${eventName} — Results`;
+// "Friday, November 20, 2026 · Worcester school"
+export const resultsSheetSub = (dateIso, school) => `${longDate(dateIso)} · ${schoolName(school)}`;
+export const RESULTS_SHEET_CONTINUED = '(continued)';
+export const RESULTS_PASSED_HEADING = 'PASSED — CONGRATULATIONS!';
+export const RESULTS_NEW_BELT = 'New belt';
+export const RESULTS_PASSED_BOX = 'PASSED';
+// Printed only when no student in the whole event has passed yet (each class with nobody passed
+// is left off the sheet).
+export const RESULTS_NONE_PASSED = 'No passed results recorded yet.';
+// "November Children Testing — Results · printed Fri, Nov 20, 2026, 8:15 PM"
+export const resultsSheetFoot = (eventName, printedAt) =>
+  `${resultsSheetTitle(eventName)} · printed ${printedAt.toLocaleString('en-US', {
+    timeZone: SCHOOL_TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+  })}`;
+export const resultsSheetPage = (page, pages) => `Page ${page} of ${pages}`;
+
+// CB18 (v0.416, v0.418 Q3): Download CSV — admins only, hidden while Hide private details is on,
+// the whole event (lib/testing/resultsCsv.js builds the rows). Star's words where they fit
+// (star/resultsText.js).
+export const DOWNLOAD_CSV = 'Download CSV';
+export const DOWNLOADING_CSV = 'Downloading…'; // the button's words while it works
+export const cbCsvDownloaded = (fileName, n) =>
+  `Downloaded ${fileName} (${studentsCount(n)}). It has payments and graders’ notes — keep it private.`;
+export const CB_CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then try again.'; // + Retry
+export const CB_CSV_NOT_ALLOWED = 'Only an admin can download the CSV.';
+// The 15 column headings, exactly v0.418 Q3's, in order (the registration id last)
+export const CB_CSV_HEADINGS = [
+  'Reference', 'First name', 'Last name', 'Class', 'Class time', 'Belt', 'Testing for', 'Result', 'Grader’s note',
+  'Paying by', 'Paid', 'Amount paid', 'Paid on', 'Paid by', 'Registration id',
+];
+export const CB_CSV_YES = 'Yes';
+export const CB_CSV_NO = 'No';
+
 // G8: the Students tab
 export const DETAIL_RESULT = 'Result';
 // "· Nov 20, 5:41 PM by Staff"
@@ -926,7 +1034,7 @@ export const LEAVE_ANYWAY = 'Leave anyway';
 // =====================================================================================
 
 // One recorded payment as text: "$65 cash Nov 2". p = { cents, method, paidOn }
-const paymentPart = (p) => `${dollars(p.cents)} ${payingByLower(p.method)} ${monthDay(p.paidOn)}`;
+const paymentPart = (p) => `${formatMoney(p.cents)} ${payingByLower(p.method)} ${monthDay(p.paidOn)}`;
 
 // ----- The tab (P1, P7) -----
 export const TAB_PRIVATE = 'Private testing';
@@ -936,13 +1044,13 @@ export const CARD_PRIVATE = 'Private testings';
 // Under the Paid card: "1 owes more" ("2 owe more" — CP1)
 export const owesMoreCount = (n) => (n === 1 ? '1 owes more' : `${n} owe more`);
 // Under Payments recorded: "includes $85 from cancelled"
-export const includesCancelled = (cents) => `includes ${dollars(cents)} from cancelled`;
+export const includesCancelled = (cents) => `includes ${formatMoney(cents)} from cancelled`;
 export const COL_DAY_TIME = 'Day · time';
 export const COL_TESTING_FOR_PRICE = 'Testing for · price';
 // "Tue, Dec 1 · 4:00 PM"
 export const privateDayTime = (dateIso, hhmm) => `${weekdayMonthDay(dateIso)} · ${timeLabel(hhmm)}`;
 // The amber line under a name: "Paid $65 · $20 more to collect"
-export const owedLine = (paidCents, dueCents) => `Paid ${dollars(paidCents)} · ${dollars(dueCents)} more to collect`;
+export const owedLine = (paidCents, dueCents) => `Paid ${formatMoney(paidCents)} · ${formatMoney(dueCents)} more to collect`;
 export const movedFromLine = (eventName) => `Moved from ${eventName}`;
 // A cancelled row's gray tag: "Cancelled Nov 28"
 export const cancelledTag = (stamp) => `Cancelled ${stampDay(stamp)}`;
@@ -953,14 +1061,36 @@ export const LOADING_PRIVATE = 'Loading private testings'; // screen readers onl
 export const PRIVATE_SWITCH_LABEL = 'Upcoming or past private testings'; // screen readers only: the Upcoming / Past switch
 export const LOAD_PRIVATE_FAILED = 'Couldn’t load private testings. Check the connection, then retry.'; // CP1
 
+// ----- Design review part 2 on the Private testing tab (rulebook v0.420 / v0.421 / v0.423, mockup P2) -----
+// CB9: a Paid / Not paid card is on and nobody on this side is left (v0.420 Q2 A; the event
+// roster's "Everyone in this class has paid." / "No paid students in this class.").
+export const EVERY_UPCOMING_PRIVATE_PAID = 'Every upcoming private testing is paid.';
+export const EVERY_PAST_PRIVATE_PAID = 'Every past private testing is paid.';
+export const NO_PAID_UPCOMING_PRIVATE = 'No paid upcoming private testings.';
+export const NO_PAID_PAST_PRIVATE = 'No paid past private testings.';
+// CB1: what is owed changed while the Mark paid box was open (an admin changed the belt and so the
+// price, or a payment was edited). Nothing was saved; the box stays closed (v0.423). A private
+// price doesn't depend on the day, so there is no "testing-day price" here.
+export const privatePriceChangedNote = (name, cents) =>
+  `The amount owed for ${name} is now ${formatMoney(cents)}. Nothing was saved. Tap Mark paid again.`;
+// CB3, second half: the Undo payment box's sentence. It names the LATEST payment (on a top-up, the
+// top-up) and what the row becomes: after = { paidCents, dueCents } once it is undone.
+//   "The $20 cash payment recorded on Nov 3 is reversed and the row goes back to Paid $65 · $20
+//    more to collect. Both stay in the history."
+export const privateUndoPaymentBody = (cents, method, iso, after) => {
+  let becomes = TAG_NOT_PAID;
+  if (after && after.paidCents > 0) becomes = after.dueCents > 0 ? owedLine(after.paidCents, after.dueCents) : TAG_PAID;
+  return `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to ${becomes}. Both stay in the history.`;
+};
+
 // ----- Add private testing / Edit details (P2) -----
 // "Testing for Blue → High Blue · Group B"
 export const privateTestingForLine = (fromName, toName, className) => `Testing for ${fromName} → ${toName} · ${className}`;
 export const PRIVATE_DAY = 'Day';
 export const PRIVATE_TIME = 'Time';
 export const TIME_HINT = '6:00 AM – 10:00 PM, every 5 minutes';
-export const privatePriceLine = (cents) => `${dollars(cents)} private price`;
-export const privatePriceHint = (rankName, cents) => `The private price for ${rankName} in Classes and ranks. Mark paid charges ${dollars(cents)}.`;
+export const privatePriceLine = (cents) => `${formatMoney(cents)} private price`;
+export const privatePriceHint = (rankName, cents) => `The private price for ${rankName} in Classes and ranks. Mark paid charges ${formatMoney(cents)}.`;
 export const ADD_PRIVATE_HINT = 'For a family who asks to test privately, on their own day and time. Not part of a testing event.';
 export const PRIVATE_DAY_PAST = 'The private day can’t be in the past.';
 export const PICK_PRIVATE_DAY = 'Enter the day.'; // CP1
@@ -969,7 +1099,7 @@ export const PRIVATE_DAY_TOO_FAR = 'Pick a day within a year from today.'; // CP
 // Edit details: a copied class or belt that was removed from Classes and ranks since — CP1
 export const notInClassesRanks = (name) => `${name} (no longer in Classes and ranks)`;
 // Edit details of a paid row moved to a pricier rank (v0.254): "Price $85 → $95 · $10 more to collect"
-export const repriceLine = (fromCents, toCents, dueCents) => `Price ${dollars(fromCents)} → ${dollars(toCents)} · ${dollars(dueCents)} more to collect`;
+export const repriceLine = (fromCents, toCents, dueCents) => `Price ${formatMoney(fromCents)} → ${formatMoney(toCents)} · ${formatMoney(dueCents)} more to collect`;
 export const beltChangeClearsPrivate = (firstName, resultText) =>
   `Changing the belt clears ${firstName}’s result (${resultText}). Record it again on the private testing page.`; // CP1
 export const beltChangeClearsNotePrivate = (firstName) =>
@@ -984,7 +1114,7 @@ export const CANCEL_PRIVATE = 'Cancel private testing';
 // ----- Change day or time (P4) -----
 // "Liam Park · Group B · Blue → High Blue"
 export const privateDialogSub = (name, className, fromName, toName) => [name, className, `${fromName} → ${toName}`].filter(Boolean).join(' · ');
-export const priceStays = (cents) => `The price stays ${dollars(cents)}.`;
+export const priceStays = (cents) => `The price stays ${formatMoney(cents)}.`;
 export const clearsPrivateNoShow = (firstName, dateIso) =>
   `${firstName} was marked No show on ${weekdayMonthDay(dateIso)}. Saving a new day clears that result.`; // CP1
 
@@ -997,9 +1127,10 @@ export function cancelBody(dateIso, hhmm, payment, hidden = false) {
   const first = `${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}. It moves to Past as Cancelled.`;
   if (hidden) return `${first} Any recorded payment stays recorded; it isn’t refunded.`;
   if (!payment) return first;
-  return `${first} The ${dollars(payment.cents)} ${payingByLower(payment.method)} payment stays recorded; it isn’t refunded.`;
+  return `${first} The ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment stays recorded; it isn’t refunded.`;
 }
 export const KEEP_IT = 'Keep it';
+export const CANCELLING = 'Cancelling…'; // Cancel private testing's button while it works (v1.008 D1a, v0.422)
 export const cancelledToast = (name) => `${name}’s private testing cancelled`; // CP1
 export const deletePrivateTitle = (name) => `Delete ${name}’s private testing permanently?`; // CP1
 // "The private testing, the $85 cash payment recorded on Nov 25 and the result (Passed, Dec 5)
@@ -1014,7 +1145,7 @@ export function deletePrivateBody(payments, result, movedFrom = null, hidden = f
   if (hidden) {
     parts.push('any recorded payment');
   } else if (payments.length === 1) {
-    parts.push(`the ${dollars(payments[0].cents)} ${payingByLower(payments[0].method)} payment recorded on ${monthDay(payments[0].paidOn)}`);
+    parts.push(`the ${formatMoney(payments[0].cents)} ${payingByLower(payments[0].method)} payment recorded on ${monthDay(payments[0].paidOn)}`);
   } else if (payments.length > 1) {
     parts.push(`the ${payments.length} payments (${payments.map(paymentPart).join(', ')})`);
   }
@@ -1026,27 +1157,27 @@ export function deletePrivateBody(payments, result, movedFrom = null, hidden = f
 
 // ----- Payments on the tab (CP1) -----
 // Change how they'll pay while owing: "Liam Park · $20 more to collect"
-export const changePayingBySubOwed = (name, dueCents) => `${name} · ${dollars(dueCents)} more to collect`;
+export const changePayingBySubOwed = (name, dueCents) => `${name} · ${formatMoney(dueCents)} more to collect`;
 // Edit payment after a top-up: "Ava Chen · $65 cash Nov 2 + $20 card Dec 1 — editing the $20"
-export const editPaymentSubTopUp = (name, parts, editingCents) => `${name} · ${parts.map(paymentPart).join(' + ')} — editing the ${dollars(editingCents)}`;
+export const editPaymentSubTopUp = (name, parts, editingCents) => `${name} · ${parts.map(paymentPart).join(' + ')} — editing the ${formatMoney(editingCents)}`;
 
 // ----- Move to private testing (event page, P5) -----
 export const MOVE_TO_PRIVATE = 'Move to private testing';
 export const moveIntro = (firstName, eventName) =>
   `${firstName} leaves ${eventName} (listed under Removed there) and is listed on the Private testing tab, with their name, class and belt filled in.`;
 export const moveMoneyOwes = (paidCents, priceCents, dueCents) =>
-  `${dollars(paidCents)} paid → ${dollars(priceCents)} private price · ${dollars(dueCents)} more to collect`;
-export const moveMoneyNotPaid = (priceCents) => `${dollars(priceCents)} private price · not paid yet`;
-export const moveMoneyEnough = (paidCents) => `Already paid ${dollars(paidCents)}. Nothing more to collect.`;
+  `${formatMoney(paidCents)} paid → ${formatMoney(priceCents)} private price · ${formatMoney(dueCents)} more to collect`;
+export const moveMoneyNotPaid = (priceCents) => `${formatMoney(priceCents)} private price · not paid yet`;
+export const moveMoneyEnough = (paidCents) => `Already paid ${formatMoney(paidCents)}. Nothing more to collect.`;
 // "The $65 cash payment moves with Ava. The private price for Yellow in Classes and ranks."
 // payments = the live payments [{ cents, method }]: none → only the second sentence; two or more
 // → "The $85 in payments moves with Ava." (CP1)
 export function movePaymentHint(payments, firstName, rankName) {
   const price = `The private price for ${rankName} in Classes and ranks.`;
   if (payments.length === 0) return price;
-  if (payments.length === 1) return `The ${dollars(payments[0].cents)} ${payingByLower(payments[0].method)} payment moves with ${firstName}. ${price}`;
+  if (payments.length === 1) return `The ${formatMoney(payments[0].cents)} ${payingByLower(payments[0].method)} payment moves with ${firstName}. ${price}`;
   const total = payments.reduce((sum, p) => sum + p.cents, 0);
-  return `The ${dollars(total)} in payments moves with ${firstName}. ${price}`;
+  return `The ${formatMoney(total)} in payments moves with ${firstName}. ${price}`;
 }
 export const moveClearsNoShow = (firstName, dateIso) => `${firstName} was marked No show on ${weekdayMonthDay(dateIso)}. Moving clears that result.`;
 export const movedToast = (name) => `${name} moved to private testing`;
@@ -1058,6 +1189,22 @@ export const restoreMovedReason = (firstName) => `Not available: ${firstName} is
 export const RESTORE_MOVED = restoreMovedReason; // CP1: the banner after a refused Restore says the same
 export const moveHasResult = (firstName) => `${firstName} already has a result for this testing day, so they can’t be moved.`; // CP1
 export const UNDO_MOVE_TOO_LATE = 'Too late to undo here. The private testing stays on the Private testing tab.'; // CP1
+
+// ----- A private testing's read-only summary (v1.009, CB6) -----
+// "Private testing · Tue, Dec 1 · 4:00 PM"
+export const privateSummarySub = (dateIso, hhmm) => `Private testing · ${privateDayTime(dateIso, hhmm)}`;
+export const DETAIL_PRICE = 'Price';
+export const DETAIL_ADDED = 'Added';
+// The summary's row for a cancelled private testing: "Cancelled · Cancelled Oct 27" reads twice,
+// so the label is "Status" — NOT IN MOCKUPS (rulebook §8: every status is listed in the detail view).
+export const DETAIL_STATUS = 'Status';
+// "Cancelled Oct 27 by Jeffrey Berg" (as the roster's "Withdrawn Oct 27 by …"). NOT IN MOCKUPS.
+export const cancelledDetail = (stamp, name) => `${cancelledTag(stamp)}${name ? ` by ${name}` : ''}`;
+// "Oct 21, 2:15 PM · moved from November Children Testing" (the second part only when moved)
+export const privateAddedDetail = (stamp, movedFromEventName) =>
+  movedFromEventName ? `${stampDayTime(stamp)} · moved from ${movedFromEventName}` : stampDayTime(stamp);
+// After the payment: "$20 more to collect"
+export const moreToCollect = (cents) => `${formatMoney(cents)} more to collect`;
 
 // ----- The grading page (P6) -----
 export const BACK_TO_PRIVATE = 'Private testing';
@@ -1090,6 +1237,60 @@ export const PRIVATE_SHEET_FOOTER = 'Type the result into the private testing pa
 export const PRIVATE_GRADED = 'This private testing is already graded, so it can’t change now.';
 export const PRIVATE_IS_CANCELLED = 'This private testing was cancelled. An admin can restore it while its day is ahead.';
 export const RESTORE_TOO_LATE = 'Its day has passed, so it can’t be restored. Add a new private testing instead.';
+
+// =====================================================================================
+// History (design review CB7, rulebook v1.010 / v1.108, Color Belt v0.421, mockup P3) — the words
+// of each change in the History line at the end of both summaries. lib/testing/history.js picks
+// the words for each change-log row; these are Star's words (v0.518) in Color Belt's terms. Words
+// the mockup drew are marked P3; the rest were approved as listed (v0.425, history-words.png).
+// =====================================================================================
+export const HISTORY_STAFF = 'Staff'; // the "who" when the log has no name
+export const HISTORY_REGISTERED_FORM = 'Registered on the family form'; // P3
+export const HISTORY_ADDED_DESK = 'Added at the desk';
+// P3: "Added at the desk (Sat, Oct 31, 4:00 PM)" — a private testing, with its day and time
+export const historyAddedPrivate = (dayTime) => `Added at the desk (${dayTime})`;
+// P3: "Moved to private testing from November Children Testing (Tue, Dec 1, 4:00 PM)"
+export const historyMovedIn = (eventName, dayTime) => `Moved to private testing from ${eventName} (${dayTime})`;
+// The private testing's day and time inside those lines: "Tue, Dec 1, 4:00 PM"
+export const historyDayTime = (dateIso, hhmm) => `${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}`;
+export const HISTORY_MOVED_OUT = 'Moved to private testing'; // the event registration's side
+export const HISTORY_MOVE_UNDONE = 'Move to private testing undone';
+// P3: "Payment recorded: $65 check, paid Nov 1"
+export const historyPaymentRecorded = (cents, method, iso) => `Payment recorded: ${formatMoney(cents)} ${payingByLower(method)}, paid ${monthDay(iso)}`;
+// P3: "Payment undone: $65"
+export const historyPaymentUndone = (cents) => `Payment undone: ${formatMoney(cents)}`;
+// P3: "Payment changed: check → cash" — only the parts the edit changed (amount, way, day)
+export const historyPaymentChanged = (from, to) => `Payment changed: ${from} → ${to}`;
+export const HISTORY_PAYMENT_CHANGED = 'Payment changed';
+export const historyPaidOn = (iso) => `paid ${monthDay(iso)}`; // the day part of a changed payment
+export const historyPaymentMovedOut = (cents, method) => `Payment moved to private testing: ${formatMoney(cents)} ${payingByLower(method)}`;
+export const historyPaymentMovedIn = (cents, method, iso) => `Payment moved from the event: ${formatMoney(cents)} ${payingByLower(method)}, paid ${monthDay(iso)}`;
+export const historyPaymentMovedBack = (cents, method, iso) =>
+  `Payment moved back from private testing: ${formatMoney(cents)} ${payingByLower(method)}, paid ${monthDay(iso)}`;
+// P3: "Paying by changed: Check → Cash"
+export const historyPayingBy = (before, after) => `Paying by changed: ${payingByText(before)} → ${payingByText(after)}`;
+// One edited detail: "First name: Owen → Owen J." (Star's "what: before → after")
+export const historyField = (label, before, after) => `${label}: ${before || '—'} → ${after || '—'}`;
+export const HISTORY_BELT = 'Belt';
+export const HISTORY_CLASS = 'Class';
+export const HISTORY_PRICE = 'Price';
+// P3: "Day or time changed: Tue, Dec 1, 4:00 PM → Tue, Dec 1, 4:30 PM"
+export const historyDayChanged = (before, after) => `Day or time changed: ${before} → ${after}`;
+export const HISTORY_CANCELLED = 'Cancelled';
+export const HISTORY_RESTORED = 'Restored';
+export const HISTORY_WITHDRAWN = 'Withdrawn';
+export const HISTORY_DUPLICATE_COPY = 'Moved to Removed as a duplicate copy';
+export const HISTORY_DUPLICATE_FOUND = 'Possible duplicate found';
+export const HISTORY_KEPT_BOTH = 'Possible duplicate: kept both registrations';
+export const HISTORY_KEPT_THIS = 'Possible duplicate: kept this registration';
+export const HISTORY_SIGNATURE_DELETED = 'Signature deleted (90 days after the testing day)';
+export const HISTORY_DELETED = 'Deleted';
+// P3: "Result: Passed"; a change "Result: Not passed → Passed"; cleared "Result cleared (was No show)"
+export const historyResult = (code) => `Result: ${resultTagText(code)}`;
+export const historyResultChanged = (before, after) => `Result: ${resultTagText(before)} → ${resultTagText(after)}`;
+export const historyResultCleared = (before) => (before ? `Result cleared (was ${resultTagText(before)})` : 'Result cleared');
+export const historyNote = (note) => `Grading note: ${note}`;
+export const HISTORY_NOTE_REMOVED = 'Grading note removed';
 
 // =====================================================================================
 // "Hide private details" (rulebook v0.506, words v0.507 Q2). Color Belt keeps no date of birth or
