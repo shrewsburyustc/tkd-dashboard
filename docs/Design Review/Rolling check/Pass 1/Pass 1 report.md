@@ -56,7 +56,7 @@ Each file starts with a short starter to paste into that session. The file reach
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.040). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.041). The sections it changes hear it through the Main session.
 
 1. **Money: which school's report counts a payment taken at one school's desk?** (R1-01, High.) **Answered 2026-11-04: A** (v1.035).
    - **A (recommended):** the desk that took it, for every section, as Camps does. The report then always matches the drawer.
@@ -76,6 +76,7 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 5. **Camp money handed back** (R1-05, Medium). **Answered 2026-11-04: A** (v1.039).
    - **A (recommended):** Camps gets a "Record refund" like Star's, dated the day the money goes out.
    - **B:** keep Edit payment, which changes the payment's original, already-counted day.
+   - **5b, asked after it:** which school counts a refund handed out at the other desk? **Answered 2026-11-04: A** (v1.040): the desk that hands the money back.
 6. **Home's "N earlier days weren't closed" line** (R4-05, Medium).
    - **A (recommended):** it goes while History's "not closed" marks are switched off.
    - **B:** bring the History marks back.
@@ -118,6 +119,6 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 
 ## Next
 
-- **Jeffrey:** question 6, then the rest in order (questions 1–5 answered 2026-11-04).
+- **Jeffrey:** question 6, then the rest in order (questions 1–5 and 5b answered 2026-11-04).
 - **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13, Dashboard core's v1.118), and Color Belt when it merges.
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.
