@@ -14,6 +14,7 @@
 //   });
 
 import { spawn } from 'node:child_process';
+import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -30,9 +31,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function withChrome(work) {
   const port = 9300 + Math.floor(Math.random() * 500);
+  // A brand-new browser profile every run, removed at the end. (Named by the port alone, an old
+  // profile came back about two runs in three, with an old preview sign-in that opened on the lock
+  // screen: check-panel.mjs, 2026-11-03.)
+  const profile = join(tmpdir(), `tkd-mock-${port}-${Date.now()}`);
+  // Known quirk of this hidden Chrome (2026-11-03, the same on main's code): after a sign-in through
+  // the app's form, the page gets no mouse events (no hover, no clicks) until it is opened again.
+  // Tools that sign in reload the page before any mouse step (check-panel.mjs does).
   const chrome = spawn(CHROME, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    `--remote-debugging-port=${port}`, `--user-data-dir=${join(tmpdir(), `tkd-mock-${port}`)}`, 'about:blank',
+    `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank',
   ], { stdio: 'ignore' });
 
   async function json(path) {
@@ -119,5 +127,17 @@ export async function withChrome(work) {
     ws.close();
   } finally {
     chrome.kill();
+    // Chrome lets go of its files a moment after it stops; if they're still held, the folder stays
+    // (it is never used again).
+    await new Promise((resolve) => {
+      if (chrome.exitCode !== null || chrome.signalCode !== null) return resolve(); // already stopped
+      chrome.once('exit', resolve);
+      setTimeout(resolve, 3000).unref(); // unref: this timer alone doesn't keep Node running
+    });
+    try {
+      rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch {
+      // left in the temp folder
+    }
   }
 }
