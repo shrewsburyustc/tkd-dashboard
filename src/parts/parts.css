@@ -330,8 +330,9 @@ body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
   padding: 12px;
 }
 
-/* A stand-in for Finance's day row (finance.css .fin-dayrow / .fin-day / .fin-ibtn, copied: that
-   file isn't loaded here, it carries page-wide print rules) */
+/* A stand-in for Finance's day row (finance.css .fin-dayrow / .fin-day, copied: that file isn't
+   loaded here, it carries page-wide print rules). Its bordered buttons are the shared one
+   (shared.css .tib--outline, gray when unavailable, v1.120), not a copy of Finance's .fin-ibtn. */
 .parts-dayrow {
   display: flex;
   flex-wrap: wrap;
@@ -346,34 +347,13 @@ body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
   font-weight: 500;
 }
 
-.parts-ibtn.tib {
-  width: 32px;
-  height: 32px;
-  color: var(--color-text);
-}
-
-.parts-ibtn .tib-box {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--color-border-control);
-}
-
-.parts-ibtn.is-unavailable {
-  color: var(--color-disabled-text);
-  cursor: default;
-}
-
-.parts-ibtn.is-unavailable .tib-box {
-  border-color: var(--color-border-strong);
-}
-
 /* The first button's tooltip opens to the right, so it isn't cut off */
-.parts-dayrow > .parts-ibtn:first-child .tib-tip {
+.parts-dayrow > .tib:first-child .tib-tip {
   right: auto;
   left: 0;
 }
 
-.parts-dayrow > .parts-ibtn:first-child .tib-tip::after {
+.parts-dayrow > .tib:first-child .tib-tip::after {
   right: auto;
   left: 9px;
 }
@@ -421,19 +401,6 @@ body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
   margin: 0 0 var(--space-8);
   color: var(--color-text-secondary);
   font-size: var(--text-13);
-}
-
-/* Touch: Finance's 36px buttons with a 44px tap area */
-@media (pointer: coarse) {
-  .parts-ibtn.tib {
-    width: var(--tap-size);
-    height: var(--tap-size);
-  }
-
-  .parts-ibtn .tib-box {
-    width: 36px;
-    height: 36px;
-  }
 }
 
 @media (max-width: 639.98px) {

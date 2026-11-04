@@ -20,7 +20,12 @@
 //     pressed state and their two-line note (v1.115: each line under the one before, at the four
 //     sizes, heard after the number); Show all inside the gray line (v1.117, option a: on touch as
 //     tall as on PC and right after the dot, with an invisible box of exactly 44 px that a finger
-//     finds, covering neither the cards above nor the control under the line); the history line;
+//     finds, covering neither the cards above nor the control under the line); after Show all with
+//     the keyboard, the focus back on the card that was on, with its ring, and no ring after a
+//     click (v1.119); the history line;
+//   - a turned-off or unavailable icon button: gray, no gray square under the pointer, its tooltip
+//     still showing, the bordered one's light border, GrayText in Windows High Contrast (v1.120);
+//   - the success colors' shared settings, and the green tag drawn with them (v1.121);
 //   - Download QR code's hidden name: with two schools its own words first, then the school
 //     ("Download QR code, Worcester", v1.111); with one school none;
 //   - a real Download QR code: the file's name and that it is 1024 × 1024 pixels.
@@ -663,6 +668,127 @@ await withChrome(async (tab) => {
     await click('.ev-card', 'Paid6');
     await click('.ev-filter-line button', 'Show all');
     assert.equal(await ev(`Boolean(document.querySelector('.ev-card.is-selected'))`), false);
+  });
+
+  // Show all disappears as it's pressed: with the keyboard, the focus goes back to the card that was
+  // on, ring showing, instead of falling to the page; after a click no ring shows (v1.119).
+  await open('M6/rest', 500);
+  await check('M6: after Show all with the keyboard, the focus is back on the card that was on, ring showing; after a click, no ring (v1.119)', async () => {
+    await ev(`[...document.querySelectorAll('.ev-card--button')].find((b) => b.textContent === 'Paid6').focus()`);
+    await key('Tab');
+    assert.equal(await focused(), 'Not paid9');
+    await key('Enter');
+    assert.equal(await ev(`document.querySelector('.ev-filter-line')?.textContent`), 'Showing not paid only · Show all');
+    await key('Tab');
+    assert.equal(await focused(), 'Show all');
+    await key('Enter');
+    assert.equal(await ev(`Boolean(document.querySelector('.ev-filter-line'))`), false);
+    assert.equal(await focused(), 'Not paid9');
+    assert.equal(await ev(`document.activeElement.matches(':focus-visible')`), true);
+    assert.equal(await ev(`document.activeElement.getAttribute('aria-pressed')`), 'false');
+    // With a mouse: no ring, and the page doesn't move, even with the card 20 px above the top of
+    // the window and its gray line still in view (Chrome focuses a clicked button, and focusing
+    // the card would scroll it into view).
+    await open('M6/rest', 500);
+    await click('.ev-card', 'Not paid9');
+    try {
+      await ev(`(() => { document.body.style.paddingBottom = '2000px'; const r = [...document.querySelectorAll('.ev-card--button')].find((b) => b.textContent === 'Not paid9').getBoundingClientRect(); document.scrollingElement.scrollTop += r.top + 20; })()`);
+      await sleep(150);
+      const top = await ev(`document.scrollingElement.scrollTop`);
+      assert.ok(top > 0, 'the page could not be scrolled for the test');
+      await click('.ev-filter-line button', 'Show all');
+      assert.equal(await ev(`Boolean(document.querySelector('.ev-filter-line'))`), false);
+      assert.equal(await ev(`document.querySelector(':focus-visible')?.textContent ?? 'none'`), 'none');
+      assert.equal(await ev(`document.scrollingElement.scrollTop`), top, 'a click on Show all scrolled the page');
+    } finally {
+      await ev(`document.body.style.paddingBottom = ''`);
+    }
+  });
+
+  // A turned-off (disabled) or unavailable (aria-disabled) icon button is gray, gets no gray square
+  // under the pointer, and still shows its tooltip; a bordered one keeps the light border; Windows
+  // High Contrast draws it in GrayText (v1.120). Five buttons with the shared classes, as
+  // IconButton.jsx draws them: one that works (to compare), then the four "off" kinds.
+  await check('Icon button turned off or unavailable: gray, no gray square under the pointer, the tooltip still shows; a bordered one keeps the light border; GrayText in High Contrast (v1.120)', async () => {
+    await ev(`(() => {
+      const row = document.createElement('div');
+      row.id = 'tib-off-check';
+      row.style.cssText = 'position:fixed;left:200px;top:300px;z-index:99;display:flex;gap:48px;padding:48px;background:#fff';
+      const icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>';
+      const make = (attrs, outline) => '<button type="button" class="tib' + (outline ? ' tib--outline' : '') + '" aria-label="Sample" ' + attrs + '><span class="tib-box">' + icon + '</span><span class="tib-tip" aria-hidden="true">Sample</span></button>';
+      row.innerHTML = make('', false) + make('disabled', false) + make('aria-disabled="true"', false) + make('disabled', true) + make('aria-disabled="true"', true);
+      // A sixth: unavailable with a section's own gray (a normal colour, as Finance's › and Black
+      // Belt's Delete day have), for High Contrast below.
+      row.insertAdjacentHTML('beforeend', make('aria-disabled="true"', false).replace('class="tib', 'class="tib own-gray'));
+      const own = document.createElement('style');
+      own.id = 'tib-off-check-own';
+      own.textContent = '#tib-off-check .tib.own-gray[aria-disabled="true"] { color: rgb(138, 138, 133); opacity: 0.5; }';
+      document.head.append(own);
+      document.body.append(row);
+    })()`);
+    try {
+      // Rest the pointer on button i, then read its colours, its square and its tooltip.
+      const under = async (i) => {
+        const p = await ev(`(() => { const r = document.querySelectorAll('#tib-off-check .tib')[${i}].getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+        await tab.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: p.x, y: p.y });
+        await sleep(150);
+        return ev(`(() => { const b = document.querySelectorAll('#tib-off-check .tib')[${i}]; const box = getComputedStyle(b.querySelector('.tib-box'));
+          return { color: getComputedStyle(b).color, cursor: getComputedStyle(b).cursor, square: box.backgroundColor, border: box.borderTopColor, tip: getComputedStyle(b.querySelector('.tib-tip')).display }; })()`);
+      };
+      const works = await under(0);
+      assert.equal(works.square, 'rgb(247, 247, 245)', 'a working one gets the gray square');
+      for (const [i, kind] of [[1, 'turned off'], [2, 'unavailable']]) {
+        const off = await under(i);
+        assert.deepEqual({ color: off.color, cursor: off.cursor, square: off.square, tip: off.tip }, { color: 'rgb(138, 138, 133)', cursor: 'default', square: 'rgba(0, 0, 0, 0)', tip: 'block' }, kind);
+      }
+      for (const [i, kind] of [[3, 'bordered, turned off'], [4, 'bordered, unavailable']]) {
+        const off = await under(i);
+        assert.deepEqual({ color: off.color, border: off.border, square: off.square, tip: off.tip }, { color: 'rgb(138, 138, 133)', border: 'rgb(207, 207, 202)', square: 'rgba(0, 0, 0, 0)', tip: 'block' }, kind);
+      }
+      // Windows High Contrast: GrayText (the browser's own disabled button's colour) on the four.
+      const MOUSE = [{ name: 'pointer', value: 'fine' }, { name: 'hover', value: 'hover' }];
+      await tab.cdp('Emulation.setEmulatedMedia', { features: [...MOUSE, { name: 'forced-colors', value: 'active' }] });
+      try {
+        await sleep(200);
+        const hc = await ev(`(() => {
+          const native = document.createElement('button');
+          native.disabled = true;
+          document.body.append(native);
+          const grayText = getComputedStyle(native).color;
+          native.remove();
+          const b = [...document.querySelectorAll('#tib-off-check .tib')];
+          return { grayText, icons: b.map((x) => getComputedStyle(x).color), borders: b.slice(3, 5).map((x) => getComputedStyle(x.querySelector('.tib-box')).borderTopColor) };
+        })()`);
+        // the four kinds, and the one with a section's own gray
+        assert.deepEqual(hc.icons.slice(1), [hc.grayText, hc.grayText, hc.grayText, hc.grayText, hc.grayText]);
+        assert.notEqual(hc.icons[0], hc.grayText, 'a working one is GrayText too');
+        assert.deepEqual(hc.borders, [hc.grayText, hc.grayText]);
+      } finally {
+        await tab.cdp('Emulation.setEmulatedMedia', { features: MOUSE });
+      }
+    } finally {
+      await ev(`document.getElementById('tib-off-check')?.remove(); document.getElementById('tib-off-check-own')?.remove()`);
+      await tab.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+    }
+  });
+
+  // The success colors are shared settings (v1.121), and the shared green tag is drawn with them:
+  // the same colors as before (§7: #3B6D11 on #EAF3DE, the edge #CFE3B8).
+  await check('Success colors: the shared settings exist, and the green tag (.ttag--ok) draws #3B6D11 on #EAF3DE with the #CFE3B8 edge (v1.121)', async () => {
+    const got = await ev(`(() => {
+      const root = getComputedStyle(document.documentElement);
+      const tag = document.createElement('span');
+      tag.className = 'ttag ttag--ok';
+      tag.textContent = 'Paid';
+      document.body.append(tag);
+      try {
+        const s = getComputedStyle(tag);
+        return { settings: ['--color-success-text', '--color-success-bg', '--color-success-border'].map((n) => root.getPropertyValue(n).trim()), text: s.color, bg: s.backgroundColor, edge: s.borderTopColor };
+      } finally {
+        tag.remove();
+      }
+    })()`);
+    assert.deepEqual(got, { settings: ['#3b6d11', '#eaf3de', '#cfe3b8'], text: 'rgb(59, 109, 17)', bg: 'rgb(234, 243, 222)', edge: 'rgb(207, 227, 184)' });
   });
 
   // The two-line note (v1.115, Star's school counts on Both): each line under the one before, at the
