@@ -10,7 +10,7 @@
 - **Black Belt:** BB3–BB6, BB9, BB11, BB12, BB17, the database half of BB8 and BB13, and Edit cycle's Undo (v0.961–v0.970; migration 0032).
 - **Dashboard core:** v1.114–v1.117.
 
-**Not in pass 1; pass 2 picks them up when they're on `main`:** new students' N15 and the Calendar Event types fix (e640af5), Black Belt's BB13 time list (2e806e7, v0.971–v0.972), Dashboard core's v1.118, and Color Belt's Part 1 and Part 2. Color Belt isn't merged yet; `Notes-ColorBelt.md` lists what to check before its merge.
+**Not in pass 1; pass 2 picks them up when they're on `main`:** new students' N15 and the Calendar Event types fix (e640af5), Black Belt's BB13 time list (2e806e7, v0.971–v0.972), Dashboard core's v1.118, and Color Belt's Part 1 and Part 2. Color Belt merged after the cut (main 84a6e7d); `Notes-ColorBelt.md` lists what pass 1 found in code it shares, as fixes on its merged work.
 
 ## How it was checked
 
@@ -46,13 +46,13 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Star | `Fix-Star.md` | 12 + 8 after another session's fix | 0 | 7 |
-| New students | `Fix-NewStudents.md` | 12 + 3 after another session's fix | 0 | 14 |
-| Black Belt | `Fix-BlackBelt.md` | 21 + 9 after another session's fix | 0 | 12 |
-| Camps | `Fix-Camps.md` | 8 + 8 after another session's fix | 0 | 13 |
+| Star | `Fix-Star.md` | 12 + 8 after another session's fix | 1 | 7 |
+| New students | `Fix-NewStudents.md` | 11 + 3 after another session's fix | 2 | 15 |
+| Black Belt | `Fix-BlackBelt.md` | 21 + 9 after another session's fix | 2 | 12 |
+| Camps | `Fix-Camps.md` | 8 + 8 after another session's fix | 2 | 13 |
 | Finance | `Fix-Finance.md` | 5 + 4 after another session's fix | 2 | 2 |
 | Dashboard core | `Fix-DashboardCore.md` | 11 | 1 | 15 |
-| Color Belt | `Notes-ColorBelt.md` | check before its merge | (follows the answers) | — |
+| Color Belt | `Notes-ColorBelt.md` | its points, now fixes on main 84a6e7d | 1 | 8 |
 
 ## Questions for Jeffrey, in order (one at a time)
 
@@ -100,7 +100,7 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
     - **Words: row menu labels.** "More actions for …" everywhere (pass 1b).
     - **Toasts: ✓.** The ✓ stays only on the account toasts (PIN, password) (R2-09).
     - **Counts: possible duplicates.** Possible duplicates stay out of Paid / Not paid until resolved, with a gray line, as Black Belt does. Mark paid on a possible duplicate follows the same answer (R3-02).
-    - **Counts: cards while hidden.** People counts stay and money cards go: Star, Color Belt and Camps already do this. Black Belt keeps its Candidates card (pass 1b).
+    - **Counts: cards while hidden.** People counts stay and money cards go: Star, Color Belt and Camps already do this. Black Belt shows its Candidates card (pass 1b).
     - **Lists: Prospects' filter line.** Prospects shows "Showing … only · Show all" like the rosters (R3-03).
     - **Lists: Camps' touch roster.** Keep it (no row ⋯; the actions are in Camper detail's More), written as a named exception (R3-04).
     - **Lists: back link.** One shared back link, built by Dashboard core (R3-06).
@@ -119,6 +119,6 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 
 ## Next
 
-- **Jeffrey:** all of pass 1's questions are answered (1–10 and 5b, 2026-11-04). The fix files carry the answers; the Main session merges `design-review` when he says so.
-- **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13 and BB8 History, new students' "(now)" 2–4, Dashboard core's v1.118), and Color Belt when it merges.
+- **Jeffrey:** questions 1–10 and 5b are answered (2026-11-04); the fix files carry the answers. **Still to ask, one at a time, with pictures:** (a) the in-list search's words, place and no-match line (v1.047 (14)); (b) R2-07's open part: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open") and the load-failure words (S-2: Camps / Finance "then retry", Black Belt "then try again", Calendar "and try again"); (c) Finance's row chevrons (S-11); (d) Color Belt's weight-600 family-page text (`register.css:375, 394, 659`, which Star's and Camps' family pages load too, so Camps' page keeps 600 text after its own R4-06); (e) whether section toasts also drop their closing full stop (v1.046 (7) drops only the ✓). The Main session merges `design-review` when he says so.
+- **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13 and BB8 History, new students' "(now)" 2–4, Dashboard core's v1.118), and Color Belt's merged Part 1 and Part 2 (84a6e7d).
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.

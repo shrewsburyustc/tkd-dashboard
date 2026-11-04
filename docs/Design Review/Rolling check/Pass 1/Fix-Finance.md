@@ -88,11 +88,11 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q6-home-not-closed-li
 - **Change:** `finance.css:98–105, 948–952` take `.tc-back`'s numbers (24 px tall, and the touch margins that pull the 44 px tap box back so the heading doesn't move), as Forms' `.fb-back` did (`forms.css:196–210`, copied from `src/screens/testing/chooser/chooser.css:90–104`). Jeffrey has picked one shared back link (v1.048 (12)): switch to it once Dashboard core builds it (your R3-06 item, below).
 - **Check (preview mode):** History at 1280, 820 touch, 390 touch and 320: the link is 24 px tall with a mouse, its tap area is 44 px on touch, and the History row (`.fin-dayrow`) starts at the same height at 1280 and 820. The heading itself still sits a few px lower on touch, because the month arrows beside it grow from 32 to 44 px; that is right and stays.
 
-### R2-09 (your part) — Your toasts drop the ✓ and the full stop · Low · decided 2026-11-04 (v1.046)
+### R2-09 (your part) — Your toasts drop the ✓ · Low · decided 2026-11-04 (v1.046)
 
 - **What's wrong:** "✓ Today's drawer is closed." (or "The drawer for [day] is closed.") and "✓ CSV downloaded" show the check icon (`DayReport.jsx:378–380`, which passes no icon; `:689`, which passes `icon: true`), which the shared Toast keeps for the account toasts (`src/components/Toast.jsx:6–10`). Testing, Camps and Black Belt toasts show no ✓ and no full stop. Your approved Daily report mockup draws the ✓; v1.046 changes it.
-- **Rule:** v1.046 (7) (Jeffrey, 2026-11-04: "Approve all"): only the account toasts (PIN, password) show a ✓; Prospects', Forms' and Finance's success toasts drop the ✓ and the full stop.
-- **Change:** pass `icon: false` at `DayReport.jsx:378–380` and `:689`, and drop the closing full stop in `finance/text.js:195–196`. "Day reopened. It can be counted again." (`:201`) has two sentences: show it without its last full stop in your mockup, for Jeffrey. "Close undone. The day is open again." (`:198`) waits with R2-07's open part (Waits, below).
+- **Rule:** v1.046 (7) (Jeffrey, 2026-11-04: "Approve all"): only the account toasts (PIN, password) show a ✓; Prospects', Forms' and Finance's success toasts drop the ✓.
+- **Change:** pass `icon: false` at `DayReport.jsx:378–380` and `:689`. "Close undone. The day is open again." (`:198`) waits with R2-07's open part (Waits, below).
 - **Check (preview mode):** close today's drawer: the toast reads "Today's drawer is closed" with Undo and no ✓; Export → "CSV downloaded", with no ✓.
 
 ### S-1 (your part) — Settings lists Shrewsbury's column first · Low · decided 2026-11-04 (v1.047)
@@ -113,7 +113,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q6-home-not-closed-li
 
 - **What's wrong:** your refusal says "Someone else changed this just now. Your change wasn't saved." (`finance/text.js:209`), a failed Undo "Couldn't undo. Check the connection, then try again." (`:200`), and a refused one "Too late to undo here. Ask an admin to reopen the day." (`:199`). Black Belt's newer words say what changed and what the screen now shows.
 - **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry."
-- **Change:** after Dashboard core's R2-07, take its three sentences from `src/components/text.js`: `:209` names what changed (the day or the setting: show it in your mockup), `:200` becomes the failed-Undo sentence, and `:199` takes the "Couldn't undo: [reason]." shape. "Close undone. The day is open again." (`:198`) isn't part of this set: it waits (Waits, below).
+- **Change:** after Dashboard core's R2-07, take its three sentences from `src/components/text.js`: `:209` names what changed (the day or the setting: show it in your mockup), `:200` becomes the failed-Undo sentence, and `:199` stays as it is (your approved D3 words; not one of the three sentences). "Close undone. The day is open again." (`:198`) isn't part of this set: it waits (Waits, below).
 - **Check (preview mode):** close today's drawer, `__tkdPreview.failNextSave()`, then Undo: the bar says "Undo didn't save. Check the connection, then retry." with Retry.
 
 ### R3-06 (your part) — History's back link switches to the shared one · Low · decided 2026-11-04 (v1.048) · after Dashboard core's R3-06

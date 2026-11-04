@@ -92,19 +92,19 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 ### R3-02 (your part) — Possible duplicates stay out of the counts until resolved · Low · decided 2026-11-04 (v1.046)
 
 - **What's wrong:** your cards count rows marked "Possible duplicate". Ava Thompson's two rows are both in Campers and Coming, and the unpaid copy's $315 is in To collect, though the tag on its row replaces "$315 due" (`src/lib/camps/campRules.js:495–515`; `toCollectCents`, `:445–449`, says "Possible duplicates count"). So the To collect amounts on screen don't add up to the card.
-- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of the people counts and To collect until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038).
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of To collect (your Not paid) until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038).
 - **Change:**
-  - `campCardCounts` (`campRules.js:495`): Campers, Coming (and its "here") and To collect (count and amount) leave out rows with `duplicateState === 'possible'`; `recordedCents` keeps their money. The To collect filter (`matchesCardFilter`, `:517`) lists exactly the rows the card counts, as Black Belt's does (`src/lib/blackBelt/rules.js:1062`). Test it in `src/lib/camps/checks.mjs`.
-  - The gray line, in Black Belt's words ("The possible duplicate row isn't counted in the cards until it's resolved.", `src/blackBelt/staff/text.js:511–513`), written in your own `camps/text.js`. `CountCards` takes one line under the row (`note`), and your pizza line already uses it on camp days (`CampRoster.jsx:281, 552`): plan both lines in the mockup, and ask before changing the shared part.
+  - `campCardCounts` (`campRules.js:495`): To collect (count and amount) leaves out rows with `duplicateState === 'possible'` (Campers, Coming and its "here" don't change: a flagged camper may be a child who is here); `recordedCents` keeps their money. The To collect filter (`matchesCardFilter`, `:517`) lists exactly the rows the card counts, as Black Belt's does (`src/lib/blackBelt/rules.js:1062`). Test it in `src/lib/camps/checks.mjs`.
+  - The gray line, in words that name To collect (drawn in your mockup for Jeffrey; Black Belt's "… isn't counted in the cards …" would be wrong here, because Campers and Coming still count the row), written in your own `camps/text.js`. `CountCards` takes one line under the row (`note`), and your pizza line already uses it on camp days (`CampRoster.jsx:281, 552`): plan both lines in the mockup, and ask before changing the shared part.
   - Mark paid: nothing to change; the duplicate tag already replaces the pay tag (`payTag`, `:436–443`).
   - Mockup first.
-- **Check (preview mode):** `__tkdPreview.resetCamps()`, April Vacation Camp: Ava Thompson's possible duplicate isn't in Campers, Coming or To collect, the gray line says so, and tapping To collect doesn't list it. Review → Keep this one: the counts are whole again and the line goes. Payments recorded is the same before and after.
+- **Check (preview mode):** `__tkdPreview.resetCamps()`, April Vacation Camp: Ava Thompson's possible duplicate isn't in To collect (Campers and Coming unchanged), the gray line says so, and tapping To collect doesn't list it. Review → Keep this one: the counts are whole again and the line goes. Payments recorded is the same before and after.
 
-### R3-09 (your part) — "Find a camper" becomes "Search campers" · Low · decided 2026-11-04 (v1.047)
+### R3-09 (your part) — One wording and place for the in-list search · Low · decided 2026-11-04 (v1.047) · after Jeffrey picks the words
 
 - **What's wrong:** your box reads "Find a camper" (`camps/text.js:551`), says "No camper with that name." when nothing matches (`:530`), and has no Clear search. Black Belt says "Search candidates" and Prospects "Search name or phone", each with its own no-match line.
-- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) share one look: "Search candidates / campers / prospects", on the left above the table, with one no-match line and Clear search.
-- **Change:** `camps/text.js:551` → "Search campers" (the placeholder and the name, `CampRoster.jsx:562–563`); the box sits on the left above the table, in R3-10's order; add Clear search as Black Belt and Prospects have it (the shared `IconButton` with `IconX`); and the one no-match line (`:530`). The row gives no words for that line: draw it in your mockup and ask Jeffrey once, unless the Main session has already passed on his answer from Black Belt or New students. (R3's proposal: 'No one matches "[text]".' with a Clear search link.)
+- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) use the same words and place, with one no-match line; the words and the place are shown to Jeffrey in one picture before any box changes (proposed: "Search candidates / campers / prospects", on the left above the table, with Clear search; it would change Camps' "Find a camper", v0.715, and move Prospects' box out of the chip row, v0.236).
+- **Change:** once Jeffrey has picked the words, the place and the no-match line (the design review asks him with one picture; the answer reaches you through the Main session): the placeholder and its name (`camps/text.js:551`, `CampRoster.jsx:562–563`), the box's place (in R3-10's order), Clear search if it is picked (the shared `IconButton` with `IconX`), and the no-match line (`:530`). Mockup first.
 - **Check (preview mode):** April Vacation Camp, type "zz": the approved no-match line shows; Clear search empties the box and brings everyone back; at 820 / 390 / 320 touch it has a 44 px tap area.
 
 ### R3-10 (your part) — The duplicate box moves above the cards · Low · decided 2026-11-04 (v1.047)
@@ -125,7 +125,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 
 - **What's wrong:** where it shows Edit camp (phones, and the camp page's header), your ⋯ starts with it, then Close / Open sign-up (`CampRowMenu.jsx:218–250`). Star, Black Belt and Color Belt start with Copy link(s), then Close / Open, then Edit.
 - **Rule:** v1.047 (18) (Jeffrey, 2026-11-04: "Approve all"): every event list's ⋯ uses one order: Copy link(s), Close / Open, Edit, then the rest.
-- **Change:** in `items()` (`CampRowMenu.jsx:218`), add Close / Open sign-up before Edit camp (`:221`). Save as template, Print roster and Delete camp follow, as today. Your ⋯ has no Copy link, and the row adds none.
+- **Change:** in `items()` (`CampRowMenu.jsx:218`), move the Edit camp line (`:221`) to just after the Close / Open sign-up block (`:222–240`). Save as template, Print roster and Delete camp follow, as today. Your ⋯ has no Copy link, and the row adds none.
 - **Check (preview mode):** at 390 touch, the camp list's ⋯ reads Close sign-up (or Open sign-up), Edit camp, Save as template, Print roster, then Delete camp; the camp page's header ⋯ the same.
 
 ### R1-08 (your part) — The "$X due" tags don't gray while a Mark paid save runs · Low · after Dashboard core's R1-08
@@ -173,7 +173,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 ### R5-03 (your part) — The family page removes a child with the trash icon · Low · decided 2026-11-04 (v1.048) · after New students' R5-03
 
 - **What's wrong:** on the camp family page, "Child 2 … Remove" is a blue underlined word (`src/camp/ChildCard.jsx:92–96`, `src/camp/text.js:28`, never in a mockup). Forms' family page, the kiosk and Fill in use the trash icon button (v0.626).
-- **Rule:** v1.048 (22) (Jeffrey, 2026-11-04: "Approve all"): every family page removes a child with the trash icon button (v0.626's look), so Camps' "Remove" link changes, and the public icon-button look lives in one small stylesheet that both family pages load.
+- **Rule:** v1.048 (22) (Jeffrey, 2026-11-04: "Approve all"): every family page removes a child with the trash icon button (v0.626's look), so Camps' "Remove" link changes.
 - **Change:** after New students' R5-03 puts that look in its own small stylesheet, load it in `src/camp/main.jsx` (next to `:9–11`), and make Remove the shared `IconButton` with `IconTrash` and the label `T.removeChildLabel(n)` (`src/camp/text.js:29`); `REMOVE_CHILD` (`:28`) goes. Mockup first.
 - **Check (preview mode):** the camp's family page → Add another child: "Child 2" shows the 28 px gray trash with the "Remove child 2" tooltip on PC, and a 44 px tap area at 820 / 390 / 320 touch; removing works.
 
@@ -181,7 +181,8 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-dupl
 
 ## Waits on Jeffrey (don't build yet)
 
-- Nothing waits on Jeffrey now. He answered these on 2026-11-04 (v1.045–v1.049); each answer is a Fix now or Smaller item in this file.
+- **R3-09, the in-list search** (Low): the words, the place and the no-match line of the three in-list search boxes (v1.047 (14)). The design review asks Jeffrey with one picture; the answer reaches you through the Main session. Your R3-09 item (Fix now) follows the answer.
+- **R2-07, the open part** (Low): the load-failure words (yours say "… Check the connection, then retry.", e.g. `camps/text.js:135, 488, 722`) and the words after an Undo are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
 
 ---
 

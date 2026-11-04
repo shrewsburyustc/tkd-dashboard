@@ -128,7 +128,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-
 ### R3-02 (your part) — A possible duplicate still offers Record payment · Low–Medium · decided 2026-11-04 (v1.046)
 
 - **What's wrong:** your cards already leave possible duplicates out, with a gray line: that is now every section's rule. But both Noah Silva rows still offer Record payment: the PC row button (`RosterRows.jsx:78`), the row ⋯ on tablets and phones (`CandidatesTab.jsx:286`) and the detail's button (`CandidateDialog.jsx:628`). A payment can land on the copy that is later withdrawn (the checker rated this Low–Medium). Color Belt and Camps offer none.
-- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of the counts until the pair is resolved, with one gray line under the cards, as Black Belt does; until then it offers no Mark paid or Record payment.
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of Paid and Not paid (yours: the four plan cards) until the pair is resolved, with one gray line under the cards, as you do; until then it offers no Mark paid or Record payment.
 - **Change:** in those three places, leave Record payment out while `duplicateState === 'possible'`. Your cards and their gray line stay; with BB15 the line becomes the shared cards' `note`.
 - **Check (preview mode):** `__tkdPreview.bbSampleEdge()`: neither Noah Silva row offers Record payment, at 1280 (the row button), at 820 touch (the ⋯) or in the detail. Review → Keep this one: the kept row offers it again.
 
@@ -172,8 +172,8 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-
 ### R3-09 (your part) — One no-match line and Clear search for the in-list search · Low · decided 2026-11-04 (v1.047)
 
 - **What's wrong:** the three in-list search boxes each read and sit differently (yours "Search candidates", Camps' "Find a camper", Prospects' "Search name or phone"), with three no-match lines ('No candidates match "x".', "No camper with that name.", "No one matches that search.").
-- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) share one look: "Search candidates / campers / prospects", on the left above the table, with one no-match line and Clear search.
-- **Change:** your words and place already fit (`text.js:523`; `CandidatesTab.jsx:428–440`). Left to do: the one no-match line (`text.js:536`, used at `CandidatesTab.jsx:410`), and Clear search (`:433–437`) as the shared `IconButton` (the Smaller line about its tooltip). The row gives no words for the no-match line: draw it in your mockup and ask Jeffrey once, unless the Main session has already passed on his answer from Camps or New students. (R3's proposal: 'No one matches "[text]".' with a Clear search link.)
+- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) use the same words and place, with one no-match line; the words and the place are shown to Jeffrey in one picture before any box changes (proposed: "Search candidates / campers / prospects", on the left above the table, with Clear search; it would change Camps' "Find a camper", v0.715, and move Prospects' box out of the chip row, v0.236).
+- **Change:** once Jeffrey has picked the words, the place and the no-match line (the design review asks him with one picture; the answer reaches you through the Main session), change what differs from yours ("Search candidates", `text.js:523`, `CandidatesTab.jsx:428–440`; the no-match line `text.js:536`, used at `:410`). Clear search (`:433–437`) becomes the shared `IconButton` either way: it has no tooltip today (§1.4; the Smaller line).
 - **Check (preview mode):** `__tkdPreview.bbSampleEdge()`, type "zz" in Search candidates: the approved no-match line shows, and Clear search, with its tooltip on PC, empties the box.
 
 ### R3-10 (your part) — The one-school line moves under the cards · Low · decided 2026-11-04 (v1.047) · with BB15, in your Part 2
@@ -209,7 +209,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-
 - **What's wrong:** on Both your roster sorts by Dan, then school with Shrewsbury first, then last name. The order comes from the database: `bb_cycle_roster` (live in `0025_black_belt_grading.sql:5058`, its order at `:5115`). The grading grid, Results, the make-up list and the results CSV sort the same way (`0025:3549, 3637, 3777, 3980`), and so do the preview's fake stores (`src/lib/blackBelt/mockBlackBelt.js:1999`, `src/lib/blackBelt/mockGrading.js:246`). The location switcher puts Worcester first.
 - **Rule:** v1.047 (19) (Jeffrey, 2026-11-04: "Approve all"): Worcester comes first wherever both schools are listed, as in the location switcher. Your "Dan, then school, then last name" line stays (v1.047 (17)).
 - **Change:** plan it, and show Jeffrey the plan: either the screens sort what they get (Dan, then Worcester before Shrewsbury, then last and first name), or one migration replaces those functions with Worcester first (ask the Main session for a number; handoff §6; the steps in Rules; a security review). Either way the fake stores change too, and so do the comments that say "Shrewsbury then Worcester" (`src/lib/blackBelt/api.js:696`, `src/lib/blackBelt/rules.js:1055`).
-- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` on Both: within each Dan, Worcester's candidates come before Shrewsbury's on the roster; with `__tkdPreview.loadBlackBeltGradingSample()`, on the Grading and Results tabs too.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` on Both: within each Dan, Worcester's candidates come before Shrewsbury's on the roster; with `__tkdPreview.loadBlackBeltGradingSample()`, on the Grading and Results tabs, in the make-up picker and in the downloaded results CSV too.
 
 ### Pass 1b ⋯ names (your part) — Three rubric ⋯ say "More for …" · Low · decided 2026-11-04 (v1.045)
 
@@ -274,7 +274,8 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-
 
 ## Waits on Jeffrey (don't build yet)
 
-- Nothing waits on Jeffrey now. He answered these on 2026-11-04 (v1.045–v1.049); each answer is a Fix now or Smaller item in this file.
+- **R3-09, the in-list search** (Low): the words, the place and the no-match line of the three in-list search boxes (v1.047 (14)). The design review asks Jeffrey with one picture; the answer reaches you through the Main session. Your R3-09 item (Fix now) follows the answer.
+- **R2-07, the open part** (Low): the load-failure words (yours: `text.js:85`, "Couldn't load. Check the connection, then try again.") and the words after an Undo are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
 
 ---
 
@@ -290,7 +291,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-
 - Your Clear search ✕ (`candidates/CandidatesTab.jsx:434`) is 28 px but has no tooltip (§1.4). Use the shared `IconButton`, as Prospects will (pass 1b, R5-01). Low.
 - **R4-02 is decided** (2026-11-04, v1.049 (a)): Add candidate's New candidate form, open while Hide private details is turned on from another browser tab, keeps what was typed. It is recorded as a known gap in v0.249's "every screen". Nothing to build.
 - **S-9 is decided** (2026-11-04, v1.047 (17)): your "Dan, then school, then last name" line stays (`text.js:525`), and no other roster adds one. Nothing to build.
-- **Cards while hidden are decided** (pass 1b; 2026-11-04, v1.046 (9)): while Hide private details is on, the count cards keep the people counts and drop the money cards. Once BB15 moves you to the shared cards, you show a people count too, instead of no row. The row doesn't say where it sits beside your four plan cards when the switch is off: draw it in your BB15 mockup. Nothing to build before BB15.
+- **Cards while hidden are decided** (pass 1b; 2026-11-04, v1.046 (9)): while Hide private details is on, the count cards keep the people counts and drop the money cards. Once BB15 moves you to the shared cards, the row shows one Candidates card while the switch is on, instead of no row; with the switch off your four plan cards stay as they are (§8: max 4 in a row; a fifth card would be a new question for Jeffrey). Nothing to build before BB15.
 - **S-10 is decided** (2026-11-04, v1.048 (20)): the browser dropdown in your result-text box (`src/blackBelt/staff/rubric/ResultTextDialog.jsx:278`) becomes the shared Select (v1.100) when you next work on that screen. No sweep, so nothing to build until then.
 
 ---

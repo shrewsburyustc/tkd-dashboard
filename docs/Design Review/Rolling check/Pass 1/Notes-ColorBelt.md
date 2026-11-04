@@ -1,4 +1,4 @@
-# Color Belt — notes from the design review's rolling check (pass 1): check before your merge
+# Color Belt — fixes from the design review's rolling check (pass 1), now on your merged work
 
 **Paste into:** the Color Belt session.
 
@@ -6,15 +6,15 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 **Starter to paste:**
 
-> `git merge main` first. Then read and do `docs/Design Review/Rolling check/Pass 1/Notes-ColorBelt.md`: what the design review's rolling check found in code you share with the merged sections. Check each point before you ask for your merge. Plan first. Mockups first for anything that changes how a screen looks. Nothing is built before I OK it.
+> `git merge main` first. Then read and do `docs/Design Review/Rolling check/Pass 1/Notes-ColorBelt.md`: what the design review's rolling check found in code you share with the merged sections. Your Part 1 and Part 2 are merged (main 84a6e7d), so each point is a fix on main, made on your branch. Plan first. Mockups first for anything that changes how a screen looks. Nothing is built before I OK it.
 
 ---
 
 ## Why this note
 
-The design review's rolling check (phase 1d) looks at each section's design-review work after it merges. Pass 1 covered `main` up to 5f1db41 (2026-11-03). Your design-review work (Part 1 and Part 2, branch `color-belt`) isn't merged yet, so pass 1 didn't review it; a later pass does, after your merge.
+The design review's rolling check (phase 1d) looks at each section's design-review work after it merges. Pass 1 covered `main` up to 5f1db41 (2026-11-03). Your design-review work (Part 1 and Part 2) merged into main after the cut (84a6e7d, 2026-11-04), so pass 1 didn't review it; pass 2 does.
 
-But pass 1 found problems in code you share with the merged sections, or that you and they copied from each other. Checking them now keeps the same gaps from arriving with your merge. Pass 1's checkers looked at your branch for a few points (R2-02, R2-03, R2-10, R3-08). Where a read-only look at your branch (9dbb1ce, checked again at 5ae845c) adds something, it says so.
+But pass 1 found problems in code you share with the merged sections, or that you and they copied from each other. They arrived on main with your merge, so they are fixes now. Pass 1's checkers looked at your branch for a few points (R2-02, R2-03, R2-10, R3-08). Where a read-only look at your branch (9dbb1ce, checked again at 5ae845c) adds something, it says so.
 
 - Each point keeps its finding id (R2-02, R2-10 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 5f1db41's unless marked "on your branch"; they may have moved. Points decided in v1.045–v1.049 cite main 84a6e7d's (your merged work).
@@ -37,7 +37,7 @@ But pass 1 found problems in code you share with the merged sections, or that yo
 
 ---
 
-## Check before your merge
+## Fix now
 
 ### R2-02 — Edit event's Undo is two steps, so it can stop halfway · High
 
@@ -45,7 +45,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 - **What pass 1 found:** Star's Edit event Undo is two saves, the details and then the registration switch. If only the second fails, registration stays as edited, and Retry sends both again with the old version and falsely says "Couldn't undo. Someone else changed this just now." Your `testing/events/EventsTab.jsx:497–508` has the same two steps, on main and on your branch (9dbb1ce: `updateEvent`, then `setRegistration`, in one Undo, and `runUndo`'s Retry reruns both). Families could keep registering against what the Undo meant.
 - **Rule:** v0.970 (Black Belt's Edit cycle Undo is one database step; "Undo stopped halfway" retired), v1.006, §3.5.
-- **What to do:** the same fix as Star's R2-02. One database function puts the old details and the old switch back together or not at all, like `bb_undo_cycle_edit` in 0032; the toast's Undo calls it once. Ask the Main session for a migration number. Jeffrey applies it. The migration is live before the push that brings the app that uses it. Until it is live, Retry re-sends only the step that failed, with the version the first step returned, and never says "someone else". Main already has the same two steps, so whether this goes in before or after your merge is Jeffrey's call.
+- **What to do:** the same fix as Star's R2-02. One database function puts the old details and the old switch back together or not at all, like `bb_undo_cycle_edit` in 0032; the toast's Undo calls it once. Ask the Main session for a migration number. Jeffrey applies it. The migration is live before the push that brings the app that uses it. Until it is live, Retry re-sends only the step that failed, with the version the first step returned, and never says "someone else". Your merged code still has the two steps (`events/EventsTab.jsx:458–506` on main 84a6e7d).
 - **Check (preview mode):** Edit event (rename it and switch registration) → Save. Then:
   - **Before the migration is live (two steps):** `__tkdPreview.setTestingDelay(1500)` → Undo → `__tkdPreview.failNextSave()` about 2 s later (it fails the second step) → "Undo didn't save…" with Retry, never "someone else". Retry → "Undone", both back.
   - **With the one-step function:** `__tkdPreview.failNextSave()` → Undo → "Undo didn't save…" with Retry, and nothing changed. Retry → "Undone", both back.
@@ -59,7 +59,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 ### R1-02 — The Paying by hint · Medium (Star's), nothing to change here
 
 - **What pass 1 found:** Star's Mark paid box says "They chose Check on the form" after the desk changed Paying by. Your branch already does it right (v0.418: "If they change how they pay the dashboard should reflect that"), as Camps does (v0.735). Star now copies Camps' pattern.
-- **What to do:** nothing. Keep it, and make sure your merge brings v0.418's row with it.
+- **What to do:** nothing. Keep it (v0.418 is on main since your merge).
 
 ### R1-03 — A history that drops Paying by changes · a check
 
@@ -86,20 +86,20 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 - **Today:** Finance books your payments to the event's school (a private testing's payments to the private testing's school), so a family that pays at the other school's desk is counted in the wrong drawer.
 - **Rule:** v1.035 (Jeffrey, 2026-11-04): every payment counts at the school of the desk that took it, the school set under This device in the account menu, as Camps does (v0.708). The school is stored on the payment when it is recorded, and an undo, edit or returned check copies it from the payment it corrects (v0.903's chain rule). A refund counts at the desk that hands the money back (v1.040). Money booked to the wrong school is moved by undoing it and recording it again on a device set to the right school.
-- **What to do:** after your merge, or in your Part 2 if it fits, `testing_payments` and `testing_private_payments` get a school column. Existing rows take the school Finance shows for them today: the event's, or the private testing's (`0026:602`). The old 2-argument functions the live site still calls store that same school. `testing_mark_paid_by` / `testing_private_mark_paid_by` (your 0030 functions) take the device's school and store it. Undo, Edit payment, `testing_move_to_private` and `testing_private_undo_move` (0030) copy it from the payment they correct or move, so a Move stays a transfer (v0.407) and never changes a counted day. That needs a migration: ask the Main session for a number; Jeffrey applies it. Finance then reads your stored school in a step of its own, so say in your report when yours is live. Order: your migration, then Finance's reader migration, then your app push. The app passes This device's school through `src/App.jsx` and `src/screens/Testing.jsx`, both CLAUDE.md shared files: list them.
+- **What to do:** as a step after your merged Part 2, `testing_payments` and `testing_private_payments` get a school column. Existing rows take the school Finance shows for them today: the event's, or the private testing's (`0026:602`). The old 2-argument functions the live site still calls store that same school. `testing_mark_paid_by` / `testing_private_mark_paid_by` (your 0030 functions) take the device's school and store it. Undo, Edit payment, `testing_move_to_private` and `testing_private_undo_move` (0030) copy it from the payment they correct or move, so a Move stays a transfer (v0.407) and never changes a counted day. That needs a migration: ask the Main session for a number; Jeffrey applies it. Finance then reads your stored school in a step of its own, so say in your report when yours is live. Order: your migration, then Finance's reader migration, then your app push. The app passes This device's school through `src/App.jsx` and `src/screens/Testing.jsx`, both CLAUDE.md shared files: list them.
 
 ### R2-03 — No Undo after restoring a Duplicate copy · Medium · decided 2026-11-04 (v1.043)
 
-- **Today:** your event page's Restore of a "Duplicate copy" has an Undo that puts the row back as a plain "Removed" (`event/EventPage.jsx:1087–1096` on main; `:1292–1313` on your branch at 5ae845c).
+- **Today:** your event page's Restore of a "Duplicate copy" has an Undo that puts the row back as a plain "Removed" (`event/EventPage.jsx:1291–1312` on main 84a6e7d).
 - **Rule:** v1.043 (Jeffrey, 2026-11-04: "A: as Star"), Star's v0.517 G3 for every section: restoring a row set aside as a "Duplicate copy" shows "[Name] restored" with no Undo, because an Undo would put the row back as a plain "Removed" with a history that says Withdrawn. To change it back, an admin uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
-- **What to do:** before your merge, give that restore no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
+- **What to do:** give that restore no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
 
 ### R3-02 — Possible duplicates stay out of the counts until resolved · Low · decided 2026-11-04 (v1.046)
 
 - **Today:** your event page's cards count a possible-duplicate row in Students, Paid and Not paid, and the Paid / Not paid filters list it (`event/EventPage.jsx:435–437, 463–464, 1668–1680` on main 84a6e7d). Mark paid is already hidden on it (`event/RosterRows.jsx:79`, `EventPage.jsx:426`).
-- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of the people counts and Paid / Not paid until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038). Until then it offers no Mark paid or Record payment, as Color Belt and Camps already don't.
-- **What to do:** leave rows with `duplicateState === 'possible'` out of Students, Paid and Not paid, and out of the two filters, as Black Belt's `rosterFilter` does (`src/lib/blackBelt/rules.js:1062`). Payments recorded and its "includes $X from removed students" line stay. Add the gray line as the shared cards' `note` (`EventPage.jsx:1998`), in Black Belt's words (`src/blackBelt/staff/text.js:511–513`). Keep Mark paid hidden. Mockup first.
-- **Check (preview mode):** on an event with a possible-duplicate pair: Students, Paid and Not paid leave the pair out, the gray line says so, and tapping Not paid doesn't list them. Review → Keep this one: the counts are whole again and the line goes.
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of Paid and Not paid until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038). Until then it offers no Mark paid or Record payment, as Color Belt and Camps already don't.
+- **What to do:** leave rows with `duplicateState === 'possible'` out of Paid and Not paid, and out of the two filters (Students doesn't change), as Black Belt's `rosterFilter` does (`src/lib/blackBelt/rules.js:1062`). Payments recorded and its "includes $X from removed students" line stay. Add the gray line as the shared cards' `note` (`EventPage.jsx:1998`), in words that name Paid and Not paid, drawn in your mockup. Keep Mark paid hidden. Mockup first.
+- **Check (preview mode):** on an event with a possible-duplicate pair: Paid and Not paid leave the pair out (Students still counts it), the gray line says so, and tapping Not paid doesn't list them. Review → Keep this one: the counts are whole again and the line goes.
 
 ### R3-10 — The duplicate box goes above the cards · Low · decided 2026-11-04 (v1.047)
 
@@ -146,8 +146,8 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 ### Smaller lines for you
 
 - **Add student while hidden** (out of pass 1, for your own review): on main, Add student stays usable while Hide private details is on and shows "Paying by Cash · Check · Card". It asks no birthday or email, so it isn't desk-only, but Paying by is a payment detail that Camps hides. Check how your branch handles it, and ask Jeffrey if it needs a rule.
-- **The shared `DeleteDialog`:** the checker found it used only by your Classes and ranks (`ClassesRanksTab.jsx:63` on main), planned to go with CB5. A read-only look at 9dbb1ce shows your Classes and ranks now uses the shared ConfirmBox, so after your merge nothing uses `src/components/DeleteDialog.jsx` or its old address `src/screens/testing/DeleteDialog.jsx`. Removing a shared part is Dashboard core's call (the shared-part rule): say so in your report.
-- **Camps re-exports your words:** Camps re-exports about 75 words from your `testing/text.js` (allowed), so your word changes reach Camps' screens at your merge without a Camps review. In your merge report, list which re-exported words you changed, so Camps can check them.
+- **The shared `DeleteDialog`:** the checker found it used only by your Classes and ranks (`ClassesRanksTab.jsx:63` on main), planned to go with CB5. A read-only look at 9dbb1ce shows your Classes and ranks now uses the shared ConfirmBox, so on main nothing imports `src/components/DeleteDialog.jsx` or its old address `src/screens/testing/DeleteDialog.jsx` now (checked on 2881413). Removing a shared part is Dashboard core's call (the shared-part rule): say so in your report.
+- **Camps re-exports your words:** Camps re-exports about 75 words from your `testing/text.js` (allowed), so your word changes reach Camps' screens without a Camps review. In each report, list which re-exported words you changed, so Camps can check them.
 - Your count cards still draw Not paid with the clock (`EventPage.jsx:1413`, `PrivateTestingTab.jsx:841`), where Star and Camps use `ti-circle-x`. That's your planned CB15. Pass 1b.
 - **R5-04 is decided** (2026-11-04, v1.038): Payments recorded counts all money received, removed people included, with your own line "includes $X from removed students". Nothing changes for you.
 - **R3-08 is decided** (2026-11-04, v1.048 (13)): Star takes your `ti-calendar` for "Change private day or time". Nothing to do.

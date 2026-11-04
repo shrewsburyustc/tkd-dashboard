@@ -30,7 +30,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **One decision at a time,** with pictures: each option drawn, its pros and cons, and a recommendation.
 - **Reviews:** a separate design reviewer (the rulebook, the approved mockups, screenshots at the four sizes, and §4's six WCAG 2.2 checks, v1.033); a separate code reviewer; a separate security reviewer for anything touching the database (handoff §6).
 - **Order (a push to main deploys):** the migration is live before the push that brings the app that uses it. A step whose app calls a new or changed database function is merged only after Jeffrey has applied its migration and the checks passed (fingerprints, security advisor, tests file — CLAUDE.md). Screen-only steps can go first.
-- **Migrations:** R1-01, R1-02 and R2-02 each need a database change (one migration can hold several if you plan them together). Ask the Main session for a migration number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`). Add a SETUP section "## Migration 00NN: …" with steps `### 00NNa.` …, a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
+- **Migrations:** R1-01, R1-02 and R2-02 each need a database change (and S-1 does, if you change the order in the database) (one migration can hold several if you plan them together). Ask the Main session for a migration number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`). Add a SETUP section "## Migration 00NN: …" with steps `### 00NNa.` …, a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
 - **Don't change a shared part on your own** (`src/components/…`, the shared helpers in `src/lib/`, `src/styles/shared.css`): every section uses them. If you need something a part can't do, ask Jeffrey first. He decides whether you change it in your branch (then list it as a shared file) or the Dashboard core session does.
 - List every CLAUDE.md shared file you touch (`src/styles/shared.css` and `src/components/text.js` are on that list).
   - Star's fake database is in `src/lib/mockStar*.js`.
@@ -118,13 +118,13 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 ### R3-02 — A possible duplicate is counted twice, and offers Mark paid · Low–Medium · decided 2026-11-04 (v1.046)
 
 - **What's wrong:** both rows of a possible-duplicate pair count in your cards (`CandidatesTab.jsx:256–260`): Not paid lists both Ava Reeds, so one child is counted twice. Both rows also offer Mark paid (`CandidateRows.jsx:114`), so a payment can land on the copy that is later withdrawn. (The checkers rated the counts Low, and Mark paid on a duplicate Low–Medium.) Black Belt leaves these rows out of its cards, with a gray line; Color Belt and Camps offer no payment on them.
-- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of the people counts and Paid / Not paid until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038). Until then such a row offers no Mark paid or Record payment.
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of Paid and Not paid until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038). Until then such a row offers no Mark paid or Record payment.
 - **Change:**
-  - Counts: leave the flagged rows (the `pairs`, `CandidatesTab.jsx:279–288`, as the ⋯ menu's `flagged` does, `:1128`) out of Candidates (with its school counts on Both), Paid and Not paid (`:257–260`), and out of the Paid / Not paid filters (`:271–272`), so a card lists exactly what it counts, as Black Belt's `rosterFilter` does (`src/lib/blackBelt/rules.js:1062`). Payments recorded (`:261`, and R5-05's change) keeps any money they hold.
-  - The gray line: the shared `CountCards`' `note` (`:1490`), in Black Belt's words ("The possible duplicate row isn't counted in the cards until it's resolved.", `src/blackBelt/staff/text.js:511–513`).
+  - Counts: leave the flagged rows (the `pairs`, `CandidatesTab.jsx:279–288`, as the ⋯ menu's `flagged` does, `:1128`) out of Paid and Not paid (`:259–260`; Candidates and its school counts don't change), and out of the Paid / Not paid filters (`:271–272`), so a card lists exactly what it counts, as Black Belt's `rosterFilter` does (`src/lib/blackBelt/rules.js:1062`). Payments recorded (`:261`, and R5-05's change) keeps any money they hold.
+  - The gray line: the shared `CountCards`' `note` (`:1490`), in words that name Paid and Not paid, drawn in your mockup for Jeffrey (Black Belt's "… isn't counted in the cards …", `src/blackBelt/staff/text.js:511–513`, would be wrong here, because Candidates still counts the row).
   - Mark paid: `showRecord` (`CandidateRows.jsx:114`) leaves out a flagged row, as Color Belt's roster does.
   - Mockup first.
-- **Check (preview mode):** `__tkdPreview.resetTesting()`, Fall Star Testing: neither Ava Reed row offers Mark paid; Candidates, Paid and Not paid leave them out, and the gray line says so; tap Not paid: neither Ava Reed is listed. Review → Keep this one: the kept row counts again and offers Mark paid, and the line goes.
+- **Check (preview mode):** `__tkdPreview.resetTesting()`, Fall Star Testing: neither Ava Reed row offers Mark paid; Paid and Not paid leave them out (Candidates still counts them), and the gray line says so; tap Not paid: neither Ava Reed is listed. Review → Keep this one: the kept row counts again and offers Mark paid, and the line goes.
 
 ### R4-08 — The grayed Email result has the wrong gray and doesn't tell screen readers why · Low
 
@@ -161,15 +161,15 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 
 - **What's wrong:** after a closing date has passed, staff read "The closing date has passed. Ask an admin to reopen." (`lib/star/eventsText.js:98`, shown in the event ⋯, `star/events/StarEventsTab.jsx:748`; and `:99`). Camps says "… Ask an admin to open it." (v0.725), which matches the Close / Open pair.
 - **Rule:** v1.045 (5) (Jeffrey, 2026-11-04: "Approve all"): staff after a closing date read "Ask an admin to open it.", as Camps' v0.725.
-- **Change:** `lib/star/eventsText.js:98–99`: "Ask an admin to reopen." → "Ask an admin to open it." (the second line keeps "Registration wasn't opened.").
+- **Change:** `lib/star/eventsText.js:98–99`: "Ask an admin to reopen." → "Ask an admin to open it." (the second line keeps "Registration wasn't opened."), and update the check that asserts the old words (`src/lib/star/eventsChecks.mjs:879`).
 - **Check (preview mode):** `__tkdPreview.setRole('staff')` and reload, then `__tkdPreview.setToday()` to a day after an event's closing date: that event's ⋯ shows Open registration grayed with "The closing date has passed. Ask an admin to open it."
 
-### S-1 (your part) — On Both, the Candidates card lists Shrewsbury first · Low · decided 2026-11-04 (v1.047)
+### S-1 (your part) — On Both, Star lists Shrewsbury first: the Candidates card, the belt order, Grading, Results and the results CSV · Low · decided 2026-11-04 (v1.047)
 
-- **What's wrong:** on Both, the Candidates card's two school counts put Shrewsbury above Worcester (`CandidatesTab.jsx:258`, "as drawn"), while the location switcher and your link cards put Worcester first.
+- **What's wrong:** on Both, the Candidates card's two school counts put Shrewsbury above Worcester (`CandidatesTab.jsx:258`, "as drawn"), while the location switcher and your link cards put Worcester first. Your belt order does the same within each star level (v0.117): `sortBeltOrder` (`src/lib/star/candidatesCore.js:99–106`, used for the roster at `:402`), the Results list and the results CSV from the database (`star_event_results`, `0006_star_testing.sql:5920`, order at `:5948–5951`; `star_results_csv`, live in `0023_star_result_texts.sql:614`, order at `:656–659`), and the fake grading and results stores (`src/lib/mockStarGrading.js:143`, `src/lib/mockStarResults.js:113`).
 - **Rule:** v1.047 (19) (Jeffrey, 2026-11-04: "Approve all"): Worcester comes first wherever both schools are listed, as in the location switcher.
-- **Change:** `CandidatesTab.jsx:258`: `['worcester', 'shrewsbury']`, and its comment.
-- **Check (preview mode):** Fall Star Testing on Both, at 1280 and 390: the Candidates card lists Worcester, then Shrewsbury.
+- **Change:** `CandidatesTab.jsx:258`: `['worcester', 'shrewsbury']`, and its comment. The belt order: plan it and show Jeffrey, as Black Belt's S-1 does. Either the screens sort what they get (stars, then Worcester before Shrewsbury, then last and first name; the CSV rows sorted before the file is written), or one migration replaces `star_event_results` and `star_results_csv` with Worcester first (ask the Main session for a number; handoff §6; a security review). Either way `sortBeltOrder` and its comment, the two fake stores and the check at `src/lib/star/resultsChecks.mjs:154–156` change too.
+- **Check (preview mode):** Fall Star Testing on Both, at 1280 and 390: the Candidates card lists Worcester, then Shrewsbury; within a star level the roster, the Grading and Results tabs and the downloaded results CSV list Worcester's candidates first.
 
 ### R1-08 (your part) — Mark paid buttons don't gray while a save runs · Low · after Dashboard core's R1-08
 
@@ -224,7 +224,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 
 ## Waits on Jeffrey (don't build yet)
 
-- Nothing waits on Jeffrey now. He answered these on 2026-11-04 (v1.045–v1.049); each answer is a Fix now or Smaller item in this file.
+- **R2-07, the open part** (Low): the words after an Undo, including your "Registration open" (`lib/star/eventsText.js:79`, shown after an Undo at `StarEventsTab.jsx:466`), and the load-failure words are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
 
 ---
 

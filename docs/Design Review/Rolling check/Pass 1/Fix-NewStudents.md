@@ -87,13 +87,6 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Change:** Duplicate's toast gets Undo, which deletes the new Draft, as Camps' Save as template does. (Star's part of R2-08 is in Star's file.)
 - **Check (preview mode):** Duplicate a form → toast with Undo → Undo → "Undone", and the copy is gone.
 
-### R5-01 — Prospects' "Clear search" ✕ is 18 px with no tooltip · Medium (pass 1b)
-
-- **What's wrong:** on the PC, Prospects' Clear search ✕ (List, Board and Both) is 18 × 18 px with a 14 px icon and no tooltip. It is the one icon-only button N13 left behind: every other one in Calendar, Schedule, Prospects and Forms is now the shared 28 px icon button.
-- **Rule:** §4 check 1 (v1.033): anything you tap or click is at least 24 × 24 px. §1.4: every icon has a tooltip on hover and keyboard focus. §2.2: 16 px icons in buttons. v0.626: icon-only buttons in Prospects use the shared icon button.
-- **Change:** `Prospects.jsx:786–788` and `prospects/PipelineBar.jsx:53–55` → the shared `IconButton` (label "Clear search", `IconX`), kept inside the right end of the box. `prospects.css:189–197` keeps only the position; the touch `::after` at `:1402–1410` goes, because IconButton already gives 44 px on touch.
-- **Check (preview mode):** Prospects at 1280, type "Ru": the ✕ is 28 × 28 with a 16 px icon and shows "Clear search" on hover and on Tab. At 820 / 390 / 320 touch it has a 44 px tap area and the box doesn't grow. Board view and Both the same. Clicking it empties the box and brings back the "Follow up today" chip.
-
 ### R5-02 — The family page's Remove child icon is near-black, not the approved gray · Low (pass 1b)
 
 - **What's wrong:** on the public family page (`/f/free-class-instagram` → Add another child) the trash icons are #1F1F1F; in Fill in and the kiosk they are the approved gray #6B6B6B. The page's own reset `button { color: inherit }` (`forms-public.css:49–55`) beats the zero-weight `:where(.tib)` copy (`:130–143`).
@@ -105,7 +98,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 - **What's wrong:** the List opens on "Follow up today" (`Prospects.jsx:624`), and a stage or chip filters it too, but only the pressed chip says so: there is no "Showing … only · Show all" line, as under the count cards (v1.107).
 - **Rule:** v1.047 (10) (Jeffrey, 2026-11-04: "Approve all"): when Prospects' list is filtered (it still opens on Follow up today, v0.236), the gray "Showing … only · Show all" line shows, as under the count cards.
-- **Change:** under the `PipelineBar` (`Prospects.jsx:645`), in the List while a filter is on (the opening one included): one gray line, "Showing [filter] only · Show all", drawn as the shared one (`<p className="ev-filter-line cards-showing">` with a `link-button inline-link`, as `src/components/CountCards.jsx:89` draws it; v1.117's touch rules, `src/styles/shared.css:2127–2160`, work only inside `.cards-showing`). Show all shows everyone. The Board always shows everyone, so it gets none. The row adds only the line: the stage counts keep v0.236's look (R3's note S-12). Mockup first, with the line's words for each filter.
+- **Change:** under the `PipelineBar` (`Prospects.jsx:645`), in the List while a filter is on (the opening one included): one gray line, "Showing [filter] only · Show all", drawn as the shared one (`<p className="ev-filter-line cards-showing">` with a `link-button inline-link`, as `src/components/CountCards.jsx:89` draws it; v1.117's touch rules, `src/styles/shared.css:2127–2160`, work only inside `.cards-showing`). Show all shows everyone. After Show all with the keyboard, the focus goes to the chip or stage that was on (v1.119, as the shared cards do). The Board always shows everyone, so it gets none. The row adds only the line: the stage counts keep v0.236's look (R3's note S-12). Mockup first, with the line's words for each filter.
 - **Check (preview mode):** Prospects at 1280, 820 touch and 390: the List opens with the line ("Showing follow up today only · Show all", or the approved words); Show all → everyone, and the line goes; tap Booked → its own line. At 820 / 390 / 320 touch, Show all's tap area covers neither the chips nor the list.
 
 ### R3-11 — The page ⋯ goes last, right of the blue button · Low · decided 2026-11-04 (v1.047)
@@ -115,19 +108,19 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Change:** move each of the four ⋯ after its blue button.
 - **Check (preview mode):** Prospects and Calendar at 1280, 820 touch and 390, and the Schedule (one school and Both) at 390: the ⋯ is the last button in the header, and Tab reaches the blue button first.
 
-### R2-09 (your part) — Prospects' and Forms' toasts drop the ✓ and the full stop · Low · decided 2026-11-04 (v1.046)
+### R2-09 (your part) — Prospects' and Forms' toasts drop the ✓ · Low · decided 2026-11-04 (v1.046)
 
 - **What's wrong:** in Prospects "✓ Note saved.", "✓ Free class booked for [name]." and "✓ [name] was deleted.", and in Forms "✓ Copied as "…" (a Draft).", "✓ … was deleted.", "✓ … is published — families see the new version." and "✓ Booking settings saved — they are live now." show the check icon and a full stop. The shared Toast keeps the ✓ for the account toasts (`src/components/Toast.jsx:6–10`); Testing, Camps and Black Belt toasts have neither.
-- **Rule:** v1.046 (7) (Jeffrey, 2026-11-04: "Approve all"): only the account toasts (PIN, password) show a ✓; Prospects', Forms' and Finance's success toasts drop the ✓ and the full stop.
-- **Change:** pass `icon: false` where the ✓ shows today (`Prospects.jsx:227`, which passes `{}` when there is no Undo, and `:473`; `Forms.jsx:182, 223`; `forms/Builder.jsx:317, 345`), and drop the closing full stop from every success toast's words (`prospects/text.js:114, 212, 215–217`; `forms/text.js:50–52, 56, 98, 178`).
-- **Check (preview mode):** save a note on a prospect: "Note saved", with no ✓; Duplicate a form: "Copied as "Copy of …" (a Draft)", with no ✓ and no full stop; publish a form: the same.
+- **Rule:** v1.046 (7) (Jeffrey, 2026-11-04: "Approve all"): only the account toasts (PIN, password) show a ✓; Prospects', Forms' and Finance's success toasts drop the ✓.
+- **Change:** pass `icon: false` where the ✓ shows today (`Prospects.jsx:227`, which passes `{}` when there is no Undo, and `:473`; `Forms.jsx:182, 223`; `forms/Builder.jsx:317, 345`).
+- **Check (preview mode):** save a note on a prospect: "Note saved", with no ✓; Duplicate a form: "Copied as "Copy of …" (a Draft)", with no ✓; publish a form: the same.
 
-### R3-09 (your part) — "Search name or phone" becomes "Search prospects", on the left · Low · decided 2026-11-04 (v1.047)
+### R3-09 (your part) — One wording and place for the in-list search · Low · decided 2026-11-04 (v1.047) · after Jeffrey picks the words
 
 - **What's wrong:** Prospects' box reads "Search name or phone" (`prospects/text.js:28`), sits right of the chips (`prospects/PipelineBar.jsx:48–55`; on Both, `Prospects.jsx:801–806`) and says "No one matches that search." (`prospects/text.js:45`). Black Belt says "Search candidates", on the left above its table; Camps says "Find a camper".
-- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) share one look: "Search candidates / campers / prospects", on the left above the table, with one no-match line and Clear search.
-- **Change:** `prospects/text.js:28` → "Search prospects" (its screen-reader name, `:29`, still starts with those words); the box moves to the left, just above the list; Clear search is R5-01's `IconButton`; and the one no-match line (`:45`). The row gives no words for that line: draw it in your mockup and ask Jeffrey once, unless the Main session has already passed on his answer from Black Belt or Camps. (R3's proposal: 'No one matches "[text]".' with a Clear search link.) Mockup first, with R3-03's line.
-- **Check (preview mode):** Prospects at 1280, 820 touch and 390: "Search prospects" sits on the left above the list; type "zz": the approved no-match line shows; Clear search brings everyone back. Board and Both the same.
+- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) use the same words and place, with one no-match line; the words and the place are shown to Jeffrey in one picture before any box changes (proposed: "Search candidates / campers / prospects", on the left above the table, with Clear search; it would change Camps' "Find a camper", v0.715, and move Prospects' box out of the chip row, v0.236).
+- **Change:** once Jeffrey has picked the words, the place and the no-match line (the design review asks him with one picture; the answer reaches you through the Main session): the placeholder and its screen-reader name (`prospects/text.js:28–29`), the box's place (today right of the chips, `prospects/PipelineBar.jsx:48–55`; on Both `Prospects.jsx:801–806`), and the no-match line (`:45`). Clear search is already the shared `IconButton` (v0.631, on main). Mockup first, with R3-03's line.
+- **Check (preview mode):** Prospects at 1280, 820 touch and 390: the box reads and sits as Jeffrey picked; type "zz": the approved no-match line shows; Clear search brings everyone back. Board and Both the same.
 
 ### R4-06 (your part) — Screen text drops from weight 600 to 500 · Low · decided 2026-11-04 (v1.048)
 
@@ -139,7 +132,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 ### R5-03 (your part) — The family pages' icon-button look in one small stylesheet · Low · decided 2026-11-04 (v1.048)
 
 - **What's wrong:** your family page removes a child with the trash icon button, and its look lives inside `forms-public.css` (`:124–211`). Camps' family page shows the word "Remove" instead, and it doesn't load `forms-public.css`, so it can't share the look today.
-- **Rule:** v1.048 (22) (Jeffrey, 2026-11-04: "Approve all"): every family page removes a child with the trash icon button (v0.626's look), so Camps' "Remove" link changes, and the public icon-button look lives in one small stylesheet that both family pages load.
+- **Rule:** v1.048 (22) (Jeffrey, 2026-11-04: "Approve all"): every family page removes a child with the trash icon button (v0.626's look), so Camps' "Remove" link changes.
 - **Change:** move the `:where(.tib…)` block (`forms-public.css:124–211`, with R5-02's color rule, so do it with or after R5-02) into one small public stylesheet, loaded wherever `forms-public.css` loads today (`src/forms/main.jsx:15`; the kiosk, `src/screens/kiosk/KioskApp.jsx:29`). Check it in the preview-mode build served as plain files (Rules, "CSS order"). Then tell the Main session, so Camps can load it on its family page (Camps' R5-03).
 - **Check (preview mode):** `/f/free-class-instagram` → Add another child, Fill in and the kiosk: the trash icons look and act as after R5-02 (gray, 28 px, the tooltip, 44 px on touch).
 
@@ -168,7 +161,8 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 ## Waits on Jeffrey (don't build yet)
 
-- Nothing waits on Jeffrey now. He answered these on 2026-11-04 (v1.045–v1.049); each answer is a Fix now or Smaller item in this file.
+- **R3-09, the in-list search** (Low): the words, the place and the no-match line of the three in-list search boxes (v1.047 (14)). The design review asks Jeffrey with one picture; the answer reaches you through the Main session. Your R3-09 item (Fix now) follows the answer.
+- **R2-07, the open part** (Low): the load-failure words (Calendar's, Forms' and Prospects' "… Check the connection and try again.", `calendar/text.js:248`, `forms/text.js:15`, `prospects/text.js:15`) and the words after an Undo are still open (Dashboard core's Waits). The design review asks Jeffrey; the answer reaches you through the Main session. Everything else Jeffrey answered on 2026-11-04 (v1.045–v1.049) is a Fix now or Smaller item in this file.
 
 ---
 
@@ -180,12 +174,13 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - The W / S school letters (`.cchip-letters`) are 11 px, under §7's 12 px minimum (`calendar.css:222–228`; their weight 600 goes to 500 with R4-06). Low.
 - Prospects' own note guard says "Unsaved note. Save it or cancel first." (`prospects/text.js:126`); the shared guard says "Unsaved changes. Save or cancel first.". Settle it with N15's guard work. Low.
 - Prospects' follow-up date and booking a free class have no Undo: flagged in your status (`STATUS-DesignReview.md:12`, "flag only"), not decided. Ask Jeffrey. Low.
-- Forms builder "Delete field" is red, acts at once and has no Undo: your prompt's "(now)" point says ask Jeffrey, and don't fix it on your own. Low.
+- **Forms builder "Delete field" is decided** (v0.630, on main): nothing to do here.
 - Forms ⋯ "Duplicate" uses `ti-copy` (`Forms.jsx:264`), which the §2.4 map gives to "Copy to clipboard". It was in v0.621's approved menu, so it's a gap in the map, not a build error: ask Jeffrey for a map row. Low.
 - Forms ⋯ says just "Delete" (`forms/text.js:46`); the other list menus say "Delete event / camp / cycle / template". Your N3 box 35 already plans "Delete form" in the menu and the box. Low.
 - Forms' staff empty line "No forms yet." has no "An admin adds them." (`forms/text.js:36`): drift from v0.53 (§8 Empty states). Low.
 - Fill in's phone Sent page stacks "Fill in another" and "Close" full width with no gap (`FillInDialog.jsx:72–79`), so two 36 px targets touch; Black Belt's stacked phone buttons keep 8 px between them (`blackBelt.css:1354–1358`). Pass 1b, Low.
 - Edit statuses on a phone wraps "No-/show" and "Not / interested" inside the name column. Pass 1b, Low.
+- **R5-01 is done on main** (v0.631, 8f47f9c): Prospects' Clear search ✕ is the shared `IconButton` in both search boxes (28 px, the "Clear search" tooltip, 44 px on touch). Nothing to do here.
 - **R4-02 is decided** (2026-11-04, v1.049 (a)): an open Fill in or "+ Add prospect" keeps what was typed when Hide private details is turned on from another browser tab. Your "Left as is" (`STATUS-DesignReview.md:10`) is now Jeffrey's rule, recorded as a known gap in v0.249's "every screen". Nothing to build.
 - **S-10 is decided** (2026-11-04, v1.048 (20)): when you next work on one of these screens, its browser dropdown becomes the shared Select (v1.100): Edit statuses (`prospects/StatusesDialog.jsx:125`), the field editor (`forms/FieldEditor.jsx:136, 155`), Calendar's event and event-type boxes (`calendar/EventDialog.jsx:168`, `calendar/EventTypesDialog.jsx:155`) and the Schedule (`schedule/ScheduleSchool.jsx:530`, `schedule/SlotDialog.jsx:291`). `forms/FormFields.jsx:114` also draws the family page's Dropdown field, which doesn't load the shared styles: ask before switching that one. No sweep, so nothing to build until then.
 
