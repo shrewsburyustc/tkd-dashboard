@@ -249,3 +249,5 @@ All the items below were applied to the plan.
 **2026-11-04: live test re-runs done.** Jeffrey ran `0032_tests.sql`, `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql` and `0026_tests.sql` on live (after 0034): all passed. Nothing left to check on live for 0032 / 0034.
 
 **2026-11-04: "device" → "tablet" (rulebook v0.974, Jeffrey: "A").** `staff/text.js` HIDDEN_ON_DEVICE / PAYMENTS_HIDDEN, `results/text.js` EMAIL_OFF_HIDDEN (Star's words), `receipt/text.js` HIDDEN (v1.105's words); comments updated. Words only. **Next question:** BB20 (the printed results sheet's "Worcester and Shrewsbury").
+
+**2026-11-04: BB20 answered — keep "Worcester and Shrewsbury" on the printed results sheet (rulebook v0.975, Jeffrey: "A").** No code change. Both Part 1 wording questions are now settled.
