@@ -3,7 +3,7 @@
 // approved mockup (docs/Prospects/TKD-Forms-Mockups.html, rulebook v0.235 / v0.241 / v0.242) and
 // to change it later. The data layer only returns codes ('stale', 'waiverEmpty' …); this file
 // turns them into plain English.
-import { formatDate } from '../../lib/schedule/versions.js';
+import { formatDate, localDay } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Forms';
@@ -88,7 +88,7 @@ export const ADD_FIELD = 'Add field';
 export const SAVED_NOTE = 'Changes save as you go. Families see them after Publish.';
 export function statusLine(form, { dirty, saving, failed }) {
   const parts = [STATUS[form.status]];
-  if (form.publishedAt) parts.push(`last published ${formatDate(form.publishedAt.slice(0, 10), { weekday: false, year: false })}`);
+  if (form.publishedAt) parts.push(`last published ${formatDate(localDay(form.publishedAt), { weekday: false, year: false })}`);
   else parts.push('not published yet');
   if (failed) return { text: parts.join(' · '), extra: 'not saved', warn: true };
   if (saving) return { text: parts.join(' · '), extra: 'saving…', warn: false };

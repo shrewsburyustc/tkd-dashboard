@@ -1203,7 +1203,9 @@ body.is-card-dragging * {
   font-weight: 500;
 }
 
-.pnote {
+/* Two classes, so it beats calendar.css's .ctextarea (88px) whatever order the files load in
+   ("(now)" point 3, the same fix as Forms' boxes). */
+.ctextarea.pnote {
   min-height: 56px;
 }
 
