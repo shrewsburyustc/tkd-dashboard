@@ -15,17 +15,27 @@
   --rail-menu-ring: #8fb2f0; /* keyboard focus ring on the dark background */
 }
 
-/* The icon and its menu together: the menu is placed against this box. */
+/* The icon and its menu together. */
 .rail-menu-wrap {
-  position: relative;
   display: flex;
+  flex: none; /* never squashed in a short window: the rail scrolls instead */
   justify-content: center;
 }
 
+/* While the rail scrolls (rail--scrolls, app.css, v1.118), it narrows like the other rail buttons,
+   and the icon inside fills it. */
+.rail--scrolls .rail-menu-wrap {
+  max-width: calc(100% - 8px);
+}
+
+.rail--scrolls .rail-menu-wrap > .rail-item {
+  max-width: 100%;
+}
+
+/* Drawn above the page at the icon's measured place (RailMenu.jsx sets top and left: the icon's
+   top, 20px past its right edge), so a rail that scrolls can't cut it off (v1.118). */
 .rail-menu {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 20px);
+  position: fixed;
   z-index: 30; /* the same layer as the label bubble: above the page */
   width: 220px;
   padding: 6px 0;
@@ -86,11 +96,12 @@
   outline-offset: -2px;
 }
 
-/* PC rail: the menu replaces the plain label bubble for this icon (v0.59, exception to 2.3). On the
-   tablet rail the label sits under the icon and stays. */
+/* PC rail (Standard): the menu replaces the plain label bubble for this icon (v0.59, exception to
+   2.3). On the tablet rail, and with Panel size Large or Largest (v1.118), the label sits under the
+   icon and stays. */
 @media (min-width: 1024px) and (pointer: fine) {
-  .rail-item.has-menu:hover .rail-label,
-  .rail-item.has-menu:focus-visible .rail-label {
+  .rail--standard .rail-item.has-menu:hover .rail-label,
+  .rail--standard .rail-item.has-menu:focus-visible .rail-label {
     display: none;
   }
 }

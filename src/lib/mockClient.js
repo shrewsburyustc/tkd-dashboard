@@ -2,8 +2,10 @@
 // Why it exists: so anyone can click through every screen — sign-in, Set your PIN, Home, the
 // account menu, Change PIN, Change password, the lock screen — without a Supabase database.
 // It copies the small part of the Supabase client the app uses — auth.signInWithPassword /
-// getSession / onAuthStateChange / signOut / updateUser, rpc, and from(table).select().eq().order()
-// — and follows the same rules as the real database (migrations 0001 + 0002 + 0003).
+// getSession / getUser / onAuthStateChange / signOut / updateUser, rpc, and
+// from(table).select().eq().order() — and follows the same rules as the real database
+// (migrations 0001 + 0002 + 0003). updateUser({ data }) saves the person's own settings, as
+// Supabase's per-person settings (user_metadata) do: today only Panel size (v1.118).
 // Testing → Classes and ranks lives in its own file, mockTesting.js; Events, the roster with
 // payments and Settings → Schools live in mockTestingEvents.js (phase 2); Star testing → Rubrics and
 // prices lives in mockStarTesting.js (Star phase 1), Star testing events in mockStarEvents.js
@@ -19,6 +21,13 @@
 //   __tkdPreview.setPasswordAgeDays(8)    pretend the password was typed 8 days ago (then reload)
 //   __tkdPreview.setPasswordAgeMinutes(11) pretend the password was typed 11 minutes ago
 //                                         (Set PIN then needs the password again)
+// Panel size helpers (account menu → Panel size, v1.118; src/lib/panelSize.js):
+//   __tkdPreview.failNextPanelSave()      the next Panel size save fails like a dropped connection
+//   __tkdPreview.panelSizeElsewhere('largest') "another device" saves that size with the account
+//                                         (this tab sees it after a reload, or after refreshSignIn())
+//   __tkdPreview.refreshSignIn()          pretend Supabase's hourly sign-in refresh happened now
+//   __tkdPreview.refocusTab()             pretend the tab was shown again: Supabase re-sends this
+//                                         browser's SAVED copy of the sign-in (it can be older)
 // Testing helpers:
 //   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
 //   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
@@ -194,6 +203,8 @@ const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedu
 const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
 const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
 const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample (mockFinance.js)
+const ACCOUNT_SETTINGS_KEY = 'tkd.preview.userMetadata'; // fake per-person settings (Supabase's user_metadata): Panel size
+const FIRST_UPDATED_AT = '2026-10-01T12:00:00.000Z'; // the fake account's updated_at before anything is saved
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -256,8 +267,41 @@ function makeSession(passwordSignInSeconds, sessionId) {
     token_type: 'bearer',
     expires_in: 3600,
     expires_at: nowSeconds + 3600,
-    user: { id: FAKE_STAFF.id, email: FAKE_STAFF.email },
+    user: fakeUser(),
   };
+}
+
+// ----- Fake per-person settings (Supabase's user_metadata; Panel size, v1.118) -----
+// Kept apart from the session, so they survive signing out and in, as a real account's do.
+function loadAccountSettings() {
+  try {
+    const saved = JSON.parse(readStorage(ACCOUNT_SETTINGS_KEY));
+    if (saved && typeof saved.metadata === 'object' && saved.metadata !== null) {
+      return { metadata: saved.metadata, updatedAt: saved.updatedAt ?? FIRST_UPDATED_AT };
+    }
+  } catch {
+    // missing or damaged: nothing saved yet
+  }
+  return { metadata: {}, updatedAt: FIRST_UPDATED_AT };
+}
+
+// The account as Supabase sends it to the app: id, email, the per-person settings and when the
+// account last changed (panelSize.js keeps the newest copy).
+function fakeUser() {
+  const { metadata, updatedAt } = loadAccountSettings();
+  return { id: FAKE_STAFF.id, email: FAKE_STAFF.email, user_metadata: { ...metadata }, updated_at: updatedAt };
+}
+
+// Saves settings the way Supabase does: the keys sent replace those keys (null removes one), and
+// every other key stays.
+function mergeAccountSettings(changes) {
+  const settings = loadAccountSettings();
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === null) delete settings.metadata[key];
+    else settings.metadata[key] = value;
+  }
+  settings.updatedAt = new Date().toISOString();
+  writeStorage(ACCOUNT_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function loadSession() {
@@ -475,6 +519,8 @@ export function createMockClient() {
     if (event.key === SESSION_KEY && event.newValue === null) notify('SIGNED_OUT', null);
   });
 
+  let failNextPanelSave = false; // __tkdPreview.failNextPanelSave(): the next Panel size save fails
+
   const auth = {
     async signInWithPassword({ email, password }) {
       await wait(FAKE_DELAY_MS);
@@ -493,6 +539,14 @@ export function createMockClient() {
 
     async getSession() {
       return { data: { session: loadSession() }, error: null };
+    },
+
+    // The account itself, always the newest copy (the saved session's copy can be older), as
+    // Supabase's getUser answers. Like the real one, it doesn't change the saved session.
+    async getUser() {
+      await wait(150);
+      if (!loadSession()) return { data: { user: null }, error: { name: 'AuthSessionMissingError', message: 'Auth session missing!', status: 400 } };
+      return { data: { user: fakeUser() }, error: null };
     },
 
     onAuthStateChange(callback) {
@@ -518,9 +572,22 @@ export function createMockClient() {
     // the same answers Supabase does for a too-short password, a missing or wrong current
     // password ("Require current password when updating password" is ON in Supabase), or an
     // unchanged password. Same order of checks as Supabase.
-    async updateUser({ password, current_password: currentPassword } = {}) {
+    // With { data } instead: saves the person's own settings (Panel size, v1.118) like Supabase —
+    // the saved session gets the new copy of the account and 'USER_UPDATED' is announced.
+    async updateUser({ password, current_password: currentPassword, data } = {}) {
       await wait(FAKE_DELAY_MS);
       if (!loadSession()) return { data: { user: null }, error: { name: 'AuthSessionMissingError', message: 'Auth session missing!', status: 400 } };
+      if (data !== undefined && password === undefined) {
+        if (failNextPanelSave) {
+          failNextPanelSave = false;
+          return { data: { user: null }, error: { name: 'AuthRetryableFetchError', message: 'Failed to fetch', status: 0 } };
+        }
+        mergeAccountSettings(data ?? {});
+        const session = { ...loadSession(), user: fakeUser() };
+        saveSession(session);
+        notify('USER_UPDATED', session);
+        return { data: { user: session.user }, error: null };
+      }
       if (typeof password === 'string' && password.length < 12) {
         return {
           data: { user: null },
@@ -950,6 +1017,36 @@ export function createMockClient() {
     setPasswordAgeMinutes(minutes) {
       if (!pretendPasswordAge(Number(minutes) * MINUTE_MS)) return 'Sign in first.';
       return `Password now looks ${minutes} minute(s) old. Saving a new PIN after 10 minutes needs the password again.`;
+    },
+    // ----- Panel size helpers (v1.118) -----
+    failNextPanelSave() {
+      failNextPanelSave = true;
+      return 'The next Panel size save will fail like a dropped connection (the amber bar shows; Retry then works).';
+    },
+    // "Another device" saves a size with the account. This tab's saved sign-in keeps its old copy,
+    // as a real one would, until the page reloads (the dashboard asks the account at load) or the
+    // sign-in refreshes.
+    panelSizeElsewhere(size) {
+      if (!['standard', 'large', 'largest'].includes(size)) return "Use panelSizeElsewhere('standard'), ('large') or ('largest').";
+      mergeAccountSettings({ panel_size: size });
+      return `Another device saved "${size}". Reload to see it here, or run __tkdPreview.refreshSignIn().`;
+    },
+    // Supabase's hourly refresh: a new copy of the sign-in, with the newest copy of the account.
+    refreshSignIn() {
+      const session = loadSession();
+      if (!session) return 'Sign in first.';
+      const fresh = makeSession(Math.floor(getLastPasswordSignIn(session) / 1000), sessionIdOf(session));
+      saveSession(fresh);
+      notify('TOKEN_REFRESHED', fresh);
+      return 'The sign-in was refreshed (as Supabase does about once an hour).';
+    },
+    // Supabase announces SIGNED_IN with the copy saved in this browser each time the tab is shown
+    // again (auth-js _recoverAndRefresh); that copy may be older than one the app already has.
+    refocusTab() {
+      const session = loadSession();
+      if (!session) return 'Sign in first.';
+      notify('SIGNED_IN', session);
+      return 'Sent SIGNED_IN with this browser\'s saved copy of the sign-in, as when the tab is shown again.';
     },
     // ----- Testing helpers -----
     setRole(role) {

@@ -73,6 +73,7 @@
   --tap-size: 44px; /* minimum finger tap area */
   --topbar-height: 48px;
   --rail-width: 52px; /* PC, icons only */
-  --rail-width-labeled: 72px; /* tablet, labels under icons */
+  --rail-width-labeled: 72px; /* tablet, labels under icons; also Panel size Large (v1.118) */
+  --rail-width-largest: 96px; /* Panel size Largest (v1.118): 24px icons, 14px names */
   --bottombar-height: 60px; /* phone bottom bar: 4px + 48px item + 8px (plus the iPhone home-bar space) */
 }
