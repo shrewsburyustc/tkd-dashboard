@@ -111,6 +111,10 @@ export const SAVE = 'Save';
 export const SAVING = 'Saving…'; // on the Save button while the save is on its way
 export const CLOSE = 'Close';
 export const DELETE = 'Delete';
+export const DELETING = 'Deleting…'; // the pressed Delete … button while the delete is on its way (v1.008 D1a)
+// Classes and ranks' delete boxes (v1.008 rule 1, v0.422): the button that changes nothing says what stays.
+export const KEEP_RANK = 'Keep rank';
+export const KEEP_CLASS = 'Keep class';
 
 // "Group A · Worcester"
 export const classAtSchool = (className, school) => `${className} · ${school}`;
@@ -613,7 +617,6 @@ export function duplicateBoxLine(count) {
   return count === 1 ? '1 possible duplicate' : `${count} possible duplicates`;
 }
 export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
-export const REVIEW = 'Review';
 
 // ⋯ menu on a student (R8, plan answers 6 and 8)
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';
@@ -712,20 +715,25 @@ export const feeNow = (fee) => `The fee is now ${fee}.`;
 export const PAYMENT_STAYS = 'The payment already recorded stays as it is.';
 export const PAYMENT_NOT_HERE = 'Payment is changed with Mark paid or ⋯, not here.';
 
-// R7: compare
+// R7: compare. Its buttons' words ("Keep this one", "Not the same person — keep both", "⚠ different",
+// "Keeping…") and the duplicate box's "Review" are the shared parts' own now (src/components/text.js,
+// v1.102); so are the Registration link box's "Copy link", "Download QR code" and "Print flyer".
 export const compareTitle = (name) => `${name} is registered twice`;
 export const COMPARE_SUB = 'Same name in the same class. Differences are highlighted.';
 export const FIRST_REGISTRATION = 'First registration';
 export const SECOND_REGISTRATION = 'Second registration';
 export const COMPARE_REFERENCE = 'Reference';
-export const KEEP_THIS_ONE = 'Keep this one';
-export const keepThisOneLabel = (which) => `Keep the ${which.toLowerCase()}`;
 // The same note for staff and admins (R7): staff get the 5-second Undo too.
 export const COMPARE_NOTE =
   'Keeping one moves the other to Removed as “Duplicate copy” (Undo for 5 seconds; admins can Restore). Both are logged.';
+export const NO_REFERENCE = '—';
+// Kept only because Star's candidates text (src/screens/testing/star/candidates/text.js) still
+// reads them from here; Color Belt's own screens no longer use them. They can go once Star
+// takes them from the shared parts.
+export const KEEP_THIS_ONE = 'Keep this one';
+export const keepThisOneLabel = (which) => `Keep the ${which.toLowerCase()}`;
 export const KEEP_BOTH = 'Not the same person — keep both';
 export const DIFFERENT = 'different'; // read by screen readers after a highlighted value
-export const NO_REFERENCE = '—';
 
 // Change how they'll pay
 export const CHANGE_PAYING_BY_TITLE = 'Change how they’ll pay';
@@ -795,8 +803,6 @@ export function linkDialogLine(state, event) {
       return 'Registration is closed. The link tells families registration is closed.';
   }
 }
-export const COPY_LINK = 'Copy link';
-export const PRINT_FLYER = 'Print flyer';
 export const qrAlt = (link) => `QR code for ${link}`;
 
 // R3: the flyer (letter size, black and white)
@@ -1058,6 +1064,7 @@ export function cancelBody(dateIso, hhmm, payment, hidden = false) {
   return `${first} The ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment stays recorded; it isn’t refunded.`;
 }
 export const KEEP_IT = 'Keep it';
+export const CANCELLING = 'Cancelling…'; // Cancel private testing's button while it works (v1.008 D1a, v0.422)
 export const cancelledToast = (name) => `${name}’s private testing cancelled`; // CP1
 export const deletePrivateTitle = (name) => `Delete ${name}’s private testing permanently?`; // CP1
 // "The private testing, the $85 cash payment recorded on Nov 25 and the result (Passed, Dec 5)

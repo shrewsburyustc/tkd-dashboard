@@ -60,7 +60,9 @@ import {
   IconUserMinus,
   IconUsers,
 } from '@tabler/icons-react';
-import Dialog from '../../../components/Dialog.jsx';
+import CompareDialog from '../../../components/CompareDialog.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
+import DuplicateBox from '../../../components/DuplicateBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
@@ -97,9 +99,7 @@ import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../li
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
-import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
-import CompareDialog from './CompareDialog.jsx';
 import GradingSheet from './GradingSheet.jsx';
 import GradingTab, { groupGearTags } from './GradingTab.jsx';
 import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
@@ -1223,10 +1223,11 @@ export default function EventPage({
   });
 
   // ===== Possible duplicate: keep one / keep both (Star v0.114) =====
-  async function keepOne(keep, other) {
+  // busyKey: which button of the shared Compare dialog says "Keeping…" ('keep-first' / 'keep-second').
+  async function keepOne(keep, other, busyKey) {
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false });
+    patchDialog({ saving: true, failed: false, busyKey });
     const result = await resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
     endWrite(result.status);
     if (result.status === 'error') {
@@ -1268,7 +1269,7 @@ export default function EventPage({
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
     const { first, second } = d.pair;
-    patchDialog({ saving: true, failed: false });
+    patchDialog({ saving: true, failed: false, busyKey: 'keep-both' });
     const result = await resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
     endWrite(result.status);
     if (result.status === 'error') {
@@ -1288,14 +1289,10 @@ export default function EventPage({
   }
 
   // ===== Copy link =====
-  async function copyLink(link) {
-    try {
-      if (!link || !navigator.clipboard) throw new Error('No clipboard');
-      await navigator.clipboard.writeText(link);
-      showToast(T.TOAST_LINK_COPIED, { icon: false });
-    } catch {
-      setBanner({ text: T.COPY_FAILED });
-    }
+  // The shared Registration link box copies the link itself; a failed copy shows its amber note
+  // inside the box (v1.106 detail a, v0.422), so only the toast is left here.
+  function linkCopied() {
+    showToast(T.TOAST_LINK_COPIED, { icon: false });
   }
 
   // ===== The ⋯ menu (Star v0.110: staff see only what they can do) =====
@@ -1526,41 +1523,65 @@ export default function EventPage({
     } else if (dialog.type === 'compare') {
       const first = roster.find((r) => r.id === dialog.firstId) ?? dialog.pair.first;
       const second = roster.find((r) => r.id === dialog.secondId) ?? dialog.pair.second;
+      // The shared Compare dialog (v1.102, v0.422; R7 / Star v0.114): Color Belt's rows, words and
+      // order. Each differing value says "⚠ different"; the Registered time and the reference always
+      // differ, so they are never marked (`plain`, as Star and Black Belt). With Hide private details
+      // on, Paying by and Payment read "Hidden on this tablet" on both sides (v0.507).
+      const testingFor = (row) => {
+        const rank = rankById.get(row.eventRankId);
+        return rank ? `${rank.name} → ${rank.testingFor?.name ?? T.NO_NEW_RANK}` : '';
+      };
+      const paymentText = (row) => (row.paid ? `${T.TAG_PAID} ${T.monthDay(row.paidOn)}` : T.TAG_NOT_PAID);
+      const compareRows = [
+        { key: 'registered', label: T.DETAIL_REGISTERED, first: T.registeredDetail(first.registeredAt, first.source, null), second: T.registeredDetail(second.registeredAt, second.source, null), plain: true },
+        { key: 'reference', label: T.COMPARE_REFERENCE, first: first.reference ?? T.NO_REFERENCE, second: second.reference ?? T.NO_REFERENCE, plain: true },
+        { key: 'testing', label: T.DETAIL_TESTING_FOR, first: testingFor(first), second: testingFor(second) },
+        { key: 'paying', label: T.DETAIL_PAYING_BY, first: T.payingByText(first.payingBy), second: T.payingByText(second.payingBy), hidden },
+        { key: 'payment', label: T.DETAIL_PAYMENT, first: paymentText(first), second: paymentText(second), hidden },
+      ];
+      // v0.194: after the testing day "keep one" is admin-only, so staff don't see it (the same
+      // way staff don't see Add student on a finished event); the note then says why.
+      const canKeepOne = isAdmin || dayWindow !== 'after';
       dialogElement = (
         <CompareDialog
           key={dialog.key}
-          first={first}
-          second={second}
-          rankById={rankById}
-          isPhone={isPhone}
-          saving={dialog.saving}
-          failed={dialog.failed}
-          // v0.194: after the testing day "keep one" is admin-only, so staff don't see it
-          // (the same way staff don't see Add student on a finished event).
-          canKeepOne={isAdmin || dayWindow !== 'after'}
-          hidden={hidden}
-          onKeep={keepOne}
+          title={T.compareTitle(T.studentLabel(first))}
+          sub={T.COMPARE_SUB}
+          heads={[T.FIRST_REGISTRATION, T.SECOND_REGISTRATION]}
+          rows={compareRows}
+          canKeepOne={canKeepOne}
+          note={canKeepOne ? T.COMPARE_NOTE : T.KEEP_ONE_ADMIN_ONLY}
+          busy={dialog.saving ? (dialog.busyKey ?? null) : null}
+          failed={dialog.failed ? T.SAVE_FAILED : null}
+          onKeep={(index) => (index === 0 ? keepOne(first, second, 'keep-first') : keepOne(second, first, 'keep-second'))}
           onKeepBoth={keepBoth}
           onClose={cancelDialog}
+          isPhone={isPhone}
         />
       );
     } else if (dialog.type === 'link') {
       const address = schools?.find((s) => s.code === event.locationCode)?.address ?? null;
-      dialogElement = <RegistrationLinkDialog key={dialog.key} event={event} school={school} address={address} isPhone={isPhone} onCopy={copyLink} onClose={cancelDialog} />;
+      dialogElement = <RegistrationLinkDialog key={dialog.key} event={event} school={school} address={address} isPhone={isPhone} onCopied={linkCopied} onClose={cancelDialog} />;
     } else if (dialog.type === 'delete') {
       dialogElement = (
-        <ConfirmDeleteDialog
+        // The shared confirm box (v1.008 / v1.103, v0.422) with the words it had: "Keep student ·
+        // Delete permanently", red, first focus on Keep student; "Deleting…" while it works.
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={T.deleteStudentBody(...dialog.bodyParts, hidden)}
           hint={T.DELETE_STUDENT_HINT}
           keepLabel={T.KEEP_STUDENT}
-          deleteLabel={T.DELETE_PERMANENTLY}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          actionLabel={T.DELETE_PERMANENTLY}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={cancelDialog}
+        >
+          {T.deleteStudentBody(...dialog.bodyParts, hidden)}
+        </ConfirmBox>
       );
     } else if (dialog.type === 'note') {
       const row = active.find((r) => r.id === dialog.rowId) ?? dialog.snapshot;
@@ -1584,22 +1605,22 @@ export default function EventPage({
         />
       );
     } else if (dialog.type === 'leave') {
-      // v0.192 (approved image P3, option B): the same small box on every device. Nothing is
-      // deleted, so no red: "Stay on this page" is the blue default (Enter, Esc, backdrop, Back).
+      // v0.192's question on the shared confirm box (v1.008 D1c, v1.103, v0.422; the same small
+      // box on every device): "Stay on this page" on the left and focused first (Enter, Esc, a
+      // click outside and Back also mean Stay); "Leave anyway" on the right and red — leaving
+      // loses the unsaved results for good. At 320 wide the two stack full width, Stay on top.
       dialogElement = (
-        <Dialog key={dialog.key} title={T.leaveTitle(dialog.count)} variant="confirm" describedBy={`${baseId}-leave-body`} onRequestClose={stayOnPage}>
-          <p id={`${baseId}-leave-body`} className="tdialog-sub tdialog-body">
-            {dialog.body}
-          </p>
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={leaveAnyway}>
-              {T.LEAVE_ANYWAY}
-            </button>
-            <button type="button" className="btn btn-primary" data-autofocus onClick={stayOnPage}>
-              {T.STAY_ON_PAGE}
-            </button>
-          </div>
-        </Dialog>
+        <ConfirmBox
+          key={dialog.key}
+          title={T.leaveTitle(dialog.count)}
+          keepLabel={T.STAY_ON_PAGE}
+          actionLabel={T.LEAVE_ANYWAY}
+          loses="forGood"
+          onKeep={stayOnPage}
+          onConfirm={leaveAnyway}
+        >
+          {dialog.body}
+        </ConfirmBox>
       );
     }
   }
@@ -1716,24 +1737,17 @@ export default function EventPage({
             </p>
           )}
 
-          {/* Possible duplicates (Star v0.114): one line per pair, with Review. */}
-          {pairs.length > 0 && (
-            <div className="ev-dupbox" role="status">
-              <IconAlertTriangle size={16} aria-hidden="true" className="ev-dupbox-icon" />
-              <div className="ev-dupbox-lines">
-                {pairs.map((pair, index) => (
-                  <p key={pair.first.id} className="ev-dupbox-line">
-                    {index === 0 && <strong>{T.duplicateBoxLine(pairs.length)}</strong>}
-                    {index === 0 && ' · '}
-                    {T.registeredTwice(T.studentLabel(pair.first), classById.get(pair.first.eventClassId)?.className ?? '')}
-                    <button type="button" className="btn btn-sm ev-dupbox-review" onClick={(clickEvent) => openCompare(pair, clickEvent.currentTarget)}>
-                      {T.REVIEW}
-                    </button>
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Possible duplicates (Star v0.114) in the shared duplicate box (v1.102, v0.422): the
+              count on the first line only (its own line on phones), then one line per pair, each
+              with Review; Review passes itself, so focus returns to it when the compare closes. */}
+          <DuplicateBox
+            countText={T.duplicateBoxLine(pairs.length)}
+            pairs={pairs.map((pair) => ({
+              key: pair.first.id,
+              text: T.registeredTwice(T.studentLabel(pair.first), classById.get(pair.first.eventClassId)?.className ?? ''),
+              onReview: (opener) => openCompare(pair, opener),
+            }))}
+          />
 
           {classes.length === 0 ? (
             <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>

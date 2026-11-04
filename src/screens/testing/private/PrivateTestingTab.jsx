@@ -70,10 +70,9 @@ import { privateCards, privateMenu, splitPrivate } from '../../../lib/testing/pr
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
-import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from '../event/PaymentDialogs.jsx';
-import CancelPrivateDialog from './CancelPrivateDialog.jsx';
 import ChangeDayDialog, { checkChangeDay, isChangeDayDirty } from './ChangeDayDialog.jsx';
 import PrivateDialog, { COPIED, checkPrivateForm, isPrivateFormDirty } from './PrivateDialog.jsx';
 import PrivateRows from './PrivateRows.jsx';
@@ -1113,29 +1112,44 @@ export default function PrivateTestingTab({
       dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={name} subtitle={subtitle} today={today} onTouch={touch} onSave={savePayment} {...common} />;
     } else if (dialog.type === 'cancel') {
       dialogElement = (
-        <CancelPrivateDialog
+        // Cancel private testing (P7) on the shared confirm box (v1.008 / v1.103, v0.422): the record
+        // and its payments stay, so the action is blue (loses 'something'), first focus on "Keep
+        // it", so Enter never cancels by accident. "Cancelling…" while it works; both buttons stay
+        // focusable (aria-disabled, never the browser's own disabled).
+        <ConfirmBox
           key={dialog.key}
-          name={T.studentLabel(record ?? dialog.snapshot)}
-          body={T.cancelBody(...dialog.bodyParts, hidden)}
-          saving={dialog.saving}
-          failed={dialog.failed}
+          title={T.cancelTitle(T.studentLabel(record ?? dialog.snapshot))}
+          keepLabel={T.KEEP_IT}
+          actionLabel={T.CANCEL_PRIVATE}
+          busyLabel={T.CANCELLING}
+          loses="something"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.actionFailed : null}
           onConfirm={confirmCancel}
-          onCancel={cancelDialog}
-        />
+          onKeep={cancelDialog}
+        >
+          {T.cancelBody(...dialog.bodyParts, hidden)}
+        </ConfirmBox>
       );
     } else if (dialog.type === 'delete') {
       dialogElement = (
-        <ConfirmDeleteDialog
+        // Delete permanently (admins), the shared confirm box with its words: "Keep it · Delete
+        // permanently", red, first focus on Keep it; "Deleting…" while it works.
+        <ConfirmBox
           key={dialog.key}
           title={T.deletePrivateTitle(T.studentLabel(dialog.snapshot))}
-          body={T.deletePrivateBody(...dialog.bodyParts, hidden)}
           keepLabel={T.KEEP_IT}
-          deleteLabel={T.DELETE_PERMANENTLY}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          actionLabel={T.DELETE_PERMANENTLY}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={cancelDialog}
+        >
+          {T.deletePrivateBody(...dialog.bodyParts, hidden)}
+        </ConfirmBox>
       );
     }
   }

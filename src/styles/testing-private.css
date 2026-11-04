@@ -196,12 +196,6 @@
 }
 
 /* ===== Dialogs (P2, P4, P5) ===== */
-.pv-time {
-  width: 100%;
-  padding-right: var(--space-4);
-  font-family: inherit; /* a select doesn't take the page font by itself */
-}
-
 /* The gray box: "$95 private price" + where it comes from (P2), the move money (P5) */
 .pv-price {
   margin-bottom: var(--space-8);

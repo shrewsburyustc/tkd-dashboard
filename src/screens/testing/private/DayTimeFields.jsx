@@ -6,7 +6,10 @@
 //         v0.414): days from today to one year from today can be picked; the field writes the
 //         day as "Thu, Dec 3, 2026", so there is no weekday line under it any more. On phones the
 //         calendar opens in the page, edge to edge (inline), as in Star.
-//   Time  a list from 6:00 AM to 10:00 PM in 5-minute steps, with the hint under it
+//   Time  the shared time list (components/TimeList.jsx — CB12, rulebook v0.422 / v1.109): 6:00 AM
+//         to 10:00 PM in 5-minute steps, its default range and exactly what the database accepts
+//         (testing_private_time_is_valid, 0014; privateRules.js); the same list on every device,
+//         opening at the chosen time; typing a number jumps to that hour. The hint is under it.
 // The messages are amber, under the field: "Enter the day." / "The private day can’t be in the
 // past." / "Pick a day within a year from today." / "Choose a time." Save stays gray until fixed.
 // PC and tablet: Day and Time side by side; phones: one under the other.
@@ -16,7 +19,8 @@
 import { useLayoutEffect } from 'react';
 import Notice from '../../../components/Notice.jsx';
 import DatePicker from '../../../components/DatePicker.jsx';
-import { PRIVATE_TIME_CHOICES, privateDayLimit, privateDayProblem, privateTimeIsValid } from '../../../lib/testing/privateRules.js';
+import TimeList from '../../../components/TimeList.jsx';
+import { privateDayLimit, privateDayProblem, privateTimeIsValid } from '../../../lib/testing/privateRules.js';
 import { yearRange } from '../../../lib/star/eventDateRules.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import * as T from '../text.js';
@@ -66,8 +70,6 @@ export default function DayTimeFields({ idBase, values, check, readOnly, today, 
   useLayoutEffect(() => {
     if (autoFocus) document.getElementById(dayId)?.setAttribute('data-autofocus', '');
   }, [autoFocus, dayId]);
-  // A stored time that isn't on the list (it always is — the database only takes these) is still offered.
-  const choices = values.time && !PRIVATE_TIME_CHOICES.includes(values.time) ? [...PRIVATE_TIME_CHOICES, values.time].sort() : PRIVATE_TIME_CHOICES;
   return (
     <div className="ev-two pv-daytime">
       <div className="field">
@@ -96,26 +98,23 @@ export default function DayTimeFields({ idBase, values, check, readOnly, today, 
         {check.dayError && <Notice id={`${dayId}-error`}>{check.dayError}</Notice>}
       </div>
       <div className="field">
-        <label htmlFor={timeId}>{T.PRIVATE_TIME}</label>
-        <select
+        {/* A plain text line, as Star's: the field is a button, its name comes through labelId. */}
+        <span id={`${timeId}-label`} className="field-label">
+          {T.PRIVATE_TIME}
+        </span>
+        <TimeList
           id={timeId}
-          className="input pv-time"
-          disabled={readOnly}
-          value={values.time}
-          aria-invalid={check.timeError ? true : undefined}
-          aria-describedby={check.timeError ? `${timeId}-error` : timeHintId}
-          onChange={(event) => {
-            onChange({ time: event.target.value });
+          labelId={`${timeId}-label`}
+          describedBy={check.timeError ? `${timeId}-error` : timeHintId}
+          value={values.time || null}
+          placeholder={T.NO_TIME}
+          readOnly={readOnly}
+          invalid={Boolean(check.timeError)}
+          onChange={(time) => {
+            onChange({ time });
             onTouch('time');
           }}
-        >
-          <option value="">{T.NO_TIME}</option>
-          {choices.map((time) => (
-            <option key={time} value={time}>
-              {T.timeLabel(time)}
-            </option>
-          ))}
-        </select>
+        />
         {check.timeError && <Notice id={`${timeId}-error`}>{check.timeError}</Notice>}
         <p id={timeHintId} className="field-hint">
           {T.TIME_HINT}

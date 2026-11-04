@@ -30,6 +30,8 @@ import {
   FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
+import * as SHARED_QR from '../qr.js';
+import * as TIMES from '../times.js'; // the shared time list's choices (CB12)
 import {
   RESULTS, GRADING_NOTE_MAX, normalizeGradingNote, gradingNoteProblem, gradingWindow, canChangeResults, isGraded,
   resultCounts, schoolMinutesNow, defaultGradingClassId, addedAfterDay, testingGroups, groupOfClass,
@@ -1254,6 +1256,8 @@ check('eventRules: class times, signature, note, link', () => {
 
 // ======================= qr.js =======================
 
+// Since CB10 (rulebook v0.422, v1.106) the QR picture is the shared helper's (src/lib/qr.js); qr.js
+// here only builds the link. The shared helper's own checks are in src/lib/shared/checks.mjs.
 check('qr: link and QR picture', () => {
   assert.equal(registrationLink('p4w9tdkm'), 'https://tkd-dashboard.pages.dev/register/p4w9tdkm');
   assert.equal(registrationLink('../evil'), '');
@@ -1264,6 +1268,10 @@ check('qr: link and QR picture', () => {
   assert.ok(svg.startsWith('<svg') && svg.includes('</svg>'));
   assert.ok(!/script|onload|href/i.test(svg)); // only shapes
   assert.equal(qrSvgDataUrl('BAD CODE'), '');
+  // The same picture the shared Registration link box draws for the link (no drawing of its own).
+  assert.equal(url, SHARED_QR.qrSvgDataUrl(registrationLink('p4w9tdkm')));
+  // Download QR code's file name for a Color Belt event (one school per event).
+  assert.equal(SHARED_QR.qrFileName('November Children Testing', 'Worcester'), 'November Children Testing - Worcester QR code.png');
 });
 
 // ======================= mockTestingEvents.js (the phase 2 preview database) =======================
@@ -2350,6 +2358,23 @@ check('privateRules: the time list and the time check (v0.157)', () => {
   for (const bad of ['05:55', '22:05', '16:03', '16:00:30', '6:00', '24:00', '', null, undefined, 1600, ' 16:00']) {
     assert.equal(PR.privateTimeIsValid(bad), false, String(bad));
   }
+});
+
+check('CB12: the shared time list offers exactly the times the database accepts (v0.422, v1.109)', () => {
+  // The private time: TimeList's default range (6:00 AM–10:00 PM, every 5 minutes) is exactly
+  // testing_private_time_is_valid (0014), so every choice saves and nothing allowed is missing.
+  const offered = TIMES.timeOptions().map((option) => option.value);
+  assert.deepEqual(offered, PR.PRIVATE_TIME_CHOICES);
+  for (const time of offered) assert.equal(PR.privateTimeIsValid(time), true, time);
+  // A saved time shows as chosen, with or without seconds (the database answers 'HH:MM:SS').
+  assert.equal(TIMES.selectValue('16:30:00'), '16:30');
+  assert.equal(TIMES.selectValue('16:30'), '16:30');
+  // A class time the database took that isn't on the list (classes accept any minute, 0005) is
+  // still shown, in its place, so Edit event opens with it chosen.
+  const withOdd = TIMES.timeOptions({ value: '16:12' }).map((option) => option.value);
+  assert.ok(withOdd.includes('16:12'));
+  assert.ok(withOdd.indexOf('16:10') < withOdd.indexOf('16:12') && withOdd.indexOf('16:12') < withOdd.indexOf('16:15'));
+  assert.ok(TIMES.timeOptions({ value: '05:30' }).some((option) => option.value === '05:30'));
 });
 
 check('privateRules: the day rules count from today (incl. Feb 29)', () => {

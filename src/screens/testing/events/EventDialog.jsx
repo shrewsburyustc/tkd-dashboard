@@ -3,7 +3,8 @@
 // The form, top to bottom:
 //   - Event name and Testing date (no Start time or Where: the event belongs to the school
 //     chosen in the top bar, v0.34)
-//   - Classes testing: one line per class with a tick and a start → end time. Unticked =
+//   - Classes testing: one line per class with a tick and a start → end time (the shared time
+//     list, components/TimeList.jsx — CB12, rulebook v0.422 / v1.109). Unticked =
 //     "Not testing at this event". Classes with the same times test together.
 //   - Registration: Open / Closed (new events start Closed, Star v0.85), and "Close
 //     automatically at the end of <date>" — ticked by default, 7 days before the testing date
@@ -26,14 +27,8 @@ import { NOTE_MAX, isIsoDate, validateClassTimes } from '../../../lib/testing/ev
 import { closingDateLimits, closingYears, testingDateLimits, testingYears } from '../../../lib/star/eventDateRules.js';
 import DatePicker from '../../../components/DatePicker.jsx';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
+import TimeList from '../../../components/TimeList.jsx';
 import * as T from '../text.js';
-
-// The times offered in each list: every 5 minutes from 6:00 AM to 10:00 PM (classes can start
-// at times like 6:50; the database accepts any minute).
-const TIME_CHOICES = [];
-for (let minutes = 6 * 60; minutes <= 22 * 60; minutes += 5) {
-  TIME_CHOICES.push(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`);
-}
 
 const sameRows = (a, b) =>
   a.length === b.length &&
@@ -162,26 +157,33 @@ const NOTES = {
 function ClassTimeRow({ row, idBase, error, readOnly, isPhone, onChange }) {
   const tickId = `${idBase}-tick-${row.classId}`;
   const errorId = `${idBase}-err-${row.classId}`;
-  // A saved time that isn't on the 15-minute list (e.g. 4:10 PM) is still offered.
-  const choices = (value) => (value && !TIME_CHOICES.includes(value) ? [...TIME_CHOICES, value].sort() : TIME_CHOICES);
-  const select = (field, label) => (
-    <select
-      className="input ev-time"
-      aria-label={label}
-      aria-invalid={error ? 'true' : undefined}
-      aria-describedby={error ? errorId : undefined}
-      disabled={readOnly}
-      value={row[field] ?? ''}
-      onChange={(event) => onChange({ [field]: event.target.value || null })}
-    >
-      <option value="">{T.NO_TIME}</option>
-      {choices(row[field]).map((time) => (
-        <option key={time} value={time}>
-          {T.timeLabel(time)}
-        </option>
-      ))}
-    </select>
-  );
+  // Start and end: the shared time list (CB12, rulebook v0.422, v1.019, v1.109) — every 5 minutes
+  // from 6:00 AM to 10:00 PM (its default range), the same list on every device instead of the
+  // browser's own; it opens at the chosen time and typing a number jumps to that hour. The
+  // database accepts any minute for a class (0005 checks only that the end is after the start), so
+  // a saved time that isn't on the list (e.g. 4:12 PM, or 5:30 AM) is still shown — the shared list
+  // adds it in its place. Empty, the field says "Time" in gray, as the old empty choice did.
+  // The field is a button, so its name ("Group A start time") comes from a hidden label line.
+  const timeField = (field, label) => {
+    const fieldId = `${idBase}-${field}-${row.classId}`;
+    return (
+      <span className="ev-time">
+        <span id={`${fieldId}-label`} className="visually-hidden">
+          {label}
+        </span>
+        <TimeList
+          id={fieldId}
+          labelId={`${fieldId}-label`}
+          describedBy={error ? errorId : undefined}
+          value={row[field] ?? null}
+          placeholder={T.NO_TIME}
+          readOnly={readOnly}
+          invalid={Boolean(error)}
+          onChange={(time) => onChange({ [field]: time })}
+        />
+      </span>
+    );
+  };
   return (
     <div className={`ev-crow${row.ticked ? '' : ' is-off'}${isPhone ? ' is-phone' : ''}`}>
       <label className="cbrow ev-crow-name" htmlFor={tickId}>
@@ -198,9 +200,9 @@ function ClassTimeRow({ row, idBase, error, readOnly, isPhone, onChange }) {
       </label>
       {row.ticked ? (
         <span className="ev-crow-times">
-          {select('startTime', T.startTimeLabel(row.className))}
+          {timeField('startTime', T.startTimeLabel(row.className))}
           <span className="ev-crow-to">{T.TIME_TO}</span>
-          {select('endTime', T.endTimeLabel(row.className))}
+          {timeField('endTime', T.endTimeLabel(row.className))}
         </span>
       ) : (
         <span className="ev-crow-off">{T.NOT_TESTING_HERE}</span>
