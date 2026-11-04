@@ -3,7 +3,7 @@
 // approved mockup (docs/Prospects/TKD-Forms-Mockups.html, rulebook v0.235 / v0.241 / v0.242) and
 // to change it later. The data layer only returns codes ('stale', 'waiverEmpty' …); this file
 // turns them into plain English.
-import { formatDate } from '../../lib/schedule/versions.js';
+import { formatDate, localDay } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Forms';
@@ -58,6 +58,8 @@ export const DELETE_TITLE = 'Delete this form?';
 export const deleteText = (name) => `"${name}" and its booking settings will be deleted. This can't be undone.`;
 export const HAS_SIGNUPS = 'Families have signed up with this form, so it can\'t be deleted. Close it instead — every sign-up keeps its form.';
 export const DRAFT_NO_FILL = 'Publish the form first — then it can be filled in.';
+// A Closed form is already published: only an admin can open it again (rulebook v0.629)
+export const CLOSED_NO_FILL = 'This form is closed. An admin can open it again.';
 
 // ----- New form -----
 export const NEW_FORM_TITLE = 'New form';
@@ -86,7 +88,7 @@ export const ADD_FIELD = 'Add field';
 export const SAVED_NOTE = 'Changes save as you go. Families see them after Publish.';
 export function statusLine(form, { dirty, saving, failed }) {
   const parts = [STATUS[form.status]];
-  if (form.publishedAt) parts.push(`last published ${formatDate(form.publishedAt.slice(0, 10), { weekday: false, year: false })}`);
+  if (form.publishedAt) parts.push(`last published ${formatDate(localDay(form.publishedAt), { weekday: false, year: false })}`);
   else parts.push('not published yet');
   if (failed) return { text: parts.join(' · '), extra: 'not saved', warn: true };
   if (saving) return { text: parts.join(' · '), extra: 'saving…', warn: false };

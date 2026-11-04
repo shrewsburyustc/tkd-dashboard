@@ -1008,7 +1008,8 @@ body.is-card-dragging * {
   margin: var(--space-4) 0 var(--space-12);
 }
 
-/* Forms' staff "Fill in" buttons while desk-only (v0.616): the same plain-button gray as Email
+/* Forms' staff "Fill in" buttons while desk-only (v0.616) and on a Draft / Closed form (v0.628):
+   the same plain-button gray as Email
    above. Kept here, not in forms.css: forms.css loads before app.css in the real build (it is
    shared with the family page), so a rule there would lose to .btn:hover. When Dashboard core's
    step 2 adds a page-wide .btn.is-unavailable to shared.css, this rule (and Email's) can go. */
@@ -1202,7 +1203,9 @@ body.is-card-dragging * {
   font-weight: 500;
 }
 
-.pnote {
+/* Two classes, so it beats calendar.css's .ctextarea (88px) whatever order the files load in
+   ("(now)" point 3, the same fix as Forms' boxes). */
+.ctextarea.pnote {
   min-height: 56px;
 }
 

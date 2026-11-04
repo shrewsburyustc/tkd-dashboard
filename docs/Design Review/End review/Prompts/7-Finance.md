@@ -14,7 +14,7 @@ The design review decided eight Finance changes, F1–F8 (change list §2.6; rul
 
 **F8 is finished:** migration 0026 is live (applied 2026-10-28) and its screens are deployed (main 56308ff). This brief is F1–F7, in two parts:
 - **Part 1, ready now:** F1, F3, F4, F7 and F2's database half. They need no shared part, and your status file's §18 already lists them.
-- **Part 2, after Dashboard core's step 1 is merged:** F2's screen, F5 and F6, which switch to the shared parts (rows v1.100–v1.111).
+- **Part 2, after Dashboard core's step 1 is merged:** F2's screen, F5 and F6, which switch to the shared parts (rows v1.100–v1.113).
 
 The decisions are made. You draw them on Finance's screens, Jeffrey OKs each screen, then you build.
 
@@ -115,7 +115,7 @@ Every visible change is on an admin screen. Staff see nothing new.
 - **Where to find those days:** the fake data counts back from the day it was made. They are 7 and 2 days back (Oct 17 and Oct 22 in picture d3, made on Oct 24). `__tkdPreview.resetFinance()` makes it again from today.
 - If it matches, write F7 as done in the status file. If not, show Jeffrey before changing anything.
 
-**F2, the database half — migration 0029** (v1.019, v1.109).
+**F2, the database half — migration 0029** (v1.019, v1.109). **Applied to live 2026-10-28.**
 - **Why:** `finance_reminder_time_is_valid` (`supabase/migrations/0011_finance.sql`, line 95) accepts only 11:00–23:00 on 15-minute steps.
   - `finance_set_reminder_time` (it answers `invalid`) and the table check on `finance_reminder_times.remind_at` both use it.
   - So the shared time list's 11:05 would be refused.
@@ -142,7 +142,7 @@ F5 and F6 change nothing on screen, so they need no mockup. Prove it with before
 - a payment's detail;
 - Export, History, Settings and Print.
 
-**F2 — the shared time list on the Settings screen** (v1.019, v1.109, M8). 0029 must be live first.
+**F2 — the shared time list on the Settings screen** (v1.019, v1.109, M8). 0029 is live (2026-10-28).
 - **The switch:** `SettingsTab.jsx` (line 160) has 14 browser `<select>`s: Off, then 11:00 AM–11:00 PM every 15 minutes, from `REMINDER_TIMES` in `format.js` (line 146).
   - They become `TimeList` (`src/components/TimeList.jsx`, on `Select.jsx`, choices from `src/lib/times.js`) with `from="11:00"`, `to="23:00"` and `offLabel={T.OFF}`.
   - `REMINDER_TIMES` goes.

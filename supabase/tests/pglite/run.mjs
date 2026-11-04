@@ -454,6 +454,16 @@
 //       big history, re-run safety, and the Undo of SETUP.md 0033f
 //       (manual/0033u) - see step0033 below. Run only this step with
 //       node run.mjs --only-step0033
+//   step0034. 0034 (Black Belt: every History row also carries record_id,
+//       the logged row's own id, so a grade's correction joins to its
+//       insert row; v0.971 / v0.972, BB8) on its own database in the
+//       production order (liveOrderTo0025, then 0027, 0026, 0028, 0029,
+//       0031, 0032, 0033): the pre-apply check, only bb_candidate_history's
+//       body md5 moves (0016's and 0032's files), 0034's tests and the
+//       Black Belt tests (0032, 0016, 0024, 0025, 0026) after it, re-run
+//       safety, and the Undo of SETUP.md 0034e (manual/0034u, back to
+//       0032's reader) - see step0034 below. Run only this step with
+//       node run.mjs --only-step0034
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -500,6 +510,7 @@ const onlyStep0031 = process.argv.includes('--only-step0031');
 const onlyStep0030 = process.argv.includes('--only-step0030');
 const onlyStep0032 = process.argv.includes('--only-step0032');
 const onlyStep0033 = process.argv.includes('--only-step0033');
+const onlyStep0034 = process.argv.includes('--only-step0034');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -717,6 +728,15 @@ async function main() {
     if (prints32) {
       console.log('\n0032 fingerprints (kind  item  detail):');
       for (const line of prints32) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0034: just Black Belt's History record_id step (0034)
+  if (onlyStep0034) {
+    const prints34 = await step0034();
+    if (prints34) {
+      console.log('\n0034 fingerprints (kind  item  detail):');
+      for (const line of prints34) console.log('  ' + line);
     }
     return finish();
   }
@@ -995,6 +1015,9 @@ async function main() {
   // step0032: Black Belt's design-review database half (its own database, production order)
   console.log('\nMigration 0032 (Black Belt: 5-minute times, candidate history, Edit cycle Undo in one call):');
   const after32 = after5 ? await step0032() : null;
+  // step0034: Black Belt's History line names the logged row's id (its own database, production order)
+  console.log('\nMigration 0034 (Black Belt: History rows carry record_id):');
+  const after34 = after5 ? await step0034() : null;
   // step0033: Camps design review - Mark paid with a way, Camper history (its own database, production order)
   console.log('\nMigration 0033 (Camps design review: Mark paid with a way to pay, Camper history):');
   const after33 = after5 ? await step0033() : null;
@@ -1100,6 +1123,10 @@ async function main() {
   if (after32) {
     console.log('\n0032 fingerprints (kind  item  detail):');
     for (const line of after32) console.log('  ' + line);
+  }
+  if (after34) {
+    console.log('\n0034 fingerprints (kind  item  detail):');
+    for (const line of after34) console.log('  ' + line);
   }
   if (after33) {
     console.log('\n0033 fingerprints (kind  item  detail):');
@@ -7366,6 +7393,136 @@ async function step0032() {
   }
   await db.close().catch(() => {});
   return prints32;
+}
+
+// =====================================================================
+// step0034: Black Belt's History line names the logged row's id
+// (0034: bb_candidate_history answers record_id too; rulebook v0.971 /
+// v0.972, design-review BB8)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0032 and 0033 - each only if its file is on this branch):
+//   a. 0034's migration, tests, fingerprints and pre-apply check are
+//      connector-safe (no "delete" / "drop"); the pre-apply check (SETUP
+//      0034a) before 0034: body_is_0032 true, one version, the helper there
+//   b. apply 0034: in 0016's and 0032's fingerprint files (both list
+//      bb_candidate_history) ONLY that line differs, and only in its body
+//      md5 (0032's md5 -> 0034's, the two the pre-apply check names);
+//      every other fingerprint file is byte-identical; 0034's own row:
+//      plpgsql, stable, security definer, search_path="", postgres,
+//      authenticated + postgres only
+//   c. 0034_tests.sql, then 0032's, 0016's, 0024's, 0025's and 0026's
+//      tests; the pre-apply check now says body_is_0034
+//   d. 0034 applied a SECOND time: no fingerprint changes
+//   e. the Undo of SETUP.md 0034e (the file it names,
+//      supabase/manual/0034u_undo.sql): every fingerprint file equals the
+//      one before 0034, the pre-apply check answers as before, 0032's
+//      tests pass; then 0034 again -> the tested fingerprints,
+//      0034_tests.sql passes
+// Run only this step with   node run.mjs --only-step0034
+// =====================================================================
+const MD5_0032_HISTORY = '1cc24c95127dd0151933efade802e46a';
+const MD5_0034_HISTORY = '5f41c349f9eae85e8651d9f02d336d70';
+
+async function step0034() {
+  const L = '[0034] ';
+  const preSql = read('tests', '0034_preapply_check.sql');
+  const migration = read('migrations', '0034_black_belt_history_ids.sql');
+  const unsafe = [['migrations', '0034_black_belt_history_ids.sql'], ['tests', '0034_tests.sql'], ['tests', '0034_fingerprints.sql'],
+    ['tests', '0034_preapply_check.sql']].filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0034's migration, tests, fingerprints and pre-apply check contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0032 (Black Belt design review)', '0032_black_belt_review.sql'], ['0033 (Camps design review)', '0033_camps_design_review.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. the pre-apply check before 0034
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const clean = await pre();
+  record(`${L}[pre-apply check] before 0034: body_is_0032, not 0034, one version, bb_history_strip there`,
+    clean.body_is_0032 === true && clean.body_is_0034 === false && clean.versions === 1 && clean.strip_helper === true,
+    JSON.stringify(clean));
+
+  // b. apply 0034: only bb_candidate_history's body md5 moves (0016's and 0032's files)
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0032', '0033', '0034']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0034');
+  const before = await printsOf(db, others);
+  if (!(await run(db, `${L}apply 0034_black_belt_history_ids.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isReader = (line) => line.startsWith('function  bb_candidate_history(');
+  const md5Out = (line) => line.replace(/[0-9a-f]{32}/, '<md5>');
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (n === '0016' || n === '0032') {
+      if (gone.length !== 1 || added.length !== 1 || !isReader(gone[0]) || !isReader(added[0])
+          || md5Out(gone[0]) !== md5Out(added[0]) || !gone[0].includes(MD5_0032_HISTORY) || !added[0].includes(MD5_0034_HISTORY)) {
+        wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      }
+    } else if (gone.length || added.length) {
+      wrong.push(`${n} moved: ${JSON.stringify({ gone, added })}`);
+    }
+  }
+  record(`${L}fingerprints: only bb_candidate_history's body md5 moved (0016's and 0032's files, ${MD5_0032_HISTORY.slice(0, 8)} -> ${MD5_0034_HISTORY.slice(0, 8)}), every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints34 = after['0034_fingerprints.sql'];
+  record(`${L}0034 fingerprints: bb_candidate_history plpgsql, stable, security definer, search_path="", authenticated + postgres only`,
+    prints34.length === 1 && isReader(prints34[0]) && prints34[0].includes(MD5_0034_HISTORY)
+      && prints34[0].endsWith(' lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE'),
+    prints34.join(' | '));
+
+  // c. the tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  const bbTests = [['0032_tests.sql', 'ALL 0032 TESTS PASSED'], ['0016_tests.sql', 'ALL 0016 TESTS PASSED'],
+    ['0024_tests.sql', 'ALL 0024 TESTS PASSED'], ['0025_tests.sql', 'ALL 0025 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED']];
+  await tests('after 0034', [['0034_tests.sql', 'ALL 0034 TESTS PASSED'], ...bbTests]);
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0034: body_is_0034, one version`,
+    applied.body_is_0032 === false && applied.body_is_0034 === true && applied.versions === 1 && applied.strip_helper === true,
+    JSON.stringify(applied));
+
+  // d. re-run safety
+  await run(db, `${L}apply 0034 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0034 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+
+  // e. Undo 0034, as SETUP.md 0034e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0034e\. Undo 0034/m);
+  const undoFile = 'manual/0034u_undo.sql';
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0034] SETUP.md has "### 0034e. Undo 0034" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0034] paste ${undoFile}`, read('manual', '0034u_undo.sql'))) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0034] every fingerprint file equals the one before 0034 (0032's bb_candidate_history is back)`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    const undonePre = await pre();
+    record(`${L}[undo 0034] the pre-apply check answers as before 0034`, JSON.stringify(undonePre) === JSON.stringify(clean),
+      JSON.stringify(undonePre));
+    await tests('after the undo', [['0032_tests.sql', 'ALL 0032 TESTS PASSED']]);
+    if (await run(db, `${L}[undo 0034] apply 0034 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0034_fingerprints.sql');
+      record(`${L}[undo 0034] after the redo the 0034 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints34));
+      await tests('after the redo', [['0034_tests.sql', 'ALL 0034 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints34;
 }
 
 // =====================================================================

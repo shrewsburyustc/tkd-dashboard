@@ -6,21 +6,16 @@
 // Nothing new is stored: the steps come from what the list already knows — the sign-up date, the
 // free-class booking, the check-in and the Joined date. The List rows, the panel's big track and
 // the Board cards' one line all come from this one function, so they never disagree.
-import { addDays } from '../../lib/schedule/versions.js';
+import { addDays, localDay } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 import * as T from './text.js';
 
 export const STEP_NAMES = [T.STEP_SIGNED, T.STEP_BOOKED, T.STEP_CAME, T.STEP_JOINED];
 
 // The day something happened, in Massachusetts (a sign-up at 9 pm is still that day, not the
-// next day as the UTC time would say). Plain dates ("2026-10-19") are kept as they are.
-const NY_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
-export function localDay(value) {
-  const v = String(value ?? '');
-  if (v.length <= 10) return v;
-  const t = Date.parse(v);
-  return Number.isNaN(t) ? v.slice(0, 10) : NY_DAY.format(new Date(t));
-}
+// next day as the UTC time would say). It lives with the shared date helpers now; passed on from
+// here for the screens that already import it from this file.
+export { localDay };
 
 // "today", "tomorrow", "in 3 days" (only for dates still ahead)
 function inDays(date, today) {
