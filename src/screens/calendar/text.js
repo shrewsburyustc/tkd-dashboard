@@ -195,6 +195,9 @@ export const deleteTypeBody = (name, n) =>
   n === 0
     ? `${name} isn't used by any event. This can't be undone.`
     : `${n === 1 ? '1 event uses' : `${n} events use`} ${name}. Pick the type ${n === 1 ? 'it moves' : 'they move'} to. This can't be undone.`;
+// the "only type, in use" box's sentence (N3): the reason (LAST_TYPE_IN_USE) is the note under the buttons
+export const typeInUse = (name, n) => `${n === 1 ? '1 event uses' : `${n} events use`} ${name}.`;
+export const KEEP_TYPE = 'Keep type'; // the delete box's "changes nothing" button (N3)
 export const MOVE_TO = 'Move to';
 export const LAST_TYPE_IN_USE = "This is the only type and events use it. Add another type first, then delete this one.";
 export const DUPLICATE_TYPE = 'Another event type already has this name.';
@@ -205,7 +208,6 @@ export const SAVE = 'Save';
 export const SAVING = 'Saving…';
 export const REMOVE = 'Remove';
 export const REMOVING = 'Removing…';
-export const DELETE = 'Delete';
 export const DELETING = 'Deleting…';
 export const CLOSE = 'Close';
 export const UNDO = 'Undo';

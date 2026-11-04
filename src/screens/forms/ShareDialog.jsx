@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconCopy, IconDeviceTablet, IconDownload, IconPrinter } from '@tabler/icons-react';
+import { ConfirmButtons } from '../../components/ConfirmBox.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Logo from '../../components/Logo.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -77,14 +78,22 @@ export default function ShareDialog({ form, profile, isPhone, onClose, onNoAcces
     }
   }
 
-  // The kiosk question appears below the QR code: move focus to its main button (this also
-  // scrolls it into view); back to the kiosk button when it closes.
+  // The kiosk question appears below the QR code: its button row (ConfirmButtons, autoFocus) moves
+  // focus to the action; this scrolls the whole question into view.
   useEffect(() => {
     if (!ask) return;
-    const box = document.querySelector('.fshare-ask');
-    box?.querySelector('.btn-primary')?.focus({ preventScroll: true });
-    box?.scrollIntoView?.({ block: 'end' });
+    document.querySelector('.fshare-ask')?.scrollIntoView?.({ block: 'end' });
   }, [ask]);
+
+  // "Stay in the dashboard" / "Keep kiosk mode on": the question goes (ConfirmButtons ignores it
+  // while the action works), and focus goes back to the kiosk button that asked it — the button
+  // that had focus is gone, so it would otherwise drop to the page.
+  function closeAsk() {
+    const which = ask;
+    setAsk(null);
+    setKioskNote(null);
+    window.requestAnimationFrame(() => document.querySelector(which === 'end' ? '.fshare-kiosk-end' : '.fshare-kiosk')?.focus());
+  }
 
   // Open kiosk mode: a token for this form, kept on this tablet, then the dashboard locks and
   // App.jsx shows the kiosk instead of the lock screen.
@@ -138,7 +147,16 @@ export default function ShareDialog({ form, profile, isPhone, onClose, onNoAcces
 
   return (
     <>
-      <Dialog title={T.shareTitle(form.name)} size="detail" fullScreen={isPhone} onRequestClose={onClose}>
+      {/* While a kiosk ask works, Esc, a click outside and Back wait (N3), as in the shared box */}
+      <Dialog
+        title={T.shareTitle(form.name)}
+        size="detail"
+        fullScreen={isPhone}
+        busy={busy}
+        onRequestClose={() => {
+          if (!busy) onClose();
+        }}
+      >
         <p className="tdialog-sub">{T.STATUS[form.status]}</p>
         {draft ? (
           <Notice>{T.SHARE_DRAFT}</Notice>
@@ -201,38 +219,46 @@ export default function ShareDialog({ form, profile, isPhone, onClose, onNoAcces
                   <p className="field-hint">{T.KIOSK_END_HINT}</p>
                 </>
               )}
+              {/* The two kiosk asks (design review N3): the shared button row (ConfirmButtons) —
+                  "Stay in the dashboard" · "Open kiosk mode" and "Keep kiosk mode on" · "End kiosk
+                  mode", blue (nothing is lost), first focus on the action. Their notes sit under the
+                  buttons (v0.81), so the buttons never move when one appears. */}
               {ask === 'open' && (
                 <div className="fshare-ask" role="group" aria-labelledby="share-kiosk-ask">
                   <p id="share-kiosk-ask" className="fshare-ask__title">{T.KIOSK_CONFIRM_TITLE}</p>
                   <p>{T.kioskConfirmText(form.name)}</p>
                   <p>{T.KIOSK_HOURS}</p>
                   <p className="field-hint">{T.KIOSK_PIN_TIP}</p>
+                  <ConfirmButtons
+                    autoFocus
+                    keepLabel={T.KIOSK_STAY}
+                    actionLabel={T.KIOSK_OPEN}
+                    actionIcon={IconDeviceTablet}
+                    busyLabel={T.KIOSK_OPENING}
+                    loses="nothing"
+                    busy={busy}
+                    onKeep={closeAsk}
+                    onConfirm={openKiosk}
+                  />
                   {!profile?.is_shared && <Notice>{T.KIOSK_NOT_SHARED}</Notice>}
                   {kioskNote && <Notice>{kioskNote}</Notice>}
-                  <div className="fshare-ask__buttons">
-                    <button type="button" className="btn" onClick={() => { setAsk(null); setKioskNote(null); }}>
-                      {T.CANCEL}
-                    </button>
-                    <button type="button" className="btn btn-primary" data-autofocus aria-disabled={busy ? 'true' : undefined} onClick={openKiosk}>
-                      <IconDeviceTablet size={16} aria-hidden="true" />
-                      {busy ? T.KIOSK_OPENING : T.KIOSK_OPEN}
-                    </button>
-                  </div>
                 </div>
               )}
               {ask === 'end' && (
                 <div className="fshare-ask" role="group" aria-labelledby="share-kiosk-end">
                   <p id="share-kiosk-end" className="fshare-ask__title">{T.KIOSK_END_TITLE}</p>
                   <p>{T.KIOSK_END_TEXT}</p>
+                  <ConfirmButtons
+                    autoFocus
+                    keepLabel={T.KIOSK_KEEP_ON}
+                    actionLabel={T.KIOSK_END_CONFIRM}
+                    busyLabel={T.KIOSK_ENDING}
+                    loses="nothing"
+                    busy={busy}
+                    onKeep={closeAsk}
+                    onConfirm={endKiosk}
+                  />
                   {kioskNote && <Notice>{kioskNote}</Notice>}
-                  <div className="fshare-ask__buttons">
-                    <button type="button" className="btn" onClick={() => { setAsk(null); setKioskNote(null); }}>
-                      {T.CANCEL}
-                    </button>
-                    <button type="button" className="btn btn-primary" data-autofocus aria-disabled={busy ? 'true' : undefined} onClick={endKiosk}>
-                      {T.KIOSK_END_CONFIRM}
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

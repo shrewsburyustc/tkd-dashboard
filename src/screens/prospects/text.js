@@ -119,6 +119,8 @@ export const NO_CLASS_BOOKED = 'No free class is booked. Came is saved as the st
 export const cameAheadTitle = (name) => `${name}'s free class is still ahead`;
 export const cameAhead = (name, b) => `${name}'s free class is ${classLine(b)}. Check in on that day, when ${name} arrives.`;
 export const MARK_CAME = 'Came';
+// the button that changes nothing (N3): the card stays in the column it sits in ("Keep in Booked")
+export const keepIn = (column) => `Keep in ${column}`;
 
 // ----- Panel -----
 export const BACK = 'Back';
@@ -265,6 +267,7 @@ export const BUILTIN_NO_DELETE = "Built-in statuses can't be deleted.";
 export const deleteStatusTitle = (name) => `Delete "${name}"?`;
 export const deleteStatusBody = (name, n) => (n === 0 ? `Nobody is in "${name}". It will be deleted.` : `${n === 1 ? '1 person is' : `${n} people are`} in "${name}". Move them to:`);
 export const MOVE_TO = 'Move them to';
+// the empty choice in a dropdown (Delete status's "Move them to", the panel's lists)
 export const CHOOSE = 'Choose…';
 export const NAME_BAD = 'A name needs 1 to 40 characters.';
 export const DUPLICATE_NAME = 'Another status already has that name.';
@@ -280,7 +283,10 @@ export const deleteTitle = (name) => `Delete ${name}?`;
 export const deleteBody = (name, siblings) => (siblings
   ? `${name}'s prospect, notes and free class are deleted. The family's sign-up stays for the other children. This can't be undone.`
   : `${name}'s prospect, notes and free class are deleted, and the family's sign-up and answers with it. This can't be undone.`);
-export const DELETE = 'Delete';
+// the shared confirm box's "changes nothing" buttons (N3); the actions are the menu words
+// (DELETE_PROSPECT, DELETE_STATUS)
+export const KEEP_PROSPECT = 'Keep prospect';
+export const KEEP_STATUS = 'Keep status';
 export const DELETING = 'Deleting…';
 export const UNDO = 'Undo';
 export const UNDONE = 'Undone'; // after an Undo worked (v0.618), as the other sections say

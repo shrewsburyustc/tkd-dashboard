@@ -413,9 +413,12 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     }
     if (to.builtin === 'came') {
       const d = await fetchProspect(p.id);
-      // a class still ahead can't be checked in yet: the dialog says when, with only Cancel
+      // a class still ahead can't be checked in yet: the dialog says when, with only "Keep in …"
       const ahead = Boolean(d?.booking && d.booking.status === 'booked' && d.booking.classRunning && !d.checkedInAt && d.booking.date > today);
-      if (d) setDialog({ type: 'came', key: Date.now(), prospect: d, statusId, askCame: p.askCame, ahead, dropCode: code, saving: false, note: null });
+      // the Board column the card sits in now, for "Keep in Booked" (N3): a No-show's card sits
+      // in the Booked column (v0.610), every other card in its own status's column
+      const column = from?.builtin === 'no_show' ? school?.bookedStage?.name ?? from.name : from?.name ?? '';
+      if (d) setDialog({ type: 'came', key: Date.now(), prospect: d, statusId, askCame: p.askCame, ahead, column, dropCode: code, saving: false, note: null });
       return;
     }
     if (to.builtin === 'joined') {
@@ -446,7 +449,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       return;
     }
     // no class to check in to: save Came as the status (a class still ahead never gets here —
-    // CameDialog only offers Cancel then)
+    // CameDialog only offers "Keep in …" then)
     setDialog({ ...g, saving: true });
     setBusy(true);
     const wasJoined = schools.find((s) => s.code === g.dropCode)?.statusById?.get(d.statusId)?.builtin === 'joined';
@@ -734,7 +737,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
         />
       );
     } else if (dialog.type === 'came') {
-      dialogElement = <CameDialog state={dialog} isPhone={isPhone} onSave={saveCame} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <CameDialog state={dialog} onSave={saveCame} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'delete') {
       dialogElement = <DeleteDialog state={dialog} onTop={overPanel} onConfirm={confirmDelete} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'statuses' && statusSchool) {

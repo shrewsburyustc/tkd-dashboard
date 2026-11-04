@@ -43,7 +43,8 @@ export const SHARE = 'Share';
 export const DUPLICATE = 'Duplicate';
 export const CLOSE_FORM = 'Close form';
 export const OPEN_FORM = 'Open form';
-export const DELETE_FORM = 'Delete';
+// the ⋯ item and the confirm box's action say the same words (design review N3, v1.008)
+export const DELETE_FORM = 'Delete form';
 export const shareLabel = (name) => `Share ${name}`;
 export const moreLabel = (name) => `More actions for ${name}`;
 export const openLabel = (name) => `Open ${name}`;
@@ -55,6 +56,11 @@ export const UNDONE = 'Undone'; // after an Undo worked (v0.618)
 export const UNDO_STALE = "Couldn't undo. Someone else changed this form just now."; // like Schedule's and Star's
 export const deletedToast = (name) => `${name} was deleted.`;
 export const DELETE_TITLE = 'Delete this form?';
+export const KEEP_FORM = 'Keep form'; // the confirm box's "changes nothing" button (N3)
+export const DELETING = 'Deleting…';
+// Delete form failed (the connection): nothing tries again by itself, so the words don't say it
+// will (Star's approved v0.518 wording)
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
 export const deleteText = (name) => `"${name}" and its booking settings will be deleted. This can't be undone.`;
 export const HAS_SIGNUPS = 'Families have signed up with this form, so it can\'t be deleted. Close it instead — every sign-up keeps its form.';
 export const DRAFT_NO_FILL = 'Publish the form first — then it can be filled in.';
@@ -225,6 +231,7 @@ export const KIOSK_PIN_TIP = 'Tip: turn on Guided Access (iPad) or screen pinnin
 export const KIOSK_NOT_SHARED = 'You are signed in with your own account. Kiosk mode is meant for the shared front-desk account: your PIN will be the one that ends it.';
 export const KIOSK_OPEN = 'Open kiosk mode';
 export const KIOSK_OPENING = 'Opening…';
+export const KIOSK_STAY = 'Stay in the dashboard'; // the open ask's "changes nothing" button (N3)
 export const KIOSK_FAILED = "Couldn't open kiosk mode. Check the connection, then try again.";
 export const KIOSK_NOT_LIVE = 'This form is no longer Live, so it can\'t run in kiosk mode.';
 export const KIOSK_END = 'End kiosk mode on all tablets';
@@ -232,6 +239,8 @@ export const KIOSK_END_HINT = 'For a lost or stolen tablet: its kiosk stops at t
 export const KIOSK_END_TITLE = 'End kiosk mode on all tablets?';
 export const KIOSK_END_TEXT = 'Every tablet running this form in kiosk mode stops. A family that is filling it in right now still gets signed up.';
 export const KIOSK_END_CONFIRM = 'End kiosk mode';
+export const KIOSK_ENDING = 'Ending…';
+export const KIOSK_KEEP_ON = 'Keep kiosk mode on'; // the end ask's "changes nothing" button (N3)
 export const kioskEnded = (n) => (n === 0 ? 'No tablet was in kiosk mode for this form' : `Kiosk mode ended on ${n} tablet${n === 1 ? '' : 's'}`);
 export const KIOSK_END_FAILED = "Couldn't end kiosk mode. Check the connection, then try again.";
 export const SHARE_DRAFT = 'A Draft form can\'t be shared until it\'s published.';
