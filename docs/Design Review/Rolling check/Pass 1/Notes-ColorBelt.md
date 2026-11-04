@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 But pass 1 found problems in code you share with the merged sections, or that you and they copied from each other. Checking them now keeps the same gaps from arriving with your merge. Pass 1's checkers looked at your branch for a few points (R2-02, R2-03, R2-10, R3-08). Where a read-only look at your branch (9dbb1ce, checked again at 5ae845c) adds something, it says so.
 
 - Each point keeps its finding id (R2-02, R2-10 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's unless marked "on your branch"; they may have moved.
+- **Line numbers** are main 5f1db41's unless marked "on your branch"; they may have moved. Points decided in v1.045–v1.049 cite main 84a6e7d's (your merged work).
 - **Paths:** a path starting with `event/`, `events/` or `private/` is in `src/screens/testing/`; `testing/text.js` is `src/screens/testing/text.js`; `components/…` is `src/components/…`.
 
 ### Rules (from your prompt)
@@ -94,6 +94,55 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Rule:** v1.043 (Jeffrey, 2026-11-04: "A: as Star"), Star's v0.517 G3 for every section: restoring a row set aside as a "Duplicate copy" shows "[Name] restored" with no Undo, because an Undo would put the row back as a plain "Removed" with a history that says Withdrawn. To change it back, an admin uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
 - **What to do:** before your merge, give that restore no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
 
+### R3-02 — Possible duplicates stay out of the counts until resolved · Low · decided 2026-11-04 (v1.046)
+
+- **Today:** your event page's cards count a possible-duplicate row in Students, Paid and Not paid, and the Paid / Not paid filters list it (`event/EventPage.jsx:435–437, 463–464, 1668–1680` on main 84a6e7d). Mark paid is already hidden on it (`event/RosterRows.jsx:79`, `EventPage.jsx:426`).
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of the people counts and Paid / Not paid until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038). Until then it offers no Mark paid or Record payment, as Color Belt and Camps already don't.
+- **What to do:** leave rows with `duplicateState === 'possible'` out of Students, Paid and Not paid, and out of the two filters, as Black Belt's `rosterFilter` does (`src/lib/blackBelt/rules.js:1062`). Payments recorded and its "includes $X from removed students" line stay. Add the gray line as the shared cards' `note` (`EventPage.jsx:1998`), in Black Belt's words (`src/blackBelt/staff/text.js:511–513`). Keep Mark paid hidden. Mockup first.
+- **Check (preview mode):** on an event with a possible-duplicate pair: Students, Paid and Not paid leave the pair out, the gray line says so, and tapping Not paid doesn't list them. Review → Keep this one: the counts are whole again and the line goes.
+
+### R3-10 — The duplicate box goes above the cards · Low · decided 2026-11-04 (v1.047)
+
+- **Today:** your event page draws the cards first, then the duplicate box, then the class switch (`event/EventPage.jsx:1998–2016` on main 84a6e7d).
+- **Rule:** v1.047 (15) (Jeffrey, 2026-11-04: "Approve all"): one order above every roster: the duplicate box, the count cards, their "Showing … only" line, the one-school line, the search, the switches (Dan, class, week), then the table.
+- **What to do:** move the `DuplicateBox` (`:2009`) above the `CountCards` (`:1998`). The class switch and the roster follow, as today.
+- **Check (preview mode):** on an event with a possible-duplicate pair, at 1280 and 390: the duplicate box, then the cards, then (after tapping Not paid) "Showing not paid only · Show all", then the class switch.
+
+### R4-13 — "Ask an admin to reopen." becomes "Ask an admin to open it." · Low · decided 2026-11-04 (v1.045)
+
+- **Today:** staff after a closing date read "The closing date has passed. Ask an admin to reopen." (`testing/text.js:433, 446` on main 84a6e7d).
+- **Rule:** v1.045 (5) (Jeffrey, 2026-11-04: "Approve all"): staff after a closing date read "Ask an admin to open it.", as Camps' v0.725.
+- **What to do:** "… Ask an admin to reopen." → "… Ask an admin to open it." in both lines (the second keeps "Registration wasn't opened."). Camps doesn't re-export these two.
+- **Check (preview mode):** `__tkdPreview.setRole('staff')` and reload, then `__tkdPreview.setToday()` to a day after an event's closing date: the event's ⋯ reason reads "The closing date has passed. Ask an admin to open it."
+
+### R1-06 — The Undo payment box takes Black Belt's words · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06
+
+- **Today:** your CB3 box uses Star's words, "Undo [Name]'s payment?" and "The $X [way] payment recorded on [date] is reversed …" (`testing/text.js:662–664`, and the private testing's at `:1078–1083`, on main 84a6e7d).
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; shared words are kept once in `src/components/text.js`.
+- **What to do:** after Dashboard core's R1-06, take the title and "Paid on [date]" from `src/components/text.js`, and keep your consequence (what the row goes back to; both stay in the history).
+- **Check (preview mode):** mark a student paid, then ⋯ Undo payment: the box asks "Undo [Name]'s $X [way] payment?", and its line starts "Paid on".
+
+### R1-07 — The payment line and history words follow one set · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-07
+
+- **Today:** your toasts already read the decided words ("[Name] marked paid · $X [way]" and "Payment undone for [Name]", `testing/text.js:633, 641` on main 84a6e7d). Your payment line (`:605, 734`) and history words (`:1259, 1261`) are Star's shape, not Camps'.
+- **Rule:** v1.045 (3) (Jeffrey, 2026-11-04: "Approve all"): the toasts after Mark paid and Undo payment read "[Name] marked paid · $X [way]" (while hidden, "[Name] marked paid", v0.722) and "Payment undone for [Name]"; the person's payment line and the history's payment words become one set too, drawn in Dashboard core's mockup.
+- **What to do:** after Dashboard core's R1-07, take the toast words from `src/components/text.js`, and switch the payment line and history words to the set in its approved mockup. Camps re-exports `paymentUndoneToast` from your file (`src/screens/camps/text.js:23–102`): keep an export of that name until Camps has switched, and list it in your report.
+- **Check (preview mode):** Mark paid a student: the toast reads as today; the payment line and History read as the approved mockup.
+
+### R2-07 — One set of words for "someone else changed it" and a failed Undo · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R2-07
+
+- **Today:** "Someone else changed this just now. Your change wasn't saved." and "Couldn't undo. Someone else changed this just now." (`testing/text.js:271, 284, 646` on main 84a6e7d). "Undo didn't save. Check the connection, then retry." (`:288`) already reads the decided words.
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry."
+- **What to do:** after Dashboard core's R2-07, use its three sentences from `src/components/text.js` at those lines; a refused change or Undo names the student. Camps re-exports `STALE`, `UNDO_STALE`, `UNDO_FAILED` and `ROSTER_STALE` from your file: keep those names working until Camps has switched (its own R2-07), and list them in your report.
+- **Check (preview mode):** withdraw a student, then `__tkdPreview.simulateOtherAdminEdit()`, then Undo within 5 s: "Someone else changed [Name] just now, so nothing was done. Their change is shown."
+
+### R3-06 — Your back links switch to the shared one · Low · decided 2026-11-04 (v1.048) · after Dashboard core's R3-06
+
+- **Today:** your event page and private grading page use `.ev-back` (`event/EventPage.jsx:1611`, `private/PrivateGradingPage.jsx:270`; style `src/styles/testing-events.css:274, 1085`; on main 84a6e7d): 28 px, with a plain 44 px touch box that pushes the title down. The chooser's "← Testing" uses `.tc-back` (`src/screens/testing/chooser/BackToTesting.jsx:12`, `chooser.css:90–104`), the model for the shared one.
+- **Rule:** v1.048 (12) (Jeffrey, 2026-11-04: "Approve all"): Dashboard core builds one shared back link in `.tc-back`'s look (24 px, a 16 px arrow, a 44 px touch box pulled back so the title doesn't move), and every section switches to it.
+- **What to do:** after Dashboard core's R3-06, all three use the shared link (keep their words), and `.tc-back` goes. `.ev-back` stays while Camps' camp page and Black Belt still use it (their R3-06 items), and Testing's Black Belt link borrows its look (`src/screens/Testing.jsx:330` on main): keep that link working when `.ev-back` goes.
+- **Check (preview mode):** the event page, the private grading page and the Testing chooser at 1280, 820 touch, 390 and 320: the link is 24 px with a mouse and 44 px to tap on touch, and the title sits at the same height at 1280 and 820.
+
 ### Smaller lines for you
 
 - **Add student while hidden** (out of pass 1, for your own review): on main, Add student stays usable while Hide private details is on and shows "Paying by Cash · Check · Card". It asks no birthday or email, so it isn't desk-only, but Paying by is a payment detail that Camps hides. Check how your branch handles it, and ask Jeffrey if it needs a rule.
@@ -101,21 +150,15 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Camps re-exports your words:** Camps re-exports about 75 words from your `testing/text.js` (allowed), so your word changes reach Camps' screens at your merge without a Camps review. In your merge report, list which re-exported words you changed, so Camps can check them.
 - Your count cards still draw Not paid with the clock (`EventPage.jsx:1413`, `PrivateTestingTab.jsx:841`), where Star and Camps use `ti-circle-x`. That's your planned CB15. Pass 1b.
 - **R5-04 is decided** (2026-11-04, v1.038): Payments recorded counts all money received, removed people included, with your own line "includes $X from removed students". Nothing changes for you.
+- **R3-08 is decided** (2026-11-04, v1.048 (13)): Star takes your `ti-calendar` for "Change private day or time". Nothing to do.
+- **R3-09 is decided** (2026-11-04, v1.047 (14)): your roster gets no search box; it relies on the planned top-bar people search (v1.031). Nothing to build.
+- **S-9 is decided** (2026-11-04, v1.047 (17)): a roster says its sort order only when it isn't by name. Black Belt's line stays, and no other roster adds one. Nothing to build.
 
 ---
 
 ## Waits on Jeffrey (follow the answer later)
 
-- **R1-06** (Low) — one Undo payment box for every section. Your CB3 second half uses Star's approved words ("… recorded on Nov 3 …"); the recommended answer, Black Belt's, says "Paid on [date]". The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R1-07** (Low) — one toast after Mark paid and after Undo payment. Recommended: yours and Camps' ("[Name] marked paid · $X [way]", `testing/text.js:599`; "Payment undone for [Name]", `:605`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours: `testing/text.js:252, 269`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-02** (Low) — should a "Possible duplicate" row count in Paid / Not paid until resolved? Yours counts it today (`event/EventPage.jsx:381–383, 1410–1415`); your cards (CB9) and duplicate box (CB19) follow the answer. The same question covers whether a possible-duplicate row offers Mark paid (you hide it today). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-06** (Low) — one shared back link made by Dashboard core. Your `.ev-back` (event, private grading) is 28 px with a plain 44 px touch box that pushes the title down (`testing-events.css:272–279, 1086–1090`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-08** (Low) — the icon for "Change private day or time" in Star: the recommended answer is your `ti-calendar` (`private/PrivateTestingTab.jsx:780`), so nothing to do unless Jeffrey picks otherwise. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-09** (Low) — in-list search: does your roster get a box (A), or rely on the top-bar people search (B, recommended)? The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-10** (Low) — one order for what sits above a roster (recommended: Star's — duplicate box, count cards, their "Showing … only" line, one-school line, search, switches, table; today yours puts the cards first). The design review asks Jeffrey; the answer reaches you through the Main session.
 - **R4-06** (Low) — should weight 600 go to 500? Yours: `register.css:375, 394, 659` (your family form, which Star's and Camps' forms load too). Don't change it unless Jeffrey says so. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-13** (Low) — "Ask an admin to open it." (Camps, recommended) or "… to reopen." (yours, `testing/text.js:406, 419`). The design review asks Jeffrey; the answer reaches you through the Main session.
 
 ---
 

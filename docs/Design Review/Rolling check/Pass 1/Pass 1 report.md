@@ -46,17 +46,17 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Star | `Fix-Star.md` | 8 + 4 after another session's fix | 10 | 3 |
-| New students | `Fix-NewStudents.md` | 5 + 1 after another session's fix | 9 | 12 |
-| Black Belt | `Fix-BlackBelt.md` | 12 + 5 after another session's fix | 13 | 8 |
-| Camps | `Fix-Camps.md` | 3 + 3 after another session's fix | 12 | 9 |
-| Finance | `Fix-Finance.md` | 3 + 2 after another session's fix | 4 | 2 |
-| Dashboard core | `Fix-DashboardCore.md` | 7 | 10 | 8 |
+| Star | `Fix-Star.md` | 12 + 8 after another session's fix | 0 | 7 |
+| New students | `Fix-NewStudents.md` | 12 + 3 after another session's fix | 0 | 14 |
+| Black Belt | `Fix-BlackBelt.md` | 21 + 9 after another session's fix | 0 | 12 |
+| Camps | `Fix-Camps.md` | 8 + 8 after another session's fix | 0 | 13 |
+| Finance | `Fix-Finance.md` | 5 + 4 after another session's fix | 2 | 2 |
+| Dashboard core | `Fix-DashboardCore.md` | 11 | 1 | 15 |
 | Color Belt | `Notes-ColorBelt.md` | check before its merge | (follows the answers) | — |
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.045). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.050). The sections it changes hear it through the Main session.
 
 1. **Money: which school's report counts a payment taken at one school's desk?** (R1-01, High.) **Answered 2026-11-04: A** (v1.035).
    - **A (recommended):** the desk that took it, for every section, as Camps does. The report then always matches the drawer.
@@ -91,7 +91,7 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
    - **A (recommended):** amber, like its own "Late" tag.
    - **B:** gray, like Star and Color Belt.
    - **C:** keep red, written into §7 as an exception.
-10. **The small ones, as one batch.** Jeffrey approves the recommendations together, or pulls any out to see one by one:
+10. **The small ones, as one batch.** Jeffrey approves the recommendations together, or pulls any out to see one by one. **Answered 2026-11-04: "Approve all"** (v1.045–v1.049):
     - **Words: "Hidden on this tablet".** Use this everywhere; Black Belt says "device" (R4-03).
     - **Words: Undo payment box.** Use Black Belt's "Paid on [date]" (R1-06).
     - **Words: payment toasts.** "[Name] marked paid · $X [way]" and "Payment undone for [Name]" everywhere. The payment line and the history words follow (R1-07).
@@ -119,6 +119,6 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 
 ## Next
 
-- **Jeffrey:** question 10, the batch of small ones (questions 1–9 and 5b answered 2026-11-04).
+- **Jeffrey:** all of pass 1's questions are answered (1–10 and 5b, 2026-11-04). The fix files carry the answers; the Main session merges `design-review` when he says so.
 - **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13 and BB8 History, new students' "(now)" 2–4, Dashboard core's v1.118), and Color Belt when it merges.
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.

@@ -19,7 +19,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (R2-05, R1-08 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Step 2:** R1-08 and R3-12 lean on step 2's planned page-wide `.btn.is-unavailable` (`docs/Dashboard Core/TKD-DashboardCore-Plan.md:487, 625`), and Star's R4-08 can use it too. Plan them with it.
-- **Line numbers** are main 5f1db41's; they may have moved. The new students' N13 merge changed `shared.css` after the cut.
+- **Line numbers** are main 5f1db41's; they may have moved. The new students' N13 merge changed `shared.css` after the cut. Items decided in v1.045–v1.049 cite main 84a6e7d's.
 - **Paths:** `components/…` is `src/components/…`, and so are the bare names `Toast.jsx`, `HistoryLine.jsx`, `Select.jsx` and `MarkPaidBox.jsx`; `shared.css`, `app.css` and `testing-events.css` are in `src/styles/`. The sections' own files are named as the checkers wrote them; each section's fix file gives their full paths.
 
 ### Rules
@@ -104,20 +104,42 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q7-toast-covers-butto
 - **Change:** put the staff hint words once in `src/components/text.js`: "Past days can't be chosen." and "Days after today can't be chosen.". Then Star and Black Belt switch from "dates", and both Date paid calendars pass the "Days after today" hint (their matching items). Prospects and Finance already say "days": nothing changes on their screens. Say in your report whether their own copies should switch to the shared words (then the new students and Finance sessions each get a matching item), or record that they keep them. Leave the family-page date-of-birth hint unless Jeffrey wants it changed too.
 - **Check (preview mode):** the two lines exist once in `src/components/text.js`, and nothing on screen changes yet.
 
+### R1-07 — One set of payment words: the toasts now, the payment line and history after a mockup · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** the toast after Mark paid comes in four wordings (Star "Payment recorded"; Camps and Color Belt "[Name] marked paid · $X [way]"; Black Belt "Payment recorded · $X · [Name]"), and Undo payment's in two. The person's payment line ("$140 card · paid Nov 3" in Star, "$140 check · Worcester · Nov 3 · Jeffrey Berg" in Camps) and the history's words ("Payment recorded: $140 card, paid Nov 3" in Star, "Marked paid $140 check" in Camps) differ too.
+- **Rule:** v1.045 (3) (Jeffrey, 2026-11-04: "Approve all"): the toasts after Mark paid and Undo payment read "[Name] marked paid · $X [way]" (while hidden, "[Name] marked paid", v0.722) and "Payment undone for [Name]"; the person's payment line and the history's payment words become one set too, drawn in your mockup. v1.045 keeps shared words once in `src/components/text.js`.
+- **Change:**
+  - Put the three toast words in `src/components/text.js` now, as Camps and Color Belt have them (`src/screens/camps/text.js:576, 578`; `src/screens/testing/text.js:633, 641` on main 84a6e7d).
+  - Draw one mockup, at the four sizes, of the payment line and the history's payment words (recorded, undone, changed), from the four sections' versions today: Star `src/screens/testing/star/candidates/text.js:93, 262, 311, 313`; Camps `src/screens/camps/text.js:708, 815–816`; Black Belt `src/blackBelt/staff/text.js:1370–1373` and its detail's payment lines (`src/blackBelt/staff/candidates/CandidateDialog.jsx:134, 174`); Color Belt `src/screens/testing/text.js:605, 734, 1259, 1261` on main 84a6e7d. Jeffrey OKs one set, and it goes in `src/components/text.js` too.
+  - Star, Camps, Black Belt and Color Belt switch after (their R1-07 items). Say in your report when each part is merged.
+- **Check (preview mode):** the toast words, and later the approved line and history words, exist once in `src/components/text.js`; nothing on screen changes yet.
+
+### R1-06 — The Undo payment box's shared words · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** the Undo payment box comes in two wordings. Star, Camps and Color Belt ask "Undo [Name]'s payment?" with "… payment recorded on [date] …", though the date is the day the family paid. Black Belt asks "Undo [Name]'s $X [way] payment?" with "Paid on [date] …" (v0.964, v0.965).
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; shared words are kept once in `src/components/text.js`.
+- **Change:** put the title and the second line's opening, "Paid on [date]", in `src/components/text.js`, copied from `src/blackBelt/staff/text.js:795, 814–815` (with its curly apostrophe). Each section adds its own consequence ("the row goes back to Not paid", "… is owed again", "It comes off the balance"). Star, Camps, Black Belt and Color Belt switch after (their R1-06 items).
+- **Check (preview mode):** the words exist once in `src/components/text.js`, and nothing on screen changes yet.
+
+### R2-07 — One set of words for "someone else changed it" and a failed Undo · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** "someone else changed it" comes in seven wordings and a failed Undo in four. Color Belt, Star, Schedule and Finance say "Someone else changed this just now. Your change wasn't saved."; Black Belt says "Someone else changed [Name] just now, so nothing was done. Their change is shown."; Prospects, Forms and Calendar each have their own.
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry." (Black Belt's v0.966 set; R2-07, R4-14); shared words are kept once in `src/components/text.js`.
+- **Change:** put the three sentences in `src/components/text.js`, copied from Black Belt's (`src/blackBelt/staff/text.js:587, 88`). Not in this set: the sentences shown inside an open dialog ("… Cancel, then open it again to see the latest."), which the row doesn't name, and the two parts still open (Waits, below). Every section switches after (its R2-07 item; Color Belt's note too).
+- **Check (preview mode):** the three sentences exist once in `src/components/text.js`, and nothing on screen changes yet.
+
+### R3-06 — One shared back link · Low · decided 2026-11-04 (v1.048)
+
+- **What's wrong:** the back link has six copies in two sizes. `.st-back`, `.tc-back` and `.fb-back` are 24 px and pulled back on touch; `.ev-back`, `.bb-back` and `.fin-back-link` are 28 px with a plain 44 px touch box that pushes the title down (at 820 touch the title sits at 146 px instead of 124). v0.624 left a shared one to your work, but no plan item exists.
+- **Rule:** v1.048 (12) (Jeffrey, 2026-11-04: "Approve all"): you build one shared back link in `.tc-back`'s look (24 px, a 16 px arrow, a 44 px touch box pulled back so the title doesn't move), and every section switches to it.
+- **Change:** a back-link part in `src/components/` with its style in `shared.css`, copying `.tc-back`'s numbers (`src/screens/testing/chooser/chooser.css:90–104`): 24 px tall with a 16 px `ti-arrow-left`, and on touch a 44 px tap box pulled back with negative margins. The section passes the words and the screen-reader name. It is a new shared part: show Jeffrey one small picture first. Testing's focus helper finds back links by their old classes (`src/screens/Testing.jsx:252` on main 84a6e7d, a CLAUDE.md shared file): add the shared link's class there. Then Star, Camps, Black Belt, Finance, New students (Forms) and Color Belt switch (their R3-06 items).
+- **Check (preview mode):** on the parts page (`/parts.html`): 24 px with a mouse, a 44 px tap box on touch, and the title under it at the same height at 1280 and 820 touch.
+
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R1-07** (Low) — one set of toast words after Mark paid and after Undo payment, kept once in `src/components/text.js` (four wordings today; R2's "Payment undone" line is part of this). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-07** (Low) — one set of words for "someone else changed it", "Undo refused" and "Undo failed", kept once in `src/components/text.js` (seven and four wordings today). Folded in: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open"; R2's smaller line) and the load-failure words (R3's S-2). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-09** (Low) — the ✓ and the full stop only on the account toasts, as `Toast.jsx:6–10` already says (recommended), or on every success toast. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-06** (Low) — should you make one shared back link (`.tc-back`'s look: 24 px, 16 px arrow, 44 px touch box pulled back so the title doesn't move) for every section to switch to? v0.624 said it belongs to your work, but no plan item exists. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-09** (Low) — in-list search: one wording and place for the three boxes that exist (B, recommended), or one shared list search for every roster (A). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-02** (Low) — what an open desk-only form does when Hide private details turns on in another tab (recommended: leave it and record it in a row). You own the answer; Star, new students and Black Belt apply it. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-06** (Low) — should the weight-600 text left in Black Belt, Camps and new students go to 500, as §7 says and v1.112 did for the receipt (printed sheets keep 700–900)? The design review asks Jeffrey; the answer reaches you through the Main session.
-- **The payment line and the history words** (Low, asked together with R1-07): the person's payment line reads "$140 card · paid Nov 3" in Star and "$140 check · Worcester · Nov 3 · Jeffrey Berg" in Camps; the history says "Payment recorded: $140 card, paid Nov 3" in Star and "Marked paid $140 check" in Camps. One set of words goes with R1-07's answer. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **School order** (R3's S-1, Low): Worcester comes first in the location switcher and Star's link cards; Shrewsbury comes first in Finance Settings' columns, Star's Candidates card note on Both (`CandidatesTab.jsx:258`) and Black Belt's roster order. One order everywhere? The design review asks Jeffrey; the answer reaches you through the Main session.
-- **Native dropdowns** (R3's S-10, Low): browser `<select>` lists remain in 14 files (Camps, Prospects, Forms, Calendar, Schedule, Star's result-text preview, Black Belt's `rubric/ResultTextDialog.jsx`); only Star uses the shared Select (v1.100). Should the others switch? The design review asks Jeffrey; the answer reaches you through the Main session.
+- **R2-07, the open part** (Low) — v1.045 (4) set the refused and failed sentences (Fix now, above). Still open: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open"; R2's smaller line) and the load-failure words (R3's S-2). The design review asks Jeffrey; the answer reaches you through the Main session.
 
 ---
 
@@ -131,6 +153,13 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q7-toast-covers-butto
 - A turned-off IconButton has no turned-off look and still shows its hover and tooltip (`shared.css:962–981` has no `:disabled` exception). New students pass the browser's `disabled` (`EventTypesDialog.jsx:87`, `StatusesDialog.jsx:66`, `FieldEditor.jsx:82`); Black Belt and Finance use `aria-disabled` + `.is-unavailable`. Known (New students' N13 row). Pass 1b, Low.
 - The bordered icon-button look exists three times: `shared.css` `.tib--outline`, `finance.css` `.fin-ibtn`, `parts.css` `.parts-ibtn`; only Finance's has a grayed state. v0.626 lets Finance move to the shared one later. Pass 1b, Low.
 - The pale green `#eaf3de` is typed out in six files, and `tokens.css` has no success-background token. Optional. Pass 1b, Low.
+- **R2-09 is decided** (2026-11-04, v1.046 (7)): only the account toasts (PIN, password) show the ✓. Nothing to build: the shared Toast leaves it off when a section passes `icon: false` (`Toast.jsx:79–80`, `src/App.jsx:242–247`), and New students and Finance now do (their R2-09 items).
+- **R3-09 is decided** (2026-11-04, v1.047 (14)): no shared list search. Black Belt, Camps and New students give their own boxes one look ("Search candidates / campers / prospects", on the left above the table, one no-match line and Clear search); Star and Color Belt rely on the top-bar people search (v1.031). Nothing to build.
+- **R4-02 is decided** (2026-11-04, v1.049 (a)): a desk-only form that is open while Hide private details is turned on from another browser tab keeps what was typed. It is recorded as a known gap in v0.249's "every screen". Nothing to build.
+- **R4-03 (the words) is decided** (2026-11-04, v1.045 (1)): "Hidden on this tablet" and "Payment details are hidden on this tablet." already live once in `src/lib/privateDetails.js:47–48`, as `text.js`'s header says, so nothing moves into `text.js`. Black Belt switches to them. Nothing to build.
+- **R4-06 is decided** (2026-11-04, v1.048 (23)): screen text uses weights 400 and 500 only. Black Belt, Camps and New students change their own 600s, and printed sheets keep theirs; your shared styles have none. Nothing to build.
+- **S-1 is decided** (2026-11-04, v1.047 (19)): Worcester comes first wherever both schools are listed, as in your location switcher (`src/lib/device.js:10`). Star, Finance and Black Belt change theirs. Nothing to build.
+- **S-10 is decided** (2026-11-04, v1.048 (20)): the browser's own dropdowns become your shared Select (v1.100) when a section next works on that screen. No sweep. Nothing to build.
 
 ---
 

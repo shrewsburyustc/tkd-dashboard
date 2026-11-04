@@ -18,7 +18,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
 - **Smaller:** fix them while you're in the file. A few are questions your prompt already told you to ask Jeffrey.
 - Each item keeps its finding id (R2-01, R2-06 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved. N10, N13 and N14 changed `Calendar.jsx`, `Prospects.jsx`, `forms/Builder.jsx`, `forms/FillInDialog.jsx`, `calendar.css`, `forms-public.css` and `forms.css`, among others, after the cut.
+- **Line numbers** are main 5f1db41's; they may have moved. N10, N13 and N14 changed `Calendar.jsx`, `Prospects.jsx`, `forms/Builder.jsx`, `forms/FillInDialog.jsx`, `calendar.css`, `forms-public.css` and `forms.css`, among others, after the cut. Items decided in v1.045–v1.049 cite main 84a6e7d's.
 - **Paths:** `Forms.jsx`, `Prospects.jsx` and `Calendar.jsx` are in `src/screens/`; `forms/…` and `prospects/…` are under `src/screens/`, and so are the bare names `Builder.jsx`, `FillInDialog.jsx` and `FormsList.jsx` (in `src/screens/forms/`); `FormsApp.jsx` is the family page's `src/forms/FormsApp.jsx`; `calendar.css` and `forms-public.css` are in `src/styles/`; `components/…` is `src/components/…`.
 
 ### Rules
@@ -101,19 +101,74 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - **Change:** in `forms-public.css`, after `:where(.tib)` (`:130–143`), add `button:where(.tib) { color: var(--color-text-secondary); }`. It wins on the family page; inside the kiosk the dashboard's own `.tib` still wins, with the same color.
 - **Check (preview mode):** `/f/free-class-instagram` → Add another child: both trash icons compute rgb(107, 107, 107) at 1280 / 820 / 390 / 320 and darken on hover (PC). Kiosk and Fill in unchanged.
 
+### R3-03 — Prospects says when its list is filtered · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** the List opens on "Follow up today" (`Prospects.jsx:624`), and a stage or chip filters it too, but only the pressed chip says so: there is no "Showing … only · Show all" line, as under the count cards (v1.107).
+- **Rule:** v1.047 (10) (Jeffrey, 2026-11-04: "Approve all"): when Prospects' list is filtered (it still opens on Follow up today, v0.236), the gray "Showing … only · Show all" line shows, as under the count cards.
+- **Change:** under the `PipelineBar` (`Prospects.jsx:645`), in the List while a filter is on (the opening one included): one gray line, "Showing [filter] only · Show all", drawn as the shared one (`<p className="ev-filter-line cards-showing">` with a `link-button inline-link`, as `src/components/CountCards.jsx:89` draws it; v1.117's touch rules, `src/styles/shared.css:2127–2160`, work only inside `.cards-showing`). Show all shows everyone. The Board always shows everyone, so it gets none. The row adds only the line: the stage counts keep v0.236's look (R3's note S-12). Mockup first, with the line's words for each filter.
+- **Check (preview mode):** Prospects at 1280, 820 touch and 390: the List opens with the line ("Showing follow up today only · Show all", or the approved words); Show all → everyone, and the line goes; tap Booked → its own line. At 820 / 390 / 320 touch, Show all's tap area covers neither the chips nor the list.
+
+### R3-11 — The page ⋯ goes last, right of the blue button · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** the page ⋯ sits left of the blue add button in Prospects (`Prospects.jsx:777` before `:779–789`) and Calendar (`Calendar.jsx:626–632` before `:633–643`), and in the Schedule's phone headers (`Schedule.jsx:106–112` before `:119–122`; `schedule/ScheduleSchool.jsx:503–509` before `:512–520`). Camps and Black Belt put it last.
+- **Rule:** v1.047 (16) (Jeffrey, 2026-11-04: "Approve all"): a page's ⋯ comes last, to the right of the blue button.
+- **Change:** move each of the four ⋯ after its blue button.
+- **Check (preview mode):** Prospects and Calendar at 1280, 820 touch and 390, and the Schedule (one school and Both) at 390: the ⋯ is the last button in the header, and Tab reaches the blue button first.
+
+### R2-09 (your part) — Prospects' and Forms' toasts drop the ✓ and the full stop · Low · decided 2026-11-04 (v1.046)
+
+- **What's wrong:** in Prospects "✓ Note saved.", "✓ Free class booked for [name]." and "✓ [name] was deleted.", and in Forms "✓ Copied as "…" (a Draft).", "✓ … was deleted.", "✓ … is published — families see the new version." and "✓ Booking settings saved — they are live now." show the check icon and a full stop. The shared Toast keeps the ✓ for the account toasts (`src/components/Toast.jsx:6–10`); Testing, Camps and Black Belt toasts have neither.
+- **Rule:** v1.046 (7) (Jeffrey, 2026-11-04: "Approve all"): only the account toasts (PIN, password) show a ✓; Prospects', Forms' and Finance's success toasts drop the ✓ and the full stop.
+- **Change:** pass `icon: false` where the ✓ shows today (`Prospects.jsx:227`, which passes `{}` when there is no Undo, and `:473`; `Forms.jsx:182, 223`; `forms/Builder.jsx:317, 345`), and drop the closing full stop from every success toast's words (`prospects/text.js:114, 212, 215–217`; `forms/text.js:50–52, 56, 98, 178`).
+- **Check (preview mode):** save a note on a prospect: "Note saved", with no ✓; Duplicate a form: "Copied as "Copy of …" (a Draft)", with no ✓ and no full stop; publish a form: the same.
+
+### R3-09 (your part) — "Search name or phone" becomes "Search prospects", on the left · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** Prospects' box reads "Search name or phone" (`prospects/text.js:28`), sits right of the chips (`prospects/PipelineBar.jsx:48–55`; on Both, `Prospects.jsx:801–806`) and says "No one matches that search." (`prospects/text.js:45`). Black Belt says "Search candidates", on the left above its table; Camps says "Find a camper".
+- **Rule:** v1.047 (14) (Jeffrey, 2026-11-04: "Approve all"): the three in-list search boxes (Black Belt, Camps, Prospects) share one look: "Search candidates / campers / prospects", on the left above the table, with one no-match line and Clear search.
+- **Change:** `prospects/text.js:28` → "Search prospects" (its screen-reader name, `:29`, still starts with those words); the box moves to the left, just above the list; Clear search is R5-01's `IconButton`; and the one no-match line (`:45`). The row gives no words for that line: draw it in your mockup and ask Jeffrey once, unless the Main session has already passed on his answer from Black Belt or Camps. (R3's proposal: 'No one matches "[text]".' with a Clear search link.) Mockup first, with R3-03's line.
+- **Check (preview mode):** Prospects at 1280, 820 touch and 390: "Search prospects" sits on the left above the list; type "zz": the approved no-match line shows; Clear search brings everyone back. Board and Both the same.
+
+### R4-06 (your part) — Screen text drops from weight 600 to 500 · Low · decided 2026-11-04 (v1.048)
+
+- **What's wrong:** four screen rules use weight 600, which §7 doesn't allow (400 and 500 only): `.cchip-letters`, `.cweek-free` and `.cshow-done` in `calendar.css:238, 959, 1073`, and `.fp-tel` in `forms-public.css:471`.
+- **Rule:** v1.048 (23) (Jeffrey, 2026-11-04: "Approve all"): screen text uses weights 400 and 500 only (§7): Black Belt's, Camps' and New students' 600s go to 500; printed sheets keep their heavier weights (v0.142, v0.143).
+- **Change:** those four → 500. Check `forms-public.css` in the preview-mode build served as plain files (Rules, "CSS order").
+- **Check (preview mode):** Calendar at 1280 and the family page (`/f/free-class-instagram`) at 390: those four compute weight 500.
+
+### R5-03 (your part) — The family pages' icon-button look in one small stylesheet · Low · decided 2026-11-04 (v1.048)
+
+- **What's wrong:** your family page removes a child with the trash icon button, and its look lives inside `forms-public.css` (`:124–211`). Camps' family page shows the word "Remove" instead, and it doesn't load `forms-public.css`, so it can't share the look today.
+- **Rule:** v1.048 (22) (Jeffrey, 2026-11-04: "Approve all"): every family page removes a child with the trash icon button (v0.626's look), so Camps' "Remove" link changes, and the public icon-button look lives in one small stylesheet that both family pages load.
+- **Change:** move the `:where(.tib…)` block (`forms-public.css:124–211`, with R5-02's color rule, so do it with or after R5-02) into one small public stylesheet, loaded wherever `forms-public.css` loads today (`src/forms/main.jsx:15`; the kiosk, `src/screens/kiosk/KioskApp.jsx:29`). Check it in the preview-mode build served as plain files (Rules, "CSS order"). Then tell the Main session, so Camps can load it on its family page (Camps' R5-03).
+- **Check (preview mode):** `/f/free-class-instagram` → Add another child, Fill in and the kiosk: the trash icons look and act as after R5-02 (gray, 28 px, the tooltip, 44 px on touch).
+
+### Pass 1b ⋯ names (your part) — The planned schedule's ⋯ says "More for Winter" · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** a planned schedule's ⋯ is named "More for [name]" (`schedule/text.js:39`, used at `schedule/ScheduleSchool.jsx:559, 725`), which its tooltip shows. Every other row ⋯ says "More actions for [name]", Prospects' and Calendar's included.
+- **Rule:** v1.045 (6) (Jeffrey, 2026-11-04: "Approve all"): a row's ⋯ is labelled "More actions for [name]".
+- **Change:** `schedule/text.js:39`: "More for …" → "More actions for …" (keep the fallback "this planned schedule").
+- **Check (preview mode):** the Schedule with a planned schedule: hover or Tab to its ⋯, and the tooltip reads "More actions for Winter" (or that schedule's name).
+
+### R2-07 (your part) — One set of words for "someone else changed it" and a failed Undo · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R2-07
+
+- **What's wrong:** Prospects says "Someone else changed this prospect. It was reloaded — please try again." (`prospects/text.js:218`); Forms "Couldn't undo. Someone else changed this form just now." and "Someone else changed this form. It was reloaded — please redo your last change." (`forms/text.js:55, 102`); Calendar "Couldn't undo: it changed meanwhile. …", "Couldn't undo. Check the connection and try again." and "Someone else changed this. The calendar now shows the latest." (`calendar/text.js:249–251`); Schedule "Someone else changed this just now. Your change wasn't saved." and "Couldn't undo. Someone else changed this just now." (`schedule/text.js:157, 167`).
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry."
+- **Change:** after Dashboard core's R2-07, use its three sentences from `src/components/text.js` at those lines: a refused change or Undo names the prospect, form, event or time slot; a failed Undo says "Undo didn't save. Check the connection, then retry." (as R2-01 already does).
+- **Check (preview mode):** close a form, then `__tkdPreview.simulateOtherAdminEditForms()`, then Undo within 5 s: "Someone else changed [name] just now, so nothing was done. Their change is shown."; in Calendar, add an event, then `__tkdPreview.simulateOtherAdminEditCalendar()`, then Undo: the same sentence.
+
+### R3-06 (your part) — Forms' back link switches to the shared one · Low · decided 2026-11-04 (v1.048) · after Dashboard core's R3-06
+
+- **What's wrong:** the builder's "← Forms" is your own copy of `.tc-back` (`.fb-back`, `forms.css:196–210`; `forms/Builder.jsx:386`), as v0.624 chose until a shared one existed.
+- **Rule:** v1.048 (12) (Jeffrey, 2026-11-04: "Approve all"): Dashboard core builds one shared back link in `.tc-back`'s look (24 px, a 16 px arrow, a 44 px touch box pulled back so the title doesn't move), and every section switches to it.
+- **Change:** after Dashboard core's R3-06, use it at `Builder.jsx:386` (keep its words, its "Back to Forms" name and its save-first step), and `.fb-back` goes.
+- **Check (preview mode):** the builder at 1280, 820 touch, 390 and 320: "← Forms" looks as today, and the form's name doesn't move between 1280 and 820.
+
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R3-03** (Low, plausible) — when Prospects' list is filtered (it opens on Follow up today, your v0.236 bar), should the shared gray "Showing … only · Show all" line say so? This also settles whether the stage counts take the shared count-card look (R3's note S-12). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-11** (Low) — should a page's ⋯ always come last, right of the blue button (Prospects, `Prospects.jsx:756–769`, and Calendar, `Calendar.jsx:628–645`, would move theirs)? The design review asks Jeffrey; the answer reaches you through the Main session. Pass 1b found the same in the Schedule's phone headers (`Schedule.jsx:106`, `ScheduleSchool.jsx:503`).
-- **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (Prospects, Forms and Calendar change under either option: `prospects/text.js:217`, `forms/text.js:55, 100`, `calendar/text.js:249–251`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-09** (Low) — the ✓ and the full stop only on the account toasts (recommended: Prospects' and Forms' toasts lose theirs, `Prospects.jsx:226, 472`, `Forms.jsx:182, 223`, `Builder.jsx:316, 344`), or on every success toast. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-06** (Low) — one shared back link made by Dashboard core (Forms' `.fb-back` would switch to it). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-09** (Low) — in-list search: one wording and place for every box ("Search name or phone", `prospects/text.js:28`, and its no-match line, `:45`, may change). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-02** (Low) — what an open Fill in or "+ Add prospect" does when Hide private details turns on in another tab (your status records "Left as is" as your own call, `STATUS-DesignReview.md:10`; recommended: leave it and record it in a row). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-06** (Low) — should your weight-600 text go to 500 (`calendar.css:227, 948, 1062`, `forms-public.css:396`)? Don't change weights unless Jeffrey decides. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R5-03** (Low, pass 1b) — one way to remove a child on every family page: the trash icon button (Forms' family page since v0.626; recommended, so Camps' family page changes) or the word "Remove" (Camps' link, never in a mockup). If it's the icon, the public icon-button look moves out of `forms-public.css` into one small public stylesheet that both family pages load; that part may land with you. The design review asks Jeffrey; the answer reaches you through the Main session.
+- Nothing waits on Jeffrey now. He answered these on 2026-11-04 (v1.045–v1.049); each answer is a Fix now or Smaller item in this file.
 
 ---
 
@@ -122,7 +177,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - A Draft form's staff Fill in is natively `disabled`, so it can't be focused (`FormsList.jsx:34`). It's already your open question in `STATUS-DesignReview.md:29`, still unanswered: ask Jeffrey (one question, with a picture). Low.
 - Stale header comment: `forms/FillInDialog.jsx:3` still says "Back / Next, then Submit" (v0.622 made it Continue / Send). Low.
 - Fill in's and the family page's Send stay blue while they say "Sending…" (`FillInDialog.jsx:139`, `FormsApp.jsx:354`; `forms-public.css:119–122` sets only `cursor: progress`). Fill in's Send may gray by itself after Dashboard core's R1-08 (if it grays every `aria-disabled` `.btn` in `shared.css`): check after it. The family page loads only `forms-public.css`, so its Send is yours either way. A form dialog's Save grays (detail 8). Low.
-- The W / S school letters (`.cchip-letters`) are 11 px, under §7's 12 px minimum (`calendar.css:222–228`; their weight 600 waits for R4-06). Low.
+- The W / S school letters (`.cchip-letters`) are 11 px, under §7's 12 px minimum (`calendar.css:222–228`; their weight 600 goes to 500 with R4-06). Low.
 - Prospects' own note guard says "Unsaved note. Save it or cancel first." (`prospects/text.js:126`); the shared guard says "Unsaved changes. Save or cancel first.". Settle it with N15's guard work. Low.
 - Prospects' follow-up date and booking a free class have no Undo: flagged in your status (`STATUS-DesignReview.md:12`, "flag only"), not decided. Ask Jeffrey. Low.
 - Forms builder "Delete field" is red, acts at once and has no Undo: your prompt's "(now)" point says ask Jeffrey, and don't fix it on your own. Low.
@@ -131,6 +186,8 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 - Forms' staff empty line "No forms yet." has no "An admin adds them." (`forms/text.js:36`): drift from v0.53 (§8 Empty states). Low.
 - Fill in's phone Sent page stacks "Fill in another" and "Close" full width with no gap (`FillInDialog.jsx:72–79`), so two 36 px targets touch; Black Belt's stacked phone buttons keep 8 px between them (`blackBelt.css:1354–1358`). Pass 1b, Low.
 - Edit statuses on a phone wraps "No-/show" and "Not / interested" inside the name column. Pass 1b, Low.
+- **R4-02 is decided** (2026-11-04, v1.049 (a)): an open Fill in or "+ Add prospect" keeps what was typed when Hide private details is turned on from another browser tab. Your "Left as is" (`STATUS-DesignReview.md:10`) is now Jeffrey's rule, recorded as a known gap in v0.249's "every screen". Nothing to build.
+- **S-10 is decided** (2026-11-04, v1.048 (20)): when you next work on one of these screens, its browser dropdown becomes the shared Select (v1.100): Edit statuses (`prospects/StatusesDialog.jsx:125`), the field editor (`forms/FieldEditor.jsx:136, 155`), Calendar's event and event-type boxes (`calendar/EventDialog.jsx:168`, `calendar/EventTypesDialog.jsx:155`) and the Schedule (`schedule/ScheduleSchool.jsx:530`, `schedule/SlotDialog.jsx:291`). `forms/FormFields.jsx:114` also draws the family page's Dropdown field, which doesn't load the shared styles: ask before switching that one. No sweep, so nothing to build until then.
 
 ---
 
