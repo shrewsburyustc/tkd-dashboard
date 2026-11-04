@@ -1,0 +1,41 @@
+{
+  "title": "Color Belt · Screen 4 · After the testing day: Print results, “Passed”, Download CSV (CB18)",
+  "subtitle": "<b>Already decided</b> (v1.029): Star's <b>Print results</b> (who passed to which belt) and an <b>admin-only Download CSV</b> sit at the right of the class switch, as Star has them; the result button says <b>“Passed”</b> (“Not passed” and “No show” stay). “Passed” also replaces “Pass” on both printed grading sheets and in the note dialog's subtitle. <b>One question at the bottom.</b> <span style=\"color:#6B6B6B\">(Preview screenshots, fake data; the “after” is drawn on the real page.)</span>",
+  "width": 2700,
+  "columns": [
+    {
+      "label": "Today · Grading tab",
+      "tone": "today",
+      "items": [
+        { "src": "grading-today.png", "crop": [60, 230, 1210, 440], "scale": 0.62,
+          "caption": "<b>Today:</b> “Pass” · Not passed · No show; only Print grading sheet (the paper backup). No results list, no CSV.",
+          "marks": [[936, 488, 70, 26], [1089, 315, 167, 32]] }
+      ]
+    },
+    {
+      "label": "After · Grading tab · PC, tablet, phone, 320",
+      "tone": "after",
+      "items": [
+        { "src": "grading-after.png", "crop": [60, 230, 1210, 440], "scale": 0.62,
+          "caption": "<b>PC:</b> “Passed”; Print results and Download CSV (admins only) at the right of the class switch. They cover the whole event, every class. Download CSV is hidden while Hide private details is on.",
+          "marks": [[936, 488, 70, 26], [978, 271, 278, 32]] },
+        { "row": [
+          { "src": "grading-after-w820.png", "crop": [0, 74, 820, 600], "scale": 0.5, "shotWidth": 820, "caption": "Tablet.", "marks": [] },
+          { "src": "grading-after-w390.png", "crop": [0, 74, 390, 700], "scale": 0.55, "shotWidth": 390, "caption": "Phone: their own line under the switch (Star's).", "marks": [] },
+          { "src": "grading-after-w320.png", "crop": [0, 74, 320, 566], "scale": 0.6, "shotWidth": 320, "caption": "320 wide: stacked.", "marks": [] }
+        ] }
+      ],
+      "note": "The CSV's columns come with the database plan (it needs a database function, like Star's): a separate picture, later."
+    },
+    {
+      "label": "After · the printed results sheet (portrait letter)",
+      "tone": "after",
+      "items": [
+        { "src": "sheet.png", "crop": [24, 24, 1292, 1668], "scale": 0.5, "shotWidth": 1340,
+          "caption": "Star's sheet, for Color Belt: title, date and school, a dark band, “PASSED — CONGRATULATIONS!”, each name with the new belt, footer with print time and page numbers. Only students who passed are listed; Not passed and No show are left off (the sheet is put up at the school).",
+          "marks": [] }
+      ]
+    }
+  ],
+  "footer": "<b>One question — how the sheet splits into pages.</b> v1.029 says a page per class; the class switch (and the grading sheet) work in testing groups — classes that test at the same time (v0.193).<br><b>A · Recommended: a page per class</b> (as decided). <i>+</i> each family finds their child's class on its own page; it can go up by that class's door. <i>−</i> more pages — a class with one student still gets a page.<br><b>B · A page per testing group</b> (each class has its own heading inside). <i>+</i> fewer pages; matches the grading sheet. <i>−</i> two classes share a page, so it can't be split up by class."
+}

@@ -1,23 +1,26 @@
 // RegistrationLinkDialog.jsx — the event's registration link, its QR code, and the flyer (R2, R3).
 // Why it exists: Star v0.90 (one link per event — a Color Belt event belongs to one school).
-// The event page header's outline button "Registration link" (ti-qrcode) opens it:
-//   - a line saying whether registration is open (and until when)
-//   - a card: the school, the QR code, the link, Copy link (ti-copy, toast "Link copied") and
-//     Print flyer (ti-printer)
+// The event page header's outline button "Registration link" (ti-qrcode) opens it.
+// Since the design review's part 2 (CB10, rulebook v0.422, v1.015, v1.106) the box itself is the
+// shared one (src/components/RegistrationLinkBox.jsx); this file only hands it Color Belt's parts:
+//   - the event name and Color Belt's line saying whether registration is open (and until when)
+//   - one card: "<School> school", the QR code, the link, Copy link (the first focus; the page's
+//     toast "Link copied"), Download QR code (a 1024-pixel PNG named
+//     "November Children Testing - Worcester QR code.png") and Print flyer (Color Belt's flyer below)
+//   - a failed copy or download shows its amber note inside the box (the shared box's words)
 //   - Close (PC / tablet); phones get a full screen with a back arrow
-// The QR code is made in the browser by src/lib/testing/qr.js — no network — always for the
-// fixed production address (plan §8), and drawn as an <img> (never as inserted HTML).
+// The link is made by src/lib/testing/qr.js (always the fixed production address, plan §8) and the
+// QR pictures by the shared src/lib/qr.js — both in the browser, no network.
 //
 // The flyer (R3) is one letter-size, black-and-white page: school logo, school name, event
 // name, testing date, "Location: <school>, <address>", "Register by <closing date>", a large
-// QR code and the short link. It is drawn into the page only while printing; the print
-// stylesheet (testing-events.css, @media print) hides everything else.
-import { useEffect, useState } from 'react';
+// QR code and the short link. The shared box draws it into the page only while printing; the
+// print stylesheet (testing-events.css, @media print) hides everything else.
 import { createPortal } from 'react-dom';
-import { IconCopy, IconPrinter } from '@tabler/icons-react';
-import Dialog from '../../../components/Dialog.jsx';
 import Logo from '../../../components/Logo.jsx';
-import { qrSvgDataUrl, registrationLink } from '../../../lib/testing/qr.js';
+import RegistrationLinkBox from '../../../components/RegistrationLinkBox.jsx';
+import { qrSvgDataUrl } from '../../../lib/qr.js';
+import { registrationLink } from '../../../lib/testing/qr.js';
 import { addressLine } from '../../settings/text.js';
 import * as T from '../text.js';
 
@@ -25,7 +28,8 @@ import * as T from '../text.js';
 const shortLink = (link) => link.replace(/^https?:\/\//, '');
 
 // The printed flyer. `address` is the school's address object or null (just the school name).
-function Flyer({ event, school, address, qr, link }) {
+function Flyer({ event, school, address, link }) {
+  const qr = qrSvgDataUrl(link);
   return createPortal(
     <div className="flyer-print">
       <div className="flyer">
@@ -43,56 +47,22 @@ function Flyer({ event, school, address, qr, link }) {
   );
 }
 
-export default function RegistrationLinkDialog({ event, school, address, isPhone, onCopy, onClose }) {
+// school: the event's school name ("Worcester"); address: Settings → Schools' address or null.
+// onCopied: a copy worked (the page shows its "Link copied" toast).
+export default function RegistrationLinkDialog({ event, school, address, isPhone, onCopied, onClose }) {
   const link = registrationLink(event.publicCode);
-  const qr = qrSvgDataUrl(event.publicCode);
-  const [printing, setPrinting] = useState(false);
-
-  // Print flyer: draw the flyer, then open the browser's print window. 'afterprint' fires when
-  // that window closes (printed or cancelled); then the flyer is removed again.
-  useEffect(() => {
-    if (!printing) return undefined;
-    const done = () => setPrinting(false);
-    window.addEventListener('afterprint', done);
-    // Wait one frame so the flyer (and its QR image) is on the page before printing.
-    const frame = window.requestAnimationFrame(() => window.print());
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener('afterprint', done);
-    };
-  }, [printing]);
+  // A damaged code gives no link: then there is no card, rather than an empty link to copy.
+  const links = link ? [{ url: link, school, flyer: () => <Flyer event={event} school={school} address={address} link={link} /> }] : [];
 
   return (
-    <>
-      <Dialog title={T.REGISTRATION_LINK_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onClose}>
-        <p className="tdialog-sub ev-link-event">{event.name}</p>
-        <p className="ev-link-line">{T.linkDialogLine(event.state, event)}</p>
-        <div className="ev-link-card">
-          <p className="ev-link-school">{T.schoolName(school)}</p>
-          {qr && <img className="ev-link-qr" src={qr} alt={T.qrAlt(shortLink(link))} width={128} height={128} />}
-          <p className="ev-link-url">{shortLink(link)}</p>
-          <div className="ev-link-buttons">
-            <button type="button" className="btn btn-sm" data-autofocus onClick={() => onCopy(link)}>
-              {/* ti-copy = copy to clipboard */}
-              <IconCopy size={16} aria-hidden="true" />
-              {T.COPY_LINK}
-            </button>
-            <button type="button" className="btn btn-sm" onClick={() => setPrinting(true)}>
-              {/* ti-printer = print */}
-              <IconPrinter size={16} aria-hidden="true" />
-              {T.PRINT_FLYER}
-            </button>
-          </div>
-        </div>
-        {!isPhone && (
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={onClose}>
-              {T.CLOSE}
-            </button>
-          </div>
-        )}
-      </Dialog>
-      {printing && <Flyer event={event} school={school} address={address} qr={qr} link={link} />}
-    </>
+    <RegistrationLinkBox
+      title={T.REGISTRATION_LINK_TITLE}
+      eventName={event.name}
+      intro={T.linkDialogLine(event.state, event)}
+      links={links}
+      onCopied={onCopied}
+      onClose={onClose}
+      isPhone={isPhone}
+    />
   );
 }

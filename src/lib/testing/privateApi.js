@@ -7,6 +7,7 @@
 //   'ok' (plus the result fields) · 'no_access' · 'not_allowed' · 'not_found' · 'stale' ·
 //   'invalid' · 'withdrawn' · 'past_day' · 'has_result' · 'graded' · 'cancelled' ·
 //   'already_paid' · 'not_open' · 'finished' · 'final_award_not_set' (+ className) · 'moved' ·
+//   'price_changed' (0030, Mark paid: + amountCents, what the database says is owed now) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -15,7 +16,7 @@
 // private price, day and time, payments and result. Times: the database sends '16:00:00'; this
 // file turns it into '16:00'. Dates stay 'YYYY-MM-DD'. Money is whole cents (8500 = $85).
 import { supabase } from '../supabase.js';
-import { schoolToday } from './eventsApi.js';
+import { schoolToday, readHistoryRows } from './eventsApi.js';
 import { shortTime, isIsoDate } from './eventRules.js';
 import { RESULTS } from './gradingRules.js';
 import { owesMore, privateSide } from './privateRules.js';
@@ -23,7 +24,9 @@ import { owesMore, privateSide } from './privateRules.js';
 // Every status a call here can return (contract 0014 §1.4 + 'error').
 export const PRIVATE_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'invalid', 'withdrawn', 'past_day', 'has_result', 'graded',
-  'cancelled', 'already_paid', 'not_open', 'finished', 'final_award_not_set', 'moved', 'error',
+  'cancelled', 'already_paid', 'not_open', 'finished', 'final_award_not_set', 'moved',
+  'price_changed', // 0030 (CB1): Mark paid's amount isn't the one the box showed (+ amountCents)
+  'error',
 ];
 const SERVER_STATUSES = new Set(PRIVATE_STATUSES.filter((s) => s !== 'error'));
 const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
@@ -65,7 +68,10 @@ function toResult(row) {
 }
 
 // A row of testing_private_list (+ its results row) → the app's private testing.
-function toPrivateRow(row, resultRow, today) {
+// movedFromSource: for one moved from an event, how its old registration was made — 'form' (the
+// family's form) or 'staff' (added at the desk) — read from testing_registrations; null when it
+// wasn't moved or that read failed (loadPrivateTestings). The Mark paid box's hint uses it.
+function toPrivateRow(row, resultRow, today, movedFromSource = null) {
   const testingFor = row.to_kind === 'rank'
     ? { kind: 'rank', name: row.to_name, belt: beltOf(row, 'to_') }
     : { kind: 'none', name: null, belt: null };
@@ -91,6 +97,7 @@ function toPrivateRow(row, resultRow, today) {
     movedFromEventId: row.moved_from_event_id ?? null,
     movedFromRegistrationId: row.moved_from_registration_id ?? null,
     movedFromEventName: row.moved_from_event_name ?? null,
+    movedFromSource: movedFromSource === 'form' || movedFromSource === 'staff' ? movedFromSource : null,
     version: row.version,
     createdAt: row.created_at,
     createdByName: row.created_by_name,
@@ -154,7 +161,7 @@ async function selectIn(table, columns, column, ids) {
 
 // One school's private testings (both sides — the screen splits them with
 // privateRules.splitPrivate). → { status:'ok', today, rows:[…], payments:[…] } (payments oldest
-// first) · 'no_access' · 'error'
+// first; each row has movedFromSource, see toPrivateRow) · 'no_access' · 'error'
 export async function loadPrivateTestings(locationCode) {
   try {
     if (!KNOWN_LOCATIONS.has(locationCode)) return failure(new Error(`Unknown school: ${locationCode}`));
@@ -168,14 +175,25 @@ export async function loadPrivateTestings(locationCode) {
     if (listRes?.error) return failure(listRes.error);
     if (!Array.isArray(listRes.data)) return unexpected('testing_private_list');
     const ids = listRes.data.map((r) => r.id);
-    const [resultRes, paymentRes] = await Promise.all([
+    // The old event registrations of the moved ones (moving only withdraws a registration, never
+    // deletes it): how each was made, 'form' or 'staff', for the Mark paid box's hint (CB1).
+    const movedIds = [...new Set(listRes.data.map((r) => r.moved_from_registration_id).filter(isText))];
+    const [resultRes, paymentRes, sourceRes] = await Promise.all([
       selectIn('testing_private_results', RESULT_COLUMNS, 'private_id', ids),
       selectIn('testing_private_payments', PAYMENT_COLUMNS, 'private_id', ids),
+      selectIn('testing_registrations', 'id, source', 'id', movedIds).catch((error) => ({ error })),
     ]);
     if (resultRes.error) return failure(resultRes.error);
     if (paymentRes.error) return failure(paymentRes.error);
     const resultOf = new Map(resultRes.rows.map((r) => [r.private_id, r]));
-    const rows = listRes.data.map((row) => toPrivateRow(row, resultOf.get(row.id) ?? null, today));
+    // If that read fails the list still loads: every moved row gets movedFromSource null, which
+    // the hint shows as "… at the desk." (privateRules.markPaidChoiceWhere). The shared box always
+    // shows a hint, and "at the desk" is the safer guess: "on the form" would claim the family
+    // chose it themselves, which isn't known. (A registration whose event was later deleted is
+    // missing too and gets the same.)
+    const sourceOf = new Map((sourceRes.rows ?? []).map((r) => [r.id, r.source]));
+    const rows = listRes.data.map((row) =>
+      toPrivateRow(row, resultOf.get(row.id) ?? null, today, sourceOf.get(row.moved_from_registration_id) ?? null));
     return { status: 'ok', today, rows, payments: paymentRes.rows.map(toPayment).sort(byRecordedAt) };
   } catch (error) {
     return failure(error);
@@ -185,7 +203,8 @@ export async function loadPrivateTestings(locationCode) {
 // One private testing (its grading page). → { status:'ok', today, startedAt, row, payments } ·
 // 'not_found' (deleted, or a wrong link) · 'no_access' · 'error'. startedAt = Date.now() when
 // this call STARTED (as eventsApi.loadEvent): the grading engine compares it with the time a
-// save answered, so it never shows a read older than its own save.
+// save answered, so it never shows a read older than its own save. The grading page has no Mark
+// paid, so its row's movedFromSource stays null (not read).
 export async function loadPrivateTesting(privateId) {
   const startedAt = Date.now();
   try {
@@ -229,6 +248,8 @@ async function callRpc(name, args, readOk) {
     const status = data?.status;
     if (typeof status !== 'string' || !SERVER_STATUSES.has(status)) return unexpected(name);
     if (status === 'final_award_not_set') return { status, className: typeof data.class_name === 'string' ? data.class_name : null };
+    // 0030 (CB1): nothing was saved; the database's amount comes back so the page can name it.
+    if (status === 'price_changed') return isInt(data.amount_cents) ? { status, amountCents: data.amount_cents } : unexpected(name);
     if (status !== 'ok') return { status };
     const result = readOk(data);
     return result ? { status: 'ok', ...result } : unexpected(name);
@@ -299,15 +320,26 @@ export async function changePrivatePayingBy({ privateId, expectedVersion, paying
   );
 }
 
-// Mark paid: the DATABASE records what is owed (the private price, or just the difference) by
-// today's date and the current paying-by. → { status:'ok', paymentId, amountCents, method,
-// version } · 'already_paid' (nothing owed — also a $0 price) · 'cancelled' · 'stale' …
-export async function markPrivatePaid({ privateId, expectedVersion } = {}) {
+// Mark paid with a way to pay (migration 0030 §3b, design review CB1, rulebook v0.418 / v0.420):
+// the shared Mark paid box shows what is still owed and asks Paid by Cash / Check / Card.
+//   method          'cash' | 'check' | 'card' — how they paid
+//   expectedCents   the amount the box SHOWED. The DATABASE still works out what is owed (the
+//                   private price, or just the rest after a part payment — a "top-up") and records
+//                   it by today's date; if its amount is different (the price or the payments
+//                   changed while the box was open) it saves nothing and answers 'price_changed'
+//                   with amountCents, so the page can name the new amount (v0.423).
+// A way that isn't the family's "Paying by" changes "Paying by" too (v0.418 Q2); Undo payment puts
+// the family's choice back. (It replaces the old one-click testing_private_mark_paid, which the
+// database keeps until a later small migration removes it; nothing in the app calls that one.)
+// → { status:'ok', paymentId, amountCents, method, paidOn, payingBy, version } · 'price_changed'
+//   (+ amountCents) · 'already_paid' (nothing owed — also a $0 price) · 'cancelled' · 'stale'
+//   (e.g. a double click) · 'not_found' · 'invalid' · 'no_access' · 'error'
+export async function markPrivatePaidBy({ privateId, expectedVersion, method, expectedCents } = {}) {
   return callRpc(
-    'testing_private_mark_paid',
-    { p_private_id: privateId, p_expected_version: expectedVersion },
+    'testing_private_mark_paid_by',
+    { p_private_id: privateId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents },
     (d) => (isText(d.payment_id) && isInt(d.amount_cents) && isText(d.method) && isInt(d.version)
-      ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, version: d.version }
+      ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, paidOn: d.paid_on ?? null, payingBy: d.paying_by ?? d.method, version: d.version }
       : null),
   );
 }
@@ -374,6 +406,14 @@ export async function moveToPrivate({ registrationId, expectedVersion, privateDa
       ? { privateId: d.private_id, version: d.version, registrationVersion: d.registration_version, amountDueCents: d.amount_due_cents, resultCleared: d.result_cleared }
       : null),
   );
+}
+
+// History (design review CB7, migration 0030 §5c): a private testing's change-log rows for the
+// History line of its summary — ONLY its own rows (a moved one starts at the move, v0.418 Q4).
+// Same answer as eventsApi.loadRegistrationHistory: { status:'ok', rows } · 'no_access' ·
+// 'invalid' · 'not_found' · 'stale' · 'error'. Never throws.
+export async function loadPrivateHistory(privateId) {
+  return callRpc('testing_private_history', { p_private_id: privateId }, readHistoryRows);
 }
 
 // Undo move (the toast's Undo): only the mover, within 10 seconds, while nothing changed.

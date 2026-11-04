@@ -81,6 +81,15 @@ export function showMarkPaid(row) {
   return row?.status === 'active' && row.amountDueCents > 0;
 }
 
+// Where the family chose "Paying by", for the Mark paid box's hint (CB1): 'form' ("They chose
+// Cash on the form.") only when the private testing was moved from an event registration the
+// family made on the event's form (movedFromSource 'form'); otherwise 'desk' ("… at the desk.") —
+// added here at the desk, moved from a student staff added at the desk ('staff'), or the old
+// registration couldn't be read (null; privateApi.loadPrivateTestings).
+export function markPaidChoiceWhere(row) {
+  return row?.movedFromSource === 'form' ? 'form' : 'desk';
+}
+
 // May the desk change how they'll pay? Active, and not paid yet or still owing.
 export function canChangePayingBy(row) {
   return row?.status === 'active' && (row.paid !== true || row.amountDueCents > 0);
@@ -137,15 +146,17 @@ export function privateCards(rows) {
 //              (v0.405: an admin can still fix a graded one; a belt change clears its result) ·
 //              changeDay / cancel while no Pass / Not passed ·
 //              changePayingBy the same AND canChangePayingBy · admins: editPayment / undoPayment
-//              when paid, delete
+//              when paid, delete · printReceipt (staff and admins) when paid — a payment that
+//              still stands (design review CB2, rulebook v0.420: it ends the money group)
 //   cancelled: admins only — restore while its day is today or later, delete
 //   hidden:    "Hide private details" is on (v0.506) → no payment items: changePayingBy,
-//              editPayment and undoPayment are false (as Star's ⋯ menus, v0.508 G4)
+//              editPayment, undoPayment and printReceipt are false (as Star's ⋯ menus, v0.508 G4;
+//              Print receipt: v0.518 Q8 B)
 export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
   const admin = isAdmin === true;
   const none = {
     editDetails: false, changePayingBy: false, changeDay: false, grade: false, editPayment: false,
-    undoPayment: false, cancel: false, restore: false, delete: false,
+    undoPayment: false, printReceipt: false, cancel: false, restore: false, delete: false,
   };
   if (row?.status === 'cancelled') {
     return { ...none, restore: admin && row.privateDate >= today, delete: admin };
@@ -162,6 +173,7 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     grade: true,
     editPayment: money && admin && row.paid === true,
     undoPayment: money && admin && row.paid === true,
+    printReceipt: money && row.paid === true, // CB2: staff and admins
     cancel: open,
     delete: admin,
   };

@@ -25,6 +25,7 @@
   min-height: 40px;
   padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
   font-size: var(--text-13);
+  cursor: pointer; /* a tap anywhere on the row opens its summary (v1.009) */
 }
 
 /* PC: + Day · time first, + Paid on */
@@ -39,10 +40,24 @@
   background: var(--color-surface);
   color: var(--color-text-secondary);
   font-size: var(--text-12);
+  cursor: default;
 }
 
 .pv-row.is-selected {
   background: var(--color-blue-tint);
+}
+
+/* The row has keyboard focus (↑ ↓ on the list; Enter opens the summary) — as the event roster */
+.pv-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* Hover — mouse only, as the event roster */
+@media (hover: hover) {
+  .pv-row:not(.pv-head):not(.is-selected):hover {
+    background: var(--color-surface);
+  }
 }
 
 .pv-row > [role='cell'] {
@@ -175,38 +190,7 @@
   font-weight: 500;
 }
 
-/* "1 owes more" under the Paid card's number */
-.ev-card-note.pv-card-warn {
-  color: var(--color-warning-text);
-}
-
-/* No private testings at all: one line and the Add button in a box (P1 tablet) */
-.pv-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-12);
-  padding: var(--space-32, 32px) var(--space-16);
-  text-align: center;
-}
-
-.pv-empty-text {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-}
-
 /* ===== Dialogs (P2, P4, P5) ===== */
-.pv-date {
-  width: 100%;
-}
-
-.pv-time {
-  width: 100%;
-  padding-right: var(--space-4);
-  font-family: inherit; /* a select doesn't take the page font by itself */
-}
-
 /* The gray box: "$95 private price" + where it comes from (P2), the move money (P5) */
 .pv-price {
   margin-bottom: var(--space-8);

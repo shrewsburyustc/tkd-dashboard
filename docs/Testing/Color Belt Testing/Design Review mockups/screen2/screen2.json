@@ -1,0 +1,60 @@
+{
+  "title": "Color Belt · Screen 2 · Picking a date (CB11)",
+  "subtitle": "<b>Already decided</b> (v1.018): Star's date picker replaces the browser's date box everywhere. In Color Belt that's four fields: Add / Edit event's <b>testing date</b> and <b>closing date</b>, the <b>private day</b> (Add private testing, Change day or time, Move to private testing) and Edit payment's <b>date paid</b>. <b>One question at the bottom.</b> <span style=\"color:#6B6B6B\">(Preview screenshots, fake data; the “after” is drawn on the real page, nothing is built yet.)</span>",
+  "width": 2700,
+  "columns": [
+    {
+      "label": "Today · browser date boxes",
+      "tone": "today",
+      "items": [
+        { "src": "cb-edit-today.png", "crop": [380, 80, 520, 200], "scale": 0.9,
+          "caption": "<b>1.</b> Edit event: the browser's box (looks different on the PC, the iPad and a phone), and a weekday line under it.",
+          "marks": [[646, 209, 230, 32], [646, 247, 230, 18]] },
+        { "src": "cb-edit-today-scrolled.png", "crop": [380, 490, 520, 140], "scale": 0.9,
+          "caption": "<b>2.</b> Closing date: the same box and weekday line.",
+          "marks": [[428, 527, 240, 32], [428, 565, 160, 16]] },
+        { "row": [
+          { "src": "pv-day-today.png", "crop": [420, 80, 440, 297], "scale": 0.7,
+            "caption": "<b>3.</b> Change day or time (and Add private testing).", "marks": [[444, 190, 190, 32]] },
+          { "src": "pay-today.png", "crop": [460, 80, 360, 394], "scale": 0.7,
+            "caption": "<b>4.</b> Edit payment: date paid.", "marks": [[484, 322, 240, 32]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After · PC",
+      "tone": "after",
+      "items": [
+        { "src": "cb-edit-after.png", "crop": [380, 80, 520, 460], "scale": 0.9,
+          "caption": "<b>1.</b> Star's picker: the field says “Fri, Nov 20, 2026”; a click opens Month · Year and the days. Gray days can't be picked.",
+          "marks": [[646, 209, 230, 32], [572, 225, 304, 295]] },
+        { "src": "cb-edit-after-closed.png", "crop": [380, 500, 520, 130], "scale": 0.9,
+          "caption": "<b>2.</b> The weekday line goes (the field already says the day). The “11:59 PM, Massachusetts time…” line stays.",
+          "marks": [[428, 545, 240, 32]] },
+        { "row": [
+          { "src": "pv-day-after.png", "crop": [420, 80, 440, 297], "scale": 0.7,
+            "caption": "<b>3.</b> Private day.", "marks": [[444, 190, 190, 32]] },
+          { "src": "pay-after.png", "crop": [460, 80, 360, 394], "scale": 0.7,
+            "caption": "<b>4.</b> Date paid.", "marks": [[484, 322, 312, 32]] }
+        ] }
+      ],
+      "note": "Days that can be picked (gray = no), as Color Belt and Star check today: testing date — today or later; closing date — today up to the testing date; private day — today up to a year ahead; date paid — not after today (the database already refuses a later day)."
+    },
+    {
+      "label": "After · tablet 820 · phone 390 · 320 wide",
+      "tone": "after",
+      "items": [
+        { "row": [
+          { "src": "cb-day-w820.png", "crop": [180, 90, 460, 460], "scale": 0.75, "shotWidth": 820,
+            "caption": "Tablet: the calendar floats under the field.", "marks": [[214, 206, 190, 32]] },
+          { "src": "cb-day-w390.png", "crop": [0, 0, 390, 844], "scale": 0.6, "shotWidth": 390,
+            "caption": "Phone: the calendar opens in the page, edge to edge.", "marks": [[16, 118, 358, 36]] },
+          { "src": "cb-day-w320.png", "crop": [0, 0, 320, 640], "scale": 0.6, "shotWidth": 320,
+            "caption": "320 wide: the same, nothing cut off.", "marks": [[16, 118, 288, 36]] }
+        ] }
+      ],
+      "note": "This is Star's picker exactly as it works today on each size — Color Belt only uses it."
+    }
+  ],
+  "footer": "<b>One question — the earliest “date paid”.</b> Today Color Belt's date paid takes any day up to today. Star's (the picker we're copying) also refuses a day before the person registered, and says so under the days: “Not before Oct 18 (registered) or after today.”<br><b>A · Recommended: copy Star — not before the day they registered (private testing: the day it was added), not after today,</b> with that line. <i>+</i> catches a typo like 2025 for 2026; the same rule in both sections. <i>−</i> a payment taken before the registration can't be entered (it shouldn't happen: the desk registers first).<br><b>B · Only “not after today”</b> (what the database checks). <i>+</i> nothing new. <i>−</i> a wrong year goes through and lands on the wrong day in Finance's Daily report."
+}

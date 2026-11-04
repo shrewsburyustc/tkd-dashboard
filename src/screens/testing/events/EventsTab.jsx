@@ -8,8 +8,8 @@
 //   - opens Add event / Edit event (admins), the ⋯ menu (Copy registration link, Close / Open
 //     registration with a 5-second Undo, Edit event on phones, Delete event for admins)
 //   - opens an event's page when a row is clicked (App.jsx gives it the #testing/event/<id> address)
-// The drawing of the form lives in EventDialog.jsx; the delete confirmation in
-// ConfirmDeleteDialog.jsx.
+// The drawing of the form lives in EventDialog.jsx; the delete confirmation is the shared
+// ConfirmBox (src/components/ConfirmBox.jsx, v1.008 / v1.103).
 //
 // Rules worth knowing (same as phase 1, contract 0003 §8):
 //   - ONE change at a time: while a save is on its way, other changes are ignored.
@@ -34,10 +34,10 @@ import { registrationLink } from '../../../lib/testing/qr.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
-import ChoiceGroup from './ChoiceGroup.jsx';
-import ConfirmDeleteDialog from './ConfirmDeleteDialog.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import EventDialog, { checkEventForm, isEventFormDirty } from './EventDialog.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from './useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import * as T from '../text.js';
 
 // Upcoming / Past, per school, kept while the page is open (like phase 1's open classes).
@@ -907,17 +907,23 @@ export default function EventsTab({
       );
     } else {
       dialogElement = (
-        <ConfirmDeleteDialog
+        // The shared confirm box (v1.008 / v1.103, v0.422), with the words it had: "Keep event ·
+        // Delete event", red, first focus on Keep. "Deleting…" while it works.
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={T.deleteEventBody({ ...dialog.bodyParts, hidden })}
           keepLabel={T.KEEP_EVENT}
-          deleteLabel={T.DELETE_EVENT}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          actionLabel={T.DELETE_EVENT}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={cancelDialog}
+        >
+          {T.deleteEventBody({ ...dialog.bodyParts, hidden })}
+        </ConfirmBox>
       );
     }
   }
