@@ -35,6 +35,20 @@ export default function NewFormDialog({ state, both, isPhone, onChange, onTouch,
       {state.saving ? T.CREATING : T.CREATE}
     </button>
   );
+  // The note: under the buttons on PC / tablet (v0.81); on phones above Create, with
+  // "Discard changes" — phones have no Cancel, so it's their way out (v0.56, design review N15).
+  const noteBlock = state.note && (
+    <div className="tdialog-note">
+      <Notice>
+        {state.note}
+        {isPhone && (
+          <button type="button" className="note-action" onClick={onCancel}>
+            {T.DISCARD_CHANGES}
+          </button>
+        )}
+      </Notice>
+    </div>
+  );
   return (
     <Dialog title={T.NEW_FORM_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onRequestClose}>
       {!both && <p className="tdialog-sub">{T.SCHOOL_NAME[v.school]}</p>}
@@ -86,19 +100,20 @@ export default function NewFormDialog({ state, both, isPhone, onChange, onTouch,
             })}
           </div>
         </fieldset>
-        {state.note && (
-          <div className="tdialog-note">
-            <Notice>{state.note}</Notice>
-          </div>
-        )}
         {isPhone ? (
-          <div className="dialog-page-submit">{createButton}</div>
+          <>
+            {noteBlock}
+            <div className="dialog-page-submit">{createButton}</div>
+          </>
         ) : (
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={onCancel}>
-              {T.CANCEL}
-            </button>
-            {createButton}
+          <div className="dialog-footer">
+            <div className="dialog-actions">
+              <button type="button" className="btn" onClick={onCancel}>
+                {T.CANCEL}
+              </button>
+              {createButton}
+            </div>
+            {noteBlock}
           </div>
         )}
       </form>

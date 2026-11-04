@@ -496,6 +496,22 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     setMenu(null);
     setDialog({ type: 'statuses', key: Date.now(), code, step: 'list', statusId: null, values: null, initial: null, touched: {}, saving: false, note: null, moveTo: null });
   }
+  // Edit statuses changes steps inside one box (list ↔ Add / Edit status): move focus to the new
+  // step's first field, or the box itself — otherwise Cancel / Discard changes / "← Edit statuses"
+  // would leave focus nowhere and Esc would stop working (copied from Calendar's event types).
+  const statusesStepNow = dialog?.type === 'statuses' ? dialog.step : null;
+  useEffect(() => {
+    if (!statusesStepNow) return;
+    // Two frames: the new step has rendered (and a closing confirmation is gone) by then.
+    window.requestAnimationFrame(() =>
+      window.requestAnimationFrame(() => {
+        const role = statusesStepNow === 'delete' ? 'alertdialog' : 'dialog';
+        const boxes = document.querySelectorAll(`[role="${role}"]`);
+        const box = boxes[boxes.length - 1];
+        (box?.querySelector('[data-autofocus]') ?? box)?.focus();
+      }),
+    );
+  }, [statusesStepNow]);
   function statusesStep(step, s = null) {
     setDialog((g) => {
       if (!g) return g;
@@ -734,10 +750,14 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           onReorder={reorderStatus}
           onCancel={() => setDialog(null)}
           onRequestClose={() => {
+            // Esc / Back: the list closes; an Add / Edit status step goes back to the list, but with
+            // a change it stays open with "Unsaved changes…" until Save or Cancel (like Calendar's
+            // Event types; rulebook v0.46 / v1.027, design review N15).
             const g = ref.current.dialog;
+            if (g.saving) return;
             if (g.step === 'list') setDialog(null);
             else if (!isStatusFormDirty(g)) statusesStep('list');
-            else setDialog({ ...g, note: null, step: 'list' });
+            else if (!g.note) setDialog({ ...g, note: 'UNSAVED' });
           }}
         />
       );

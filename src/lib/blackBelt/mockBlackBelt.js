@@ -344,8 +344,7 @@ function parseTime(text) {
   return { db: `${String(h).padStart(2, '0')}:${m[2]}:${String(s).padStart(2, '0')}`, minutes: h * 60 + min, seconds: s };
 }
 // bb_time_is_valid: 06:00–22:00 on a 5-minute step, no seconds (0032; 0016 had a 15-minute step).
-// (The screens still offer every 15 minutes — rules.js TIME_STEP_MINUTES — until the shared time
-// list arrives; the database only got wider.)
+// (The testing day dialog offers the same times: the shared time list, BB13.)
 const bbTimeOk = (t) => t !== null && t.seconds === 0 && t.minutes >= 360 && t.minutes <= 1320 && t.minutes % 5 === 0;
 
 // ----- The history (0032) -----

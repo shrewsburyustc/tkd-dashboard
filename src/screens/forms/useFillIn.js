@@ -101,12 +101,15 @@ export function useFillIn({ isPhone, screenLocked, onNoAccess, onSent, onClosed 
     }
   }
 
+  // Esc, a click outside or Back: with something typed, the note shows and the dialog stays open
+  // until Send or Cancel — a second Esc does nothing (rulebook v0.46 / v1.027, design review N15).
+  // Phones have no Cancel, so their note (this one or an error) holds a "Discard changes" link (v0.56).
   function requestClose() {
     const d = ref.current;
     if (!d || d.saving) return;
     const started = d.mode === 'fill' && !d.sent && JSON.stringify(d.values) !== JSON.stringify(emptyFillValues());
-    if (started && d.note !== 'LEAVE_FILL') patch({ note: 'LEAVE_FILL' });
-    else close();
+    if (!started) close();
+    else if (!d.note) patch({ note: 'LEAVE_FILL' }); // an error note already showing stays
   }
 
   const element = state && !screenLocked

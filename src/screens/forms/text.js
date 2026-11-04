@@ -288,4 +288,6 @@ export const SEND_INVALID = 'Some answers were refused. Check them and send agai
 export const timeOption = (t) => `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`;
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const LEAVE_FILL = 'This sign-up isn\'t sent yet. Send it or press Cancel to throw it away.';
-export const DISCARD = 'Throw it away';
+// Phones have no Cancel button, so the phone note points at its own link instead (design review N15)
+export const LEAVE_FILL_PHONE = 'This sign-up isn\'t sent yet. Send it or discard it.';
+export const DISCARD_CHANGES = 'Discard changes';

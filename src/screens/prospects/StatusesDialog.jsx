@@ -30,7 +30,7 @@ export function checkStatusForm(state, statuses) {
   };
 }
 
-const NOTES = { STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
+const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
 
 export default function StatusesDialog({ state, statuses, counts, schoolName, isAdmin, isPhone, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
   const idBase = `statuses-${state.key}`;
@@ -154,6 +154,20 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
     if (check.canSave) onSave();
     else onTouch(['submit', 'name']);
   }
+  // The Add / Edit step's note: under the buttons on PC / tablet (v0.81); on phones above Save
+  // with "Discard changes", which goes back to the list — phones have no Cancel (v0.56, N15).
+  const formNote = state.note && NOTES[state.note] && (
+    <div className="tdialog-note">
+      <Notice>
+        {NOTES[state.note]}
+        {isPhone && (
+          <button type="button" className="note-action" onClick={() => onStep('list')}>
+            {T.DISCARD_CHANGES}
+          </button>
+        )}
+      </Notice>
+    </div>
+  );
   const saveButton = (
     <button type="submit" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${check.canSave ? '' : ' is-unavailable'}`} aria-disabled={check.canSave ? undefined : 'true'}>
       <IconCheck size={16} aria-hidden="true" />
@@ -204,16 +218,28 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
             })}
           </div>
         </fieldset>
-        {noteBlock}
         {isPhone ? (
-          <div className="dialog-page-submit">{saveButton}</div>
+          <>
+            {formNote}
+            <div className="dialog-page-submit">{saveButton}</div>
+          </>
         ) : (
-          <div className="dialog-actions sdialog-actions">
-            <button type="button" className="btn" onClick={() => onStep('list')}>
-              <IconArrowLeft size={16} aria-hidden="true" />
-              {T.STATUSES_TITLE}
-            </button>
-            <span className="sdialog-actions-right">{saveButton}</span>
+          <div className="dialog-footer">
+            <div className="dialog-actions sdialog-actions">
+              <button type="button" className="btn" disabled={state.saving} onClick={() => onStep('list')}>
+                <IconArrowLeft size={16} aria-hidden="true" />
+                {T.STATUSES_TITLE}
+              </button>
+              {/* Cancel and "← Edit statuses" both drop the change and go back to the list, as in
+                  Calendar's Event types (N15) */}
+              <span className="sdialog-actions-right">
+                <button type="button" className="btn" disabled={state.saving} onClick={() => onStep('list')}>
+                  {T.CANCEL}
+                </button>
+                {saveButton}
+              </span>
+            </div>
+            {formNote}
           </div>
         )}
       </form>

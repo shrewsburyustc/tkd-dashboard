@@ -31,11 +31,12 @@ import {
   hasProblems, followApplicationDue, setPaymentDueDate, buildAddPayload, buildUpdatePayload, cycleToForm, planTotals,
   kukkiwonRange, ageOn, isUnder18OnFirstDay, scheduleFor, planSummary, emailIsValid, codeIsValid, waiverVersionOk,
   nextWaiverVersionName, waiverBodyProblem, keepYearsProblem, purgeDueOn, addYears, placeProblem, findDuplicateCycle,
-  partsAlsoOnOtherDays, effectiveDueOn, PARTS,
+  partsAlsoOnOtherDays, effectiveDueOn, PARTS, FIRST_TIME, LAST_TIME, TIME_STEP_MINUTES,
   candidateItems, candidateMoney, liveLines, hasLivePayment, cycleCandidateItems, predictMoney, dueNowItems, nextItems, defaultTicks,
   sumRemaining, rosterCards, rosterFilter, searchMatches, duplicatePairs, pairReturnedLines,
 } from './rules.js';
 import { blackBeltLink, qrSvgDataUrl, qrFileName, qrPngBlob } from './qr.js';
+import { timeOptions } from '../times.js'; // the shared time list's choices (BB13)
 import {
   STARTING_POINT_SCHEDULE, STARTING_POINT_REQUIREMENTS, STARTING_POINT_NAME, SEED_WAIVER_BODY, SEED_WAIVER_VERSION_NAME,
 } from './startingPoint.js';
@@ -185,10 +186,11 @@ check('money: priceIsValid = bb_price_is_valid', () => {
 
 // ======================= rules.js: times =======================
 
-check('rules: time rule (06:00–22:00, 15-minute steps)', () => {
+check('rules: time rule (06:00–22:00, 5-minute steps)', () => {
   assert.equal(timeIsValid('07:45'), true);
   assert.equal(timeIsValid('22:15'), false); // after 10 PM
-  assert.equal(timeIsValid('10:10'), false); // not on a 15-minute step
+  assert.equal(timeIsValid('10:10'), true); // 5-minute steps since 0032 (BB13)
+  assert.equal(timeIsValid('10:07'), false); // not on a 5-minute step
   assert.equal(timeIsValid('06:00'), true);
   assert.equal(timeIsValid('22:00'), true);
   assert.equal(timeIsValid('05:45'), false);
@@ -197,10 +199,12 @@ check('rules: time rule (06:00–22:00, 15-minute steps)', () => {
   assert.equal(timeIsValid('25:00'), false);
   assert.equal(timeIsValid(''), false);
   assert.equal(timeIsValid(null), false);
-  assert.equal(TIME_OPTIONS.length, 65);
+  assert.equal(TIME_OPTIONS.length, 193);
   assert.equal(TIME_OPTIONS[0], '06:00');
   assert.equal(TIME_OPTIONS[TIME_OPTIONS.length - 1], '22:00');
   assert.ok(TIME_OPTIONS.every(timeIsValid));
+  // the testing day dialog's list (the shared TimeList) offers exactly these times (BB13)
+  assert.deepEqual(timeOptions({ from: FIRST_TIME, to: LAST_TIME, step: TIME_STEP_MINUTES }).map((o) => o.value), TIME_OPTIONS);
   assert.equal(timeLabel('14:30'), '2:30 PM');
   assert.equal(timeLabel('12:00'), '12:00 PM');
   assert.equal(timeRangeLabel('12:30', '14:30'), '12:30–2:30 PM');
@@ -299,7 +303,8 @@ check('rules: dayProblems', () => {
   assert.deepEqual(dayProblems(goodDay({ end: '12:00' }), { today: TODAY }), { end: 'notAfterStart' }); // end before start
   assert.deepEqual(dayProblems(goodDay({ start: '07:45', end: '08:00', second: null }), { today: TODAY }), {});
   assert.deepEqual(dayProblems(goodDay({ end: '22:15' }), { today: TODAY }), { end: 'badTime' });
-  assert.deepEqual(dayProblems(goodDay({ start: '10:10' }), { today: TODAY }), { start: 'badTime' });
+  assert.deepEqual(dayProblems(goodDay({ start: '10:07' }), { today: TODAY }), { start: 'badTime' }); // off the 5-minute step
+  assert.deepEqual(dayProblems(goodDay({ start: '10:10' }), { today: TODAY }), {}); // on it (BB13)
   assert.deepEqual(dayProblems(goodDay({ name: '  ' }), { today: TODAY }), { name: 'empty' });
   assert.deepEqual(dayProblems(goodDay({ place: null }), { today: TODAY }), { place: 'missing' });
   assert.deepEqual(dayProblems(goodDay({ place: { other: 'x'.repeat(101) } }), { today: TODAY }), { place: 'tooLong' });
@@ -338,7 +343,7 @@ check('rules: cycleFormProblems (each T4b input)', () => {
   assert.equal(edit((f) => { f.days[1].end = '12:00'; }).days[1].end, 'notAfterStart'); // end before start
   assert.equal(edit((f) => { f.days[1].start = '07:45'; }).days, undefined); // 07:45 is fine
   assert.equal(edit((f) => { f.days[1].end = '22:15'; }).days[1].end, 'badTime');
-  assert.equal(edit((f) => { f.days[1].start = '10:10'; }).days[1].start, 'badTime');
+  assert.equal(edit((f) => { f.days[1].start = '10:07'; }).days[1].start, 'badTime'); // off the 5-minute step (BB13)
   assert.equal(edit((f) => { f.days[0].second.end = null; }).days[0].secondEnd, 'missing'); // half a second part
   assert.equal(edit((f) => { f.days[0].parts = ['jumping']; }).days[0].parts, 'invalid'); // unknown part
   assert.deepEqual(edit((f) => { f.days = f.days.slice(0, 2); }).partsWithoutDay, ['curriculum']); // part on no day
