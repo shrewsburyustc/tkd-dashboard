@@ -63,6 +63,10 @@
 --   "rollback;" to "commit;".
 --
 -- BEFORE YOU RUN IT
+--   It runs before AND after 0035 (which removes the old 2-argument Mark
+--   paid functions): the old-style payments go through the pg_temp helpers
+--   below (before 0035 they ARE the old functions, so O1 still checks them
+--   side by side), and K1 expects 13 functions instead of 15 after 0035.
 --   0005, 0010, 0011, 0014, 0018 and 0030 are applied. You need two
 --   ACTIVE staff rows: an admin and the shared front desk (role staff).
 --   Replace <paste-admin-UID-here> and <paste-desk-UID-here> below with
@@ -79,6 +83,73 @@
 -- =====================================================================
 
 begin;
+
+-- ---------------------------------------------------------------------
+-- Test payments (migration 0035): 0035 removed the old one-click Mark paid
+-- (testing_mark_paid / testing_private_mark_paid, 2 arguments). The test
+-- payments below go through these helpers, which call the old function
+-- while it exists and otherwise 0030's *_by version the way the old one
+-- worked: the family's "Paying by" as the way and the worked-out amount
+-- (asked for with 0 cents expected first: that price_changed answer
+-- writes nothing). An ok answer keeps only the old keys (status,
+-- payment_id, amount_cents, method, version), so every check reads the
+-- same answer as before. They run with the caller's rights (as whoever
+-- t_call / "set local role" made the caller), like the call they stand in
+-- for. Temporary: they vanish with the session and the rollback.
+-- ---------------------------------------------------------------------
+
+create function pg_temp.t_mark_paid(p_registration_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_mark_paid($1, $2)' into v_r using p_registration_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_registrations x where x.id = p_registration_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_mark_paid_by($1, $2, $3, 0)' into v_r using p_registration_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_registration_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+
+create function pg_temp.t_private_mark_paid(p_private_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_private_mark_paid($1, $2)' into v_r using p_private_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_private x where x.id = p_private_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_private_mark_paid_by($1, $2, $3, 0)' into v_r using p_private_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_private_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_private_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+
 
 -- ---------------------------------------------------------------------
 -- Test helpers (temporary: they vanish with the session, and the
@@ -494,7 +565,7 @@ begin
   -- O1. The old 2-argument Mark paid still works, side by side
   -- ===================================================================
   v_x := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Old', 'check');
-  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid(%L, 1)', v_x));
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_mark_paid(%L, 1)', v_x));
   perform pg_temp.t_eq('O1 old testing_mark_paid: the way = paying by, nothing remembered, no paid_on / paying_by keys',
     (v_r ->> 'status') || ':' || (v_r ->> 'method') || ':' || (v_r ->> 'amount_cents') || ':' || (v_r ? 'paid_on') || ':' || (v_r ? 'paying_by')
       || ':' || (select coalesce(p.paying_by_before, '-') from public.testing_payments p where p.id = (v_r ->> 'payment_id')::uuid),
@@ -505,7 +576,7 @@ begin
   v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid_by(%L, %s, %L, 6500)', v_x, pg_temp.t_ver(v_x), 'cash'));
   perform pg_temp.t_eq('O1 then the new function by cash', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_x), 'ok:cash');
   perform pg_temp.t_eq('O1 then the old function -> already_paid', pg_temp.t_call('authenticated', v_c_d1,
-    format('public.testing_mark_paid(%L, %s)', v_x, pg_temp.t_ver(v_x))) ->> 'status', 'already_paid');
+    format('pg_temp.t_mark_paid(%L, %s)', v_x, pg_temp.t_ver(v_x))) ->> 'status', 'already_paid');
 
 
   -- ===================================================================
@@ -574,7 +645,7 @@ begin
   -- the old 2-argument private Mark paid, side by side; its undo changes nothing extra
   v_priv3 := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
     'worcester', 'Cb30', 'Old private', v_rk1, 'check', v_today + 3, '17:00')) ->> 'id')::uuid;
-  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_priv3));
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_priv3));
   perform pg_temp.t_eq('O1 old testing_private_mark_paid', (v_r ->> 'status') || ':' || (v_r ->> 'method') || ':' || (v_r ->> 'amount_cents'),
     'ok:check:8500');
   v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_undo_payment(%L)', v_r ->> 'payment_id'));
@@ -704,7 +775,7 @@ begin
   --     up once, the new payment keeps the family's choice (cash), and
   --     Finance moves by exactly the edit
   v_ea := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit old', 'cash');
-  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid(%L, 1)', v_ea));
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_mark_paid(%L, 1)', v_ea));
   perform pg_temp.t_eq('E1 setup: an old-style cash payment', (v_r ->> 'status') || ':' || (v_r ->> 'method'), 'ok:cash');
   v_old := (v_r ->> 'payment_id')::uuid;
   v_v := pg_temp.t_ver(v_ea);
@@ -790,7 +861,7 @@ begin
   --     to another amount -> nothing kept, paying by stays; its undo
   --     changes nothing extra
   v_ee := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit plain', 'check');
-  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid(%L, 1)', v_ee)) ->> 'payment_id')::uuid;
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_mark_paid(%L, 1)', v_ee)) ->> 'payment_id')::uuid;
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6000, %L)', v_old, 'check', v_today));
   v_new := (v_r ->> 'payment_id')::uuid;
   perform pg_temp.t_eq('E1 old-style, same way: paying by check, nothing kept',
@@ -912,7 +983,7 @@ begin
   -- (c) an old-style payment moves (and comes back) with nothing kept
   v_mc := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Move plain', 'check');
   perform pg_temp.t_eq('V1 setup: old-style check payment', pg_temp.t_call('authenticated', v_c_d1,
-    format('public.testing_mark_paid(%L, 1)', v_mc)) ->> 'status', 'ok');
+    format('pg_temp.t_mark_paid(%L, 1)', v_mc)) ->> 'status', 'ok');
   v_pb := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 2, %L, %L)', v_mc, v_today + 4, '18:00')) ->> 'private_id')::uuid;
   perform pg_temp.t_eq('V1 old-style moved: paying by check, nothing kept',
     pg_temp.t_ppaying(v_pb) || ':' || (select string_agg(coalesce(p.paying_by_before, '-'), ',') from public.testing_private_payments p where p.private_id = v_pb),
@@ -958,7 +1029,7 @@ begin
   --     card - the family's choice is lost and an admin sets it by hand.
   v_pa := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
     'worcester', 'Cb30', 'Top-up edit', v_rk1, 'cash', v_today + 3, '17:00')) ->> 'id')::uuid;
-  v_p1 := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_pa)) ->> 'payment_id')::uuid;
+  v_p1 := (pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_pa)) ->> 'payment_id')::uuid;
   update public.testing_private set private_cents = 9000 where id = v_pa;   -- the price goes up (as the SQL Editor)
   v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid_by(%L, %s, %L, 500)', v_pa, pg_temp.t_pver(v_pa), 'card'));
   v_p2 := (v_r ->> 'payment_id')::uuid;
@@ -1158,7 +1229,10 @@ begin
         and p.proname in ('testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_undo_payment', 'testing_private_undo_payment',
                           'testing_edit_payment', 'testing_private_edit_payment', 'testing_move_to_private', 'testing_private_undo_move',
                           'testing_registration_history', 'testing_private_history', 'testing_results_csv',
-                          'testing_history_strip', 'testing_downloads_guard', 'testing_mark_paid', 'testing_private_mark_paid')), '15');
+                          'testing_history_strip', 'testing_downloads_guard', 'testing_mark_paid', 'testing_private_mark_paid')),
+    -- 0035 removes the two old ones (both together, never one alone)
+    case when to_regprocedure('public.testing_mark_paid(uuid, integer)') is null
+          and to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is null then '13' else '15' end);
   perform pg_temp.t_eq('K1 the history readers are stable, the writers volatile',
     (select string_agg(p.proname || '=' || p.provolatile::text, ',' order by p.proname collate "C") from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace

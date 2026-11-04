@@ -473,6 +473,17 @@
 //       safety, and the Undo of SETUP.md 0034e (manual/0034u, back to
 //       0032's reader) - see step0034 below. Run only this step with
 //       node run.mjs --only-step0034
+//   step0035. 0035 (Color Belt clean-up: the old one-click Mark paid
+//       functions testing_mark_paid / testing_private_mark_paid removed;
+//       the app uses 0030's *_by) on its own database in the production
+//       order (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030,
+//       0032, 0033, 0034): the pre-apply check, the guard (refused without
+//       0030, refused while something still calls an old one), only the
+//       two old lines leave the fingerprint files, 0035's tests and the
+//       Color Belt + Finance tests before / after, re-run safety, and the
+//       Undo of SETUP.md 0035e (manual/0035u: both back byte for byte) -
+//       see step0035 below. Run only this step with
+//       node run.mjs --only-step0035
 //   step0036. 0036 (New students: each child's last name and date of
 //       birth, the Address question; v0.634 - v0.639) on its own database
 //       in the production order (liveOrderTo0025, then 0027, 0026, 0028,
@@ -592,6 +603,7 @@ const onlyStep0030 = process.argv.includes('--only-step0030');
 const onlyStep0032 = process.argv.includes('--only-step0032');
 const onlyStep0033 = process.argv.includes('--only-step0033');
 const onlyStep0034 = process.argv.includes('--only-step0034');
+const onlyStep0035 = process.argv.includes('--only-step0035');
 const onlyStep0036 = process.argv.includes('--only-step0036');
 const onlyStep0041 = process.argv.includes('--only-step0041');
 const onlyStep0042 = process.argv.includes('--only-step0042');
@@ -835,6 +847,11 @@ async function main() {
       console.log('\n0033 fingerprints (kind  item  detail):');
       for (const line of prints33) console.log('  ' + line);
     }
+    return finish();
+  }
+  // --only-step0035: just the Color Belt clean-up step (0035; it has no fingerprint file of its own)
+  if (onlyStep0035) {
+    await step0035();
     return finish();
   }
   // --only-step0036: just New students' last name, date of birth and Address step (0036)
@@ -1168,6 +1185,9 @@ async function main() {
   // step0033: Camps design review - Mark paid with a way, Camper history (its own database, production order)
   console.log('\nMigration 0033 (Camps design review: Mark paid with a way to pay, Camper history):');
   const after33 = after5 ? await step0033() : null;
+  // step0035: Color Belt clean-up - the old one-click Mark paid functions removed (its own database, production order)
+  console.log('\nMigration 0035 (Color Belt: the old 2-argument Mark paid functions removed):');
+  if (after5) await step0035();
   // step0036: New students - each child's last name and date of birth, the Address question (its own database, production order)
   console.log('\nMigration 0036 (New students: each child\'s last name and date of birth, the Address question):');
   const after36 = after5 ? await step0036() : null;
@@ -8094,6 +8114,197 @@ async function step0033() {
   }
   await db.close().catch(() => {});
   return prints33;
+}
+
+// =====================================================================
+// step0035: Color Belt clean-up after 0030 (0035) - the old one-click
+// Mark paid functions testing_mark_paid(uuid, integer) (0005) and
+// testing_private_mark_paid(uuid, integer) (0014) are removed
+// ---------------------------------------------------------------------
+// On its OWN fresh database in the production order with every live
+// migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030,
+// 0032, 0033, 0034):
+//   a. connector-safe files (pre-apply check, tests, the 0005 / 0014
+//      fingerprints); the migration's only "drop" lines are its two
+//      "drop function if exists" lines (and comments)
+//   b. the pre-apply check before 0035: both old bodies as tested, 2
+//      versions, 0030's two *_by there and as tested, nobody else
+//   c. the Color Belt and Finance tests BEFORE 0035 (0005, 0010, 0011,
+//      0014, 0018, 0026, 0030 - their test payments use the old ones)
+//   d. the guard (each in a transaction that is rolled back): refused
+//      without 0030's testing_mark_paid_by; refused when another function
+//      still calls an old one (and the pre-apply check names it)
+//   e. apply 0035: in every fingerprint file ONLY the two old function
+//      lines go (0003's list, 0005's and 0014's files); nothing is added;
+//      every other line and file byte-identical
+//   f. 0035_tests.sql and every baseline file again after it (0005, 0010,
+//      0011, 0014, 0018, 0026, 0030: their test payments go through each
+//      file's pg_temp Mark paid helper, which uses 0030's *_by after 0035)
+//   g. the pre-apply check after 0035; 0035 a SECOND time changes nothing;
+//      0030 re-run after 0035 is accepted by its guard and moves no
+//      fingerprint
+//   h. the Undo of SETUP.md 0035e (manual/0035u): both functions back
+//      byte for byte (raw body md5 = production's before 0035), every
+//      fingerprint file equals the one before 0035, the pre-apply check
+//      as before, the baseline tests pass; then 0035 again (redo) and
+//      0035_tests.sql passes
+// Run only this step with   node run.mjs --only-step0035
+// =====================================================================
+async function step0035() {
+  const L = '[0035] ';
+  const preSql = read('tests', '0035_preapply_check.sql');
+  const migration = read('migrations', '0035_color_belt_cleanup.sql');
+  const undoFile = 'manual/0035u_undo_color_belt_cleanup.sql';
+  // a. connector-safe files; the migration's "drop" words
+  const unsafe = [['tests', '0035_tests.sql'], ['tests', '0035_preapply_check.sql'], ['tests', '0005_fingerprints.sql'],
+    ['tests', '0014_fingerprints.sql']].filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0035's tests, pre-apply check and the 0005 / 0014 fingerprints contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const dropLines = migration.replace(/\r\n/g, '\n').split('\n').filter((l) => /drop|delete/i.test(l) && !/^\s*--/.test(l));
+  record(`${L}the migration's only removals are its two "drop function if exists" lines (no cascade)`,
+    JSON.stringify(dropLines) === JSON.stringify(['drop function if exists public.testing_mark_paid(uuid, integer);',
+      'drop function if exists public.testing_private_mark_paid(uuid, integer);']), dropLines.join(' | '));
+  const body = (sql) => sql.replace(/^begin;\s*$/m, '').replace(/^commit;\s*$/m, '');
+
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt History record_id)', '0034_black_belt_history_ids.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. the pre-apply check before 0035
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const clean = await pre();
+  record(`${L}[pre-apply check] before 0035: both old bodies as 0005 / 0014, 2 versions, 0030's *_by there and as tested, nobody else uses them`,
+    clean.old_event_is_0005 === true && clean.old_private_is_0014 === true && clean.old_versions === 2
+      && clean.by_functions === true && clean.by_bodies_are_0030 === true && clean.other_users === null, JSON.stringify(clean));
+  const rawMd5 = async () => (await db.query(`select p.proname::text as name, md5(p.prosrc) as md5 from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname in ('testing_mark_paid', 'testing_private_mark_paid') order by 1`)).rows
+    .map((r) => `${r.name}=${r.md5}`).join(',');
+  // production's raw prosrc md5s before 0035 (read-only check, 2026-11-04)
+  const liveRaw = 'testing_mark_paid=6b4346eb5d04f2866170f54724f8988d,testing_private_mark_paid=a8dfaf7f8166a45d3eb7f8cc15f0d0cd';
+  const rawBefore = await rawMd5();
+  record(`${L}before 0035 the two old functions are byte for byte production's (raw body md5)`, rawBefore === liveRaw, rawBefore);
+
+  // c. the baseline tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  const baseline = [['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
+    ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
+    ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED'],
+    ['0030_tests.sql', 'ALL 0030 TESTS PASSED']];
+  await tests('before 0035', baseline);
+
+  // d. the guard, on copies of the state that are rolled back
+  const refused = async (label, setupSql, want) => {
+    let message = '';
+    try {
+      await db.exec('begin;');
+      await db.exec(setupSql);
+      await db.exec(body(migration));
+    } catch (error) {
+      message = error.message;
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    const still = await one(db, `select count(*)::integer from pg_proc where proname in ('testing_mark_paid', 'testing_private_mark_paid')`);
+    record(`${L}[guard] ${label}`, message.includes(want) && still === 2, message || 'not refused');
+  };
+  await refused('refused without 0030\'s testing_mark_paid_by (nothing removed)',
+    'drop function public.testing_mark_paid_by(uuid, integer, text, integer);', '0035 needs migration 0030');
+  await refused('refused when another function still calls testing_private_mark_paid (names it; nothing removed)',
+    `create function public.zz_uses_old(p uuid) returns jsonb language sql as $f$ select public.testing_private_mark_paid(p, 1) $f$;`,
+    'function public.zz_uses_old(p uuid)');
+  try {
+    await db.exec('begin;');
+    await db.exec(`create view public.zz_old_view as select 'testing_mark_paid(x)'::text as t;`);
+    const named = (await db.query(preSql)).rows[0].other_users;
+    record(`${L}[pre-apply check] other_users names a view that mentions an old function`, named === 'view public.zz_old_view', String(named));
+  } catch (error) {
+    record(`${L}[pre-apply check] other_users names a view`, false, error.message);
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+
+  // e. apply 0035
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  if (!(await run(db, `${L}apply 0035_color_belt_cleanup.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const goneWanted = {
+    '0003': [/^testing_mark_paid {2}p_registration_id uuid, p_expected_version integer {2}/, /^testing_private_mark_paid {2}p_private_id uuid, p_expected_version integer {2}/],
+    '0005': [/^function {2}testing_mark_paid\(p_registration_id uuid, p_expected_version integer\) {2}/],
+    '0014': [/^function {2}testing_private_mark_paid\(p_private_id uuid, p_expected_version integer\) {2}/],
+  };
+  const wrong = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    const want = goneWanted[n] || [];
+    if (added.length) wrong.push(`${n} added: ${added.join(' | ')}`);
+    if (gone.length !== want.length || !want.every((re) => gone.some((line) => re.test(line)))) wrong.push(`${n} gone: ${gone.join(' | ') || '(none)'}`);
+  }
+  record(`${L}fingerprints: only the two old Mark paid lines went (0003's list, 0005's and 0014's files), nothing added, every other line and file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${numbers.length} files`);
+
+  // f. the tests after 0035: 0035's own, then every baseline file again (their test
+  //    payments now go through the *_by functions - pg_temp.t_mark_paid /
+  //    t_private_mark_paid in each file)
+  await tests('after 0035', [['0035_tests.sql', 'ALL 0035 TESTS PASSED'], ...baseline]);
+
+  // g. the pre-apply check after 0035, re-run safety
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0035: no old versions, 0030's *_by there and as tested, nobody else`,
+    applied.old_event_is_0005 === false && applied.old_private_is_0014 === false && applied.old_versions === 0
+      && applied.by_functions === true && applied.by_bodies_are_0030 === true && applied.other_users === null, JSON.stringify(applied));
+  await run(db, `${L}apply 0035 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0035 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+  // 0030 re-run AFTER 0035: its guard accepts the *_by functions in place of the old ones
+  // (the guard is a DO block, so no function body moves)
+  if (await run(db, `${L}re-run 0030 after 0035 (its guard accepts the state after 0035)`, read('migrations', '0030_color_belt_review.sql'))) {
+    const after30 = await printsOf(db, numbers);
+    const moved30 = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(after30[`${n}_fingerprints.sql`]));
+    record(`${L}0030 re-run after 0035: no fingerprint change (0030's included), the old functions stay gone`,
+      moved30.length === 0 && (await one(db, `select count(*)::integer from pg_proc where proname in ('testing_mark_paid', 'testing_private_mark_paid')`)) === 0,
+      moved30.join(', '));
+  }
+
+  // h. Undo 0035, as SETUP.md 0035e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0035e\. Undo 0035/m);
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0035] SETUP.md has "### 0035e. Undo 0035" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0035] paste ${undoFile}`, read('manual', '0035u_undo_color_belt_cleanup.sql'))) {
+    const rawUndone = await rawMd5();
+    record(`${L}[undo 0035] both functions are back byte for byte (raw body md5 = production's before 0035)`, rawUndone === liveRaw, rawUndone);
+    const undone = await printsOf(db, numbers);
+    const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0035] every fingerprint file equals the one before 0035 (rights included)`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+    const undonePre = await pre();
+    record(`${L}[undo 0035] the pre-apply check answers as before 0035`, JSON.stringify(undonePre) === JSON.stringify(clean),
+      JSON.stringify(undonePre));
+    await tests('after the undo', baseline);
+    if (await run(db, `${L}[undo 0035] apply 0035 again (redo)`, migration)) {
+      const redo = await printsOf(db, numbers);
+      const differ = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(redo[`${n}_fingerprints.sql`]));
+      record(`${L}[undo 0035] after the redo every fingerprint file equals the tested one`, differ.length === 0, differ.join(', '));
+      await tests('after the redo', [['0035_tests.sql', 'ALL 0035 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return true;
 }
 
 // =====================================================================

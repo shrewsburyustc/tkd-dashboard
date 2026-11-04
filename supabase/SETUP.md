@@ -3009,6 +3009,58 @@ Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as name
 
 ---
 
+## Migration 0035: Color Belt — the old one-click Mark paid functions removed
+
+**Status: NOT APPLIED** (built on `color-belt` 2026-11-04; needs a security review and Jeffrey's OK first). The clean-up 0030 promised ("a later small migration removes them").
+
+**Production order:** … 0030 (live) → 0032 → 0033 → 0034 (live) → **0035**. It needs 0030 — it stops with "0035 needs migration 0030 (Color Belt: Mark paid with a way to pay) first" if `testing_mark_paid_by` or `testing_private_mark_paid_by` is missing. **Apply it only while the live app is main 801b757 or newer** (since then the app calls only the `*_by` functions; an older app's Mark paid button would fail).
+
+**What it does** (`supabase/migrations/0035_color_belt_cleanup.sql`): removes **only** `public.testing_mark_paid(uuid, integer)` (0005 section 14i) and `public.testing_private_mark_paid(uuid, integer)` (0014 section 8e), with `drop function if exists` (no `cascade`). No table, column, row, right, rule, trigger or other function changes; payments the old functions recorded stay as they are. Before removing anything, a guard stops it if 0030's replacements are missing, **or if another function's code, a view or a read rule still names an old function** (it lists them). Checked 2026-11-04: no migration and nothing on production calls either one (no function body, view, read rule, trigger or `pg_depend` row).
+
+### 0035a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0035_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `old_event_is_0005 true`, `old_private_is_0014 true`, `old_versions 2`, `by_functions true`, `by_bodies_are_0030 true`, `other_users` empty (NULL). Anything else → **stop** (an old function changed since, 0030 isn't what was tested, or something still uses them). Answer on 2026-11-04: ready.
+2. Claude runs `supabase/tests/0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` and keeps the results (the "before" record for 0035c and the undo).
+3. Claude checks the live site is main 801b757 or newer (its Mark paid box calls `testing_mark_paid_by` / `testing_private_mark_paid_by`).
+
+### 0035b. Apply 0035 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0035_color_belt_cleanup.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase **will** warn about destructive operations. This time they are real: the two `drop function if exists` lines remove the old functions. Confirm only if you mean it.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint change). **If 0005 or 0014 is ever re-run after 0035**, it puts the old function back — re-run 0030 and then 0035 straight after it. **Re-running 0030 after 0035 is fine:** its guard (a DO block, so no fingerprint moves) accepts either the old functions or its own `*_by` ones (tested: no fingerprint change).
+
+### 0035c. Read-only checks (Claude runs these through the connection)
+
+1. The pre-apply check again: `false / false / 0 / true / true / NULL`.
+2. Compared with 0035a: `0003_fingerprints.sql` has **only** the `testing_mark_paid` and `testing_private_mark_paid` lines fewer; `0005_fingerprints.sql` **only** the `testing_mark_paid(…)` line fewer; `0014_fingerprints.sql` **only** the `testing_private_mark_paid(…)` line fewer; nothing added anywhere; `0030_fingerprints.sql` and every other file unchanged (`run.mjs` step0035 checks exactly that).
+3. **Security advisor:** nothing new.
+
+### 0035d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0035_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0035 TESTS PASSED**. It checks both old functions are gone (calling one fails as "no such function"), that 0030's event and private Mark paid still work (price changed, ok, double click, already paid, Undo, a top-up), and that every other Color Belt app function from 0005, 0010, 0014 and 0030 is there with the same rights. It makes its own `zz cb35 …` class and event and rolls everything back.
+2. Then `0005_tests.sql`, `0010_tests.sql`, `0011_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql` and `0030_tests.sql` again — all must still pass. Their test payments go through a small temporary helper in each file (`pg_temp.t_mark_paid` / `pg_temp.t_private_mark_paid`): it calls the old function while it exists and, after 0035, 0030's `*_by` version with the family's way and the worked-out amount, and returns the old answer's keys — so the files run before and after 0035 and check the same things.
+3. Put the placeholders back afterwards.
+
+### 0035e. Undo 0035 (only with Jeffrey's OK)
+
+1. The app does **not** need to be rolled back (it doesn't call the old functions).
+2. Paste **the whole file** `supabase/manual/0035u_undo_color_belt_cleanup.sql` in the SQL Editor → **Run**. It puts back `testing_mark_paid(uuid, integer)` and `testing_private_mark_paid(uuid, integer)` copied word for word from 0005 (14i) and 0014 (8e) — byte for byte what was live before 0035 — with their exact revoke and grant (only `authenticated` may run them). Nothing is removed, so Supabase should not warn.
+3. Claude checks: the pre-apply check answers as in 0035a; `0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` match 0035a's record. Then run `0005_tests.sql`, `0010_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql`, `0030_tests.sql`.
+4. To redo: paste 0035 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0035: the guard refuses without 0030 and while another function still calls an old one; only the two old lines leave the fingerprint files; all seven test files pass before and after 0035; 0030 re-run after 0035 moves no fingerprint; the undo file exactly as named here brings both back byte for byte with the same fingerprints and the tests pass; 0035 again gives the tested fingerprints and `0035_tests.sql` passes).
+
+**Why:**
+- **Remove them at all:** two unused doors into the payment tables; with them gone there is one Mark paid per kind, the one that records the way they paid and refuses a changed price.
+- **A guard that searches for callers:** `drop function` without `cascade` already stops on a recorded dependency, but a plpgsql function's call to another function isn't recorded — so the guard searches every function's code, the views and the read rules by name.
+- **The older test files keep working through a helper, not a rewrite:** before 0035 the helper IS the old function, so they test 0005 / 0014 / 0030 exactly as built; after 0035 the same checks run through 0030's functions. 0005's C5, 0014's V1 and 0030's K1 (the exact-signature / count checks) accept the removal, and 0005's T2d ignores the session's own temporary schema (where the helper lives).
+
+---
+
+---
+
 ## Migration 0036: each child's last name and date of birth, the Address question
 
 **Status: applied 2026-11-04** (Jeffrey, SQL Editor: "success no rows"; 0036a pre-check as expected; 0036c fingerprints equal the PGlite ones, security advisor unchanged; the app went live the same day at main a5d0e1d; the 0036d tests file waits for his UIDs). Built on `claude/prospect-form-system-cd893d` (rulebook v0.634–v0.639; plan `docs/Prospects/TKD-ProspectProfile-Build-Plan.md` §2). Apply it **before** the app version that asks for last names, dates of birth and addresses is deployed (that app reads the new columns and keys). The live app keeps working after it: it still sends each child as first name + age, and that is still accepted.

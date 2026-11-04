@@ -1305,6 +1305,20 @@ const evCall = (name, args, ctx = E_ADMIN) => {
   return res.data;
 };
 const evStatus = (name, args, ctx) => evCall(name, args, ctx).status;
+// Migration 0035 removed the old one-click Mark paid (testing_mark_paid / testing_private_mark_paid,
+// 2 arguments), and the preview with it. The checks written for it now call 0030's *_by version
+// the way the old one worked: the family's "Paying by" as the way, and the amount the database
+// works out (asked for first with 0 cents expected: that price_changed answer writes nothing).
+// An ok answer keeps only the old keys, so the checks still compare exactly what they did.
+const OLD_MARK_PAID_KEYS = ['status', 'payment_id', 'amount_cents', 'method', 'version'];
+const oneClickPaid = (name, idKey, rowOf) => (args, ctx = E_ADMIN) => {
+  const full = { ...args, p_method: rowOf(args[idKey])?.paying_by ?? 'cash', p_expected_cents: 0 };
+  let answer = evCall(name, full, ctx);
+  if (answer.status === 'price_changed') answer = evCall(name, { ...full, p_expected_cents: answer.amount_cents }, ctx);
+  return answer.status === 'ok' ? Object.fromEntries(OLD_MARK_PAID_KEYS.map((k) => [k, answer[k]])) : answer;
+};
+const markPaid = oneClickPaid('testing_mark_paid_by', 'p_registration_id', (id) => ev.snapshot().registrations.find((r) => r.id === id));
+const markPaidStatus = (args, ctx) => markPaid(args, ctx).status;
 // Classes and ranks functions (phase 1) on the same store.
 const tCall = (name, args) => {
   const res = evTesting.rpc(name, args, E_ADMIN);
@@ -1453,8 +1467,11 @@ check('events mock: reads and column permissions', () => {
   // The public functions and helpers are not for signed-in staff.
   for (const name of EVENT_RESTRICTED_RPC_NAMES) assert.equal(ev.rpc(name, {}, E_ADMIN).error.code, '42501', name);
   assert.equal(ev.rpc('testing_nope', {}, E_ADMIN).error.code, 'PGRST202');
-  assert.equal(ev.rpc('testing_mark_paid', { p_registration_id: 'x', p_expected_version: 1 }, E_ADMIN).error.code, '22P02');
-  assert.equal(ev.rpc('testing_mark_paid', { p_registration_id: regBy('CB-3112').id }, E_ADMIN).error.code, 'PGRST202'); // missing argument
+  assert.equal(ev.rpc('testing_mark_paid_by', { p_registration_id: 'x', p_expected_version: 1, p_method: 'cash', p_expected_cents: 6500 }, E_ADMIN).error.code, '22P02');
+  assert.equal(ev.rpc('testing_mark_paid_by', { p_registration_id: regBy('CB-3112').id }, E_ADMIN).error.code, 'PGRST202'); // missing argument
+  // 0035: the old 2-argument Mark paid functions are gone, as on the live database.
+  assert.equal(ev.rpc('testing_mark_paid', { p_registration_id: regBy('CB-3112').id, p_expected_version: 1 }, E_ADMIN).error.code, 'PGRST202');
+  assert.equal(ev.rpc('testing_private_mark_paid', { p_private_id: regBy('CB-3112').id, p_expected_version: 1 }, E_ADMIN).error.code, 'PGRST202');
 });
 
 check('events mock: who may call each function (A / S splits)', () => {
@@ -1468,7 +1485,6 @@ check('events mock: who may call each function (A / S splits)', () => {
     testing_add_student: { p_event_id: anyId, p_first: 'A', p_last: 'B', p_event_rank_id: anyId, p_stripes: true, p_paying_by: 'cash' },
     testing_update_student: { p_registration_id: anyId, p_expected_version: 1, p_first: 'A', p_last: 'B', p_event_rank_id: anyId },
     testing_change_paying_by: { p_registration_id: anyId, p_expected_version: 1, p_paying_by: 'cash' },
-    testing_mark_paid: { p_registration_id: anyId, p_expected_version: 1 },
     testing_undo_payment: { p_payment_id: anyId },
     testing_edit_payment: { p_payment_id: anyId, p_method: 'cash', p_amount_cents: 100, p_paid_on: '2026-10-17' },
     testing_resolve_duplicate: { p_keep_id: anyId, p_keep_version: 1, p_other_id: '00000000-0000-4000-8000-00000000abce', p_other_version: 1, p_keep_both: true },
@@ -1484,7 +1500,6 @@ check('events mock: who may call each function (A / S splits)', () => {
     testing_private_update: { p_private_id: anyId, p_expected_version: 1, p_first: 'A', p_last: 'B', p_rank_id: anyId },
     testing_private_change_day: { p_private_id: anyId, p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' },
     testing_private_change_paying_by: { p_private_id: anyId, p_expected_version: 1, p_paying_by: 'cash' },
-    testing_private_mark_paid: { p_private_id: anyId, p_expected_version: 1 },
     testing_private_undo_payment: { p_payment_id: anyId },
     testing_private_edit_payment: { p_payment_id: anyId, p_method: 'cash', p_amount_cents: 100, p_paid_on: '2026-10-17' }, // A
     testing_private_cancel: { p_private_id: anyId, p_expected_version: 1 },
@@ -1519,7 +1534,9 @@ check('events mock: who may call each function (A / S splits)', () => {
   assert.equal(JSON.stringify(evDb()), before); // nothing was written by refusals
   // failNextSave: a dropped connection, nothing changes.
   ev.failNextSave();
-  const res = ev.rpc('testing_mark_paid', { p_registration_id: regBy('CB-3112').id, p_expected_version: regBy('CB-3112').version }, E_DESK);
+  const res = ev.rpc('testing_mark_paid_by', {
+    p_registration_id: regBy('CB-3112').id, p_expected_version: regBy('CB-3112').version, p_method: regBy('CB-3112').paying_by, p_expected_cents: 6500,
+  }, E_DESK);
   assert.equal(res.data, null);
   assert.ok(res.error);
   assert.equal(regBy('CB-3112').version, 1);
@@ -1661,10 +1678,10 @@ check('events mock: students, Mark paid, Undo window, Edit payment', () => {
   assert.equal(sam.source, 'staff');
   assert.equal(sam.signature, null);
   // Mark paid before the testing day: the early price, method = how they'll pay.
-  const paid = evCall('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 1 }, E_DESK);
+  const paid = markPaid({ p_registration_id: sam.id, p_expected_version: 1 }, E_DESK);
   assert.deepEqual({ ...paid, payment_id: 'x' }, { status: 'ok', payment_id: 'x', amount_cents: 6500, method: 'card', version: 2 });
-  assert.equal(evStatus('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 1 }, E_DESK), 'stale'); // double click
-  assert.equal(evStatus('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 2 }, E_DESK), 'already_paid');
+  assert.equal(markPaidStatus({ p_registration_id: sam.id, p_expected_version: 1 }, E_DESK), 'stale'); // double click
+  assert.equal(markPaidStatus({ p_registration_id: sam.id, p_expected_version: 2 }, E_DESK), 'already_paid');
   assert.equal(evStatus('testing_change_paying_by', { p_registration_id: sam.id, p_expected_version: 2, p_paying_by: 'cash' }, E_DESK), 'already_paid');
   const row = rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === sam.id);
   assert.deepEqual([row.paid, row.paid_cents, row.paid_on, row.paid_method, row.last_payment_id], [true, 6500, '2026-10-17', 'card', paid.payment_id]);
@@ -1681,7 +1698,7 @@ check('events mock: students, Mark paid, Undo window, Edit payment', () => {
   assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === sam.id).paid, false);
   // Change how they'll pay, then pay again; 10 s later only an admin may undo.
   assert.equal(evCall('testing_change_paying_by', { p_registration_id: sam.id, p_expected_version: 3, p_paying_by: 'cash' }, E_DESK).version, 4);
-  const again = evCall('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 4 }, E_DESK);
+  const again = markPaid({ p_registration_id: sam.id, p_expected_version: 4 }, E_DESK);
   assert.equal(again.method, 'cash');
   evClock += 10000;
   assert.equal(evStatus('testing_undo_payment', { p_payment_id: again.payment_id }, E_DESK), 'not_allowed');
@@ -1698,14 +1715,14 @@ check('events mock: students, Mark paid, Undo window, Edit payment', () => {
   // On the testing day: the testing-day price. Mark paid works even once finished.
   evToday = '2026-11-20';
   const zoe = regBy('CB-3112');
-  assert.equal(evCall('testing_mark_paid', { p_registration_id: zoe.id, p_expected_version: zoe.version }, E_DESK).amount_cents, 7500);
+  assert.equal(markPaid({ p_registration_id: zoe.id, p_expected_version: zoe.version }, E_DESK).amount_cents, 7500);
   evToday = '2026-11-21';
   const sam2 = regBy('CB-3110');
-  assert.equal(evCall('testing_mark_paid', { p_registration_id: sam2.id, p_expected_version: sam2.version }, E_DESK).amount_cents, 7500);
+  assert.equal(markPaid({ p_registration_id: sam2.id, p_expected_version: sam2.version }, E_DESK).amount_cents, 7500);
   assert.equal(addS().status, 'finished'); // no new students once finished
   // Withdrawn students can't be paid or change how they pay.
   const leo = regBy('CB-3116');
-  assert.equal(evStatus('testing_mark_paid', { p_registration_id: leo.id, p_expected_version: leo.version }, E_DESK), 'withdrawn');
+  assert.equal(markPaidStatus({ p_registration_id: leo.id, p_expected_version: leo.version }, E_DESK), 'withdrawn');
   assert.equal(evStatus('testing_change_paying_by', { p_registration_id: leo.id, p_expected_version: leo.version, p_paying_by: 'card' }, E_DESK), 'withdrawn');
 });
 
@@ -1931,11 +1948,11 @@ check('events mock: signatures are removed 90 days after the testing date', () =
   const before = { version: zoe.version, updated_at: zoe.updated_at };
   evToday = '2027-02-18'; // Nov 20 + 90 days: not yet
   const mia = regBy('CB-3109');
-  evCall('testing_mark_paid', { p_registration_id: mia.id, p_expected_version: mia.version }, E_DESK);
+  markPaid({ p_registration_id: mia.id, p_expected_version: mia.version }, E_DESK);
   assert.ok(regBy('CB-3112').signature.startsWith(SIGNATURE_PREFIX)); // still kept
   evToday = '2027-02-19'; // 91 days after: the next Mark paid / Add event / family form cleans up
   const sam = regBy('CB-3110');
-  evCall('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: sam.version }, E_DESK);
+  markPaid({ p_registration_id: sam.id, p_expected_version: sam.version }, E_DESK);
   const z = regBy('CB-3112');
   assert.equal(z.signature, null);
   assert.equal(z.signature_deleted_at, new Date(evClock).toISOString());
@@ -1964,7 +1981,7 @@ check('events mock: helpers and store migration', () => {
   assert.equal(evDb().events[0].name, 'November Children Testing');
   // Classes and ranks writes keep the events part.
   evReset();
-  evStatus('testing_mark_paid', { p_registration_id: regBy('CB-3112').id, p_expected_version: 1 }, E_DESK);
+  markPaidStatus({ p_registration_id: regBy('CB-3112').id, p_expected_version: 1 }, E_DESK);
   const cls = worcesterClass('Group A');
   evTesting.rpc('testing_update_class', { p_class_id: cls.id, p_expected_version: cls.version, p_name: 'Group A1', p_final_award_rank_id: cls.final_award_rank_id, p_final_award_none: false }, E_ADMIN);
   assert.equal(evDb().classes.find((c) => c.id === cls.id).name, 'Group A1');
@@ -2562,7 +2579,15 @@ const pAdd = (over = {}, ctx = E_DESK) => pCall('testing_private_add', {
   p_location_code: 'worcester', p_first: 'Liam', p_last: 'Park', p_rank_id: liveRankOf('Group A', 'Yellow').id, p_stripes: true,
   p_paying_by: 'cash', p_private_date: '2026-12-01', p_private_time: '16:00', ...over,
 }, ctx);
-const pMark = (id, ctx = E_DESK) => pCall('testing_private_mark_paid', pArgs(id), ctx);
+// 0035: the one-click private Mark paid is gone; pMark calls testing_private_mark_paid_by the way it
+// worked (see oneClickPaid above).
+const privateMarkPaid = oneClickPaid('testing_private_mark_paid_by', 'p_private_id', privRow);
+const pOneClick = (args, ctx = E_DESK) => {
+  const answer = privateMarkPaid(args, ctx);
+  assertPrivDueSame();
+  return answer;
+};
+const pMark = (id, ctx = E_DESK) => pOneClick(pArgs(id), ctx);
 const pUpdate = (id, rankId, ctx = E_DESK, names = {}) => pCall('testing_private_update', pArgs(id, {
   p_first: names.first ?? privRow(id).first_name, p_last: names.last ?? privRow(id).last_name, p_rank_id: rankId,
 }), ctx);
@@ -2742,7 +2767,7 @@ check('private mock: money — Mark paid, Undo (own / moved / admin), Edit, payi
   const paid = pMark(id);
   assert.deepEqual([paid.status, paid.amount_cents, paid.method, paid.version], ['ok', 8500, 'cash', 2]);
   assert.equal(pMark(id).status, 'already_paid');
-  assert.equal(pCall('testing_private_mark_paid', { p_private_id: id, p_expected_version: 1 }).status, 'stale'); // double click
+  assert.equal(pOneClick({ p_private_id: id, p_expected_version: 1 }).status, 'stale'); // double click
   // The desk's own Undo within 10 seconds: ok; after 10 seconds / another desk: not_allowed; admins any time.
   evClock += 3000;
   assert.equal(pCall('testing_private_undo_payment', { p_payment_id: paid.payment_id }, E_DESK2).status, 'not_allowed');
@@ -2806,7 +2831,7 @@ check('private mock: Cancel, Restore and Delete (V7, E11)', () => {
   // Every write on a cancelled one → cancelled.
   const pay = privPayments(id)[0];
   const writes = [
-    ['testing_private_cancel', pArgs(id)], ['testing_private_mark_paid', pArgs(id)],
+    ['testing_private_cancel', pArgs(id)], ['testing_private_mark_paid_by', pArgs(id, { p_method: 'cash', p_expected_cents: 0 })],
     ['testing_private_update', pArgs(id, { p_first: 'X', p_last: 'Y', p_rank_id: row.rank_id })],
     ['testing_private_change_day', pArgs(id, { p_private_date: '2026-12-02', p_private_time: '16:00' })],
     ['testing_private_change_paying_by', pArgs(id, { p_paying_by: 'card' })],
@@ -2985,7 +3010,7 @@ check('private mock: the moved registration afterwards — live functions (V9b, 
   const move = pMove('CB-3107');
   const moveReversal = evDb().payments.find((p) => p.reverses_payment_id === original.id);
   const v = () => regBy('CB-3107').version;
-  assert.equal(evStatus('testing_mark_paid', { p_registration_id: mia.id, p_expected_version: v() }, E_ADMIN), 'withdrawn');
+  assert.equal(markPaidStatus({ p_registration_id: mia.id, p_expected_version: v() }, E_ADMIN), 'withdrawn');
   assert.equal(evStatus('testing_change_paying_by', { p_registration_id: mia.id, p_expected_version: v(), p_paying_by: 'card' }, E_ADMIN), 'withdrawn');
   assert.equal(evStatus('testing_undo_payment', { p_payment_id: original.id }, E_ADMIN), 'stale');
   assert.equal(evStatus('testing_undo_payment', { p_payment_id: moveReversal.id }, E_ADMIN), 'invalid');

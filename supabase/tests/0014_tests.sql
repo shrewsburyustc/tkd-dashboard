@@ -51,6 +51,10 @@
 --   that one statement (so its version stays what the move left).
 --
 -- BEFORE YOU RUN IT
+--   0. It runs before AND after 0035 (which removes testing_mark_paid and
+--      testing_private_mark_paid): its test payments go through the
+--      pg_temp.t_mark_paid / t_private_mark_paid helpers below, and V1
+--      accepts the removal.
 --   1. 0001-0006, 0010 and 0014 are applied. You need TWO existing, ACTIVE
 --      staff rows: an admin (Main Admin) and the shared front desk (Staff,
 --      role staff).
@@ -69,6 +73,73 @@
 -- =====================================================================
 
 begin;
+
+-- ---------------------------------------------------------------------
+-- Test payments (migration 0035): 0035 removed the old one-click Mark paid
+-- (testing_mark_paid / testing_private_mark_paid, 2 arguments). The test
+-- payments below go through these helpers, which call the old function
+-- while it exists and otherwise 0030's *_by version the way the old one
+-- worked: the family's "Paying by" as the way and the worked-out amount
+-- (asked for with 0 cents expected first: that price_changed answer
+-- writes nothing). An ok answer keeps only the old keys (status,
+-- payment_id, amount_cents, method, version), so every check reads the
+-- same answer as before. They run with the caller's rights (as whoever
+-- t_call / "set local role" made the caller), like the call they stand in
+-- for. Temporary: they vanish with the session and the rollback.
+-- ---------------------------------------------------------------------
+
+create function pg_temp.t_mark_paid(p_registration_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_mark_paid($1, $2)' into v_r using p_registration_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_registrations x where x.id = p_registration_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_mark_paid_by($1, $2, $3, 0)' into v_r using p_registration_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_registration_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+
+create function pg_temp.t_private_mark_paid(p_private_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_private_mark_paid($1, $2)' into v_r using p_private_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_private x where x.id = p_private_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_private_mark_paid_by($1, $2, $3, 0)' into v_r using p_private_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_private_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_private_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+
 
 do $$
 declare
@@ -345,6 +416,13 @@ begin
     raise exception 'TEST FAILED: V1 testing_private_list must not show a login id';
   end if;
   -- the functions
+  -- After 0035 the old one-click testing_private_mark_paid is gone on
+  -- purpose (the app uses 0030's testing_private_mark_paid_by), so it is
+  -- not expected then.
+  if to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is null
+     and to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)') is not null then
+    v_staff_fns := array_remove(v_staff_fns, 'testing_private_mark_paid');
+  end if;
   v_n := 0;
   for v_fn in
     select p.oid, p.proname::text as name, p.prosecdef, p.proconfig, p.proowner, p.pronargdefaults
@@ -401,7 +479,8 @@ begin
       'public.testing_move_to_private(uuid, integer, date, time)',
       'public.testing_private_undo_move(uuid, integer)',
       'public.testing_restore_student(uuid, integer)']) as x(sig)
-   where to_regprocedure(x.sig) is null;
+   where to_regprocedure(x.sig) is null
+     and (x.sig <> 'public.testing_private_mark_paid(uuid, integer)' or 'testing_private_mark_paid' = any (v_staff_fns));
   if v_txt is not null then raise exception 'TEST FAILED: V1 missing function signature(s): %', v_txt; end if;
   -- the triggers
   select string_agg(x.tbl || '.' || x.trg, ', ') into v_txt
@@ -484,7 +563,7 @@ begin
       public.testing_private_update(v_pv2, 1, 'Lock', 'Out', v_ta_yellow),
       public.testing_private_change_day(v_pv2, 1, v_today + 2, time '16:00'),
       public.testing_private_change_paying_by(v_pv2, 1, 'card'),
-      public.testing_private_mark_paid(v_pv2, 1),
+      pg_temp.t_private_mark_paid(v_pv2, 1),
       public.testing_private_undo_payment(gen_random_uuid()),
       public.testing_private_edit_payment(gen_random_uuid(), 'cash', 100, v_today),
       public.testing_private_cancel(v_pv2, 1),
@@ -518,7 +597,7 @@ begin
         raise exception 'TEST FAILED: V2 anon could read testing_private_list'; exception when insufficient_privilege then null; end;
   begin perform public.testing_private_add('worcester', 'An', 'On', v_ta_yellow, true, 'cash', v_today + 1, time '16:00');
         raise exception 'TEST FAILED: V2 anon could call testing_private_add'; exception when insufficient_privilege then null; end;
-  begin perform public.testing_private_mark_paid(v_pv2, 1);
+  begin perform pg_temp.t_private_mark_paid(v_pv2, 1);
         raise exception 'TEST FAILED: V2 anon could call testing_private_mark_paid'; exception when insufficient_privilege then null; end;
   begin perform public.testing_private_set_result(v_pv2, 'pass');
         raise exception 'TEST FAILED: V2 anon could call testing_private_set_result'; exception when insufficient_privilege then null; end;
@@ -712,7 +791,7 @@ begin
     raise exception 'TEST FAILED: V4 a live rank after a removed one expected ok 8500, got %', v_r;
   end if;
   -- paid $85, belt to a $95 rank -> $10 owed; back to $85 -> nothing owed
-  v_r := public.testing_private_mark_paid(v_p4b, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p4b, 1);
   if (v_r ->> 'amount_cents')::int is distinct from 8500 then raise exception 'TEST FAILED: V4 setup mark paid 8500 expected, got %', v_r; end if;
   v_r := public.testing_private_update(v_p4b, 2, 'Bea', 'Pricier', v_tb_blue);
   if v_r is distinct from jsonb_build_object('status', 'ok', 'version', 3, 'amount_due_cents', 1000, 'result_cleared', false) then
@@ -856,7 +935,7 @@ begin
   -- a moved-in payment: the mover can't undo it with the payment Undo
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.testing_mark_paid(v_r6, 1);
+  v_r := pg_temp.t_mark_paid(v_r6, 1);
   if (v_r ->> 'amount_cents')::int is distinct from 6500 then raise exception 'TEST FAILED: V6 setup event mark paid 6500 expected, got %', v_r; end if;
   v_r := public.testing_move_to_private(v_r6, 2, v_today + 1, time '16:00');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: V6 setup move expected ok, got %', v_r; end if;
@@ -872,18 +951,18 @@ begin
   -- Mark paid: the full price, then already_paid; the old version -> stale
   perform set_config('request.jwt.claims', v_c_d1, true);
   v_p6a := (public.testing_private_add('worcester', 'Pay', 'Full', v_ta_yellow, true, 'cash', v_today + 2, time '16:00') ->> 'id')::uuid;
-  v_r := public.testing_private_mark_paid(v_p6a, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p6a, 1);
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'amount_cents')::int <> 8500 or v_r ->> 'method' <> 'cash'
      or (v_r ->> 'version')::int <> 2 or v_r ->> 'payment_id' is null then
     raise exception 'TEST FAILED: V6 mark paid expected {ok, 8500, cash, version 2}, got %', v_r;
   end if;
-  v_r := public.testing_private_mark_paid(v_p6a, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p6a, 1);
   if v_r is distinct from jsonb_build_object('status', 'stale') then raise exception 'TEST FAILED: V6 double mark paid with the old version expected stale, got %', v_r; end if;
-  v_r := public.testing_private_mark_paid(v_p6a, 2);
+  v_r := pg_temp.t_private_mark_paid(v_p6a, 2);
   if v_r is distinct from jsonb_build_object('status', 'already_paid') then raise exception 'TEST FAILED: V6 mark paid when paid expected already_paid, got %', v_r; end if;
   -- the difference after a move ($65 paid -> $20); Change how they'll pay
   -- while owed ok, then already_paid once paid in full
-  v_r := public.testing_mark_paid(v_r6b, 1);
+  v_r := pg_temp.t_mark_paid(v_r6b, 1);
   v_r := public.testing_move_to_private(v_r6b, 2, v_today + 1, time '16:00');
   v_pm6b := (v_r ->> 'private_id')::uuid;
   if (v_r ->> 'amount_due_cents')::int is distinct from 2000 then raise exception 'TEST FAILED: V6 move with $65 paid expected 2000 due, got %', v_r; end if;
@@ -891,7 +970,7 @@ begin
   if v_r is distinct from jsonb_build_object('status', 'ok', 'version', 2) then
     raise exception 'TEST FAILED: V6 change paying by while owed expected {ok, 2}, got %', v_r;
   end if;
-  v_r := public.testing_private_mark_paid(v_pm6b, 2);
+  v_r := pg_temp.t_private_mark_paid(v_pm6b, 2);
   if (v_r ->> 'amount_cents')::int is distinct from 2000 or v_r ->> 'method' is distinct from 'card' then
     raise exception 'TEST FAILED: V6 mark paid after a move expected the difference 2000 by card, got %', v_r;
   end if;
@@ -901,11 +980,11 @@ begin
   end if;
   -- a $0 private price: already_paid, nothing inserted
   v_p6z := (public.testing_private_add('worcester', 'Zed', 'Zero', v_tb_free, true, 'cash', v_today + 2, time '16:00') ->> 'id')::uuid;
-  v_r := public.testing_private_mark_paid(v_p6z, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p6z, 1);
   if v_r is distinct from jsonb_build_object('status', 'already_paid') then raise exception 'TEST FAILED: V6 $0 price expected already_paid, got %', v_r; end if;
   -- Undo: D1's own within 10 s ok
   v_p6u := (public.testing_private_add('worcester', 'Udo', 'Own', v_ta_yellow, true, 'cash', v_today + 2, time '16:00') ->> 'id')::uuid;
-  v_r := public.testing_private_mark_paid(v_p6u, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p6u, 1);
   v_pay := (v_r ->> 'payment_id')::uuid;
   v_r := public.testing_private_undo_payment(v_pay);
   if v_r is distinct from jsonb_build_object('status', 'ok', 'version', 3) then raise exception 'TEST FAILED: V6 D1 own undo expected {ok, 3}, got %', v_r; end if;
@@ -914,7 +993,7 @@ begin
   -- another user's payment -> not_allowed for D1
   v_p6v := (public.testing_private_add('worcester', 'Ulf', 'Other', v_ta_yellow, true, 'cash', v_today + 2, time '16:00') ->> 'id')::uuid;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.testing_private_mark_paid(v_p6v, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p6v, 1);
   v_pay := (v_r ->> 'payment_id')::uuid;
   perform set_config('request.jwt.claims', v_c_d1, true);
   v_r := public.testing_private_undo_payment(v_pay);
@@ -939,7 +1018,7 @@ begin
   v_r := public.testing_private_undo_payment(v_pay);
   if v_r is distinct from jsonb_build_object('status', 'invalid') then raise exception 'TEST FAILED: V6 undo of a reversal expected invalid, got %', v_r; end if;
   -- Edit payment: D1 not_allowed; A1 ok on the most recent
-  v_r := public.testing_private_mark_paid(v_p6e, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p6e, 1);
   v_pay := (v_r ->> 'payment_id')::uuid;
   perform set_config('request.jwt.claims', v_c_d1, true);
   v_r := public.testing_private_edit_payment(v_pay, 'card', 8000, v_today);
@@ -968,7 +1047,7 @@ begin
   v_p7  := (public.testing_private_add('worcester', 'Cam', 'Cancel', v_ta_yellow, true, 'cash', v_today + 1, time '16:00') ->> 'id')::uuid;
   v_p7p := (public.testing_private_add('worcester', 'Cap', 'Passed', v_ta_yellow, true, 'cash', v_today, time '16:00') ->> 'id')::uuid;
   v_p7n := (public.testing_private_add('worcester', 'Can', 'Noshow', v_ta_yellow, true, 'cash', v_today, time '16:00') ->> 'id')::uuid;
-  v_r := public.testing_private_mark_paid(v_p7, 1);
+  v_r := pg_temp.t_private_mark_paid(v_p7, 1);
   v_pay := (v_r ->> 'payment_id')::uuid;
   v_r := public.testing_private_cancel(v_p7, 2);
   if v_r is distinct from jsonb_build_object('status', 'ok', 'version', 3) then raise exception 'TEST FAILED: V7 D1 cancel expected {ok, 3}, got %', v_r; end if;
@@ -985,7 +1064,7 @@ begin
     public.testing_private_update(v_p7, 3, 'Cam', 'Cancel', v_ta_orange),
     public.testing_private_change_day(v_p7, 3, v_today + 2, time '16:00'),
     public.testing_private_change_paying_by(v_p7, 3, 'card'),
-    public.testing_private_mark_paid(v_p7, 3),
+    pg_temp.t_private_mark_paid(v_p7, 3),
     public.testing_private_undo_payment(v_pay),
     public.testing_private_set_result(v_p7, 'pass'),
     public.testing_private_set_result_note(v_p7, 'x')] loop
@@ -1261,11 +1340,11 @@ begin
   v_r := public.testing_move_to_private(v_m1, 2, v_today + 1, time '15:00');
   if v_r is distinct from jsonb_build_object('status', 'withdrawn') then raise exception 'TEST FAILED: V9 moving the same registration again expected withdrawn, got %', v_r; end if;
   -- an already-reversed pair stays; only the live payment moves
-  v_r := public.testing_mark_paid(v_m10, 1);
+  v_r := pg_temp.t_mark_paid(v_m10, 1);
   v_m10_first := (v_r ->> 'payment_id')::uuid;
   v_r := public.testing_undo_payment(v_m10_first);
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: V9 setup event undo expected ok, got %', v_r; end if;
-  v_r := public.testing_mark_paid(v_m10, 3);
+  v_r := pg_temp.t_mark_paid(v_m10, 3);
   v_m10_second := (v_r ->> 'payment_id')::uuid;
   v_r := public.testing_move_to_private(v_m10, 4, v_today + 1, time '15:00');
   v_pm10 := (v_r ->> 'private_id')::uuid;
@@ -1337,7 +1416,7 @@ begin
   -- ===================================================================
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.testing_mark_paid(v_m1, 2);
+  v_r := pg_temp.t_mark_paid(v_m1, 2);
   if v_r is distinct from jsonb_build_object('status', 'withdrawn') then raise exception 'TEST FAILED: V9b live mark paid expected withdrawn, got %', v_r; end if;
   v_r := public.testing_change_paying_by(v_m1, 2, 'card');
   if v_r is distinct from jsonb_build_object('status', 'withdrawn') then raise exception 'TEST FAILED: V9b live change paying by expected withdrawn, got %', v_r; end if;
@@ -1354,7 +1433,7 @@ begin
   if v_r is distinct from jsonb_build_object('status', 'invalid') then raise exception 'TEST FAILED: V9b live edit of the move''s reversal expected invalid, got %', v_r; end if;
   -- removing the event after a move: the private testing and its money stay
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.testing_mark_paid(v_md, 1);
+  v_r := pg_temp.t_mark_paid(v_md, 1);
   v_r := public.testing_move_to_private(v_md, 2, v_today + 1, time '15:00');
   v_pmd := (v_r ->> 'private_id')::uuid;
   perform set_config('request.jwt.claims', v_c_a1, true);
@@ -1453,10 +1532,10 @@ begin
     raise exception 'TEST FAILED: V11 D1 live undo of a recreated event payment expected not_allowed, got %', v_r;
   end if;
   -- after a Mark paid on the private side -> stale
-  v_r := public.testing_mark_paid(v_m13, 1);
+  v_r := pg_temp.t_mark_paid(v_m13, 1);
   v_r := public.testing_move_to_private(v_m13, 2, v_today + 1, time '15:00');
   v_pm13 := (v_r ->> 'private_id')::uuid;
-  v_r := public.testing_private_mark_paid(v_pm13, 1);
+  v_r := pg_temp.t_private_mark_paid(v_pm13, 1);
   v_r := public.testing_private_undo_move(v_pm13, 2);
   if v_r is distinct from jsonb_build_object('status', 'stale') then raise exception 'TEST FAILED: V11 undo move after a private payment expected stale, got %', v_r; end if;
   -- after the registration was edited (A1 renames it) -> stale
