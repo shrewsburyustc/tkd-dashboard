@@ -28,7 +28,7 @@ import { versionInEffect } from '../../lib/calendar/days.js';
 import { toTimeText } from '../../lib/schedule/time.js';
 import { emailOk, fieldsProblem, LOCKED_TYPES, longTextProblem, newField, nextFieldId, PALETTE, slugOk } from '../../lib/forms/fields.js';
 import { publishForm, saveDraft, setBooking, setFormStatus } from '../../lib/forms/api.js';
-import { Grip } from '../testing/RankRows.jsx';
+import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import BookingSettings, { bookingProblem, groupSlotKey, timeSlotKey } from './BookingSettings.jsx';
 import FieldEditor from './FieldEditor.jsx';
 import FieldPalette, { addBlocked, FieldIcon } from './FieldPalette.jsx';

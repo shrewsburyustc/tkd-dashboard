@@ -237,7 +237,8 @@ export default function ProspectPanel({
             label: s.id === p.statusId ? `${s.name} ${T.CURRENT}` : s.name,
             Icon: s.id === p.statusId ? IconCheck : ({ className }) => <i className={`pdot-menu ${className ?? ''}`} style={{ background: colorOf(s.color).edge }} aria-hidden="true" />,
             separatorBefore: i === stages.length && exits.length > 0,
-            onSelect: () => s.id !== p.statusId && onStatus(s.id),
+            // the Status button, so a dialog this opens (Joined) gives focus back to it
+            onSelect: () => s.id !== p.statusId && onStatus(s.id, statusMenu.anchor),
           }))}
           onClose={(reason) => {
             const el = statusMenu.anchor;

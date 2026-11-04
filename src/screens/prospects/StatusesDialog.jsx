@@ -14,7 +14,7 @@ import RowMenu from '../../components/RowMenu.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
 import { cleanText, textProblem } from '../../lib/calendar/rules.js';
-import { Grip } from '../testing/RankRows.jsx';
+import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import * as T from './text.js';
 
 export const isStatusFormDirty = (state) => (state.step === 'add' || state.step === 'edit') && JSON.stringify(state.values) !== JSON.stringify(state.initial);
