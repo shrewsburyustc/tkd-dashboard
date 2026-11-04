@@ -1,0 +1,339 @@
+{
+ "title": "Color Belt · Part 2 · P2 · Private testing tab (CB1, CB2, CB3, CB9)",
+ "subtitle": "<b>Mostly already decided</b>: the same Mark paid box, Print receipt and Undo question as P1 (Star v0.518, shared parts v1.103–v1.107), plus the private cards becoming filters (v1.013). <b>Two questions of Color Belt’s own are at the bottom.</b> <span style=\"color:#6B6B6B\">(Preview screenshots, fake data. The “after” is drawn on top of the real page with the shared parts’ real markup; nothing in the app is built yet.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "pc-today.png",
+     "crop": [
+      60,
+      225,
+      1210,
+      390
+     ],
+     "scale": 0.8,
+     "caption": "<b>1. Mark paid</b> records the payment at once, by Paying by (Liam: Cash; Ava’s top-up: Cash). If they pay another way, an admin fixes it afterwards with Edit payment. <b>4. The cards</b> are plain boxes: tapping does nothing; “1 owes more” is amber text.",
+     "marks": [
+      [
+       1107,
+       446,
+       108,
+       28
+      ],
+      [
+       1107,
+       515,
+       108,
+       28
+      ],
+      [
+       374,
+       232,
+       286,
+       94
+      ],
+      [
+       672,
+       232,
+       286,
+       94
+      ]
+     ]
+    },
+    {
+     "src": "pc-menu-today.png",
+     "crop": [
+      640,
+      290,
+      630,
+      330
+     ],
+     "scale": 0.9,
+     "caption": "<b>2–3.</b> ⋯ → <b>Undo payment</b> acts at once, with no question. There is no Print receipt.",
+     "marks": [
+      [
+       1048,
+       450,
+       198,
+       32
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "pc-markpaid-after.png",
+       "crop": [
+        640,
+        420,
+        630,
+        310
+       ],
+       "scale": 0.85,
+       "caption": "<b>1. CB1 · Mark paid opens the shared box</b>, as P1: name · amount (worked out by the database, shown, not typed), <b>Paid by</b> preset to Paying by with “They chose Cash at the desk.” (added at the desk; “… on the form.” for a student moved from an event), then <b>Mark paid $95</b>. Picking another way also changes Paying by (v0.419).",
+       "marks": [
+        [
+         975,
+         547,
+         240,
+         166
+        ]
+       ]
+      },
+      {
+       "src": "pc-topup-after.png",
+       "crop": [
+        640,
+        380,
+        630,
+        280
+       ],
+       "scale": 0.85,
+       "caption": "<b>Top-up</b> (Ava paid $65 of $85 before the price went up): the same box with <b>only what is still owed</b>, “Ava Chen · $20” → <b>Mark paid $20</b>.",
+       "marks": [
+        [
+         975,
+         478,
+         240,
+         166
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w820-markpaid-after.png",
+       "shotWidth": 820,
+       "crop": [
+        96,
+        420,
+        700,
+        360
+       ],
+       "scale": 0.55,
+       "caption": "Tablet 820",
+       "marks": [
+        [
+         499,
+         595,
+         240,
+         178
+        ]
+       ]
+      },
+      {
+       "src": "w390-markpaid-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        190,
+        390,
+        350
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         8,
+         340,
+         240,
+         178
+        ]
+       ]
+      },
+      {
+       "src": "w320-markpaid-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        190,
+        320,
+        350
+       ],
+       "scale": 0.7,
+       "caption": "320 wide",
+       "marks": [
+        [
+         8,
+         340,
+         240,
+         178
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "src": "pc-menu-after.png",
+     "crop": [
+      640,
+      270,
+      630,
+      340
+     ],
+     "scale": 0.9,
+     "caption": "<b>2. CB2 · Print receipt</b> ends the ⋯ money group, for staff and admins, on a row with a payment. Hidden while Hide private details is on. (The receipt itself is mockup P3.)",
+     "marks": [
+      [
+       1048,
+       450,
+       198,
+       32
+      ]
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-confirm-after.png",
+       "crop": [
+        440,
+        60,
+        400,
+        230
+       ],
+       "scale": 1,
+       "caption": "<b>3. CB3 · Undo payment asks first</b>, as P1: “Undo Noah Kim’s payment?” · Keep payment (focused first) · <b>Undo payment</b> (blue). On a top-up it undoes the most recent payment, as today.",
+       "marks": [
+        [
+         460,
+         80,
+         360,
+         183
+        ]
+       ]
+      },
+      {
+       "src": "w820-confirm-after.png",
+       "shotWidth": 820,
+       "crop": [
+        200,
+        70,
+        420,
+        240
+       ],
+       "scale": 0.75,
+       "caption": "Tablet 820",
+       "marks": [
+        [
+         230,
+         96,
+         360,
+         187
+        ]
+       ]
+      },
+      {
+       "src": "w390-confirm-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        60,
+        390,
+        240
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         16,
+         84,
+         358,
+         187
+        ]
+       ]
+      },
+      {
+       "src": "w320-confirm-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.7,
+       "caption": "320: stacked",
+       "marks": [
+        [
+         16,
+         64,
+         288,
+         231
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-filter-after.png",
+       "crop": [
+        60,
+        225,
+        1210,
+        280
+       ],
+       "scale": 0.62,
+       "caption": "<b>4. CB9 · The cards filter</b> (shared CountCards, as the event roster): Private testings shows everyone; <b>Paid</b> and <b>Not paid</b> filter, with a blue edge and “Showing not paid only · Show all”; Payments recorded stays a plain total and keeps “includes $X from cancelled”. With Hide private details on, only the Private testings card shows (as today).",
+       "marks": [
+        [
+         672,
+         232,
+         286,
+         94
+        ],
+        [
+         76,
+         336,
+         190,
+         18
+        ]
+       ]
+      },
+      {
+       "src": "w390-filter-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        236,
+        390,
+        440
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         16,
+         348,
+         175,
+         70
+        ],
+        [
+         16,
+         440,
+         200,
+         20
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<div style=\"margin:26px 0 8px\"><div style=\"display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px\">To decide</div><h2 style=\"font-size:20px;margin:0 0 6px\">Question 1 of 2 · The Paid card’s “1 owes more”: amber or gray?</h2><p style=\"margin:0 0 14px;max-width:1700px\">Today the note is amber text (the warning color) on the gray card; it is the only colored card note in the dashboard. The shared cards draw every note gray (Payments recorded’s “includes $85 from cancelled”, Star’s school counts). Each row that owes more already has its own amber line with the ⚠ icon: “Paid $65 · $20 more to collect”.</p><div style=\"display:flex;gap:24px;align-items:flex-start\"><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">A · Keep it amber</div><div style=\"display:flex;gap:16px;align-items:flex-start\"><figure style=\"width:540px\"><div class=\"shot\" style=\"width:540px;height:190.8px\"><img src=\"pc-q1-a.png\" style=\"left:-658.8000000000001px;top:-406.8px;width:2304px\"><div class=\"mark\" style=\"left:32px;top:122px;width:144.8px;height:40.4px;border-color:#1D4ED8\"></div></div><figcaption>The Paid card, enlarged.</figcaption></figure><figure style=\"width:390px\"><div class=\"shot\" style=\"width:390px;height:109.2px\"><img src=\"pc-q1-a.png\" style=\"left:-234px;top:-543.4px;width:1664px\"></div><figcaption>Ava’s row (both options).</figcaption></figure></div><p style=\"margin:8px 0 0\">Looks as today. <b>Needs a change to a shared part</b> (an amber note option on CountCards): asked of Dashboard core through Main, so P2’s build waits for it. Amber text without the ⚠ icon and its pale background goes against §7 (amber is always icon + text), and on the gray card it reads almost black (it is hard to tell from gray, as you can see).</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6\"><div style=\"font-weight:700;margin-bottom:10px\">B · Gray, like every card note <span style=\"background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px\">Recommended</span></div><div style=\"display:flex;gap:16px;align-items:flex-start\"><figure style=\"width:540px\"><div class=\"shot\" style=\"width:540px;height:190.8px\"><img src=\"pc-q1-b.png\" style=\"left:-658.8000000000001px;top:-406.8px;width:2304px\"><div class=\"mark\" style=\"left:32px;top:122px;width:144.8px;height:40.4px;border-color:#1D4ED8\"></div></div><figcaption>The Paid card, enlarged.</figcaption></figure><figure style=\"width:390px\"><div class=\"shot\" style=\"width:390px;height:109.2px\"><img src=\"pc-q1-b.png\" style=\"left:-234px;top:-543.4px;width:1664px\"></div><figcaption>Ava’s row (both options).</figcaption></figure></div><p style=\"margin:8px 0 0\"><b>Recommended.</b> No shared-part change, so nothing waits. The card only counts; the warning stays where staff act on it: the row’s amber “⚠ Paid $65 · $20 more to collect” line and its Mark paid button. Same words, only the color changes.</p></div></div></div><div style=\"margin:26px 0 8px\"><div style=\"display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px\">To decide</div><h2 style=\"font-size:20px;margin:0 0 6px\">Question 2 of 2 · With Not paid on, what happens when you switch to Past?</h2><p style=\"margin:0 0 14px;max-width:1700px\">The cards already count only the side shown (Upcoming: 3 · 2 paid · 1 not paid; Past: 1 · 1 · 0). The closest pattern is the event roster: its Not paid filter <b>stays on when you switch class</b>, and a class with nobody left shows “Everyone in this class has paid.” (Star and Camps have no second switch to copy.)</p><div style=\"display:flex;gap:24px;align-items:flex-start\"><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6\"><div style=\"font-weight:700;margin-bottom:10px\">A · The filter stays on (as the event roster’s class switch) <span style=\"background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px\">Recommended</span></div><div style=\"display:flex;gap:16px;align-items:flex-start\"><figure style=\"width:580.8px\"><div class=\"shot\" style=\"width:580.8px;height:134.4px\"><img src=\"pc-q2-upcoming.png\" style=\"left:-28.799999999999997px;top:-108px;width:614.4px\"><div class=\"mark\" style=\"left:289.76px;top:-0.6400000000000001px;width:145.28px;height:53.12px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:3.6799999999999997px;top:50.239999999999995px;width:108.8px;height:23.36px;border-color:#1D4ED8\"></div></div><figcaption>Upcoming, Not paid on: Liam.</figcaption></figure><figure style=\"width:580.8px\"><div class=\"shot\" style=\"width:580.8px;height:134.4px\"><img src=\"pc-q2-a-past.png\" style=\"left:-28.799999999999997px;top:-108px;width:614.4px\"><div class=\"mark\" style=\"left:289.76px;top:-0.6400000000000001px;width:145.28px;height:53.12px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:3.6799999999999997px;top:84.8px;width:574.4px;height:48.32px;border-color:#1D4ED8\"></div></div><figcaption>Tap Past: still “Showing not paid only”; nobody → “Every past private testing is paid.”</figcaption></figure></div><p style=\"margin:8px 0 0\"><b>Recommended.</b> Same as the roster staff already use: a filter you turned on stays on until Show all or tapping the card again; the blue edge and the “Showing not paid only · Show all” line always say it’s on. Lets the desk check “who still owes” on both sides in two taps. The filter is kept only while the page is open, as the side is today.</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">B · Switching sides turns the filter off</div><figure style=\"width:580.8px\"><div class=\"shot\" style=\"width:580.8px;height:144px\"><img src=\"pc-q2-b-past.png\" style=\"left:-28.799999999999997px;top:-108px;width:614.4px\"><div class=\"mark\" style=\"left:146.72px;top:-0.6400000000000001px;width:432.32px;height:53.12px;border-color:#1D4ED8\"></div></div><figcaption>Tap Past: every past private testing shows, no card on.</figcaption></figure><p style=\"margin:8px 0 0\">Never an empty-looking list after a switch, but it behaves differently from the event roster, and checking who owes on Past needs Not paid again (one more tap).</p></div></div></div><p style=\"margin-top:18px\"><b>Everything else is copied</b> from P1 / Star v0.518 and the shared parts. <b>Answer Question 1 first (A or B), then Question 2.</b></p>"
+}
