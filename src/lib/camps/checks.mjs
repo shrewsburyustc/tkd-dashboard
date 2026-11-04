@@ -14,6 +14,7 @@ import {
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
   gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
+  comingCardDay, comesOnDay, campCardCounts, matchesCardFilter,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
@@ -1805,6 +1806,69 @@ check('mock (0033): Mark paid with a way, Paying by follows, Undo puts it back, 
   const many = history(ethan);
   assert.equal(many.length, 500);
   assert.equal(many[0].after.age, 600);
+});
+
+// ======================= The camp page's count cards (design review C10, rulebook v0.737) =======================
+
+check('count cards: which day Coming means (before / on / between / after the camp)', () => {
+  // A Mon, Wed, Fri camp (unsorted on purpose).
+  const cardDays = [{ dayId: 'fri', day: '2027-04-23' }, { dayId: 'mon', day: '2027-04-19' }, { dayId: 'wed', day: '2027-04-21' }];
+  assert.deepEqual(comingCardDay(cardDays, '2027-04-10'), { mode: 'next', day: { dayId: 'mon', day: '2027-04-19' } }); // before: the first day
+  assert.deepEqual(comingCardDay(cardDays, '2027-04-21'), { mode: 'today', day: { dayId: 'wed', day: '2027-04-21' } }); // a camp day: today
+  assert.deepEqual(comingCardDay(cardDays, '2027-04-22'), { mode: 'next', day: { dayId: 'fri', day: '2027-04-23' } }); // between: the next camp day
+  assert.deepEqual(comingCardDay(cardDays, '2027-04-24'), { mode: 'after', day: null }); // after: the card becomes Came
+  assert.deepEqual(comingCardDay([], '2027-04-24'), { mode: 'after', day: null }); // no days at all
+  // The card's words.
+  assert.equal(CampText.cardComingOn('2027-04-19'), 'Coming Mon, Apr 19');
+  assert.equal(CampText.showingComingOn('2027-04-19'), 'Showing coming Mon, Apr 19 only');
+  assert.equal(CampText.cardOfDays(1), 'of 1 day');
+  assert.equal(CampText.cardOfDays(150), 'of 150 days');
+  assert.equal(CampText.extraTodayCount('Pizza party', 11), 'Pizza party today: 11');
+});
+
+check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payments recorded)', () => {
+  const cardDays = [{ dayId: 'mon', day: '2027-04-19' }, { dayId: 'tue', day: '2027-04-20' }];
+  const row = (id, status, dayList, paidCents, owesCents, extra = {}) => ({
+    id, status, days: dayList, paidCents, owesCents, duplicateState: null, ...extra,
+  });
+  const roster = [
+    row('a', 'active', [{ dayId: 'mon', checkedInAt: '2027-04-19T12:00:00Z' }, { dayId: 'tue', checkedInAt: null }], 20000, 0), // paid
+    row('b', 'active', [{ dayId: 'mon', checkedInAt: null }], 5000, 1500), // owes $15
+    row('c', 'active', [{ dayId: 'tue', checkedInAt: null }], 0, 21900), // $219 due
+    row('d', 'active', [{ dayId: 'mon', checkedInAt: null }], 0, 10000, { duplicateState: 'possible' }), // a possible duplicate still owes
+    row('e', 'active', [{ dayId: 'tue', checkedInAt: null }], 12000, -500), // paid too much: Paid, never lowers To collect
+    row('f', 'active', [{ dayId: 'tue', checkedInAt: null }], 18600, 0, { duplicateState: 'possible' }), // a PAID possible duplicate: nothing to collect
+    row('x', 'withdrawn', [{ dayId: 'mon', checkedInAt: null }], 7500, 0), // removed: not counted, but its money is
+    row('y', 'withdrawn', [], 3000, 0), // removed, $40 paid and $10 reversed = $30 still recorded
+  ];
+  const before = campCardCounts(roster, cardDays, '2027-04-01');
+  assert.equal(before.mode, 'next');
+  assert.equal(before.campers, 6);
+  assert.equal(before.coming, 3); // a, b, d on Monday
+  assert.equal(before.toCollect, 3); // b (owes), c (due), d (a possible duplicate that owes) — not f (paid)
+  assert.equal(before.toCollectCents, 1500 + 21900 + 10000);
+  assert.equal(before.recordedCents, 20000 + 5000 + 12000 + 18600 + 7500 + 3000); // every payment, removed campers' too
+  const monday = campCardCounts(roster, cardDays, '2027-04-19');
+  assert.equal(monday.mode, 'today');
+  assert.deepEqual([monday.coming, monday.here], [3, 1]);
+  const after = campCardCounts(roster, cardDays, '2027-05-01');
+  assert.equal(after.mode, 'after');
+  assert.equal(after.coming, 0);
+  assert.deepEqual([after.came, after.cameOf], [1, 7]); // active campers only: 1 check-in of 7 signed-up days
+  // Nobody owes: To collect 0 (the card then says "All paid").
+  const allPaid = campCardCounts(roster.filter((r) => ['a', 'e', 'x'].includes(r.id)), cardDays, '2027-04-01');
+  assert.deepEqual([allPaid.toCollect, allPaid.toCollectCents], [0, 0]);
+  assert.equal(CampText.ALL_PAID, 'All paid');
+  // Nobody at all.
+  const none = campCardCounts([], cardDays, '2027-04-01');
+  assert.deepEqual([none.campers, none.coming, none.toCollect, none.recordedCents], [0, 0, 0, 0]);
+  // The filters: Coming keeps that day's campers, To collect the ones not paid, null everyone.
+  const monDay = cardDays[0];
+  assert.deepEqual(roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'coming', monDay)).map((r) => r.id), ['a', 'b', 'd']);
+  assert.deepEqual(roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'collect', monDay)).map((r) => r.id), ['b', 'c', 'd']);
+  assert.equal(roster.every((r) => matchesCardFilter(r, null, monDay)), true);
+  assert.equal(comesOnDay(roster[2], 'mon'), false);
+  assert.equal(comesOnDay(roster[2], 'tue'), true);
 });
 
 console.log(`${count} groups of checks ran.`);

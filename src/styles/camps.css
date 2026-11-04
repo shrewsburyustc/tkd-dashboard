@@ -398,25 +398,17 @@
   font-weight: 400;
 }
 
-/* "9 of 15 here · 6 not here yet" / "13 paid · 5 to collect · $1,040" */
-.cp-statline {
-  margin: 0 0 var(--space-12);
-  font-size: var(--text-14);
-}
-
-.cp-statline {
+/* "Updated 2:41:07 PM" on its own line, on the right, above the count cards (design review C10,
+   rulebook v0.737, picture 18; the cards themselves are the shared .ev-cards). A camp nobody
+   signed up for has no cards: the line then keeps the old summary line's space under it. */
+.cp-updated-line {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-4) var(--space-24);
+  justify-content: flex-end;
+  margin: 0 0 var(--space-4);
 }
 
-/* The big numbers of option A: "9 of 15 here", "13 paid" */
-.cp-big {
-  margin-right: var(--space-4);
-  font-size: 22px; /* the option A summary numbers (approved image) */
-  font-weight: 500;
-  line-height: 1.2;
+.cp-updated-line.is-alone {
+  margin-bottom: var(--space-12);
 }
 
 .cp-name {
@@ -714,11 +706,6 @@
   vertical-align: middle;
 }
 
-/* "All paid" in the summary line when nothing is owed */
-.cp-allpaid {
-  font-weight: 500;
-}
-
 /* (The old "short camp" look — a narrow table for 1–2 days, review 13 — was removed after the
    live test 2026-10-21: the roster always spans the whole width; see .cp-rcol-day above.) */
 
@@ -735,9 +722,8 @@
   text-align: center;
 }
 
-/* "Updated 2:41:07 PM" at the end of the summary line: quiet gray, pushed to the right */
+/* "Updated 2:41:07 PM": quiet gray (on .cp-updated-line, right, above the count cards) */
 .cp-updated {
-  margin-left: auto;
   color: var(--color-text-secondary);
   font-size: var(--text-12);
   font-variant-numeric: tabular-nums;

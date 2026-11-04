@@ -491,10 +491,24 @@ export const MORE_CAMP_ACTIONS = 'More actions for this camp'; // (not in the mo
 export const NO_CAMPERS = 'No campers yet. Families sign up with the Registration link.'; // (§7.3)
 
 // ----- The one roster (CP5, 2026-10-21, Camps-one-roster.html + Camps-multiweek-roster.html option A) -----
-// Summary line: "9 of 15 here today  5 to collect · $1,040  Pizza party today: 11" (the numbers are drawn big)
-export const hereTodayOf = (total, short) => (short ? `of ${total} here` : `of ${total} here today`);
-export const comingOnDay = (day) => `coming on ${dayLong(day)}`; // (not in the mockups) no camp today: the next camp day
-export const toCollectShort = 'to collect';
+// The count cards above Find a camper (design review C10, rulebook v0.737, picture 18; they replace
+// the old summary line "9 of 15 here today  5 to collect · $1,040  Pizza party today: 11"):
+// Campers · Coming today ("9 here") / Coming Mon, Apr 19 · To collect ("$1,355" / "All paid") ·
+// Payments recorded. After the camp the Coming card is "Came" ("142" / "of 150 days").
+export const CARD_CAMPERS = 'Campers';
+export const CARD_COMING_TODAY = 'Coming today';
+export const cardComingOn = (day) => `Coming ${dayLong(day)}`; // before the camp / between camp days: the next camp day
+export const cardHere = (n) => `${n} here`; // under Coming today: checked in today
+export const CARD_CAME = 'Came';
+export const cardOfDays = (n) => `of ${n} ${n === 1 ? 'day' : 'days'}`;
+export const CARD_TO_COLLECT = 'To collect';
+export const ALL_PAID = 'All paid'; // under To collect when nobody owes
+export const CARD_PAYMENTS = 'Payments recorded';
+// The gray line while a card filters the roster (the shared part adds " · Show all").
+export const SHOWING_COMING_TODAY = 'Showing coming today only';
+export const showingComingOn = (day) => `Showing coming ${dayLong(day)} only`;
+export const SHOWING_TO_COLLECT = 'Showing to collect only';
+export const NO_MATCH_FILTER = 'No campers match.'; // (not in the mockups) a card filter (with or without Find a camper) leaves nobody, as Star's "No candidates match."
 export const ROSTER_LABEL = 'Campers'; // (not in the mockups) screen readers: the roster table
 export const COL_PAID = 'Paid';
 export const dueTag = (cents) => `${formatMoney(cents)} due`;
@@ -534,10 +548,6 @@ export const rosterLegendParts = (touch) => ({
   missed: 'didn’t come',
   rest: ' · — not signed up that day',
 });
-// A finished camp's summary: "Came 142 of 150 days"; nothing owed: "All paid". (not in the mockups)
-export const CAME_WORD = 'Came';
-export const ofDays = (n) => ` of ${n} ${n === 1 ? 'day' : 'days'}`;
-export const ALL_PAID = 'All paid';
 export const FIND_CAMPER = 'Find a camper';
 export const CHECK_IN = 'Check in';
 export const checkedInToast = (name, stamp) => `${name} checked in · ${clockTime(stamp)}`;
@@ -545,8 +555,11 @@ export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (n
 export const checkInFailed = (name) => `${name} wasn't checked in. Check the connection and try again.`; // (not in the mockups)
 export const undoCheckInFailed = (name) => `${name}'s check-in wasn't undone. Check the connection and try again.`; // (not in the mockups)
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
-// "Pizza party today: 15" — the number is drawn big. Another day: "Pizza party: 12" (not in the mockups).
-export const extraTodayLine = (name, isToday = true) => (isToday ? `${name} today:` : `${name}:`);
+// "Pizza party today: 11" — the gray line under the count cards, only on a day the extra is offered
+// (an extra offered only on some days); several such extras are joined with " · ".
+export const extraTodayLine = (name) => `${name} today:`;
+export const extraTodayCount = (name, n) => `${extraTodayLine(name)} ${n}`;
+export const EXTRAS_JOIN = ' · ';
 // Paid tags, the camper menu. The tag opens the shared Mark paid box (components/MarkPaidBox.jsx,
 // rulebook v0.735), whose own words ("Paid by", "Mark paid $166", "They chose Cash on the form.")
 // are in components/text.js.

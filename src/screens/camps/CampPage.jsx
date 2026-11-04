@@ -10,15 +10,15 @@
 //     C11) and ⋯ (on phones the button keeps its words and sits on its own line under the name)
 //     (Edit camp (admin) · Close / Open sign-up · Save as template (admin) · Print roster ·
 //     Delete camp (admin) — CampRowMenu.jsx)
-//   - the roster (CampRoster.jsx): summary line, Find a camper, possible duplicates, the week switch
+//   - the roster (CampRoster.jsx): the count cards (C10, rulebook v0.737), Find a camper, possible duplicates, the week switch
 //     for camps longer than one calendar week, one row per child with Paid and a column per day,
 //     then Removed
 // Every name opens Camper detail (CamperDialog.jsx; on touch screens it also holds the row's ⋯
 // actions). The page reloads quietly every 15 seconds (useLiveLoad), so family sign-ups and
 // check-ins on another device show up by themselves. If those quiet reloads keep failing (2 in a
 // row — e.g. the Wi-Fi dropped), an amber "Couldn't refresh the roster." bar with Retry appears
-// above the roster, so the page never just looks frozen (live test 2026-10-21); the roster's
-// summary line also says when it was last updated. Every change goes to the database
+// above the roster, so the page never just looks frozen (live test 2026-10-21); the roster
+// also says when it was last updated ("Updated …", above the count cards). Every change goes to the database
 // (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
 // toast — since rulebook v0.726 also Edit camp, Edit details and Edit payment ("Payment changed");
 // permanent ones ask first (rule 1.4), and so does Undo payment (rulebook v0.730). Staff and admins see different ⋯ items
@@ -28,7 +28,8 @@
 //
 // "Hide private details" (the top-bar switch, src/lib/privateDetails.js; rulebook v0.722, design
 // review C1) — copied from Color Belt's built event page (v0.412). While it is on, Camps hides
-// money: no Paid column / "to collect" / Mark paid (CampRoster), gray "Hidden on this tablet" in
+// money: no Paid column / To collect and Payments recorded cards (a To collect filter is cleared) /
+// Mark paid (CampRoster), gray "Hidden on this tablet" in
 // Camper detail, Compare and Edit details, no money items in ⋯ / "More", "any recorded payment" in
 // the delete sentences, no amounts in toasts. Turning it on closes the payment dialogs (Change how
 // they'll pay, Edit payment, the Undo payment box), the ⋯ menu, the toast and every banner (they may name money or carry
@@ -161,6 +162,9 @@ export default function CampPage({
   const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
   const [query, setQuery] = useState('');
+  // The pressed count card (C10, rulebook v0.737): null | 'coming' | 'collect'. Kept here beside
+  // Find a camper's text; another camp starts without one (Camps.jsx draws this page with key={campId}).
+  const [filter, setFilter] = useState(null);
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByCamp.get(campId) ?? true);
   const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
   const busyRef = useRef(false);
@@ -317,6 +321,8 @@ export default function CampPage({
     // marked paid" names paid status. The row's Not saved mark goes with it.
     setBanner(null);
     setNotSavedId(null);
+    // The To collect card goes, so its filter does too (as Star clears its payment filter).
+    if (filter === 'collect') setFilter(null);
     // (only when the switch changes)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailsHidden]);
@@ -1221,6 +1227,8 @@ export default function CampPage({
         pairs={pairs}
         query={query}
         onQuery={setQuery}
+        filter={filter}
+        onFilter={setFilter}
         removedOpen={removedOpen}
         onToggleRemoved={() => setRemovedOpen(!removedOpen)}
         layout={layout}
