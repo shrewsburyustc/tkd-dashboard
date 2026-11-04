@@ -19,6 +19,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
+import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
 import { PC_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -753,9 +754,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>
           <p className="psub">{both ? T.BOTH_SCHOOLS : location}</p>
         </div>
-        <button type="button" className="icon-button" aria-label={T.MORE_ACTIONS} aria-haspopup="menu" onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })}>
-          <IconDots size={20} aria-hidden="true" />
-        </button>
+        <IconButton label={T.MORE_ACTIONS} aria-haspopup="menu" aria-expanded={menu ? 'true' : 'false'} onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })} Icon={IconDots} />
         {/* grayed but still focusable while private details are hidden (v0.616); the line below says why */}
         <button
           type="button"

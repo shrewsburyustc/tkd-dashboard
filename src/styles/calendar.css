@@ -36,6 +36,17 @@
   gap: var(--space-4);
 }
 
+/* "Previous month" is at the left edge: its tooltip opens to the right so it isn't cut off */
+.ctoolbar-nav > .tib:first-child .tib-tip {
+  right: auto;
+  left: 0;
+}
+
+.ctoolbar-nav > .tib:first-child .tib-tip::after {
+  right: auto;
+  left: 9px;
+}
+
 .ctoolbar-title {
   min-width: 9.5em;
   margin: 0 var(--space-8);

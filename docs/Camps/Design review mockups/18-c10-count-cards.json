@@ -1,0 +1,37 @@
+{
+  "title": "Camps C10 — four count cards replace the summary line",
+  "subtitle": "Rules v1.013 and v1.014 (count cards filter, a money total is never a button), v1.107 (the shared row, <code>components/CountCards.jsx</code>, approved as M6), v1.115 (a card’s small note under the number) and v1.117 (the gray “Showing … only · Show all” line). Walkthrough picture 11b chose option B: Camps’ own four cards. Today a camp page has one summary line (“15 coming on Mon, Apr 19 · 6 to collect · $1,355 · Updated …”) that can’t be tapped. After: <b>(1)</b> four cards — <b>Campers</b> (everyone) · <b>Coming [day]</b> (filter) · <b>To collect</b> (filter; the number is campers who still owe, the money under it) · <b>Payments recorded</b> (a total, not a button). <b>(2)</b> “Coming” means: before the camp, its first day (“Coming Mon, Apr 19”); on a camp day, “Coming today” with “9 here” under it; between camp days, the next camp day; after the camp the card becomes <b>Came</b> (“9” / “of 9 days”, not a button). <b>(3)</b> Nobody owes: To collect 0, “All paid”. <b>(4)</b> The pizza count (an extra offered only on some days) moves to the cards’ own gray line under the row, only on that day. <b>(5)</b> Tapping Coming shows only that day’s campers, with “Showing coming today only · Show all”; To collect: “Showing to collect only · Show all”; the filter and Find a camper work together; in a two-week camp, if the Coming day is in the other week, the tap also moves the week switch to that week. <b>(6)</b> Hide private details on: only Campers and Coming. <b>(7)</b> “Updated …” on the right, above the cards. <b>(8)</b> Phones: two by two (the shared row does that itself). Preview numbers are real except where a caption says <b>sample</b>. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/c10-pc-today.png", "crop": [60, 90, 1220, 270], "scale": 0.68, "marks": [[76, 184, 1180, 27]],
+        "caption": "<b>PC 1280×800.</b> April Vacation Camp (before the camp): one line, “15 coming on Mon, Apr 19 · 6 to collect · $1,355”, “Updated …” at its right end. Nothing can be tapped." },
+      { "src": "shots/c10-tab-today.png", "crop": [72, 90, 748, 300], "scale": 0.68, "shotWidth": 820, "marks": [[96, 219, 700, 27]],
+        "caption": "<b>Tablet 820×1180 touch.</b> The money ($1,355) is left out on tablets." },
+      { "row": [
+        { "src": "shots/c10-ph-today.png", "crop": [0, 90, 390, 520], "scale": 0.62, "shotWidth": 390, "marks": [[16, 283, 358, 49]],
+          "caption": "<b>Phone 390×844 touch.</b> “Updated” wraps under the numbers." },
+        { "src": "shots/c10-320-today.png", "crop": [0, 90, 320, 520], "scale": 0.62, "shotWidth": 320, "marks": [[16, 283, 288, 49]],
+          "caption": "<b>320 wide.</b>" }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "src": "shots/c10-pc-before.png", "crop": [60, 90, 1220, 270], "scale": 0.68, "marks": [[76, 184, 1180, 116]],
+        "caption": "<b>PC, before the camp</b> (April Vacation Camp, real preview numbers): Campers 19 · Coming Mon, Apr 19 15 · To collect 6 / $1,355 · Payments recorded $3,795. “Updated …” above the cards, on the right." },
+      { "src": "shots/c10-pc-day.png", "crop": [60, 90, 1220, 710], "scale": 0.68, "marks": [[76, 184, 1180, 175]],
+        "caption": "<b>PC, on a camp day, Coming tapped</b> — <b>sample</b>: drawn as if Wed, Apr 21 were today, with “9 here” made up (the camp hasn’t started, so the “Not open yet” tag and the Check in buttons are as they are now). 16 coming that day and “Pizza party today: 11” are the camp’s real counts for Wed. The list shows only Wednesday’s campers; the pizza line sits right under the cards, above “Showing coming today only · Show all”." },
+      { "src": "shots/c10-pc-after.png", "crop": [60, 90, 1220, 270], "scale": 0.68, "marks": [[76, 184, 1180, 116]],
+        "caption": "<b>PC, after the camp</b> (Columbus Day Camp, Oct 12 — real preview numbers): <b>Came</b> 9 / of 9 days (not a button), To collect 0 / All paid, Payments recorded $702." },
+      { "src": "shots/c10-pc-hidden.png", "crop": [60, 30, 1220, 300], "scale": 0.68, "marks": [[76, 184, 1180, 94]],
+        "caption": "<b>PC, Hide private details on</b> (the real switch; see “Private details hidden” at the top): only Campers and Coming. The shared row keeps its four-column grid, so the two cards fill the left half." },
+      { "src": "shots/c10-tab-after.png", "crop": [72, 90, 748, 300], "scale": 0.8, "shotWidth": 820, "marks": [[96, 219, 700, 116]],
+        "caption": "<b>Tablet 820 touch.</b> Four in a row; the money is on the To collect card now (today’s tablet line leaves it out)." },
+      { "row": [
+        { "src": "shots/c10-ph-after.png", "crop": [0, 90, 390, 520], "scale": 0.62, "shotWidth": 390, "marks": [[16, 283, 358, 196]],
+          "caption": "<b>Phone 390 touch.</b> Two by two." },
+        { "src": "shots/c10-320-after.png", "crop": [0, 90, 320, 520], "scale": 0.62, "shotWidth": 320, "marks": [[16, 283, 288, 214]],
+          "caption": "<b>320.</b> “Coming Mon, Apr 19” and “Payments recorded” wrap to two lines." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>How it was drawn:</b> <code>mock-c10-cards.js</code> hides the real summary line and mounts the <b>real</b> shared row (<code>CountCards.jsx</code>) with the camp’s numbers, worked out the way <code>CampRoster.jsx</code> works out today’s line (<code>payTag</code>, <code>toCollectCents</code>, <code>extraCountOnDay</code>) from the preview’s own camp. Nothing in the app was changed. <b>Not drawn:</b> the two-week camp’s week switch moving when Coming is tapped (point 5) and the “between camp days” Coming (point 2) — both use the same card, only the day differs. <br><br><b>Your choice:</b> OK as drawn, or change a point (say which)."
+}

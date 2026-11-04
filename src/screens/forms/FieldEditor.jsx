@@ -4,6 +4,7 @@
 // straight into the draft (the builder saves as you go). The four contact fields can only be
 // relabelled (the lock); Book a class has its own settings below its label (BookingSettings).
 import { IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import { textProblem } from '../../lib/calendar/rules.js';
 import { CHOICE_TYPES, HELP_MAX, LABEL_MAX, LOCKED_TYPES, MAX_OPTIONS, OPTION_MAX, WAIVER_MAX, longTextProblem } from '../../lib/forms/fields.js';
@@ -78,9 +79,7 @@ export default function FieldEditor({ field, fields, readOnly, idBase, onChange,
                   onChange={(e) => onChange({ options: options.map((x, j) => (j === i ? e.target.value : x)) }, { renameOption: { from: o, to: e.target.value } })}
                 />
                 {options.length > 2 && (
-                  <button type="button" className="icon-button" aria-label={T.removeOption(o)} disabled={readOnly} onClick={() => onChange({ options: options.filter((_, j) => j !== i) }, { removeOption: o })}>
-                    <IconX size={16} aria-hidden="true" />
-                  </button>
+                  <IconButton label={T.removeOption(o)} disabled={readOnly} onClick={() => onChange({ options: options.filter((_, j) => j !== i) }, { removeOption: o })} Icon={IconX} />
                 )}
               </li>
             ))}

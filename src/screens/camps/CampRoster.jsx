@@ -15,31 +15,50 @@
 //          review C16: one icon per meaning, as Prospects and the Calendar; was ti-check / ti-x).
 //          The printed roster (PrintRoster.jsx) still prints ✓ / ✗ ·
 //   ⋯     (mouse only; on touch screens the ⋯ items live in Camper detail).
-// Above the table: the summary line ("9 of 15 here today  5 to collect · $1,040  Pizza party
-// today: 11"), Find a camper, and — only when the camp's days cross more than one calendar week —
+// Above the table: a quiet "Updated 2:41:07 PM" on the right, then the shared count cards
+// (components/CountCards.jsx; design review C10, rulebook v0.737, picture 18 — they replaced the old
+// summary line "9 of 15 here today  5 to collect · $1,040  Pizza party today: 11"):
+//   Campers (shows everyone) · Coming [day] (filters to that day's campers: "Coming today" with
+//   "9 here" under it on a camp day, else the next camp day, "Coming Mon, Apr 19"; after the camp
+//   the card is "Came" — days attended, "of 150 days", not a button) · To collect (filters to the
+//   campers who still owe; the money under the number, or "All paid") · Payments recorded (every
+//   payment of the camp, reversals taken off — a total, never a button).
+//   The numbers come from campRules.campCardCounts. Under the row, only on that day, the gray
+//   "Pizza party today: 11" line. A pressed card filters the roster ("Showing to collect only ·
+//   Show all"); the filter and Find a camper apply together, and "Removed" is hidden while a filter
+//   is on (as Star hides its removed candidates). Tapping Coming in a camp of more than one week
+//   moves the week switch to that day's week. The page (CampPage.jsx) keeps the filter, beside
+//   Find a camper's text.
+// Then Find a camper, and — only when the camp's days cross more than one calendar week —
 // the week switch ("Week 1 · Jul 6–10 | Week 2 · Jul 13–17"; each week shows only its own days,
-// Paid and "to collect" stay whole-camp). Below it: the possible-duplicate box (the shared
+// Paid and the cards stay whole-camp). Below it: the possible-duplicate box (the shared
 // components/DuplicateBox.jsx since rulebook v0.729), then "Removed".
 // Phones: one card per child — name + Paid on top, the week's day buttons underneath (today
 // outlined), 44px targets. The page (CampPage.jsx) does every write; this file only draws.
 // Live-test fixes (2026-10-21): the grid always spans the full width, even for a 1-day camp (the
 // Camper column takes the spare room); a camp with nobody signed up still shows the grid (headers,
 // week switch, legend) with "No campers yet…" as one row inside it, so a closed or past camp
-// never looks like it lost its roster; and the summary line ends with a quiet "Updated 2:41:07 PM".
+// never looks like it lost its roster; and "Updated 2:41:07 PM" stays (since C10 on its own line,
+// right, above the cards; a camp nobody signed up for shows only that line, no cards).
 // "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
-// v0.412): no Paid column (PC / tablet) and no money tags on the phone cards, no "N to collect ·
-// $X" / "All paid", and the Mark paid box can't open (an open one closes). A "Possible duplicate"
+// v0.412): no Paid column (PC / tablet) and no money tags on the phone cards, only the Campers and
+// Coming (or Came) cards (To collect and Payments recorded go, and a To collect filter is cleared
+// by the page), and the Mark paid box can't open (an open one closes). A "Possible duplicate"
 // tag isn't money: on PC / tablet it moves onto the name's line, on phones it stays on its card.
-// Check-in, "here today", Find a camper, the extra counts and "Updated …" stay.
-// Money ("to collect · $1,040", the tags) is written by the shared formatMoney (src/lib/money.js;
+// Check-in, "here", Find a camper, the extra counts and "Updated …" stay.
+// Money ("$1,355", the tags) is written by the shared formatMoney (src/lib/money.js;
 // rulebook v0.732, design review C17), as every section does.
 import { useEffect, useState } from 'react';
-import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconUserCheck, IconUserX } from '@tabler/icons-react';
+import {
+  IconAlertTriangle, IconCalendarEvent, IconChevronDown, IconChevronUp, IconCircleX, IconDots, IconSearch, IconSum, IconUserCheck, IconUsers, IconUserX,
+} from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
+// The shared row of count cards (design review M6 / C10, rulebook v1.013 and v0.737)
+import CountCards from '../../components/CountCards.jsx';
 // The shared Mark paid box (design review C2, rulebook v0.735) under the "$X due" / "Owes $X" tag
 import MarkPaidBox from '../../components/MarkPaidBox.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, payingByChoiceWhere, toCollectCents } from '../../lib/camps/campRules.js';
+import { campCardCounts, extraCountOnDay, extraOfferedOn, matchesCardFilter, missingExtraOnDay, payTag, payingByChoiceWhere } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { formatMoney } from '../../lib/money.js';
 import DuplicateBox from '../../components/DuplicateBox.jsx';
@@ -195,6 +214,8 @@ export default function CampRoster({
   pairs,
   query,
   onQuery,
+  filter = null, // the pressed count card: null | 'coming' | 'collect' (C10; kept by the page)
+  onFilter, // (null | 'coming' | 'collect') => void
   removedOpen,
   onToggleRemoved,
   layout, // { isPhone, isTouch, isWide }
@@ -216,41 +237,69 @@ export default function CampRoster({
   // Today's notes under the names only while the shown week has today in it (review 12).
   const noteDay = todayDay && shownDays.some((d) => d.dayId === todayDay.dayId) ? todayDay : null;
 
-  // ----- The summary line -----
-  const comes = (row, dayId) => (row.days ?? []).some((d) => d.dayId === dayId);
-  let first;
-  if (todayDay) {
-    const coming = active.filter((r) => comes(r, todayDay.dayId));
-    const here = coming.filter((r) => r.days.find((d) => d.dayId === todayDay.dayId)?.checkedInAt);
-    first = (
-      <span>
-        <span className="cp-big">{here.length}</span>
-        {T.hereTodayOf(coming.length, isPhone)}
-      </span>
-    );
-  } else {
-    const next = days.find((d) => d.day > today) ?? null;
-    first = next ? (
-      <span>
-        <span className="cp-big">{active.filter((r) => comes(r, next.dayId)).length}</span>
-        {T.comingOnDay(next.day)}
-      </span>
-    ) : (
-      // The camp is over: how many of the signed-up days were attended ("Came 142 of 150 days").
-      <span>
-        {T.CAME_WORD} <span className="cp-big">{active.reduce((n, r) => n + (r.days ?? []).filter((d) => d.checkedInAt).length, 0)}</span>
-        {T.ofDays(active.reduce((n, r) => n + (r.days ?? []).length, 0))}
-      </span>
-    );
+  // ----- The count cards (design review C10, rulebook v0.737, picture 18) -----
+  // Every number comes from campRules.campCardCounts (tested in checks.mjs). Payments recorded
+  // counts the removed campers' payments too (money taken is money taken, as Finance counts it).
+  const counts = campCardCounts([...active, ...removed], days, today);
+  const cardDay = counts.day; // the Coming card's camp day (null after the camp)
+  // A filter only works while its card is on screen: Coming is gone after the camp (it became
+  // Came), To collect while Hide private details is on (the page also clears it then).
+  const shownFilter = (filter === 'coming' && cardDay) || (filter === 'collect' && !detailsHidden) ? filter : null;
+  const comingCard = cardDay
+    ? {
+        key: 'coming',
+        Icon: IconCalendarEvent, // ti-calendar-event = a day's campers
+        label: counts.mode === 'today' ? T.CARD_COMING_TODAY : T.cardComingOn(cardDay.day),
+        value: String(counts.coming),
+        note: counts.mode === 'today' ? T.cardHere(counts.here) : null,
+        kind: 'filter',
+      }
+    : // The camp is over: how many of the signed-up days were attended — a total, not a button.
+      { key: 'came', Icon: IconUserCheck, label: T.CARD_CAME, value: String(counts.came), note: T.cardOfDays(counts.cameOf), kind: 'total' };
+  const cards = [
+    { key: 'all', Icon: IconUsers, label: T.CARD_CAMPERS, value: String(counts.campers), kind: 'all' },
+    comingCard,
+    // Hidden: neither To collect nor Payments recorded (both say who paid / how much).
+    ...(detailsHidden
+      ? []
+      : [
+          {
+            key: 'collect',
+            Icon: IconCircleX, // ti-circle-x = not paid (as Star's Not paid)
+            label: T.CARD_TO_COLLECT,
+            value: String(counts.toCollect),
+            // The money on every screen size (picture 18); nobody owes → "All paid".
+            note: counts.toCollect === 0 ? T.ALL_PAID : formatMoney(counts.toCollectCents),
+            kind: 'filter',
+          },
+          { key: 'recorded', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(counts.recordedCents), kind: 'total' }, // ti-sum = a money total
+        ]),
+  ];
+  // The gray line under the cards, only on a camp day: each extra offered only on some days and
+  // offered today, with its count ("Pizza party today: 11").
+  const dayExtras = counts.mode === 'today' ? extras.filter((e) => e.per === 'day' && (e.onlyOn ?? []).length > 0 && extraOfferedOn(e, cardDay.day)) : [];
+  const extrasNote = dayExtras.map((e) => T.extraTodayCount(e.name, extraCountOnDay(active, e, cardDay.dayId, days))).join(T.EXTRAS_JOIN) || null;
+  const showingText =
+    shownFilter === 'coming' ? (counts.mode === 'today' ? T.SHOWING_COMING_TODAY : T.showingComingOn(cardDay.day)) : shownFilter === 'collect' ? T.SHOWING_TO_COLLECT : '';
+  // A card was pressed (key = 'coming' / 'collect' to filter, null = everyone). Coming in a camp of
+  // more than one week also moves the week switch to the week with that day, so its column shows.
+  function selectCard(key) {
+    onFilter(key);
+    if (key === 'coming' && cardDay && weeks.length > 1) {
+      const index = weeks.findIndex((w) => w.days.some((d) => d.dayId === cardDay.dayId));
+      if (index !== -1 && index !== weekIndex) onWeek(index);
+    }
   }
-  const toCollect = active.filter((r) => payTag(r) !== 'paid').length;
-  const dayExtras = todayDay ? extras.filter((e) => e.per === 'day' && (e.onlyOn ?? []).length > 0 && extraOfferedOn(e, todayDay.day)) : [];
 
-  // ----- Search -----
+  // ----- Search and the card filter (both apply together) -----
   const q = query.trim().toLowerCase();
   const match = (row) => !q || `${row.firstName} ${row.lastName}`.toLowerCase().includes(q);
-  const rows = active.filter(match).sort(byFirstName);
-  const removedRows = removed.filter(match).sort(byFirstName);
+  const rows = active.filter((row) => match(row) && matchesCardFilter(row, shownFilter, cardDay)).sort(byFirstName);
+  // While a card filters, "Removed" is hidden (they aren't in the counts; as Star's roster does).
+  const removedRows = shownFilter ? [] : removed.filter(match).sort(byFirstName);
+  // Find a camper and / or a card left nobody: one gray row says so (a card's words win, since
+  // "No camper with that name." would be wrong when the name exists but is filtered out).
+  const noMatchText = active.length > 0 && rows.length === 0 && (q || shownFilter) ? (shownFilter ? T.NO_MATCH_FILTER : T.NO_MATCH_ROSTER) : null;
 
   const popoverRow = popover ? active.find((r) => r.id === popover.rowId) : null;
   // The camper was paid meanwhile (another device), or Hide private details was switched on: the
@@ -371,7 +420,7 @@ export default function CampRoster({
             </div>
           );
         })}
-        {q && rows.length === 0 && active.length > 0 && <p className="tempty">{T.NO_MATCH_ROSTER}</p>}
+        {noMatchText && <p className="tempty">{noMatchText}</p>}
         {/* Nobody signed up (yet): the sentence takes the cards' place, under the week switch. */}
         {active.length === 0 && <p className="tempty cp-rempty">{T.NO_CAMPERS}</p>}
       </div>
@@ -438,10 +487,10 @@ export default function CampRoster({
                 </tr>
               );
             })}
-            {q && rows.length === 0 && active.length > 0 && (
+            {noMatchText && (
               <tr>
                 <td colSpan={columns} className="tempty">
-                  {T.NO_MATCH_ROSTER}
+                  {noMatchText}
                 </td>
               </tr>
             )}
@@ -496,29 +545,11 @@ export default function CampRoster({
 
   return (
     <div className="cp-roster-area">
-      {!hasCampers ? (
-        // No campers at all: counts would only read "0 of 0", so the line keeps just "Updated …".
-        updated && <p className="cp-statline">{updated}</p>
-      ) : (
-      <p className="cp-statline">
-        {first}
-        {/* Hidden: neither "N to collect · $X" nor "All paid" (both say who paid). */}
-        {detailsHidden ? null : toCollect === 0 ? (
-          <span className="cp-allpaid">{T.ALL_PAID}</span>
-        ) : (
-          <span>
-            <span className="cp-big">{toCollect}</span>
-            {T.toCollectShort}
-            {isWide && ` · ${formatMoney(toCollectCents(active))}`}
-          </span>
-        )}
-        {dayExtras.map((extra) => (
-          <span key={extra.extraId}>
-            {T.extraTodayLine(extra.name)} <span className="cp-big">{extraCountOnDay(active, extra, todayDay.dayId, days)}</span>
-          </span>
-        ))}
-        {updated}
-      </p>
+      {/* "Updated …" on its own line, on the right, above the cards (picture 18). */}
+      {updated && <p className={`cp-updated-line${hasCampers ? '' : ' is-alone'}`}>{updated}</p>}
+      {/* No campers at all: the cards would only read 0, so there are none (only "Updated …"). */}
+      {hasCampers && (
+        <CountCards cards={cards} selected={shownFilter} onSelect={selectCard} showingText={showingText} note={extrasNote} />
       )}
       {/* Find a camper only when there is someone to find. */}
       {hasCampers && (
