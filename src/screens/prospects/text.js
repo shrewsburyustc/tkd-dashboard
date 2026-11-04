@@ -247,6 +247,8 @@ export const WHICH_SCHOOL = 'School';
 
 // ----- Statuses -----
 export const STATUSES_TITLE = 'Edit statuses';
+export const UNSAVED = 'Unsaved changes. Save or cancel first.';
+export const DISCARD_CHANGES = 'Discard changes';
 export const statusesSub = (school) => `${school} · stages show in the bar, side exits as chips beside it`;
 export const ADD_STATUS = 'Add status';
 export const EDIT_STATUS = 'Edit status';

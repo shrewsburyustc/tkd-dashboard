@@ -35,6 +35,10 @@ export function checkTypeForm(state, types) {
   };
 }
 
+// Phones have no Cancel in the Add / Edit step, so these notes hold "Discard changes", which goes
+// back to the list (v0.56; the same notes as the Calendar's EventDialog).
+const PHONE_DISCARD_NOTES = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED'];
+
 const NOTES = {
   UNSAVED: T.UNSAVED,
   STALE_DIALOG: T.STALE_DIALOG,
@@ -225,7 +229,18 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
           </div>
         </fieldset>
 
-        {isPhone && noteBlock}
+        {isPhone && state.note && NOTES[state.note] && (
+          <div className="tdialog-note">
+            <Notice>
+              {state.note === 'STALE_DIALOG' ? T.STALE_DIALOG_PHONE : NOTES[state.note]}
+              {PHONE_DISCARD_NOTES.includes(state.note) && (
+                <button type="button" className="note-action" onClick={() => onStep('list')}>
+                  {T.DISCARD_CHANGES}
+                </button>
+              )}
+            </Notice>
+          </div>
+        )}
         {isPhone ? (
           <>
             <div className="dialog-page-submit">{saveButton}</div>
