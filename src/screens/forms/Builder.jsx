@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconArrowDown, IconArrowLeft, IconArrowUp, IconDots, IconEye, IconGitBranch, IconLock, IconPlus, IconSettings, IconShare, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
@@ -574,9 +575,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
                     {LOCKED_TYPES.includes(f.type) && <IconLock size={12} aria-label={T.LOCKED} className="flock" />}
                   </span>
                 </button>
-                <button type="button" className="icon-button" aria-label={T.fieldMore(f.label)} aria-haspopup="menu" onClick={(e) => setMenu({ kind: 'field', anchor: e.currentTarget, field: f, index: i })}>
-                  <IconDots size={20} aria-hidden="true" />
-                </button>
+                <IconButton label={T.fieldMore(f.label)} aria-haspopup="menu" aria-expanded={menu?.kind === 'field' && menu.field.id === f.id ? 'true' : 'false'} onClick={(e) => setMenu({ kind: 'field', anchor: e.currentTarget, field: f, index: i })} Icon={IconDots} />
               </li>
             );
             return row;
