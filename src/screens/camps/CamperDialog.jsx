@@ -10,6 +10,8 @@
 //     app that shows them — they come from camp_camper_detail, never from the lists)
 //   - Sign-up: "Signed up on the family form, Mar 3, 2027 · waiver signed on the form · reference
 //     CP-4821" ("signature deleted after 3 years" after the purge)
+//   - History: the shared line "History · 5 changes ›" (CamperHistory.jsx; design review C7,
+//     rulebook v0.736) — on touch screens just above More, which stays last
 // Edit details turns the summary into fields (Star v0.112 / Color Belt): child (names, age 1–99,
 // member), days, extras (per-day extras ask which days), parent and emergency contact. Changing
 // days, member or extras prices the WHOLE camper again at the camp's current prices (v0.700,
@@ -46,7 +48,8 @@
 // (`hidden` is something else: the screen is locked — the dialog keeps its values but isn't drawn.)
 //
 // Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
-//        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
+//        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones),
+//        familySize (how many campers are on this camper's sign-up — History's "(whole family)"), isPhone,
 //        hidden, detailsHidden, startInEdit, onClose(), onSaved(undo) (undo() = save the old details again — the toast's Undo, v0.726), onNoAccess, onRefreshProfile,
 //        onPrintReceipt(opener) (PC / tablet without touch only, else null — v0.734)
 import { Fragment, useEffect, useId, useState } from 'react';
@@ -60,6 +63,8 @@ import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, 
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { CamperTag } from './CampRoster.jsx';
+// The History line after Sign-up (design review C7, rulebook v0.736)
+import CamperHistory from './CamperHistory.jsx';
 import * as T from './text.js';
 
 const NOTES = {
@@ -142,7 +147,7 @@ function weekLines(b, myDayObjs, prices) {
   return weeks;
 }
 
-export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile, onPrintReceipt = null }) {
+export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, familySize = 1, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile, onPrintReceipt = null }) {
   const idBase = useId();
   const [load, setLoad] = useState({ status: 'loading', detail: null });
   const [mode, setMode] = useState(startInEdit ? 'edit' : 'view');
@@ -314,6 +319,12 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
 
         <h3 className="cp-detail-head">{T.HEAD_SIGNUP}</h3>
         <p className="cp-signup-line">{T.signupLine(camper)}</p>
+
+        {/* The shared one-line History ends the summary (C7, v0.736): after Sign-up, and on touch
+            just above More (More stays last). It reads the history itself when it appears. */}
+        <div className="cp-detail-history">
+          <CamperHistory camper={camper} campDays={days} campExtras={extras} familySize={familySize} hidden={detailsHidden} onNoAccess={onNoAccess} />
+        </div>
 
         {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). Shown whenever
             there is an item besides Edit details — even while one is loading and the items are

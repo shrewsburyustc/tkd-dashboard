@@ -325,14 +325,28 @@ export async function changePayingBy(camperId, expectedVersion, payingBy) {
   return callRpc('camp_change_paying_by', { p_camper_id: camperId, p_expected_version: expectedVersion, p_paying_by: payingBy }, hasVersion);
 }
 
-// Mark paid: one click records what the camper owes now, the way they said they'd pay, today.
+// Mark paid: records what the camper owes now, today, the way picked in the shared Mark paid box.
 // school = the school whose desk took the money ('worcester' | 'shrewsbury', v0.707 — work it out
 // with campRules.paymentSchoolFor from this device's home school — never asked, owner decision 2026-10-19).
-// → { status:'ok', paymentId, amountCents, method, version, school } · 'already_paid' · 'stale'
-//   (double click) · { status:'invalid', field:'school' }
-export async function markPaid(camperId, expectedVersion, school) {
-  return callRpc('camp_mark_paid', { p_camper_id: camperId, p_expected_version: expectedVersion, p_school: school },
-    (d) => isText(d.paymentId) && isInt(d.amountCents) && isText(d.method) && hasVersion(d));
+// method = 'cash' | 'check' | 'card' (migration 0033, rulebook v0.735), or null / left out = the
+// camper's Paying by. A different way also changes the camper's Paying by (Undo payment puts it back).
+// → { status:'ok', paymentId, amountCents, method, version, school, payingBy } · 'already_paid' ·
+//   'stale' (double click) · { status:'invalid', field:'school' | 'method' }
+export async function markPaid(camperId, expectedVersion, school, method = null) {
+  // p_method is only sent when there is one (the database gives it a default).
+  const args = { p_camper_id: camperId, p_expected_version: expectedVersion, p_school: school };
+  if (method !== null && method !== undefined) args.p_method = method;
+  return callRpc('camp_mark_paid', args, (d) => isText(d.paymentId) && isInt(d.amountCents) && isText(d.method) && hasVersion(d));
+}
+
+// The camper's history (migration 0033, rulebook v0.736; camp_camper_history, staff and admins):
+// the change log of the camper, their days and extras (no check-ins), their payments and their
+// sign-up (shared by brothers and sisters), newest first, at most 500 rows, no login ids.
+// → { status:'ok', rows: [{ occurredAt, actorName, tableName, op, batchId, action, before, after }] }
+//   (before / after: the changed columns, in camelCase like everything here) · 'no_access' ·
+//   'not_found' · 'error'. Never throws (CamperHistory.jsx's reader throws for HistoryLine).
+export async function loadCamperHistory(camperId) {
+  return callRpc('camp_camper_history', { p_camper_id: camperId }, (d) => Array.isArray(d.rows));
 }
 
 // Undo payment: admins any time (⋯ → Undo payment); staff only their own Mark paid, within 10

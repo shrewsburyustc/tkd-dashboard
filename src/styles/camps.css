@@ -451,27 +451,6 @@
   padding-left: 36px;
 }
 
-/* The small box with Mark paid under a Not paid / Owes note */
-.cp-popover {
-  position: fixed;
-  z-index: 45;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
-  max-width: 280px;
-  padding: var(--space-12);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.cp-popover-line {
-  margin: 0;
-  font-size: var(--text-13);
-}
-
 /* ===== C6 Camper detail / Edit details ===== */
 .cp-detail-head {
   margin: var(--space-16) 0 var(--space-4);
@@ -488,6 +467,13 @@
 .cp-signup-line {
   margin: 0 0 var(--space-8);
   font-size: var(--text-13);
+}
+
+/* The History line after Sign-up (C7, rulebook v0.736): 12px above it in all (the Sign-up line's 8px
+   + 4px), as Star's summary parts (.st-detail-part + .st-detail-part); the line and its list are
+   the shared part's (shared.css .hist-*). */
+.cp-detail-history {
+  margin-top: var(--space-4);
 }
 
 .cp-chips {

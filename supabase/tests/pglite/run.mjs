@@ -433,6 +433,17 @@
 //       SETUP.md 0032e (manual/0032u: refused with a 12:05 testing day,
 //       then back to 0016's rule) - see step0032 below. Run only this
 //       step with   node run.mjs --only-step0032
+//   step0033. 0033 (Camps design review: Mark paid with a way to pay and
+//       the Camper history line, v0.735 / v0.736) on its own database in
+//       the production order with every live migration on this branch
+//       (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031): the
+//       pre-apply check, the backfill (no history row, no version moved),
+//       only the planned 0013 / 0022 items move, the old app's 3-input
+//       Mark paid as role authenticated (named and positional), 0033's
+//       tests and the camps and Finance tests, the reader's speed on a
+//       big history, re-run safety, and the Undo of SETUP.md 0033f
+//       (manual/0033u) - see step0033 below. Run only this step with
+//       node run.mjs --only-step0033
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -477,6 +488,7 @@ const onlyStep0029 = process.argv.includes('--only-step0029');
 const onlyStep0028 = process.argv.includes('--only-step0028');
 const onlyStep0031 = process.argv.includes('--only-step0031');
 const onlyStep0032 = process.argv.includes('--only-step0032');
+const onlyStep0033 = process.argv.includes('--only-step0033');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -685,6 +697,15 @@ async function main() {
     if (prints32) {
       console.log('\n0032 fingerprints (kind  item  detail):');
       for (const line of prints32) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0033: just the Camps design review step (0033)
+  if (onlyStep0033) {
+    const prints33 = await step0033();
+    if (prints33) {
+      console.log('\n0033 fingerprints (kind  item  detail):');
+      for (const line of prints33) console.log('  ' + line);
     }
     return finish();
   }
@@ -951,6 +972,9 @@ async function main() {
   // step0032: Black Belt's design-review database half (its own database, production order)
   console.log('\nMigration 0032 (Black Belt: 5-minute times, candidate history, Edit cycle Undo in one call):');
   const after32 = after5 ? await step0032() : null;
+  // step0033: Camps design review - Mark paid with a way, Camper history (its own database, production order)
+  console.log('\nMigration 0033 (Camps design review: Mark paid with a way to pay, Camper history):');
+  const after33 = after5 ? await step0033() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -1049,6 +1073,10 @@ async function main() {
   if (after32) {
     console.log('\n0032 fingerprints (kind  item  detail):');
     for (const line of after32) console.log('  ' + line);
+  }
+  if (after33) {
+    console.log('\n0033 fingerprints (kind  item  detail):');
+    for (const line of after33) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -7109,6 +7137,384 @@ async function step0032() {
   }
   await db.close().catch(() => {});
   return prints32;
+}
+
+// =====================================================================
+// step0033: Camps design review - Mark paid with a way to pay, Camper
+// history (0033, rulebook v0.735 / v0.736)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration on this branch (liveOrderTo0025, then 0027, 0026, 0028,
+// 0029 and 0031; Color Belt's 0030 is live too but not on this branch -
+// it touches only Color Belt's testing_* objects):
+//   a. 0033_fingerprints.sql and 0033_preapply_check.sql are
+//      connector-safe (no "delete" / "drop")
+//   b. three campers BEFORE 0033: two signed up through the family form
+//      (Bo's Paying by then changed at the desk) and one added with no
+//      history insert row: the pre-apply check answers
+//      true / false / 3 / 0 / false / 3 / 1 / 1 - the 3 functions are the
+//      exact code 0033 was built on (body md5)
+//   c. apply 0033: the backfill takes each camper's form choice from its
+//      history insert row (Bo: cash), else its Paying by (the third),
+//      writes no history row and moves no version; in every other
+//      fingerprints file only the planned items move (0013's
+//      camp_mark_paid 3 -> 4 inputs, camp_undo_payment, camp_edit_payment,
+//      the roster view, camp_campers' column rights, the new trigger;
+//      0022's camp_edit_payment and the two new rules) with the same
+//      rights, owner, definer and settings; 0033's own lines as planned;
+//      the pre-apply check answers "already applied"
+//   d. AS THE APP: SET ROLE authenticated with an unlocked admin's token,
+//      camp_mark_paid called with 3 NAMED inputs (as supabase-js sends
+//      it) and with 3 positional inputs: both reach the one 4-input
+//      function and pay by Paying by; only one camp_mark_paid exists; anon
+//      and camps_registrar can't run the new reader (rolled back)
+//   e. 0033_tests.sql, then 0013's, 0017's, 0018's, 0022's, 0026's and
+//      0027's tests
+//   f. SPEED: 30,000 more history rows (other campers' days with their
+//      check-ins, other campers' updates, this camper's rows):
+//      camp_camper_history must answer "ok" in under 1 second (timed with
+//      and without the new index); EXPLAIN of its query (generic and
+//      custom plan) uses the partial index and never scans change_log
+//   g. 0033 applied a SECOND time: no fingerprint, row or history change
+//   h. the Undo of SETUP.md 0033f (manual/0033u): every fingerprint file
+//      equals the one before 0033, the pre-apply check answers as before,
+//      the camps tests pass; then 0033 again -> the tested fingerprints,
+//      0033_tests.sql passes
+// Run only this step with   node run.mjs --only-step0033
+// =====================================================================
+async function step0033() {
+  const L = '[0033] ';
+  const preSql = read('tests', '0033_preapply_check.sql');
+  record(`${L}0033_fingerprints.sql and 0033_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0033_fingerprints.sql')) && !/delete|drop/i.test(preSql));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (Edit camp guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. two campers before 0033 (a family sign-up of Amy, Paying by cash,
+  // and Bo, whose Paying by the desk then changes to check)
+  const claims = JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: CAMPS_ADMIN_SID,
+    amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+  const setClaims = (c) => db.query(`select set_config('request.jwt.claims', $1, false)`, [c]);
+  await campsAdminSession(db);
+  const seeded = await run(db, `${L}a camp with two campers signed up before 0033`, `
+    do $$
+    declare
+      v_mon   date := date_trunc('week', (public.testing_today() + 14)::timestamp)::date + 7;
+      v_r     jsonb;
+      v_camp  uuid;
+      v_total integer := 0;
+      v_try   integer;
+      v_kids  jsonb;
+    begin
+      perform set_config('request.jwt.claims', '${claims}', true);
+      v_r := public.camp_add_camp('worcester', false, 'PGlite 0033 camp', array[v_mon, v_mon + 1, v_mon + 2], '09:00', '15:00',
+               public.testing_today() - 3, public.testing_today() + 5, public.testing_today() + 5, 5, 12,
+               '${JSON.stringify([1, 2, 3].map((k) => ({ day_count: k, member_early_cents: 7500 * k, member_regular_cents: 8000 * k,
+                 nonmember_early_cents: 8500 * k, nonmember_regular_cents: 9000 * k })))}'::jsonb,
+               '[{"name": "Lunch", "price_cents": 700, "per": "day", "not_for_all_days": false}]'::jsonb, null, 'I agree.');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'camp_add_camp %', v_r; end if;
+      v_camp := (v_r ->> 'id')::uuid;
+      perform set_config('request.jwt.claims', '', true);
+      select jsonb_agg(jsonb_build_object('first_name', n, 'last_name', 'Before', 'age', 8, 'member', true,
+               'day_ids', (select jsonb_agg(d.id order by d.day) from public.camp_days d where d.camp_id = v_camp),
+               'extras', '[]'::jsonb) order by n) into v_kids
+        from unnest(array['Amy', 'Bo']) as n;
+      for v_try in 1 .. 2 loop
+        select public.camp_public_signup(c.public_code, 'pglite-0033', gen_random_uuid(), v_kids, 'Test Parent', '5085550100',
+                 'Parent', 'Test Contact', '5085550101', 'Friend', 'cash', true, '${TEST_SIGNATURE}', 'camp-2026-10-18',
+                 md5(c.waiver_text), v_total) into v_r
+          from public.camps c where c.id = v_camp;
+        exit when v_r ->> 'status' = 'ok';
+        v_total := (v_r ->> 'new_total_cents')::integer;
+      end loop;
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'sign-up %', v_r; end if;
+      perform set_config('request.jwt.claims', '${claims}', true);
+      select public.camp_change_paying_by(c.id, c.version, 'check') into v_r from public.camp_campers c where c.first_name = 'Bo';
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'change paying by %', v_r; end if;
+      perform set_config('request.jwt.claims', '', true);
+      -- Cy (card): a camper with NO history insert row (added by hand with
+      -- the history trigger off), so the backfill must fall back to Paying by
+      alter table public.camp_campers disable trigger camp_campers_log;
+      insert into public.camp_campers (signup_id, camp_id, position, first_name, last_name, age, member, paying_by, base_cents)
+      select c.signup_id, c.camp_id, 3, 'Cy', 'Before', 8, true, 'card', c.base_cents
+        from public.camp_campers c where c.first_name = 'Amy';
+      alter table public.camp_campers enable trigger camp_campers_log;
+    end
+    $$;`);
+  if (!seeded) return null;
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const fnMd5 = (sig) => one(db, `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                                    from pg_proc p where p.oid = to_regprocedure('public.${sig}')`);
+  const md5s = [await fnMd5('camp_mark_paid(uuid, integer, text)'), await fnMd5('camp_undo_payment(uuid)'),
+    await fnMd5('camp_edit_payment(uuid, text, integer, date, text)')];
+  record(`${L}the pre-apply check names the md5s of the code 0033 was built on (0013 mark paid, 0013 undo, 0022 edit)`,
+    preSql.includes(md5s[0]) && preSql.includes(md5s[1]) && preSql.includes(md5s[2]), md5s.join(' / '));
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0033: true / false / 3 / 0 / false, 3 campers, 1 changed at the desk, 1 without an insert row`,
+    ready.mark_paid_3_inputs === true && ready.mark_paid_4_inputs === false && ready.replaced_as_tested === 3
+      && ready.new_columns === 0 && ready.history_function === false && ready.campers === 3 && ready.campers_desk_changed === 1
+      && ready.campers_without_insert_row === 1,
+    JSON.stringify(ready));
+
+  // c. apply 0033
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023', '0025', '0027', '0026', '0028', '0029', '0031', '0033']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const campers = `select string_agg(c.first_name || ':' || c.paying_by || ':' || c.version, ',' order by c.first_name) from public.camp_campers c`;
+  const campersBefore = await one(db, campers);
+  const logBefore = await one(db, 'select count(*)::integer from public.change_log');
+  const migration = read('migrations', '0033_camps_design_review.sql');
+  if (!(await run(db, `${L}apply 0033_camps_design_review.sql`, migration))) return null;
+  record(`${L}the backfill: paying_by_on_form = the form's choice from the insert row (Bo: cash, though the desk made it check), else Paying by (Cy: card); no version moved; no history row`,
+    (await one(db, `select string_agg(c.first_name || ':' || c.paying_by_on_form, ',' order by c.first_name) from public.camp_campers c`))
+      === 'Amy:cash,Bo:cash,Cy:card'
+      && (await one(db, campers)) === campersBefore
+      && (await one(db, 'select count(*)::integer from public.change_log')) === logBefore,
+    `${await one(db, campers)}; history ${logBefore} -> ${await one(db, 'select count(*)::integer from public.change_log')}`);
+  record(`${L}the two camper triggers are on again after the backfill`,
+    (await one(db, `select count(*)::integer from pg_trigger t where t.tgrelid = 'public.camp_campers'::regclass
+                      and t.tgname in ('camp_campers_before_write', 'camp_campers_log', 'camp_campers_before_form_choice')
+                      and t.tgenabled = 'O'`)) === 3);
+  const after = await printsOf(db, numbers);
+  const parts = (line) => line.split('  ');
+  const key = (line) => parts(line).slice(0, 2).join('  ');
+  // what may move, per file: "kind  item" (a changed line: same key gone + added)
+  const allowed = {
+    '0013': ['function  camp_mark_paid(p_camper_id uuid, p_expected_version integer, p_school text)',
+      'function  camp_mark_paid(p_camper_id uuid, p_expected_version integer, p_school text, p_method text)',
+      'function  camp_undo_payment(p_payment_id uuid)',
+      'function  camp_edit_payment(p_payment_id uuid, p_method text, p_amount_cents integer, p_paid_on date, p_school text)',
+      'view  camp_roster', 'table  camp_campers', 'trigger  camp_campers.camp_campers_before_form_choice'],
+    '0022': ['function  camp_edit_payment(p_payment_id uuid, p_method text, p_amount_cents integer, p_paid_on date, p_school text)',
+      'constraint  camp_campers.camp_campers_paying_by_on_form_check', 'constraint  camp_payments.camp_payments_paying_by_before_check'],
+  };
+  const wrong = [];
+  for (const n of numbers.filter((x) => x !== '0033')) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    for (const line of [...gone, ...added]) {
+      if (!(allowed[n] || []).includes(key(line))) wrong.push(`${n}: ${line}`);
+    }
+    // a function that moved in place: only its body md5 (the first 32 characters of the detail)
+    for (const g of gone.filter((x) => parts(x)[0] === 'function')) {
+      const twin = added.find((a) => key(a) === key(g));
+      if (twin && parts(twin)[2].slice(32) !== parts(g)[2].slice(32)) wrong.push(`${n}: more than the body changed: ${key(g)}`);
+    }
+    if (n === '0013') {
+      const mp3 = gone.find((x) => key(x).includes('p_school text)') && key(x).startsWith('function  camp_mark_paid('));
+      const mp4 = added.find((x) => key(x).includes('p_method text)') && key(x).startsWith('function  camp_mark_paid('));
+      if (!mp3 || !mp4 || parts(mp3)[2].slice(32) !== parts(mp4)[2].slice(32)) wrong.push('0013: camp_mark_paid 3 -> 4 inputs with other rights or settings');
+      const roster = after[f].find((x) => key(x) === 'view  camp_roster') || '';
+      if (!roster.endsWith('options=security_invoker=true')) wrong.push(`0013: ${roster}`);
+      const campersLine = after[f].find((x) => key(x) === 'table  camp_campers') || '';
+      const campersOld = before[f].find((x) => key(x) === 'table  camp_campers') || '';
+      if (campersLine.replace(',paying_by_on_form>authenticated:SELECT', '') !== campersOld) wrong.push(`0013: camp_campers rights: ${campersLine}`);
+    }
+  }
+  record(`${L}fingerprints: only the planned 0013 / 0022 items moved (same rights, owner, definer, settings); every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${numbers.length} files`);
+  const prints33 = after['0033_fingerprints.sql'];
+  const fp = (k) => prints33.find((l) => key(l) === k) || '';
+  const appFns = ['camp_mark_paid(p_camper_id uuid, p_expected_version integer, p_school text, p_method text)',
+    'camp_undo_payment(p_payment_id uuid)', 'camp_camper_history(p_camper_id uuid)',
+    'camp_edit_payment(p_payment_id uuid, p_method text, p_amount_cents integer, p_paid_on date, p_school text)'];
+  record(`${L}0033 fingerprints: 4 app functions security definer, search_path="", only postgres and authenticated; the 2 helpers for nobody`,
+    prints33.filter((l) => l.startsWith('function  ')).length === 6
+      && appFns.every((x) => fp(`function  ${x}`).includes('definer=true') && fp(`function  ${x}`).includes('settings=search_path=""')
+        && fp(`function  ${x}`).endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE'))
+      && ['camp_history_strip(p_row jsonb)', 'camp_campers_keep_form_choice()'].every((x) => fp(`function  ${x}`).includes('definer=false')
+        && fp(`function  ${x}`).includes('settings=search_path=""') && fp(`function  ${x}`).endsWith('rights=postgres:EXECUTE')),
+    prints33.filter((l) => l.startsWith('function  ')).join(' | '));
+  record(`${L}0033 fingerprints: paying_by_on_form text not null readable by authenticated only; paying_by_before by nobody; the view invoker, select for authenticated only`,
+    fp('column  camp_campers.paying_by_on_form') === 'column  camp_campers.paying_by_on_form  text notnull=true rights=authenticated:SELECT'
+      && fp('column  camp_payments.paying_by_before') === 'column  camp_payments.paying_by_before  text notnull=false rights='
+      && fp('view  camp_roster').endsWith('options=security_invoker=true rights=authenticated:SELECT')
+      && prints33.length === 13,
+    prints33.filter((l) => !l.startsWith('function  ')).join(' | '));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0033: false / true / 0 / 2 / true`,
+    applied.mark_paid_3_inputs === false && applied.mark_paid_4_inputs === true && applied.replaced_as_tested === 0
+      && applied.new_columns === 2 && applied.history_function === true, JSON.stringify(applied));
+
+  // d. as the app (SET ROLE authenticated, the admin's token): the old
+  // app's 3-input calls reach the one 4-input function. Each statement
+  // runs on its own (a later one sees what the call wrote); their
+  // answers are merged into one object for the check.
+  const asApp = async (label, sql, check) => {
+    let out;
+    try {
+      await db.exec('begin;');
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+      await db.exec('set local role authenticated;');
+      const answers = [];
+      for (const q of [].concat(sql)) answers.push((await db.query(q)).rows[0]);
+      out = Object.assign({}, ...answers);
+    } catch (error) {
+      out = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[as the app] ${label}`, check(out), JSON.stringify(out));
+  };
+  const amy = await one(db, `select c.id::text from public.camp_campers c where c.first_name = 'Amy'`);
+  const amyV = await one(db, `select c.version from public.camp_campers c where c.first_name = 'Amy'`);
+  // what the call left behind: Paying by, and the payment's method (as the app may read it)
+  const afterPay = `select c.paying_by as pb, (select p.method from public.camp_payments p where p.camper_id = c.id) as paid_by
+                      from public.camp_campers c where c.id = '${amy}'`;
+  const paidOk = (o) => o?.r?.status === 'ok' && o.r.method === 'cash' && o.r.paying_by === 'cash' && o.pb === 'cash'
+    && o.paid_by === 'cash';
+  await asApp('3 NAMED inputs (p_camper_id, p_expected_version, p_school) -> ok, paid by Paying by (cash)',
+    [`select public.camp_mark_paid(p_camper_id => '${amy}', p_expected_version => ${amyV}, p_school => 'worcester') as r`, afterPay],
+    paidOk);
+  await asApp('3 positional inputs -> ok, paid by Paying by (cash)',
+    [`select public.camp_mark_paid('${amy}'::uuid, ${amyV}, 'worcester') as r`, afterPay], paidOk);
+  await asApp('4 NAMED inputs with p_method card -> Paying by card',
+    [`select public.camp_mark_paid(p_camper_id => '${amy}', p_expected_version => ${amyV}, p_school => 'worcester', p_method => 'card') as r`,
+      afterPay],
+    (o) => o?.r?.status === 'ok' && o.r.method === 'card' && o.pb === 'card' && o.paid_by === 'card');
+  await asApp('camp_camper_history -> ok with rows',
+    `select public.camp_camper_history('${amy}') as r`, (o) => o?.r?.status === 'ok' && o.r.rows.length > 0);
+  record(`${L}exactly one camp_mark_paid, with 4 inputs`,
+    (await one(db, `select string_agg(pg_get_function_identity_arguments(p.oid), ' | ') from pg_proc p
+                     join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'camp_mark_paid'`))
+      === 'p_camper_id uuid, p_expected_version integer, p_school text, p_method text');
+  for (const role of ['anon', 'camps_registrar']) {
+    let message = '';
+    try {
+      await db.exec('begin;');
+      await db.exec(`set local role ${role};`);
+      await db.query(`select public.camp_camper_history('${amy}')`);
+    } catch (error) {
+      message = error.message;
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}${role} can't run camp_camper_history`, /permission denied/.test(message), message || 'it ran');
+  }
+
+  // e. the tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  const campTests = [['0013_tests.sql', 'ALL 0013 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'],
+    ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0022_tests.sql', 'ALL 0022 TESTS PASSED'],
+    ['0026_tests.sql', 'ALL 0026 TESTS PASSED'], ['0027_tests.sql', 'ALL 0027 TESTS PASSED']];
+  await tests('after 0033', [['0033_tests.sql', 'ALL 0033 TESTS PASSED'], ...campTests]);
+
+  // f. speed: 30,000 more history rows, then time the reader as the admin
+  await setClaims('');
+  await run(db, `${L}[speed] 30,000 more history rows`, `
+    insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+    select 'PGlite seed', 'pglite_seed', 'camp_camper_days', gen_random_uuid(), 'insert', null,
+           jsonb_build_object('camper_id', gen_random_uuid(), 'day_id', gen_random_uuid())
+      from generate_series(1, 10000);
+    insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+    select 'PGlite seed', 'camp_check_in', 'camp_camper_days', l.record_id, 'update',
+           '{"checked_in_at": null}'::jsonb, jsonb_build_object('checked_in_at', now(), 'checked_in_by_name', 'Staff')
+      from public.change_log l where l.action = 'pglite_seed' and l.table_name = 'camp_camper_days';
+    insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+    select 'PGlite seed', 'pglite_seed', 'camp_campers', gen_random_uuid(), 'update', '{"age": 8}'::jsonb, '{"age": 9}'::jsonb
+      from generate_series(1, 9000);
+    insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+    select 'PGlite seed', 'pglite_seed', 'camp_payments', gen_random_uuid(), 'insert', null,
+           jsonb_build_object('camper_id', c.id, 'method', 'cash', 'amount_cents', 100)
+      from public.camp_campers c, generate_series(1, 500) where c.first_name = 'Amy';
+    analyze public.change_log;`);
+  await campsAdminSession(db);
+  await setClaims(claims);
+  const timeIt = async () => {
+    const t0 = performance.now();
+    const r = (await db.query(`select public.camp_camper_history('${amy}') as r`)).rows[0].r;
+    return { ms: Math.round(performance.now() - t0), status: r.status, rows: r.rows?.length };
+  };
+  await timeIt();   // warm-up
+  const withIndex = await timeIt();
+  let withoutIndex = null;
+  try {
+    await db.exec('begin; drop index public.change_log_camp_camper_idx;');
+    await timeIt();
+    withoutIndex = await timeIt();
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  await setClaims('');
+  const total = await one(db, 'select count(*)::integer from public.change_log');
+  record(`${L}[speed] camp_camper_history with ${total} history rows: ok, 500 rows, under 1 second`,
+    withIndex.status === 'ok' && withIndex.rows === 500 && withIndex.ms < 1000,
+    `with the new index ${withIndex.ms} ms; without it ${withoutIndex?.ms} ms`);
+  // EXPLAIN of the reader's own query (cut out of the migration, with the
+  // two variables as parameters), both as a "generic" plan (what plpgsql
+  // settles on after a few calls) and a "custom" one: every part must use
+  // an index - the partial index for the days / extras / payments, never a
+  // full scan of change_log
+  {
+    const mig = migration.replace(/\r\n/g, '\n');
+    const s0 = mig.indexOf('from (select u.id');
+    const s1 = mig.indexOf('limit 500) as h', s0);
+    const q = ('select u.id' + mig.slice(s0 + 'from (select u.id'.length, s1) + 'limit 500')
+      .replaceAll('p_camper_id', '$1::uuid').replaceAll('v_signup_id', '$2::uuid');
+    const signup = await one(db, `select c.signup_id::text from public.camp_campers c where c.id = '${amy}'`);
+    const plans = {};
+    try {
+      await db.exec(`prepare h33(uuid, uuid) as ${q};`);
+      for (const mode of ['force_generic_plan', 'force_custom_plan']) {
+        await db.exec(`set plan_cache_mode = ${mode};`);
+        plans[mode] = (await db.query(`explain execute h33('${amy}', '${signup}')`)).rows.map((r) => r['QUERY PLAN']).join('\n');
+      }
+    } catch (error) {
+      plans.error = error.message;
+    } finally {
+      await db.exec('reset plan_cache_mode; deallocate all;').catch(() => {});
+    }
+    for (const [mode, plan] of Object.entries(plans)) console.log(`${L}[speed] EXPLAIN (${mode}):\n${plan}`);
+    const good = (p) => typeof p === 'string' && p.includes('change_log_camp_camper_idx') && !/Seq Scan on change_log/.test(p);
+    record(`${L}[speed] EXPLAIN: the partial index is used and change_log is never scanned in full (generic and custom plan)`,
+      !plans.error && good(plans.force_generic_plan) && good(plans.force_custom_plan), plans.error || '');
+  }
+
+  // g. re-run safety (the history count as well: the backfill finds nothing to fill)
+  const snapshot = `select md5(coalesce((select string_agg(to_jsonb(c)::text, ',' order by c.id) from public.camp_campers c), '')
+                      || coalesce((select string_agg(to_jsonb(p)::text, ',' order by p.id) from public.camp_payments p), '')
+                      || (select count(*) from public.change_log)::text)`;
+  const snapBefore = await one(db, snapshot);
+  await run(db, `${L}apply 0033 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0033 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapshot)) === snapBefore, movedAgain.join(', '));
+
+  // h. Undo 0033, as SETUP.md 0033f has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0033f\. Undo 0033/m);
+  const undoFile = 'manual/0033u_undo_camps_design_review.sql';
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0033] SETUP.md has "### 0033f. Undo 0033" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0033] paste ${undoFile}`, read('manual', '0033u_undo_camps_design_review.sql'))) {
+    const undone = await printsOf(db, numbers);
+    const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0033] every fingerprint file equals the one before 0033`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+    const undonePre = await pre();
+    record(`${L}[undo 0033] the pre-apply check answers as before 0033 (functions and columns)`,
+      undonePre.mark_paid_3_inputs === true && undonePre.mark_paid_4_inputs === false && undonePre.replaced_as_tested === 3
+        && undonePre.new_columns === 0 && undonePre.history_function === false, JSON.stringify(undonePre));
+    await tests('after the undo', campTests);
+    if (await run(db, `${L}[undo 0033] apply 0033 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0033_fingerprints.sql');
+      record(`${L}[undo 0033] after the redo the 0033 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints33));
+      await tests('after the redo', [['0033_tests.sql', 'ALL 0033 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints33;
 }
 
 function finish() {
