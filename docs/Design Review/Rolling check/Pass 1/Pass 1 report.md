@@ -120,5 +120,5 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 ## Next
 
 - **Jeffrey:** question 8, then the rest in order (questions 1–7 and 5b answered 2026-11-04).
-- **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13, Dashboard core's v1.118), and Color Belt when it merges.
+- **Pass 2:** everything merged after e7fd75b (N15, the Calendar Event types fix, Black Belt's BB13 and BB8 History, new students' "(now)" 2 + 3, Dashboard core's v1.118), and Color Belt when it merges.
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.
