@@ -2,24 +2,29 @@
 // Why it exists: it's where staff see who is signed in, lock the screen, change their PIN or
 // password, set this device's default location, and sign out. Order (contract 0002, item 7):
 //   who-line · Lock now · Change PIN (or "Set PIN" if none yet) · Change password · This device
+//   · Panel size (v1.118 — the side panel's size for this person, saved with their account; PC and
+//     tablet only: a phone held upright has no side panel)
 //   · Hide private details (a switch, Finance v0.215, renamed v0.506 — anyone signed in; remembered by this device)
 //   · [admins only: separator · "Admin" label · Staff accounts (v0.15 / v0.70) · Settings (v0.135)]
 //   · separator · Sign out
 // The Admin group is shown to admins only; the database refuses non-admins anyway (0004, 0005).
 // The shared front-desk account (profile.is_shared) doesn't get Change PIN / Change password:
 // only an admin changes the desk PIN and password (decided v0.28).
-//   - PC and tablet: a 248px dropdown under the initials, right-aligned.
+//   - PC and tablet: a 248px dropdown under the initials, right-aligned. In a window too short
+//     for it, it scrolls on its own (v1.118), so the page behind never moves.
 //   - Phone (<640px): a sheet that slides up from the bottom over a dimmed background.
 // The dropdown-vs-sheet difference is CSS only (app.css, "Account menu" section).
+// "This device" and "Panel size" each open their choices under them; opening one closes the other.
 //
 // Keyboard: opening moves focus to the first item; ↑/↓/Home/End move between items;
 // Esc, Tab, clicking outside, or choosing an item closes it and focus returns to the initials.
 // Phone sheet only: dragging the sheet down with a finger more than 60px closes it too.
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconCheck,
   IconCurrencyDollarOff,
   IconKey,
+  IconLayoutSidebar,
   IconLock,
   IconLogout,
   IconMapPin,
@@ -32,10 +37,12 @@ import { LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { claimBack } from '../lib/backButton.js';
 import { usePrivateDetailsHidden, HIDE_PRIVATE_DETAILS } from '../lib/privateDetails.js';
+import { PANEL_SIZE, PANEL_SIZE_LABELS, PANEL_SIZES } from '../lib/panelSize.js';
 
 // menuitemcheckbox = the Hide private details switch (it stays checked or unchecked, like a switch).
 const ITEM_SELECTOR = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 const SWIPE_CLOSE_PX = 60; // drag the sheet down further than this and it closes
+const WINDOW_EDGE_PX = 8; // a dropdown that must scroll stops this far above the window's bottom
 
 export default function AccountMenu({
   profile,
@@ -49,14 +56,21 @@ export default function AccountMenu({
   onSettings,
   onSignOut,
   isScreenLocked,
+  panelSize = 'standard', // the person's Panel size (v1.118, lib/panelSize.js)
+  onPanelSizeChange,
 }) {
   const [open, setOpen] = useState(false);
   const [choosingDevice, setChoosingDevice] = useState(false); // "This device" choices expanded?
+  const [choosingSize, setChoosingSize] = useState(false); // "Panel size" choices expanded?
+  // PC and tablet: the dropdown's height limit (px) while the window is too short for it, else null.
+  const [roomBelow, setRoomBelow] = useState(null);
   const [detailsHidden, setDetailsHidden] = usePrivateDetailsHidden(); // this device's Hide private details switch
 
   const buttonRef = useRef(null); // the initials button
   const panelRef = useRef(null); // the dropdown / sheet
   const deviceItemRef = useRef(null); // the "This device" row
+  const sizeItemRef = useRef(null); // the "Panel size" row
+  const sizeGroupRef = useRef(null); // the three sizes under it
   const wasOpenRef = useRef(false); // lets us notice the moment the menu closes
   const panelId = useId(); // unique id linking the button to the menu (aria-controls)
 
@@ -73,6 +87,7 @@ export default function AccountMenu({
     function handleBack() {
       setOpen(false);
       setChoosingDevice(false);
+      setChoosingSize(false);
     }
     const release = claimBack(handleBack);
     window.addEventListener('popstate', handleBack);
@@ -85,6 +100,7 @@ export default function AccountMenu({
   function close() {
     setOpen(false);
     setChoosingDevice(false);
+    setChoosingSize(false);
     setDragDistance(0);
     dragStartYRef.current = null;
     dragDistanceRef.current = 0;
@@ -170,6 +186,33 @@ export default function AccountMenu({
     }
   }, [choosingDevice]);
 
+  // The same for the three panel sizes.
+  useEffect(() => {
+    if (choosingSize) sizeGroupRef.current?.querySelector('[aria-checked="true"]')?.focus();
+  }, [choosingSize]);
+
+  // PC and tablet: a dropdown taller than the room under the top bar gets its own scroll (v1.118),
+  // so it never runs off the bottom of the window. Measured when it opens, when a row opens or
+  // closes its choices, and when the window changes size; a dropdown that fits stays exactly as
+  // before (no scroll). Done before the screen is drawn (useLayoutEffect). (The phone sheet has its
+  // own limit in app.css.)
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || isSheet || !panel) {
+      setRoomBelow(null);
+      return undefined;
+    }
+    function fit() {
+      const room = Math.floor(window.innerHeight - panel.getBoundingClientRect().top - WINDOW_EDGE_PX);
+      const border = panel.offsetHeight - panel.clientHeight;
+      const needed = panel.scrollHeight + border; // its full height, even while it scrolls
+      setRoomBelow(needed > room ? room : null);
+    }
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [open, isSheet, choosingDevice, choosingSize]);
+
   // Arrow keys inside the menu.
   function handlePanelKeyDown(event) {
     const items = Array.from(panelRef.current.querySelectorAll(ITEM_SELECTOR));
@@ -194,6 +237,14 @@ export default function AccountMenu({
     onDeviceLocationChange(location); // saves the device default AND moves the switcher
     setChoosingDevice(false);
     deviceItemRef.current?.focus(); // keep keyboard users on the "This device" row
+  }
+
+  function choosePanelSize(size) {
+    // Shows at once and saves it with the account. The ticked size again: nothing happens, unless
+    // its save had failed (then it is saved again) — lib/panelSize.js decides.
+    onPanelSizeChange(size);
+    setChoosingSize(false);
+    sizeItemRef.current?.focus(); // keep keyboard users on the "Panel size" row
   }
 
   const roleLabel = profile.role === 'admin' ? 'Admin' : 'Staff';
@@ -231,8 +282,14 @@ export default function AccountMenu({
           <div
             ref={panelRef}
             id={panelId}
-            className={dragDistance > 0 ? 'account-panel is-dragging' : 'account-panel'}
-            style={dragDistance > 0 ? { transform: `translateY(${dragDistance}px)` } : undefined}
+            className={`account-panel${dragDistance > 0 ? ' is-dragging' : ''}${roomBelow !== null ? ' account-panel--scrolls' : ''}`}
+            style={
+              dragDistance > 0
+                ? { transform: `translateY(${dragDistance}px)` }
+                : roomBelow !== null
+                  ? { maxHeight: roomBelow }
+                  : undefined
+            }
             onKeyDown={handlePanelKeyDown}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -289,7 +346,10 @@ export default function AccountMenu({
                 tabIndex={-1}
                 className="menu-item"
                 aria-expanded={choosingDevice}
-                onClick={() => setChoosingDevice((value) => !value)}
+                onClick={() => {
+                  setChoosingDevice((value) => !value);
+                  setChoosingSize(false);
+                }}
               >
                 <IconMapPin size={16} aria-hidden="true" className="menu-icon" />
                 <span>This device</span>
@@ -311,6 +371,51 @@ export default function AccountMenu({
                         onClick={() => chooseDeviceLocation(location)}
                       >
                         <span>{location}</span>
+                        {checked && <IconCheck size={16} aria-hidden="true" className="menu-check" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Panel size (v1.118): the side panel's size for this person, saved with their account
+                  (lib/panelSize.js). Works like "This device". Left out on a phone held upright,
+                  which has no side panel. */}
+              {!isSheet && (
+                <button
+                  ref={sizeItemRef}
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  className="menu-item"
+                  aria-expanded={choosingSize}
+                  onClick={() => {
+                    setChoosingSize((value) => !value);
+                    setChoosingDevice(false);
+                  }}
+                >
+                  {/* ti-layout-sidebar = Panel size, guidelines 2.4 (v1.118) */}
+                  <IconLayoutSidebar size={16} aria-hidden="true" className="menu-icon" />
+                  <span>{PANEL_SIZE}</span>
+                  <span className="menu-value">{PANEL_SIZE_LABELS[panelSize]}</span>
+                </button>
+              )}
+
+              {!isSheet && choosingSize && (
+                <div ref={sizeGroupRef} role="group" aria-label={PANEL_SIZE}>
+                  {PANEL_SIZES.map((size) => {
+                    const checked = size === panelSize;
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={checked}
+                        tabIndex={-1}
+                        className="menu-item menu-subitem"
+                        onClick={() => choosePanelSize(size)}
+                      >
+                        <span>{PANEL_SIZE_LABELS[size]}</span>
                         {checked && <IconCheck size={16} aria-hidden="true" className="menu-check" />}
                       </button>
                     );

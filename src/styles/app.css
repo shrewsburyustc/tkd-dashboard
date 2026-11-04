@@ -6,6 +6,7 @@
     Phone          (max-width: 639.98px)                 → bottom bar, menu as bottom sheet
     Tablet         (min-width: 640px)                    → 72px rail with labels
     PC             (min-width: 1024px) and (pointer: fine) → 52px icon rail with hover label
+                   (Panel size Standard; Large and Largest keep labels under the icons, v1.118)
     Touch screens  (pointer: coarse)                     → bigger controls, 44px tap areas
   "pointer: coarse" means the main input is a finger — true on an iPad even when it's wide.
 */
@@ -504,7 +505,22 @@ img {
   overflow-y: auto;
 }
 
+/* Panel size couldn't be saved (v1.118, Shell.jsx): the shared amber bar sits on the frame, under
+   the top bar, so it stays on every page. It lines up with the page's own edges (24px; 16px on
+   phones), and on the right also clears the page's own scrollbar (--page-scrollbar, Shell.jsx). */
+.shell-errbar {
+  flex: none;
+  padding: var(--space-12) calc(var(--space-24) + var(--page-scrollbar, 0px)) 0 var(--space-24);
+}
+
+.shell-errbar .errbar {
+  margin-bottom: 0; /* the page's own top padding makes the gap under it */
+}
+
 /* ===== Rail (left navigation) — hidden on phones ===== */
+/* Panel size (v1.118, Rail.jsx): the class rail--standard, rail--large or rail--largest says which
+   size the signed-in person chose. Standard is the look described below; Large and Largest are at
+   the end of the tablet block, and use the tablet's look (names under the icons) on PC too. */
 .rail {
   display: none;
 }
@@ -525,6 +541,7 @@ img {
   .rail-item {
     position: relative;
     display: flex;
+    flex: none; /* never squashed in a short window: the rail scrolls instead (v1.118) */
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -558,17 +575,60 @@ img {
     font-size: var(--text-12);
     line-height: 1.3;
   }
+
+  /* A window too short for the rail (v1.118): Rail.jsx adds rail--scrolls, and the rail scrolls on
+     its own — up and down only, with a thin scrollbar — while the page and the top bar stay put.
+     Moving with Tab keeps 8px round the focused button, so its keyboard ring is never cut off, and
+     the buttons narrow to the room the scrollbar leaves, keeping 4px each side for the ring (2px
+     gap + 2px line). A rail that fits neither scrolls nor clips: exactly as before. */
+  .rail--scrolls {
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scroll-padding-block: var(--space-8);
+  }
+
+  .rail--scrolls .rail-item {
+    max-width: calc(100% - 8px);
+  }
+
+  /* Large and Largest (Panel size, v1.118): the names are 14px, §7's body size */
+  .rail--large .rail-label,
+  .rail--largest .rail-label {
+    font-size: var(--text-14);
+    white-space: nowrap;
+  }
+
+  /* Largest: 96px wide, 88px buttons, 24px icons in a 32px pill (4px above and below the icon,
+     16px each side) */
+  .rail--largest {
+    width: var(--rail-width-largest);
+  }
+
+  .rail--largest .rail-item {
+    width: 88px;
+    min-height: 64px;
+  }
+
+  .rail--largest .rail-icon {
+    padding: var(--space-4) var(--space-16);
+  }
+
+  .rail--largest .rail-icon svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 
-/* PC (wide AND mouse): 52px icon-only rail; label bubble on hover and keyboard focus */
+/* PC (wide AND mouse), Standard: 52px icon-only rail; label bubble on hover and keyboard focus */
 @media (min-width: 1024px) and (pointer: fine) {
-  .rail {
+  .rail--standard {
     gap: var(--space-8);
     width: var(--rail-width);
     padding: var(--space-12) 0;
   }
 
-  .rail-item {
+  .rail--standard .rail-item {
     width: 36px;
     height: 36px;
     min-height: 0;
@@ -576,33 +636,43 @@ img {
     gap: 0;
   }
 
-  .rail-icon {
+  .rail--standard .rail-icon {
     padding: 0;
   }
 
-  .rail-icon svg {
+  .rail--standard .rail-icon svg {
     width: 18px;
     height: 18px;
   }
 
-  .rail-item.is-current {
+  .rail--standard .rail-item.is-current {
     background: var(--color-blue-tint);
   }
 
-  .rail-item.is-current .rail-icon {
+  .rail--standard .rail-item.is-current .rail-icon {
     background: none;
   }
 
-  .rail-item:hover:not(.is-current) {
+  .rail--standard .rail-item:hover:not(.is-current) {
     background: var(--color-surface); /* light gray highlight; the current item keeps its tint */
   }
 
-  /* The dark label bubble, to the right of the icon. No fade: it appears instantly. */
-  .rail-label {
+  /* Large and Largest: pointing greys only the icon's pill (§2.3), not the whole button — a gray
+     box the size of the button would look more selected than the current section's pill. */
+  .rail--large .rail-item:hover:not(.is-current) .rail-icon,
+  .rail--largest .rail-item:hover:not(.is-current) .rail-icon {
+    background: var(--color-surface);
+  }
+
+  /* The dark label bubble, to the right of the icon. No fade: it appears instantly. It is drawn
+     above the page (position: fixed), at the place Rail.jsx measured for it (--bubble-x and
+     --bubble-y: just past the icon's right edge, level with its middle), so a rail that scrolls
+     can't cut it off (v1.118). */
+  .rail--standard .rail-label {
     display: none;
-    position: absolute;
-    top: 50%;
-    left: calc(100% + var(--space-8));
+    position: fixed;
+    top: var(--bubble-y);
+    left: var(--bubble-x);
     transform: translateY(-50%);
     z-index: 30;
     padding: var(--space-4) var(--space-8);
@@ -616,7 +686,7 @@ img {
   }
 
   /* Small triangle on the bubble's left edge, pointing at the icon */
-  .rail-label::before {
+  .rail--standard .rail-label::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -626,8 +696,8 @@ img {
     border-right-color: var(--color-tooltip-bg);
   }
 
-  .rail-item:hover .rail-label,
-  .rail-item:focus-visible .rail-label {
+  .rail--standard .rail-item:hover .rail-label,
+  .rail--standard .rail-item:focus-visible .rail-label {
     display: block;
   }
 }
@@ -788,6 +858,15 @@ img {
   border-radius: var(--radius-control);
   background: var(--color-bg);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* the one place a subtle shadow is allowed */
+}
+
+/* A window too short for the dropdown (v1.118): AccountMenu.jsx limits its height to the room
+   below the top bar, and it scrolls on its own, with a thin scrollbar; scrolling it never scrolls
+   the page behind. Only then — a dropdown that fits has no scroll at all. */
+.account-panel--scrolls {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .account-grab {
@@ -1246,6 +1325,10 @@ img {
 
   .home {
     padding: var(--space-16);
+  }
+
+  .shell-errbar {
+    padding: var(--space-12) calc(var(--space-16) + var(--page-scrollbar, 0px)) 0 var(--space-16);
   }
 
   .loc-option {
