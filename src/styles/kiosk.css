@@ -179,6 +179,17 @@
   margin-top: var(--space-16);
 }
 
+/* A wrong PIN's amber note looks as on the dashboard's lock screen (12px text, icon 1px down):
+   forms-public.css, loaded with the kiosk, has the family page's bigger 13px note
+   ("(now)" point 4). */
+.fk-pin .notice {
+  font-size: var(--text-12);
+}
+
+.fk-pin .notice-icon {
+  margin-top: 1px;
+}
+
 /* ----- "Still there?" (2 minutes idle mid-form) ----- */
 .fk-still {
   position: fixed;
