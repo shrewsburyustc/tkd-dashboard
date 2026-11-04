@@ -616,8 +616,8 @@ export const detailSub = (cycleName, dan, code) => `${cycleName} · ${DAN_LABELS
 export const editDetailsSub = (name, cycleName, dan, code) => `${name} · ${detailSub(cycleName, dan, code)}`;
 export const dobLine = (dob, age, firstDay) => (age === null || age === undefined || !firstDay ? monthDayYear(dob) : `${monthDayYear(dob)} (${age} on ${monthDayYear(firstDay)})`);
 export const DELETED_AFTER_KEEPING = 'Deleted after the keeping time';
-export const HIDDEN_ON_DEVICE = 'Hidden on this device'; // Hide payments on (OP-B7)
-export const PAYMENTS_HIDDEN = 'Payments are hidden on this device.'; // (OP-B7)
+export const HIDDEN_ON_DEVICE = 'Hidden on this tablet'; // Hide private details on (OP-B7; "tablet" as every section, v0.507 / v0.974)
+export const PAYMENTS_HIDDEN = 'Payments are hidden on this tablet.'; // (OP-B7; v0.974)
 export const registeredLine = (registeredOn, source, code) =>
   source === 'desk' ? `${shortDate(registeredOn)} · at the desk` : `${shortDate(registeredOn)} · family form (${schoolName(code)} link)`;
 export const VIEW_SIGNATURE = 'View signature';

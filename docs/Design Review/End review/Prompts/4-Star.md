@@ -10,7 +10,7 @@
 
 ## The brief
 
-The walkthrough decided 12 changes for Star (change list §2.3, S1–S12). They are rulebook rows **v1.000–v1.034**. The shared parts they use are rows **v1.100–v1.111**, built by the Dashboard core session and approved by Jeffrey.
+The walkthrough decided 12 changes for Star (change list §2.3, S1–S12). They are rulebook rows **v1.000–v1.034**. The shared parts they use are rows **v1.100–v1.113**, built by the Dashboard core session and approved by Jeffrey.
 - **Part 1** needs no shared part: S3, S4, S7, S9, S12's migration (0028) and the questions for Jeffrey.
 - **Part 2** switches Star to the shared parts: S1, S2, S5, S6, S8, S10, S11 and S12's screen.
 
@@ -42,7 +42,7 @@ The walkthrough decided 12 changes for Star (change list §2.3, S1–S12). They 
 1. CLAUDE.md, and `docs/Dashboard Docs/TKD-Dashboard-Handoff.md` §6.
 2. **The rulebook rows** (`grep -n "decided v1\.[01]"`):
    - the decisions: v1.001 (Mark paid), v1.002 (receipt), v1.003 (Edit payment + Undo), v1.006 (Undo), v1.008 (confirm boxes), v1.010 (history), v1.011 (⋯ order), v1.013 (cards), v1.015 (registration link), v1.019 (time list), v1.024 (icons, §2.4), v1.026 (money), v1.030 (shared parts), v1.033 (WCAG 2.2, §4);
-   - the shared parts: v1.100 (dialog on top, one dropdown, Grip), v1.101 (minus sign), v1.102–v1.109 (the eight parts), v1.111;
+   - the shared parts: v1.100 (dialog on top, one dropdown, Grip), v1.101 (minus sign), v1.102–v1.109 (the eight parts), v1.111–v1.113;
    - §8's "Are you sure?" boxes and Metric cards;
    - Star's own rows these change: v0.66, v0.92, v0.99, v0.109, v0.110, v0.112, v0.114, v0.115, v0.121, v0.164, v0.192, v0.506–v0.508, v0.512, v0.514.
 3. **The change list** `docs/Design Review/End review/TKD-DesignReview-ChangeList.md`: §1, §2.3, §4, and §6 (D1a–D1d; D1c is Star's leave warning).
@@ -141,7 +141,7 @@ The walkthrough decided 12 changes for Star (change list §2.3, S1–S12). They 
    - one line, "Worcester 12 · Shrewsbury 11";
    - or a two-line note in the shared part (the shared-part rule above).
 
-**A check, not a question.** Plan §2b, §9 row 14 and §10 say Star's Dan-change box opens on top of the candidate dialog, so one Back press reaches both.
+**A check, not a question.** Dashboard core's plan (§2b, §9 row 14, §10) said Star's Dan-change box opens on top of the candidate dialog, so one Back press reaches both; v1.113 corrected that.
 - In the code, the box takes the dialog's place instead (`CandidatesTab.jsx:1223–1251`, drawn as `overlayElement ?? dialogElement` at `:1343`): one dialog, one Back step.
 - Check it at phone size in the preview. If the code is right, there's nothing to fix.
 
@@ -209,7 +209,7 @@ So all eight boxes switch to it first:
   - **Paid by**, preset to `row.payingBy`, with the hint "They chose … on the form." or "… at the desk." (from `row.source`);
   - then **"Mark paid $140"**.
 - **Amount and date:** the amount is `row.expectedFeeCents` (the database's fee, as today); the date is today.
-- **No migration:** `star_record_payment(uuid, integer, text, integer, date)` already takes the way to pay, the amount and the date (0006 §18u). v1.104 and plan M3 are wrong to say Star's function needs the way to pay.
+- **No migration:** `star_record_payment(uuid, integer, text, integer, date)` already takes the way to pay, the amount and the date (0006 §18u). v1.113 corrected v1.104 and plan M3, which said Star's function needs it.
 - **Ask in the S1 mockup (one question):** staff lose v0.110's "type another amount", e.g. a discount, or the early price on the testing day.
   - v1.001 leaves that to an admin's Edit payment afterwards.
   - v1.001's row doesn't name v0.110, so record Jeffrey's answer in your row.

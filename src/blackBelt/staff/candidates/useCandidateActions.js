@@ -264,7 +264,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // the date of birth or the email may stay on screen. Close every money dialog (Record / Edit /
   // Undo payment, refund, returned check, receipt), leave Edit details (it shows the date of birth
   // and email), close a payment line's ⋯ and clear a money toast. The detail itself redraws with
-  // "Hidden on this device"; Compare, Change plan and Add hide their money parts themselves.
+  // "Hidden on this tablet"; Compare, Change plan and Add hide their money parts themselves.
   const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt'];
   function paymentsHiddenNow() {
     const d = dlgRef.current;
