@@ -24,10 +24,13 @@ import { IconAlertTriangle, IconLock } from '@tabler/icons-react';
 import FormsApp from '../../forms/FormsApp.jsx';
 import * as FT from '../../forms/text.js';
 import LockScreen from '../LockScreen.jsx';
-import { kioskState, readKiosk } from '../../lib/kiosk.js';
+import { kioskState, markKioskLoaded, readKiosk } from '../../lib/kiosk.js';
 import '../../styles/forms.css';
 import '../../styles/forms-public.css';
 import '../../styles/kiosk.css';
+
+// From now on the family page's stylesheet is on this page: a sign-out reloads (App.jsx, src/lib/kiosk.js).
+markKioskLoaded();
 
 const IDLE_MS = 2 * 60 * 1000; // no tap for 2 minutes mid-form …
 const WARN_SECONDS = 15; // … then "Still there?" for 15 seconds, then the form is wiped
