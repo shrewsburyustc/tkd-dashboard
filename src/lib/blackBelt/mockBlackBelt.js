@@ -1139,6 +1139,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         .slice(0, HISTORY_MAX_ROWS)
         .map((l) => ({
           occurred_at: l.occurred_at, actor_name: l.actor_name, action: l.action, table_name: l.table_name, op: l.op,
+          record_id: l.record_id, // 0034: the logged row's own id (the History finds a grade's subject by it)
           before: historyStrip(l.before), after: historyStrip(l.after),
         }));
       return { answer: { status: 'ok', rows } };

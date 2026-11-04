@@ -203,6 +203,9 @@ function toHistoryRow(r) {
     op: r.op, // 'insert' | 'update' | 'delete'
     before: r.before ?? null,
     after: r.after ?? null,
+    // the logged row's own id (migration 0034); null from a database before 0034 — the History
+    // then words a grade change without its subject (historyWords.js)
+    recordId: typeof r.record_id === 'string' && r.record_id !== '' ? r.record_id : null,
   };
 }
 
@@ -722,8 +725,9 @@ export async function loadCandidate({ candidateId } = {}) {
 // login id and shows a date of birth, email, signature or signer's name only as "on file" /
 // "changed". (history.js wraps this for the shared History line.)
 // → { status:'ok', rows: HistoryRow[] } · 'not_found' · 'invalid' · 'no_access' · 'error'
-//   HistoryRow = { occurredAt, actorName, action, tableName, op, before, after } — before / after
-//   are the changed columns with their database names (snake_case), or null.
+//   HistoryRow = { occurredAt, actorName, action, tableName, op, before, after, recordId } — before /
+//   after are the changed columns with their database names (snake_case), or null; recordId is
+//   the logged row's own id (migration 0034), or null from a database before 0034.
 export async function loadCandidateHistory({ candidateId } = {}) {
   return callRpc('bb_candidate_history', { p_candidate_id: candidateId ?? null }, (d) => {
     if (!Array.isArray(d.rows)) return null;
