@@ -260,6 +260,8 @@ export const KIND_EXIT = 'Side exit (a chip)';
 export const COLOR = 'Color';
 export const BUILTIN_NOTE = 'The app uses this status, so it can be renamed but not deleted, and it stays where it is shown.';
 export const DELETE_STATUS = 'Delete status';
+// under a built-in status's grayed "Delete status" (rulebook v0.632, v1.004's reason line)
+export const BUILTIN_NO_DELETE = "Built-in statuses can't be deleted.";
 export const deleteStatusTitle = (name) => `Delete "${name}"?`;
 export const deleteStatusBody = (name, n) => (n === 0 ? `Nobody is in "${name}". It will be deleted.` : `${n === 1 ? '1 person is' : `${n} people are`} in "${name}". Move them to:`);
 export const MOVE_TO = 'Move them to';
