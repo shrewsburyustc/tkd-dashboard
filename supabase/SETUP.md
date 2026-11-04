@@ -2780,7 +2780,7 @@ Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as name
 
 ## Migration 0033: Camps design review (Mark paid with a way to pay, Camper history)
 
-**Status: NOT APPLIED.** Built on `camps` (rulebook v0.735 = C2, the shared Mark paid box; v0.736 = C7, the history line; plan `docs/Camps/TKD-Camps-0033-Plan.md`). Apply it **before** the app version that sends the way to pay or shows the History line is deployed. The app from before 0033 keeps working with 0033 applied (its 3-input Mark paid call is covered by the new input's default — tested).
+**Status: APPLIED 2026-11-03** (Jeffrey, SQL Editor; 0033a pre-check ready, 0033c fingerprints match the file, 0033d advisor nothing new, 0033e all seven test files passed). Built on `camps` (rulebook v0.735 = C2, the shared Mark paid box; v0.736 = C7, the history line; plan `docs/Camps/TKD-Camps-0033-Plan.md`). Apply it **before** the app version that sends the way to pay or shows the History line is deployed. The app from before 0033 keeps working with 0033 applied (its 3-input Mark paid call is covered by the new input's default — tested).
 
 **Production order:** … 0022 → 0027 (live) → 0026, 0028, 0029, 0031 (live) → **0033**. It needs 0013, 0017, 0022 and 0027 — it stops with "0033 needs migration 00NN … first" if one is missing.
 

@@ -5,7 +5,7 @@
 - **C2:** the shared Mark paid box, picture 16, rulebook **v0.735**.
 - **C7:** the history line, picture 17, rulebook **v0.736**.
 
-**Status:** number **0033** reserved by Main on 2026-11-03 (main 5edbc19). **Must be tested before Jeffrey pastes:** the live app's 3-input `camp_mark_paid` call (named and positional) resolves to the new version with `p_method` null, and only one `camp_mark_paid` exists. Built and reviewed 2026-11-03 (see the status file); nothing is applied. Jeffrey pastes the file into the Supabase SQL Editor after the security review, with his OK.
+**Status:** number **0033** reserved by Main on 2026-11-03 (main 5edbc19). **Must be tested before Jeffrey pastes:** the live app's 3-input `camp_mark_paid` call (named and positional) resolves to the new version with `p_method` null, and only one `camp_mark_paid` exists. Built and reviewed 2026-11-03 (see the status file). **Applied to production 2026-11-03.** Jeffrey pastes the file into the Supabase SQL Editor after the security review, with his OK.
 
 **Order (a push to `main` deploys):** 0033 must be live **before** the app that calls it is pushed. The app from before 0033 keeps working with 0033 applied, because `camp_mark_paid`'s new 4th input has a default.
 
