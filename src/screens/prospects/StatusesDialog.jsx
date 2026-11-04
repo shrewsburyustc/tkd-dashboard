@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
@@ -58,16 +59,14 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
                   <span className="ctypes-name">{s.name}</span>
                   <span className="pkind">{s.kind === 'stage' ? T.KIND_STAGE : T.KIND_EXIT}{s.builtin ? ` · ${T.BUILTIN_TAG}` : ''}</span>
                 </button>
-                <button
-                  type="button"
-                  className="icon-button"
-                  aria-label={T.statusMore(s.name)}
+                <IconButton
+                  label={T.statusMore(s.name)}
                   aria-haspopup="menu"
+                  aria-expanded={menu?.status.id === s.id ? 'true' : 'false'}
                   disabled={state.saving}
                   onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget, status: s, index: i })}
-                >
-                  <IconDots size={20} aria-hidden="true" />
-                </button>
+                  Icon={IconDots}
+                />
               </li>,
             ];
           })}

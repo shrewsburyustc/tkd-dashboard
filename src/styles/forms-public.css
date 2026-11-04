@@ -121,18 +121,93 @@ h1:focus,
   cursor: progress;
 }
 
-.icon-button {
+/* Icon-only button (IconButton.jsx; "Remove child"): the same look as the dashboard's
+   (shared.css .tib), copied because this page doesn't load shared.css (design review N13).
+   A 28px square with a 16px icon; on touch screens a 44px tap area (see below). On a PC its
+   name shows in a dark tooltip on hover and keyboard focus.
+   Every selector is wrapped in :where(), which gives it zero weight: inside the front-desk kiosk
+   (where this file loads after the dashboard's) the dashboard's own rules still win. */
+:where(.tib) {
   display: inline-flex;
+  position: relative; /* anchor for the tooltip */
   flex: none;
   align-items: center;
   justify-content: center;
-  width: var(--tap-size);
-  height: var(--tap-size);
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: var(--radius-control);
   background: none;
-  color: var(--color-text);
+  color: var(--color-text-secondary);
+}
+
+:where(.tib-box) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+}
+
+:where(.tib-tip) {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-8));
+  z-index: 30;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-tooltip-bg);
+  color: var(--color-on-blue);
+  font-size: var(--text-13);
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none; /* the bubble never blocks clicks */
+}
+
+:where(.tib-tip)::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 9px;
+  border: 5px solid transparent;
+  border-top-color: var(--color-tooltip-bg);
+}
+
+/* No room above: the bubble goes below, its triangle pointing up */
+:where([data-tip='below'] > .tib-tip) {
+  top: calc(100% + var(--space-8));
+  bottom: auto;
+}
+
+:where([data-tip='below'] > .tib-tip)::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--color-tooltip-bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.tib:hover .tib-tip, .tib:focus-visible .tib-tip) {
+    display: block;
+  }
+}
+
+@media (hover: hover) {
+  :where(.tib:hover .tib-box) {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+}
+
+@media (pointer: coarse) {
+  :where(.tib) {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
 }
 
 .link-button {

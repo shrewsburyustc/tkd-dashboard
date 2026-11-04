@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconCalendarPlus, IconDots, IconPlus } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
+import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -102,16 +103,13 @@ export default function Schedule({ location, isAdmin, onModalOpenChange, ...rest
     const buttons = isAdmin ? (
       <div className="sactions">
         {isPhone ? (
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={T.MORE_ACTIONS}
+          <IconButton
+            label={T.MORE_ACTIONS}
             aria-haspopup="menu"
             aria-expanded={menuAnchor ? 'true' : 'false'}
             onClick={(e) => setMenuAnchor(menuAnchor ? null : e.currentTarget)}
-          >
-            <IconDots size={20} aria-hidden="true" />
-          </button>
+            Icon={IconDots}
+          />
         ) : (
           <button type="button" className="btn" onClick={(e) => ask('plan', e.currentTarget)}>
             <IconCalendarPlus size={16} aria-hidden="true" />

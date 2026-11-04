@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
@@ -78,18 +79,15 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
                     <i className="cpanel-swatch" style={{ background: c.fill, borderColor: c.edge }} aria-hidden="true" />
                     <span className="ctypes-name">{t.name}</span>
                   </button>
-                  <button
-                    type="button"
-                    className="icon-button"
+                  <IconButton
                     data-type-more={t.id}
-                    aria-label={T.typeMore(t.name)}
+                    label={T.typeMore(t.name)}
                     aria-haspopup="menu"
                     aria-expanded={menu?.type.id === t.id ? 'true' : 'false'}
                     disabled={state.saving}
                     onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget, type: t, index: i })}
-                  >
-                    <IconDots size={20} aria-hidden="true" />
-                  </button>
+                    Icon={IconDots}
+                  />
                 </li>,
               ];
             })}
