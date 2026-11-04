@@ -77,6 +77,7 @@ import Prospects from './screens/Prospects.jsx';
 import Finance from './screens/Finance.jsx';
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePrivateDetailsHidden } from './lib/privateDetails.js';
+import { usePanelSize } from './lib/panelSize.js';
 import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
@@ -206,6 +207,9 @@ export default function App() {
   const [financeModalOpen, setFinanceModalOpen] = useState(false); // a Finance dialog is showing
   // This device's "Hide private details" switch (v0.215, renamed v0.506): Finance leaves the rail and its addresses go Home.
   const [paymentsHidden] = usePrivateDetailsHidden();
+  // The signed-in person's Panel size (v1.118), saved with their account. It follows the sign-in
+  // itself (lib/panelSize.js), so it is known before the dashboard first shows.
+  const panel = usePanelSize();
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
@@ -1048,6 +1052,7 @@ export default function App() {
             onSettings={() => guarded(() => navigate('settings'))}
             onSignOut={() => guarded(() => signOut())}
             badges={{ prospects: prospectsCount }}
+            panel={panel}
           >
             {section === 'home' && (
               <Home

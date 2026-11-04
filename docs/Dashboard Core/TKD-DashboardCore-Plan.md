@@ -746,3 +746,111 @@ Jeffrey chose **(a), room for the box** (2026-10-29; picture `Questions/M6-show-
 - **Pictures:** Star's real Candidates tab with the built code (Both at tablet, phone and 320; one school at phone) is pixel-identical to option (a) in Jeffrey's picture. Side by side: `Proof/parts/M6-show-all-built-vs-a.png`.
 
 Where it stands: the status file.
+
+## 15. A larger side panel for the Grandmaster (asked 2026-10-29)
+
+**Asked** by Jeffrey through the Main session, 2026-10-29: "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster". The rulebook calls the side panel the **rail**. This is its own item, not part of step 2. If its switch lands in the account menu or Settings, step 2's designs of those include it.
+
+**Today** (rulebook §1.3 and §2.3, v0.4; `app.css`, "Rail" section):
+- **PC** (1024 px and wider, with a mouse): 52 px wide, icons only (18 px icons in 36×36 squares). A name shows only in a dark bubble, while the mouse points at the icon or the keyboard focus is on it.
+- **Tablet**, and any touch screen 640 px or wider (also a mouse window 640–1023 px wide): 72 px wide, with the names always under the icons (20 px icons, 12 px names, items 64×56).
+- **Phone** (under 640 px): no rail. The bottom bar shows Home, Calendar, Prospects and More, with their names.
+- Nothing expands or collapses. The rail pushes the page over; it never covers it.
+- The names are already in the page on PC, hidden by the CSS, so a rail with names on PC is mostly a CSS change.
+
+**What to copy for the switch: Hide private details** (v0.252, v0.253, v0.506).
+- It is a checkbox row in the account menu, next to "This device", for anyone signed in.
+- It is remembered in that browser (`tkd.device.hidePayments`), with nothing in the database.
+- A setting remembered per staff account would need a new migration (the staff table has no column for preferences); its number comes through the Main session.
+
+**Who it's for:** the Grandmaster, the design review's main user ("used to pen and paper… not comfortable with technology"). Which device he uses isn't recorded anywhere.
+
+**Questions for Jeffrey, one at a time, each with pictures at the four sizes:**
+1. **What the large panel looks like.** Picture: `Questions/SP1-large-panel-look.png`.
+   - **A, the tablet's panel on PC (PC only):** 72 px wide, 20 px icons, 12 px names; buttons 64×56. It needs a window 492 px tall (today 368).
+   - **B, the same panel with bigger names (PC and tablet):** 72 px wide, 20 px icons, 14 px names; buttons 64×58. It needs 510 px. "Prospects" fills 60 of the 64 px.
+   - **C, a bigger panel (PC and tablet):** 96 px wide, 24 px icons (the rulebook's largest), 14 px names; a 32 px pill; buttons 88×64. It needs 556 px.
+   - No screen scrolls sideways with any of them: all 19 screens were checked at 640, 820 and 1024 px.
+   - Recommendation: **B**. **Decided 2026-11-03: B**, as each person's own setting. Jeffrey: "B but make it a setting that I can change. For example, I dont need the icons that big but he might, so let us be able to change based on who is using the it." B's icons stay 20 px; only the names grow.
+   - Jeffrey's next message, the same day: "Also allow for bigger icons as well".
+2. **The setting's shape.** Picture: `Questions/SP2-three-sizes.png`.
+   - **A, one choice with three sizes:** Standard (today), Large (question 1's B) and Largest (question 1's C: 24 px icons, 14 px names, 96 px wide).
+   - **B, two separate switches:** bigger names, and bigger icons. That makes four looks, and "bigger icons alone" isn't drawn yet.
+   - Recommendation: A. **Decided 2026-11-03: three sizes** (Jeffrey: "Three sizes"). A new person or device starts on Standard.
+3. **Who changes a person's size, and where** (asked before how it's remembered, because it limits that choice):
+   - each person, in their own account menu, next to "This device" and "Hide private details";
+   - Jeffrey, for each person, in Staff accounts;
+   - or both.
+   An admin setting someone else's size must save it with that person's account in the database: a migration (Supabase's per-user settings can't be changed for another person from the app). Picture: `Questions/SP3-who-changes-it.png`.
+   - **Decided 2026-11-03: each person** (Jeffrey: "Each person"). It is a "Panel size" row in their own account menu, under "This device", opening to the three sizes, and it is left out of the phone's menu. No Staff accounts change.
+4. **How each person's setting is remembered:** on each device, or with their account. Picture: `Questions/SP4-remembered.png`.
+   - **Decided 2026-11-03: with their account** (Jeffrey: "With their account"). It is kept in Supabase's per-user settings (`user_metadata`), with no migration; see the build notes below.
+   - Per person on each device works like Prospects' List/Board choice and Calendar's Show menu (v0.613): saved in that browser, with no database change.
+   - Per staff account follows the person to every device. Two ways to build it:
+     - Supabase's own per-user settings (`user_metadata`): no migration. The person can edit it, so it must never decide access, and it isn't written to `change_log`. The app doesn't use it today.
+     - A column on the staff table: a migration, with its number reserved through Main.
+   - Either way, the setting is per person only when each person signs in with their own account (v0.13). On the shared front-desk login "Staff" (v0.27), everyone at the desk shares one setting.
+   - A button on the panel itself, or Settings ("Details for the whole school. Admins only."), were the other places considered. They're poor fits for a personal setting, so question 3 doesn't offer them.
+5. ~~Who can use it~~ — **settled by question 1's answer:** anyone can have a bigger panel.
+
+**Build notes** (from question 1's review, 2026-10-29; they apply whichever look is chosen):
+- **Pointing with the mouse greys only the icon's pill**, as §2.3 says ("Hovered icon gets a light gray highlight"). Today's PC rule (`app.css`, `.rail-item:hover`) greys the whole button: with names, a grey 64×56 box would look more selected than the current item's pill.
+- **Testing keeps its name on PC.** `rail-menu.css`'s PC rule (lines 91–95) hides Testing's name while its menu shows; with names under the icons, that rule must apply only to the icon-only panel.
+- **The panel gets its own scroll when the window is too short.** Today it can't scroll. A phone turned sideways (844×390, touch) already gets the tablet panel: Prospects and Finance start off-screen, and the whole page scrolls 94 px. The larger looks need more height (C: 556 px).
+- **Spacing stays on §7's scale** (4/8/12/16/24/32): C's pill is 4 px by 16 px.
+- From question 3's review (2026-11-03):
+  - **The account menu gets its own scroll in a short window.** On PC and tablet the dropdown ends at 420 px today, or 484 px with "This device" open. With "Panel size" open it reaches about 548 px, past the roughly 508 px of a 1366×768 laptop at 125%.
+  - **A "Panel size" row copies "This device" fully:** the focus moves to the ticked choice, and the choices get a group label.
+  - **A three-way control in a box needs radio-group arrow keys.**
+  - **`ti-layout-sidebar`** (the row's icon) goes into §2.4's icon map before it's used.
+- From question 4's review (2026-11-03), if the size is kept **with each person's account** (Supabase's per-user settings, `user_metadata`):
+  - **Read it with `supabase.auth.getUser()` at load, not from the sign-in token.** Today the app loads with `getSession()` (`App.jsx`), whose copy can be about an hour old. Also apply it when the sign-in refreshes (`App.jsx` already listens for that), so an open dashboard catches up within about an hour.
+  - **Save with `supabase.auth.updateUser({ data: { … } })`.** It changes only the signed-in person's settings and keeps any others there.
+  - **Accept only the three sizes**; anything else counts as Standard.
+  - **A failed save shows §3.5's "couldn't save" message.**
+  - **The preview's fake database (`mockClient.js`, a shared file) fakes `getUser()` and `updateUser({ data })`.** Its `updateUser` handles only passwords today.
+  - **The 10b row says:**
+    - the setting is display-only and must never decide what anyone can see or do;
+    - it is the second exception, after Change password, to "writes go through security-definer functions";
+    - it isn't a school record, so it isn't in `change_log` (handoff §6 logs every change to a record).
+  - Nothing in `supabase/` or `src/` reads `user_metadata`, `raw_user_meta_data` or `app_metadata` today (checked 2026-11-03).
+  - The shared desk login "Staff" keeps one size, which follows it to every device signed in as "Staff".
+- From the mockup's design review (2026-11-03):
+  - **The name labels (Standard on PC) and Testing's page menu are drawn outside the scrolling panel**, in a layer placed at the icon's measured position, and close when the panel scrolls or the window resizes. A panel with `overflow` cuts off anything drawn beside it: the review measured today's label cut to its arrow tip, and Testing's menu fully hidden, with the keyboard moving into items nobody can see (§4).
+  - **The buttons narrow to the room the thin scrollbar leaves** (about 10 px in Chrome on Windows), keeping 4 px each side for the keyboard ring (2 px gap + 2 px line): `max-width: calc(100% - 8px)`. An inside ring on the panel's buttons would also work. (Built: only while the rail scrolls. Applied always, the panel's 1 px border made the buttons 63 and 87 px in every window; the code review, 2026-11-03.)
+  - **Check in the build's review:** at 1093×514 with the panel scrolled, Testing's menu and Standard's name labels show in full.
+  - **It opens at the saved size straight away**, from the saved sign-in (`session.user`). `getUser()` only corrects it; the app already waits for the profile before showing anything.
+  - **On a sign-in refresh, read the size from `session.user`.** Calling Supabase inside `onAuthStateChange` can freeze it (see the comment in `App.jsx`).
+  - **The failed-save bar sits on the frame, under the top bar,** so it stays when the person changes page, next to v1.005's offline bar. Its words: "Couldn't save your panel size, so your other devices keep the old one. Check the internet, then Retry." Retry and ×; it never closes by itself (§3.5).
+  - **After a size change in a short window, the current section's button stays in view** in the panel.
+  - **Known, Color Belt's to fix:** its roster's "Testing for" and "Paying by" text already overlaps at 640 px wide (11 overlapping pairs in the preview's 4 rows), but not at 700 px. With Largest it also overlaps at 700 px (3 pairs), but not at 768. This change doesn't cause it.
+- Mockup: `Mockups/SP-panel-size.png` (and `.html`). The three sizes, the menu row and the phone menu, Testing's menu, a short window, and a failed save.
+
+**OK'd 2026-11-03** (Jeffrey: "OK, build it"); rulebook **v1.118**. **Built** the same day:
+- `src/lib/panelSize.js` (new): the size comes from each copy of the account that reaches the device: the saved sign-in at load, then `getUser()` once; a sign-in; the hourly refresh; our own save. The newest copy wins (by the account's `updated_at`), and a size chosen here but not yet saved wins over every copy. It saves with `updateUser({ data: { panel_size } })`, with Retry and ×.
+  - A copy of another person's account starts afresh: no unsaved size, no amber bar. (Supabase sends no signal when a sign-out can't reach it with an expired sign-in; the code review, 2026-11-03.)
+  - The ticked size chosen again: nothing happens, unless its save had failed; then it is saved again.
+- `Rail.jsx` and `app.css`: the classes `rail--standard`, `rail--large` and `rail--largest`.
+  - In a window too short for it, the rail scrolls on its own: `rail--scrolls` (measured after each drawing and by a ResizeObserver) gives it `overflow-y: auto`, a thin scrollbar, `scroll-padding-block: 8px` (Tab keeps the keyboard ring in view) and buttons narrowed to `calc(100% - 8px)`. A rail that fits neither scrolls nor clips, exactly as before (the design review found a clipping rail cut the ring's right side by 1 px). The buttons never shrink (`flex: none`).
+  - Standard's bubble is `position: fixed` at `--bubble-x` / `--bubble-y`. These are measured after each drawing, scroll and resize, and again as the pointer or the keyboard reaches an item.
+  - The current section is kept in view after a size or page change, and when the lock screen closes.
+- `RailMenu.jsx` and `rail-menu.css`: Testing's menu is `position: fixed` at the icon's measured place. It closes if a rail scroll or a resize moves the icon.
+- `AccountMenu.jsx`:
+  - the Panel size row (not on phones);
+  - This device and Panel size open one at a time;
+  - a dropdown that doesn't fit gets its own scroll (`account-panel--scrolls` and a max-height), and one that fits stays exactly as before.
+- `Shell.jsx`: the amber bar under the top bar (`.shell-errbar`); on a page with its own scrollbar, its right side clears that scrollbar (`--page-scrollbar`). `tokens.css`: `--rail-width-largest: 96px`.
+- The preview (`mockClient.js`): `getUser`, `updateUser({ data })`, and the helpers `failNextPanelSave()`, `panelSizeElsewhere(size)`, `refreshSignIn()` and `refocusTab()` (Supabase re-sends the browser's saved, possibly older, copy when a tab is shown again).
+- Checks: `tools/check-panel.mjs` (38). Proof: `Proof/panel/SP-built-vs-mockup.png`.
+- Known and accepted (the code review and the design review, 2026-11-03):
+  - Two tabs saving different sizes at the same moment: one can show the other size until its next sign-in refresh (about an hour).
+  - When the sign-in was ended elsewhere (e.g. Staff accounts signs someone out everywhere), the load's `getUser()` can be what notices. The person then lands on Home after signing in again, instead of on their page.
+  - Large in a rail that scrolls (a window 510 px tall or less, e.g. a phone turned sideways): "Prospects" is wider than the narrowed button, so a keyboard ring on it crosses its first and last letters.
+  - After × or a Retry that works, the keyboard focus goes to the page, as with the shared amber bar everywhere.
+- Found by the design review in other sections (theirs to fix; passed on through Main):
+  - New students: at 640 px wide with a mouse, the Prospects board makes the whole page scroll sideways (94 px with Standard, so already on `main`). Each column head's hidden screen-reader count is `position: absolute` with no positioned parent; `position: relative` on `.pbcol-head` (or `.pboard`) fixes it.
+  - Color Belt and Star: at 640 px wide on touch, their event lists squeeze the Event column to almost nothing (Color Belt with Largest: 22 px, one name over 10 lines; Star already 18 px with Standard, 0 with Largest). Their fixed columns never drop a low-priority column, as §1.3 asks for tablets. Fine from 700 px.
+  - Calendar at 640 px with Largest: the "Closed · Holiday" chip wraps over 4 lines (cosmetic).
+  - Color Belt's roster overlap is no worse than above (12 / 13 overlapping pairs at 640 px with Standard / Largest; 1 / 3 at 700 px; none from 740 px).
+
+Where it stands: the status file.
