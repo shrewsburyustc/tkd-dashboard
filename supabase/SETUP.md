@@ -2780,7 +2780,7 @@ Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as name
 
 ## Migration 0032: Black Belt — testing times every 5 minutes, candidate history, Edit cycle Undo in one call
 
-**Status: not applied yet.** Built on `black-belt`, design-review items BB13 (rulebook v1.019 / S12), BB8 (v1.010, the History line) and the Edit cycle Undo race (BB5, v0.967).
+**Status: applied 2026-11-03** (0032a pre-check, 0032c fingerprints and security advisor, 0032d `0032_tests.sql` all passed; 0016/0024/0025/0026 tests not yet re-run on live — PGlite ran them after 0032). Built on `black-belt`, design-review items BB13 (rulebook v1.019 / S12), BB8 (v1.010, the History line) and the Edit cycle Undo race (BB5, v0.967).
 
 **Production order:** … 0025 → 0027 → 0026 → 0028 → 0029 → 0031 (live) → **0032**. It needs 0016, 0024 and 0025 (it stops with "0032 needs migration 0016 / 0024 / 0025 … first" if one is missing). **It must be live before the app version that calls `bb_candidate_history` or `bb_undo_cycle_edit`, or offers 5-minute testing times.** The app that is live today keeps working unchanged after it.
 
