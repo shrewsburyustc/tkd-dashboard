@@ -1,7 +1,8 @@
 // DayDialog.jsx — "Add testing day" / "Edit testing day", on top of Add / Edit cycle.
 // Why it exists: approved mockup Cycles 5 (rulebook v0.918 and its four details). The fields:
-//   - Name (shown to families), Date, Start time, End time (the v0.51 dropdown: 6:00 AM–10:00 PM
-//     in 15-minute steps), Place (Worcester school · Shrewsbury school · Other place + its text)
+//   - Name (shown to families), Date, Start time, End time (the shared time list, design review
+//     BB13 / v1.019 / v1.109: 6:00 AM–10:00 PM in 5-minute steps, opening with the chosen time in
+//     the middle), Place (Worcester school · Shrewsbury school · Other place + its text)
 //   - "Second part at another time or place" (detail 3: e.g. the outdoor part of Physical at
 //     Horgan Arena) → its own Start, End and Place
 //   - Graded this day: Physical, Technical, Curriculum (at least one, OP-18). Detail 2: a part
@@ -19,7 +20,8 @@
 import { useId } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Notice from '../../../components/Notice.jsx';
-import { TIME_OPTIONS, dayProblems, hasProblems, partsAlsoOnOtherDays } from '../../../lib/blackBelt/rules.js';
+import TimeList from '../../../components/TimeList.jsx';
+import { FIRST_TIME, LAST_TIME, TIME_STEP_MINUTES, dayProblems, hasProblems, partsAlsoOnOtherDays } from '../../../lib/blackBelt/rules.js';
 import { cycleDateYears, pastHint, testingDayMin } from '../../../lib/blackBelt/dateLimits.js';
 import DateField from '../parts/DateField.jsx';
 import InnerDialog from '../parts/InnerDialog.jsx';
@@ -27,7 +29,6 @@ import SelectField from '../parts/SelectField.jsx';
 import { valuesToDay } from './formValues.js';
 import * as T from '../text.js';
 
-const TIME_CHOICES = TIME_OPTIONS.map((time) => ({ value: time, label: T.timeLabel(time) }));
 const PLACE_CHOICES = [
   { value: 'worcester', label: T.PLACE_SCHOOL.worcester },
   { value: 'shrewsbury', label: T.PLACE_SCHOOL.shrewsbury },
@@ -92,18 +93,20 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
     </button>
   );
 
-  // One time dropdown with its label and message.
+  // One time field (the shared time list) with its label and message.
   const timeField = (field, label, message, autoTouch) => (
     <div className="field">
       <span id={`${id}-${field}-label`} className="field-label">
         {label}
       </span>
-      <SelectField
+      <TimeList
         id={`${id}-${field}`}
         labelId={`${id}-${field}-label`}
         describedBy={message ? err(field) : undefined}
         value={v[field] || null}
-        options={TIME_CHOICES}
+        from={FIRST_TIME}
+        to={LAST_TIME}
+        step={TIME_STEP_MINUTES}
         placeholder={T.CHOOSE_TIME}
         invalid={Boolean(message)}
         onChange={(value) => set({ [field]: value }, autoTouch)}

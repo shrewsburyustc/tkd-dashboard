@@ -29,6 +29,7 @@ import {
   IconPhone, IconTrash, IconUserCheck, IconUserX, IconX,
 } from '@tabler/icons-react';
 import DatePicker, { datePickerOpener } from '../../components/DatePicker.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { colorOf } from '../../lib/schedule/colors.js';
@@ -118,9 +119,7 @@ export default function ProspectPanel({
           {p.childFirstName}, {p.childAge}
         </h2>
         {onClose && (
-          <button type="button" className="icon-button" aria-label={T.CLOSE_PANEL} onClick={onClose}>
-            <IconX size={20} aria-hidden="true" />
-          </button>
+          <IconButton label={T.CLOSE_PANEL} onClick={onClose} Icon={IconX} />
         )}
       </div>
       <p className="ppanel-who">

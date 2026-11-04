@@ -221,6 +221,21 @@
   right: 9px;
 }
 
+/* Bordered icon button: a 32px square with a gray border (Calendar's ‹ ›; design review N13).
+   The same look as Finance's ‹ › (finance.css .fin-ibtn), kept here once so every section can
+   use it. On touch screens it's 36px inside the 44px tap area (see the touch section). */
+.tib.tib--outline {
+  width: 32px;
+  height: 32px;
+  color: var(--color-text);
+}
+
+.tib--outline .tib-box {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-control);
+}
+
 /* Compact outline button (e.g. "Add rank"): 28px with a mouse */
 .btn-sm {
   height: 28px;
@@ -964,6 +979,12 @@ html.is-reordering .tib-tip {
     color: var(--color-text);
   }
 
+  /* The bordered one (Calendar's ‹ ›) reacts like Finance's: white inside, darker border */
+  .tib--outline:hover .tib-box {
+    background: var(--color-bg);
+    border-color: var(--color-text-secondary);
+  }
+
   .grip:hover {
     background: var(--color-border);
     color: var(--color-text);
@@ -985,9 +1006,15 @@ html.is-reordering .tib-tip {
 
 /* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
 @media (pointer: coarse) {
-  .tib {
+  .tib,
+  .tib.tib--outline {
     width: var(--tap-size);
     height: var(--tap-size);
+  }
+
+  .tib--outline .tib-box {
+    width: 36px;
+    height: 36px;
   }
 
   /* Joined buttons on touch: 36px with their border, and a 44px tap area */

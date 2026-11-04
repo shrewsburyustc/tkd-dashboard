@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps C10 — four count cards replace the summary line</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1840px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps C10 — four count cards replace the summary line</h1>
+<p class="sub">Rules v1.013 and v1.014 (count cards filter, a money total is never a button), v1.107 (the shared row, <code>components/CountCards.jsx</code>, approved as M6), v1.115 (a card’s small note under the number) and v1.117 (the gray “Showing … only · Show all” line). Walkthrough picture 11b chose option B: Camps’ own four cards. Today a camp page has one summary line (“15 coming on Mon, Apr 19 · 6 to collect · $1,355 · Updated …”) that can’t be tapped. After: <b>(1)</b> four cards — <b>Campers</b> (everyone) · <b>Coming [day]</b> (filter) · <b>To collect</b> (filter; the number is campers who still owe, the money under it) · <b>Payments recorded</b> (a total, not a button). <b>(2)</b> “Coming” means: before the camp, its first day (“Coming Mon, Apr 19”); on a camp day, “Coming today” with “9 here” under it; between camp days, the next camp day; after the camp the card becomes <b>Came</b> (“9” / “of 9 days”, not a button). <b>(3)</b> Nobody owes: To collect 0, “All paid”. <b>(4)</b> The pizza count (an extra offered only on some days) moves to the cards’ own gray line under the row, only on that day. <b>(5)</b> Tapping Coming shows only that day’s campers, with “Showing coming today only · Show all”; To collect: “Showing to collect only · Show all”; the filter and Find a camper work together; in a two-week camp, if the Coming day is in the other week, the tap also moves the week switch to that week. <b>(6)</b> Hide private details on: only Campers and Coming. <b>(7)</b> “Updated …” on the right, above the cards. <b>(8)</b> Phones: two by two (the shared row does that itself). Preview numbers are real except where a caption says <b>sample</b>. Amber = what changes.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:829.6px">
+    <div class="shot" style="width:829.6px;height:183.60000000000002px">
+      <img src="shots/c10-pc-today.png" style="left:-40.800000000000004px;top:-61.2px;width:870.4000000000001px">
+      <div class="mark" style="left:6.880000000000001px;top:59.92px;width:810.4000000000001px;height:26.360000000000003px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> April Vacation Camp (before the camp): one line, “15 coming on Mon, Apr 19 · 6 to collect · $1,355”, “Updated …” at its right end. Nothing can be tapped.</figcaption>
+  </figure>
+<figure style="width:508.64000000000004px">
+    <div class="shot" style="width:508.64000000000004px;height:204.00000000000003px">
+      <img src="shots/c10-tab-today.png" style="left:-48.96px;top:-61.2px;width:557.6px">
+      <div class="mark" style="left:12.32px;top:83.72000000000001px;width:484.00000000000006px;height:26.360000000000003px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet 820×1180 touch.</b> The money ($1,355) is left out on tablets.</figcaption>
+  </figure>
+<div class="row"><figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:322.4px">
+      <img src="shots/c10-ph-today.png" style="left:0px;top:-55.8px;width:241.8px">
+      <div class="mark" style="left:5.92px;top:115.66px;width:229.96px;height:38.379999999999995px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390×844 touch.</b> “Updated” wraps under the numbers.</figcaption>
+  </figure><figure style="width:198.4px">
+    <div class="shot" style="width:198.4px;height:322.4px">
+      <img src="shots/c10-320-today.png" style="left:0px;top:-55.8px;width:198.4px">
+      <div class="mark" style="left:5.92px;top:115.66px;width:186.56px;height:38.379999999999995px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>320 wide.</b></figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After (mockup)</div>
+  <figure style="width:829.6px">
+    <div class="shot" style="width:829.6px;height:183.60000000000002px">
+      <img src="shots/c10-pc-before.png" style="left:-40.800000000000004px;top:-61.2px;width:870.4000000000001px">
+      <div class="mark" style="left:6.880000000000001px;top:59.92px;width:810.4000000000001px;height:86.88000000000001px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, before the camp</b> (April Vacation Camp, real preview numbers): Campers 19 · Coming Mon, Apr 19 15 · To collect 6 / $1,355 · Payments recorded $3,795. “Updated …” above the cards, on the right.</figcaption>
+  </figure>
+<figure style="width:829.6px">
+    <div class="shot" style="width:829.6px;height:482.8px">
+      <img src="shots/c10-pc-day.png" style="left:-40.800000000000004px;top:-61.2px;width:870.4000000000001px">
+      <div class="mark" style="left:6.880000000000001px;top:59.92px;width:810.4000000000001px;height:127.00000000000001px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, on a camp day, Coming tapped</b> — <b>sample</b>: drawn as if Wed, Apr 21 were today, with “9 here” made up (the camp hasn’t started, so the “Not open yet” tag and the Check in buttons are as they are now). 16 coming that day and “Pizza party today: 11” are the camp’s real counts for Wed. The list shows only Wednesday’s campers; the pizza line sits right under the cards, above “Showing coming today only · Show all”.</figcaption>
+  </figure>
+<figure style="width:829.6px">
+    <div class="shot" style="width:829.6px;height:183.60000000000002px">
+      <img src="shots/c10-pc-after.png" style="left:-40.800000000000004px;top:-61.2px;width:870.4000000000001px">
+      <div class="mark" style="left:6.880000000000001px;top:59.92px;width:810.4000000000001px;height:86.88000000000001px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, after the camp</b> (Columbus Day Camp, Oct 12 — real preview numbers): <b>Came</b> 9 / of 9 days (not a button), To collect 0 / All paid, Payments recorded $702.</figcaption>
+  </figure>
+<figure style="width:829.6px">
+    <div class="shot" style="width:829.6px;height:204.00000000000003px">
+      <img src="shots/c10-pc-hidden.png" style="left:-40.800000000000004px;top:-20.400000000000002px;width:870.4000000000001px">
+      <div class="mark" style="left:6.880000000000001px;top:100.72000000000001px;width:810.4000000000001px;height:71.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, Hide private details on</b> (the real switch; see “Private details hidden” at the top): only Campers and Coming. The shared row keeps its four-column grid, so the two cards fill the left half.</figcaption>
+  </figure>
+<figure style="width:598.4px">
+    <div class="shot" style="width:598.4px;height:240px">
+      <img src="shots/c10-tab-after.png" style="left:-57.6px;top:-72px;width:656px">
+      <div class="mark" style="left:15.200000000000003px;top:99.2px;width:568px;height:100.80000000000001px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet 820 touch.</b> Four in a row; the money is on the To collect card now (today’s tablet line leaves it out).</figcaption>
+  </figure>
+<div class="row"><figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:322.4px">
+      <img src="shots/c10-ph-after.png" style="left:0px;top:-55.8px;width:241.8px">
+      <div class="mark" style="left:5.92px;top:115.66px;width:229.96px;height:129.51999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390 touch.</b> Two by two.</figcaption>
+  </figure><figure style="width:198.4px">
+    <div class="shot" style="width:198.4px;height:322.4px">
+      <img src="shots/c10-320-after.png" style="left:0px;top:-55.8px;width:198.4px">
+      <div class="mark" style="left:5.92px;top:115.66px;width:186.56px;height:140.68px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>320.</b> “Coming Mon, Apr 19” and “Payments recorded” wrap to two lines.</figcaption>
+  </figure></div>
+  
+</div>
+</div>
+<div class="foot"><b>How it was drawn:</b> <code>mock-c10-cards.js</code> hides the real summary line and mounts the <b>real</b> shared row (<code>CountCards.jsx</code>) with the camp’s numbers, worked out the way <code>CampRoster.jsx</code> works out today’s line (<code>payTag</code>, <code>toCollectCents</code>, <code>extraCountOnDay</code>) from the preview’s own camp. Nothing in the app was changed. <b>Not drawn:</b> the two-week camp’s week switch moving when Coming is tapped (point 5) and the “between camp days” Coming (point 2) — both use the same card, only the day differs. <br><br><b>Your choice:</b> OK as drawn, or change a point (say which).</div>
+</body></html>
