@@ -52,3 +52,7 @@ Settings fit" (relayed by Jeffrey in the Color Belt session). Next: the Settings
 - **Hints:** should the Schedule's and Forms' hints become links to Settings → Classes and ranks?
 - **Both schools:** Settings ignores the top bar. How are each school's classes shown, e.g. one school under the other, or a school switch inside the part?
 - **Names:** what is the Prices tab called?
+
+## Answers (one rulebook row when all four are in)
+
+- Q1 (2026-11-04): **B** — Settings stays admins only; staff read Color Belt’s Prices tab, view only (every class, rank, price and final award; not the “Testing for” column). No account-menu change for Dashboard core.
