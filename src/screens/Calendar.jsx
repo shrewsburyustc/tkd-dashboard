@@ -22,6 +22,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCalendarEvent, IconCalendarOff, IconChevronLeft, IconChevronRight, IconDots, IconPalette, IconPlus } from '@tabler/icons-react';
 import ErrorBanner from '../components/ErrorBanner.jsx';
+import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -622,16 +623,13 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
   const buttons =
     isAdmin && ready ? (
       <div className="sactions">
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={T.MORE_ACTIONS}
+        <IconButton
+          label={T.MORE_ACTIONS}
           aria-haspopup="menu"
           aria-expanded={menu?.kind === 'more' ? 'true' : 'false'}
           onClick={(e) => setMenu(menu ? null : { kind: 'more', anchor: e.currentTarget })}
-        >
-          <IconDots size={20} aria-hidden="true" />
-        </button>
+          Icon={IconDots}
+        />
         <button
           type="button"
           className="btn btn-primary"
@@ -660,12 +658,8 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
   const toolbar = (
     <div className="ctoolbar">
       <div className="ctoolbar-nav">
-        <button type="button" className="icon-button" aria-label={shownView === 'month' ? T.PREVIOUS_MONTH : T.PREVIOUS_WEEK} onClick={() => step(-1)}>
-          <IconChevronLeft size={20} aria-hidden="true" />
-        </button>
-        <button type="button" className="icon-button" aria-label={shownView === 'month' ? T.NEXT_MONTH : T.NEXT_WEEK} onClick={() => step(1)}>
-          <IconChevronRight size={20} aria-hidden="true" />
-        </button>
+        <IconButton className="tib--outline" label={shownView === 'month' ? T.PREVIOUS_MONTH : T.PREVIOUS_WEEK} onClick={() => step(-1)} Icon={IconChevronLeft} />
+        <IconButton className="tib--outline" label={shownView === 'month' ? T.NEXT_MONTH : T.NEXT_WEEK} onClick={() => step(1)} Icon={IconChevronRight} />
         <h2 className="ctoolbar-title" aria-live="polite">
           {title}
         </h2>

@@ -17,6 +17,7 @@
 //   onAnswer(fieldId, value)  onChildren(list)  onBooking(childIndex, timeKey | '')  onSignature(dataUrl | null)
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import DatePicker from '../../components/DatePicker.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import { isVisible, MAX_CHILDREN, NO_TIME_KEY } from '../../lib/forms/fields.js';
 import { formatDate } from '../../lib/schedule/versions.js';
@@ -178,9 +179,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             <div className="fchild-head">
               <span className="fchild-title">{T.CHILD(i + 1)}</span>
               {children.length > 1 && !readOnly && (
-                <button type="button" className="icon-button" aria-label={T.removeChild(i + 1)} onClick={() => onChildren(children.filter((_, j) => j !== i))}>
-                  <IconTrash size={16} aria-hidden="true" />
-                </button>
+                <IconButton label={T.removeChild(i + 1)} onClick={() => onChildren(children.filter((_, j) => j !== i))} Icon={IconTrash} />
               )}
             </div>
             <div className="fchild-row">

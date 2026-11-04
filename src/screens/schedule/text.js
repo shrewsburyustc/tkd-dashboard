@@ -12,7 +12,8 @@ export const ADD_SHORT = 'Add'; // phone header button
 export const PLAN_A_CHANGE = 'Plan a change';
 export const MORE_ACTIONS = 'More actions';
 export const WHICH_SCHOOL = 'Which school?';
-export const BOTH_SCHOOLS = 'Worcester and Shrewsbury';
+// Under the title on Both, as in Prospects, Calendar and Forms (v1.022, design review N10).
+export const BOTH_SCHOOLS = 'Both schools';
 export const whichSchoolFor = (kind) => (kind === 'add' ? 'Add a time slot to which school\'s schedule?' : 'Plan a change for which school?');
 export const LOADING = 'Loading the schedule';
 

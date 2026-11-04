@@ -934,7 +934,16 @@
   text-align: center;
 }
 
+/* The tick: a green check in a pale-green circle, the same as the family page's
+   thank-you screen (forms-public.css .fp-done__ok), so both "sent" screens match (N14) */
 .fsent-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eaf3de;
   color: var(--color-success-text);
 }
 

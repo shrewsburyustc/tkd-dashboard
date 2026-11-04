@@ -448,6 +448,78 @@ export function toCollectCents(rows) {
   return (rows ?? []).filter((r) => r.status === 'active').reduce((sum, r) => sum + Math.max(0, r.owesCents ?? 0), 0);
 }
 
+// ----- The camp page's count cards (design review C10, rulebook v0.737) -----
+// The four cards above Find a camper: Campers · Coming [day] (or Came, after the camp) · To collect ·
+// Payments recorded. The screen (CampRoster.jsx) draws them with the shared CountCards; the numbers
+// are worked out here so checks.mjs can test them without React.
+
+// Which day the "Coming" card is about:
+//   { mode: 'today', day }  today is a camp day          → "Coming today", "N here"
+//   { mode: 'next', day }   before the camp, or between two camp days → the next camp day
+//                           ("Coming Mon, Apr 19")
+//   { mode: 'after', day: null }  every camp day has passed (or the camp has no days) → the card
+//                           becomes "Came"
+// days = the camp's Day[] (any order), today = 'YYYY-MM-DD'.
+export function comingCardDay(days, today) {
+  const sorted = [...(days ?? [])].filter((d) => isIsoDate(d?.day)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+  const todays = sorted.find((d) => d.day === today);
+  if (todays) return { mode: 'today', day: todays };
+  const next = sorted.find((d) => d.day > today);
+  if (next) return { mode: 'next', day: next };
+  return { mode: 'after', day: null };
+}
+
+// Does this camper still owe money? (To collect counts and keeps these; an overpaid camper owes
+// nothing.)
+export function stillOwes(row) {
+  return (row?.owesCents ?? 0) > 0;
+}
+
+// Does this camper come on that camp day?
+export function comesOnDay(row, dayId) {
+  return (row?.days ?? []).some((d) => d.dayId === dayId);
+}
+
+// Every number on the cards, from the camp's whole roster (active AND removed rows):
+//   campers        active campers
+//   coming         active campers signed up on the card's day (0 after the camp)
+//   here           of those, checked in on that day (only shown when the day is today)
+//   came / cameOf  after the camp: days attended / days signed up, over the active campers
+//   toCollect      active campers who still owe money (owesCents above 0): "Owes", "$X due", and a
+//                  possible duplicate only while it owes (a paid one has nothing to collect; v0.737
+//                  says "campers who still owe")
+//   toCollectCents what those campers still owe (toCollectCents above)
+//   recordedCents  every payment recorded for this camp, reversals taken off — the sum of every
+//                  roster row's paidCents, REMOVED campers included: money taken is money taken,
+//                  and Finance's Daily report counts a removed camper's payment too
+export function campCardCounts(roster, days, today) {
+  const rows = roster ?? [];
+  const active = rows.filter((r) => r.status === 'active');
+  const { mode, day } = comingCardDay(days, today);
+  const comingRows = day ? active.filter((r) => comesOnDay(r, day.dayId)) : [];
+  const here = day ? comingRows.filter((r) => r.days.find((d) => d.dayId === day.dayId)?.checkedInAt).length : 0;
+  return {
+    mode,
+    day,
+    campers: active.length,
+    coming: comingRows.length,
+    here,
+    came: active.reduce((n, r) => n + (r.days ?? []).filter((d) => d.checkedInAt).length, 0),
+    cameOf: active.reduce((n, r) => n + (r.days ?? []).length, 0),
+    toCollect: active.filter(stillOwes).length,
+    toCollectCents: toCollectCents(active),
+    recordedCents: rows.reduce((n, r) => n + (Number.isInteger(r.paidCents) ? r.paidCents : 0), 0),
+  };
+}
+
+// Does a roster row stay on screen under a card's filter? filter = null | 'coming' | 'collect';
+// day = the Coming card's day (comingCardDay). 'coming' with no day (after the camp) keeps everyone.
+export function matchesCardFilter(row, filter, day) {
+  if (filter === 'coming') return !day || comesOnDay(row, day.dayId);
+  if (filter === 'collect') return stillOwes(row);
+  return true;
+}
+
 // Which school's drawer a camp payment goes to (owner decision 2026-10-19, changes v0.707 part 1):
 // THIS DEVICE's home school (account menu "This device: Worcester / Shrewsbury", device.js) — not
 // the top switcher — for every camp, so Mark paid never asks. Accepts the device's name

@@ -7,7 +7,7 @@
 // state: { mode: 'fill' | 'preview', form, fields, step, values, problems, times, saving, note, sent }
 //   values = { answers, children: [{ first_name, age }], bookings: { childIndex: timeKey }, signature }
 import { useEffect, useRef } from 'react';
-import { IconArrowLeft, IconArrowRight, IconCheck, IconCircleCheck } from '@tabler/icons-react';
+import { IconArrowLeft, IconArrowRight, IconCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { emptyFillValues, stepProblems, stepsOf } from '../../lib/forms/fields.js';
@@ -56,7 +56,10 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
     return (
       <Dialog title={T.SENT_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onCancel}>
         <div className="fsent">
-          <IconCircleCheck size={40} aria-hidden="true" className="fsent-icon" />
+          {/* The same tick as the family page's thank-you screen (ThankYou.jsx), design review N14 */}
+          <div className="fsent-icon" aria-hidden="true">
+            <IconCheck size={24} />
+          </div>
           <p>{T.sentText(v.answers.parent_name)}</p>
           {state.sent.bookings.length > 0 && (
             <ul className="fsent-list">
