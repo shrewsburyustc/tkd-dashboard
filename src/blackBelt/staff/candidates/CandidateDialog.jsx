@@ -20,7 +20,7 @@
 // shows the Dan as text, not a field (Q-G4: a make-up's Dan can't change). Delete permanently is
 // grayed while the candidate has grades (Q-G3, v0.950).
 // Privacy (§5): the date of birth and email appear only here, and with the device's Hide payments
-// switch on they read "Hidden on this device" (OP-B7); so do the payments, Edit details is grayed
+// switch on they read "Hidden on this tablet" (OP-B7, v0.974); so do the payments, Edit details is grayed
 // ("Edit details at the desk.") and View signature isn't offered. The data lives in
 // useCandidateActions only while this dialog is open.
 // Focus: Edit details puts the cursor in First name; back from it, or from a dialog opened here,

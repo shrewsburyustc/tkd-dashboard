@@ -32,7 +32,7 @@
   background: var(--color-bg);
 }
 
-/* "Payments are hidden on this device." (Hide payments switch on) */
+/* "Payment details are hidden on this tablet." (Hide private details on) */
 .bbr-hidden {
   margin: 0;
   color: var(--color-text-secondary);

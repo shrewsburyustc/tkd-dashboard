@@ -10,7 +10,7 @@
 //   Close                             nothing changes
 // PC / tablet: two columns; phone: a full screen with the two one after the other.
 // The two registrations are read with loadCandidate (the only read that has the date of birth and
-// email); with the device's Hide payments switch on those two and Paid read "Hidden on this device".
+// email); with the device's Hide payments switch on those two and Paid read "Hidden on this tablet".
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { formatCents } from '../../../lib/blackBelt/money.js';
