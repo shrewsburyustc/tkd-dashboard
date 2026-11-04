@@ -34,10 +34,10 @@ import { registrationLink } from '../../../lib/testing/qr.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
-import ChoiceGroup from './ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.jsx';
 import EventDialog, { checkEventForm, isEventFormDirty } from './EventDialog.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from './useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import * as T from '../text.js';
 
 // Upcoming / Past, per school, kept while the page is open (like phase 1's open classes).

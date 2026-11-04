@@ -20,7 +20,7 @@ import DatePicker from '../../../components/DatePicker.jsx';
 import { isIsoDate, MAX_PAYMENT_CENTS, todayInSchoolTime } from '../../../lib/testing/eventRules.js';
 import { yearRange } from '../../../lib/star/eventDateRules.js';
 import { parseDollars } from '../../../lib/money.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import * as T from '../text.js';
 
 const METHODS = ['cash', 'check', 'card'];

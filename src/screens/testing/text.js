@@ -8,6 +8,10 @@
 // Follows "Hide private details" (v0.506): its words are at the end, and a few sentences take a
 // `hidden` input so they never name money while the switch is on.
 
+// Money in the sentences below is written by the dashboard’s one money helper (rulebook
+// v1.026): "$65", with cents only when there are some ("$290.50").
+import { formatMoney } from '../../lib/money.js';
+
 // ----- 7.1 Page, tabs, states -----
 export const PAGE_TITLE = 'Testing';
 export const ADD_CLASS = 'Add class';
@@ -354,6 +358,9 @@ export function timeLabel(hhmm) {
 
 // ----- Money -----
 // 6500 → "$65" (whole dollars; the same style as Classes and ranks)
+// Color Belt’s own screens and sentences use formatMoney (src/lib/money.js) since design
+// review CB16; this one stays, unchanged, because Camps imports it (src/screens/camps/text.js)
+// until Camps switches in its own prompt.
 export function dollars(cents) {
   if (typeof cents !== 'number' || !Number.isFinite(cents)) return '';
   const value = cents / 100;
@@ -522,10 +529,10 @@ export function deleteEventBody({ activeCount, removedCount, paymentCents, resul
   }
   if (resultCount > 0) {
     const results = resultCount === 1 ? 'their 1 testing result' : `their ${resultCount} testing results`;
-    if (paymentCents > 0) return `Its ${who}, ${regs}, ${results} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
+    if (paymentCents > 0) return `Its ${who}, ${regs}, ${results} and ${formatMoney(paymentCents)} of payments are deleted too. ${tail}`;
     return `Its ${who}, ${regs} and ${results} are deleted too. ${tail}`; // CP1
   }
-  if (paymentCents > 0) return `Its ${who}, ${regs} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
+  if (paymentCents > 0) return `Its ${who}, ${regs} and ${formatMoney(paymentCents)} of payments are deleted too. ${tail}`;
   return `Its ${who} and ${regs} are deleted too. ${tail}`;
 }
 export const KEEP_EVENT = 'Keep event';
@@ -563,7 +570,7 @@ export const CARD_PAID = 'Paid';
 export const CARD_NOT_PAID = 'Not paid';
 export const CARD_PAYMENTS = 'Payments recorded';
 // R8: the small gray line under Payments recorded when removed students' payments are in it.
-export const includesRemoved = (cents) => `includes ${dollars(cents)} from removed students`;
+export const includesRemoved = (cents) => `includes ${formatMoney(cents)} from removed students`;
 export const SHOWING_PAID = 'Showing paid only';
 export const SHOWING_NOT_PAID = 'Showing not paid only';
 export const SHOW_ALL = 'Show all';
@@ -620,7 +627,7 @@ export const REVIEW_DUPLICATE = 'Review possible duplicate';
 export const moreForStudent = (name) => `More actions for ${name}`;
 
 // Toasts
-export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${dollars(cents)} ${payingByLower(method)}`;
+export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${formatMoney(cents)} ${payingByLower(method)}`;
 export const withdrawnToast = (name) => `${name} withdrawn`;
 export const restoredToast = (name) => `${name} restored`;
 export const studentAddedToast = (name) => `${name} added`;
@@ -666,8 +673,8 @@ export const PICK_PAYING_BY = 'Choose how they’ll pay.';
 export const NEEDS_THREE_STRIPES = 'Every student needs 3 stripes on one side of their belt to test.';
 // "$65 ($75 on the testing day)" before the testing day; "$75" on it or after.
 export function feeText(earlyCents, dayCents, onOrAfterTestingDay) {
-  if (onOrAfterTestingDay || earlyCents === dayCents) return dollars(dayCents);
-  return `${dollars(earlyCents)} (${dollars(dayCents)} on the testing day)`;
+  if (onOrAfterTestingDay || earlyCents === dayCents) return formatMoney(dayCents);
+  return `${formatMoney(earlyCents)} (${formatMoney(dayCents)} on the testing day)`;
 }
 // "Testing for Orange → Green · Group A, 5:00 – 6:00 PM · $65 ($75 on the testing day)"
 // fee null (Hide private details, v0.506): the line ends after the class and time.
@@ -694,7 +701,7 @@ export const REFERENCE_WORD = 'reference';
 export const SIGNED_FORM = 'Parent or guardian, on the form';
 export const signatureDeleted = (stamp) => `Signed on the form, ${stampDay(stamp)} (the signature is deleted 90 days after testing)`;
 export const NOT_SIGNED_DESK = 'Not signed here (added at the desk)';
-export const paidDetail = (cents, method, paidOn) => `${dollars(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
+export const paidDetail = (cents, method, paidOn) => `${formatMoney(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
 export const removedDetail = (stamp, name, reason) =>
   `${reason === 'duplicate_copy' ? 'Duplicate copy, removed' : 'Withdrawn'} ${stampDay(stamp)}${name ? ` by ${name}` : ''}`;
 export const EDIT_DETAILS_TITLE = 'Edit details';
@@ -759,13 +766,13 @@ export function deleteStudentBody(eventName, payment, graded = null, firstName =
     // "the testing result (Not passed, Nov 20)" — or "the grading note" when only a note exists.
     const what = graded.result ? `the testing result (${resultTagText(graded.result)}, ${stampDay(graded.resultAt)})` : 'the grading note';
     if (payment) {
-      const paid = `the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
+      const paid = `the ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
       return `${firstName}’s registration, ${paid} and ${what} are deleted. They won’t show in Payments recorded or on the Grading tab any more. This can’t be undone.`;
     }
     return `${firstName}’s registration and ${what} are deleted. They won’t show on the Grading tab any more. This can’t be undone.`; // CP1
   }
   if (!payment) return `The registration is deleted from ${eventName}. This can’t be undone.`;
-  return `The registration and the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
+  return `The registration and the ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
     payment.paidOn,
   )} are deleted from ${eventName}. The payment won’t show in Payments recorded any more. This can’t be undone.`;
 }
@@ -977,7 +984,7 @@ export const LEAVE_ANYWAY = 'Leave anyway';
 // =====================================================================================
 
 // One recorded payment as text: "$65 cash Nov 2". p = { cents, method, paidOn }
-const paymentPart = (p) => `${dollars(p.cents)} ${payingByLower(p.method)} ${monthDay(p.paidOn)}`;
+const paymentPart = (p) => `${formatMoney(p.cents)} ${payingByLower(p.method)} ${monthDay(p.paidOn)}`;
 
 // ----- The tab (P1, P7) -----
 export const TAB_PRIVATE = 'Private testing';
@@ -987,13 +994,13 @@ export const CARD_PRIVATE = 'Private testings';
 // Under the Paid card: "1 owes more" ("2 owe more" — CP1)
 export const owesMoreCount = (n) => (n === 1 ? '1 owes more' : `${n} owe more`);
 // Under Payments recorded: "includes $85 from cancelled"
-export const includesCancelled = (cents) => `includes ${dollars(cents)} from cancelled`;
+export const includesCancelled = (cents) => `includes ${formatMoney(cents)} from cancelled`;
 export const COL_DAY_TIME = 'Day · time';
 export const COL_TESTING_FOR_PRICE = 'Testing for · price';
 // "Tue, Dec 1 · 4:00 PM"
 export const privateDayTime = (dateIso, hhmm) => `${weekdayMonthDay(dateIso)} · ${timeLabel(hhmm)}`;
 // The amber line under a name: "Paid $65 · $20 more to collect"
-export const owedLine = (paidCents, dueCents) => `Paid ${dollars(paidCents)} · ${dollars(dueCents)} more to collect`;
+export const owedLine = (paidCents, dueCents) => `Paid ${formatMoney(paidCents)} · ${formatMoney(dueCents)} more to collect`;
 export const movedFromLine = (eventName) => `Moved from ${eventName}`;
 // A cancelled row's gray tag: "Cancelled Nov 28"
 export const cancelledTag = (stamp) => `Cancelled ${stampDay(stamp)}`;
@@ -1010,8 +1017,8 @@ export const privateTestingForLine = (fromName, toName, className) => `Testing f
 export const PRIVATE_DAY = 'Day';
 export const PRIVATE_TIME = 'Time';
 export const TIME_HINT = '6:00 AM – 10:00 PM, every 5 minutes';
-export const privatePriceLine = (cents) => `${dollars(cents)} private price`;
-export const privatePriceHint = (rankName, cents) => `The private price for ${rankName} in Classes and ranks. Mark paid charges ${dollars(cents)}.`;
+export const privatePriceLine = (cents) => `${formatMoney(cents)} private price`;
+export const privatePriceHint = (rankName, cents) => `The private price for ${rankName} in Classes and ranks. Mark paid charges ${formatMoney(cents)}.`;
 export const ADD_PRIVATE_HINT = 'For a family who asks to test privately, on their own day and time. Not part of a testing event.';
 export const PRIVATE_DAY_PAST = 'The private day can’t be in the past.';
 export const PICK_PRIVATE_DAY = 'Enter the day.'; // CP1
@@ -1020,7 +1027,7 @@ export const PRIVATE_DAY_TOO_FAR = 'Pick a day within a year from today.'; // CP
 // Edit details: a copied class or belt that was removed from Classes and ranks since — CP1
 export const notInClassesRanks = (name) => `${name} (no longer in Classes and ranks)`;
 // Edit details of a paid row moved to a pricier rank (v0.254): "Price $85 → $95 · $10 more to collect"
-export const repriceLine = (fromCents, toCents, dueCents) => `Price ${dollars(fromCents)} → ${dollars(toCents)} · ${dollars(dueCents)} more to collect`;
+export const repriceLine = (fromCents, toCents, dueCents) => `Price ${formatMoney(fromCents)} → ${formatMoney(toCents)} · ${formatMoney(dueCents)} more to collect`;
 export const beltChangeClearsPrivate = (firstName, resultText) =>
   `Changing the belt clears ${firstName}’s result (${resultText}). Record it again on the private testing page.`; // CP1
 export const beltChangeClearsNotePrivate = (firstName) =>
@@ -1035,7 +1042,7 @@ export const CANCEL_PRIVATE = 'Cancel private testing';
 // ----- Change day or time (P4) -----
 // "Liam Park · Group B · Blue → High Blue"
 export const privateDialogSub = (name, className, fromName, toName) => [name, className, `${fromName} → ${toName}`].filter(Boolean).join(' · ');
-export const priceStays = (cents) => `The price stays ${dollars(cents)}.`;
+export const priceStays = (cents) => `The price stays ${formatMoney(cents)}.`;
 export const clearsPrivateNoShow = (firstName, dateIso) =>
   `${firstName} was marked No show on ${weekdayMonthDay(dateIso)}. Saving a new day clears that result.`; // CP1
 
@@ -1048,7 +1055,7 @@ export function cancelBody(dateIso, hhmm, payment, hidden = false) {
   const first = `${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}. It moves to Past as Cancelled.`;
   if (hidden) return `${first} Any recorded payment stays recorded; it isn’t refunded.`;
   if (!payment) return first;
-  return `${first} The ${dollars(payment.cents)} ${payingByLower(payment.method)} payment stays recorded; it isn’t refunded.`;
+  return `${first} The ${formatMoney(payment.cents)} ${payingByLower(payment.method)} payment stays recorded; it isn’t refunded.`;
 }
 export const KEEP_IT = 'Keep it';
 export const cancelledToast = (name) => `${name}’s private testing cancelled`; // CP1
@@ -1065,7 +1072,7 @@ export function deletePrivateBody(payments, result, movedFrom = null, hidden = f
   if (hidden) {
     parts.push('any recorded payment');
   } else if (payments.length === 1) {
-    parts.push(`the ${dollars(payments[0].cents)} ${payingByLower(payments[0].method)} payment recorded on ${monthDay(payments[0].paidOn)}`);
+    parts.push(`the ${formatMoney(payments[0].cents)} ${payingByLower(payments[0].method)} payment recorded on ${monthDay(payments[0].paidOn)}`);
   } else if (payments.length > 1) {
     parts.push(`the ${payments.length} payments (${payments.map(paymentPart).join(', ')})`);
   }
@@ -1077,27 +1084,27 @@ export function deletePrivateBody(payments, result, movedFrom = null, hidden = f
 
 // ----- Payments on the tab (CP1) -----
 // Change how they'll pay while owing: "Liam Park · $20 more to collect"
-export const changePayingBySubOwed = (name, dueCents) => `${name} · ${dollars(dueCents)} more to collect`;
+export const changePayingBySubOwed = (name, dueCents) => `${name} · ${formatMoney(dueCents)} more to collect`;
 // Edit payment after a top-up: "Ava Chen · $65 cash Nov 2 + $20 card Dec 1 — editing the $20"
-export const editPaymentSubTopUp = (name, parts, editingCents) => `${name} · ${parts.map(paymentPart).join(' + ')} — editing the ${dollars(editingCents)}`;
+export const editPaymentSubTopUp = (name, parts, editingCents) => `${name} · ${parts.map(paymentPart).join(' + ')} — editing the ${formatMoney(editingCents)}`;
 
 // ----- Move to private testing (event page, P5) -----
 export const MOVE_TO_PRIVATE = 'Move to private testing';
 export const moveIntro = (firstName, eventName) =>
   `${firstName} leaves ${eventName} (listed under Removed there) and is listed on the Private testing tab, with their name, class and belt filled in.`;
 export const moveMoneyOwes = (paidCents, priceCents, dueCents) =>
-  `${dollars(paidCents)} paid → ${dollars(priceCents)} private price · ${dollars(dueCents)} more to collect`;
-export const moveMoneyNotPaid = (priceCents) => `${dollars(priceCents)} private price · not paid yet`;
-export const moveMoneyEnough = (paidCents) => `Already paid ${dollars(paidCents)}. Nothing more to collect.`;
+  `${formatMoney(paidCents)} paid → ${formatMoney(priceCents)} private price · ${formatMoney(dueCents)} more to collect`;
+export const moveMoneyNotPaid = (priceCents) => `${formatMoney(priceCents)} private price · not paid yet`;
+export const moveMoneyEnough = (paidCents) => `Already paid ${formatMoney(paidCents)}. Nothing more to collect.`;
 // "The $65 cash payment moves with Ava. The private price for Yellow in Classes and ranks."
 // payments = the live payments [{ cents, method }]: none → only the second sentence; two or more
 // → "The $85 in payments moves with Ava." (CP1)
 export function movePaymentHint(payments, firstName, rankName) {
   const price = `The private price for ${rankName} in Classes and ranks.`;
   if (payments.length === 0) return price;
-  if (payments.length === 1) return `The ${dollars(payments[0].cents)} ${payingByLower(payments[0].method)} payment moves with ${firstName}. ${price}`;
+  if (payments.length === 1) return `The ${formatMoney(payments[0].cents)} ${payingByLower(payments[0].method)} payment moves with ${firstName}. ${price}`;
   const total = payments.reduce((sum, p) => sum + p.cents, 0);
-  return `The ${dollars(total)} in payments moves with ${firstName}. ${price}`;
+  return `The ${formatMoney(total)} in payments moves with ${firstName}. ${price}`;
 }
 export const moveClearsNoShow = (firstName, dateIso) => `${firstName} was marked No show on ${weekdayMonthDay(dateIso)}. Moving clears that result.`;
 export const movedToast = (name) => `${name} moved to private testing`;
@@ -1124,7 +1131,7 @@ export const cancelledDetail = (stamp, name) => `${cancelledTag(stamp)}${name ? 
 export const privateAddedDetail = (stamp, movedFromEventName) =>
   movedFromEventName ? `${stampDayTime(stamp)} · moved from ${movedFromEventName}` : stampDayTime(stamp);
 // After the payment: "$20 more to collect"
-export const moreToCollect = (cents) => `${dollars(cents)} more to collect`;
+export const moreToCollect = (cents) => `${formatMoney(cents)} more to collect`;
 
 // ----- The grading page (P6) -----
 export const BACK_TO_PRIVATE = 'Private testing';

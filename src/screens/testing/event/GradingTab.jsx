@@ -37,7 +37,7 @@ import { placeTip } from '../../../components/IconButton.jsx';
 import { LOCATION_NAME } from '../../../lib/device.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
 import { canChangeResults, gradingWindow, groupOfClass, resultCounts, testingGroups } from '../../../lib/testing/gradingRules.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ResultButtons, { ResultTag } from './ResultButtons.jsx';
 import { TestingForCell } from './StudentDialog.jsx';
 import ResultsSheet from './ResultsSheet.jsx';

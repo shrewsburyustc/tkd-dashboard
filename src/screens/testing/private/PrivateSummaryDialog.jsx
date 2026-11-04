@@ -17,6 +17,7 @@
 // Like the other dialogs it only DRAWS; PrivateTestingTab decides what the buttons do.
 import { IconEdit } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
+import { formatMoney } from '../../../lib/money.js';
 import { ResultTag } from '../event/ResultButtons.jsx';
 import { TestingForCell } from '../event/StudentDialog.jsx';
 import { rankViewOf } from './PrivateRows.jsx';
@@ -56,7 +57,7 @@ export default function PrivateSummaryDialog({ record, isPhone, canEdit, hidden 
   } else {
     payment = (
       <>
-        <span className="ttag">{T.TAG_NOT_PAID}</span> · {T.dollars(record.amountDueCents)}
+        <span className="ttag">{T.TAG_NOT_PAID}</span> · {formatMoney(record.amountDueCents)}
       </>
     );
   }
@@ -69,7 +70,7 @@ export default function PrivateSummaryDialog({ record, isPhone, canEdit, hidden 
         <SummaryRow label={T.DETAIL_TESTING_FOR}>
           <TestingForCell rank={rankViewOf(record)} />
         </SummaryRow>
-        {!hidden && <SummaryRow label={T.DETAIL_PRICE}>{T.dollars(record.privateCents)}</SummaryRow>}
+        {!hidden && <SummaryRow label={T.DETAIL_PRICE}>{formatMoney(record.privateCents)}</SummaryRow>}
         <SummaryRow label={T.DETAIL_ADDED}>{T.privateAddedDetail(record.createdAt, record.movedFromEventName)}</SummaryRow>
         {hidden ? (
           // Hide private details (v0.507 Q2): the payment part keeps its row and says it is hidden

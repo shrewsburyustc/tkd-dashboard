@@ -35,7 +35,7 @@ import { IconAlertTriangle, IconDots, IconEdit } from '@tabler/icons-react';
 import Belt from '../../components/Belt.jsx';
 import Grip from '../../components/Grip.jsx';
 import IconButton from '../../components/IconButton.jsx';
-import { formatDollars } from '../../lib/money.js';
+import { formatMoney } from '../../lib/money.js';
 import * as T from './text.js';
 
 // The table's columns (CSS grid), depending on the device and on who is looking.
@@ -77,7 +77,7 @@ function AwardReminder({ isAdmin }) {
 }
 
 // The grip handle: the shared one (src/components/Grip.jsx) since Dashboard core step 1. This
-// export keeps the imports of Calendar, Forms and Prospects (and ClassBlock) working.
+// export keeps the imports of Calendar, Forms and Prospects working.
 export { Grip };
 
 // Phone line 1 is two units: "[belt] Rank" and "→ [belt] Next rank". Each unit is an
@@ -216,15 +216,15 @@ function TableRow({ rank, cls, ctx, lifted = false }) {
         )}
       </span>
       <span role="cell" className="rcell num">
-        {formatDollars(rank.earlyCents)}
+        {formatMoney(rank.earlyCents)}
       </span>
       <span role="cell" className="rcell num">
-        {formatDollars(rank.dayCents)}
+        {formatMoney(rank.dayCents)}
       </span>
       {layout.isWide && (
         <>
           <span role="cell" className="rcell num">
-            {formatDollars(rank.privateCents)}
+            {formatMoney(rank.privateCents)}
           </span>
           <span role="cell" className="rcell">
             {rank.sparringGear ? T.YES : T.NO}
@@ -306,8 +306,8 @@ function PhoneRow({ rank, cls, ctx, lifted = false }) {
         {/* Each price never breaks inside itself, and the "·" travels with the price after it,
             so a narrow phone never shows a line ending in a lonely dot. */}
         <div className="l2">
-          <span>{T.PHONE_EARLY(formatDollars(rank.earlyCents))}</span> <span>· {T.PHONE_DAY(formatDollars(rank.dayCents))}</span>{' '}
-          <span>· {T.PHONE_PRIVATE(formatDollars(rank.privateCents))}</span>
+          <span>{T.PHONE_EARLY(formatMoney(rank.earlyCents))}</span> <span>· {T.PHONE_DAY(formatMoney(rank.dayCents))}</span>{' '}
+          <span>· {T.PHONE_PRIVATE(formatMoney(rank.privateCents))}</span>
           {sparringText && (
             <>
               {' '}

@@ -25,7 +25,7 @@ import { nameKey, nameProblem, normalizeName } from '../../../lib/testing/names.
 import { NOTE_MAX, isIsoDate, validateClassTimes } from '../../../lib/testing/eventRules.js';
 import { closingDateLimits, closingYears, testingDateLimits, testingYears } from '../../../lib/star/eventDateRules.js';
 import DatePicker from '../../../components/DatePicker.jsx';
-import ChoiceGroup from './ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import * as T from '../text.js';
 
 // The times offered in each list: every 5 minutes from 6:00 AM to 10:00 PM (classes can start

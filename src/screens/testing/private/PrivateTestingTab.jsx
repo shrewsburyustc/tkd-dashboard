@@ -49,7 +49,7 @@ import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
-import { centsToInputText } from '../../../lib/money.js';
+import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { withTestingFor } from '../../../lib/testing/rankOrder.js';
 import { schoolToday } from '../../../lib/testing/eventsApi.js';
@@ -69,9 +69,9 @@ import {
 import { privateCards, privateMenu, splitPrivate } from '../../../lib/testing/privateRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from '../event/PaymentDialogs.jsx';
 import CancelPrivateDialog from './CancelPrivateDialog.jsx';
 import ChangeDayDialog, { checkChangeDay, isChangeDayDirty } from './ChangeDayDialog.jsx';
@@ -987,7 +987,7 @@ export default function PrivateTestingTab({
       { key: 'count', label: T.CARD_PRIVATE, Icon: IconUsers, value: cards.count },
       { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: cards.paid, note: cards.owesMore > 0 ? T.owesMoreCount(cards.owesMore) : null, warn: true },
       { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: cards.notPaid }, // ti-circle-x = not paid (v1.024)
-      { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null }, // ti-sum = a money total (v0.303)
+      { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: formatMoney(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null }, // ti-sum = a money total (v0.303)
     ];
     // Hide private details: only the Private testings card (as Star's G4).
     const cardList = hidden ? allCards.slice(0, 1) : allCards;

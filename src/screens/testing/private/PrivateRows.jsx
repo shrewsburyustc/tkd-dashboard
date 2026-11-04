@@ -20,6 +20,7 @@
 // list is one Tab stop, ↑ ↓ move between rows, Enter opens the summary, ← → reach the buttons.
 import { IconAlertTriangle, IconArrowRight, IconCheck, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
+import { formatMoney } from '../../../lib/money.js';
 import { showMarkPaid } from '../../../lib/testing/privateRules.js';
 import { ResultTag } from '../event/ResultButtons.jsx';
 import { TestingForCell } from '../event/StudentDialog.jsx';
@@ -91,7 +92,7 @@ function PrivateRow({ row, ctx }) {
   const testingFor = (
     <span className="pv-tf">
       <TestingForCell rank={rankViewOf(row)} />
-      {!hidden && <span className="pv-tf-price">· {T.dollars(row.privateCents)}</span>}
+      {!hidden && <span className="pv-tf-price">· {formatMoney(row.privateCents)}</span>}
     </span>
   );
 

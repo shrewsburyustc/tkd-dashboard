@@ -25,7 +25,7 @@ import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { ResultTag } from './ResultButtons.jsx';
 import * as T from '../text.js';
 

@@ -31,7 +31,7 @@ import { LOCATION_CODE } from '../../../lib/device.js';
 import { canChangeResults, gradingWindow } from '../../../lib/testing/gradingRules.js';
 import { loadPrivateTesting, setPrivateResult, setPrivateResultNote } from '../../../lib/testing/privateApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import NoteDialog, { checkNote, isNoteDirty } from '../event/NoteDialog.jsx';
 import ResultButtons, { ResultTag } from '../event/ResultButtons.jsx';
 import { TestingForCell } from '../event/StudentDialog.jsx';

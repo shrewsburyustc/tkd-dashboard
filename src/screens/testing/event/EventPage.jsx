@@ -65,7 +65,7 @@ import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
-import { centsToInputText } from '../../../lib/money.js';
+import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
@@ -96,9 +96,9 @@ import {
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
-import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import CompareDialog from './CompareDialog.jsx';
 import GradingSheet from './GradingSheet.jsx';
 import GradingTab, { groupGearTags } from './GradingTab.jsx';
@@ -1444,7 +1444,7 @@ export default function EventPage({
     { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
     { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: active.length - paidCount }, // ti-circle-x = not paid (v1.024)
-    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(paymentsTotal) }, // ti-sum = a money total (v0.303)
+    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: formatMoney(paymentsTotal) }, // ti-sum = a money total (v0.303)
   ];
   // Hide private details: only the Students card (as Star's G4).
   const cards = hidden ? allCards.slice(0, 1) : allCards;
