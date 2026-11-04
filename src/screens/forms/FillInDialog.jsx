@@ -97,6 +97,44 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
   }
 
   const answer = (id, value) => onChange({ answers: { ...v.answers, [id]: value } }, id);
+  // The note: under the buttons on PC / tablet (v0.81), above them on phones, where every note
+  // (the unsaved one or an error) also holds "Discard changes" — phones have no Cancel (v0.56, N15).
+  const leaving = state.note === 'LEAVE_FILL';
+  const noteBlock = state.note && (
+    <div className="tdialog-note">
+      <Notice>
+        {isPhone && leaving ? T.LEAVE_FILL_PHONE : NOTES[state.note] ?? state.note}
+        {isPhone && !preview && (
+          <button type="button" className="note-action" onClick={onCancel}>
+            {T.DISCARD_CHANGES}
+          </button>
+        )}
+      </Notice>
+    </div>
+  );
+  const actions = (
+    <div className={`dialog-actions fstep-actions${isPhone ? ' fstep-actions--phone' : ''}`}>
+      {!isPhone && (
+        <button type="button" className="btn" onClick={onCancel}>
+          {preview ? T.CLOSE : T.CANCEL}
+        </button>
+      )}
+      <span className="sdialog-actions-right">
+        {step > 0 && (
+          <button type="button" className="btn" disabled={state.saving} onClick={() => onStep(step - 1, {})}>
+            <IconArrowLeft size={16} aria-hidden="true" />
+            {T.BACK}
+          </button>
+        )}
+        {!(preview && last) && (
+          <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined}>
+            {last ? <IconCheck size={16} aria-hidden="true" /> : <IconArrowRight size={16} aria-hidden="true" />}
+            {last ? (state.saving ? T.SUBMITTING : T.SEND) : T.CONTINUE}
+          </button>
+        )}
+      </span>
+    </div>
+  );
   return (
     <Dialog title={title} size="medium" fullScreen={isPhone} onRequestClose={onRequestClose}>
       <p className="tdialog-sub">{preview ? (state.form.status === 'draft' || state.draftPreview ? T.PREVIEW_DRAFT_NOTE : T.PREVIEW_NOTE) : T.ENTERED_BY}</p>
@@ -120,32 +158,17 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
           onBooking={(i, key) => onChange({ bookings: { ...v.bookings, [i]: key || undefined } }, 'booking')}
           onSignature={(signature) => onChange({ signature }, 'signature')}
         />
-        {state.note && (
-          <div className="tdialog-note">
-            <Notice>{NOTES[state.note] ?? state.note}</Notice>
+        {isPhone ? (
+          <>
+            {noteBlock}
+            {actions}
+          </>
+        ) : (
+          <div className="dialog-footer">
+            {actions}
+            {noteBlock}
           </div>
         )}
-        <div className={`dialog-actions fstep-actions${isPhone ? ' fstep-actions--phone' : ''}`}>
-          {!isPhone && (
-            <button type="button" className="btn" onClick={onCancel}>
-              {preview ? T.CLOSE : T.CANCEL}
-            </button>
-          )}
-          <span className="sdialog-actions-right">
-            {step > 0 && (
-              <button type="button" className="btn" disabled={state.saving} onClick={() => onStep(step - 1, {})}>
-                <IconArrowLeft size={16} aria-hidden="true" />
-                {T.BACK}
-              </button>
-            )}
-            {!(preview && last) && (
-              <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined}>
-                {last ? <IconCheck size={16} aria-hidden="true" /> : <IconArrowRight size={16} aria-hidden="true" />}
-                {last ? (state.saving ? T.SUBMITTING : T.SEND) : T.CONTINUE}
-              </button>
-            )}
-          </span>
-        </div>
       </form>
     </Dialog>
   );
