@@ -15,10 +15,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in your merged work (F1–F7; F8 was live already) and in how the other sections' payments reach your Daily report.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
+- **Waits on Jeffrey:** nothing now: Jeffrey answered every pass 1 question (v1.035–v1.051).
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (R4-12, R1-09 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved.
+- **Line numbers** are main 5f1db41's; they may have moved. Items decided in v1.045–v1.049 cite main 84a6e7d's, and items decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** `HistoryView.jsx`, `HomeReminders.jsx` and `DayReport.jsx` are in `src/screens/finance/`; `finance/text.js` is `src/screens/finance/text.js`; `finance.css` and `forms.css` are in `src/styles/`; `mockFinance.js` is `src/lib/mockFinance.js`; `0026` is `supabase/migrations/0026_finance_black_belt.sql`.
 
 ### Rules
@@ -62,12 +62,14 @@ Most severe first.
   - Color Belt's payments need a second, later Finance migration of the same function: event and private payments read Color Belt's stored school. It comes after Color Belt's migration is live and before Color Belt's app push; the Color Belt session tells the Main session when.
 - **Check (preview mode):** after Star's change and your R1-09: This device = Shrewsbury, top bar Worcester, mark a Worcester Star candidate paid → Shrewsbury's Daily report lists it, Worcester's doesn't. Edit the candidate's school → nothing moves.
 
-### R4-12 (= R3-06's Finance part) — "← Back to the day" is 28 px and pushes the heading down on touch · Low
+### R4-05 — Home's "earlier days weren't closed" line follows History's switch · Medium · decided 2026-11-04 (v1.041)
 
-- **What's wrong:** History's back link (`.fin-back-link`) is 28 px tall, not v0.820's 24 px. On touch it becomes a plain 44 px box that pushes the "History" heading down: R4 measured the heading's top at 224 px at 1280, 250 at 820 touch, and 260 at 390 and 320 (16 px of the 26 px jump is the link; the rest is the taller month arrows on touch, which stay). Forms' builder copied `.tc-back`, whose touch box is pulled back with negative margins, so its title stays at 124 px on both PC and tablet. (Your status says the style question "settled itself", status line 204: that was the session's call, not Jeffrey's.)
-- **Rule:** v0.820 ("blue text, 16 px arrow, 24 px tall, 44 px tap area on touch"); v1.020 (the v0.59 back link everywhere); v0.624.
-- **Change:** `finance.css:98–105, 948–952` take `.tc-back`'s numbers (24 px tall, and the touch margins that pull the 44 px tap box back so the heading doesn't move), as Forms' `.fb-back` did (`forms.css:196–210`, copied from `src/screens/testing/chooser/chooser.css:90–104`). If Jeffrey later picks one shared back link (R3-06, below), switch to it then.
-- **Check (preview mode):** History at 1280, 820 touch, 390 touch and 320: the link is 24 px tall with a mouse, its tap area is 44 px on touch, and the History row (`.fin-dayrow`) starts at the same height at 1280 and 820. The heading itself still sits a few px lower on touch, because the month arrows beside it grow from 32 to 44 px; that is right and stays.
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q6-home-not-closed-line.png`.
+
+- **What's wrong:** Home tells admins "20 earlier days at Worcester weren't closed …", but History, where Open History leads, marks none of them while `SHOW_UNCLOSED` is off (v0.821, v0.822). The line also comes back after every day with payments.
+- **Rule:** v1.041 (Jeffrey, 2026-11-04: "A: hide warning"): while History's "Not closed" marks are off, Home's earlier-days line is hidden too, and the same switch brings all three back. Today's own "drawer isn't closed yet" reminder keeps its own control (Off in Finance → Settings).
+- **Change:** move `SHOW_UNCLOSED` (`HistoryView.jsx:32`) into one exported constant in your own files, read by both `HistoryView.jsx` and `HomeReminders.jsx`. In `HomeReminders.jsx`, add the earlier-days line (`:131–134`) only when it is on; while it is off, also skip the History read (`:83`) and keep `pending` false (`:135`), so Home doesn't hold back "Nothing on Home yet" waiting for it. Today's reminder (`:119–129`) stays as it is. No database change.
+- **Check (preview mode):** as an admin on Home, no "earlier days weren't closed" line while the switch is off. Today's "drawer isn't closed yet" line still shows when it is due, and hides when the reminder time is Off. Set the constant to true on your machine only: Home's line and History's line and tags all come back. Then set it back to false and confirm with `git diff` that it isn't changed before you commit.
 
 ### R1-05 — List camp refunds like the others · Medium · decided 2026-11-04 (v1.039) · after Camps' R1-05
 
@@ -79,6 +81,27 @@ Most severe first.
   - R1-09's preview reader lists camp refunds too (`readCamps` in `mockFinance.js`).
 - **Check (preview mode):** after Camps' change, record a $66 cash camp refund today → today's Daily report shows it in Refunds with "after $66.00 refunds" under the total, and Close the day expects $66 less cash. The payment's original day doesn't change.
 
+### R4-12 (= R3-06's Finance part) — "← Back to the day" is 28 px and pushes the heading down on touch · Low
+
+- **What's wrong:** History's back link (`.fin-back-link`) is 28 px tall, not v0.820's 24 px. On touch it becomes a plain 44 px box that pushes the "History" heading down: R4 measured the heading's top at 224 px at 1280, 250 at 820 touch, and 260 at 390 and 320 (16 px of the 26 px jump is the link; the rest is the taller month arrows on touch, which stay). Forms' builder copied `.tc-back`, whose touch box is pulled back with negative margins, so its title stays at 124 px on both PC and tablet. (Your status says the style question "settled itself", status line 204: that was the session's call, not Jeffrey's.)
+- **Rule:** v0.820 ("blue text, 16 px arrow, 24 px tall, 44 px tap area on touch"); v1.020 (the v0.59 back link everywhere); v0.624.
+- **Change:** `finance.css:98–105, 948–952` take `.tc-back`'s numbers (24 px tall, and the touch margins that pull the 44 px tap box back so the heading doesn't move), as Forms' `.fb-back` did (`forms.css:196–210`, copied from `src/screens/testing/chooser/chooser.css:90–104`). Jeffrey has picked one shared back link (v1.048 (12)): switch to it once Dashboard core builds it (your R3-06 item, below).
+- **Check (preview mode):** History at 1280, 820 touch, 390 touch and 320: the link is 24 px tall with a mouse, its tap area is 44 px on touch, and the History row (`.fin-dayrow`) starts at the same height at 1280 and 820. The heading itself still sits a few px lower on touch, because the month arrows beside it grow from 32 to 44 px; that is right and stays.
+
+### R2-09 (your part) — Your toasts drop the ✓ · Low · decided 2026-11-04 (v1.046)
+
+- **What's wrong:** "✓ Today's drawer is closed." (or "The drawer for [day] is closed.") and "✓ CSV downloaded" show the check icon (`DayReport.jsx:378–380`, which passes no icon; `:689`, which passes `icon: true`), which the shared Toast keeps for the account toasts (`src/components/Toast.jsx:6–10`). Testing, Camps and Black Belt toasts show no ✓ and no full stop. Your approved Daily report mockup draws the ✓; v1.046 changes it.
+- **Rule:** v1.046 (7) (Jeffrey, 2026-11-04: "Approve all"): only the account toasts (PIN, password) show a ✓; Prospects', Forms' and Finance's success toasts drop the ✓.
+- **Change:** pass `icon: false` at `DayReport.jsx:378–380` and `:689`. "Close undone. The day is open again." (`:198`) changes with your R2-07 (the words after an Undo) item, below.
+- **Check (preview mode):** close today's drawer: the toast reads "Today's drawer is closed" with Undo and no ✓; Export → "CSV downloaded", with no ✓.
+
+### S-1 (your part) — Settings lists Shrewsbury's column first · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** Finance → Settings draws Shrewsbury's column before Worcester's ("Column order as drawn in D9", `src/screens/finance/SettingsTab.jsx:34–35`), while the location switcher and your own Both page (`BothSummary.jsx:32–35`) put Worcester first.
+- **Rule:** v1.047 (19) (Jeffrey, 2026-11-04: "Approve all"): Worcester comes first wherever both schools are listed, as in the location switcher. This changes D9's drawn order.
+- **Change:** `SettingsTab.jsx:35`: `['worcester', 'shrewsbury']` (used at `:138, 217, 234, 243`), and its comment.
+- **Check (preview mode):** Finance → Settings at 1280: Worcester's column comes first; at 390, the school choice lists Worcester first.
+
 ### R1-09 — Preview only: Star payments never reach the Daily report · Low (preview only)
 
 - **What's wrong:** Finance's preview keeps its own made-up Star candidates (`mockFinance.js:26–29`; its comment "Star testing has no preview database in this branch" is no longer true) and never reads Star's preview store `tkd.preview.star`. So a Star payment marked in the preview never reaches the Daily report: Lily Brooks's $140 card (Worcester, Nov 3) was missing from Worcester's Nov 3, while Shrewsbury listed the made-up Liam Walsh, Ava Rossi and Mason Hill for a "Star testing · Nov 24" that doesn't exist in Star's preview. It also hides Star's half of R1-01 from every preview check.
@@ -86,15 +109,46 @@ Most severe first.
 - **Change:** add a `readStar()` input next to `readCamps` / `readBlackBelt` (`mockFinance.js:367–414`) that reads Star's candidates, events and payments, with the school worked out the way live 0026 does until Star stores a school on each payment, then from that stored school (R1-01, v1.035); keep the old sample only when Star's store has no payments. It is passed in where `src/lib/mockClient.js` creates the Finance backend (`:770–775`, next to `readCamps` / `readBlackBelt`). mockClient.js is a CLAUDE.md shared file: list it.
 - **Check (preview mode):** mark Lily Brooks paid $140 by card on Worcester → Finance, Worcester, today lists "Star testing · [the Fall event's date] · $140.00" under Card.
 
+### R2-07 (the words after an Undo) — "Undone" after every Undo · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** after the Undo of Close the day, your toast says "Close undone. The day is open again." (`finance/text.js:198`, shown at `DayReport.jsx:418`), where every other section says "Undone". Settings' Undo (the reminder switch, a reminder time, Copy Monday) says nothing when it works (`SettingsTab.jsx:76–85`: it only reloads).
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Finance "Undone. The day is open again." (R2-07's open part).
+- **Change:** `finance/text.js:198` → "Undone. The day is open again." (two sentences, so it keeps its full stops). In Settings' `runUndo` (`SettingsTab.jsx:80–82`), show "Undone" when the Undo worked.
+- **Check (preview mode):** close today's drawer → Undo → "Undone. The day is open again.", and the day can be counted again; Finance → Settings, change a reminder time → Undo → "Undone", and the old time is back.
+
+### S-11 — History's rows drop the "›" · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** each History row ends with a `ti-chevron-right` (`HistoryView.jsx:197–199`) in a column of its own (the empty header cell, `:179`; `.fin-col-chev`, `finance.css:509–511`). The §2.4 map allows it ("go to a page"), but Star's events, Black Belt's cycles and Camps' camps open a page from a row with no chevron.
+- **Rule:** v1.051 (3) (Jeffrey, 2026-11-04: "Yes approved go ahead"): Finance's History rows drop the "›" arrow at the end, like every other list whose rows open a page (S-11).
+- **Change:** remove the chevron cell, its header cell and `.fin-col-chev` (nothing else uses it). The whole row still opens the day, and the hint under the table stays ("Click a day to open its report. …", `HistoryView.jsx:205`). The phone list has no chevron. Mockup first: one small picture of the PC and tablet rows.
+- **Check (preview mode):** Finance → History at 1280 and 820 touch: each row ends with its status tag; a click or tap on a row opens that day, and the keyboard opens it as today.
+
+### R2-09 (the full stop) — One-sentence toasts drop their full stop · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** "Today's drawer is closed." (`finance/text.js:195`) and "The drawer for [day] is closed." (`:196`), both shown at `DayReport.jsx:378`, are one sentence and end with a full stop, where Testing's, Camps' and Black Belt's one-sentence toasts have none. Your other toasts have no full stop, or are two sentences ("Day reopened. It can be counted again.", `:201`).
+- **Rule:** v1.051 (5) (Jeffrey, 2026-11-04: "Yes approved go ahead"): a one-sentence toast has no full stop at the end ("Ava Reed restored"); a two-sentence toast keeps them; Prospects, Forms, Finance and Calendar change, and so does Staff accounts' "Password reset for [name]." (Dashboard core), the one other one-sentence toast with a full stop (R2-09).
+- **Change:** drop the closing full stop at `:195` and `:196`. Build it with your R2-09 item, which takes the ✓ off the same toast. "Undone. The day is open again." (your R2-07 (the words after an Undo) item) and "Day reopened. It can be counted again." keep theirs.
+- **Check (preview mode):** close today's drawer: "Today's drawer is closed", with Undo, no ✓ and no full stop.
+
+### R2-07 (your part) — One set of words for "someone else changed it" and a failed Undo · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R2-07
+
+- **What's wrong:** your refusal says "Someone else changed this just now. Your change wasn't saved." (`finance/text.js:209`), a failed Undo "Couldn't undo. Check the connection, then try again." (`:200`), and a refused one "Too late to undo here. Ask an admin to reopen the day." (`:199`). Black Belt's newer words say what changed and what the screen now shows.
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry."
+- **Change:** after Dashboard core's R2-07, take its three sentences from `src/components/text.js`: `:209` names what changed (the day or the setting: show it in your mockup), `:200` becomes the failed-Undo sentence, and `:199` stays as it is (your approved D3 words; not one of the three sentences). "Close undone. The day is open again." (`:198`) isn't part of this set: it changes with your R2-07 (the words after an Undo) item, below.
+- **Check (preview mode):** close today's drawer, `__tkdPreview.failNextSave()`, then Undo: the bar says "Undo didn't save. Check the connection, then retry." with Retry.
+
+### R3-06 (your part) — History's back link switches to the shared one · Low · decided 2026-11-04 (v1.048) · after Dashboard core's R3-06
+
+- **What's wrong:** History's "← Back to the day" is your own copy (`.fin-back-link`, `finance.css:99, 950`; `HistoryView.jsx:110`); R4-12 fixes its numbers first.
+- **Rule:** v1.048 (12) (Jeffrey, 2026-11-04: "Approve all"): Dashboard core builds one shared back link in `.tc-back`'s look (24 px, a 16 px arrow, a 44 px touch box pulled back so the title doesn't move), and every section switches to it.
+- **Change:** after Dashboard core's R3-06, use it at `HistoryView.jsx:110` (keep its words), and `.fin-back-link` goes. If the shared link is on main before you start R4-12, do both at once with the shared link.
+- **Check (preview mode):** R4-12's check, with the shared link.
+
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R4-05** (Medium) — while History's "not closed" marks are off (v0.821, v0.822), should Home's "N earlier days weren't closed" line go too? Today it leads to a History that shows nothing (`HomeReminders.jsx:131–135` doesn't read `SHOW_UNCLOSED`, `HistoryView.jsx:32, 53, 213`). Recommended: yes, the same switch. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours: `finance/text.js:200, 209`; "Close undone. The day is open again.", `:198`, is folded in). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-09** (Low) — the ✓ and the full stop only on the account toasts (recommended: your "✓ Today's drawer is closed." and "✓ CSV downloaded", `DayReport.jsx:378, 689`, lose theirs, although your approved Daily report mockup draws the ✓), or on every success toast. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-06** (Low) — one shared back link made by Dashboard core, which every section then uses (yours, after R4-12's fix, would switch to it). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **Row chevrons** (R3's S-11, Low) — History's rows end with a `ti-chevron-right` (`HistoryView.jsx:198`). The §2.4 map allows it ("go to a page"), but Star's events, Black Belt's cycles and Camps' camps open a page from a row with no chevron. One look for every list whose rows open a page? The design review asks Jeffrey; the answer reaches you through the Main session.
+Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.051); each answer is a Fix now or Smaller item in this file.
 
 ---
 
@@ -102,6 +156,7 @@ Most severe first.
 
 - Export loses "private": the report says "Star testing, private" / "Color belt testing, private", but the CSV's For cell just "Star testing", because `finance_export` builds its rows without `is_private` (`0026:1307–1330`; `finance_day` has it, `:1176`; the CSV is built in `src/lib/finance/csv.js:52`). Low; older than pass 1. It needs a new version of `finance_export`: replace only that function, starting from 0026's version (the live one), with a tests file, a fingerprints file and a `step00NN`. Ask the Main session for a migration number. Jeffrey applies it. The migration is live before the push that brings the app that uses it.
 - F6's optional one-line ask (take Retry, Dismiss, Back, Close and Cancel from the shared words in `src/components/text.js`) has no recorded answer: status line 199 says F6 is done, with no ask, and `finance/text.js:214–215` keeps your own. Ask Jeffrey in one line, or record that it wasn't asked. Low.
+- **S-2 is decided** (2026-11-04, v1.051 (2)): your load lines already end word for word "Check the connection, then retry.", each with Retry (`DayReport.jsx:584`, `HistoryView.jsx:142`, `PaymentDetailDialog.jsx:143–151`, `SettingsTab.jsx:158`). Nothing to build.
 
 ---
 

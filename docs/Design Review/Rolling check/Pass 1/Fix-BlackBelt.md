@@ -15,10 +15,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in your merged work (BB3–BB6, BB9, BB11, BB12, BB17; BB8's and BB13's database half; Edit cycle's one-step Undo). Your Part 2 (BB1, BB2, BB7, BB10, BB13–BB15, BB19) wasn't in this pass: nothing below asks you to build it early, but some items name the Part 2 step they go with.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
+- **Waits on Jeffrey:** nothing now: Jeffrey answered every pass 1 question (v1.035–v1.051).
 - **Smaller:** fix them while you're in the file. A few are checks or questions your prompt already asked for.
 - Each item keeps its finding id (R1-04, R4-03 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved.
+- **Line numbers** are main 5f1db41's; they may have moved. Items decided in v1.045–v1.049 cite main 84a6e7d's, and items decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** `CandidatesTab.jsx`, `CandidateDialog.jsx`, `RosterRows.jsx`, `useCandidateActions.js`, `useMakeupPicker.js`, `icons.js`, `CompareDialog.jsx`, `ChangePlanDialog.jsx` and `SummaryCards.jsx` are in `src/blackBelt/staff/candidates/`. `candidates/…`, `cycle/…` and `results/…` are under `src/blackBelt/staff/`. A bare `text.js` is `src/blackBelt/staff/text.js`, and `blackBelt.css` is `src/blackBelt/staff/blackBelt.css`. `components/…` is `src/components/…`; `app.css` and `testing-events.css` are in `src/styles/`.
 
 ### Rules
@@ -30,7 +30,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **One decision at a time,** with pictures and a recommendation.
 - **Reviews:** a separate design reviewer (the rulebook, the approved mockups, screenshots at the four sizes, and §4's six WCAG 2.2 checks, v1.033); a separate code reviewer; a separate security reviewer for anything touching the database (handoff §6).
 - **Order (a push to main deploys):** the migration is live before the push that brings the app that uses it. A step whose app calls a new or changed database function is merged only after Jeffrey has applied its migration and the checks passed (fingerprints, security advisor, tests file — CLAUDE.md). Screen-only steps can go first.
-- R1-01 needs a database change: ask the Main session for a migration number; Jeffrey applies it; the migration is live before the push that brings the app that uses it. Add a SETUP section "## Migration 00NN: …", a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
+- R1-01 needs a database change (and S-1 does, if you change the order in the database): ask the Main session for a migration number; Jeffrey applies it; the migration is live before the push that brings the app that uses it. Add a SETUP section "## Migration 00NN: …", a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
 - **Don't change a shared part on your own** (`src/components/…`, the shared helpers in `src/lib/`, `src/styles/shared.css`): every section uses them. If you need something a part can't do, ask Jeffrey first. He decides whether you change it in your branch (then list it as a shared file) or the Dashboard core session does.
 - List every CLAUDE.md shared file you touch (`src/styles/shared.css` and `src/components/text.js` are on that list).
 - Keep `docs/Testing/Black Belt Testing/TKD-BlackBelt-Status.md` current, with a short "Rolling check, pass 1" section.
@@ -72,16 +72,16 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q2-blackbelt-plan-hid
 - **Rule:** v1.035 (Jeffrey, 2026-11-04): every payment counts at the school of the desk that took it, the school set under This device in the account menu, as Camps does (v0.708). The school is stored on the payment when it is recorded, and an undo, edit or returned check copies it from the payment it corrects (v0.903's chain rule). A refund counts at the desk that hands the money back (v1.040). Money booked to the wrong school is moved by undoing it and recording it again on a device set to the right school. Your v0.903 chain rule stays; only where the first school comes from changes. `bb_record_refund` takes the device's school too, instead of the candidate's latest live payment's (v1.040); its new input also has a default (blank = today's rule, the latest live payment's school), so the live app keeps working until the push.
 - **Change:**
   - One Black Belt migration: `bb_record_payment` takes the device's school and stores it instead of the candidate's. The new input has a default (blank = the candidate's school), so the live app keeps working until the push. Ask the Main session for a migration number. Jeffrey applies it. The migration is live before the push that brings the app that uses it.
-  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1102–1103`); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
+  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1122–1123` on main d7b5ebf); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
   - Finance needs no change for you: it already reads your stored school (v0.808).
   - The preview's fake Black Belt store (`src/lib/blackBelt/mockBlackBelt.js`) changes too, or the check below can't pass.
 - **Check (preview mode):** `__tkdPreview.bbSampleEdge()` + `__tkdPreview.setToday('2027-04-26')`; This device = Shrewsbury, top bar Worcester; record Sam Lee's payment (a Worcester candidate) → Finance's Shrewsbury Daily report for that day lists it, Worcester's doesn't.
 
-### R4-03 (the gray) — "Hidden on this device" is drawn in the normal black · Medium
+### R4-03 (the gray) — "Hidden on this tablet" is drawn in the normal black · Medium
 
-- **What's wrong:** your hidden birthday and email ("Hidden on this device") are drawn in the normal text color, rgb(31, 31, 31) (measured at 820), so on the mat they read like data. Star's read gray, rgb(107, 107, 107).
+- **What's wrong:** your hidden birthday and email ("Hidden on this tablet" since v0.974; "Hidden on this device" when measured) are drawn in the normal text color, rgb(31, 31, 31) (measured at 820), so on the mat they read like data. Star's read gray, rgb(107, 107, 107).
 - **Rule:** v0.507 Q2: hidden values keep their row and read gray.
-- **Change:** draw them with the shared gray hidden-value style (`.ev-hidden-value`, `testing-events.css:1315`, #6B6B6B) in `CandidateDialog.jsx:610–611` (and in your own `CompareDialog.jsx:30–35` until BB15 swaps in the shared one). The words wait for Jeffrey (R4-03, the words, below).
+- **Change:** draw them with the shared gray hidden-value style (`.ev-hidden-value`, `testing-events.css:1315`, #6B6B6B) in `CandidateDialog.jsx:610–611` (and in your own `CompareDialog.jsx:30–35` until BB15 swaps in the shared one). The words are on main since v0.974, except the Payments part: R4-03 (the words), below.
 - **Check (preview mode):** after `__tkdPreview.bbSampleEdge()`, switch on, open Mia Chen at 820: the two values measure rgb(107, 107, 107).
 
 ### R4-04 — At the mat, work like Star while private details are hidden · Medium · decided 2026-11-04 (v1.037)
@@ -93,12 +93,45 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 - **Change:** `cycle/CyclePage.jsx:213–217` (Add candidate stays usable while hidden; the finished-cycle case is unchanged); the New candidate item in the menu grays with Star's reason and stays focusable; `candidates/CandidatesTab.jsx:172–176, 478–480` (the Add candidate menu: New candidate grays inside it, Make-up stays); `CandidatesTab.jsx:260–266` (row ⋯), `CandidateDialog.jsx:425–431` (detail ⋯) and `text.js:569–571` (Edit details opens; "Edit details at the desk." goes); the hidden view is built in `EditFields` (`CandidateDialog.jsx:208–306`); `useCandidateActions.js:283–285` today leaves Edit details when the switch turns on: keep it open with the two fields turning gray, as Star's does. In `EditFields`, while hidden: the staff Dan lock and its line (`:217, 295–297`, `text.js:722`) become one look on every row, "Change the Dan at the desk." (as Star's `CandidateDialog.jsx:345`), and the admin's "$X is already paid" line (`:298–303`) is left out (as Star's `:349`); Edit details' birthday and email read the gray "Hidden on this tablet" and can't be changed while hidden, as Star's `CandidateDialog.jsx:415, 456` does. Mockup first.
 - **Check (preview mode):** `__tkdPreview.loadBlackBeltGradingSample()` (Fall 2027 is the later cycle; Spring 2027 has a below-the-mark candidate), switch on, 820 × 1180 touch: Add candidate opens; New candidate is grayed with the reason; Make-up from an earlier cycle opens its picker and adds; Edit details opens, the birthday and email read "Hidden on this tablet", and a name change saves; switch off: the birthday and email are unchanged; as staff (`__tkdPreview.setRole('staff')`, reload), the Dan reads the same on a paid and an unpaid row. On a finished cycle, Add candidate is still grayed with "This cycle is finished, so candidates can't be added."
 
+### R2-03 — No Undo after restoring a Duplicate copy · Medium · decided 2026-11-04 (v1.043)
+
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q8-undo-restored-duplicate.png`.
+
+- **What's wrong:** after a "Duplicate copy" is restored, its Undo withdraws it again as a plain "Removed" (`useCandidateActions.js:1069–1090` → `0016_black_belt.sql:4428–4436`).
+- **Rule:** v1.043 (Jeffrey, 2026-11-04: "A: as Star"), Star's v0.517 G3 for every section: restoring a row set aside as a "Duplicate copy" shows "[Name] restored" with no Undo, because an Undo would put the row back as a plain "Removed" with a history that says Withdrawn. To change it back, an admin uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
+- **Change:** in `useCandidateActions.js:1069–1090`, when the restored row was a Duplicate copy, the toast says "[Name] restored" with no Undo, as Star's `star/candidates/CandidatesTab.jsx:900–910` does. Other restores keep their Undo. No database change.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` → Review the Noah Silva pair → Keep this one: the copy sits in Removed as "Duplicate copy" → ⋯ Restore → no Undo in the toast. Withdraw and restore an ordinary candidate → Undo is still there.
+
+### R3-01 — Past-due "Not paid" turns amber · Medium · decided 2026-11-04 (v1.044)
+
+Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-paid.png`.
+
+- **What's wrong:** once a due date has passed, the roster's "Not paid" tag is drawn in the Delete red (measured rgb(163, 45, 45) on rgb(252, 235, 235); `text.js:558–559`, `RosterRows.jsx:61`, `blackBelt.css:1024–1029`). §7 (v1.007) keeps red for "gone for good".
+- **Rule:** v1.044 (Jeffrey, 2026-11-04: "A: amber"): amber, like your own "Late · $X since [date]". The timing (v0.224) and the Not paid card and filter stay as they are.
+- **Change:** in `text.js:559`, change the past-due Not paid's `kind: 'red'` to `'warn'` (Late's amber), then remove the red kind and `.bb-tag--red` (`blackBelt.css:1024–1029`) if nothing else uses them. Don't just recolor the red class. The tag is drawn only through `MoneyTag`: the roster row (phones included) and the candidate detail's title (`CandidateDialog.jsx:626`). Show Jeffrey a small picture first.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` + `__tkdPreview.setToday('2027-04-26')`: Rina Patel's "Not paid" is amber, the same as Sam Lee's "Late", at 1280, 820, 390 and 320. Nothing on the roster is red except Delete permanently.
+
 ### R2-05 (your part) — An Undo pressed during another save is dropped without a word · Medium · after Dashboard core's R2-05
 
-- **What's wrong:** the shared Toast removes itself before it runs Undo (`components/Toast.jsx:73–77`), and your Undo returns early while another save runs (`useCandidateActions.js:342`). So the toast vanishes, nothing happens and nothing is said. Staff believe it was undone.
+- **What's wrong:** the shared Toast removes itself before it runs Undo (`components/Toast.jsx:73–77`), and your Undo returns early while another save runs (`useCandidateActions.js:341`). So the toast vanishes, nothing happens and nothing is said. Staff believe it was undone.
 - **Rule:** rule 1.4 / v1.006; §3.5 (never silent).
 - **Change:** after Dashboard core's R2-05 (an Undo pressed while a save runs is *queued*: it waits its turn and runs as soon as that save ends, and its toast stays as "Undoing…"), your Undos use Dashboard core's helper: `runQuick` (`useCandidateActions.js:341–343`), the make-up picker's `undoAdd` and Edit cycle's Undo (`cycle/useCycleEditor.jsx`).
 - **Check (preview mode):** `__tkdPreview.setTestingDelay(2500)`; withdraw candidate A, withdraw candidate B, press A's Undo during B's save → A comes back with "Undone".
+
+### R3-02 (your part) — A possible duplicate still offers Record payment · Low–Medium · decided 2026-11-04 (v1.046)
+
+- **What's wrong:** your cards already leave possible duplicates out, with a gray line: that is now every section's rule. But both Noah Silva rows still offer Record payment: the PC row button (`RosterRows.jsx:78`), the row ⋯ on tablets and phones (`CandidatesTab.jsx:286`) and the detail's button (`CandidateDialog.jsx:628`). A payment can land on the copy that is later withdrawn (the checker rated this Low–Medium). Color Belt and Camps offer none.
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of Paid and Not paid (yours: the four plan cards) until the pair is resolved, with one gray line under the cards, as you do; until then it offers no Mark paid or Record payment.
+- **Change:** in those three places, leave Record payment out while `duplicateState === 'possible'`. Your cards and their gray line stay; with BB15 the line becomes the shared cards' `note`.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()`: neither Noah Silva row offers Record payment, at 1280 (the row button), at 820 touch (the ⋯) or in the detail. Review → Keep this one: the kept row offers it again.
+
+### R4-03 (the words) — The Payments part says "Payment details are hidden on this tablet." · Low · decided 2026-11-04 (v1.045)
+
+- **Done on main:** v0.974 (392bc9e) switched your words to "tablet": the hidden values and the Compare box read "Hidden on this tablet" (`text.js:619`), the Results line reads Star's (`results/text.js:104`), and the receipt reads "Payment details are hidden on this tablet." (`receipt/text.js:30`). Lines in this item are main 392bc9e's.
+- **What's wrong:** one part is left. v0.974's Payments part reads "Payments are hidden on this tablet." (`text.js:620`, drawn at `CandidateDialog.jsx:709`), while v0.507 Q2, which v0.974 says it carries out, and v1.045 (1) say "Payment details are hidden on this tablet.", as your own receipt line already does. v0.974's picture (`docs/Testing/Black Belt Testing/images/bb8-bb13/Q-device-or-tablet.png`) showed "Payments are hidden on this tablet."; the rulebook's v0.974 now carries a note pointing to v1.045 (1).
+- **Rule:** v1.045 (1) (Jeffrey, 2026-11-04: "Approve all"): hidden values read "Hidden on this tablet" and payment parts "Payment details are hidden on this tablet." (v0.507 Q2); the two privacy words stay in `src/lib/privateDetails.js`.
+- **Change:** make the Payments part read "Payment details are hidden on this tablet.": use `PAYMENT_DETAILS_HIDDEN` from `src/lib/privateDetails.js:48` instead of your own copy (`text.js:620`), and `HIDDEN_ON_THIS_TABLET` (`:47`) instead of `text.js:619`, so the two words live once. Build it with R4-03 (the gray).
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()`, switch on, 820 × 1180 touch: Mia Chen's Payments part reads "Payment details are hidden on this tablet.", and her birthday and email still read "Hidden on this tablet".
 
 ### R3-05 — "Show both schools" turns into a 44 px box on touch · Low
 
@@ -120,14 +153,14 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 
 - **What's wrong:** when the read behind an admin's row ⋯ (or the detail) fails, the bar says "Couldn't load. Check the connection, then try again." with no Retry, and the ⋯ shows nothing while it reads. A bar says "try again" with no button to do it, after a tap that seemed to do nothing.
 - **Rule:** v0.966 (1): a connection failure always has Retry in the same bar.
-- **Change:** in `useCandidateActions.js:150–158` pass a `retry` that repeats the same read (as `runQuick` does, `:357–358`), and show the ⋯ as busy while it reads (`RosterRows.jsx:100–113`). The preview's `failNextSave` fails writes only, so add a failed-read helper (or a `checks.mjs` case) to check it. A new `__tkdPreview` helper is registered in `src/lib/mockClient.js`, a CLAUDE.md shared file: list it, and keep the helper itself in your own fake store (`src/lib/blackBelt/mockBlackBelt.js`).
+- **Change:** in `useCandidateActions.js:150–158` pass a `retry` that repeats the same read (as `runQuick` does, `:357–358`), and show the ⋯ as busy while it reads (`RosterRows.jsx:100–113`). The preview's `failNextSave` fails writes only, so add a failed-read helper (or a `checks.mjs` case) to check it. A new `__tkdPreview` helper is registered in `src/lib/mockClient.js`, a CLAUDE.md shared file: list it, and keep the helper itself in your own fake store (`src/lib/blackBelt/mockBlackBelt.js`). The bar's words become v1.051 (2)'s ("… Check the connection, then retry."): build this with your S-2 item, below, which adds Retry in four more places.
 - **Check (preview mode):** with the failed read armed, open an admin row's ⋯: the bar shows Retry, and Retry opens the menu.
 
 ### R4-14 — Two sentences for one refused Undo · Low
 
 - **What's wrong:** the Undo of Change plan, Add candidate, Withdraw and a make-up says "Couldn't undo. Someone else changed this candidate just now." (`text.js:970`), while v0.966 (2) / v0.967 set one sentence for this refusal: "Someone else changed [Name] just now, so nothing was done. Their change is shown." (`text.js:587`). The same event reads two ways depending on which Undo was pressed.
 - **Rule:** v0.966 (2), v0.967.
-- **Change:** use `T.candidateStale(name)` at `useCandidateActions.js:691, 761, 1004` and `useMakeupPicker.js:168`, and retire `UNDO_STALE_CANDIDATE`. If Jeffrey picks one shared set of these words (R2-07, below), use that instead.
+- **Change:** use `T.candidateStale(name)` at `useCandidateActions.js:691, 761, 1004` and `useMakeupPicker.js:168`, and retire `UNDO_STALE_CANDIDATE`. Jeffrey picked this set for every section (v1.045 (4)); your R2-07 item, below, takes it from the shared file once Dashboard core's R2-07 is on main.
 - **Check (preview mode):** Withdraw, then `__tkdPreview.simulateOtherAdminEdit()`, then Undo within 5 s (`__tkdPreview.setTestingDelay` to slow it): the bar says the new sentence.
 
 ### R4-15 — Four older rows changed by later ones have no "(See …)" note · Low (docs)
@@ -137,12 +170,73 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 - **Change:** add the four notes at your next rulebook edit: `git merge main` first, re-read the rulebook, keep CRLF. (Line numbers move; find the rows by their numbers.)
 - **Check:** no preview needed: each of the four rows starts with its "(See …)" note.
 
+### R3-09 (your part) — "Find a candidate", and Clear search on the no-match line · Low · decided 2026-11-04 (v1.047, v1.050)
+
+- **What's wrong:** the three in-list search boxes each read and sit differently (yours "Search candidates", Camps' "Find a camper", Prospects' "Search name or phone"), with three no-match lines ('No candidates match "x".', "No camper with that name.", "No one matches that search.").
+- **Rule:** v1.050 (Jeffrey, 2026-11-04: "A: Find a …"; settles v1.047 (14)): the three in-list search boxes read "Find a candidate" (Black Belt), "Find a camper" (Camps, as v0.715) and "Find a prospect" (Prospects), and sit on the left, above the list; Prospects' box moves out of the chip row. When nothing is found, one line: 'No candidates / campers / prospects match "[text]".' followed by a Clear search link, as "Showing … only · Show all"; the box's own ✕ stays the shared icon button (v0.631). Prospects' box still finds by phone, and its screen-reader name keeps saying so. Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q11-list-search-words.png`.
+- **Change:** "Search candidates" → "Find a candidate", for the placeholder and the screen-reader name (`text.js:523`, used at `CandidatesTab.jsx:431–432`). Your box already sits on the left, above the table (its place in the order is R3-10's), and your no-match line already reads the decided words ('No candidates match "[text]".', `text.js:536`, used at `CandidatesTab.jsx:410`): keep them, and end the line with "· Clear search", a link that empties the box, drawn like the shared "Showing … only · Show all" line. The box's own ✕ (`CandidatesTab.jsx:433–437`) becomes the shared `IconButton`, as Prospects' is (v0.631): it has no tooltip today (§1.4; the Smaller line). Mockup first.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()`: the box reads "Find a candidate"; type "zz": 'No candidates match "zz". · Clear search' shows; the Clear search link empties the box, and so does the box's ✕, with its tooltip on PC.
+
+### R3-10 (your part) — The one-school line moves under the cards · Low · decided 2026-11-04 (v1.047) · with BB15, in your Part 2
+
+- **What's wrong:** above your roster come the one-school line, then the duplicate box, the cards, then the search and caption; on phones the cards come after the search (`CandidatesTab.jsx:417–442`). Every section has its own order.
+- **Rule:** v1.047 (15) (Jeffrey, 2026-11-04: "Approve all"): one order above every roster: the duplicate box, the count cards, their "Showing … only" line, the one-school line, the search, the switches (Dan, class, week), then the table.
+- **Change:** with BB15's switch to the shared count cards: the duplicate box (`:425`), then the cards and their "Showing … only" line, then the one-school line (`:417–424`, drawn as R3-05's shared line), then the search and caption (`:428–440`), then the table, on every size (the phone cards at `:442` move up too). Mockup first, with BB15's.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` on Worcester, at 1280, 820 touch, 390 and 320, after tapping a card: the duplicate box, the cards, "Showing … only", "Showing Worcester candidates only · Show both schools", then Find a candidate (R3-09).
+
+### R4-06 (your part) — Screen text drops from weight 600 to 500 · Low · decided 2026-11-04 (v1.048)
+
+- **What's wrong:** 20 screen rules still use weight 600, which §7 doesn't allow (400 and 500 only): the family form (`src/blackBelt/form/form.css:443, 993`), `blackBelt.css:1706, 1881, 2022, 2093, 2155, 2526`, the grading screen (`src/blackBelt/staff/grading/grading.css:296, 308, 400, 490, 602, 607, 910, 951, 1133`), the receipt (`src/blackBelt/staff/receipt/receipt.css:57, 126`) and Results (`results/results.css:226`).
+- **Rule:** v1.048 (23) (Jeffrey, 2026-11-04: "Approve all"): screen text uses weights 400 and 500 only (§7): Black Belt's, Camps' and New students' 600s go to 500; printed sheets keep their heavier weights (v0.142, v0.143).
+- **Change:** those 20 → 500. The printed grading sheet's four (`grading.css:1219, 1268, 1296, 1324`, inside `@media print`) keep 600. (The receipt's two may go anyway when BB2 moves you to the shared receipt.)
+- **Check (preview mode):** the family form, the candidate detail, the grading screen, the receipt and Results at 1280 and 820: no text computes weight 600; the printed grading sheet (print preview) is unchanged.
+
+### R4-13 (your part) — "Ask an admin to reopen" becomes "Ask an admin to open it." · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** staff read "The application date has passed. Ask an admin to reopen." (`text.js:90`, in the bar: `cycles/useCycleActions.js:56, 120`) and "Registration closed on [date]. Ask an admin to reopen it." (`text.js:495`, under the tabs: `cycle/CyclePage.jsx:289`). Camps says "… Ask an admin to open it." (v0.725), which matches the Close / Open pair.
+- **Rule:** v1.045 (5) (Jeffrey, 2026-11-04: "Approve all"): staff after a closing date read "Ask an admin to open it.", as Camps' v0.725.
+- **Change:** `text.js:90`: "… Ask an admin to open it."; `:495`: "Registration closed on [date]. Ask an admin to open it."; and the comment at `cycle/CyclePage.jsx:29`.
+- **Check (preview mode):** `__tkdPreview.setRole('staff')` and reload, then `__tkdPreview.setToday()` to a day after a cycle's application date: the line under its tabs ends "Ask an admin to open it."
+
+### After Edit details (R2's smaller line) — Edit details closes back to the roster · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** after Edit details saves, Black Belt goes back to the candidate's detail (`useCandidateActions.js:870–871`), while Star and Camps close to the roster (`src/screens/camps/CampPage.jsx:919–923`). So the Undo toast shows over a different screen in each section.
+- **Rule:** v1.047 (21) (Jeffrey, 2026-11-04: "Approve all"): after Edit details saves, the detail closes back to the roster, as Star and Camps do; Black Belt changes.
+- **Change:** in `saveEdit` (`useCandidateActions.js:802`), after a save that works, close the detail instead of `patchDetail({ mode: 'view', … })` (`:870–871`), and return focus to the candidate's row. The toast and its Undo (`:842–868`) stay. A refused save keeps the detail open, as today.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()`, open Sam Lee → ⋯ Edit details → change the first name → Save: the detail closes, the roster shows the new name, focus is on Sam Lee's row, and the toast has Undo; Undo brings the old name back.
+
+### S-1 (your part) — On Both, the roster lists Shrewsbury before Worcester · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** on Both your roster sorts by Dan, then school with Shrewsbury first, then last name. The order comes from the database: `bb_cycle_roster` (live in `0025_black_belt_grading.sql:5058`, its order at `:5115`). The grading grid, Results, the make-up list and the results CSV sort the same way (`0025:3549, 3637, 3777, 3980`), and so do the preview's fake stores (`src/lib/blackBelt/mockBlackBelt.js:1999`, `src/lib/blackBelt/mockGrading.js:246`). The location switcher puts Worcester first.
+- **Rule:** v1.047 (19) (Jeffrey, 2026-11-04: "Approve all"): Worcester comes first wherever both schools are listed, as in the location switcher. Your "Dan, then school, then last name" line stays (v1.047 (17)).
+- **Change:** plan it, and show Jeffrey the plan: either the screens sort what they get (Dan, then Worcester before Shrewsbury, then last and first name), or one migration replaces those functions with Worcester first (ask the Main session for a number; handoff §6; the steps in Rules; a security review). Either way the fake stores change too, and so do the comments that say "Shrewsbury then Worcester" (`src/lib/blackBelt/api.js:696`, `src/lib/blackBelt/rules.js:1055`).
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` on Both: within each Dan, Worcester's candidates come before Shrewsbury's on the roster; with `__tkdPreview.loadBlackBeltGradingSample()`, on the Grading and Results tabs, in the make-up picker and in the downloaded results CSV too.
+
+### Pass 1b ⋯ names (your part) — Three rubric ⋯ say "More for …" · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** on the Rubric tab, a bracket's, a subject's and an item's ⋯ are named "More for [name]" (`text.js:1077, 1094, 1112`; used at `src/blackBelt/staff/rubric/RubricEditor.jsx:245, 429, 589`). Screen readers hear it and the tooltip shows it. Every other row ⋯ says "More actions for [name]", your own included (`text.js:175, 544`).
+- **Rule:** v1.045 (6) (Jeffrey, 2026-11-04: "Approve all"): a row's ⋯ is labelled "More actions for [name]".
+- **Change:** `text.js:1077, 1094, 1112`: "More for …" → "More actions for …" (keep the fallbacks "subject" and "item").
+- **Check (preview mode):** `__tkdPreview.bbSample()`, a cycle's Rubric tab: hover or Tab to a subject's ⋯: its tooltip reads "More actions for [subject]".
+
+### R2-07 (the words after an Undo, your part) — Undo Mark as sent says "Undone", and reopening registration says so · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** on the Results tab, the Undo in Mark as sent's toast says nothing when it works (`results/ResultsTab.jsx:378–393`: it only reloads). Your other Undos say "Undone". And when the Undo of Close registration opens registration again, the toast says only "Undone" (`cycles/useCycleActions.js:99–100`).
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Finance "Undone. The day is open again.", Star "Undone. Registration is open again."; the same rule covers every Undo that opens registration, sign-up or a form again, in the same pattern: Color Belt and Black Belt "Undone. Registration is open again." (R2-07's open part).
+- **Change:** in `undoFromToast`, show "Undone" (`results/text.js:234` already has it) when the Undo worked. Star's Results tab gets the same fix (its own item). When `switchRegistration`'s Undo opened registration (`cycles/useCycleActions.js:99–100`), show "Undone. Registration is open again.". The Undo of a first opening closes it (`:72`): plain "Undone". The same applies after Edit cycle's Undo when it puts registration back to open (`cycle/useCycleEditor.jsx:399`, its toast at `:406`).
+- **Check (preview mode):** `__tkdPreview.loadBlackBeltGradingSample()`, a cycle's Results tab → a finished row's Email result → Mark as sent → Undo in its toast → "Undone", and the row reads "Not sent yet" again. A cycle's ⋯ Close registration → Undo → "Undone. Registration is open again."
+
 ### R4-08 (your copy) — The grayed Email result doesn't tell screen readers why · Low · after Star's R4-08, in your Part 2
 
 - **What's wrong:** your grayed Email result on the Results tab uses the same tokens as Star's (the hairline border and a plain cursor) and has no `aria-describedby` either (R4: `src/blackBelt/staff/results/ResultRows.jsx:145–151`). (`aria-describedby` points a control at the text explaining it; a screen reader reads that text after the button's name.)
 - **Rule:** v1.000 (2) ("the approved unavailable look, still focusable"); v1.103.
 - **Change:** after Star's R4-08, copy it in your Part 2: v1.103's tokens (`--color-border-strong`, `not-allowed`) and `aria-describedby` pointing at the "Email result is off …" line.
 - **Check (preview mode):** Results tab, switch on, 820 touch: border rgb(207, 207, 202), cursor `not-allowed`, and the button's description is the line.
+
+### R2-04 (your part) — Your own toast rules go · Low · after Dashboard core's R2-04
+
+- **Change:** once the shared toast has its own room (v1.042), remove your ⋯ sheet rule for it (`blackBelt.css:1593–1598`, inside the phones block that starts at `:1559`). Keep the full-screen detail's lift (`:1600–1606`, v0.967 (3)) until Jeffrey answers v1.042's open point.
+- **Check (preview mode):** at 390 touch, a toast over your full-screen candidate detail leaves its bottom buttons clear, the same as before.
 
 ### R3-13 (your part) — The date hint says "dates" · Low · after Dashboard core's R3-13
 
@@ -151,31 +245,51 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 - **Change:** after Dashboard core's R3-13 puts the words in `src/components/text.js`, use "Past days can't be chosen.". Leave the family-page date-of-birth hint unless Jeffrey wants it changed too.
 - **Check (preview mode):** open each staff calendar with gray days: each has exactly that one line.
 
-### R4-07 (your part) — The gray "Payment history is hidden" line · Low · after Dashboard core's R4-07, in your Part 2
+### R4-07 (your part) — The gray "Payment history is hidden" line · Low · done: BB8 and Dashboard core's R4-07 — check only
 
-- **Change:** build BB8's history on the shared `HistoryLine`. After Dashboard core's R4-07, the gray line shows in every history while hidden, paid or not.
+- **Done:** BB8's history is built on the shared `HistoryLine` (`src/blackBelt/staff/candidates/CandidateHistory.jsx:44`), and Dashboard core's R4-07 (v1.122, on main since 7511656) shows the gray line there in every history while hidden, paid or not.
 - **Check (preview mode):** switch on; Mia Chen and Rina Patel both show the line.
+
+### R1-06 (your part) — Your Undo payment words, from the shared file · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06
+
+- **What's wrong:** nothing on your screen: every section now takes your Undo payment box's words (v0.964, v0.965). Once Dashboard core puts them in `src/components/text.js`, a second copy in `text.js:795, 814–815` would drift.
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence; v1.045: "Built by Dashboard core (the shared words) and by each section switching to them."
+- **Change:** after Dashboard core's R1-06, take the title and "Paid on [date]" from `src/components/text.js`; keep your "for [what]" and "It comes off the balance; the history keeps it."
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` + `__tkdPreview.setToday('2027-04-26')`, record Sam Lee's payment, then ⋯ Undo payment: the box reads as before.
+
+### R1-07 (your part) — Your payment toasts take Camps' and Color Belt's words · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-07
+
+- **What's wrong:** after Record payment your toast says "Payment recorded · $X · [Name]" (`text.js:774`, `useCandidateActions.js:421`), and after Undo payment "Payment undone · $X [way] · [Name]" (`text.js:818`, `useCandidateActions.js:550`). Camps and Color Belt say "[Name] marked paid · $X [way]" and "Payment undone for [Name]".
+- **Rule:** v1.045 (3) (Jeffrey, 2026-11-04: "Approve all"): the toasts after Mark paid and Undo payment read "[Name] marked paid · $X [way]" (while hidden, "[Name] marked paid", v0.722) and "Payment undone for [Name]"; the person's payment line and the history's payment words become one set too, drawn in Dashboard core's mockup.
+- **Change:** after Dashboard core's R1-07, use its toast words at `useCandidateActions.js:421, 550`. Then your payment lines (`CandidateDialog.jsx:134, 174`) and history words (`text.js:1370–1373`) follow the set in Dashboard core's approved mockup.
+- **Check (preview mode):** `__tkdPreview.bbSampleEdge()` + `__tkdPreview.setToday('2027-04-26')`, record Sam Lee's $330 cash payment: the toast reads "Sam Lee marked paid · $330 cash"; ⋯ Undo payment → "Payment undone for Sam Lee".
+
+### R2-07 (your part) — Your older refusal words go · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R2-07
+
+- **What's wrong:** your v0.966 words are now every section's, but older ones remain: "Couldn't undo. Someone else changed this cycle just now." (`text.js:89`), "Couldn't change registration. …" and "Couldn't delete. …" (`:76, 87`), "Someone else changed this just now." (`:1194`), and on the Results tab "Couldn't undo. Someone else changed this email text just now." and "Couldn't undo Mark as sent. Check the connection, then try again." (`results/text.js:245, 149`). R4-14 retires `:970`.
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry." (your words: v0.966 (2) and your own Undo lines); item (4)'s sentences are kept once in the shared words file (`src/components/text.js`).
+- **Change:** after Dashboard core's R2-07, take the three sentences from `src/components/text.js` (your copies at `text.js:587` and `:88` then go) and use them at those lines: a refused change or Undo names what changed; a refusal with its own reason reads "Couldn't undo: [reason]." (as `:1226` already does); a failed Undo says the failed-Undo sentence.
+- **Check (preview mode):** as R4-14's: withdraw, then `__tkdPreview.simulateOtherAdminEdit()`, then Undo within 5 s: "Someone else changed [Name] just now, so nothing was done. Their change is shown."
+
+### R3-06 (your part) — Your back link switches to the shared one · Low · decided 2026-11-04 (v1.048) · after Dashboard core's R3-06
+
+- **What's wrong:** your back link (`.bb-back`, `blackBelt.css:18`; on `src/blackBelt/staff/BlackBeltTesting.jsx:68` and `cycle/CyclePage.jsx:227`) is 28 px, and its plain 44 px touch box pushes the title down (146 px at 820 touch, where Star's sits at 124).
+- **Rule:** v1.048 (12) (Jeffrey, 2026-11-04: "Approve all"): Dashboard core builds one shared back link in `.tc-back`'s look (24 px, a 16 px arrow, a 44 px touch box pulled back so the title doesn't move), and every section switches to it.
+- **Change:** after Dashboard core's R3-06, both links use it (keep their words), and `.bb-back` goes.
+- **Check (preview mode):** the Black Belt page and a cycle page at 1280, 820 touch, 390 and 320: the link is 24 px with a mouse and 44 px to tap on touch, and the title sits at the same height at 1280 and 820.
+
+### S-2 (your part) — One line when a page can't load · Low · decided 2026-11-04 (v1.051) · after Dashboard core's S-2
+
+- **What's wrong:** your load failures end "… Check the connection, then try again.": `text.js:85` ("Couldn't load.") and `:989` (the rubric), the receipt (`src/blackBelt/staff/receipt/text.js:28`), Results (`results/text.js:108, 159, 211`) and Grading (`src/blackBelt/staff/grading/text.js:65`). Five places show the line with nothing to press: the read behind an admin's row ⋯ and the detail (`useCandidateActions.js:157`, R4-11's), the signature box (`candidates/SignatureDialog.jsx:28`), opening Edit cycle (`cycle/useCycleEditor.jsx:122`), the read before Delete cycle (`cycles/CyclesTab.jsx:239`) and the make-up picker's choose step (`useMakeupPicker.js:194`).
+- **Rule:** v1.051 (2) (Jeffrey, 2026-11-04: "Yes approved go ahead"): when a page can't load, it says "Couldn't load. Check the connection, then retry." with Retry, everywhere. A line may still name what didn't load ("Couldn't load the calendar. Check the connection, then retry."), so only the endings change: Calendar, Forms, Prospects and Black Belt … (R3's S-2). A read that fails behind a menu or inside a dialog is a connection failure too: v1.004 and §8 ("always include Retry where it applies") already ask for its Retry.
+- **Change:** after Dashboard core's S-2 puts the sentence in `src/components/text.js`: `text.js:85` takes it from there, and the other lines end "Check the connection, then retry." (they keep naming what didn't load; the receipt's goes with BB2 if the shared receipt comes first). Each of the five places gets a Retry that repeats its read. R4-11 adds the first one (`useCandidateActions.js:150–158`): build the two together, so it isn't added twice.
+- **Check (preview mode):** with R4-11's failed-read helper armed each time: an admin row's ⋯, Edit cycle, a candidate's signature and Delete cycle each show "… Check the connection, then retry." with Retry, and Retry does the read. The other lines end "then retry".
 
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R4-03, the words** (Medium) — "Hidden on this tablet" and "Payment details are hidden on this tablet." from `src/lib/privateDetails.js` instead of "… on this device" (`text.js:494, 619–620`), and the Results line worded as Star's (`results/text.js:103`). v1.036 and v1.037 already use "Hidden on this tablet" (`HIDDEN_ON_THIS_TABLET`, `src/lib/privateDetails.js:47`) for the plan and Edit details, and v1.037 settled the desk line. Until this is answered your screens would show both words, so it is asked before R4-01 and R4-04 are built (recommended: the shared words everywhere, v0.507 Q2 "the same words on every screen"). Your prompt's question, never asked. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-01** (Medium) — the past-due "Not paid" tag in the Delete red (`text.js:557–558`, `RosterRows.jsx:61`, `blackBelt.css:1024–1029`): amber like your own "Late" (recommended), gray like Star's, or red written into §7 as a named exception (v0.224 chose red; v1.007 says red means only "gone for good"). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-03** (Medium) — Undo after restoring a "Duplicate copy" withdraws it as a plain "Removed" (`useCandidateActions.js:1069–1090` → `0016_black_belt.sql:4428–4436`). Recommended: Star's rule everywhere, no Undo there. You follow Camps' answer. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-04** (Medium) — how the 5-second toast stays off the buttons under it, for every section. Your own lift (`blackBelt.css:1559, 1592–1606`, phones only) would move into the shared rule. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R1-06** (Low) — one Undo payment box for every section: yours (v0.964 / v0.965, recommended) or Star's with "recorded on" → "paid on" (then your title changes back). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R1-07** (Low) — one toast after Mark paid and after Undo payment: Camps' and Color Belt's words (recommended; yours change: `text.js:774, 818`) or yours. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed": your v0.966 shape for everyone (recommended) or the older shape. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-02** (Low) — should a "Possible duplicate" row count in the cards: your rule, left out with a gray note (recommended), or counted (then yours changes). The design review asks Jeffrey; the answer reaches you through the Main session. The same answer settles whether a possible-duplicate row offers its payment button (you offer it on both Noah Silva rows; Color Belt hides it).
-- **R3-06** (Low) — one shared back link made by Dashboard core (your `.bb-back`, 28 px with a plain 44 px touch box that pushes the title down, would switch to it). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-09** (Low) — in-list search: one wording and place for every box ("Search candidates", `text.js:523`, and its no-match line, `:536`, may change). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-10** (Low) — one order for what sits above a roster (recommended: Star's; you'd move the one-school line under the cards with BB15). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-02** (Low) — what an open desk-only form (your Add candidate) does when Hide private details turns on in another tab. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-06** (Low) — should your 24 weight-600 lines go to 500 (the printed sheet keeps 700–900)? Don't change weights unless Jeffrey decides. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-13** (Low) — "Ask an admin to open it." (Camps, recommended) or "… to reopen." (yours, `text.js:90, 495`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **Where Edit details returns** (Low): after Edit details, Black Belt goes back to the candidate's detail (`useCandidateActions.js:870`), while Star and Camps close to the roster (`CampPage.jsx:913–917`), so the Undo toast shows in different places. Is one rule wanted? The design review asks Jeffrey; the answer reaches you through the Main session.
-- **The roster-order line** (R3's S-9, Low): only Black Belt says how its roster is sorted ("Dan, then school, then last name", `text.js:525`). Keep it, drop it, or add it to the other rosters? The design review asks Jeffrey; the answer reaches you through the Main session.
+Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.051); each answer is a Fix now or Smaller item in this file.
 
 ---
 
@@ -184,11 +298,15 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q3-blackbelt-desk-onl
 - Print receipt is offered with nothing paid (`CandidatesTab.jsx:246, 313`: it checks only `!hidden`); Star shows it only on a row with a payment (v0.518), and Camps leaves it out (v0.734). Low; do it with BB2.
 - Heads-up for BB1 (planned, not a finding): when "Method" becomes "Paid by", Record refund should say "Refunded by", like Star (`src/screens/testing/star/candidates/text.js:165`) and Finance's payment detail.
 - Your two prompt checks aren't recorded in the status file. The chooser check (Testing → Black Belt → Testing → Color belt testing opens Color Belt) passed in the checker's preview: record it. BB3's Finance check (the Daily report after Edit payment and its Undo) wasn't tried: do it and record it.
-- BB20 ("Worcester and Shrewsbury" on the printed results sheet) still isn't asked. It's planned: ask it as your plan says.
+- **BB20 is decided and done** (2026-11-04, v0.975, on main 392bc9e): the printed results sheet keeps "Worcester and Shrewsbury". Nothing to build.
 - The grading leave warning still has Leave anyway on the left, plain (`cycle/CyclePage.jsx:477–483`): planned for BB19 (Part 2). Nothing new.
 - The phone header's blue "Add candidate" is full width (`blackBelt.css:830–832`). §2.1 names no such exception, and Star keeps its header buttons their own size. A question: show Jeffrey one picture (full width, or its own size). Low.
 - The empty roster shows four "0" cards, the search box and the table header, and its line says "or add one here" without naming the button (`text.js:535`; v1.028). Star shows one line that names "Add candidate". Low.
-- Your Clear search ✕ (`candidates/CandidatesTab.jsx:434`) is 28 px but has no tooltip (§1.4). Use the shared `IconButton`, as Prospects will (pass 1b, R5-01). Low.
+- Your Clear search ✕ (`candidates/CandidatesTab.jsx:434`) is 28 px but has no tooltip (§1.4). Use the shared `IconButton`, as Prospects already does (v0.631, on main); your R3-09 item does it. Low.
+- **R4-02 is decided** (2026-11-04, v1.049 (a)): Add candidate's New candidate form, open while Hide private details is turned on from another browser tab, keeps what was typed. It is recorded as a known gap in v0.249's "every screen". Nothing to build.
+- **S-9 is decided** (2026-11-04, v1.047 (17)): your "Dan, then school, then last name" line stays (`text.js:525`), and no other roster adds one. Nothing to build.
+- **Cards while hidden are decided** (pass 1b; 2026-11-04, v1.046 (9)): while Hide private details is on, the count cards keep the people counts and drop the money cards. Once BB15 moves you to the shared cards, the row shows one Candidates card while the switch is on, instead of no row; with the switch off your four plan cards stay as they are (§8: max 4 in a row; a fifth card would be a new question for Jeffrey). Nothing to build before BB15.
+- **S-10 is decided** (2026-11-04, v1.048 (20)): the browser dropdown in your result-text box (`src/blackBelt/staff/rubric/ResultTextDialog.jsx:278`) becomes the shared Select (v1.100) when you next work on that screen. No sweep, so nothing to build until then.
 
 ---
 

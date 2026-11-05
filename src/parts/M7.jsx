@@ -1,9 +1,11 @@
 // M7.jsx — the parts page's samples of the shared history line (components/HistoryLine.jsx; mockup
-// M7, rulebook v1.108).
+// M7, rulebook v1.108 / v1.122).
 // Why it exists: the parts page (plan §4) shows every state with fake people (no database). Each
 // state opens a sample person's summary (as the mockup draws it: a Color Belt student) whose last
 // line is the shared one. The section's reader is a sample: it answers at once, never (loading),
-// with nothing (empty) or fails (Retry reads again, then fails again).
+// with nothing (empty) or fails (Retry reads again, then fails again). Two samples with Hide private
+// details on are for someone who never paid: with other changes, and with nothing at all — their
+// history must look like a paid person's (the gray line in every history while hidden, v1.122).
 import { useState } from 'react';
 import { IconEdit } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
@@ -27,6 +29,7 @@ function describe(row, { hidden }) {
 
 const READERS = {
   ready: () => resolveAfter(ROWS, 50),
+  unpaid: () => resolveAfter(ROWS.filter((row) => row.kind !== 'payment'), 50), // never paid
   empty: () => resolveAfter([], 50),
   never,
   failed: () => failAfter(300),
@@ -103,9 +106,9 @@ function ClosedState() {
 }
 
 // "Open" / "Hide private details on": the line tapped
-function OpenState({ hidden = false }) {
+function OpenState({ hidden = false, read = 'ready' }) {
   useLater(() => pressLikeMouse(document.querySelector('.hist-btn')), 400);
-  return <SampleSummary hidden={hidden} />;
+  return <SampleSummary hidden={hidden} read={read} />;
 }
 
 export const PART = {
@@ -116,6 +119,8 @@ export const PART = {
     { id: 'closed', title: 'Closed, as the summary opens', dialog: true, render: () => <ClosedState /> },
     { id: 'open', title: 'Open', dialog: true, render: () => <OpenState /> },
     { id: 'hidden', title: 'Hide private details on', dialog: true, render: () => <OpenState hidden /> },
+    { id: 'hidden-unpaid', title: 'Hide private details on, someone who never paid: the same gray line (v1.122)', dialog: true, render: () => <OpenState hidden read="unpaid" /> },
+    { id: 'hidden-empty', title: 'Hide private details on, nothing recorded: "History" and the gray line (v1.122)', dialog: true, render: () => <SampleSummary hidden read="empty" /> },
     { id: 'loading', title: 'While it reads', dialog: true, render: () => <SampleSummary read="never" /> },
     { id: 'failed', title: "If it can't read", dialog: true, render: () => <SampleSummary read="failed" /> },
     { id: 'empty', title: 'Nothing recorded yet', dialog: true, render: () => <SampleSummary read="empty" /> },

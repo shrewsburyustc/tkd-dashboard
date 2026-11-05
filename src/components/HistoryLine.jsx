@@ -1,9 +1,9 @@
 // HistoryLine.jsx — the history line at the end of a person's summary, and its list (design review
-// M7, rulebook v1.010 / v1.108).
+// M7, rulebook v1.010 / v1.108 / v1.122).
 // Why it exists: rulebook v1.010 — every person's summary ends with Prospects' one line,
 // "History · 3 changes ›"; a tap opens the list right there, newest first: what changed, then
-// when · who. Star has a five-row block today, Prospects its own line; Color Belt, Camps and Black
-// Belt have none. This is the one line:
+// when · who. Star, Color Belt, Camps and Black Belt all draw their people's histories with this
+// one line:
 //   - a button (screen readers hear collapsed / expanded) whose arrow points right while closed
 //     and down while open (detail a, §2.4 — the one place › doesn't open a page);
 //   - the list: the section's words for what changed, then the date and the name the same way
@@ -13,8 +13,10 @@
 //     (v1.004); with nothing recorded: plain text, "History · no changes yet", nothing to open;
 //   - with Hide private details on, changes about money are left out of the count and the list,
 //     and one gray line says so: "Payment history is hidden on this tablet." (Star's words, v0.506).
-// Each section reads its own history and words it (Color Belt, Camps and Black Belt each need a
-// reader first, in their own prompts). Nothing switches to it in Dashboard core step 1.
+//     The line shows in EVERY history while hidden, not only where money changes were left out:
+//     otherwise seeing it or not would tell paid from unpaid (v1.122, design review R4-07). With
+//     nothing else to show, the history reads "History" with the gray line under it.
+// Each section reads its own history and words it (its load() and describe(), below).
 //
 // Props:
 //   load()            the section's reader: a promise of its history rows (any shape); it is
@@ -24,8 +26,7 @@
 //                                                milliseconds or a Date — or a school date
 //                                                'YYYY-MM-DD'; lib/historyDates.js); who
 //                                                ("Jeffrey Berg")
-//                       { hiddenPayment: true }  a change about money while hidden (left out, counted
-//                                                for the gray line)
+//                       { hiddenPayment: true }  a change about money while hidden (left out)
 //                       null                     nothing to show for this row
 //   hidden            Hide private details is on
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
@@ -90,24 +91,21 @@ export default function HistoryLine({ load, describe, hidden = false }) {
     );
   }
 
-  // The section's words for each row; money rows left out while hidden (and counted for the line).
-  let hiddenPayments = 0;
+  // The section's words for each row; money rows left out while hidden.
   const entries = [];
   for (const row of state.rows) {
     const words = describe(row, { hidden });
-    if (!words) continue;
-    if (words.hiddenPayment) {
-      if (hidden) hiddenPayments += 1;
-      continue;
-    }
+    if (!words || words.hiddenPayment) continue;
     entries.push(words);
   }
   entries.sort(newestFirst);
-  const hiddenLine = hidden && hiddenPayments > 0 && <p className="field-hint hist-hidden-line">{HISTORY_PAYMENTS_HIDDEN}</p>;
+  // While hidden, the gray line shows in every history, whether or not money rows were left out:
+  // only then can't it tell paid from unpaid (v1.122).
+  const hiddenLine = hidden && <p className="field-hint hist-hidden-line">{HISTORY_PAYMENTS_HIDDEN}</p>;
 
   if (entries.length === 0) {
-    // Nothing to open. (Only money changes, and they're hidden: the line says "History" and the
-    // gray line says why there is nothing to show.)
+    // Nothing to open. (While hidden, the line says "History" and the gray line says why there may
+    // be nothing to show, for everyone alike.)
     return hiddenLine ? (
       <>
         <div className="hist-none">

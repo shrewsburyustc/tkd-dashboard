@@ -854,3 +854,90 @@ Where it stands: the status file.
   - Color Belt's roster overlap is no worse than above (12 / 13 overlapping pairs at 640 px with Standard / Largest; 1 / 3 at 700 px; none from 740 px).
 
 Where it stands: the status file.
+
+## 16. The design review's rolling check, pass 1: the fix list
+
+Source: `docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md`. Started 2026-11-04 (Jeffrey: "The fix list"), on `main` 2881413.
+
+**How it's done** (the fix file's rules and CLAUDE.md):
+- plan first, then a picture before any change you'd see: the four sizes, with what changes outlined in amber, one screen at a time;
+- one decision at a time;
+- each step gets a design reviewer and a code reviewer; R4-07 (privacy) also gets a security reviewer;
+- a commit on `dashboard-core` after each reviewed step, never a push, then a report to Main naming the sections that must adopt it;
+- no migration is needed.
+
+**Steps, in the proposed order:**
+
+1. **R4-07: the gray "Payment history is hidden" line tells paid from unpaid (privacy).**
+   - **Today:** `src/components/HistoryLine.jsx:106` shows the line only for people with money changes, so seeing it tells you who paid.
+   - **Fix:** show it in every history while Hide private details is on (drop `hiddenPayments > 0`).
+     - With no other changes, the line reads "History" plus the gray line.
+     - With changes, the gray line sits under the opened list, as now.
+   - **Who gets it:** every section that uses the shared history (Star, Camps, Color Belt, Black Belt), with no change of their own.
+   - **Picture:** an unpaid and a paid camper, before and after, at PC and phone sizes.
+   - **Check:** `check-parts.mjs` (M7), plus Camps and Star in the preview.
+2. **Small fixes, nothing (or almost nothing) to see:**
+   - **R4-09: tags you click are 22 px tall with a mouse.**
+     - In `src/styles/testing-events.css`, `.ev-tag-button::after` gets an invisible box outside the touch rule too (`inset: -1px 0`); touch keeps its `-14px -4px`.
+     - The pill draws the same, rows don't grow, and a click 1 px above or below still opens it. Check-only.
+     - Color Belt, Star, Camps and Black Belt use this style.
+   - **R3-13: one gray-day hint.**
+     - "Past days can’t be chosen." and "Days after today can’t be chosen." live once, in `src/components/text.js`. Nothing on screen changes yet.
+     - The sections' own items: Star and Black Belt switch from "dates", and Star's and Camps' Date paid calendars pass the "Days after today" hint.
+     - Recommended: Prospects and Finance also switch their own copies to the shared words. The words are the same, and v1.030 asks for one source.
+   - **Smaller: the Mark paid box on phones** (`MarkPaidBox.jsx:91–92`). It opens over the phone's bottom bar at 320×800; it should stay above the bar. One small before-and-after picture.
+3. **R2-05: an Undo pressed while another save runs is dropped (Medium).**
+   - **What the research found:**
+     - There are 26 groups of Undo handlers in 8 areas, each with its own true/false "busy" flag and nothing to wait on; several have no guard at all.
+     - The shared Toast removes itself before it runs Undo, and doesn't wait for it.
+   - **The fix:**
+     - a shared helper (`begin` / `end`, plus "run this when the running save ends");
+     - a busy toast, "Undoing…", that stays while the Undo waits and runs.
+   - **First, a picture and Jeffrey's calls,** one at a time:
+     - the "Undoing…" toast;
+     - what happens to the running save's own toast;
+     - what happens if that save fails;
+     - what happens if the person leaves the page while the Undo waits.
+
+     The risks the research found go into those questions: a failing save clears the toast today, some Undos have a 10-second limit, and some checks run when Undo is pressed.
+   - **Who builds what:** Dashboard core builds the toast, the helper and a sample on the parts page. Each section then switches its Undo handlers to it: Star, Camps, Black Belt, New students (Calendar, Schedule, Prospects, Forms), Color Belt and Finance.
+4. **R3-12: the shared dropdown gets an "unavailable" state.**
+   - **The look:** gray words and chevron and the not-allowed pointer. It stays a Tab stop, and its reason is read on focus (`aria-disabled`, `aria-describedby`), as the date picker's `disabled` already works.
+   - **Files:** `Select.jsx`; `TimeList.jsx`, which lists its props one by one; and `shared.css`, including High Contrast.
+   - **Picture:**
+     - the parts page's new state;
+     - Star's Dan field for staff before (the busy "saving" pointer, words not gray) and after.
+   - **Then:** Star switches its Dan field (Star's item).
+5. **R1-08: buttons and tags that wait for a save don't look unavailable.**
+   - **What the research found:** about 25 kinds of buttons in every section are `aria-disabled` but look normal. Among them:
+     - Camps' "$X due" tags;
+     - Star's and Color Belt's Mark paid while a save runs;
+     - many in Black Belt, Star, Finance, Forms and Schedule;
+     - Staff accounts' Reset password;
+     - the amber bar's "Try again";
+     - Download QR.
+   - **The trade-off:** a page-wide gray (`.btn[aria-disabled='true']`, `.ev-tag-button[aria-disabled='true']`) fixes them all at once. But it would also change some that shouldn't change: Camps' red Delete permanently, steppers and ‹ › arrows at a limit, Finance's Copy Monday, and the kiosk.
+   - **Jeffrey's call:** the page-wide rule with those handled, or each section adding `is-unavailable` itself. He sees a picture sheet of every screen that changes first.
+   - **Timing:** this is the plain-button half of the gray that step 2 planned (plan :487, :625), so it lands before step 2.
+6. **Smaller refactors, nothing on screen changes:**
+   - one shared class for the gray "hidden" words (five copies today: `.ev-hidden-value`, `.st-hidden-value`, `.cmp-hidden`, `.rcpt-hidden`, `.hist-hidden-line`);
+   - one shared `NoIcon` (six copies today).
+
+   Dashboard core adds the shared one and switches its own parts. Each section switches its own copies from a note, as with the pale green.
+
+**Already done by the cleanup** (v1.119–v1.121, live): the stale `.cp-popover` comment, the turned-off icon button's look, the bordered button's copies (Finance's switch is Finance's), and the pale green.
+
+**Not here:** Staff accounts while private details are hidden (step 2's M17).
+
+**Waits on Jeffrey** (the Design Review asks him through Main; nothing is built here until his answers arrive):
+- R2-04: the toast staying off the buttons under it;
+- R1-07: one set of toast words after Mark paid and Undo payment;
+- R2-07: the words for "someone else changed it", Undo refused and Undo failed;
+- R2-09: the ✓ and full stop on toasts;
+- R3-06: one shared back link;
+- R3-09: in-list search;
+- R4-02: an open desk-only form when Hide private details turns on;
+- R4-06: weight 600 to 500;
+- the payment line and history words;
+- the school order;
+- the browser's own dropdowns.
