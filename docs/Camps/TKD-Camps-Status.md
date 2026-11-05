@@ -166,7 +166,7 @@ Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Par
 
 Fix list: `docs/Design Review/Rolling check/Pass 1/Fix-Camps.md` (sent by Main 2026-11-05 on Jeffrey's "Yes, send them"). Plan: `docs/Camps/TKD-Camps-Pass1-Plan.md`. main merged into camps first (40660d8).
 
-- **Step 1, small screen fixes** (S-8, R2-07 words, R2-03, S-2, R4-06, the smaller items, the camperHistoryWords comment): plan written; picture 20 next, once Jeffrey OKs the plan.
+- **Step 1, small screen fixes** (S-8, R2-07 words, R2-03, S-2, R4-06, the smaller items, the camperHistoryWords comment): Jeffrey OK'd the plan 2026-11-05 ("Yes, start step 1"). Picture 20 (`Design review mockups/20-small-fixes.png`) sent 2026-11-05 for his OK. On the tablet and PC the camp list's row has its own Edit pencil, so S-8 changes only the phone list ⋯ and the header ⋯.
 - **Step 2, above the roster** (R3-10, R3-02, R5-04, R3-09): picture 21 after step 1; it carries one decision (where the possible-duplicate line goes, since the count line already uses the shared row note).
 - **Step 3, R1-05 Record refund:** needs migration **0039** (reserved by Main 2026-11-05, main c769a66; tell Main when it is live so Finance runs its R1-05 test); then Finance's R1-05; the app push waits for both.
 - **Later:** R2-05, R1-08, R3-13, R1-06, R1-07, R2-07 (stale words), R3-06 wait on Dashboard core; R5-03 on New students; Paying by "(chosen …)" on Star's R1-02; tag target size on Dashboard core's R4-09; C19 on M12.

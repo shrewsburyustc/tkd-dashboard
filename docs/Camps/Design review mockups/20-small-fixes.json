@@ -1,0 +1,76 @@
+{
+  "title": "Camps — pass 1, step 1: the small fixes (S-8, R2-07, R2-03, S-2, R4-06)",
+  "subtitle": "The fixes the design review’s rolling check found, that you already decided on 2026-11-04 (v1.043, v1.047, v1.048, v1.051). No database change. Real preview data; the “After” changes are drawn on top of the real screens for this picture only. Amber = what changes. <b>1</b> S-8: the camp’s ⋯ starts with Close / Open sign-up, then Edit camp (as Star, Black Belt and Color Belt). <b>2</b> R2-07: the Undo of Close sign-up says sign-up is open again. <b>3</b> R2-03: restoring a “Duplicate copy” has no Undo (an Undo would remove the row as plain “Removed”, with “Withdrawn” in its history); other restores keep it. <b>4–5</b> S-2: five reads that fail now offer Retry (it repeats the same read). <b>6</b> R4-06: the family page’s week title drops to weight 500.",
+  "width": 1900,
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/x2-ph-listmenu-today.png", "crop": [0, 470, 390, 374], "scale": 0.75, "shotWidth": 390, "marks": [[0, 546, 390, 44]],
+          "caption": "<b>1 · Phone 390 touch,</b> the camp list’s ⋯. Edit camp comes first." },
+        { "src": "shots/x2-ph-headmenu-today.png", "crop": [0, 470, 390, 374], "scale": 0.75, "shotWidth": 390, "marks": [[0, 546, 390, 44]],
+          "caption": "<b>1 · Phone,</b> the camp page’s header ⋯ (same at every size)." }
+      ] },
+      { "row": [
+        { "src": "shots/x2-pc-signup-today.png", "crop": [700, 640, 580, 160], "scale": 0.6, "marks": [[1170, 737, 86, 40]],
+          "caption": "<b>2 · PC.</b> ⋯ Close sign-up → Undo: “Undone”." },
+        { "src": "shots/x2-ph-signup-today.png", "crop": [0, 680, 390, 164], "scale": 0.75, "shotWidth": 390, "marks": [[160, 741, 70, 36]],
+          "caption": "<b>2 · Phone.</b>" }
+      ] },
+      { "src": "shots/x2-pc-restored-today.png", "crop": [700, 640, 580, 160], "scale": 0.6, "marks": [[1026, 737, 230, 40]],
+        "caption": "<b>3 · PC.</b> Removed → “Duplicate copy” → Restore: the toast offers Undo." },
+      { "row": [
+        { "src": "shots/x2-pc-banner-today.png", "crop": [52, 90, 1228, 290], "scale": 0.45, "marks": [[76, 184, 1180, 40]],
+          "caption": "<b>4 · PC.</b> ⋯ Undo payment / Edit payment / Delete permanently when the camper can’t be read: the bar says “retry”, but has no Retry." },
+        { "src": "shots/x2-ph-banner-today.png", "crop": [0, 90, 390, 330], "scale": 0.6, "shotWidth": 390, "marks": [[16, 283, 358, 59]],
+          "caption": "<b>4 · Phone.</b> (⋯ Delete camp on the camp list: the same, with “Couldn’t load this camp.”)" }
+      ] },
+      { "row": [
+        { "src": "shots/x2-pc-editfail-today.png", "crop": [240, 60, 800, 180], "scale": 0.55, "marks": [[284, 132, 712, 82]],
+          "caption": "<b>5 · PC.</b> Edit camp when the camp can’t be read: Close only." },
+        { "src": "shots/x2-ph-editfail-today.png", "crop": [0, 0, 390, 200], "scale": 0.6, "shotWidth": 390, "marks": [[16, 64, 358, 34]],
+          "caption": "<b>5 · Phone.</b> Nothing to press but ←." }
+      ] },
+      { "row": [
+        { "src": "shots/x2-pc-week-today.png", "crop": [376, 380, 520, 140], "scale": 0.7, "marks": [[393, 393, 100, 20], [393, 485, 112, 20]],
+          "caption": "<b>6 · PC,</b> the family page (Two-Week Summer Camp). “Week 1 · Jul 5 – 9” at 600." },
+        { "src": "shots/x2-ph-week-today.png", "crop": [16, 395, 370, 220], "scale": 0.6, "shotWidth": 390, "marks": [[33, 413, 100, 20], [33, 585, 112, 20]],
+          "caption": "<b>6 · Phone.</b>" }
+      ] }
+    ] },
+    { "label": "After", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/x2-ph-listmenu-after.png", "crop": [0, 470, 390, 374], "scale": 0.75, "shotWidth": 390, "marks": [[0, 590, 390, 44]],
+          "caption": "<b>1 · Phone.</b> Close sign-up, <b>Edit camp</b>, Save as template, Print roster, Delete camp." },
+        { "src": "shots/x2-ph-headmenu-after.png", "crop": [0, 470, 390, 374], "scale": 0.75, "shotWidth": 390, "marks": [[0, 590, 390, 44]],
+          "caption": "<b>1 · Phone,</b> header ⋯: the same order." }
+      ] },
+      { "row": [
+        { "src": "shots/x2-pc-signup-after.png", "crop": [700, 640, 580, 160], "scale": 0.6, "marks": [[1030, 737, 226, 40]],
+          "caption": "<b>2 · PC.</b> “Undone. Sign-up is open again.” The Undo of Open sign-up stays “Undone”." },
+        { "src": "shots/x2-ph-signup-after.png", "crop": [0, 680, 390, 164], "scale": 0.75, "shotWidth": 390, "marks": [[93, 741, 204, 36]],
+          "caption": "<b>2 · Phone.</b>" }
+      ] },
+      { "src": "shots/x2-pc-restored-after.png", "crop": [700, 640, 580, 160], "scale": 0.6, "marks": [[1080, 737, 176, 40]],
+        "caption": "<b>3 · PC.</b> “Ava Thompson restored”, no Undo (Star’s rule). To change it back: Review → Keep this one." },
+      { "row": [
+        { "src": "shots/x2-pc-banner-after.png", "crop": [52, 90, 1228, 290], "scale": 0.45, "marks": [[1133, 188, 87, 31]],
+          "caption": "<b>4 · PC.</b> The same words, now with Retry: it reads the camper again and opens the box." },
+        { "src": "shots/x2-ph-banner-after.png", "crop": [0, 90, 390, 330], "scale": 0.6, "shotWidth": 390, "marks": [[235, 306, 87, 33]],
+          "caption": "<b>4 · Phone.</b>" }
+      ] },
+      { "row": [
+        { "src": "shots/x2-pc-editfail-after.png", "crop": [240, 60, 800, 180], "scale": 0.55, "marks": [[859, 182, 63, 32]],
+          "caption": "<b>5 · PC.</b> Retry, then Close." },
+        { "src": "shots/x2-ph-editfail-after.png", "crop": [0, 0, 390, 200], "scale": 0.6, "shotWidth": 390, "marks": [[311, 115, 63, 35]],
+          "caption": "<b>5 · Phone.</b> Retry under the line." }
+      ] },
+      { "row": [
+        { "src": "shots/x2-pc-week-after.png", "crop": [376, 380, 520, 140], "scale": 0.7, "marks": [[393, 393, 100, 20], [393, 485, 112, 20]],
+          "caption": "<b>6 · PC.</b> Weight 500, as every screen title (§7). The printed roster keeps 600." },
+        { "src": "shots/x2-ph-week-after.png", "crop": [16, 395, 370, 220], "scale": 0.6, "shotWidth": 390, "marks": [[33, 413, 100, 20], [33, 585, 112, 20]],
+          "caption": "<b>6 · Phone.</b>" }
+      ] }
+    ] }
+  ],
+  "footer": "<b>Tablet 820 touch and PC:</b> the camp list’s row has its own Edit pencil, so its ⋯ has no Edit camp and doesn’t change (1); the header ⋯ changes the same way at every size. Toasts, bars and the Retry button are the shared parts, so 820 and 320 look like these; the design reviewer checks all four sizes after the build. <br><b>Also in this step, words only (nothing to draw):</b> straight apostrophes in the Undo payment box; staff see “No camps yet. An admin adds them.” on an empty camp list (§8 Empty states; admins keep “Add one with Add camp.”); a code comment in the camper history file updated now that Dashboard core’s v1.122 is live; the status file records the four checks the review asked for. <br><b>For testing:</b> a small “fail the next read” helper in the preview’s fake Camps store, added to <code>src/lib/mockClient.js</code> (a shared file) so the Retry buttons can be tried. <br><b>How it was drawn:</b> <code>mock-x2-small-fixes.js</code> and <code>mock-c05-toast.js</code> draw on top of the real preview; nothing in the app changed yet. <br><br><b>Your choice:</b> OK all six, or change a point (say which number)."
+}
