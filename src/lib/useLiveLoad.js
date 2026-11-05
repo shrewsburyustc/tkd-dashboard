@@ -26,7 +26,13 @@
 //   live.updatedAt  when the last good answer for this key arrived (a Date.now() number) or null.
 //   (refreshFailing and updatedAt were added for the camp roster, 2026-10-21; screens that don't
 //   read them behave exactly as before.)
-import { useCallback, useEffect, useRef, useState } from 'react';
+// Every live load that reloads by itself (refreshMs) also tells the one offline bar whether its
+// reloads keep failing (lib/connection.js; design review M12, rulebook v1.123): two in a row, once
+// the server has answered it at least once, counted across a school switch. It reports only while
+// it is asking (it has a key and is turned on). A screen that closes takes its report with it, and
+// every live load reloads at once when the browser says it's back online.
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { reportRefreshFailing } from './connection.js';
 
 // How often the Events list and the event page reload on their own (rulebook v0.157).
 export const LIVE_REFRESH_MS = 15 * 1000;
@@ -49,6 +55,10 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
   const loadRef = useRef(load);
   // Failed reloads in a row for the current key ({ key, count }); a good answer resets it.
   const [fails, setFails] = useState({ key: null, count: 0 });
+  // For the one offline bar (M12): failed reloads in a row across keys (switching school keeps
+  // counting), and whether the server has ever answered this screen. A screen that has never had an
+  // answer (e.g. a database function that's missing) never claims "You're offline".
+  const [streak, setStreak] = useState({ count: 0, answered: false });
 
   useEffect(() => {
     keyRef.current = key;
@@ -79,6 +89,10 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
         result = { status: 'error' };
       }
       if (seq !== seqRef.current) return latestRef.current; // a newer request took over
+      // Any answer from the server (data, "no access", "not found") shows the connection works.
+      if (result?.status === 'ok' || result?.status === 'no_access' || result?.status === 'not_found') {
+        setStreak((prev) => (prev.count === 0 && prev.answered ? prev : { count: 0, answered: true }));
+      }
       if (result?.status === 'ok') {
         cache.set(current, result);
         setState({ key: current, data: result, status: 'ready', okAt: Date.now() });
@@ -103,6 +117,7 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
       });
       // Count it (only the newest request gets here, so a replaced one never counts).
       setFails((prev) => ({ key: current, count: prev.key === current ? prev.count + 1 : 1 }));
+      setStreak((prev) => ({ count: prev.count + 1, answered: prev.answered }));
       return 'error';
     };
 
@@ -126,6 +141,16 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [reload]);
+
+  // Reload when the connection comes back (the browser's "online" event), so a screen whose reloads
+  // were failing, and the one offline bar it keeps up (M12), clear at once, not at the next tick.
+  useEffect(() => {
+    function onOnline() {
+      if (keyRef.current && enabledRef.current) reload();
+    }
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
   }, [reload]);
 
   // The regular quiet reload (refreshMs). It runs only while the tab is visible and the screen
@@ -172,6 +197,26 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
   // Only a warning while there IS something on screen ('ready'); a first load that failed already
   // shows its own error screen.
   const refreshFailing = status === 'ready' && fails.key === key && fails.count >= FAILS_BEFORE_WARNING;
+
+  // The one offline bar (M12): report this screen's answer, and take it back when the screen closes.
+  // Only a screen that reloads by itself (refreshMs) and is asking right now (it has a key and is
+  // turned on) reports — "two failed refreshes in a row" (v1.005) — so its next refresh can always
+  // take the report back. A tab that isn't showing (its key is null) can't, so it doesn't report.
+  // It counts across keys and only once the server has answered this screen (see `streak`).
+  // (useId: a name for this one use of the hook, the same on every redraw.)
+  const asking = key !== null && key !== undefined && Boolean(enabled);
+  const reportFailing = Boolean(refreshMs) && asking && streak.answered && streak.count >= FAILS_BEFORE_WARNING;
+  const reportId = useId();
+  useEffect(() => {
+    reportRefreshFailing(reportId, reportFailing);
+  }, [reportId, reportFailing]);
+  useEffect(() => () => reportRefreshFailing(reportId, false), [reportId]);
+  // A screen that stops asking (its tab closed, it was turned off, or the lock) keeps its count at one
+  // short of the bar. When it asks again, one more failed refresh brings the bar straight back and a
+  // good one clears it, so the bar never shows before that first reload has answered.
+  useEffect(() => {
+    if (!asking) setStreak((prev) => (prev.count < FAILS_BEFORE_WARNING ? prev : { count: FAILS_BEFORE_WARNING - 1, answered: prev.answered }));
+  }, [asking]);
 
   return { status, data, reload, setLocal, refreshFailing, updatedAt };
 }

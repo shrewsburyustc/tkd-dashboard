@@ -28,6 +28,16 @@
 //   __tkdPreview.refreshSignIn()          pretend Supabase's hourly sign-in refresh happened now
 //   __tkdPreview.refocusTab()             pretend the tab was shown again: Supabase re-sends this
 //                                         browser's SAVED copy of the sign-in (it can be older)
+// The one offline bar (design review M12, v1.123; src/lib/connection.js):
+//   __tkdPreview.cutConnection(true)      the device "goes offline": every database call fails like a
+//                                         dropped connection and the page hears "offline" (the bar
+//                                         shows at once)
+//   __tkdPreview.cutConnection('internet') the Wi-Fi is up but the internet isn't: every call fails,
+//                                         but the browser still says "online" (the bar shows after two
+//                                         failed refreshes, about 30 seconds, on pages that refresh)
+//   __tkdPreview.cutConnection(false)     the connection is back
+//                                         (while it's cut, the lock screen can't check the PIN and
+//                                         asks you to check the connection; reloading the page ends it)
 // Testing helpers:
 //   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
 //   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
@@ -757,6 +767,11 @@ export function createMockClient() {
   let starGradingOffline = false;
   // failStarHome(true): every star_home_today ask fails like a dropped connection (phase 7).
   let starHomeOffline = false;
+  // cutConnection(): every call fails like a dropped connection (the one offline bar, M12):
+  // false = working · true = offline (the browser hears "offline") · 'internet' = the Wi-Fi is up
+  // but the internet isn't (the browser still says "online").
+  let connectionCut = false;
+  const droppedConnection = () => ({ data: null, error: { message: 'Failed to fetch (preview: cutConnection)' }, status: 0 });
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -807,6 +822,7 @@ export function createMockClient() {
       then(resolve, reject) {
         const run = async () => {
           await wait(testingDelay());
+          if (connectionCut) return droppedConnection();
           if (query.write) {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
@@ -867,6 +883,10 @@ export function createMockClient() {
   // options: the real client's third argument; { get: true } sends a read-only GET request, which
   // the Star candidates fake refuses for functions that write (contract §7).
   async function rpc(name, args = {}, options = {}) {
+    if (connectionCut) {
+      await wait(testingDelay());
+      return droppedConnection();
+    }
     if (STAR_CANDIDATE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
       if (starGradingOffline && STAR_GRADING_RPC_NAMES.includes(name)) {
@@ -1170,6 +1190,18 @@ export function createMockClient() {
       return starGradingOffline
         ? 'Star grading is now "offline": every grade, count and grid read fails. Run __tkdPreview.setStarOffline(false) to come back.'
         : 'Star grading is back online. The page refreshes, then Not saved grades save by themselves.';
+    },
+    // ----- The one offline bar (design review M12, v1.123) -----
+    cutConnection(mode = true) {
+      const before = connectionCut;
+      connectionCut = mode === 'internet' ? 'internet' : Boolean(mode);
+      // A real Wi-Fi drop makes the browser fire "offline" (and "online" when it's back); the Wi-Fi
+      // being up without internet fires nothing.
+      if (connectionCut === true && before !== true) window.dispatchEvent(new Event('offline'));
+      if (connectionCut !== true && before === true) window.dispatchEvent(new Event('online'));
+      if (connectionCut === true) return 'Offline: every call fails and the page hears "offline", so the offline bar shows at once. __tkdPreview.cutConnection(false) brings the connection back.';
+      if (connectionCut === 'internet') return 'The internet is cut but the browser still says "online": every call fails, and the offline bar shows after two failed refreshes (about 30 seconds) on pages that refresh by themselves. __tkdPreview.cutConnection(false) brings it back.';
+      return 'The connection is back. The offline bar goes by itself (after the next good refresh, if failed refreshes showed it).';
     },
     simulateStarDanChange(firstName = 'Noah', dan = 2) {
       return starCandidates.simulateDanChange(firstName, dan);
