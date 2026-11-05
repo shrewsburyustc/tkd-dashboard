@@ -6,14 +6,14 @@
 // for results: the server never sends it back (privacy, §8.3), so the Results line shows what the
 // family typed (v0.510). The reference number is shown on screen only (no email yet, v0.103).
 import { formatDollars, longDate, methodsLabel, methodWord } from '../register/format.js';
-import { startTimeLabel } from '../lib/star/starEventRules.js';
+import { testingTimeLabel } from '../lib/star/starEventRules.js';
 import { whereLine } from './parts.jsx';
 import * as T from './text.js';
 
 export default function Registered({ result, email, visit, onTestingDay, onAnother, headingRef }) {
   const name = `${result.first_name} ${result.last_name}`;
   const method = methodWord(result.paying_by);
-  const time = startTimeLabel(result.start_time);
+  const time = testingTimeLabel(result.start_time, result.end_time); // v0.520
   const twoPrices = result.same_day_cents > result.standard_cents;
 
   // The family's total: before-the-day prices before the testing day, testing-day prices on it.

@@ -2699,6 +2699,8 @@ Tested in PGlite on every run (`run.mjs` step0029, or `node run.mjs --only-step0
 
 ### 0028e. Undo 0028 (only with Jeffrey's OK)
 
+**After 0041 is live:** an event's end time uses the same rule (`star_events_end_time_check`), so step 2 must also find no end time outside 8:00 AM–8:00 PM every 15 minutes (`select count(*) from public.star_events where end_time is not null and not (end_time between time '08:00' and time '20:00' and extract(minute from end_time)::integer % 15 = 0)` must be 0); the undo file doesn't check end times (see Migration 0041, 0041b).
+
 1. **Put the app back first** to a version that offers only 8:00 AM–8:00 PM every 15 minutes.
 2. Claude runs `supabase/tests/0028_preapply_check.sql`: `events_bad_old` and `privates_bad_old` must be **0**. Above 0 → events or private testings were saved with a new time (e.g. 6:05 AM, 9:30 PM, 10:10); change them in the app first. (Postgres does not re-check saved rows when the function inside a table rule changes, so such an event would stay — and every later save of it would be refused as "invalid".)
 3. Paste **the whole file** `supabase/manual/0028u_undo_star_start_time.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0028 undo refused: …") while any saved time breaks 0006's rule, then puts back 0006's exact `star_start_time_is_valid` (section 1a, word for word) with its revoke (one transaction).
@@ -3066,5 +3068,74 @@ Tested in PGlite on every run (`run.mjs` step0036: a form and a family from befo
 - **ZIP digits written as `[0-9]`:** on a database with ICU text rules (as production) the shorthand `\d` also matches other alphabets' digits; `[0-9]` matches only 0–9, like the app's check.
 - **The undo refuses instead of losing data:** Postgres doesn't re-check saved rows when a function inside a table rule changes, so putting the old field rules back under a form with an Address question would block every later save of that form.
 - **Staff read sign-ups only through the functions:** a home address and a child's date of birth are private (rulebook section 5). Read rights on the table would let anyone with a staff login pull every family at once; `prospects_get` gives one family at a time, to an unlocked session.
+
+---
+
+## Migration 0041: Star event end time
+
+**Status: applied 2026-11-05** (pasted by Jeffrey; 0041c: pre-apply check `1 / 0 / 2 / 5 / 0 / 5 / 0`, all 7 fingerprint rows match the tested copy; 0041d: security advisor nothing new (the three staff functions only under the usual "signed-in can run a security definer function" warning); 0041e: Jeffrey ran 0041_tests, 0006_tests, 0023_tests and 0028_tests: all passed). Was: not applied yet. Built on `star-testing` (rulebook v0.520, urgent: families must see the testing time "from when to when" so parents know when to pick up). Apply it **before** the app version that shows and saves the end time is deployed. The live app keeps working after it (see "the old app" below).
+
+**Production order:** … 0034 → 0036 (all live) → **0041**. It needs 0006, 0023 and 0028 (Star testing) — it stops with "0041 needs migrations 0006, 0023 and 0028 (Star testing) first" if one is missing.
+
+**What it does** (`supabase/migrations/0041_star_end_time.sql`):
+- **`star_events.end_time`** (new column, `time`, may be empty) with the table rule **`star_events_end_time_check`**: empty, or a valid time by the same rule as start times (`star_start_time_is_valid`, 0028: 6:00 AM–10:00 PM every 5 minutes, no seconds) **and later than the start time**. Signed-in staff may read it (`grant select (end_time) … to authenticated`, like the other event columns); nothing for anon or the family form's login. Events saved before 0041 keep an empty end time — nothing is filled in and no version moves.
+- **`star_add_event`** and **`star_update_event`** (0023's version) get one more input, last: **`p_end_time time default null`**. Same checks, answers, owner and rights otherwise; an end time equal to or before the start, off the 5-minute step or outside the day → `invalid`. Edit event with the same values (end time included) still writes nothing. Postgres can't add an input to an existing function, so the old 7- / 8-input versions are removed and the new ones made in the same transaction.
+- **`star_public_event`** (the family form), **`star_public_answer`** (the "You're registered" answer, internal) and **`star_home_today`** (Home's Today card) — replaced; each answer has one more key, **`end_time`** (`"HH:MM"`, or null when none is saved). Same arguments, checks, owner and rights.
+- **The old app:** it calls `star_add_event` / `star_update_event` by argument name without `p_end_time`; the default (empty) makes those calls work and save no end time. The new answer keys are extra keys a reader that doesn't know them ignores. Known and small: an Edit event saved from a browser tab opened **before** the new app deployed sends no end time, so it clears one (tested). The new app always sends it.
+
+**Each step needs Jeffrey's OK.**
+
+### 0041a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0041_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `end_time_column 0`, `old_signatures 2`, `new_signatures 0`, `replaced_found 5`, `replaced_as_tested 5`, `applied_as_tested 0`, `events_with_end_time 0`. **`replaced_as_tested` below 5 → stop**: one of the five functions changed since 0041 was built, and pasting would undo that change — 0041 must be rebuilt on the newer code first. `1 / 0 / 2 / 5 / 0 / 5 / …` = already applied.
+2. Claude runs `0006_fingerprints.sql`, `0023_fingerprints.sql` and `0041_fingerprints.sql` and keeps the results (the "before" record for 0041c and the undo).
+
+### 0041b. Apply 0041 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0041_star_end_time.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about destructive operations: the two `drop function` lines remove the old versions of `star_add_event` / `star_update_event` (made again straight after with the new input, same transaction), and `drop constraint if exists` only makes re-running safe. No data is removed. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested: no fingerprint, row or history change). **Re-running 0006 or 0023 after this** would add their old versions back next to these — don't; if it happens, re-run 0041 straight after. **Don't paste 0023's undo (0023e) or 0028's undo (0028e) after 0041 without asking Claude:** 0023's undo would add 0006's 8-input `star_update_event` next to 0041's (two versions, so the app's call becomes ambiguous), and 0028's undo checks only start and private times, not end times (an end time such as 9:30 PM would break the old rule unnoticed).
+
+### 0041c. Fingerprints (Claude, read-only through the connection)
+
+1. **Pre-apply check again:** `1 / 0 / 2 / 5 / 0 / 5 / 0`.
+2. `supabase/tests/0041_fingerprints.sql` must match what `run.mjs` printed ("0041 fingerprints"), 7 rows:
+   - `column  star_events.end_time  time without time zone notnull=false rights=authenticated:SELECT`
+   - `constraint  star_events.star_events_end_time_check  c CHECK (((end_time IS NULL) OR (star_start_time_is_valid(end_time) AND (end_time > start_time))))`
+   - `function  star_add_event(p_name text, p_testing_date date, p_start_time time without time zone, p_where_code text, p_registration_open boolean, p_auto_close_on date, p_note text, p_end_time time without time zone)  68a83e642a88b040600a8705b1e6fe17 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  star_home_today()  35e629267ebda3feb495e107917b0b1c lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  star_public_answer(p_candidate_id uuid)  51443a4da8b201138db3ea265c49c386 lang=sql volatility=s returns=jsonb definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`
+   - `function  star_public_event(p_code text)  8467dd3d6816e80be496c9dc79edd4c2 lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=postgres:EXECUTE,star_registrar:EXECUTE`
+   - `function  star_update_event(p_event_id uuid, p_expected_version integer, p_name text, p_testing_date date, p_start_time time without time zone, p_where_code text, p_auto_close_on date, p_note text, p_end_time time without time zone)  9da337592eacfa3b2593777050ad7604 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+
+   The file contains neither of the words the connection refuses.
+3. `0006_fingerprints.sql` differs from 0041a's record **only** in: the `star_add_event(…)` and `star_update_event(…)` lines (the item now ends `…, p_note text, p_end_time time without time zone)`, and the body md5 changed; definer, settings, owner and rights the same), the `star_public_answer`, `star_home_today` and `star_public_event` lines (body md5 only), and the `table  star_events` line (its `columns=` list gains `end_time>authenticated:SELECT`, nothing else). `0023_fingerprints.sql` differs only in the `star_update_event(…)` line (the new input and body md5). Every other migration's fingerprints: unchanged (`run.mjs` step0041 checks exactly that).
+
+### 0041d. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection): **nothing new.** Every replaced function keeps `search_path = ''` and its rights; the new column is readable by signed-in staff only.
+
+### 0041e. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0041_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0041 TESTS PASSED**. It checks the column, its rule and its rights (anon can't read it), the five functions' settings and rights (the old 7- / 8-input versions gone), Add event with and without an end time (also by name without `p_end_time`, as the live app calls it), the refused end times (equal, earlier, 18:03, 22:05, seconds), Edit event (same values write nothing; changing only the end time → one version and one history row; moving the start to or past the end refused; clearing it), the table rule, and `end_time` in the family form's answers and Home's Today card — on its own `zz test …` events. Everything is rolled back.
+2. Then `0006_tests.sql`, `0023_tests.sql` and `0028_tests.sql` again — all must still pass (they accept the old and the new inputs of the two functions, and the extra `end_time` key, so they pass before and after 0041).
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0041f. Undo 0041 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that doesn't send `p_end_time` (the old functions don't have that input, so the new app's Add event / Edit event would fail).
+2. Claude runs `supabase/tests/0041_preapply_check.sql`: `events_with_end_time` must be **0**. Above 0 → events have an end time saved; clear them first (Edit event, no end time) — the undo won't throw them away silently.
+3. Paste **the whole file** `supabase/manual/0041u_undo_star_end_time.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0041 undo refused: …") while any event has an end time, then removes 0041's two functions and puts back 0006's `star_add_event` and 0023's `star_update_event`, then 0006's `star_public_answer`, `star_home_today` and `star_public_event` (all word for word, with their rights), and removes the table rule, the read right and the column (one transaction). Supabase warns about destructive operations — they are the planned removals. Confirm only if you mean it.
+4. Claude checks afterwards: the pre-apply check answers `0 / 2 / 0 / 5 / 5 / 0 / 0` again; `0006_fingerprints.sql`, `0023_fingerprints.sql` and `0041_fingerprints.sql` match 0041a's record. Then run `0006_tests.sql`, `0023_tests.sql`, `0028_tests.sql`.
+5. To redo: paste 0041 again (safe). Running the undo twice is safe too.
+
+Tested in PGlite on every run (`run.mjs` step0041: an event from before 0041 kept unchanged; the live app's calls by name still work; the undo file exactly as named here, first refused with a planted event with an end time, then on the clean database: every fingerprint file equals the one before 0041 and the Star tests pass; 0041 again gives the tested fingerprints and `0041_tests.sql` passes).
+
+**Why:**
+- **A default on the new input:** the database goes live before the app; the live app calls by argument name without `p_end_time`, and the default keeps those calls working.
+- **The same time rule as start times:** one rule (`star_start_time_is_valid`) for every Star time, so the app's time list fits both.
+- **A table rule as well as the function checks:** defence in depth — no row can hold an end time at or before its start, whatever writes it.
+- **The undo refuses instead of losing data:** removing the column would throw away end times families may already have seen.
 
 ---

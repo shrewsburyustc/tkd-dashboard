@@ -1,0 +1,220 @@
+{
+ "title": "Star End time · 4 of 4 — where staff see the testing time",
+ "subtitle": "Event page summary line (under the event name), Home’s “Today” card on the testing day, and the printed flyer. Amber = the time today; green = the range.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/04e-today-pc.png",
+     "crop": [
+      52,
+      95,
+      760,
+      85
+     ],
+     "scale": 1.1,
+     "caption": "<b>Event page, PC 1280×800.</b> “Tue, Dec 1, 2026 · 6:00 PM at Shrewsbury school · both schools · 21 candidates”",
+     "marks": [
+      [
+       185,
+       149,
+       56,
+       25
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/04e-today-ph.png",
+     "crop": [
+      0,
+      100,
+      390,
+      120
+     ],
+     "scale": 1,
+     "caption": "<b>Event page, phone 390×844, touch.</b>",
+     "marks": [
+      [
+       125,
+       159,
+       56,
+       25
+      ]
+     ],
+     "shotWidth": 390
+    },
+    {
+     "src": "shots/04h-today-pc.png",
+     "crop": [
+      52,
+      215,
+      760,
+      115
+     ],
+     "scale": 1,
+     "caption": "<b>Home “Today” card, PC</b> (preview day set to Dec 1). Title “Fall Star Testing · 6:00 PM”.",
+     "marks": [
+      [
+       250,
+       260,
+       62,
+       22
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/04h-today-ph.png",
+     "crop": [
+      0,
+      265,
+      390,
+      180
+     ],
+     "scale": 1,
+     "caption": "<b>Home “Today” card, phone.</b>",
+     "marks": [
+      [
+       189,
+       311,
+       62,
+       22
+      ]
+     ],
+     "shotWidth": 390
+    },
+    {
+     "src": "shots/04f-today-pc.png",
+     "crop": [
+      300,
+      20,
+      680,
+      790
+     ],
+     "scale": 0.62,
+     "caption": "<b>Printed flyer</b> (paper, one size; shown at its printed width). “Tuesday, December 1, 2026 · 6:00 PM”.",
+     "marks": [
+      [
+       728,
+       322,
+       90,
+       36
+      ]
+     ],
+     "shotWidth": 1280
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/04e-after-pc.png",
+     "crop": [
+      52,
+      95,
+      760,
+      85
+     ],
+     "scale": 1.1,
+     "caption": "<b>Event page, PC.</b> “Tue, Dec 1, 2026 · 6:00 PM – 8:00 PM at Shrewsbury school · both schools · 21 candidates”",
+     "marks": [
+      [
+       185,
+       149,
+       121,
+       25
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/04e-after-ph.png",
+     "crop": [
+      0,
+      100,
+      390,
+      120
+     ],
+     "scale": 1,
+     "caption": "<b>Event page, phone.</b> Still two lines; the range stays on the first.",
+     "marks": [
+      [
+       125,
+       159,
+       121,
+       25
+      ]
+     ],
+     "shotWidth": 390
+    },
+    {
+     "src": "shots/04h-after-pc.png",
+     "crop": [
+      52,
+      215,
+      760,
+      115
+     ],
+     "scale": 1,
+     "caption": "<b>Home “Today” card, PC.</b> “Fall Star Testing · 6:00 PM – 8:00 PM”.",
+     "marks": [
+      [
+       250,
+       260,
+       124,
+       22
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/04h-after-ph.png",
+     "crop": [
+      0,
+      265,
+      390,
+      180
+     ],
+     "scale": 1,
+     "caption": "<b>Home “Today” card, phone.</b> Still one line.",
+     "marks": [
+      [
+       189,
+       311,
+       124,
+       22
+      ]
+     ],
+     "shotWidth": 390
+    },
+    {
+     "src": "shots/04f-after-pc.png",
+     "crop": [
+      300,
+      20,
+      680,
+      790
+     ],
+     "scale": 0.62,
+     "caption": "<b>Printed flyer.</b> “Tuesday, December 1, 2026 · 6:00 PM – 8:00 PM”.",
+     "marks": [
+      [
+       684,
+       322,
+       184,
+       36
+      ]
+     ],
+     "shotWidth": 1280
+    }
+   ],
+   "note": "The Events list rows show only the date (no time), so they don’t change. Private testing lines (“Private star testing · 4:30 PM”) keep one time."
+  }
+ ],
+ "footer": "Rulebook decision “A” (approved): Star testing events get an End time as well as a Start time, so parents know when to pick up. Preview screenshots (fake database; the fake Fall Star Testing’s start was set to 6:00 PM in preview for these pictures, its date stays Tue, Dec 1, 2026). The “After” column is drawn over the real page — nothing in the app was changed. An event with no end time saved yet keeps showing only the start time, exactly as “Today”. Private testing times (one time) don’t change."
+}

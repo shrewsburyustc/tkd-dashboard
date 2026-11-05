@@ -6,7 +6,7 @@
 // come unchanged from Color Belt's src/register/parts.jsx.
 import { StateMessage } from '../register/parts.jsx';
 import { locationLine, longDate, longDateWithYear } from '../register/format.js';
-import { startTimeLabel } from '../lib/star/starEventRules.js';
+import { testingTimeLabel } from '../lib/star/starEventRules.js';
 import * as T from './text.js';
 
 // 'YYYY-MM-DD' → "Mar 4, 2012" (the date-of-birth field and the check page, Form screens 2 and 6).
@@ -34,7 +34,7 @@ export const whereLine = (where) => locationLine(where?.name ?? '', where?.addre
 // the note for families (left out on the finished page, v0.104).
 export function EventBox({ event, showRegisterBy, showNote = true }) {
   if (!event) return null;
-  const time = startTimeLabel(event.start_time);
+  const time = testingTimeLabel(event.start_time, event.end_time); // "6:00 PM – 8:00 PM" (v0.520)
   return (
     <section className="reg-hero" aria-label={event.name}>
       <h1 className="reg-hero__title">{event.name}</h1>

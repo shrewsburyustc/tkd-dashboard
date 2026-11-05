@@ -475,6 +475,17 @@
 //       (manual/0036u: refused while something uses 0036, then back to
 //       the earlier functions and rules) - see step0036 below. Run only
 //       this step with   node run.mjs --only-step0036
+//   step0041. 0041 (Star event end time, v0.520) on its own database in
+//       the production order (liveOrderTo0025, then 0027, 0026, 0028,
+//       0029, 0031, 0030, 0032, 0033, 0034, 0036) with a Star event made
+//       before it: the pre-apply check, exactly the planned fingerprint
+//       lines move (the five functions in 0006's / 0023's files, the
+//       star_events column rights), nothing is written, 0041's tests and
+//       the Star tests (0006, 0023, 0028) before and after, the old app's
+//       calls without p_end_time, re-run safety, and the Undo of SETUP.md
+//       0041f (manual/0041u: refused while an end time is saved, then
+//       back to the earlier functions, no column) - see step0041 below.
+//       Run only this step with   node run.mjs --only-step0041
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -523,6 +534,7 @@ const onlyStep0032 = process.argv.includes('--only-step0032');
 const onlyStep0033 = process.argv.includes('--only-step0033');
 const onlyStep0034 = process.argv.includes('--only-step0034');
 const onlyStep0036 = process.argv.includes('--only-step0036');
+const onlyStep0041 = process.argv.includes('--only-step0041');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -767,6 +779,15 @@ async function main() {
     if (prints36) {
       console.log('\n0036 fingerprints (kind  item  detail):');
       for (const line of prints36) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0041: just the Star event end time step (0041)
+  if (onlyStep0041) {
+    const prints41 = await step0041();
+    if (prints41) {
+      console.log('\n0041 fingerprints (kind  item  detail):');
+      for (const line of prints41) console.log('  ' + line);
     }
     return finish();
   }
@@ -1045,6 +1066,9 @@ async function main() {
   // step0036: New students - each child's last name and date of birth, the Address question (its own database, production order)
   console.log('\nMigration 0036 (New students: each child\'s last name and date of birth, the Address question):');
   const after36 = after5 ? await step0036() : null;
+  // step0041: Star event end time (its own database, production order)
+  console.log('\nMigration 0041 (Star event end time):');
+  const after41 = after5 ? await step0041() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -1159,6 +1183,10 @@ async function main() {
   if (after36) {
     console.log('\n0036 fingerprints (kind  item  detail):');
     for (const line of after36) console.log('  ' + line);
+  }
+  if (after41) {
+    console.log('\n0041 fingerprints (kind  item  detail):');
+    for (const line of after41) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -8274,6 +8302,293 @@ async function step0036() {
   }
   await db.close().catch(() => {});
   return prints36;
+}
+
+// =====================================================================
+// step0041: Star event end time (0041, rulebook v0.520)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034 and 0036 - each only if its file is on this
+// branch):
+//   a. 0041_fingerprints.sql and 0041_preapply_check.sql are
+//      connector-safe (no "delete" / "drop"); a Star event made through
+//      star_add_event BEFORE 0041 is kept; the pre-apply check (SETUP
+//      0041a) answers 0 / 2 / 0 / 5 / 5 / 0 / 0
+//   b. the Star tests (0006, 0023, 0028) pass BEFORE 0041 (the baseline)
+//   c. apply 0041: in every other fingerprint file ONLY these lines move -
+//      and each of them does: in 0006's file star_add_event and
+//      star_update_event (one more input, p_end_time; the rest of the
+//      line apart from the body md5 the same), star_public_answer,
+//      star_home_today and star_public_event (body md5 only) and the
+//      star_events table line (its column rights gain
+//      end_time>authenticated:SELECT, nothing else); in 0023's file
+//      star_update_event (one more input, body md5). 0041's own rows as
+//      designed. 0041 writes nothing: the event from before keeps its
+//      version, an empty end time, and no history row is added. The
+//      pre-apply check answers 1 / 0 / 2 / 5 / 0 / 5 / 0
+//   d. 0041_tests.sql, then the baseline tests again; the live app's
+//      calls (by NAME, without p_end_time) as a signed-in admin still work
+//   e. 0041 applied a SECOND time: no fingerprint, row or history change
+//   f. the Undo of SETUP.md 0041f (the file it names,
+//      supabase/manual/0041u_undo_star_end_time.sql):
+//        - with an event with an end time planted (in a transaction rolled
+//          back afterwards) the pre-apply check counts it and the undo
+//          refuses with its message, changing nothing
+//        - on the clean database: every fingerprint file equals the one
+//          before 0041; the pre-apply check answers as before; the event
+//          from before is as it was; the baseline tests pass; a second
+//          undo changes nothing; then 0041 again -> the tested
+//          fingerprints, 0041_tests.sql passes
+// Run only this step with   node run.mjs --only-step0041
+// =====================================================================
+async function step0041() {
+  const L = '[0041] ';
+  const preSql = read('tests', '0041_preapply_check.sql');
+  const migration = read('migrations', '0041_star_end_time.sql');
+  const unsafe = [['tests', '0041_fingerprints.sql'], ['tests', '0041_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0041_fingerprints.sql and 0041_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students profile)', '0036_new_students_profile.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // As the pretend admin (a fresh unlocked session), inside one statement: `body` is plpgsql
+  const asAdmin41 = (body) => `
+    do $$
+    declare
+      v_s uuid := gen_random_uuid();
+      v_r jsonb;
+      v_today date := public.testing_today();   -- read as postgres, before the role switch
+    begin
+      insert into auth.sessions (id, user_id) values (v_s, '${ADMIN_UID}');
+      insert into public.session_unlock (session_id, staff_id, unlocked_until) values (v_s, '${ADMIN_UID}', now() + interval '30 minutes');
+      perform set_config('request.jwt.claims', jsonb_build_object('sub', '${ADMIN_UID}', 'role', 'authenticated', 'session_id', v_s,
+        'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60)))::text, true);
+      set local role authenticated;
+      ${body}
+      reset role;
+      perform set_config('request.jwt.claims', '', true);
+    end
+    $$;`;
+
+  // a. a Star event made BEFORE 0041, the live app's way (by name, 7 inputs)
+  if (!(await run(db, `${L}a Star event made before 0041 (star_add_event by name, as the live app)`, asAdmin41(`
+      v_r := public.star_add_event(p_name => 'zz before 0041', p_testing_date => v_today + 20, p_start_time => '10:00',
+                                   p_where_code => 'worcester', p_registration_open => true, p_auto_close_on => null, p_note => null);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'event before 0041: %', v_r; end if;`)))) return null;
+  // the Star events (without end_time, so it compares across 0041 and its undo) and the history size, as one md5
+  const snapSql = `select md5(
+       coalesce((select string_agg((to_jsonb(e) - 'end_time')::text, ',' order by e.id) from public.star_events e), '')
+    || (select count(*) from public.change_log)::text)`;
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const answer = (r) => r ? [r.end_time_column, r.old_signatures, r.new_signatures, r.replaced_found, r.replaced_as_tested,
+    r.applied_as_tested, r.events_with_end_time].join(' / ') : 'none';
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0041: 0 / 2 / 0 / 5 / 5 / 0 / 0 (nothing of 0041, the five functions as tested)`,
+    answer(ready) === '0 / 2 / 0 / 5 / 5 / 0 / 0', answer(ready));
+
+  // b. the baseline tests
+  const baseline = [['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0023_tests.sql', 'ALL 0023 TESTS PASSED'],
+    ['0028_tests.sql', 'ALL 0028 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0041', baseline);
+
+  // c. apply 0041: only the planned lines move
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0041']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0041');
+  const before = await printsOf(db, numbers);
+  const dataBefore = await one(db, snapSql);
+  if (!(await run(db, `${L}apply 0041_star_end_time.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const parts = (line) => line.split('  ');
+  const fnName = (item) => item.slice(0, item.indexOf('('));
+  const bodyOnly = ['star_public_answer', 'star_home_today', 'star_public_event'];
+  const newInput = ['star_add_event', 'star_update_event'];
+  const END = 'end_time>authenticated:SELECT';
+  // 0006's table line of star_events without the end_time column right
+  const withoutEnd = (detail) => detail.replace(/ columns=(.*)$/, (whole, cols) =>
+    ' columns=' + cols.split(',').filter((c) => c !== END).join(','));
+  const wrong = [];
+  const moved = {};   // fingerprint file number -> the planned items that moved
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      if (kind === 'function' && bodyOnly.includes(fnName(item))) {
+        const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) { (moved[n] ??= []).push(fnName(item)); continue; }
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+      } else if (kind === 'function' && newInput.includes(fnName(item))) {
+        // the same function with p_end_time added as its last input; apart from the body md5 the same line
+        const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item.replace(/\)$/, ', p_end_time time without time zone)'));
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) { (moved[n] ??= []).push(fnName(item)); continue; }
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone, no twin with p_end_time)'}`);
+      } else if (kind === 'table' && item === 'star_events') {
+        const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+        if (twin && parts(twin)[2].includes(END) && withoutEnd(parts(twin)[2]) === detail && !detail.includes(END)) {
+          (moved[n] ??= []).push('star_events'); continue;
+        }
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+      } else {
+        wrong.push(`${n}: ${g} (moved)`);
+      }
+    }
+    for (const a of added) {
+      const [kind, item] = parts(a);
+      const twinned = gone.some((g) => parts(g)[0] === kind
+        && (parts(g)[1] === item || parts(g)[1].replace(/\)$/, ', p_end_time time without time zone)') === item));
+      if (!twinned) wrong.push(`${n}: added ${a}`);
+    }
+  }
+  const expected = { '0006': [...newInput, ...bodyOnly, 'star_events'], '0023': ['star_update_event'] };
+  for (const [n, items] of Object.entries(expected)) {
+    const got = moved[n] ?? [];
+    if (got.length !== items.length || !items.every((x) => got.includes(x))) {
+      wrong.push(`${n}: planned ${items.join(', ')} - moved ${got.join(', ') || 'nothing'}`);
+    }
+  }
+  for (const n of Object.keys(moved)) if (!expected[n]) wrong.push(`${n}: moved ${moved[n].join(', ')}`);
+  record(`${L}fingerprints: exactly the planned lines moved (0006: star_add_event / star_update_event + p_end_time, star_public_answer / star_home_today / star_public_event body md5, star_events + end_time read right; 0023: star_update_event + p_end_time); everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints41 = after['0041_fingerprints.sql'];
+  const fn = (name) => prints41.find((l) => l.startsWith(`function  ${name}(`)) || '';
+  const tail = (lang, vol, definer, rights) =>
+    ` lang=${lang} volatility=${vol} returns=jsonb definer=${definer} settings=search_path="" owner=postgres rights=${rights}`;
+  record(`${L}0041 fingerprints: star_add_event / star_update_event end with p_end_time, security definer, signed-in staff only; star_home_today the same`,
+    fn('star_add_event').includes(', p_note text, p_end_time time without time zone)  ')
+      && fn('star_update_event').includes(', p_note text, p_end_time time without time zone)  ')
+      && ['star_add_event', 'star_update_event', 'star_home_today']
+        .every((x) => fn(x).endsWith(tail('plpgsql', 'v', 'true', 'authenticated:EXECUTE,postgres:EXECUTE'))),
+    ['star_add_event', 'star_update_event', 'star_home_today'].map(fn).join(' | '));
+  record(`${L}0041 fingerprints: star_public_event for star_registrar only (definer, stable); star_public_answer for nobody (sql, stable, not definer)`,
+    fn('star_public_event').endsWith(tail('plpgsql', 's', 'true', 'postgres:EXECUTE,star_registrar:EXECUTE'))
+      && fn('star_public_answer').endsWith(tail('sql', 's', 'false', 'postgres:EXECUTE')),
+    ['star_public_event', 'star_public_answer'].map(fn).join(' | '));
+  const rowOf = (kind, item) => prints41.find((l) => l.startsWith(`${kind}  ${item}  `)) || '';
+  record(`${L}0041 fingerprints: the column (time, may be empty, signed-in staff read it) and its table rule; 7 rows`,
+    rowOf('column', 'star_events.end_time') === 'column  star_events.end_time  time without time zone notnull=false rights=authenticated:SELECT'
+      && rowOf('constraint', 'star_events.star_events_end_time_check').includes('end_time IS NULL')
+      && rowOf('constraint', 'star_events.star_events_end_time_check').includes('star_start_time_is_valid(end_time)')
+      && rowOf('constraint', 'star_events.star_events_end_time_check').includes('end_time > start_time')
+      && prints41.length === 7,
+    prints41.filter((l) => !l.startsWith('function')).join(' | '));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0041: 1 / 0 / 2 / 5 / 0 / 5 / 0`, answer(applied) === '1 / 0 / 2 / 5 / 0 / 5 / 0', answer(applied));
+  record(`${L}0041 wrote nothing: the event from before 0041 is unchanged (end time empty, same version) and no history row was added`,
+    dataBefore === (await one(db, snapSql))
+      && (await one(db, `select count(*)::int from public.star_events e where e.name = 'zz before 0041' and e.end_time is null and e.version = 1`)) === 1);
+
+  // d. the tests; the live app's calls (by name, without p_end_time) still work
+  await tests('after 0041', [['0041_tests.sql', 'ALL 0041 TESTS PASSED'], ...baseline]);
+  let oldApp = '';
+  try {
+    await db.exec('begin;');
+    await db.exec(asAdmin41(`
+      v_r := public.star_add_event(p_name => 'zz old app 0041', p_testing_date => v_today + 21, p_start_time => '09:00',
+                                   p_where_code => 'shrewsbury', p_registration_open => false, p_auto_close_on => null, p_note => null);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'old app add: %', v_r; end if;
+      v_r := public.star_update_event(p_event_id => (v_r ->> 'id')::uuid, p_expected_version => 1, p_name => 'zz old app 0041 b',
+                                      p_testing_date => v_today + 21, p_start_time => '09:15', p_where_code => 'shrewsbury',
+                                      p_auto_close_on => null, p_note => null);
+      if v_r is distinct from '{"status": "ok", "version": 2}'::jsonb then raise exception 'old app update: %', v_r; end if;`));
+    oldApp = await one(db, `select coalesce(left(e.start_time::text, 5), '') || ' ' || coalesce(e.end_time::text, 'no end')
+                              from public.star_events e where e.name = 'zz old app 0041 b'`);
+  } catch (error) {
+    oldApp = error.message;
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}the live app's Add event and Edit event (by name, no p_end_time) still work and save no end time`,
+    oldApp === '09:15 no end', oldApp);
+
+  // e. re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0041 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0041 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+
+  // f. Undo 0041, as SETUP.md 0041f has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0041f\. Undo 0041/m);
+  const undoFile = 'manual/0041u_undo_star_end_time.sql';
+  const undoSql = read('manual', '0041u_undo_star_end_time.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0041] SETUP.md has "### 0041f. Undo 0041" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else {
+    // f1. an event WITH an end time (made through star_add_event as the admin) blocks the undo;
+    // the undo file runs without its own begin / commit inside a transaction that is rolled back
+    const inner = undoSql.replace(/\r\n/g, '\n').replace(/^begin;$/m, '').replace(/^commit;$/m, '');
+    let planted = null;
+    let refusal = '';
+    try {
+      await db.exec('begin;');
+      await db.exec(asAdmin41(`
+        v_r := public.star_add_event('zz plant 0041', v_today + 9, '10:00', 'worcester', false, null, null, '12:00');
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant: star_add_event %', v_r; end if;`));
+      planted = await pre();
+      try {
+        await db.exec(inner);
+      } catch (error) {
+        refusal = error.message;
+      }
+    } catch (error) {
+      planted = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[undo 0041] a planted event with an end time: the pre-apply check counts it (events_with_end_time = 1)`,
+      planted?.events_with_end_time === 1, JSON.stringify(planted));
+    record(`${L}[undo 0041] ... and the undo file refuses ("0041 undo refused: 1 Star event(s)")`,
+      refusal.includes('0041 undo refused: 1 Star event(s)'), refusal || 'no error');
+    const rolledBack = await pre();
+    record(`${L}[undo 0041] the planted event was rolled back, 0041 is still applied`,
+      answer(rolledBack) === answer(applied), answer(rolledBack));
+
+    // f2. the undo on the clean database
+    if (await run(db, `${L}[undo 0041] paste ${undoFile}`, undoSql)) {
+      const undone = await printsOf(db, numbers);
+      const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+      record(`${L}[undo 0041] every fingerprint file equals the one before 0041 (0041's own file lists the five older functions again)`,
+        back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+      const undonePre = await pre();
+      record(`${L}[undo 0041] the pre-apply check answers as before 0041 (0 / 2 / 0 / 5 / 5 / 0 / 0)`,
+        answer(undonePre) === answer(ready), answer(undonePre));
+      record(`${L}[undo 0041] no end_time column, no table rule left; the event from before 0041 and the history are as before 0041`,
+        (await one(db, `select count(*)::int from pg_attribute a where a.attrelid = 'public.star_events'::regclass and a.attname = 'end_time'`)) === 0
+          && (await one(db, `select count(*)::int from pg_constraint c where c.conname = 'star_events_end_time_check'`)) === 0
+          && dataBefore === (await one(db, snapSql)));
+      await tests('after the undo', baseline);
+      await run(db, `${L}[undo 0041] paste ${undoFile} a SECOND time`, undoSql);
+      const undoneAgain = await printsOf(db, numbers);
+      record(`${L}[undo 0041] a second undo changes nothing`,
+        numbers.every((n) => JSON.stringify(undone[`${n}_fingerprints.sql`]) === JSON.stringify(undoneAgain[`${n}_fingerprints.sql`])));
+      if (await run(db, `${L}[undo 0041] apply 0041 again (redo)`, migration)) {
+        const redo = await fingerprints(db, '0041_fingerprints.sql');
+        record(`${L}[undo 0041] after the redo the 0041 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints41));
+        await tests('after the redo', [['0041_tests.sql', 'ALL 0041 TESTS PASSED']]);
+      }
+    }
+  }
+  await db.close().catch(() => {});
+  return prints41;
 }
 
 function finish() {

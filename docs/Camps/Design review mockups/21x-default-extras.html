@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps — Add camp: Early drop-off and Late pick-up already there</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1900px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps — Add camp: Early drop-off and Late pick-up already there</h1>
+<p class="sub">Add camp → Start from <b>Blank camp</b> → 4. Extras, PC 1280. Today a blank camp starts with no extras. After, it starts with the two lines filled in: Per day, still removable with ✕ for a camp that doesn't offer them. Edit camp and existing camps don't change. A camp started from a template keeps the template's own extras. Amber = what changes.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:570px">
+    <div class="shot" style="width:570px;height:105px">
+      <img src="shots/x3-extras-today.png" style="left:-195px;top:-300px;width:960px">
+      <div class="mark" style="left:14.75px;top:4.25px;width:541.25px;height:95px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Blank camp:</b> “No extras”. You press + Add extra twice and type both lines every time.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Option A · names only</div>
+  <figure style="width:570px">
+    <div class="shot" style="width:570px;height:322.5px">
+      <img src="shots/x3-extras-a.png" style="left:-195px;top:-213.75px;width:960px">
+      <div class="mark" style="left:23.75px;top:53px;width:305.75px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:23.75px;top:205.25px;width:305.75px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:417.5px;top:53px;width:101.75px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:417.5px;top:205.25px;width:101.75px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:101px;top:2.75px;width:128px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>A.</b> Both lines start with the name and Per day. <b>You type the price</b> for each camp; until you do, the section says “2 extras have no price” and Save is blocked, so a camp can't go out with a wrong or missing price.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Option B · names and prices</div>
+  <figure style="width:570px">
+    <div class="shot" style="width:570px;height:337.5px">
+      <img src="shots/x3-extras-b.png" style="left:-195px;top:-153.75px;width:960px">
+      <div class="mark" style="left:23.75px;top:58.25px;width:305.75px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:23.75px;top:185px;width:305.75px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:327.5px;top:58.25px;width:92px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:327.5px;top:185px;width:92px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:417.5px;top:58.25px;width:101px;height:32px;border-color:#F59E0B"></div><div class="mark" style="left:417.5px;top:185px;width:101px;height:32px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>B.</b> Both lines start fully filled in, prices too ($15 and $8 here are only the preview's examples — you'd give me the real ones). Nothing to type, but if a price changes later it's in the code, so changing it needs a small update from me.</figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>Recommendation: B</b> if the two prices are the same for every camp; <b>A</b> if they change from camp to camp. Either way it's an app-only change (no database change), and the fake preview's camps don't change. <br><br><b>Your choice:</b> A or B? For B, tell me each one's price per day (and, if you want them in the name, the times, e.g. “Early drop-off, 7:30–9:00 AM”).</div>
+</body></html>

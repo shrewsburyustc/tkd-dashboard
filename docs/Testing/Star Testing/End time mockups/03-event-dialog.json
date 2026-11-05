@@ -1,0 +1,276 @@
+{
+ "title": "Star End time · 3 of 4 — Add event / Edit event dialog",
+ "subtitle": "A new required field “End time”, right after Start time, using the same shared time list (“Choose a time” while empty). It offers the times after the chosen start, every 5 minutes, up to 10:00 PM. Layout: Testing date moves to its own full-width row, and “Start time | End time” sit side by side on PC and tablet (stacked on phones, as today). Shown: the existing Fall Star Testing opened in Edit, End time not saved yet.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/03-today-pc.png",
+     "crop": [
+      420,
+      80,
+      440,
+      720
+     ],
+     "scale": 0.95,
+     "caption": "<b>PC 1280×800.</b> “Testing date | Start time” share one row; there is no end time.",
+     "marks": [
+      [
+       444,
+       253,
+       392,
+       54
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/03-today-tab.png",
+       "crop": [
+        190,
+        96,
+        440,
+        962
+       ],
+       "scale": 0.62,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         214,
+         273,
+         392,
+         58
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/03-today-ph.png",
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.62,
+       "caption": "<b>Phone 390×844, touch</b> (full-screen page).",
+       "marks": [
+        [
+         16,
+         185,
+         358,
+         128
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/03-after-pc.png",
+       "crop": [
+        420,
+        80,
+        440,
+        720
+       ],
+       "scale": 0.62,
+       "caption": "<b>PC 1280×800.</b> Testing date on its own row; Start time | End time below it. End time empty: “Choose a time”.",
+       "marks": [
+        [
+         444,
+         253,
+         392,
+         54
+        ],
+        [
+         646,
+         319,
+         190,
+         54
+        ]
+       ],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/03-list-pc.png",
+       "crop": [
+        420,
+        80,
+        440,
+        720
+       ],
+       "scale": 0.62,
+       "caption": "<b>PC · End time list open.</b> Starts at 6:05 PM (the first time after the 6:00 PM start) and runs to 10:00 PM.",
+       "marks": [
+        [
+         646,
+         319,
+         190,
+         302
+        ]
+       ],
+       "shotWidth": 1280
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/03-err1-pc.png",
+       "crop": [
+        430,
+        300,
+        420,
+        140
+       ],
+       "scale": 0.98,
+       "caption": "<b>Save with End time empty:</b> “Choose an end time.” (same amber line as “Choose a start time.”)",
+       "marks": [
+        [
+         646,
+         319,
+         190,
+         92
+        ]
+       ],
+       "shotWidth": 1280
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/03-err2-pc.png",
+       "crop": [
+        430,
+        300,
+        420,
+        140
+       ],
+       "scale": 0.98,
+       "caption": "<b>End time not after the start</b> (e.g. a start moved past a saved end): “End time must be after the start time.”",
+       "marks": [
+        [
+         646,
+         319,
+         190,
+         110
+        ]
+       ],
+       "shotWidth": 1280
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/03-after-tab.png",
+       "crop": [
+        190,
+        96,
+        440,
+        962
+       ],
+       "scale": 0.62,
+       "caption": "<b>Tablet 820×1180, touch.</b> Same layout as PC.",
+       "marks": [
+        [
+         214,
+         273,
+         392,
+         58
+        ],
+        [
+         416,
+         343,
+         190,
+         58
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/03-after-ph.png",
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.62,
+       "caption": "<b>Phone 390×844, touch.</b> One field per row: Testing date, Start time, End time.",
+       "marks": [
+        [
+         16,
+         325,
+         358,
+         58
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/03-err1-ph.png",
+       "crop": [
+        0,
+        240,
+        390,
+        200
+       ],
+       "scale": 0.68,
+       "caption": "<b>Phone:</b> “Choose an end time.”",
+       "marks": [
+        [
+         16,
+         325,
+         358,
+         96
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/03-err2-ph.png",
+       "crop": [
+        0,
+        240,
+        390,
+        200
+       ],
+       "scale": 0.68,
+       "caption": "<b>Phone:</b> “End time must be after the start time.”",
+       "marks": [
+        [
+         16,
+         325,
+         358,
+         96
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    }
+   ],
+   "note": "What moved: only Testing date — from the left half of the Start time row to a full-width row of its own (it was already full width on phones). Where, Registration and the rest stay where they are. Save stays gray until End time is chosen, like Start time."
+  }
+ ],
+ "footer": "Rulebook decision “A” (approved): Star testing events get an End time as well as a Start time, so parents know when to pick up. Preview screenshots (fake database; the fake Fall Star Testing’s start was set to 6:00 PM in preview for these pictures, its date stays Tue, Dec 1, 2026). The “After” column is drawn over the real page — nothing in the app was changed. An event with no end time saved yet keeps showing only the start time, exactly as “Today”. Private testing times (one time) don’t change."
+}

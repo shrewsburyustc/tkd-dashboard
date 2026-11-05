@@ -29,7 +29,7 @@ export default function StarFlyer({ event, school, whereSchool, addressText }) {
         <p className="st-flyer-school">{T.FLYER_SCHOOL}</p>
         <p className="st-flyer-for">{T.flyerFor(school.school)}</p>
         <h1 className="st-flyer-title">{event.name}</h1>
-        <p className="st-flyer-big">{T.flyerWhen(event.testingDate, event.startTime)}</p>
+        <p className="st-flyer-big">{T.flyerWhen(event.testingDate, event.startTime, event.endTime)}</p>
         <p className="st-flyer-line">{T.flyerLocation(whereSchool, addressText)}</p>
         {school.qr && <img className="st-flyer-qr" src={school.qr} alt={T.qrAlt(school.school, shortLink(school.link))} />}
         <p className="st-flyer-big">{T.SCAN_TO_REGISTER}</p>

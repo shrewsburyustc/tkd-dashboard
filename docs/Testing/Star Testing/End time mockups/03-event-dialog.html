@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Star End time · 3 of 4 — Add event / Edit event dialog</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1840px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Star End time · 3 of 4 — Add event / Edit event dialog</h1>
+<p class="sub">A new required field “End time”, right after Start time, using the same shared time list (“Choose a time” while empty). It offers the times after the chosen start, every 5 minutes, up to 10:00 PM. Layout: Testing date moves to its own full-width row, and “Start time | End time” sit side by side on PC and tablet (stacked on phones, as today). Shown: the existing Fall Star Testing opened in Edit, End time not saved yet.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:418px">
+    <div class="shot" style="width:418px;height:684px">
+      <img src="shots/03-today-pc.png" style="left:-399px;top:-76px;width:1216px">
+      <div class="mark" style="left:18.799999999999997px;top:160.35px;width:380.4px;height:59.3px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> “Testing date | Start time” share one row; there is no end time.</figcaption>
+  </figure>
+<div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:596.4399999999999px">
+      <img src="shots/03-today-tab.png" style="left:-117.8px;top:-59.519999999999996px;width:508.4px">
+      <div class="mark" style="left:10.879999999999999px;top:105.74px;width:251.04px;height:43.96px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet 820×1180, touch.</b></figcaption>
+  </figure><figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:523.28px">
+      <img src="shots/03-today-ph.png" style="left:0px;top:0px;width:241.8px">
+      <div class="mark" style="left:5.92px;top:110.7px;width:229.96px;height:87.36px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390×844, touch</b> (full-screen page).</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:446.4px">
+      <img src="shots/03-after-pc.png" style="left:-260.4px;top:-49.6px;width:793.6px">
+      <div class="mark" style="left:10.879999999999999px;top:103.26px;width:251.04px;height:41.48px;border-color:#3B8F2A"></div><div class="mark" style="left:136.12px;top:144.18px;width:125.8px;height:41.48px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> Testing date on its own row; Start time | End time below it. End time empty: “Choose a time”.</figcaption>
+  </figure><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:446.4px">
+      <img src="shots/03-list-pc.png" style="left:-260.4px;top:-49.6px;width:793.6px">
+      <div class="mark" style="left:136.12px;top:144.18px;width:125.8px;height:195.24px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>PC · End time list open.</b> Starts at 6:05 PM (the first time after the 6:00 PM start) and runs to 10:00 PM.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:411.59999999999997px">
+    <div class="shot" style="width:411.59999999999997px;height:137.2px">
+      <img src="shots/03-err1-pc.png" style="left:-421.4px;top:-294px;width:1254.4px">
+      <div class="mark" style="left:207.68px;top:14.620000000000001px;width:194.2px;height:98.16px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Save with End time empty:</b> “Choose an end time.” (same amber line as “Choose a start time.”)</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:411.59999999999997px">
+    <div class="shot" style="width:411.59999999999997px;height:137.2px">
+      <img src="shots/03-err2-pc.png" style="left:-421.4px;top:-294px;width:1254.4px">
+      <div class="mark" style="left:207.68px;top:14.620000000000001px;width:194.2px;height:115.8px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>End time not after the start</b> (e.g. a start moved past a saved end): “End time must be after the start time.”</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:596.4399999999999px">
+      <img src="shots/03-after-tab.png" style="left:-117.8px;top:-59.519999999999996px;width:508.4px">
+      <div class="mark" style="left:10.879999999999999px;top:105.74px;width:251.04px;height:43.96px;border-color:#3B8F2A"></div><div class="mark" style="left:136.12px;top:149.14px;width:125.8px;height:43.96px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Tablet 820×1180, touch.</b> Same layout as PC.</figcaption>
+  </figure><figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:523.28px">
+      <img src="shots/03-after-ph.png" style="left:0px;top:0px;width:241.8px">
+      <div class="mark" style="left:5.92px;top:197.5px;width:229.96px;height:43.96px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Phone 390×844, touch.</b> One field per row: Testing date, Start time, End time.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:265.20000000000005px">
+    <div class="shot" style="width:265.20000000000005px;height:136px">
+      <img src="shots/03-err1-ph.png" style="left:0px;top:-163.20000000000002px;width:265.20000000000005px">
+      <div class="mark" style="left:6.880000000000001px;top:53.800000000000004px;width:251.44000000000003px;height:73.28px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Phone:</b> “Choose an end time.”</figcaption>
+  </figure><figure style="width:265.20000000000005px">
+    <div class="shot" style="width:265.20000000000005px;height:136px">
+      <img src="shots/03-err2-ph.png" style="left:0px;top:-163.20000000000002px;width:265.20000000000005px">
+      <div class="mark" style="left:6.880000000000001px;top:53.800000000000004px;width:251.44000000000003px;height:73.28px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Phone:</b> “End time must be after the start time.”</figcaption>
+  </figure></div>
+  <div class="note">What moved: only Testing date — from the left half of the Start time row to a full-width row of its own (it was already full width on phones). Where, Registration and the rest stay where they are. Save stays gray until End time is chosen, like Start time.</div>
+</div>
+</div>
+<div class="foot">Rulebook decision “A” (approved): Star testing events get an End time as well as a Start time, so parents know when to pick up. Preview screenshots (fake database; the fake Fall Star Testing’s start was set to 6:00 PM in preview for these pictures, its date stays Tue, Dec 1, 2026). The “After” column is drawn over the real page — nothing in the app was changed. An event with no end time saved yet keeps showing only the start time, exactly as “Today”. Private testing times (one time) don’t change.</div>
+</body></html>

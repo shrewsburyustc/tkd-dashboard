@@ -22,6 +22,7 @@ import { createRubricsApi } from './rubricsCore.js';
 import { createStarEventsApi, STAR_EVENT_STATUSES, splitUpcomingPast, latestCreatedEvent } from './eventsCore.js';
 import {
   startTimeIsValid, startTimeLabel, shortStartTime, STAR_CODE_PATTERN, WHERE_CODES, editWouldReopen,
+  endTimeIsValid, testingTimeLabel,
 } from './starEventRules.js';
 import { starRegistrationLink, starQrSvgDataUrl, starSchoolLinks, isStarCode } from './links.js';
 import { timeOptions } from '../times.js';
@@ -101,7 +102,7 @@ const newEvent = (over = {}) => ({
 });
 // Edit event's arguments for an event as loaded, changed by `over`.
 const editOf = (e, over = {}) => ({
-  eventId: e.id, expectedVersion: e.version, name: e.name, testingDate: e.testingDate, startTime: e.startTime,
+  eventId: e.id, expectedVersion: e.version, name: e.name, testingDate: e.testingDate, startTime: e.startTime, endTime: e.endTime, // endTime: v0.520
   whereCode: e.whereCode, autoCloseOn: e.autoCloseOn, note: e.note, ...over,
 });
 async function loaded(rig, name) {
@@ -136,6 +137,22 @@ await check('start time: 6:00 AM to 10:00 PM on a 5-minute step, no seconds (sta
   assert.equal(startTimeLabel('10:00:00'), '10:00 AM');
   assert.equal(shortStartTime('13:15:00'), '13:15');
   assert.equal(shortStartTime('nope'), null);
+});
+
+await check('v0.520 end time: valid only when on the 5-minute list AND after the start; the range label keeps each time whole', () => {
+  const N = '\u00a0';
+  assert.ok(endTimeIsValid('18:00', '20:00'));
+  assert.ok(endTimeIsValid('18:00:00', '18:05:00'));
+  assert.ok(endTimeIsValid('21:55', '22:00'));
+  for (const [s, e] of [['18:00', '18:00'], ['18:00', '17:00'], ['18:00', '18:03'], ['18:00', '22:05'], ['18:00', null], [null, '20:00'], ['18:00', 'nope']]) {
+    assert.equal(endTimeIsValid(s, e), false, `${s} → ${e}`);
+  }
+  assert.equal(testingTimeLabel('18:00', '20:00'), `6:00${N}PM – 8:00${N}PM`);
+  assert.equal(testingTimeLabel('10:00:00', '12:00:00'), `10:00${N}AM – 12:00${N}PM`);
+  // no end time, or one that isn't after the start → just the start (as before v0.520)
+  assert.equal(testingTimeLabel('18:00', null), `6:00${N}PM`);
+  assert.equal(testingTimeLabel('18:00', '17:00'), `6:00${N}PM`);
+  assert.equal(testingTimeLabel('nope', '20:00'), '');
 });
 
 await check('links: production address, /star/<code>, one per school, code pattern ^[a-hjkmnp-z2-9]{8}$', async () => {
@@ -218,7 +235,8 @@ await check('the seed: three made-up events, one upcoming open, one upcoming not
   assert.equal(latestCreatedEvent(r.events).name, 'Winter Star Testing'); // added most recently
   assert.equal(latestCreatedEvent([]), null);
   // The summary line and the links dialog's status line.
-  assert.equal(eventSummary(fall), 'Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 3 candidates');
+  // the seed's events end two hours after they start (v0.520)
+  assert.equal(eventSummary(fall), 'Sat, Nov 14, 2026 · 10:00\u00a0AM – 12:00\u00a0PM at Shrewsbury school · both schools · 3 candidates');
   assert.equal(registrationStatusLine(fall), 'Registration is open until Sat, Nov 7.');
   assert.equal(registrationStatusLine(winter), "Registration hasn't been opened yet, so families can't sign up.");
   assert.equal(registrationStatusLine(spring), "Registration is closed, so families can't sign up right now.");
@@ -279,6 +297,29 @@ await check('the API never throws: no client, a throwing client, unexpected answ
 // 3. Add event: statuses in check order, copy-at-create, codes, names, times, closing date
 // =====================================================================================
 
+await check('v0.520 end time through the data layer: saved, refused when not after the start, changed and cleared by Edit', async () => {
+  const rig = makeRig();
+  assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ name: 'Ends Late', endTime: '12:00' }))), 'ok');
+  assert.equal(rig.calls.at(-1)[1].p_end_time, '12:00:00');
+  let e = await loaded(rig, 'Ends Late');
+  assert.equal(e.endTime, '12:00');
+  assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ name: 'Ends Early', endTime: '09:00' }))), 'invalid');
+  assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ name: 'Ends Same', endTime: '10:00' }))), 'invalid');
+  // no end time is still allowed by the database (events from before 0041)
+  assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ name: 'No End' }))), 'ok');
+  assert.equal((await loaded(rig, 'No End')).endTime, null);
+  const edit = (endTime) => rig.api.updateStarEvent({ eventId: e.id, expectedVersion: e.version, name: e.name, testingDate: e.testingDate,
+    startTime: e.startTime, endTime, whereCode: e.whereCode, autoCloseOn: e.autoCloseOn, note: e.note });
+  const same = await edit('12:00');
+  assert.equal(same.status, 'ok');
+  assert.equal(same.version, e.version); // the same end time writes nothing
+  assert.equal(statusOf(await edit('13:30')), 'ok');
+  e = await loaded(rig, 'Ends Late');
+  assert.equal(e.endTime, '13:30');
+  assert.equal(statusOf(await edit(null)), 'ok');
+  assert.equal((await loaded(rig, 'Ends Late')).endTime, null);
+});
+
 await check('star_add_event: argument names and ok answer (two codes, version 1); starts Closed', async () => {
   const rig = makeRig();
   const r = await rig.api.addStarEvent(newEvent({ note: '  Bring water.  ' }));
@@ -288,7 +329,7 @@ await check('star_add_event: argument names and ok answer (two codes, version 1)
   assert.notEqual(r.publicCodeWorcester, r.publicCodeShrewsbury);
   const [name, args] = rig.calls.at(-1);
   assert.equal(name, 'star_add_event');
-  assert.deepEqual(Object.keys(args).sort(), ['p_auto_close_on', 'p_name', 'p_note', 'p_registration_open', 'p_start_time', 'p_testing_date', 'p_where_code']);
+  assert.deepEqual(Object.keys(args).sort(), ['p_auto_close_on', 'p_end_time', 'p_name', 'p_note', 'p_registration_open', 'p_start_time', 'p_testing_date', 'p_where_code']);
   assert.equal(args.p_start_time, '10:00:00');
   const e = await loaded(rig, 'Summer Star Testing');
   assert.equal(e.state, 'not_open_yet');
@@ -863,6 +904,10 @@ await check('the fake answers every §6.2 function by its argument names (missin
   assert.equal(extra.error.code, 'PGRST202');
   const badDate = rig.events.rpc('star_add_event', { p_name: 'x', p_testing_date: 'soon', p_start_time: '10:00', p_where_code: 'worcester', p_registration_open: false, p_auto_close_on: null, p_note: null }, rig.ctx);
   assert.equal(badDate.error.code, '22007');
+  // 0041: p_end_time has a default, so the live app's call without it still works (no end time saved)
+  const oldApp = rig.events.rpc('star_add_event', { p_name: 'Old App Event', p_testing_date: TODAY, p_start_time: '10:00', p_where_code: 'worcester', p_registration_open: false, p_auto_close_on: null, p_note: null }, rig.ctx);
+  assert.equal(oldApp.error ?? null, null);
+  assert.equal((await loaded(rig, 'Old App Event')).endTime, null);
 });
 
 await check('words: every status of every action has a message (ok and no_access have none)', async () => {
