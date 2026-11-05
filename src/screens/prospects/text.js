@@ -268,6 +268,14 @@ export const SHEET_TRIAL = 'Trial classes';
 export const SHEET_COMMENTS = 'Comments';
 export const SHEET_BOXES_HINT = 'Write the date on top, initial below.';
 export const SHEET_PRIVATE = 'Private: keep in the locked drawer, shred when done.'; // the footer's right side is the child's name
+// A sheet too long for one page (v0.641): the answers print one line each, then the part above the
+// signature up to 10% smaller; only a much longer form goes on to a second page (the signature and
+// the 15 boxes stay on the first). "the next page", not "page 2": no page numbers are printed, and
+// in a family's print the second child's pages come after the first child's.
+export const SHEET_MORE_NEXT = 'More answers on the next page.';
+export const SHEET_ANSWERS_NEXT = 'The answers are on the next page.';
+export const HEAD_ANSWERS_CONTINUED = 'Form answers (continued)';
+export const SHEET_WAIVER_NEXT = "The waiver's wording is on the next page.";
 
 // timeline: typed notes always show; the automatic changes open from "History" (v0.255)
 export const HISTORY = 'History';
