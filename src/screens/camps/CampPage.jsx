@@ -85,6 +85,8 @@ import { camperMenuItems } from './CamperRowMenu.jsx';
 import { useCampActions } from './CampRowMenu.jsx';
 import { compareRows, findPairs } from './duplicates.js';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
+import { focusSoon } from './focusSoon.js';
+import { useRevealRetryBar } from './revealRetryBar.js';
 import * as T from './text.js';
 
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
@@ -104,21 +106,8 @@ function activePayment(payments) {
   return live.sort((a, b) => (a.recordedAt < b.recordedAt ? -1 : 1))[live.length - 1] ?? null;
 }
 
-// Gives focus back to an element once the page behind a closed dialog is usable again (it stays
-// "inert" for a moment after the dialog closes).
-function focusSoon(find) {
-  let tries = 0;
-  const step = () => {
-    const element = typeof find === 'function' ? find() : find;
-    if (element && element.isConnected && element.closest('[inert]') && tries < 30) {
-      tries += 1;
-      window.requestAnimationFrame(step);
-      return;
-    }
-    if (element && element.isConnected) element.focus();
-  };
-  window.requestAnimationFrame(step);
-}
+// focusSoon (./focusSoon.js) gives focus back to an element once the page behind a closed dialog
+// is usable again (it stays "inert" for a moment after the dialog closes).
 
 export default function CampPage({
   campId,
@@ -241,6 +230,12 @@ export default function CampPage({
     reload: reloadQuiet,
     onDeleted: () => onBack({ replace: true }),
   });
+
+  // A failed read's amber bar (Undo payment, Edit payment, Delete permanently, Delete camp; S-2)
+  // is drawn right under the page's head, maybe far above where the person is scrolled: bring it
+  // into view and focus its Retry. barRef = the Camps-owned wrapper around the page's bar.
+  const barRef = useRef(null);
+  useRevealRetryBar(banner, () => barRef.current?.querySelector('.errbar') ?? null);
 
   // Locking closes menus; dialogs only hide (they come back after the PIN).
   useEffect(() => {
@@ -466,6 +461,14 @@ export default function CampPage({
     const name = T.camperLabel(row);
     const newVersion = result.version;
     const back = restore ? withdrawCamper : restoreCamper;
+    // Restoring a "Duplicate copy": "[Name] restored" with NO Undo (design review R2-03, rulebook
+    // v1.043, as Star's v0.517 G3). An Undo would withdraw it again as a plain "Removed", with
+    // "Withdrawn" in its history — not what it was. To change it back, an admin uses Review → Keep
+    // this one again. Every other restore keeps its 5-second Undo.
+    if (restore && row.withdrawnReason === 'duplicate_copy') {
+      showToast(T.restoredToast(name), { icon: false });
+      return;
+    }
     showToast(restore ? T.restoredToast(name) : T.withdrawnToast(name), {
       icon: false,
       action: { label: T.UNDO, onAction: () => runUndo(() => back(row.id, newVersion)) },
@@ -494,8 +497,7 @@ export default function CampPage({
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
       leaveDetail(from);
-      setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
-      reloadQuiet();
+      camperReadProblem(result.status, () => startUndoPayment(row, opener), opener);
       return;
     }
     openDialog({
@@ -601,6 +603,29 @@ export default function CampPage({
     setDialog(null);
     if (from.opener) focusSoon(from.opener);
   }
+  // The camper read before Undo payment, Edit payment or Delete permanently didn't give what the
+  // box needs. status 'error' = it didn't reach the database: the bar offers Retry, which clears
+  // the bar and repeats the same read (design review S-2, rulebook v1.051). `again` starts it
+  // without `from` — the Camper detail has closed by then, so the box opens on its own. (No reload
+  // after a failed read: it would fail too and put its own bar over this one's Retry.)
+  // Anything else (the camper or the payment is gone, someone changed it): ROSTER_STALE ("Someone
+  // else changed this just now …") and the roster reloads — reading again wouldn't help, so no Retry.
+  function camperReadProblem(status, again, opener) {
+    if (status === 'error') {
+      setBanner({
+        text: T.LOAD_CAMPER_FAILED,
+        reveal: true, // scrolled into view, focus on its Retry (useRevealRetryBar below)
+        opener, // the ⋯ / name that started it: focus may move from there to Retry
+        retry: () => {
+          setBanner(null);
+          again();
+        },
+      });
+    } else {
+      setBanner({ text: T.ROSTER_STALE });
+      reloadQuiet();
+    }
+  }
   async function startEditPayment(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
     const result = await loadCamperDetail(row.id);
@@ -615,11 +640,12 @@ export default function CampPage({
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
       leaveDetail(from);
-      setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
-      reloadQuiet();
+      camperReadProblem(result.status, () => startEditPayment(row, opener), opener);
       return;
     }
-    openDialog({ type: 'payment', row, payment, opener });
+    // The name comes from this fresh read (as Undo payment's box does), not from `row`: after a
+    // Retry, `row` is the roster row from the first, failed try, and the name may have changed since.
+    openDialog({ type: 'payment', row, name: T.camperLabel(result.camper), payment, opener });
   }
   async function startDeleteCamper(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
@@ -632,8 +658,7 @@ export default function CampPage({
     if (detailGone(from)) return;
     if (result.status !== 'ok') {
       leaveDetail(from);
-      setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
-      reloadQuiet();
+      camperReadProblem(result.status, () => startDeleteCamper(row, opener), opener);
       return;
     }
     const payments = result.payments ?? [];
@@ -1007,7 +1032,7 @@ export default function CampPage({
       dialogElement = (
         <EditPaymentDialog
           key={dialog.key}
-          name={T.camperLabel(dialog.row)}
+          name={dialog.name}
           payment={dialog.payment}
           today={today}
           isPhone={isPhone}
@@ -1199,7 +1224,12 @@ export default function CampPage({
       </div>
       )}
 
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || actions.busy} onDismiss={() => setBanner(null)} />}
+      {/* The wrapper only lets useRevealRetryBar find this page's bar. display: contents
+          (cp-bar-slot in camps.css) means it draws no box of its own, so the bar's spacing and the
+          layout stay exactly as they were. */}
+      <div className="cp-bar-slot" ref={barRef}>
+        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || actions.busy} onDismiss={() => setBanner(null)} />}
+      </div>
       {/* The automatic reload keeps failing: say so (same amber bar as every other problem). It
           goes away by itself after the next good reload — automatic or this Retry. */}
       {live.refreshFailing && (

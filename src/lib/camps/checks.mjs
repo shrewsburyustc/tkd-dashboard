@@ -33,7 +33,8 @@ import {
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
-import { campUndoRefusal, undoAddsPastDay, undoCampPayload } from '../../screens/camps/sections/campForm.js';
+// … and its starting values (a Blank camp's two extras, rulebook v0.739).
+import { campUndoRefusal, undoAddsPastDay, undoCampPayload, blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate } from '../../screens/camps/sections/campForm.js';
 
 let count = 0;
 function check(label, fn) {
@@ -773,6 +774,67 @@ check('mock: scripted run — add camp → sign up → check in → mark paid �
   assert.equal(rows(b, 'camp_roster', 'id', [{ col: 'camp_id', value: added.id }]).length, 0);
   assert.equal(store().camp_payments.some((p) => all.some((x) => x.id === p.camper_id)), false);
   assert.equal(rows(b, 'camp_templates', 'id', [{ col: 'id', value: saved.id }]).length, 1); // templates stay
+});
+
+// failNextCampRead (design review S-2, rulebook v1.051): the next Camps READ — a select on a Camps
+// table or a read function — fails like a dropped connection, so the preview can show each failed
+// read's Retry. "The next read" = the first matching read and every other one started in the same
+// moment (until `defer` runs: here we hold the deferred step and run it by hand). Saves don't use
+// it up; a target ('camp_camper_detail', 'camps', …) leaves every other read alone; once the
+// moment is over the read works again (that's the Retry).
+check('mock: failNextCampRead — same-moment reads fail, a target ignores other reads, then it clears', () => {
+  let store = null;
+  const later = []; // the deferred "end of the moment" steps, run by hand below
+  const endMoment = () => later.splice(0).forEach((fn) => fn());
+  const b = createCampsBackend({
+    loadStore: () => store,
+    saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); },
+    now: () => Date.parse('2027-04-21T14:00:00Z'),
+    today: () => '2027-04-21',
+    newId: () => randomUUID(),
+    defer: (fn) => later.push(fn),
+  });
+  const failed = (res) => res.data === null && res.status === 0 && /failNextCampRead/.test(res.error?.message ?? '');
+  const april = rows(b, 'camps', 'id, name, version').find((c) => c.name === 'April Vacation Camp');
+  const camper = toCamel(rows(b, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]))[0];
+  const readCamp = () => b.select('camps', 'id', [{ col: 'id', value: april.id }], [], ADMIN);
+
+  // No target: two reads in the same moment (StrictMode's double start; a camp's five tables) both fail.
+  b.failNextCampRead();
+  assert.equal(failed(readCamp()), true);
+  assert.equal(failed(b.select('camp_days', 'id', [], [], ADMIN)), true);
+  assert.equal(failed(b.rpc('camp_camper_detail', { p_camper_id: camper.id }, ADMIN)), true);
+  endMoment(); // the moment is over: cleared
+  assert.equal(readCamp().error, null);
+  assert.equal(rpcOk(b, 'camp_camper_detail', { p_camper_id: camper.id }).status, 'ok');
+  assert.equal(later.length, 0);
+
+  // A target: other reads go through and don't use it up; only that read fails, then it clears.
+  b.failNextCampRead('camp_camper_detail');
+  assert.equal(readCamp().error, null);
+  assert.equal(b.select('camp_roster', 'id', [], [], ADMIN).error, null);
+  assert.equal(later.length, 0); // nothing matched yet: still armed
+  assert.equal(failed(b.rpc('camp_camper_detail', { p_camper_id: camper.id }, ADMIN)), true);
+  assert.equal(failed(b.rpc('camp_camper_detail', { p_camper_id: camper.id }, ADMIN)), true); // same moment
+  assert.equal(readCamp().error, null); // still only the target
+  endMoment();
+  assert.equal(rpcOk(b, 'camp_camper_detail', { p_camper_id: camper.id }).status, 'ok');
+
+  // A table target ('camps' = what Edit camp and Delete camp read first).
+  b.failNextCampRead('camps');
+  assert.equal(b.select('camp_templates', 'id', [], [], ADMIN).error, null);
+  assert.equal(failed(readCamp()), true);
+  endMoment();
+  assert.equal(readCamp().error, null);
+
+  // A save neither fails nor uses it up: the read after the save is the one that fails.
+  b.failNextCampRead();
+  const before = JSON.stringify(store);
+  assert.equal(rpcOk(b, 'camp_set_signup', { p_camp_id: april.id, p_expected_version: april.version, p_open: false }).status, 'ok');
+  assert.notEqual(JSON.stringify(store), before);
+  assert.equal(failed(b.select('camp_templates', 'id', [], [], ADMIN)), true);
+  endMoment();
+  assert.equal(b.select('camp_templates', 'id', [], [], ADMIN).error, null);
 });
 
 check('mock: removing a day / extra only withdrawn campers picked; rate limit; failNextSave', () => {
@@ -1963,6 +2025,29 @@ check('roster extras: the count line under the cards (before / on / between / af
   assert.equal(dayExtraCounts(rows, [ROSTER_EXTRAS[1]], APRIL_DAYS, 'today', APRIL_DAYS[0]), null);
   // A camp with only a pizza party: on a pizza day the line is "Today · Pizza party: 2" (as the old line, new words).
   assert.equal(CampText.dayExtrasLine(dayExtraCounts(rows, [ROSTER_EXTRAS[1]], APRIL_DAYS, 'today', APRIL_DAYS[2])), 'Today · Pizza party: 2');
+});
+
+// ======================= A Blank camp starts with Early drop-off and Late pick-up (v0.739) =======================
+check('Add camp: Blank camp starts with Early drop-off and Late pick-up, prices empty', () => {
+  const form = { blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate };
+  const blank = form.blankValues('2026-11-05', 'worcester');
+  assert.deepEqual(blank.extras.map((e) => [e.name, e.price, e.per, e.notForAllDays, e.onlyOn.length, e.id]),
+    [['Early drop-off', '', 'day', false, 0, null], ['Late pick-up', '', 'day', false, 0, null]]);
+  // Fresh rows each time (React keys never shared between two dialogs).
+  const again = form.blankValues('2026-11-05', 'worcester');
+  assert.notEqual(again.extras[0].key, blank.extras[0].key);
+  // The empty prices: section 4 says "2 extras have no price" and nothing can be saved yet.
+  const checked = form.checkForm(blank, { mode: 'add', today: '2026-11-05', initialDays: [], server: {} });
+  assert.equal(checked.sections[4].problem, true);
+  assert.equal(checked.sections[4].summary, CampText.extrasNoPrice(2));
+  assert.equal(checked.payload, null);
+  // Switching back to Blank camp from a template brings the two lines back.
+  const back = form.applyBlank({ ...blank, extras: [], name: 'Winter Camp' }, '2026-11-05');
+  assert.deepEqual(back.extras.map((e) => e.name), ['Early drop-off', 'Late pick-up']);
+  assert.equal(back.name, 'Winter Camp');
+  // Edit camp / Edit template keep exactly the saved extras (none → none).
+  assert.deepEqual(form.valuesFromCamp({ name: 'X', locationCode: 'worcester', startTime: '09:00:00', endTime: '15:00:00', minAge: 5, maxAge: 12 }, [{ day: '2026-11-25' }], [], []).extras, []);
+  assert.deepEqual(form.valuesFromTemplate({ name: 'T', locationCode: 'worcester', dayCount: 1, startTime: '09:00:00', endTime: '15:00:00', opensDaysBefore: 30, closesDaysBefore: 1, earlyDaysBefore: 7, minAge: 5, maxAge: 12, extras: [] }).extras, []);
 });
 
 console.log(`${count} groups of checks ran.`);
