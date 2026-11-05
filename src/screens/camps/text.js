@@ -428,6 +428,9 @@ export function shortDayLabels(isoDays) {
 }
 export const removeExtraLabel = (name) => `Remove ${name || 'this extra'}`; // (not in the mockups)
 export const NO_EXTRAS = 'No extras'; // (not in the mockups)
+// The two extras a Blank camp starts with (v0.739, picture 21x option A): every camp has them, so
+// the admin only types their prices (or removes one with ✕). Names only — no price is kept here.
+export const DEFAULT_EXTRA_NAMES = ['Early drop-off', 'Late pick-up'];
 export const MAX_EXTRAS_NOTE = 'A camp can have up to 10 extras.'; // (not in the mockups)
 export const extrasNoPrice = (n) => (n === 1 ? '1 extra has no price' : `${n} extras have no price`);
 export const extrasNoName = (n) => (n === 1 ? '1 extra has no name' : `${n} extras have no name`); // (not in the mockups)

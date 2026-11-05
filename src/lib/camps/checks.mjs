@@ -33,7 +33,8 @@ import {
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
-import { campUndoRefusal, undoAddsPastDay, undoCampPayload } from '../../screens/camps/sections/campForm.js';
+// … and its starting values (a Blank camp's two extras, rulebook v0.739).
+import { campUndoRefusal, undoAddsPastDay, undoCampPayload, blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate } from '../../screens/camps/sections/campForm.js';
 
 let count = 0;
 function check(label, fn) {
@@ -2024,6 +2025,29 @@ check('roster extras: the count line under the cards (before / on / between / af
   assert.equal(dayExtraCounts(rows, [ROSTER_EXTRAS[1]], APRIL_DAYS, 'today', APRIL_DAYS[0]), null);
   // A camp with only a pizza party: on a pizza day the line is "Today · Pizza party: 2" (as the old line, new words).
   assert.equal(CampText.dayExtrasLine(dayExtraCounts(rows, [ROSTER_EXTRAS[1]], APRIL_DAYS, 'today', APRIL_DAYS[2])), 'Today · Pizza party: 2');
+});
+
+// ======================= A Blank camp starts with Early drop-off and Late pick-up (v0.739) =======================
+check('Add camp: Blank camp starts with Early drop-off and Late pick-up, prices empty', () => {
+  const form = { blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate };
+  const blank = form.blankValues('2026-11-05', 'worcester');
+  assert.deepEqual(blank.extras.map((e) => [e.name, e.price, e.per, e.notForAllDays, e.onlyOn.length, e.id]),
+    [['Early drop-off', '', 'day', false, 0, null], ['Late pick-up', '', 'day', false, 0, null]]);
+  // Fresh rows each time (React keys never shared between two dialogs).
+  const again = form.blankValues('2026-11-05', 'worcester');
+  assert.notEqual(again.extras[0].key, blank.extras[0].key);
+  // The empty prices: section 4 says "2 extras have no price" and nothing can be saved yet.
+  const checked = form.checkForm(blank, { mode: 'add', today: '2026-11-05', initialDays: [], server: {} });
+  assert.equal(checked.sections[4].problem, true);
+  assert.equal(checked.sections[4].summary, CampText.extrasNoPrice(2));
+  assert.equal(checked.payload, null);
+  // Switching back to Blank camp from a template brings the two lines back.
+  const back = form.applyBlank({ ...blank, extras: [], name: 'Winter Camp' }, '2026-11-05');
+  assert.deepEqual(back.extras.map((e) => e.name), ['Early drop-off', 'Late pick-up']);
+  assert.equal(back.name, 'Winter Camp');
+  // Edit camp / Edit template keep exactly the saved extras (none → none).
+  assert.deepEqual(form.valuesFromCamp({ name: 'X', locationCode: 'worcester', startTime: '09:00:00', endTime: '15:00:00', minAge: 5, maxAge: 12 }, [{ day: '2026-11-25' }], [], []).extras, []);
+  assert.deepEqual(form.valuesFromTemplate({ name: 'T', locationCode: 'worcester', dayCount: 1, startTime: '09:00:00', endTime: '15:00:00', opensDaysBefore: 30, closesDaysBefore: 1, earlyDaysBefore: 7, minAge: 5, maxAge: 12, extras: [] }).extras, []);
 });
 
 console.log(`${count} groups of checks ran.`);

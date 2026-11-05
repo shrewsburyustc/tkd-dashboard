@@ -2,7 +2,7 @@
 
 **What this is:** the plan for `docs/Design Review/Rolling check/Pass 1/Fix-Camps.md`, written 2026-11-05 on `camps` after `git merge main` (40660d8). Each item keeps its finding id. Nothing is built before Jeffrey OKs its picture.
 
-**How each step runs:** picture (one PNG per screen, amber outlines, 1280 / 820 touch / 390 touch / 320) → Jeffrey's OK → rulebook row from 0.700–0.799 if he decides something new (next free **0.739**) → a subagent builds → a separate design reviewer and code reviewer (plus a security reviewer for step 3) → fixes → status file → commit on `camps`. No push.
+**How each step runs:** picture (one PNG per screen, amber outlines, 1280 / 820 touch / 390 touch / 320) → Jeffrey's OK → rulebook row from 0.700–0.799 if he decides something new (next free **0.740**; 0.739 = a Blank camp starts with Early drop-off and Late pick-up) → a subagent builds → a separate design reviewer and code reviewer (plus a security reviewer for step 3) → fixes → status file → commit on `camps`. No push.
 
 ---
 

@@ -284,7 +284,15 @@ export default function CampDialog({
     });
   }
   function removeExtra(key) {
+    const index = values.extras.findIndex((e) => e.key === key);
     setValues((current) => ({ ...current, extras: current.extras.filter((e) => e.key !== key) }));
+    // The ✕ that was pressed is gone, so keyboard focus would fall to the page (WCAG 2.4.3). Move it
+    // to the ✕ of the line that took its place, else the line above's ✕, else + Add extra. A button,
+    // not the name box, so a phone doesn't pop up its keyboard after a tap.
+    window.requestAnimationFrame(() => {
+      const boxes = document.querySelectorAll('.cp-extra-remove');
+      (boxes[index] ?? boxes[index - 1] ?? document.querySelector('.cp-add-extra'))?.focus();
+    });
     setTouched((current) => ({ ...current, 4: true }));
     setServer((current) => ({ ...current, extraError: null }));
     clearSoftNote();

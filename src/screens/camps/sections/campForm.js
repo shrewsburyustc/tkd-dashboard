@@ -86,7 +86,16 @@ export function withExtraDays(values) {
 
 // ----- Starting values -----
 
+// The extras a Blank camp starts with (rulebook v0.739): Early drop-off and Late pick-up, Per day,
+// every camp day, with the PRICE LEFT EMPTY — the section then says "2 extras have no price" and
+// Save waits until the admin types each price, so no camp goes out with a guessed price. Either one
+// can be removed with its ✕. Each call makes fresh rows (new keys), so two dialogs never share one.
+function defaultExtras() {
+  return T.DEFAULT_EXTRA_NAMES.map((name) => ({ key: newExtraKey(), id: null, name, price: '', per: 'day', notForAllDays: false, onlyOn: [], onlyWeekdays: [], followWeekdays: false }));
+}
+
 // A blank camp (Add camp, Start from: Blank camp). defaultLocation: 'worcester' | 'shrewsbury' | 'both'.
+// Edit camp and Edit template start from this too, but replace the extras with the saved ones.
 export function blankValues(today, defaultLocation) {
   return {
     startFrom: 'blank',
@@ -107,7 +116,7 @@ export function blankValues(today, defaultLocation) {
     closesBefore: '',
     earlyBefore: '',
     bank: {},
-    extras: [],
+    extras: defaultExtras(),
     minAge: String(DEFAULT_AGES.min),
     maxAge: String(DEFAULT_AGES.max),
     description: '',
