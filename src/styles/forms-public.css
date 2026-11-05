@@ -607,9 +607,7 @@ h1:focus,
     width: 100%;
   }
 
-  .fchild-row {
-    grid-template-columns: minmax(0, 1fr) 72px;
-  }
+  /* (each child's boxes and the address go one above the other on phones: forms.css) */
 
   .cbox {
     min-height: var(--tap-size);

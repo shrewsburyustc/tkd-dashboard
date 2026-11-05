@@ -5,7 +5,7 @@
 // Prints "ALL PROGRESS CHECKS PASSED", or stops at the first failed check.
 import assert from 'node:assert/strict';
 import { localDay, progressOf, progressWords } from './progress.js';
-import { signedLine, whenLine } from './text.js';
+import { clockOf, dayOf, printFamily, whenLine } from './text.js';
 import { statusLine } from '../forms/text.js';
 
 const TODAY = '2026-10-19';
@@ -69,10 +69,18 @@ assert.equal(r.short.tone, 'warn');
 // A sign-up at 9 pm in Massachusetts is that day, not the next (UTC) day
 assert.equal(localDay('2026-10-19T01:30:00Z'), '2026-10-18');
 assert.equal(localDay('2026-10-19'), '2026-10-19');
-// "(now)" point 2: a note, the waiver's "signed" date and "last published" at 9:30 pm show that day too
+// "(now)" point 2: a note, the waiver's date signed and "last published" at 9:30 pm show that day too
 assert.equal(whenLine('2026-10-19T01:30:00Z', 'Staff'), 'Oct 18 · Staff');
-assert.equal(signedLine('2026-10-19T01:30:00Z', true), 'waiver signed Oct 18');
+assert.equal(dayOf('2026-10-19T01:30:00Z'), 'Sun, Oct 18, 2026');
 assert.ok(statusLine({ status: 'live', publishedAt: '2026-10-19T01:30:00Z' }, {}).text.includes('last published Oct 18'));
+// the profile's form strip: the Massachusetts day and clock time of a sign-up (v0.639)
+assert.equal(dayOf('2026-11-04T23:12:00Z'), 'Wed, Nov 4, 2026');
+assert.equal(clockOf('2026-11-04T23:12:00Z'), '6:12 pm');
+assert.equal(clockOf('2026-11-05T05:05:00Z'), '12:05 am');
+assert.equal(clockOf(null), '');
+// Print's menu with brothers or sisters (v0.636)
+assert.equal(printFamily(['Ava', 'Noah']), 'Ava and Noah · 2 sheets');
+assert.equal(printFamily(['Ava', 'Noah', 'Mia']), 'Ava, Noah and Mia · 3 sheets');
 
 // A cancelled class gets no countdown
 r = progressOf({ ...base, booking: booking('2026-10-26', { classRunning: false }) }, st('booked'), TODAY);

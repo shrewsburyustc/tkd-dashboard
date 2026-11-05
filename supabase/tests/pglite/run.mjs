@@ -464,6 +464,17 @@
 //       safety, and the Undo of SETUP.md 0034e (manual/0034u, back to
 //       0032's reader) - see step0034 below. Run only this step with
 //       node run.mjs --only-step0034
+//   step0036. 0036 (New students: each child's last name and date of
+//       birth, the Address question; v0.634 - v0.639) on its own database
+//       in the production order (liveOrderTo0025, then 0027, 0026, 0028,
+//       0029, 0031, 0030, 0032, 0033, 0034) with a form and a sign-up made
+//       before it: the pre-apply check, exactly the planned fingerprint
+//       lines move (8 bodies, the size rule, 2 new rules), nothing is
+//       written, 0036's tests and the Forms / Prospects tests before and
+//       after, re-run safety, and the Undo of SETUP.md 0036e
+//       (manual/0036u: refused while something uses 0036, then back to
+//       the earlier functions and rules) - see step0036 below. Run only
+//       this step with   node run.mjs --only-step0036
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -511,6 +522,7 @@ const onlyStep0030 = process.argv.includes('--only-step0030');
 const onlyStep0032 = process.argv.includes('--only-step0032');
 const onlyStep0033 = process.argv.includes('--only-step0033');
 const onlyStep0034 = process.argv.includes('--only-step0034');
+const onlyStep0036 = process.argv.includes('--only-step0036');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -746,6 +758,15 @@ async function main() {
     if (prints33) {
       console.log('\n0033 fingerprints (kind  item  detail):');
       for (const line of prints33) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0036: just New students' last name, date of birth and Address step (0036)
+  if (onlyStep0036) {
+    const prints36 = await step0036();
+    if (prints36) {
+      console.log('\n0036 fingerprints (kind  item  detail):');
+      for (const line of prints36) console.log('  ' + line);
     }
     return finish();
   }
@@ -1021,6 +1042,9 @@ async function main() {
   // step0033: Camps design review - Mark paid with a way, Camper history (its own database, production order)
   console.log('\nMigration 0033 (Camps design review: Mark paid with a way to pay, Camper history):');
   const after33 = after5 ? await step0033() : null;
+  // step0036: New students - each child's last name and date of birth, the Address question (its own database, production order)
+  console.log('\nMigration 0036 (New students: each child\'s last name and date of birth, the Address question):');
+  const after36 = after5 ? await step0036() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -1131,6 +1155,10 @@ async function main() {
   if (after33) {
     console.log('\n0033 fingerprints (kind  item  detail):');
     for (const line of after33) console.log('  ' + line);
+  }
+  if (after36) {
+    console.log('\n0036 fingerprints (kind  item  detail):');
+    for (const line of after36) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -7901,6 +7929,351 @@ async function step0033() {
   }
   await db.close().catch(() => {});
   return prints33;
+}
+
+// =====================================================================
+// step0036: New students - each child's last name and date of birth, the
+// Address question (0036, rulebook v0.634 - v0.639)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033 and 0034 - each only if its file is on this branch):
+//   a. 0036_fingerprints.sql and 0036_preapply_check.sql are
+//      connector-safe (no "delete" / "drop"); a Free class form made from
+//      the template BEFORE 0036 and a sign-up through it (two children
+//      sent the old way) are kept; the pre-apply check (SETUP 0036a)
+//      answers 0 / false / 15 / 8 / 8 / 0 / 0 / 0
+//   b. the Forms / Prospects tests (0007, 0009, 0012, 0015, 0019, 0021,
+//      0031) pass BEFORE 0036 (the baseline)
+//   c. apply 0036: in every other fingerprint file ONLY these lines move -
+//      and each of them does: the "function" lines of the eight replaced
+//      functions (body md5 only - rights, owner, definer and settings
+//      stay) in 0009's, 0012's and 0031's files; 0009's
+//      form_submissions_size_check line (2000 -> 4000) and its
+//      form_submissions table line (the app's readable columns: 0009's
+//      15 -> id, form_id, location_code, created_at - security review);
+//      0012's two new prospects rules (added). No policy, view or
+//      app-callable security-invoker function reads form_submissions.
+//      0036's own rows as designed. 0036 writes nothing: the earlier
+//      sign-up, its prospects (version 1, no last name or date of birth),
+//      the forms and both histories are unchanged. The pre-apply check
+//      answers 2 / true / 4 / 8 / 0 / 0 / 0 / 0
+//   d. 0036_tests.sql, then the baseline tests again; the form made
+//      before 0036 (no Address question) takes both child shapes (rolled
+//      back)
+//   e. 0036 applied a SECOND time: no fingerprint, row or history change
+//   f. the Undo of SETUP.md 0036e (the file it names,
+//      supabase/manual/0036u_undo_new_students_profile.sql):
+//        - with a Walk-in form (it has the Address question) and two
+//          new-shape families through it planted - one of them six
+//          children with 40-letter names in a 4-byte alphabet - in a
+//          transaction rolled back afterwards, the pre-apply check counts
+//          them and the undo refuses with its message, changing nothing
+//        - on the clean database: every fingerprint file equals the one
+//          before 0036; the pre-apply check answers as before; the
+//          earlier sign-up is as it was; the baseline tests pass; a
+//          second undo changes nothing; then 0036 again -> the tested
+//          fingerprints, 0036_tests.sql passes
+// Run only this step with   node run.mjs --only-step0036
+// =====================================================================
+async function step0036() {
+  const L = '[0036] ';
+  const preSql = read('tests', '0036_preapply_check.sql');
+  const migration = read('migrations', '0036_new_students_profile.sql');
+  const unsafe = [['tests', '0036_fingerprints.sql'], ['tests', '0036_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0036_fingerprints.sql and 0036_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. a Free class form made BEFORE 0036 (from the template of that time)
+  // and a family sent through it the live page's way, as on production
+  const SIG = "'data:image/png;base64,' || repeat('A', 300)";
+  const SETTINGS = `'{"thank_you":"","alert_email":null,"confirm_email":false,"add_to_calendar":false}'`;
+  if (!(await run(db, `${L}a form and a sign-up (two children, the old way) from before 0036`, `
+    do $$
+    declare
+      v_f uuid;
+      v_r jsonb;
+      v_fields jsonb;
+    begin
+      select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', '"Our wording."') else e end order by n)
+        into v_fields from jsonb_array_elements(public.forms_template('free_class')) with ordinality as t(e, n);
+      insert into public.forms (location_code, name, slug, kind, status, draft, published, published_version, settings)
+      values ('worcester', 'zz before 0036', 'zz-before-0036', 'free_class', 'live', v_fields, v_fields, 1, ${SETTINGS})
+      returning id into v_f;
+      v_r := public.forms_submit_core(v_f, gen_random_uuid(), 1,
+               '{"parent_name": "Pat Zzbefore", "parent_phone": "(508) 555-0177", "parent_email": "pat.zz@example.com", "waiver": true}',
+               '[{"first_name": "Una", "age": 6}, {"first_name": "Ned", "age": 8}]', '[]', ${SIG}, 'staff', 'PGlite before 0036');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'sign-up before 0036: %', v_r; end if;
+    end
+    $$;`))) return null;
+  // everything 0036 could touch, as one md5 (the two new prospects columns left out, so it compares across 0036 and its undo)
+  const snapSql = `select md5(
+       coalesce((select string_agg(to_jsonb(f)::text, ',' order by f.id) from public.forms f), '')
+    || coalesce((select string_agg(to_jsonb(s)::text, ',' order by s.id) from public.form_submissions s), '')
+    || coalesce((select string_agg((to_jsonb(p) - 'child_last_name' - 'child_dob')::text, ',' order by p.id) from public.prospects p), '')
+    || (select count(*) from public.change_log)::text || '/' || (select count(*) from public.family_history)::text)`;
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0036: 0 / false / 15 / 8 / 8 / 0 / 0 / 0 (nothing of 0036, 0009's 15 readable columns, the 8 functions as tested)`,
+    ready.new_columns === 0 && ready.size_rule_4000 === false && ready.staff_submission_columns === 15
+      && ready.replaced_found === 8 && ready.replaced_as_tested === 8
+      && ready.forms_with_address === 0 && ready.signups_over_2000 === 0 && ready.prospects_with_new_details === 0,
+    JSON.stringify(ready));
+
+  // b. the baseline tests
+  const baseline = [['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'],
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0031_tests.sql', 'ALL 0031 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0036', baseline);
+
+  // c. apply 0036: only the planned lines move
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0036');
+  const before = await printsOf(db, numbers);
+  const dataBefore = await one(db, snapSql);
+  if (!(await run(db, `${L}apply 0036_new_students_profile.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const replaced = ['forms_fields_are_valid(', 'forms_template(', 'forms_check_answers(', 'forms_submit_core(',
+    'prospects_from_submission(', 'prospects_list(', 'prospects_search(', 'prospects_get('];
+  const sizeRule = 'form_submissions.form_submissions_size_check';
+  const newRules = ['prospects.prospects_child_last_name_check', 'prospects.prospects_child_dob_check'];
+  // 0009's "table" line of form_submissions with only the four columns 0036 leaves readable
+  const staffColumns = ['created_at', 'form_id', 'id', 'location_code'];
+  const onlyStaffColumns = (detail) => detail.replace(/ columns=(.*)$/, (whole, cols) =>
+    ' columns=' + cols.split(',').filter((c) => staffColumns.includes(c.split(':')[0])).join(','));
+  const parts = (line) => line.split('  ');
+  const wrong = [];
+  const moved = {};   // fingerprint file number -> the planned items that moved
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+      if (kind === 'function' && replaced.some((r) => item.startsWith(r)) && twin && parts(twin)[2].slice(32) === detail.slice(32)) {
+        (moved[n] ??= []).push(item);   // the body md5 moved, nothing else
+      } else if (kind === 'constraint' && item === sizeRule && twin && detail.includes('<= 2000)')
+                 && parts(twin)[2] === detail.replace('<= 2000)', '<= 4000)')) {
+        (moved[n] ??= []).push(item);   // 2000 -> 4000, nothing else
+      } else if (kind === 'table' && item === 'form_submissions' && twin && detail.includes(' columns=answers:')
+                 && parts(twin)[2] === onlyStaffColumns(detail) && parts(twin)[2].split(' columns=')[1].split(',').length === 4) {
+        (moved[n] ??= []).push(item);   // the readable columns: 0009's 15 -> the 4, the rest of the line the same
+      } else {
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+      }
+    }
+    for (const a of added) {
+      const [kind, item] = parts(a);
+      if (gone.some((g) => parts(g)[0] === kind && parts(g)[1] === item)) continue;   // a twin, judged above
+      if (kind === 'constraint' && newRules.includes(item)) (moved[n] ??= []).push(item);
+      else wrong.push(`${n}: added ${a}`);
+    }
+  }
+  const expected = {
+    '0009': ['forms_fields_are_valid(', 'forms_template(', 'forms_check_answers(', 'forms_submit_core(', sizeRule, 'form_submissions'],
+    '0012': ['prospects_from_submission(', 'prospects_list(', 'prospects_search(', 'prospects_get(', ...newRules],
+    '0031': ['forms_submit_core('],
+  };
+  for (const [n, items] of Object.entries(expected)) {
+    const got = moved[n] ?? [];
+    if (got.length !== items.length || !items.every((x) => got.some((g) => g.startsWith(x)))) {
+      wrong.push(`${n}: planned ${items.join(', ')} - moved ${got.join(', ') || 'nothing'}`);
+    }
+  }
+  for (const n of Object.keys(moved)) if (!expected[n]) wrong.push(`${n}: moved ${moved[n].join(', ')}`);
+  record(`${L}fingerprints: exactly the planned lines moved (the 8 functions' body md5 in 0009 / 0012 / 0031, 0009's size rule 2000 -> 4000 and form_submissions' readable columns 15 -> 4, 0012's 2 new prospects rules); everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  // nothing the app runs reads form_submissions with the app's own rights: no table rule (policy) or
+  // view mentions it, and no security-invoker function the app may call does (definer functions run
+  // as their owner, so the narrower read rights don't touch them)
+  const relies = (await db.query(`
+    select 'policy ' || p.tablename || '.' || p.policyname as what from pg_policies p
+     where coalesce(p.qual, '') || coalesce(p.with_check, '') like '%form_submissions%'
+    union all
+    select 'view ' || v.schemaname || '.' || v.viewname from pg_views v
+     where v.schemaname not in ('pg_catalog', 'information_schema') and v.definition like '%form_submissions%'
+    union all
+    select 'view ' || m.schemaname || '.' || m.matviewname from pg_matviews m where m.definition like '%form_submissions%'
+    union all
+    select 'security-invoker function ' || p.oid::regprocedure::text
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname not in ('pg_catalog', 'information_schema') and not p.prosecdef
+       and p.prosrc like '%form_submissions%' and has_function_privilege('authenticated', p.oid, 'EXECUTE')`)).rows.map((r) => r.what);
+  record(`${L}nothing the app runs reads form_submissions with its own rights (no policy, view or app-callable security-invoker function mentions it)`,
+    relies.length === 0, relies.join(', '));
+  const prints36 = after['0036_fingerprints.sql'];
+  const fn = (name) => prints36.find((l) => l.startsWith(`function  ${name}(`)) || '';
+  const tail = (definer, rights) => ` definer=${definer} settings=search_path="" owner=postgres rights=${rights}`;
+  record(`${L}0036 fingerprints: forms_fields_are_valid, forms_template, forms_check_answers, forms_submit_core are security invoker, search_path="", for nobody`,
+    ['forms_fields_are_valid', 'forms_template', 'forms_check_answers', 'forms_submit_core']
+      .every((x) => fn(x).endsWith(tail('false', 'postgres:EXECUTE'))),
+    ['forms_fields_are_valid', 'forms_template', 'forms_check_answers', 'forms_submit_core'].map(fn).join(' | '));
+  record(`${L}0036 fingerprints: the trigger prospects_from_submission is security definer for nobody; prospects_list / search / get security definer for authenticated only`,
+    fn('prospects_from_submission').endsWith(tail('true', 'postgres:EXECUTE'))
+      && ['prospects_list', 'prospects_search', 'prospects_get'].every((x) => fn(x).endsWith(tail('true', 'authenticated:EXECUTE,postgres:EXECUTE'))),
+    ['prospects_from_submission', 'prospects_list', 'prospects_search', 'prospects_get'].map(fn).join(' | '));
+  const rowOf = (kind, item) => prints36.find((l) => l.startsWith(`${kind}  ${item}  `)) || '';
+  record(`${L}0036 fingerprints: the two columns (nullable, readable by nobody) and the three rules`,
+    rowOf('column', 'prospects.child_last_name') === 'column  prospects.child_last_name  text notnull=false rights='
+      && rowOf('column', 'prospects.child_dob') === 'column  prospects.child_dob  date notnull=false rights='
+      && rowOf('constraint', sizeRule).includes('(answers)::text) <= 20000)') && rowOf('constraint', sizeRule).includes('(children)::text) <= 4000)')
+      && rowOf('constraint', newRules[0]).includes('child_last_name IS NULL') && rowOf('constraint', newRules[0]).includes('calendar_text_is_valid(child_last_name, 40)')
+      && rowOf('constraint', newRules[1]).includes('child_dob IS NULL') && rowOf('constraint', newRules[1]).includes("'1900-01-01'::date")
+      && rowOf('constraint', newRules[1]).includes("'2100-01-01'::date") && prints36.length === 8 * 2 + 2 + 3 + 1,
+    prints36.filter((l) => !l.startsWith('function')).join(' | '));
+  record(`${L}0036 fingerprints: form_submissions keeps RLS and its owner-only table rights; the app may read only id, form_id, location_code, created_at`,
+    rowOf('table', 'form_submissions').startsWith('table  form_submissions  rls=true grants=postgres:')
+      && !rowOf('table', 'form_submissions').includes('authenticated:SELECT')
+      && rowOf('table', 'form_submissions').endsWith(' columns=' + staffColumns.map((c) => `${c}:authenticated=r/postgres`).join(',')),
+    rowOf('table', 'form_submissions'));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0036: 2 / true / 4 / 8 / 0 / 0 / 0 / 0`,
+    applied.new_columns === 2 && applied.size_rule_4000 === true && applied.staff_submission_columns === 4
+      && applied.replaced_found === 8 && applied.replaced_as_tested === 0
+      && applied.forms_with_address === 0 && applied.signups_over_2000 === 0 && applied.prospects_with_new_details === 0,
+    JSON.stringify(applied));
+  record(`${L}0036 wrote nothing: the forms, the sign-up from before 0036, its prospects and both histories are unchanged`,
+    dataBefore === (await one(db, snapSql)));
+  record(`${L}the sign-up from before 0036: both prospects with no last name or date of birth, still version 1`,
+    (await one(db, `select count(*)::int from public.prospects p join public.form_submissions s on s.id = p.submission_id
+                      where s.parent_name = 'Pat Zzbefore' and p.child_last_name is null and p.child_dob is null and p.version = 1`)) === 2);
+
+  // d. the tests; the form made before 0036 takes both child shapes (rolled back)
+  await tests('after 0036', [['0036_tests.sql', 'ALL 0036 TESTS PASSED'], ...baseline]);
+  let shapes = null;
+  try {
+    await db.exec('begin;');
+    shapes = (await db.query(`
+      select public.forms_submit_core(f.id, gen_random_uuid(), 1,
+               '{"parent_name": "Pat Zzbefore", "parent_phone": "(508) 555-0177", "parent_email": "pat.zz@example.com", "waiver": true}',
+               '[{"first_name": "Una", "age": 6}]', '[]', ${SIG}, 'staff', 'PGlite') ->> 'status' as old_shape,
+             public.forms_submit_core(f.id, gen_random_uuid(), 1,
+               '{"parent_name": "Pat Zzbefore", "parent_phone": "(508) 555-0177", "parent_email": "pat.zz@example.com", "waiver": true}',
+               jsonb_build_array(jsonb_build_object('first_name', 'Una', 'last_name', 'Zzbefore',
+                                                    'dob', to_char(public.schedule_today() - interval '6 years', 'YYYY-MM-DD'))),
+               '[]', ${SIG}, 'staff', 'PGlite') ->> 'status' as new_shape
+        from public.forms f where f.slug = 'zz-before-0036'`)).rows[0];
+  } catch (error) {
+    shapes = { error: error.message };
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}the form made before 0036 (no Address question) takes both child shapes`,
+    shapes?.old_shape === 'ok' && shapes?.new_shape === 'ok', JSON.stringify(shapes));
+
+  // e. re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0036 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0036 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+
+  // f. Undo 0036, as SETUP.md 0036e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0036e\. Undo 0036/m);
+  const undoFile = 'manual/0036u_undo_new_students_profile.sql';
+  const undoSql = read('manual', '0036u_undo_new_students_profile.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0036] SETUP.md has "### 0036e. Undo 0036" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else {
+    // f1. planted (and rolled back): a Walk-in form - it has the Address question - and two new-shape
+    // families through it, one of them six children with 40-letter names in a 4-byte alphabet.
+    // The undo file runs without its own begin / commit inside that transaction.
+    const inner = undoSql.replace(/\r\n/g, '\n').replace(/^begin;$/m, '').replace(/^commit;$/m, '');
+    let planted = null;
+    let refusal = '';
+    try {
+      await db.exec('begin;');
+      await db.exec(`
+        do $$
+        declare
+          v_f uuid;
+          v_r jsonb;
+          v_fields jsonb;
+          v_ans jsonb := jsonb_build_object('parent_name', 'Plant Zzfamily', 'parent_phone', '(508) 555-0188',
+                           'parent_email', 'plant.zz@example.com', 'waiver', true,
+                           'address', jsonb_build_object('street', '1 Elm St', 'city', 'Shrewsbury', 'state', 'MA', 'zip', '01545'));
+          v_dob text := to_char(public.schedule_today() - interval '7 years', 'YYYY-MM-DD');
+        begin
+          select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', '"Our wording."') else e end order by n)
+            into v_fields from jsonb_array_elements(public.forms_template('walk_in')) with ordinality as t(e, n);
+          insert into public.forms (location_code, name, slug, kind, status, draft, published, published_version, settings)
+          values ('shrewsbury', 'zz plant 0036', 'zz-plant-0036', 'walk_in', 'live', v_fields, v_fields, 1, ${SETTINGS})
+          returning id into v_f;
+          v_r := public.forms_submit_core(v_f, gen_random_uuid(), 1, v_ans,
+                   jsonb_build_array(jsonb_build_object('first_name', 'Pia', 'last_name', 'Zzplant', 'dob', v_dob),
+                                     jsonb_build_object('first_name', 'Rex', 'last_name', 'Zzplant', 'dob', v_dob)),
+                   '[]', ${SIG}, 'staff', 'PGlite plant');
+          if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant 1: %', v_r; end if;
+          v_r := public.forms_submit_core(v_f, gen_random_uuid(), 1, v_ans,
+                   (select jsonb_agg(jsonb_build_object('first_name', repeat(chr(131072), 40), 'last_name', repeat(chr(131072), 40), 'dob', v_dob))
+                      from generate_series(1, 6)),
+                   '[]', ${SIG}, 'staff', 'PGlite plant');
+          if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant 2: %', v_r; end if;
+        end
+        $$;`);
+      planted = await pre();
+      try {
+        await db.exec(inner);
+      } catch (error) {
+        refusal = error.message;
+      }
+    } catch (error) {
+      planted = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[undo 0036] planted: the pre-apply check counts 1 form with an Address question, 1 sign-up over 2000 bytes, 8 prospects with new details`,
+      planted?.forms_with_address === 1 && planted?.signups_over_2000 === 1 && planted?.prospects_with_new_details === 8, JSON.stringify(planted));
+    record(`${L}[undo 0036] ... and the undo file refuses with the three counts ("0036 undo refused")`,
+      refusal.includes('0036 undo refused: 1 form(s)') && refusal.includes('1 sign-up(s)') && refusal.includes('8 prospect(s)'), refusal || 'no error');
+    const rolledBack = await pre();
+    record(`${L}[undo 0036] the planted rows were rolled back, 0036 is still applied`,
+      JSON.stringify(rolledBack) === JSON.stringify(applied), JSON.stringify(rolledBack));
+
+    // f2. the undo on the clean database
+    if (await run(db, `${L}[undo 0036] paste ${undoFile}`, undoSql)) {
+      const undone = await printsOf(db, others);
+      const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+      record(`${L}[undo 0036] every fingerprint file equals the one before 0036`,
+        back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+      const undonePre = await pre();
+      record(`${L}[undo 0036] the pre-apply check answers as before 0036`, JSON.stringify(undonePre) === JSON.stringify(ready),
+        JSON.stringify(undonePre));
+      record(`${L}[undo 0036] the forms, the sign-up from before 0036, its prospects and both histories are as before 0036`,
+        dataBefore === (await one(db, snapSql)));
+      await tests('after the undo', baseline);
+      await run(db, `${L}[undo 0036] paste ${undoFile} a SECOND time`, undoSql);
+      const undoneAgain = await printsOf(db, others);
+      record(`${L}[undo 0036] a second undo changes nothing`,
+        others.every((n) => JSON.stringify(undone[`${n}_fingerprints.sql`]) === JSON.stringify(undoneAgain[`${n}_fingerprints.sql`])));
+      if (await run(db, `${L}[undo 0036] apply 0036 again (redo)`, migration)) {
+        const redo = await fingerprints(db, '0036_fingerprints.sql');
+        record(`${L}[undo 0036] after the redo the 0036 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints36));
+        await tests('after the redo', [['0036_tests.sql', 'ALL 0036 TESTS PASSED']]);
+      }
+    }
+  }
+  await db.close().catch(() => {});
+  return prints36;
 }
 
 function finish() {

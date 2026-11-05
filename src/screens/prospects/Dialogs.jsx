@@ -7,8 +7,11 @@
 //   CameDialog        a Board card dropped on Came asks "Did … come?" first (v0.246)
 //   AddProspectDialog "+ Add prospect" asks which Live form to fill in for the family (v0.236)
 //   DeleteDialog      delete a prospect — admins only, with a confirmation
+// CameDialog and DeleteDialog are the dashboard's shared "are you sure?" box (ConfirmBox, design
+// review N3, rulebook v1.008 / v1.103).
 // The values being typed live in Prospects.jsx (so a lock while one is open loses nothing).
 import { IconCheck, IconClipboardText, IconTrash, IconUserCheck } from '@tabler/icons-react';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
 import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -130,27 +133,46 @@ export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel
 
 // A Board card dropped on Came (v0.246): "Did Ava come to the free class?" — Came checks the
 // child in (on the class day, or after it) or, with no class to check in to, saves Came as the status.
-export function CameDialog({ state, isPhone, onSave, onCancel }) {
+// The same small box on every device (design review N3, v1.103): never a full page on phones.
+//   33  the shared ConfirmBox: "Keep in <column>" · "Came" (blue, first focus on Came: nothing is lost)
+//   34  the class is still ahead: ONE button, "Keep in <column>". ConfirmBox always draws two, so
+//       this one is a plain small confirm Dialog whose button row has ConfirmBox's classes
+//       (`dialog-actions cfm-actions`), so it is never pinned to the bottom on short screens.
+// state.column is the name of the Board column the card sits in now ("Booked", "New"; a No-show's
+// card sits in Booked, v0.610) — Prospects.jsx works it out when the card is dropped.
+export function CameDialog({ state, onSave, onCancel }) {
   const b = state.prospect.booking;
-  return (
-    <Dialog title={state.ahead ? T.cameAheadTitle(state.prospect.childFirstName) : T.cameTitle(state.prospect.childFirstName)} size="small" fullScreen={isPhone} onRequestClose={onCancel}>
-      <p className="tdialog-sub">{state.ahead ? T.cameAhead(state.prospect.childFirstName, b) : b && b.status === 'booked' ? T.classLine(b) : T.NO_CLASS_BOOKED}</p>
-      {state.note && <Notice>{NOTES[state.note] ?? state.note}</Notice>}
-      <Footer isPhone={isPhone} onCancel={onCancel}>
-        {state.ahead ? (
-          isPhone && (
-            <button type="button" className="btn btn-block" data-autofocus onClick={onCancel}>
-              {T.CANCEL}
-            </button>
-          )
-        ) : (
-          <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${state.saving ? ' is-unavailable' : ''}`} aria-disabled={state.saving ? 'true' : undefined} data-autofocus onClick={() => !state.saving && onSave()}>
-            <IconUserCheck size={16} aria-hidden="true" />
-            {state.saving ? T.SAVING : T.MARK_CAME}
+  const name = state.prospect.childFirstName;
+  const keepLabel = T.keepIn(state.column);
+  if (state.ahead) {
+    return (
+      <Dialog title={T.cameAheadTitle(name)} variant="confirm" describedBy={`pcame-${state.key}`} onRequestClose={onCancel}>
+        <p id={`pcame-${state.key}`} className="tdialog-sub tdialog-body">
+          {T.cameAhead(name, b)}
+        </p>
+        <div className="dialog-actions cfm-actions">
+          <button type="button" className="btn" data-autofocus onClick={onCancel}>
+            {keepLabel}
           </button>
-        )}
-      </Footer>
-    </Dialog>
+        </div>
+      </Dialog>
+    );
+  }
+  return (
+    <ConfirmBox
+      title={T.cameTitle(name)}
+      keepLabel={keepLabel}
+      actionLabel={T.MARK_CAME}
+      actionIcon={IconUserCheck}
+      busyLabel={T.SAVING}
+      loses="nothing"
+      busy={state.saving}
+      failed={state.note ? NOTES[state.note] ?? state.note : null}
+      onKeep={onCancel}
+      onConfirm={onSave}
+    >
+      {b && b.status === 'booked' ? T.classLine(b) : T.NO_CLASS_BOOKED}
+    </ConfirmBox>
   );
 }
 
@@ -198,21 +220,26 @@ export function AddProspectDialog({ state, isPhone, onPickSchool, onPick, onCanc
   );
 }
 
+// Delete a prospect (admins): the shared ConfirmBox (design review N3) — "Keep prospect" ·
+// "Delete prospect" (red, first focus on Keep). The sentence always stays; a problem shows as the
+// amber note under the buttons. On phones it opens on top of the panel page (onTop, v1.100).
 export function DeleteDialog({ state, onConfirm, onCancel, onTop = false }) {
   return (
-    <Dialog title={T.deleteTitle(state.name)} variant="confirm" describedBy={`pdel-${state.key}`} onTop={onTop} returnFocusTo={onTop ? state.opener ?? null : null} onRequestClose={onCancel}>
-      <p id={`pdel-${state.key}`} className="tdialog-sub tdialog-body">
-        {state.note ? NOTES[state.note] ?? state.note : T.deleteBody(state.name, state.siblings)}
-      </p>
-      <div className="dialog-actions">
-        <button type="button" className="btn" data-autofocus onClick={onCancel}>
-          {T.CANCEL}
-        </button>
-        <button type="button" className={`btn btn-delete${state.saving ? ' is-unavailable' : ''}`} onClick={() => !state.saving && onConfirm()}>
-          <IconTrash size={16} aria-hidden="true" />
-          {state.saving ? T.DELETING : T.DELETE}
-        </button>
-      </div>
-    </Dialog>
+    <ConfirmBox
+      title={T.deleteTitle(state.name)}
+      keepLabel={T.KEEP_PROSPECT}
+      actionLabel={T.DELETE_PROSPECT}
+      actionIcon={IconTrash}
+      busyLabel={T.DELETING}
+      loses="forGood"
+      busy={state.saving}
+      failed={state.note ? NOTES[state.note] ?? state.note : null}
+      onKeep={onCancel}
+      onConfirm={onConfirm}
+      onTop={onTop}
+      returnFocusTo={onTop ? state.opener ?? null : null}
+    >
+      {T.deleteBody(state.name, state.siblings)}
+    </ConfirmBox>
   );
 }

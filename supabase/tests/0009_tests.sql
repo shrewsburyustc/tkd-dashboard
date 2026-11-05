@@ -164,7 +164,7 @@ begin
   end if;
   v_txt := concat_ws(',',
     public.forms_fields_are_valid(v_fields - 1),                                                          -- parent phone missing
-    public.forms_fields_are_valid(v_fields || jsonb_build_array(v_fields -> 4)),                          -- duplicate id
+    public.forms_fields_are_valid(v_fields || jsonb_build_array((select e from jsonb_array_elements(v_fields) e where e ->> 'id' = 'step_2'))),  -- duplicate id
     public.forms_fields_are_valid(v_fields || jsonb_build_array(jsonb_build_object('id', 'x', 'type', 'video', 'label', 'X'))),
     public.forms_fields_are_valid(v_fields || jsonb_build_array(jsonb_build_object('id', 'x', 'type', 'choice', 'label', 'X', 'options', jsonb_build_array('Only')))),
     public.forms_fields_are_valid(v_fields || jsonb_build_array(jsonb_build_object('id', 'x', 'type', 'short_text', 'label', 'X', 'show_if', jsonb_build_object('field', 'later', 'value', 'a')))),
@@ -172,8 +172,11 @@ begin
     public.forms_fields_are_valid(v_fields || jsonb_build_array(jsonb_build_object('id', 'x', 'type', 'short_text', 'label', 'X', 'extra', 1))),
     public.forms_fields_are_valid(v_fields || jsonb_build_array(jsonb_build_object('id', 'x', 'type', 'short_text', 'label', 'Bad' || chr(8203) || 'label'))),
     public.forms_fields_are_valid(v_fields || jsonb_build_array(jsonb_build_object('id', 'b2', 'type', 'booking', 'label', 'Again'))),
-    public.forms_fields_are_valid(jsonb_set(v_fields, '{8,text}', to_jsonb('Agree' || chr(7)))),          -- control char in waiver
-    public.forms_fields_are_valid(jsonb_set(v_fields, '{5,required}', 'true')));                          -- booking "required"
+    -- (fields found by id, not by place, so this works before and after 0036 adds the Address question)
+    public.forms_fields_are_valid(jsonb_set(v_fields, array[(select (n - 1)::text from jsonb_array_elements(v_fields) with ordinality as t(e, n)
+                                                             where e ->> 'id' = 'waiver'), 'text'], to_jsonb('Agree' || chr(7)))),   -- control char in waiver
+    public.forms_fields_are_valid(jsonb_set(v_fields, array[(select (n - 1)::text from jsonb_array_elements(v_fields) with ordinality as t(e, n)
+                                                             where e ->> 'id' = 'booking'), 'required'], 'true')));                 -- booking "required"
   if v_txt <> 'f,f,f,f,f,f,f,f,f,f,f' then
     raise exception 'TEST FAILED: 1d field-list rules gave %', v_txt;
   end if;
@@ -182,7 +185,14 @@ begin
     from generate_series(1, 61 - jsonb_array_length(v_fields) + 1) g;
   if public.forms_fields_are_valid(v_r) then raise exception 'TEST FAILED: 1e more than 60 fields should be refused'; end if;
   -- the test form: the template + a choice and a field shown only for "Other"
-  v_fields := jsonb_set(v_fields, '{8,text}', to_jsonb('I agree to the school''s rules.'::text))
+  -- (the waiver found by id, and without 0036's Address question - 0036_tests.sql
+  -- tests it - so the answers below work before and after 0036)
+  select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', to_jsonb('I agree to the school''s rules.'::text)) else e end
+                   order by n)
+    into v_fields
+    from jsonb_array_elements(v_fields) with ordinality as t(e, n)
+   where e ->> 'type' <> 'address';
+  v_fields := v_fields
               || jsonb_build_array(
                    jsonb_build_object('id', 'interest', 'type', 'choice', 'label', 'Interested in', 'required', true,
                                       'options', jsonb_build_array('Kids', 'Teens', 'Other')),
@@ -194,7 +204,9 @@ begin
            jsonb_build_object('id', 'spar', 'type', 'choice', 'label', 'Sparring?', 'options', jsonb_build_array('Yes', 'No')),
            jsonb_build_object('id', 'waiver', 'type', 'waiver', 'label', 'Waiver', 'required', true, 'text', 'Our wording.'));
   if not public.forms_fields_publishable(v_r)
-     or public.forms_fields_are_valid(jsonb_set(v_r, '{5,show_if}', jsonb_build_object('field', 'spar', 'value', 'Yes'))) then
+     or public.forms_fields_are_valid(jsonb_set(v_r, array[(select (n - 1)::text from jsonb_array_elements(v_r) with ordinality as t(e, n)
+                                                            where e ->> 'id' = 'waiver'), 'show_if'],   -- (the waiver found by id)
+                                                jsonb_build_object('field', 'spar', 'value', 'Yes'))) then
     raise exception 'TEST FAILED: 1h a waiver must not be hidden by "show only if"';
   end if;
   if public.forms_settings_are_valid('{"thank_you":"x","alert_email":"nope","confirm_email":true,"add_to_calendar":true}') then

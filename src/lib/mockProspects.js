@@ -4,6 +4,12 @@
 // migration 0012. It is a PART of the fake Forms database (mockForms.js), because a sign-up and
 // its prospects change together there too: 0012's triggers make one prospect per child when a
 // sign-up is saved, and move a child New ↔ Booked when a free class is booked or cancelled.
+// Migration 0036 (rulebook v0.634 / v0.637): each child's last name and date of birth. A sign-up
+// sent by the new forms stores a child as { first_name, last_name, dob, age } (age worked out from
+// the date of birth when it was sent); older ones as { first_name, age }. The prospect copies the
+// last name and date of birth (null for older children); the list returns the last name only, the
+// search also matches it, and prospects_get returns both (and each sibling's last name and date of
+// birth).
 //
 //   const part = createProspectsPart({ newId, stamp, today, nowLocal, times, slotsOn, insertRow, updateRow });
 //   part.afterSubmission(db, submission, ctx)   (= trigger prospects_from_submission)
@@ -13,6 +19,7 @@
 import { addDays } from './schedule/versions.js';
 import { cleanText, textProblem } from './calendar/rules.js';
 import { longTextProblem } from './forms/fields.js';
+import { ageOn } from './prospects/child.js';
 
 export const PROSPECT_COLORS = ['gray', 'yellow', 'orange', 'green', 'teal', 'sky', 'purple', 'pink'];
 
@@ -77,8 +84,10 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     seedStatuses(db, sub.location_code);
     sub.children.forEach((c, i) => {
       if (db.prospects.some((p) => p.submission_id === sub.id && p.child_index === i)) return;
+      // 0036: the last name and date of birth come along (null for a child sent as { first_name, age })
       const p = insertRow(db.prospects, {
-        id: newId(), location_code: sub.location_code, submission_id: sub.id, child_index: i, child_first_name: c.first_name, child_age: c.age,
+        id: newId(), location_code: sub.location_code, submission_id: sub.id, child_index: i, child_first_name: c.first_name,
+        child_last_name: c.last_name ?? null, child_dob: c.dob ?? null, child_age: c.age,
         status_id: statusOf(db, sub.location_code, 'new'), follow_up_on: null, joined_on: null, checked_in_at: null, checked_in_by_name: null,
         last_activity_at: stamp(),
       }, ctx);
@@ -161,8 +170,10 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
           const s = db.submissions.find((x) => x.id === p.submission_id);
           const b = bookingOf(db, p);
           const builtin = builtinOf(db, p.status_id);
+          // the last name for "Ava N." — never the date of birth or age (v0.245, rule 5)
           return {
-            id: p.id, version: p.version, family_id: p.submission_id, child_first_name: p.child_first_name, parent_name: s?.parent_name ?? '',
+            id: p.id, version: p.version, family_id: p.submission_id, child_first_name: p.child_first_name, child_last_name: p.child_last_name ?? null,
+            parent_name: s?.parent_name ?? '',
             status_id: p.status_id, follow_up_on: p.follow_up_on, joined_on: p.joined_on, created_at: p.created_at, signed_up_at: s?.created_at ?? p.created_at,
             checked_in: Boolean(p.checked_in_at),
             opened_by_me: db.opens.some((o) => o.prospect_id === p.id && o.staff === ctx.actorName),
@@ -180,7 +191,8 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
       if (!a.p_location_code || text.length < 2 || text.length > 80) return st('invalid');
       const ids = db.prospects.filter((p) => p.location_code === a.p_location_code).filter((p) => {
         const s = db.submissions.find((x) => x.id === p.submission_id);
-        return p.child_first_name.toLowerCase().includes(text) || (s?.parent_name ?? '').toLowerCase().includes(text)
+        return p.child_first_name.toLowerCase().includes(text) || (p.child_last_name ?? '').toLowerCase().includes(text)
+          || (s?.parent_name ?? '').toLowerCase().includes(text)
           || (digits.length >= 4 && (s?.parent_phone ?? '').replace(/[^0-9]/g, '').includes(digits));
       }).map((p) => p.id);
       return { status: 'ok', ids };
@@ -195,12 +207,13 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
         status: 'ok',
         prospect: {
           id: p.id, version: p.version, location_code: p.location_code, family_id: p.submission_id, child_first_name: p.child_first_name,
+          child_last_name: p.child_last_name ?? null, child_dob: p.child_dob ?? null,
           child_age: p.child_age, status_id: p.status_id, follow_up_on: p.follow_up_on, joined_on: p.joined_on, checked_in_at: p.checked_in_at,
           checked_in_by_name: p.checked_in_by_name, parent_name: s.parent_name, parent_phone: s.parent_phone, parent_email: s.parent_email,
           form_id: f?.id ?? null, form_name: f?.name ?? '', source: s.source, entered_by: s.entered_by, signed_up_at: s.created_at, signed_at: s.signed_at,
           has_signature: s.signature !== null, fields: s.fields, answers: s.answers, booking: bookingJson(bookingOf(db, p)),
           siblings: db.prospects.filter((x) => x.submission_id === p.submission_id && x.id !== p.id).sort((x, y) => x.child_index - y.child_index)
-            .map((x) => ({ id: x.id, child_first_name: x.child_first_name, child_age: x.child_age, status_id: x.status_id })),
+            .map((x) => ({ id: x.id, child_first_name: x.child_first_name, child_last_name: x.child_last_name ?? null, child_dob: x.child_dob ?? null, child_age: x.child_age, status_id: x.status_id })),
           notes: db.notes.filter((n) => n.prospect_id === p.id).sort((x, y) => (x.created_at < y.created_at ? 1 : -1))
             .map((n) => ({ id: n.id, body: n.body, follow_up_on: n.follow_up_on, created_at: n.created_at, created_by_name: n.created_by_name })),
           activity: db.activity.filter((x) => x.prospect_id === p.id).sort((x, y) => y.id - x.id)
@@ -436,24 +449,41 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     // A few more made-up Worcester families (no free class), so every stage has someone.
     const form = db.forms.find((f) => f.location_code === 'worcester' && f.status === 'live');
     const daysAgo = (n) => new Date(new Date(stamp()).getTime() - n * 86400000).toISOString();
-    const family = (parent, phone, kids, ago) => {
+    // A child as the new forms send it (0036): { first_name, last_name, dob, age }, the date of birth
+    // chosen so the child is `age` today (born a year earlier when the birthday is still ahead).
+    const kid = (first, last, age, monthDay) => {
+      const year = Number(today().slice(0, 4)) - age - (monthDay > today().slice(5) ? 1 : 0);
+      const dob = `${year}-${monthDay}`;
+      return { first_name: first, last_name: last, dob, age: ageOn(dob, today()) };
+    };
+    // old: an older sign-up (children sent as { first_name, age }, before the Address question
+    // existed — its copy of the form has none), kept so the profile's "Not asked" state shows.
+    const family = (parent, phone, kids, ago, { old = false, street = null, heard = null } = {}) => {
       if (!form) return [];
+      const email = `${parent.split(' ')[0].toLowerCase()}@example.com`;
+      const fields = JSON.parse(JSON.stringify(form.published)).filter((f) => !old || f.type !== 'address');
+      const answers = { parent_name: parent, parent_phone: phone, parent_email: email, waiver: true };
+      const addressField = fields.find((f) => f.type === 'address');
+      if (addressField && street) answers[addressField.id] = { street, city: 'Worcester', state: 'MA', zip: '01602' };
+      const heardField = fields.find((f) => f.id === 'heard');
+      if (heard && (heardField?.options ?? []).includes(heard)) answers.heard = heard;
       const sub = insertRow(db.submissions, {
-        id: newId(), form_id: form.id, location_code: 'worcester', published_version: form.published_version, fields: JSON.parse(JSON.stringify(form.published)),
-        answers: { parent_name: parent, parent_phone: phone, parent_email: `${parent.split(' ')[0].toLowerCase()}@example.com`, waiver: true },
-        parent_name: parent, parent_phone: phone, parent_email: `${parent.split(' ')[0].toLowerCase()}@example.com`,
-        children: kids.map(([first_name, age]) => ({ first_name, age })), signature: db.submissions.find((x) => x.signature)?.signature ?? null, signed_at: daysAgo(ago), entered_by: null, source: 'public', submission_key: newId(),
+        id: newId(), form_id: form.id, location_code: 'worcester', published_version: form.published_version, fields,
+        answers, parent_name: parent, parent_phone: phone, parent_email: email,
+        children: kids, signature: db.submissions.find((x) => x.signature)?.signature ?? null, signed_at: daysAgo(ago), entered_by: null, source: 'public', submission_key: newId(),
       }, { actorName: 'Preview' });
       sub.created_at = daysAgo(ago);
       afterSubmission(db, sub, { actorName: 'Preview' });
       return db.prospects.filter((x) => x.submission_id === sub.id);
     };
     const named = (code, name) => db.statuses.find((x) => x.location_code === code && x.name === name)?.id;
-    const [liam] = family('Dan Park', '508-555-0161', [['Liam', 6]], 0);
-    const [ethan] = family('Lisa Brown', '508-555-0188', [['Ethan', 9]], 12);
-    const [owen] = family('Pat Diaz', '508-555-0123', [['Owen', 8]], 20);
-    const [mia] = family('Sara Smith', '508-555-0170', [['Mia', 7]], 9);
-    const [ruby] = family('Jo Allen', '508-555-0145', [['Ruby', 11]], 5);
+    const [liam] = family('Dan Park', '508-555-0161', [kid('Liam', 'Park', 6, '05-14')], 0, { street: '48 Grove Street', heard: 'Instagram' });
+    const [ethan] = family('Lisa Brown', '508-555-0188', [{ first_name: 'Ethan', age: 9 }], 12, { old: true });
+    const [owen] = family('Pat Diaz', '508-555-0123', [kid('Owen', 'Diaz', 8, '09-02')], 20, { street: '7 Pleasant Street', heard: 'A friend' });
+    // Mia and her brother Jack: one sign-up with two children (Print asks "Mia only" or both, v0.636)
+    const [mia] = family('Sara Smith', '508-555-0170', [kid('Mia', 'Smith', 7, '01-23'), kid('Jack', 'Smith', 9, '10-02')], 9, { street: '210 Park Avenue', heard: 'Google' });
+    // Ruby's last name isn't her parent's: the List says "Ruby M." (v0.637)
+    const [ruby] = family('Jo Allen', '508-555-0145', [kid('Ruby', 'Martinez', 11, '06-30')], 5, { street: '15 Lincoln Street', heard: 'Instagram' });
     void liam;
     if (ethan) updateRow(ethan, { status_id: statusOf(db, 'worcester', 'no_show'), follow_up_on: addDays(today(), -2) }, ctx);
     // Owen joined but kept an old follow-up date: the Calendar must NOT show it (v0.615).
@@ -465,9 +495,9 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     }
     // For the Calendar's follow-ups (v0.612 / v0.615): one later this week, and a Not interested
     // child with a follow-up date left on it (must NOT show).
-    const [noah] = family('Chris Nguyen', '508-555-0133', [['Noah', 7]], 3);
+    const [noah] = family('Chris Nguyen', '508-555-0133', [kid('Noah', 'Nguyen', 7, '08-11')], 3, { street: '12 Elm Street', heard: 'A friend' });
     if (noah) updateRow(noah, { status_id: named('worcester', 'Contacted'), follow_up_on: addDays(today(), 4) }, ctx);
-    const [zoe] = family('Kim Lee', '508-555-0152', [['Zoe', 10]], 15);
+    const [zoe] = family('Kim Lee', '508-555-0152', [kid('Zoe', 'Lee', 10, '02-17')], 15, { street: '33 Salisbury Street', heard: 'Facebook' });
     if (zoe) updateRow(zoe, { status_id: statusOf(db, 'worcester', 'not_interested'), follow_up_on: addDays(today(), 1) }, ctx);
     const byChild = (name) => db.prospects.find((p) => p.child_first_name === name);
     const rohan = byChild('Rohan');
