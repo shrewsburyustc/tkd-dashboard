@@ -1,10 +1,13 @@
 // text.js — every word the Prospects screens show, in one place.
 // Why it exists: same as the Forms and Calendar text.js — one spot to check the wording against
-// the approved mockup (docs/Prospects/TKD-Prospects-Mockups.html rev 3, rulebook v0.236 / v0.244)
-// and to change it later. The data layer only returns codes; this file turns them into words.
+// the approved mockups (docs/Prospects/TKD-Prospects-Mockups.html rev 3, rulebook v0.236 / v0.244;
+// the profile window and the printed visitor sheet: docs/Prospects/TKD-Prospect-Profile-Mockups.html
+// rev 3, v0.634–v0.639) and to change it later. The data layer only returns codes; this file turns
+// them into words.
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 import { addDays, localDay } from '../../lib/schedule/versions.js';
+import { addressLine } from '../../lib/prospects/child.js';
 
 export const PAGE_TITLE = 'Prospects';
 export const ADD_PROSPECT = 'Add prospect';
@@ -43,6 +46,7 @@ export const NOBODY = 'Nobody here.';
 export const NOBODY_TODAY = 'Nobody to follow up today.';
 export const NO_PROSPECTS = 'No prospects yet. They appear here when a family sends a form, or with "Add prospect".';
 export const NO_MATCH = 'No one matches that search.';
+// "Ava N.": the initial is the child's own last initial, or the parent's for older sign-ups (v0.637)
 export const childLabel = (p, initial) => (initial ? `${p.childFirstName} ${initial}.` : p.childFirstName);
 export const NONE = '—';
 export const NEW_SIGNUP = 'New sign-up';
@@ -122,7 +126,7 @@ export const MARK_CAME = 'Came';
 // the button that changes nothing (N3): the card stays in the column it sits in ("Keep in Booked")
 export const keepIn = (column) => `Keep in ${column}`;
 
-// ----- Panel -----
+// ----- The profile window (v0.639; was the side panel, v0.236) -----
 export const BACK = 'Back';
 export const CLOSE_PANEL = 'Close';
 export const UNSAVED_NOTE = 'Unsaved note. Save it or cancel first.';
@@ -134,10 +138,11 @@ export const COPY_NUMBER = 'Copy number';
 export const COPIED = 'Copied';
 export const callTitle = (name) => `Call ${name}`;
 export const STATUS = 'Status';
+export const statusButton = (name) => `${STATUS}: ${name}`; // the status tag button's name (no "Status" label is shown)
 export const FOLLOW_UP = 'Follow up';
+export const followUpButton = (text) => `${FOLLOW_UP}: ${text}`;
 export const FREE_CLASS = 'Free class';
 export const PHONE = 'Phone';
-export const SIBLINGS = 'Sibling';
 export const NOTES = 'Notes and calls';
 export const ADD_NOTE = 'Add a note…';
 export const NOTE_LABEL = 'Note';
@@ -146,10 +151,61 @@ export const NOTE_BAD = 'A note needs 1 to 1000 characters, with no hidden chara
 export const WHEN = 'Follow up';
 export const WHEN_OPTIONS = [['tomorrow', 'Tomorrow'], ['3', 'In 3 days'], ['week', 'Next week'], ['pick', 'Pick a date'], ['none', 'No follow-up']];
 export const PICK_DATE = 'Follow-up date';
-export const FORM_AND_WAIVER = 'Form answers and waiver';
-export const answersLine = (n) => (n === 1 ? '1 answer' : `${n} answers`);
-export const fromForm = (form, date) => `from "${form}" · ${shortDate(date).slice(4)}`;
-export const enteredBy = (name) => `Entered by ${name}`;
+// the gray strip at the top: the form they filled out (v0.639)
+export const SENT_ONLINE = 'Sent online';
+export const SENT_KIOSK = 'Sent on the kiosk at the desk';
+export const enteredAtDesk = (name) => `Entered at the desk by ${name}`;
+// how the form came in: staff Fill in ("Entered at the desk by …"), the kiosk, or the family's own page
+export const sentHow = (p) => (p.enteredBy ? enteredAtDesk(p.enteredBy) : p.source === 'kiosk' ? SENT_KIOSK : SENT_ONLINE);
+// "Sent online · Wed, Nov 4, 2026 · 6:12 pm · Worcester"
+export const stripLine = (how, date, time, school) => [how, date, time, school].filter(Boolean).join(' · ');
+export const yearsOld = (n) => (n === 1 ? '1 year old' : `${n} years old`);
+// the section heads (13px, like Camps' camper detail)
+export const HEAD_FAMILY = 'Child and family';
+export const HEAD_ANSWERS = 'Form answers';
+export const asSentOn = (day) => `as sent on ${shortDate(day).slice(4)}`;
+export const NO_QUESTIONS = 'This form asks no other questions.';
+export const YES = 'Yes';
+// One answer in words: a list → "a, b"; a ticked box → "Yes"; a date → "Mon, Mar 4, 2019"; an
+// address → one line; nothing → '' (the profile shows "—", the printed sheet a blank line).
+export function answerWords(field, value) {
+  if (value === undefined || value === null || value === '' || value === false) return '';
+  if (Array.isArray(value)) return value.join(', ');
+  if (value === true) return YES;
+  if (field?.type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDate(value);
+  if (typeof value === 'object') return addressLine(value);
+  return String(value);
+}
+export const HEAD_WAIVER = 'Waiver';
+export const HEAD_FREE = 'Free class and follow-up';
+// Child and family rows
+export const DATE_OF_BIRTH = 'Date of birth';
+export const PARENT = 'Parent or guardian';
+export const HOME_ADDRESS = 'Home address';
+export const SIBLING = 'Brother or sister';
+export const siblingLine = (name, age, status) => `${name}${age !== null && age !== undefined ? `, ${age}` : ''}${status ? ` · ${status}` : ''}`;
+export const openSibling = (line) => `${SIBLING}: ${line}`;
+export const NOT_ASKED_ON_FORM = 'Not asked on this form'; // the form had no Address question
+export const notAskedAge = (age) => `Not asked · age on the form: ${age}`; // signed up before dates of birth were asked
+// Waiver rows
+export const AGREED = 'Agreed';
+export const WAIVER_NOT_ON_FORM = 'Not on this form';
+export const DATE_SIGNED = 'Date signed';
+export const keptUntil = (date, afterClass) => `Kept until ${date} (90 days after ${afterClass ? 'the free class' : 'signing'}).`;
+export const READ_WAIVER = 'Read the waiver';
+export const WAIVER_TEXT = 'Waiver text';
+// Print (v0.636): straight away for one child; a menu when the sign-up has brothers or sisters
+export const PRINT = 'Print';
+export const PRINT_PREPARING = 'Preparing…';
+export const PRINT_OFF_WHILE_HIDDEN = 'Print is off while private details are hidden. Print at the desk.';
+export const PRINT_FAILED = "Couldn't get the pages ready to print. Check the connection and try again.";
+export const printOnly = (name) => `${name} only`;
+// "Ava and Noah · 2 sheets", "Ava, Noah and Mia · 3 sheets" — one visitor sheet per child (a
+// sheet that doesn't fit runs to a second page, so the menu counts sheets, not pages)
+export function printFamily(names) {
+  const list = names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return `${list} · ${names.length} sheets`;
+}
 export const NO_TIME_YET = 'No time yet — call to set one up';
 export const CLASS_GONE = 'Class cancelled — call the family';
 export const PROSPECT_GONE = 'That prospect no longer exists.';
@@ -168,13 +224,50 @@ export const DELETE_PROSPECT = 'Delete prospect';
 export const NO_FOLLOW_UP = 'No follow-up';
 export const CURRENT = '(now)';
 export const EDIT_STATUSES = 'Edit statuses';
-export const signedLine = (signedAt, hasPicture) => (signedAt
-  ? `waiver signed ${shortDate(localDay(signedAt)).slice(4)}${hasPicture ? '' : ' (picture deleted after 90 days)'}`
-  : 'no waiver');
 export const SHOW_SIGNATURE = 'Show signature';
 export const SIGNATURE = 'Signature';
 export const SIGNATURE_GONE = 'The picture was deleted 90 days after the free class. The waiver was signed on the date above.';
+export const SIGNATURE_FAILED = "Couldn't load the signature. Check the connection and try again.";
 export const LOADING_PANEL = 'Loading…';
+
+// ----- Dates and times as the profile and the sheet show them -----
+// 'YYYY-MM-DD' → "Mon, Mar 4, 2019"; withWeekday false → "Mar 4, 2019"
+export const longDate = (day, withWeekday = true) => formatDate(day, { weekday: withWeekday });
+// A database time → the Massachusetts day in words ("Wed, Nov 4, 2026"; a 9 pm sign-up stays that day)
+export const dayOf = (at, withWeekday = true) => longDate(localDay(at), withWeekday);
+// A database time → the Massachusetts clock time, "6:12 pm" (read as "18:12", then written the
+// app's own way by schedule/time.js)
+const NY_24H = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+export function clockOf(at) {
+  const t = Date.parse(at ?? '');
+  if (Number.isNaN(t)) return '';
+  const minutes = parseTime(NY_24H.format(new Date(t)));
+  return minutes === null ? '' : formatTime(minutes, true);
+}
+// the free class with its year, for the sheet: "Mon, Nov 9, 2026 · 4:00 pm · White"
+export const classLineYear = (b) => `${formatDate(b.date)} · ${formatTime(parseTime(b.start), true)} · ${b.className}`;
+
+// ----- The printed visitor sheet (PrintSheet.jsx; v0.636, mockup rev 3 screen 4) -----
+export const SCHOOL_FULL = 'Jae H. Jeong’s U.S. Taekwondo Center';
+export const VISITOR_INFORMATION = 'Visitor information';
+export const printedBy = (date, name) => `Printed ${date}${name ? ` by ${name}` : ''}`;
+export const FORM_WORD = 'Form:';
+// "Sent online Wed, Nov 4, 2026, 6:12 pm" / "Entered at the desk by Jeffrey Berg, Sat, Oct 31, 2026, 10:05 am"
+export const sheetSentLine = (how, date, time) => (how === SENT_ONLINE ? `${how} ${date}, ${time}` : `${how}, ${date}, ${time}`);
+export const SHEET_STUDENT = 'Student';
+export const SHEET_NAME = 'Name';
+export const SHEET_AGE = 'Age';
+export const SHEET_NOT_ASKED = 'Not asked';
+export const SHEET_NO_TIME = 'No time yet';
+export const SHEET_EMAIL = 'Email';
+export const SHEET_AGREE = 'I have read and agree to the waiver.';
+export const SHEET_SIGNATURE = 'Signature of parent or guardian';
+export const signedOn = (date) => `Signed on ${date}`; // the picture was deleted after 90 days (v0.242)
+export const SHEET_STAFF = 'For staff use';
+export const SHEET_TRIAL = 'Trial classes';
+export const SHEET_COMMENTS = 'Comments';
+export const SHEET_BOXES_HINT = 'Write the date on top, initial below.';
+export const SHEET_PRIVATE = 'Private: keep in the locked drawer, shred when done.'; // the footer's right side is the child's name
 
 // timeline: typed notes always show; the automatic changes open from "History" (v0.255)
 export const HISTORY = 'History';

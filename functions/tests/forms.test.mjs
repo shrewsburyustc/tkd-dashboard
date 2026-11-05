@@ -437,6 +437,20 @@ test('POST ok: the fixed answer only; typed values passed; client key is not the
   assert.equal(db.log.closed, 1, 'client closed through waitUntil');
 });
 
+test('POST: a child with a last name and a date of birth, and the home address (0036), are passed on as they are', async () => {
+  const db = fakeDb({ submit: okSubmit });
+  const body = goodBody({
+    answers: { ...goodBody().answers, address: { street: '12 Elm Street', city: 'Worcester', state: 'MA', zip: '01602' } },
+    children: [{ first_name: 'Ava', last_name: 'Nguyen', dob: '2019-03-04' }],
+  });
+  const r = await run(handlePost, context({ body }), { openDatabase: db.openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.equal(r.json.status, 'ok');
+  const args = db.log.calls[0][1];
+  // the Function only checks types and sizes; the database checks each child and works out the age
+  assert.deepEqual(args.children, body.children);
+  assert.deepEqual(args.answers, body.answers);
+});
+
 test('POST: no signature (form without a waiver) and a kiosk token are passed on as they are', async () => {
   const db = fakeDb({ submit: { ...okSubmit, repeat: true } });
   const body = goodBody({ kiosk_token: KIOSK });

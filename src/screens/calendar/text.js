@@ -79,6 +79,8 @@ export function dayLabel(date, info, isToday) {
 export const followUpCount = (n) => (n === 1 ? '1 follow-up' : `${n} follow-ups`);
 export const FOLLOW_UPS = 'Follow-ups';
 export const followUpsOf = (school) => `Follow-ups · ${school}`;
+// "Ava N.": the child's first name and the initial of their own last name — the parent's for a
+// child who signed up before last names were asked (prospects/followUps.js childInitial, v0.637)
 export const followName = (f) => `${f.childFirstName}${f.initial ? ` ${f.initial}.` : ''}`;
 export const OVERDUE = 'Overdue';
 export const DUE_TODAY = 'Due today';

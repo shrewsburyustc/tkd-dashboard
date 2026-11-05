@@ -99,7 +99,7 @@ group('preview database: forms_public_get / forms_public_submit', () => {
   const versionId = randomUUID();
   const schedule = { versions: [{ id: versionId, location_code: 'worcester', starts_on: '2026-01-01' }],
     slots: [{ id: randomUUID(), version_id: versionId, weekday: 3, starts_at: '16:00:00', ends_at: '16:40:00', class_ids: [classes[0].id] }] };
-  let store = { schema: 2, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
+  let store = { schema: 3, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
   const b = createFormsBackend({
     loadStore: () => store, saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); }, now: () => Date.parse('2027-01-11T13:00:00Z'), newId: randomUUID,
     getSchedule: () => schedule, getCalendar: () => ({ closures: [], closureClasses: [] }), getClasses: () => classes, today: () => '2027-01-11',
@@ -120,9 +120,11 @@ group('preview database: forms_public_get / forms_public_submit', () => {
   assert.deepEqual(got.times.map((t) => t.date), ['2027-01-13', '2027-01-20']);
   assert.equal(b.publicGet('admin').status, 'not_found');
   const sig = `data:image/png;base64,${'A'.repeat(300)}`;
+  // each child with a last name and a date of birth, and the home address (0036)
   const send = (key, extra = {}) => b.publicSubmit({ slug: 'free-class', submissionKey: key, publishedVersion: 1,
-    answers: { parent_name: 'Maria Lopez', parent_phone: '508-555-0142', parent_email: 'm@example.com', waiver: true },
-    children: [{ first_name: 'Sofia', age: 8 }], bookings: [{ child: 0, class_id: classes[0].id, date: '2027-01-13', starts_at: '16:00' }], signature: sig, ...extra });
+    answers: { parent_name: 'Maria Lopez', parent_phone: '508-555-0142', parent_email: 'm@example.com',
+      address: { street: '7 Main Street', city: 'Shrewsbury', state: 'MA', zip: '01545' }, waiver: true },
+    children: [{ first_name: 'Sofia', last_name: 'Lopez', dob: '2018-05-20' }], bookings: [{ child: 0, class_id: classes[0].id, date: '2027-01-13', starts_at: '16:00' }], signature: sig, ...extra });
   const key = randomUUID();
   const ok = send(key);
   assert.equal(ok.status, 'ok');
@@ -131,6 +133,7 @@ group('preview database: forms_public_get / forms_public_submit', () => {
   assert.equal(store.submissions.length, 1);
   assert.equal(store.submissions[0].source, 'public');
   assert.equal(store.submissions[0].entered_by, null);
+  assert.deepEqual(store.submissions[0].children, [{ first_name: 'Sofia', last_name: 'Lopez', dob: '2018-05-20', age: 8 }]); // age on 2027-01-11
   const taken = send(randomUUID());
   assert.equal(taken.status, 'time_taken'); // the only spot is gone
   assert.deepEqual(taken.times.map((t) => t.date), ['2027-01-20']);

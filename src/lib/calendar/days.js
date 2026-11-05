@@ -89,7 +89,8 @@ export function recordMatches(record, slot, code) {
 //   ctx.bookings       [{ id, locationCode, classId, className, date, start 'HH:MM', end, childFirstName,
 //                        formName, status, classRunning }] — free classes from Forms (v0.241 answer 6)
 //   ctx.followUps      [{ id, code, childFirstName, initial, followUpOn }] — prospects' open follow-ups
-//                      (v0.612 / v0.615; made by prospects/followUps.js calendarFollowUps)
+//                      (v0.612 / v0.615; made by prospects/followUps.js calendarFollowUps; `initial`
+//                      is the child's own last initial, or the parent's for older sign-ups, v0.637)
 // Returns {
 //   date, weekday,
 //   schools:  [{ code, name, classes: [{ slot, name, colorKeys, cancelled }] }]   (by start time)
@@ -165,9 +166,10 @@ export function buildDay(date, ctx) {
     .filter((b) => b.date === date && b.status === 'booked' && codes.has(b.locationCode))
     .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.className.localeCompare(b.className)));
 
+  // by the name as shown, "Ava N.": first name, then the initial after it
   const followUps = (ctx.followUps ?? [])
     .filter((f) => f.followUpOn === date && codes.has(f.code))
-    .sort((a, b) => a.childFirstName.localeCompare(b.childFirstName) || a.initial.localeCompare(b.initial));
+    .sort((a, b) => a.childFirstName.localeCompare(b.childFirstName) || (a.initial ?? '').localeCompare(b.initial ?? ''));
 
   return {
     date,

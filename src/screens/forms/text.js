@@ -112,18 +112,23 @@ export const DUPLICATE_SLUG = 'Another form already uses that web address. Pick 
 export const PALETTE_GROUPS = { Contact: 'Contact', Choices: 'Choices', School: 'School', Layout: 'Layout' };
 export const TYPE_LABEL = {
   short_text: 'Short text', long_text: 'Long text', phone: 'Phone', email: 'Email', number: 'Number', date: 'Date',
-  choice: 'One choice', checkboxes: 'Checkboxes', dropdown: 'Dropdown', booking: 'Book a class', waiver: 'Waiver',
+  address: 'Address', choice: 'One choice', checkboxes: 'Checkboxes', dropdown: 'Dropdown', booking: 'Book a class', waiver: 'Waiver',
   heading: 'Heading and text', step: 'New step',
   parent_name: 'Parent name', parent_phone: 'Phone', parent_email: 'Email', children: 'Children',
 };
 export const addType = (type) => `Add ${TYPE_LABEL[type]}`;
-export const ONLY_ONE = { booking: 'This form already has a Book a class block.', waiver: 'This form already has a Waiver block.' };
+export const ONLY_ONE = {
+  booking: 'This form already has a Book a class block.',
+  waiver: 'This form already has a Waiver block.',
+  address: 'This form already has an Address question.', // one per form (v0.634)
+};
 export const TOO_MANY = 'A form can have at most 60 fields.';
 export const stepLabel = (n, label) => `Step ${n} · ${label}`;
 export const REQUIRED_MARK = '· required';
 export const LOCKED = 'Always on the form';
 export const showsIf = (question, value) => `Shows only if "${question}" is ${value}`;
-export const CHILD_HINT = 'First name, age · "+ Add another child"';
+export const CHILD_HINT = 'First name, last name, date of birth · "+ Add another child"'; // v0.634, v0.637
+export const ADDRESS_HINT = 'Street, city, state, ZIP code'; // the Address question in the builder (v0.634)
 export const bookingHint = (classes, times) => (classes === 0 ? 'No classes picked yet' : `${classes === 1 ? '1 class' : `${classes} classes`} · ${times === 1 ? '1 time' : `${times} times`}`);
 export const WAIVER_HINT_EMPTY = 'No wording yet — write it before publishing';
 export const WAIVER_HINT = 'Waiver text · I agree · signature';
@@ -148,7 +153,7 @@ export const STEP_NAME = 'Step name';
 export const HELP = 'Help text (optional)';
 export const REQUIRED = 'Required';
 export const ALWAYS_REQUIRED = 'Always required — we need a way to reach the family.';
-export const CHILDREN_HINT = 'Families add 1 to 6 children: first name and age.';
+export const CHILDREN_HINT = 'Families add 1 to 6 children: first name, last name and date of birth.';
 export const BOOKING_NEVER_REQUIRED = 'Never required — when no times are open, families can still send the form.';
 export const OPTIONS = 'Options';
 export const option = (n) => `Option ${n}`;
@@ -255,8 +260,17 @@ export const stepOf = (n, total, label) => `Step ${n} of ${total} · ${label}`;
 export const ENTERED_BY = 'You are filling this in for a family. It will be marked "Entered by" you.';
 export const CHILD = (n) => `Child ${n}`;
 export const FIRST_NAME = 'First name';
-export const AGE = 'Age';
+export const LAST_NAME = 'Last name'; // v0.637
+export const DOB = 'Date of birth'; // v0.634: the age is worked out from it
+// inside the date of birth's calendar (the same set-up as Star's date of birth)
+export const DOB_CALENDAR_HINT = "Pick the month and year first, then the day. Future dates can't be chosen.";
+export const yearsOld = (n) => (n === 1 ? '1 year old' : `${n} years old`); // under the date of birth once picked
 export const ADD_CHILD = 'Add another child';
+// The Address question's four boxes (v0.634; the question's own label, e.g. "Home address", is above them)
+export const STREET = 'Street address';
+export const CITY = 'City';
+export const STATE = 'State';
+export const ZIP_CODE = 'ZIP code';
 export const removeChild = (n) => `Remove child ${n}`;
 export const pickTimeFor = (name) => (name ? `Free class for ${name}` : 'Free class');
 export const pickTimeProblem = (name) => `Pick a time for ${name}, or "No time yet".`;
@@ -271,6 +285,9 @@ export const TIMES_FAILED = "Couldn't load the open times. Check the connection.
 export const AGREE = 'I have read and agree to the waiver';
 export const SIGN_HERE = 'Signature';
 export const SIGN_HINT = 'Sign with a finger, pen or mouse.';
+// under the signature: today's date, filled in by itself (v0.635); the day saved is the day it's sent
+export const DATE_SIGNED = 'Date signed';
+export const DATE_SIGNED_HINT = "Filled in automatically with today's date.";
 export const CLEAR = 'Clear';
 export const SEND = 'Send';
 export const SUBMITTING = 'Sending…';
@@ -284,11 +301,37 @@ export const FIELD_PROBLEM = {
   date: 'Pick a date.',
   choice: 'Pick one of the options.',
   children: 'Add at least one child (up to 6).',
-  child: 'Each child needs a first name and an age from 2 to 99.',
+  // the children's boxes (v0.634, v0.637): put together into one line by childrenProblemLine below
+  child_dob: "Pick each child's date of birth.",
+  child_name_long: "Keep each child's first and last name to 40 characters or fewer.",
+  child_name_bad: "A child's name has a character that can't be used. Retype it.",
+  child_age: 'Each child needs to be 2 to 99 years old. Check the date of birth.',
+  // the Address question (v0.634): put together by addressProblemLine below
+  address: 'Enter the whole address: street, city, state and ZIP code.',
+  zip: 'Enter a 5-digit ZIP code.',
   signature: 'Please sign in the box.',
   booking_pick: 'Pick a time for each child, or "No time yet".',
   booking_full: 'Two children picked a time with fewer spots left. Pick another time for one of them.',
 };
+// "a", "a and b", "a, b and c"
+const andList = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+const CHILD_BOX_WORDS = { first_name: 'first name', last_name: 'last name', dob: 'date of birth' };
+// The ONE line under the children, about every wrong box at once (design review), from
+// childrenProblemKinds (lib/forms/fields.js): e.g. a blank child → "Enter each child's first name,
+// last name and date of birth."
+export function childrenProblemLine({ missing, long, bad, age }) {
+  const parts = [];
+  if (missing.length === 1 && missing[0] === 'dob') parts.push(FIELD_PROBLEM.child_dob);
+  else if (missing.length > 0) parts.push(`Enter each child's ${andList(missing.map((box) => CHILD_BOX_WORDS[box]))}.`);
+  if (long) parts.push(FIELD_PROBLEM.child_name_long);
+  if (bad) parts.push(FIELD_PROBLEM.child_name_bad);
+  if (age) parts.push(FIELD_PROBLEM.child_age);
+  return parts.join(' ');
+}
+// The ONE line under an address, about every wrong box at once: codes = addressPartProblems' values
+export function addressProblemLine(codes) {
+  return ['address', 'zip', 'text'].filter((code) => codes.includes(code)).map((code) => FIELD_PROBLEM[code]).join(' ');
+}
 export const takenBy = (names) => `Taken by ${names}`;
 export const SENT_TITLE = 'Sent';
 export const sentText = (parent) => `${parent}'s sign-up is saved.`;
