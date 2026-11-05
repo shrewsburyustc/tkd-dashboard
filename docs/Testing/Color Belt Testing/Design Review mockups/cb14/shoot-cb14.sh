@@ -7,8 +7,15 @@ C="../../Testing/Color Belt Testing/Design Review mockups/cb14"
 ONE="../../Testing/Color Belt Testing/Design Review mockups/p3/oneshot.mjs"
 S="$C/steps"
 J="$C/inject-cb14.js"
-for spec in ${SIZES:-"820 1180 touch w820" "390 844 touch w390" "320 640 touch w320"}; do
+# One size per line: "width height touch name". (Before: an unquoted list split into single words,
+# so cdp.mjs got "size 320" with no height and hung.) SIZES may hold lines in the same form.
+SPECS="${SIZES:-820 1180 touch w820
+390 844 touch w390
+320 640 touch w320}"
+while IFS= read -r spec; do
+  [ -n "$spec" ] || continue
   set -- $spec
+  if [ $# -lt 4 ]; then echo "bad size line: $spec (want: width height touch name)" >&2; exit 1; fi
   timeout 20 node cdp.mjs size $1 $2 $3 >/dev/null || true
   sleep 2
   # remember each school's list at this size
@@ -20,6 +27,6 @@ for spec in ${SIZES:-"820 1180 touch w820" "390 844 touch w390" "320 640 touch w
   # the Prices tab
   timeout 40 node "$ONE" $1 $2 $3 "$C/$4-prices-after.png" "$S/wait.js" "$S/nav-classes.js" "$S/set-prices.js" "$J"
   echo "shot $4"
-done
+done <<< "$SPECS"
 rm -f "$C/tmp-grab.png"
 node cdp.mjs size 1280 800 >/dev/null
