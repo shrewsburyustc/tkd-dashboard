@@ -245,9 +245,9 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q9-blackbelt-red-not-
 - **Change:** after Dashboard core's R3-13 puts the words in `src/components/text.js`, use "Past days can't be chosen.". Leave the family-page date-of-birth hint unless Jeffrey wants it changed too.
 - **Check (preview mode):** open each staff calendar with gray days: each has exactly that one line.
 
-### R4-07 (your part) — The gray "Payment history is hidden" line · Low · after Dashboard core's R4-07, in your Part 2
+### R4-07 (your part) — The gray "Payment history is hidden" line · Low · done: BB8 and Dashboard core's R4-07 — check only
 
-- **Change:** build BB8's history on the shared `HistoryLine`. After Dashboard core's R4-07, the gray line shows in every history while hidden, paid or not.
+- **Done:** BB8's history is built on the shared `HistoryLine` (`src/blackBelt/staff/candidates/CandidateHistory.jsx:44`), and Dashboard core's R4-07 (v1.122, on main since 7511656) shows the gray line there in every history while hidden, paid or not.
 - **Check (preview mode):** switch on; Mia Chen and Rina Patel both show the line.
 
 ### R1-06 (your part) — Your Undo payment words, from the shared file · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06

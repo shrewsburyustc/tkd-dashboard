@@ -78,7 +78,7 @@ Picture (today, with amber outlines): `docs/Design Review/Rolling check/Pass 1/p
 
 ### Shared fixes you get from Dashboard core · Low
 
-- **R4-07:** the history's gray "Payment history is hidden on this tablet." line shows only for people who had money changes (`HistoryLine.jsx:106`), so it tells paid from unpaid. Dashboard core shows it in every history while hidden; your CB7 line gets it. Check it once Dashboard core's R4-07 is on main.
+- **R4-07:** the history's gray "Payment history is hidden on this tablet." line showed only for people who had money changes, so it told paid from unpaid. Dashboard core's R4-07 (v1.122, on main since 7511656) shows it in every history while hidden, and your CB7 line gets it from the shared part: check it.
 - **R4-09:** clickable tags (`.ev-tag-button`) are 22 px tall with a mouse. Dashboard core gives them a 24 px target in `testing-events.css`. Check your tags after.
 - **R3-13:** Dashboard core puts "Past days can't be chosen." and "Days after today can't be chosen." in `src/components/text.js`. If your CB11 date fields gray days, use those words and show the hint.
 

@@ -69,11 +69,9 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q7-toast-covers-butto
 - **Change:** one shared rule: an Undo pressed while a save runs is *queued* (it waits its turn) and runs as soon as that save ends. Its toast stays meanwhile, as "Undoing…" in the busy look. You build the Toast side and one small helper; each section's `runUndo` uses it (Star, Camps, Black Belt and new students have a matching item; Color Belt's note too). This is a shared part (`src/components/Toast.jsx`) with a new state: show Jeffrey one small picture of the "Undoing…" toast first.
 - **Check (preview mode):** `__tkdPreview.setTestingDelay(2500)`; On the parts page: an Undo pressed while a fake save runs shows "Undoing…" and runs when the save ends. (Each section's matching item checks its own screen.)
 
-### R4-07 — The gray "Payment history is hidden" line tells paid from unpaid · Low
+### R4-07 — The gray "Payment history is hidden" line tells paid from unpaid · Low · done in your R4-07 work (v1.122) — check only
 
-- **What's wrong:** the history's gray line "Payment history is hidden on this tablet." appears only for people who had money changes (`HistoryLine.jsx:106`, `hidden && hiddenPayments > 0`). So seeing it or not tells paid from unpaid — the thing v0.249 hides. In Camps, with the switch on, Ella Grant (unpaid) shows no gray line and Chloe Nguyen (paid) shows it.
-- **Rule:** v1.108 / v1.010 (money changes are left out and one gray line says so); v0.249 (paid / not-paid hidden on that device).
-- **Change:** show the line in every history while the switch is on (drop `hiddenPayments > 0`; the "nothing to open" branch just below then shows "History" plus the line). Star and Camps use `HistoryLine` today; Black Belt and Color Belt get the fix with their Part 2.
+- **Done** in your R4-07 work (v1.122, on main since 7511656): while private details are hidden, the shared history shows the gray line in every history, paid or not (`HistoryLine.jsx:102–104` on main 7511656), and one with nothing to open reads "History" with the line under it.
 - **Check (preview mode):** Camps, switch on: Ella Grant (unpaid) and Chloe Nguyen (paid) both show the gray line; Star the same.
 
 ### R1-08 — Buttons and tags that wait for a Mark paid save don't look unavailable · Low
@@ -182,7 +180,7 @@ Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.0
 
 ## Done when
 
-- Every Fix now item is built, reviewed and approved by Jeffrey in the preview: a design reviewer at the four sizes for visual changes, a code reviewer, and a security reviewer for anything touching the database or privacy (R4-07 is a privacy fix).
+- Every Fix now item is built, reviewed and approved by Jeffrey in the preview: a design reviewer at the four sizes for visual changes, a code reviewer, and a security reviewer for anything touching the database or privacy.
 - Both builds pass (`npm run build` and `npm run build:preview-mode`), and so does `node src/lib/shared/checks.mjs`.
 - Jeffrey's decisions are rows from your block.
 - The status file is current, and the work is committed on `dashboard-core`. No push.

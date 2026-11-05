@@ -48,10 +48,10 @@ Each file starts with a short starter to paste into that session. The file reach
 |---|---|---|---|---|
 | Star | `Fix-Star.md` | 13 + 9 after another session's fix | 0 | 7 |
 | New students | `Fix-NewStudents.md` | 12 + 4 after another session's fix, and 1 check (already done on main) | 0 | 15 |
-| Black Belt | `Fix-BlackBelt.md` | 22 + 10 after another session's fix | 0 | 12 |
+| Black Belt | `Fix-BlackBelt.md` | 22 + 9 after another session's fix, and 1 check (already done on main) | 0 | 12 |
 | Camps | `Fix-Camps.md` | 10 + 8 after another session's fix | 0 | 13 |
 | Finance | `Fix-Finance.md` | 8 + 4 after another session's fix | 0 | 3 |
-| Dashboard core | `Fix-DashboardCore.md` | 13 | 0 | 15 |
+| Dashboard core | `Fix-DashboardCore.md` | 12, and 1 check (already done on main) | 0 | 15 |
 | Color Belt | `Notes-ColorBelt.md` | 8 + 7 after another session's fix, and 3 checks (its merged work, main 84a6e7d) | 0 | 9 |
 
 ## Questions for Jeffrey, in order (one at a time)
@@ -157,7 +157,7 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
     4. "Color Belt's family-page text (Star's and Camps' family pages use the same file) goes from weight 600 to 500, like all other screen text."
     5. "Toasts: a one-sentence toast has no full stop at the end ('Ava Reed restored'); a two-sentence toast keeps them. Prospects, Forms, Finance and Calendar change."
 - **Next:** the Main session merges `design-review` when Jeffrey says so; then pass 2. This branch also removes the duplicate v0.737 row that main carries (392bc9e, lines 939 and 942); the merge keeps the copy with the notes.
-- **Re-merged 2026-11-05:** `main` moved on while Jeffrey paused the sessions (New students' N3 confirm boxes, v0.633, and visitor profile, migration 0036 and v0.634–v0.641; Camps' v0.738), so this branch merged it in (main d7b5ebf, merge fdf2770; only the rulebook conflicted). The New students and Camps fix files were then checked again against that code: their references cite main d7b5ebf's lines; New students' R2-06 and two of its smaller lines were already done, so they are checks now; three new places were added to items New students already had (R2-01, S-2); and Camps' two items about the pizza line (R3-02, R3-10) name v0.738's count line instead. Main's new v0.738 note sits on the kept v0.737 row.
+- **Re-merged 2026-11-05:** `main` moved on while Jeffrey paused the sessions (New students' N3 confirm boxes, v0.633, and visitor profile, migration 0036 and v0.634–v0.641; Camps' v0.738), so this branch merged it in (main d7b5ebf, merge fdf2770; only the rulebook conflicted). The New students and Camps fix files were then checked again against that code: their references cite main d7b5ebf's lines; New students' R2-06 and two of its smaller lines were already done, so they are checks now; three new places were added to items New students already had (R2-01, S-2); and Camps' two items about the pizza line (R3-02, R3-10) name v0.738's count line instead. Main's new v0.738 note sits on the kept v0.737 row. Then `main` moved again (Dashboard core's R4-07, v1.122) and was merged in too (main 7511656, merge 1671d06): R4-07 is done, so Dashboard core's item and Black Belt's part are checks now.
 - **Pass 2:** what merged into `main` after pass 1's cut (e7fd75b):
   - N15 + Calendar Event types (e640af5)
   - Black Belt BB13 (2e806e7) and BB8 History (b428666)
@@ -168,4 +168,5 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
   - Black Belt v0.974–v0.975 (392bc9e)
   - new students' N3 confirm boxes (v0.633) and visitor profile: migration 0036 and v0.634–v0.640 (a5d0e1d), and v0.641 (d7b5ebf)
   - Camps v0.738, Early drop-off and Late pick-up on the roster (3a8dc70)
+  - Dashboard core R4-07, the gray line in every history while hidden, v1.122 (7511656)
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.
