@@ -41,7 +41,7 @@ At the next rulebook edit: add "also Camps' Coming card (v0.737)" to §2.4's `ti
 
 One picture: **22-record-refund** (⋯ → Record refund, the box, the toast with Undo, the history line, the receipt's minus line, Edit / Undo payment grayed with "Undo the refund first.").
 
-- **Migration (number to come from Main; next free 0037):**
+- **Migration 0039** (reserved by Main 2026-11-05, main c769a66; file `0039_<what>.sql`, SETUP "## Migration 0039: …", `step0039`):
   - `camp_payments` gets a new kind `refund`: its own negative row with the date, the way (cash or check), the desk's school, and no `reverses_payment_id`. Copies Star's `star_record_refund` (0006).
   - `camp_payments_kind_check` widens. It was last redefined in **0022**, not 0013.
   - The refund function is for admins only. It refuses:
