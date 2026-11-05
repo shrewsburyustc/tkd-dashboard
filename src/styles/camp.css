@@ -183,7 +183,7 @@
 }
 .camp-week__title {
   font-size: var(--text-13);
-  font-weight: 600;
+  font-weight: 500; /* screen text uses 400 and 500 only (§7; design review R4-06, v1.048). This class is only on the family page; the printed roster's styles are in camps.css (@media print) and keep their 600. */
   color: var(--color-text);
 }
 .camp-week__all {

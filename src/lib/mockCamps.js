@@ -20,6 +20,11 @@
 //   camps.select(table, columns, filters, orders, ctx)   filters: [{ col, value, op:'eq'|'in' }]
 //   camps.rpc(name, args, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName, userId }
 //   camps.publicCamp(code) / camps.publicSignup({...}) — what camps_registrar may call
+//     defer(fn)    → runs fn a moment later (default: 100 ms; the checks pass their own);
+//                    optional — failNextCampRead uses it to end its "same moment"
+//   camps.failNextSave() / camps.failNextCampRead(target?) — the next save / the next read (of
+//                    one table or read function, if named) fails like a dropped connection
+//                    (test helpers; __tkdPreview in mockClient.js)
 //
 // The store is RE-READ ON EVERY CALL (no copy is kept in memory), so the staff tab and the family
 // page open in another tab always see each other's changes.
@@ -928,8 +933,15 @@ function yearsBefore(dateIso, years) {
 
 // ----- The backend -----
 
-export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(), today, newId, locations }) {
+// failNextCampRead's "same moment" (see that helper): reads that reach the fake database within
+// this many milliseconds of the first failed one fail too. Not 0: the fake network answers each
+// read after a timer, and two reads started a millisecond apart (React StrictMode's double start)
+// can then answer on either side of a 0 ms timer. 100 ms is far shorter than the 15-second refresh.
+const READ_FAIL_MOMENT_MS = 100;
+
+export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(), today, newId, locations, defer = (fn) => setTimeout(fn, READ_FAIL_MOMENT_MS) }) {
   let failNext = false; // set by failNextSave()
+  let failRead = null; // set by failNextCampRead(): { target, firing } or null
   const stamp = () => new Date(now()).toISOString();
   // The "today" the default data uses for its check-ins.
   const dataToday = () => today();
@@ -1966,6 +1978,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   // supabase.from(table).select(columns).eq(…).in(…).order(…)
   function select(table, columns, filters = [], orders = [], ctx = {}) {
     if (!(table in GRANTED)) return fail('PGRST205', `Could not find the table 'public.${table}' in the schema cache`, 404);
+    if (readFails(table)) return droppedRead(); // failNextCampRead helper
+
     if (!ctx.signedIn) return denied(`table ${table}`);
     const existing = [...GRANTED[table], ...HIDDEN[table]];
     const wanted = String(columns ?? '*').split(',').map((col) => col.trim()).filter(Boolean);
@@ -2000,6 +2014,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       failNext = false; // pretend the connection dropped: nothing changes (failNextSave helper)
       return { data: null, error: { message: 'Failed to fetch (preview: failNextSave)' }, count: null, status: 0, statusText: '' };
     }
+    if (READ_ONLY.has(name) && readFails(name)) return droppedRead(); // failNextCampRead helper
     if (!ctx.signedIn) return denied(`function ${name}`);
     let parsed;
     try {
@@ -2027,6 +2042,39 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
 
   function failNextSave() {
     failNext = true;
+  }
+
+  // failNextCampRead(target?): the NEXT Camps read answers like a dropped connection. failNextSave
+  // skips reads, so this is how the preview shows the Retry of a failed read (design review S-2,
+  // rulebook v1.051): Edit camp, and the reads before Undo payment, Edit payment, Delete
+  // permanently and Delete camp.
+  //   target — a Camps table or read-function name ('camps', 'camp_roster', 'camp_camper_detail',
+  //            …): only a read of that one fails. No target: any Camps read (a select on a Camps
+  //            table, or camp_camper_detail / camp_camper_history).
+  // "The next read" means the first matching read AND every other matching read in the same
+  // moment: the failure stays on until `defer` runs (in the browser READ_FAIL_MOMENT_MS = 100 ms
+  // after the first failed read; the checks run it by hand). Why: one screen read is often several at once (a camp =
+  // five tables), and in development React's StrictMode starts Edit camp's read twice on purpose
+  // and throws the first away — a failure used up only by that throwaway read would never show.
+  // (With no target, the camp page's and camp list's own refresh every 15 seconds can still use
+  // it up; arm it right before pressing, or pass a target.)
+  function failNextCampRead(target = null) {
+    failRead = { target: typeof target === 'string' && target !== '' ? target : null, firing: false };
+  }
+  // Does this read (a table or function name) fail now? The first match starts the "same moment".
+  function readFails(name) {
+    if (failRead === null || (failRead.target !== null && failRead.target !== name)) return false;
+    if (!failRead.firing) {
+      failRead.firing = true;
+      const armed = failRead;
+      defer(() => {
+        if (failRead === armed) failRead = null; // cleared (unless it was armed again meanwhile)
+      });
+    }
+    return true;
+  }
+  function droppedRead() {
+    return { data: null, error: { message: 'Failed to fetch (preview: failNextCampRead)' }, count: null, status: 0, statusText: '' };
   }
 
   // "Another admin" changes every camp, camper, sign-up and template: open dialogs go stale.
@@ -2091,7 +2139,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   }
 
   return {
-    select, rpc, publicCamp, publicSignup, failNextSave, simulateOtherAdminEdit, reset, snapshot: read,
+    select, rpc, publicCamp, publicSignup, failNextSave, failNextCampRead, simulateOtherAdminEdit, reset, snapshot: read,
     firstOpenCode, simulateSignup,
   };
 }

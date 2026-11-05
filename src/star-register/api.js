@@ -13,14 +13,14 @@
 // only deal with status words.
 //
 //   getEvent(code) → { status:'ok', state:'open'|'not_open'|'closed'|'finished', closed_on,
-//                      school:{code, name}, event:{name, testing_date, start_time 'HH:MM', note,
+//                      school:{code, name}, event:{name, testing_date, start_time 'HH:MM', end_time 'HH:MM'|null (0041), note,
 //                      auto_close_on, where:{name, address}}, dans:[{dan, label, star_limit,
 //                      standard_cents, same_day_cents, pass_mark, max_score, categories:[{name,
 //                      credits}]}], turnstile_site_key }
 //                  | { status: 'not_found' | 'not_open' | 'rate_limited' | 'bad_request' | 'unavailable' | 'network' }
 //   sendRegistration(code, body) → { status:'ok', reference, first_name, last_name, dan, dan_label,
 //                      stars_from, stars_to, standard_cents, same_day_cents, paying_by, event_name,
-//                      testing_date, start_time, school_name, where:{name, address} }
+//                      testing_date, start_time, end_time (0041; null when none), school_name, where:{name, address} }
 //                  | { status:'closed', closed_on } | { status: 'not_found' | 'not_open' | 'finished'
 //                    | 'rate_limited' | 'invalid' | 'bad_request' | 'verify_failed' | 'unavailable' | 'network' }
 //   body = { submission_id, first_name, last_name, date_of_birth, email, dan, stars_from, paying_by,

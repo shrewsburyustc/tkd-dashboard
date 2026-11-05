@@ -220,7 +220,9 @@ await check('order (proposal 6): by time; at the same time the event first, then
 await check('wording: titles, lines and the count for many / one / none, Both and one school', () => {
   const answer = toHomeAnswer(okData([goodEvent], [goodPrivate('Alex', 'Kim', '16:00', 'shrewsbury', randomUUID())]).data);
   const [event, alex] = homeItems(answer, null);
-  assert.equal(T.eventTitle(event), 'Fall 2026 Star Testing · 10:00 AM');
+  // no end time in this answer → only the start, kept whole (v0.520)
+  assert.equal(T.eventTitle(event), 'Fall 2026 Star Testing · 10:00\u00a0AM');
+  assert.equal(T.eventTitle({ ...event, endTime: '12:00' }), 'Fall 2026 Star Testing · 10:00\u00a0AM – 12:00\u00a0PM');
   assert.equal(T.eventLine(event), 'Shrewsbury school · 22 candidates testing today');
   assert.equal(T.privateTitle(alex), 'Private star testing · 4:00 PM');
   assert.equal(T.privateLine(alex), 'Alex Kim · 1st Dan · 1 star → 2 stars');

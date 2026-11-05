@@ -129,6 +129,7 @@ const okEvent = {
     name: 'November Star Testing',
     testing_date: '2026-11-21',
     start_time: '10:00',
+    end_time: '12:00', // 0041 (v0.520)
     note: '35 classes for trophy',
     auto_close_on: '2026-11-14',
     where: { name: 'Worcester', address: { street: '123 Main St', city: 'Worcester', state: 'MA', zip: '01608', country: 'US' }, code: 'worcester' },
@@ -154,6 +155,7 @@ const expectedEvent = {
     name: 'November Star Testing',
     testing_date: '2026-11-21',
     start_time: '10:00',
+    end_time: '12:00',
     note: '35 classes for trophy',
     auto_close_on: '2026-11-14',
     where: { name: 'Worcester', address: { street: '123 Main St', city: 'Worcester', state: 'MA', zip: '01608' } },
@@ -184,6 +186,7 @@ const okRegister = {
   event_name: 'November Star Testing',
   testing_date: '2026-11-21',
   start_time: '10:00',
+  end_time: '12:00', // 0041 (v0.520)
   school_name: 'Worcester',
   where: { name: 'Worcester', address: null },
   submission_id: 'must not be passed on',
@@ -206,6 +209,7 @@ const expectedRegister = {
   event_name: 'November Star Testing',
   testing_date: '2026-11-21',
   start_time: '10:00',
+  end_time: '12:00',
   school_name: 'Worcester',
   where: { name: 'Worcester', address: null },
 };

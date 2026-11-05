@@ -118,6 +118,8 @@
 // localStorage 'tkd.preview.camps'; setRole, failNextSave, failSavesUntilRetry, reconnect,
 // setTestingDelay, setToday and simulateOtherAdminEdit cover Camps too):
 //   __tkdPreview.resetCamps()             back to the default camps, campers and templates
+//   __tkdPreview.failNextCampRead()       the next Camps read fails like a dropped connection (to see its Retry);
+//                                         failNextCampRead('camp_camper_detail') = only that read
 //   __tkdPreview.campWeek()               today = Wed, Apr 21, 2027 (April Vacation Camp week),
 //                                         camps reset + reload — to see Check in
 //   __tkdPreview.setCampsRegistration(false) the camp form's kill switch
@@ -1073,6 +1075,14 @@ export function createMockClient() {
       failNextTesting = true;
       staffAccounts.failNext();
       return 'The next Testing or Camps save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
+    },
+    // failNextCampRead()                     → the next Camps read (any table or read function) fails.
+    // failNextCampRead('camp_camper_detail') → only the next read of that table / function fails.
+    failNextCampRead(target) {
+      if (target !== undefined && !CAMP_TABLES.includes(target) && !CAMP_READ_RPC_NAMES.includes(target)) return `Unknown Camps read. Use one of: ${[...CAMP_TABLES, ...CAMP_READ_RPC_NAMES].join(', ')}.`;
+      camps.failNextCampRead(target);
+      if (target !== undefined) return `The next read of ${target} will fail like a dropped connection. Press Retry to read it again.${target === 'camp_camper_detail' ? ' On touch screens, arm it AFTER Camper detail is open (opening it reads camp_camper_detail too).' : ''}`;
+      return 'The next Camps read will fail like a dropped connection (e.g. Edit camp). The camp page and camp list refresh every 15 seconds, which can use it up: arm it right before pressing, or name a read, e.g. failNextCampRead(\'camp_camper_detail\') for ⋯ Undo payment (on touch screens, arm that one AFTER Camper detail is open: opening it reads camp_camper_detail too).';
     },
     resetStaffAccounts() {
       staffAccounts.reset();
