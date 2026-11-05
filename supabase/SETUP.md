@@ -3073,7 +3073,7 @@ Tested in PGlite on every run (`run.mjs` step0036: a form and a family from befo
 
 ## Migration 0041: Star event end time
 
-**Status: not applied yet.** Built on `star-testing` (rulebook v0.520, urgent: families must see the testing time "from when to when" so parents know when to pick up). Apply it **before** the app version that shows and saves the end time is deployed. The live app keeps working after it (see "the old app" below).
+**Status: applied 2026-11-05** (pasted by Jeffrey; 0041c: pre-apply check `1 / 0 / 2 / 5 / 0 / 5 / 0`, all 7 fingerprint rows match the tested copy; 0041d: security advisor nothing new (the three staff functions only under the usual "signed-in can run a security definer function" warning); 0041e: Jeffrey ran 0041_tests, 0006_tests, 0023_tests and 0028_tests: all passed). Was: not applied yet. Built on `star-testing` (rulebook v0.520, urgent: families must see the testing time "from when to when" so parents know when to pick up). Apply it **before** the app version that shows and saves the end time is deployed. The live app keeps working after it (see "the old app" below).
 
 **Production order:** … 0034 → 0036 (all live) → **0041**. It needs 0006, 0023 and 0028 (Star testing) — it stops with "0041 needs migrations 0006, 0023 and 0028 (Star testing) first" if one is missing.
 
