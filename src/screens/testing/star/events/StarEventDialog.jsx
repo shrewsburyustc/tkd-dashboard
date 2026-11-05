@@ -2,10 +2,13 @@
 // Why it exists: approved Events mockups screens 4–7 (v0.85–v0.87, v0.92) and gap mockups G4–G5
 // (v0.500). The form, top to bottom:
 //   - Event name
-//   - Testing date | Start time            (Start time: the shared time list, components/TimeList.jsx,
-//     6:00 AM–10:00 PM every 5 minutes, "Choose a time" while empty — design review S12, rulebook
-//     v0.518 / v1.109; the testing date uses the dashboard's own calendar, components/DatePicker.jsx,
-//     v0.502/v0.503)
+//   - Testing date (its own row since v0.520)
+//   - Start time | End time (one per row on phones). Both are the shared time list,
+//     components/TimeList.jsx, every 5 minutes, "Choose a time" while empty (design review S12,
+//     rulebook v0.518 / v1.109). v0.520: both are required; Start runs 6:00 AM–9:55 PM (a 10:00 PM
+//     start could have no later end), End starts 5 minutes after the chosen start and runs to
+//     10:00 PM. The testing date uses the dashboard's own calendar, components/DatePicker.jsx
+//     (v0.502/v0.503).
 //   - Where (Worcester school / Shrewsbury school; the shared dropdown, components/Select.jsx,
 //     v1.100) + its hint; in Add event, the line "Start time and Where copied from <last event>.
 //     Change if needed." (nothing to copy for the very first event: both start empty, screen 4)
@@ -29,7 +32,7 @@ import Dialog from '../../../../components/Dialog.jsx';
 import Notice from '../../../../components/Notice.jsx';
 import { nameKey, nameProblem, normalizeName } from '../../../../lib/testing/names.js';
 import { NOTE_MAX, isIsoDate } from '../../../../lib/testing/eventRules.js';
-import { editWouldReopen, startTimeIsValid, WHERE_CODES } from '../../../../lib/star/starEventRules.js';
+import { editWouldReopen, endTimeIsValid, startTimeIsValid, startTimeMinutes, WHERE_CODES } from '../../../../lib/star/starEventRules.js';
 import { eventState } from '../../../../lib/testing/eventRules.js';
 import { closingBoxBlocked, closingDateLimits, closingYears, testingDateLimits, testingYears } from '../../../../lib/star/eventDateRules.js';
 import DatePicker from '../../../../components/DatePicker.jsx';
@@ -41,6 +44,14 @@ import * as T from './text.js';
 // Where's choices (made once; they never change). The Start time list makes its own: TimeList's
 // default range, 6:00 AM–10:00 PM every 5 minutes, is exactly the database's rule since migration
 // 0028 (startTimeIsValid in starEventRules.js; checked in eventsChecks.mjs).
+// End time's list starts 5 minutes after the chosen start (v0.520); no start yet → 6:05 AM.
+// A saved end time outside the list (e.g. the start moved past it) is still shown (TimeList).
+function endListFrom(startTime) {
+  const start = startTimeIsValid(startTime) ? startTimeMinutes(startTime) : 6 * 60;
+  const first = Math.min(start + 5, 22 * 60);
+  return `${String(Math.floor(first / 60)).padStart(2, '0')}:${String(first % 60).padStart(2, '0')}`;
+}
+
 const WHERE_CHOICES = WHERE_CODES.map((code) => ({ value: code, label: T.whereText(code) }));
 
 // Did anything change since the dialog opened? (Esc / backdrop / back arrow close only if not.)
@@ -51,6 +62,7 @@ export function isStarEventFormDirty(state) {
     a.name !== b.name ||
     a.testingDate !== b.testingDate ||
     a.startTime !== b.startTime ||
+    (a.endTime ?? null) !== (b.endTime ?? null) ||
     a.whereCode !== b.whereCode ||
     a.open !== b.open ||
     a.autoClose !== b.autoClose ||
@@ -91,6 +103,12 @@ export function checkStarEventForm(state, events, today, record) {
   const timeOk = startTimeIsValid(values.startTime);
   const whereOk = WHERE_CODES.includes(values.whereCode);
   const timeError = !timeOk && triedSave ? T.CHOOSE_START_TIME : null;
+  // ----- End time (v0.520): required, and later than the start -----
+  const endChosen = startTimeMinutes(values.endTime ?? null) !== null;
+  const endOk = timeOk && endTimeIsValid(values.startTime, values.endTime);
+  let endError = null;
+  if (!endChosen) endError = triedSave ? T.CHOOSE_END_TIME : null;
+  else if (timeOk && !endOk) endError = T.END_AFTER_START; // e.g. the start was moved past it
   const whereError = !whereOk && triedSave ? T.CHOOSE_WHERE : null;
 
   // ----- Closing date (v0.85): on or before the testing date; a changed one not in the past -----
@@ -114,6 +132,7 @@ export function checkStarEventForm(state, events, today, record) {
     dateOk &&
     !(dateChanged && values.testingDate < today) &&
     timeOk &&
+    endOk &&
     whereOk &&
     closingOk &&
     !noteError;
@@ -123,6 +142,7 @@ export function checkStarEventForm(state, events, today, record) {
         name: typed,
         testingDate: values.testingDate,
         startTime: values.startTime,
+        endTime: values.endTime,
         whereCode: values.whereCode,
         registrationOpen: values.open,
         autoCloseOn: values.autoClose ? values.closingDate : null,
@@ -131,7 +151,7 @@ export function checkStarEventForm(state, events, today, record) {
     : null;
   const sameAsSaved = isEdit && valid && !isStarEventFormDirty(state);
   const canSave = valid && !state.saving && !state.blocked;
-  return { nameError, dateError, timeError, whereError, closingError, noteError, canSave, sameAsSaved, payload };
+  return { nameError, dateError, timeError, endError, whereError, closingError, noteError, canSave, sameAsSaved, payload };
 }
 
 // The notes that can sit above the buttons (keys set by StarEventsTab).
@@ -225,6 +245,7 @@ export default function StarEventDialog({
     name: `${idBase}-name`,
     date: `${idBase}-date`,
     time: `${idBase}-time`,
+    end: `${idBase}-end`,
     where: `${idBase}-where`,
     regLabel: `${idBase}-reg-label`,
     auto: `${idBase}-auto`,
@@ -256,34 +277,36 @@ export default function StarEventDialog({
           {check.nameError && <Notice id={`${ids.name}-error`}>{check.nameError}</Notice>}
         </div>
 
+        {/* v0.520: Testing date has its own row; Start time | End time share the next one */}
+        <div className="field">
+          <span id={`${ids.date}-label`} className="field-label">
+            {T.TESTING_DATE}
+          </span>
+          {/* The dashboard's own calendar (v0.502, v0.503): today or later; opens on the chosen
+              month, or this month when empty */}
+          <DatePicker
+            id={ids.date}
+            label={T.TESTING_DATE}
+            value={values.testingDate}
+            today={today}
+            min={testingLimits.min}
+            max={testingLimits.max}
+            years={testingYears(today, record?.testingDate)}
+            hint={T.TESTING_DATE_HINT}
+            placeholder={T.CHOOSE}
+            disabled={readOnly}
+            invalid={Boolean(check.dateError)}
+            describedBy={check.dateError ? `${ids.date}-error` : undefined}
+            inline={isPhone}
+            onChange={(testingDate) => {
+              onChange({ testingDate });
+              onTouch('testingDate');
+            }}
+          />
+          {check.dateError && <Notice id={`${ids.date}-error`}>{check.dateError}</Notice>}
+        </div>
+
         <div className="ev-two">
-          <div className="field">
-            <span id={`${ids.date}-label`} className="field-label">
-              {T.TESTING_DATE}
-            </span>
-            {/* The dashboard's own calendar (v0.502, v0.503): today or later; opens on the chosen
-                month, or this month when empty */}
-            <DatePicker
-              id={ids.date}
-              label={T.TESTING_DATE}
-              value={values.testingDate}
-              today={today}
-              min={testingLimits.min}
-              max={testingLimits.max}
-              years={testingYears(today, record?.testingDate)}
-              hint={T.TESTING_DATE_HINT}
-              placeholder={T.CHOOSE}
-              disabled={readOnly}
-              invalid={Boolean(check.dateError)}
-              describedBy={check.dateError ? `${ids.date}-error` : undefined}
-              inline={isPhone}
-              onChange={(testingDate) => {
-                onChange({ testingDate });
-                onTouch('testingDate');
-              }}
-            />
-            {check.dateError && <Notice id={`${ids.date}-error`}>{check.dateError}</Notice>}
-          </div>
           <div className="field">
             <span id={`${ids.time}-label`} className="field-label">
               {T.START_TIME}
@@ -293,11 +316,28 @@ export default function StarEventDialog({
               labelId={`${ids.time}-label`}
               describedBy={check.timeError ? `${ids.time}-error` : undefined}
               value={values.startTime}
+              to="21:55" // v0.520: the last start that can still have a later end (a saved 10:00 PM still shows)
               readOnly={readOnly}
               invalid={Boolean(check.timeError)}
               onChange={(startTime) => onChange({ startTime })}
             />
             {check.timeError && <Notice id={`${ids.time}-error`}>{check.timeError}</Notice>}
+          </div>
+          <div className="field">
+            <span id={`${ids.end}-label`} className="field-label">
+              {T.END_TIME}
+            </span>
+            <TimeList
+              id={ids.end}
+              labelId={`${ids.end}-label`}
+              describedBy={check.endError ? `${ids.end}-error` : undefined}
+              value={values.endTime ?? null}
+              from={endListFrom(values.startTime)}
+              readOnly={readOnly}
+              invalid={Boolean(check.endError)}
+              onChange={(endTime) => onChange({ endTime })}
+            />
+            {check.endError && <Notice id={`${ids.end}-error`}>{check.endError}</Notice>}
           </div>
         </div>
 

@@ -36,7 +36,7 @@ A and B are screen-only, so they can go live first. C waits on the database. D w
 
 ## Step C — migration 0038 (reserved by Main 2026-11-05, main c769a66)
 
-One migration, built on the live functions: `star_update_event` from 0023, `star_start_time_is_valid` from 0028, everything else from 0006. Handoff §6 rules. SETUP section "## Migration 0038: …", `step0038` in `run.mjs`, tests and fingerprints files, security review.
+One migration, built on the live functions: **`star_add_event`, `star_update_event`, `star_public_answer`, `star_home_today` and `star_public_event` from 0041** (the end time, v0.520, goes live first: never copy 0006's or 0023's versions, and never bring back their 7- / 8-input signatures), `star_start_time_is_valid` from 0028, everything else from 0006. `star_undo_event_edit` saves and restores `end_time` too. Handoff §6 rules. SETUP section "## Migration 0038: …", `step0038` in `run.mjs`, tests and fingerprints files, security review.
 
 1. **R2-02:** new `star_undo_event_edit(...)`: puts the old details **and** the old registration switch back in one transaction, or nothing. Model: `bb_undo_cycle_edit` (0032). The toast's Undo calls it once. Fake twin in `src/lib/mockStarEvents.js`.
 2. **R1-01:** `star_payments.school` (set from the candidate's current school for existing rows; then not null). `star_record_payment` and `star_record_refund` take the device's school (new input, default blank = candidate's school, so the live app keeps working). Undo, Edit payment (both its rows) copy the school from the payment they correct. The app passes This device's school: touches **`src/App.jsx`** and **`src/screens/Testing.jsx`** (shared files). Fake twin in `mockStarCandidates.js`. Then tell Main, so Finance's R1-01 can read it.

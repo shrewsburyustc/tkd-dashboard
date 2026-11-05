@@ -3,7 +3,7 @@
 // (v0.155) and TKD-StarTesting-Phase7-Gap-Mockups.html (v0.515, proposals 1, 4, 9, 12). Keeping them
 // in one file means a wording change is a one-line change, and homeChecks.mjs can check them.
 // Plain functions only (no React), so Node can load this file.
-import { startTimeLabel } from './starEventRules.js';
+import { startTimeLabel, testingTimeLabel } from './starEventRules.js';
 import { whereText } from './eventsText.js';
 
 // The small gray heading above the cards (proposal 2). Drawn in capitals by CSS, so a screen
@@ -21,8 +21,8 @@ const starsText = (n) => plural(n, 'star', 'stars');
 
 const SCHOOL = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
 
-// "Fall 2026 Star Testing · 10:00 AM"
-export const eventTitle = (item) => `${item.name} · ${startTimeLabel(item.time)}`;
+// "Fall 2026 Star Testing · 10:00 AM – 12:00 PM" (v0.520; only the start when no end time is saved)
+export const eventTitle = (item) => `${item.name} · ${testingTimeLabel(item.time, item.endTime)}`;
 
 // The count (proposal 4; one school, proposal 12). The number is the database's — Home never counts.
 //   Both:        "22 candidates testing today" · "1 candidate testing today" · "No candidates testing today"

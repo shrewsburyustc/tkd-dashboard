@@ -8,7 +8,7 @@
 //
 // Dates are 'YYYY-MM-DD' text and are shown in US style ("Nov 7", "Sat, Nov 14, 2026"); they are
 // read as a calendar date on this computer, so they never shift a day because of time zones.
-import { startTimeLabel } from './starEventRules.js';
+import { testingTimeLabel } from './starEventRules.js';
 
 // ----- Dates -----
 function parseDay(iso) {
@@ -45,9 +45,10 @@ export function tagText(tag) {
 export const tagIsGreen = (tag) => tag?.code === 'open_until' || tag?.code === 'open';
 
 // ----- Event page summary line (v0.90, v0.92) -----
-// "Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 23 candidates"
+// "Sat, Nov 14, 2026 · 10:00 AM – 12:00 PM at Shrewsbury school · both schools · 23 candidates" (the end
+// time since v0.520; an event without one shows only its start)
 export const eventSummary = (event) =>
-  `${shortDate(event.testingDate)} · ${startTimeLabel(event.startTime)} at ${whereText(event.whereCode)} · both schools · ${candidatesCount(event.activeCount ?? 0)}`;
+  `${shortDate(event.testingDate)} · ${testingTimeLabel(event.startTime, event.endTime)} at ${whereText(event.whereCode)} · both schools · ${candidatesCount(event.activeCount ?? 0)}`;
 
 // ----- Registration links dialog: the status line (v0.92 screen 11, v0.99) -----
 export const EACH_SCHOOL_LINK = 'Each school has its own link; the link sets the candidate’s school.';

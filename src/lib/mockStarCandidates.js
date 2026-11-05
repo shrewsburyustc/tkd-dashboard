@@ -75,7 +75,7 @@
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { eventState, isIsoDate, addDays, todayInSchoolTime, publicStateFor, signatureIsValid, FORM_PAYING_BY } from './testing/eventRules.js';
 import { startTimeIsValid, STAR_ACK_VERSION, STAR_CODE_PATTERN } from './star/starEventRules.js';
-import { STAR_EVENTS_SCHEMA, SEED_EVENT_IDS, copyStarTemplateInto } from './mockStarEvents.js';
+import { STAR_EVENTS_SCHEMA, SEED_EVENT_IDS, copyStarTemplateInto, seedEndTime } from './mockStarEvents.js';
 import { paymentSummary, netPaidCents, reversedIds, hasUnreversedRefund } from './star/feeRules.js';
 import { candidateResult, ageOn } from './star/resultRules.js';
 import { starEmailIsValid, trimEmail } from './star/emailRule.js';
@@ -958,7 +958,7 @@ const HANDLERS = {
       .filter((e) => e.testing_date === today)
       .sort((x, y) => cmp(hhmm(x.start_time), hhmm(y.start_time)) || cmp(x.name, y.name) || cmp(x.id, y.id))
       .map((e) => ({
-        id: e.id, name: e.name, start_time: hhmm(e.start_time), where_code: e.where_code,
+        id: e.id, name: e.name, start_time: hhmm(e.start_time), end_time: e.end_time ? hhmm(e.end_time) : null, where_code: e.where_code,
         where_name: SCHOOL_NAMES[e.where_code] ?? null,
         counts: { worcester: countAt(e, 'worcester'), shrewsbury: countAt(e, 'shrewsbury') },
       }));
@@ -1047,7 +1047,8 @@ function publicEventAnswer(db, env, code, schoolAddress) {
     status: 'ok', state: pub.state, closed_on: pub.closedOn,
     school: { code: schoolCode, name: SCHOOL_NAMES[schoolCode] },
     event: {
-      name: e.name, testing_date: e.testing_date, start_time: String(e.start_time).slice(0, 5), note: e.note ?? null,
+      name: e.name, testing_date: e.testing_date, start_time: String(e.start_time).slice(0, 5),
+      end_time: e.end_time ? String(e.end_time).slice(0, 5) : null, note: e.note ?? null, // end_time: 0041
       auto_close_on: e.auto_close_on ?? null, where: whereOf(e, schoolAddress),
     },
     dans,
@@ -1063,6 +1064,7 @@ function publicAnswer(db, c, schoolAddress) {
     status: 'ok', reference: c.reference, first_name: c.first_name, last_name: c.last_name, dan: c.dan, dan_label: d.label,
     stars_from: c.stars_from, stars_to: c.stars_from + 1, standard_cents: d.standard_cents, same_day_cents: d.same_day_cents,
     paying_by: c.paying_by, event_name: e.name, testing_date: e.testing_date, start_time: String(e.start_time).slice(0, 5),
+    end_time: e.end_time ? String(e.end_time).slice(0, 5) : null, // 0041
     school_name: SCHOOL_NAMES[c.location_code] ?? null, where: whereOf(e, schoolAddress),
   };
 }
@@ -1190,7 +1192,7 @@ export function defaultStarCandidatesData(base, { today }) {
     const testingDate = addDays(today, days);
     const at = iso(noon + addedDay * DAY_MS);
     work.events.push({
-      id: SEED_CANDIDATE_EVENT_IDS[key], name, testing_date: testingDate, start_time: start, where_code: where,
+      id: SEED_CANDIDATE_EVENT_IDS[key], name, testing_date: testingDate, start_time: start, end_time: seedEndTime(start), where_code: where,
       registration_open: open, auto_close_on: addDays(testingDate, -closeBefore),
       first_opened_at: openedDay === null ? null : iso(noon + openedDay * DAY_MS),
       public_code_worcester: codeW, public_code_shrewsbury: codeS, note,
