@@ -514,17 +514,16 @@ export const COL_PAID = 'Paid';
 export const dueTag = (cents) => `${formatMoney(cents)} due`;
 export const dayHead = (iso, today, wide) => (wide ? `${dayChip(iso)}${iso === today ? ' · today' : ''}` : weekdayShort(iso));
 export const weekdayLetter = (iso) => ({ Mon: 'M', Tue: 'T', Wed: 'W', Thu: 'Th', Fri: 'F', Sat: 'Sa', Sun: 'Su' })[weekdayShort(iso)] ?? weekdayShort(iso);
-// The note under a name, today only — short, one line (review: less clutter): the extra's name
-// before any comma, without "Early " / "Late ": "Early drop-off, 7:30–9:00 AM" → "Drop-off",
-// "Late pick-up, 3:00–4:00 PM" → "Pick-up"; a missing pizza party → "No pizza". (not in the mockups)
-export function extraShort(name) {
-  const base = String(name).split(',')[0].trim().replace(/^(early|late)\s+/i, '');
-  return base.charAt(0).toUpperCase() + base.slice(1);
-}
+// The amber note under a name, today only — short, one line: a missing pizza party → "No pizza"
+// (an extra offered only on some days that the child didn't choose). Since picture 19 (option A)
+// the every-day extras (Early drop-off, Late pick-up) are in the day boxes instead. (not in the mockups)
 export const noExtraShort = (name) => `No ${String(name).trim().split(/\s+/)[0].toLowerCase()}`; // (not in the mockups)
-export const checkInDayLabel = (name, day) => `Check in ${name}, ${dayLong(day)}`; // screen readers
-export const undoCheckInDayLabel = (name, day, stamp) => `${name} checked in ${dayLong(day)} at ${clockTime(stamp)}. Undo check-in`; // screen readers
-export const missedDayLabel = (name, day) => `${name} didn’t come ${dayLong(day)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
+// Screen readers: the day box's label ends with the every-day extras the child gets that day,
+// lower-cased short names (", early drop-off, late pick-up"); shortNames = [] adds nothing (picture 19).
+const extrasTail = (shortNames = []) => shortNames.map((n) => `, ${n.toLowerCase()}`).join('');
+export const checkInDayLabel = (name, day, shortNames) => `Check in ${name}, ${dayLong(day)}${extrasTail(shortNames)}`; // screen readers
+export const undoCheckInDayLabel = (name, day, stamp, shortNames) => `${name} checked in ${dayLong(day)} at ${clockTime(stamp)}${extrasTail(shortNames)}. Undo check-in`; // screen readers
+export const missedDayLabel = (name, day, shortNames) => `${name} didn’t come ${dayLong(day)}${extrasTail(shortNames)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
 export const notSignedUpLabel = (day) => `Not signed up ${dayLong(day)}`; // screen readers
 export const payTagLabel = (name, text) => `${name}: ${text}. Mark paid`; // screen readers on the $ due / Owes tag
 export const NO_MATCH_ROSTER = 'No camper with that name.'; // (not in the mockups)
@@ -555,11 +554,18 @@ export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (n
 export const checkInFailed = (name) => `${name} wasn't checked in. Check the connection and try again.`; // (not in the mockups)
 export const undoCheckInFailed = (name) => `${name}'s check-in wasn't undone. Check the connection and try again.`; // (not in the mockups)
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
-// "Pizza party today: 11" — the gray line under the count cards, only on a day the extra is offered
-// (an extra offered only on some days); several such extras are joined with " · ".
-export const extraTodayLine = (name) => `${name} today:`;
-export const extraTodayCount = (name, n) => `${extraTodayLine(name)} ${n}`;
+// The gray line under the count cards, for the Coming card's day (picture 19; replaces "Pizza party
+// today: 11"): "Mon, Apr 19 · Early drop-off: 5 · Late pick-up: 6" before the camp / between camp
+// days, "Today · Early drop-off: 5 · Late pick-up: 6 · Pizza party: 11" on a camp day. No line after
+// the camp. parts = campRules.dayExtraCounts (short names, 0 counts included).
 export const EXTRAS_JOIN = ' · ';
+export const EXTRAS_TODAY = 'Today';
+export const extraCount = (name, n) => `${name}: ${n}`;
+export const dayExtrasLine = (parts) =>
+  [parts.isToday ? EXTRAS_TODAY : dayLong(parts.day), ...parts.counts.map((c) => extraCount(c.name, c.count))].join(EXTRAS_JOIN);
+// The legend's end (picture 19): " · Early early drop-off · Late late pick-up" — the screen draws the
+// word ("Early") in the day boxes' blue, then this meaning (the short name, lower-cased).
+export const legendExtraMeaning = (shortName) => ` ${shortName.toLowerCase()}`;
 // Paid tags, the camper menu. The tag opens the shared Mark paid box (components/MarkPaidBox.jsx,
 // rulebook v0.735), whose own words ("Paid by", "Mark paid $166", "They chose Cash on the form.")
 // are in components/text.js.

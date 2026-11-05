@@ -149,7 +149,9 @@ export function deletePlannedBody(v, count, before) {
   const keeps = before ? `${before} keeps running` : 'The schedule before it keeps running';
   return `${slots} ${keeps} past ${formatDate(v.startsOn, { weekday: false })}. This can't be undone.`;
 }
-export const DELETE = 'Delete';
+// the shared confirm box (N3): "Keep schedule" · DELETE_PLANNED (the ⋯ item's words) · "Deleting…"
+export const KEEP_SCHEDULE = 'Keep schedule';
+export const DELETING = 'Deleting…';
 
 // ----- Notes, banners, toasts -----
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';

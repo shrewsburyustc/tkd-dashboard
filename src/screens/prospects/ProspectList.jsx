@@ -1,14 +1,16 @@
 // ProspectList.jsx — the list of prospects (mockup screens 1, 2, 8, 11).
 // Why it exists: one row per child: Child · Parent · Progress · Follow up · Status.
+//   - Child: "Ava N." — the first name and the child's own last initial (v0.637; the parent's for
+//     children who signed up before last names were asked).
 //   - Progress (v0.246): the small track (Signed up → Class booked → Came → Joined) plus one line
 //     saying where the child is or what's next ("Signed up Oct 18 · needs a class").
-//   - PC: a table-like list; with the side panel open, only Child · Progress · Status fit.
-//   - Tablet: the full list (the panel is below it).
+//   - PC and tablet: a table-like list, always full width (a child opens in the profile window
+//     over it, v0.639 — the side panel beside or under the list is gone).
 //   - Phone: cards (child · parent, then the track and its line) with the status tag; an amber
 //     "Follow up · Today" line under it when due, unless the track's line is already amber.
-// Never a phone number, email, age or answer here (rulebook section 5; the list function doesn't
-// even return them). Overdue / today follow-ups, "Did … come?" and a cancelled class are amber,
-// always with words.
+// Never a phone number, email, age, date of birth, address or answer here (rulebook section 5;
+// the list function doesn't even return them). Overdue / today follow-ups, "Did … come?" and a
+// cancelled class are amber, always with words.
 import { IconAlertTriangle } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { progressOf } from './progress.js';
@@ -44,7 +46,7 @@ function Cell({ value, className = '' }) {
 // The blue dot = a new sign-up you haven't opened (what the rail badge counts: New / Booked).
 export const isUnopened = (p, statusById) => !p.openedByMe && ['new', 'booked'].includes(statusById.get(p.statusId)?.builtin ?? '');
 
-export default function ProspectList({ items, label, statusById, initials, today, selectedId, narrow, isPhone, emptyText, onOpen }) {
+export default function ProspectList({ items, label, statusById, initials, today, selectedId, isPhone, emptyText, onOpen }) {
   if (items.length === 0) return <p className="tempty pempty">{emptyText}</p>;
 
   if (isPhone) {
@@ -83,12 +85,12 @@ export default function ProspectList({ items, label, statusById, initials, today
   }
 
   return (
-    <div className={`plist${narrow ? ' plist--narrow' : ''}`} role="table" aria-label={label}>
+    <div className="plist" role="table" aria-label={label}>
       <div className="plist-row plist-head" role="row">
         <span role="columnheader">{T.COL_CHILD}</span>
-        {!narrow && <span role="columnheader">{T.COL_PARENT}</span>}
+        <span role="columnheader">{T.COL_PARENT}</span>
         <span role="columnheader">{T.COL_PROGRESS}</span>
-        {!narrow && <span role="columnheader">{T.COL_FOLLOW}</span>}
+        <span role="columnheader">{T.COL_FOLLOW}</span>
         <span role="columnheader">{T.COL_STATUS}</span>
       </div>
       {items.map((p) => {
@@ -101,11 +103,11 @@ export default function ProspectList({ items, label, statusById, initials, today
                 {name}
               </button>
             </span>
-            {!narrow && <span role="cell">{p.parentName}</span>}
+            <span role="cell">{p.parentName}</span>
             <span role="cell" className="plist-progress">
               <Track progress={progressOf(p, statusById.get(p.statusId), today)} />
             </span>
-            {!narrow && <Cell value={followCell(p, statusById, today)} />}
+            <Cell value={followCell(p, statusById, today)} />
             <span role="cell">
               <StatusTag status={statusById.get(p.statusId)} />
             </span>

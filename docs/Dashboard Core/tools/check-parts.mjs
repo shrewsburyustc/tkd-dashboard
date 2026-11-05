@@ -22,7 +22,7 @@
 //     tall as on PC and right after the dot, with an invisible box of exactly 44 px that a finger
 //     finds, covering neither the cards above nor the control under the line); after Show all with
 //     the keyboard, the focus back on the card that was on, with its ring, and no ring after a
-//     click (v1.119); the history line;
+//     click (v1.119); the history line, and its gray line in every history while hidden (v1.122);
 //   - a turned-off or unavailable icon button: gray, no gray square under the pointer, its tooltip
 //     still showing, the bordered one's light border, GrayText in Windows High Contrast (v1.120);
 //   - the success colors' shared settings, and the green tag drawn with them (v1.121);
@@ -966,6 +966,28 @@ await withChrome(async (tab) => {
     const metas = await ev(`[...document.querySelectorAll('.hist-meta')].map((m) => m.textContent)`);
     assert.deepEqual(metas, ['Oct 22 · Jeffrey Berg', 'Oct 19 · Staff', 'Oct 13 · Family form']);
     assert.equal(await ev(`Boolean(document.querySelector('.hist-btn .tabler-icon-chevron-down'))`), true);
+  });
+
+  // While private details are hidden, the gray line shows in EVERY history, so seeing it or not
+  // can't tell paid from unpaid (v1.122, design review R4-07): a paid person's history (payments
+  // left out), a never-paid person's, and one with nothing recorded all end with the same line.
+  const histWords = () => ev(`(() => {
+    const d = document.querySelector('[role=dialog]');
+    const none = d.querySelector('.hist-none');
+    // "History ·" and "no changes yet" are two spans side by side (the gap is CSS), so join them with a space
+    return { line: none ? [...none.children].map((c) => c.textContent.trim()).join(' ') : d.querySelector('.hist-btn')?.textContent.trim(),
+      items: d.querySelectorAll('.hist-item').length, gray: d.querySelector('.hist-hidden-line')?.textContent ?? null };
+  })()`);
+  await check('M7 hidden (v1.122): the gray line in every history — paid, never paid, nothing recorded; none while not hidden', async () => {
+    const GRAY = 'Payment history is hidden on this tablet.';
+    await open('M7/hidden');
+    assert.deepEqual(await histWords(), { line: 'History · 1 change', items: 1, gray: GRAY }, 'paid');
+    await open('M7/hidden-unpaid');
+    assert.deepEqual(await histWords(), { line: 'History · 1 change', items: 1, gray: GRAY }, 'never paid: the same as paid');
+    await open('M7/hidden-empty');
+    assert.deepEqual(await histWords(), { line: 'History', items: 0, gray: GRAY }, 'nothing recorded');
+    await open('M7/empty');
+    assert.deepEqual(await histWords(), { line: 'History · no changes yet', items: 0, gray: null }, 'not hidden: unchanged');
   });
 
   // ===================== M5 — the real download: name and size =====================

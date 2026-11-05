@@ -16,10 +16,9 @@
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCalendar, IconCalendarEvent, IconCalendarPlus, IconDots, IconEdit, IconHistory, IconMapPin, IconPlus, IconTrash } from '@tabler/icons-react';
-import Dialog from '../../components/Dialog.jsx';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
-import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { addSlots, deleteVersion, planVersion, removeSlot, setClassAges, setClassColor, updateSlot, updateVersion } from '../../lib/schedule/api.js';
 import { agesToText } from '../../lib/schedule/ages.js';
@@ -672,28 +671,26 @@ export default function ScheduleSchool({
       );
     } else {
       dialogElement = (
-        <Dialog title={T.deletePlannedTitle(dialog.version)} variant="confirm" describedBy={`del-${dialog.key}`} onRequestClose={cancelDialog}>
-          <p id={`del-${dialog.key}`} className="tdialog-sub tdialog-body">
-            {T.deletePlannedBody(dialog.version, dialog.count, (() => {
-              const before = copySourceFor(classified, dialog.version.startsOn);
-              return before ? versionLabel(before, classified).split(' · ')[0] : null;
-            })())}
-          </p>
-          <div className="dialog-actions">
-            <button type="button" className="btn" data-autofocus onClick={cancelDialog}>
-              {T.CANCEL}
-            </button>
-            <button type="button" className="btn btn-delete" aria-disabled={dialog.saving ? 'true' : undefined} onClick={() => !dialog.saving && confirmDelete()}>
-              <IconTrash size={16} aria-hidden="true" />
-              {T.DELETE}
-            </button>
-          </div>
-          {dialog.failed && (
-            <div className="tdialog-note">
-              <Notice>{T.DELETE_FAILED}</Notice>
-            </div>
-          )}
-        </Dialog>
+        // The shared "are you sure?" box (design review N3): "Keep schedule" · "Delete planned
+        // schedule" (red, first focus on Keep; the two stack full width when they don't fit side by
+        // side — ConfirmButtons measures them). A failure is the amber note under the buttons.
+        <ConfirmBox
+          title={T.deletePlannedTitle(dialog.version)}
+          keepLabel={T.KEEP_SCHEDULE}
+          actionLabel={T.DELETE_PLANNED}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={Boolean(dialog.saving)}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onKeep={cancelDialog}
+          onConfirm={confirmDelete}
+        >
+          {T.deletePlannedBody(dialog.version, dialog.count, (() => {
+            const before = copySourceFor(classified, dialog.version.startsOn);
+            return before ? versionLabel(before, classified).split(' · ')[0] : null;
+          })())}
+        </ConfirmBox>
       );
     }
   }

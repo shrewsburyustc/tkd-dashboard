@@ -12,6 +12,9 @@
 //   'invalid'         the values were refused
 //   'error'           anything else (no connection, unexpected answer) — { status:'error', error }
 // The database answers in snake_case; this file converts to camelCase.
+// Each child's last name and date of birth (migration 0036, rulebook v0.634 / v0.637): the list
+// carries the last name only (for "Ava N."); the profile gets both. Children who signed up before
+// 0036 have neither (null) and keep the age typed on the form.
 import { supabase } from '../supabase.js';
 import { agesFromRow } from '../schedule/ages.js';
 
@@ -31,7 +34,8 @@ function toBooking(b) {
 
 function toListItem(r) {
   return {
-    id: r.id, version: r.version, familyId: r.family_id, childFirstName: r.child_first_name, parentName: r.parent_name, statusId: r.status_id,
+    id: r.id, version: r.version, familyId: r.family_id, childFirstName: r.child_first_name, childLastName: r.child_last_name ?? null,
+    parentName: r.parent_name, statusId: r.status_id,
     followUpOn: r.follow_up_on ?? null, joinedOn: r.joined_on ?? null, createdAt: r.created_at, signedUpAt: r.signed_up_at ?? null, checkedIn: r.checked_in === true,
     openedByMe: r.opened_by_me === true, booking: toBooking(r.booking), askCame: r.ask_came === true,
   };
@@ -39,13 +43,17 @@ function toListItem(r) {
 
 function toProspect(p) {
   return {
-    id: p.id, version: p.version, locationCode: p.location_code, familyId: p.family_id, childFirstName: p.child_first_name, childAge: p.child_age,
+    id: p.id, version: p.version, locationCode: p.location_code, familyId: p.family_id, childFirstName: p.child_first_name,
+    childLastName: p.child_last_name ?? null, childDob: p.child_dob ?? null, childAge: p.child_age,
     statusId: p.status_id, followUpOn: p.follow_up_on ?? null, joinedOn: p.joined_on ?? null, checkedInAt: p.checked_in_at ?? null,
     checkedInByName: p.checked_in_by_name ?? null, parentName: p.parent_name, parentPhone: p.parent_phone, parentEmail: p.parent_email,
     formId: p.form_id, formName: p.form_name, source: p.source, enteredBy: p.entered_by ?? null, signedUpAt: p.signed_up_at,
     signedAt: p.signed_at ?? null, hasSignature: p.has_signature === true, fields: Array.isArray(p.fields) ? p.fields : [], answers: p.answers ?? {},
     booking: toBooking(p.booking),
-    siblings: (p.siblings ?? []).map((x) => ({ id: x.id, childFirstName: x.child_first_name, childAge: x.child_age, statusId: x.status_id })),
+    // each brother or sister's age is worked out like the child's own (date of birth, else the typed age)
+    siblings: (p.siblings ?? []).map((x) => ({
+      id: x.id, childFirstName: x.child_first_name, childLastName: x.child_last_name ?? null, childDob: x.child_dob ?? null, childAge: x.child_age, statusId: x.status_id,
+    })),
     notes: (p.notes ?? []).map((n) => ({ id: n.id, body: n.body, followUpOn: n.follow_up_on ?? null, createdAt: n.created_at, createdByName: n.created_by_name })),
     activity: (p.activity ?? []).map((a) => ({ kind: a.kind, detail: a.detail ?? {}, createdAt: a.created_at, createdByName: a.created_by_name })),
   };
@@ -83,17 +91,18 @@ export async function loadStatuses() {
   }
 }
 
-// One school's prospects, list columns only (never phone, email, age or answers).
+// One school's prospects, list columns only (never phone, email, age, date of birth or answers).
 export async function listProspects(locationCode) {
   return callRpc('prospects_list', { p_location_code: locationCode }, (d) => (Array.isArray(d.prospects) ? { today: d.today, prospects: d.prospects.map(toListItem) } : null));
 }
 
-// Ids of the prospects whose child or parent name contains `text`, or (4+ digits) whose phone does.
+// Ids of the prospects whose child's first or last name or parent name contains `text`, or (4+
+// digits) whose phone does.
 export async function searchProspects(locationCode, text) {
   return callRpc('prospects_search', { p_location_code: locationCode, p_text: text }, (d) => (Array.isArray(d.ids) ? { ids: d.ids } : null));
 }
 
-// The side panel.
+// The profile window (and each page of the printed visitor sheet).
 export async function getProspect(id) {
   return callRpc('prospects_get', { p_prospect_id: id }, (d) => (d.prospect ? { prospect: toProspect(d.prospect) } : null));
 }

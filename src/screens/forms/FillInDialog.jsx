@@ -5,7 +5,8 @@
 // The typed answers live in Forms.jsx (so a lock while it's open loses nothing).
 //
 // state: { mode: 'fill' | 'preview', form, fields, step, values, problems, times, saving, note, sent }
-//   values = { answers, children: [{ first_name, age }], bookings: { childIndex: timeKey }, signature }
+//   values = { answers, children: [{ first_name, last_name, dob }], bookings: { childIndex: timeKey }, signature }
+//   (the Date signed under a signature is drawn by FormFields from today's date: never in values)
 import { useEffect, useRef } from 'react';
 import { IconArrowLeft, IconArrowRight, IconCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
@@ -145,8 +146,11 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
       </div>
       <h3 className="fstep-title">{T.stepOf(step + 1, steps.length, current.label)}</h3>
       <form ref={formRef} onSubmit={next} noValidate>
+        {/* noAutofill: a desk computer is shared, so the browser must not save one family's
+            name, phone, email or address and offer it to the next (security review) */}
         <FormFields
           inlineDates={isPhone}
+          noAutofill
           fields={current.fields}
           values={v}
           problems={state.problems}

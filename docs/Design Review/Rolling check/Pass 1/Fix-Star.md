@@ -15,10 +15,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 1 covered `main` up to 5f1db41 (2026-11-03), in preview mode at the four sizes. Four reviewers looked (R1 money · R2 changes, mistakes and safety nets · R3 lists, menus and pickers · R4 item-by-item conformance and privacy). Two separate checkers then verified every finding. This file is what they confirmed in Star's merged work (Part 1 and Part 2, S1–S12).
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** a rule must be picked first. Don't build these yet.
+- **Waits on Jeffrey:** nothing now: Jeffrey answered every pass 1 question (v1.035–v1.051).
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (R1-02, R2-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
-- **Line numbers** are main 5f1db41's; they may have moved.
+- **Line numbers** are main 5f1db41's; they may have moved. Items decided in v1.045–v1.049 cite main 84a6e7d's, and items decided in v1.050–v1.051 main 392bc9e's.
 - **Paths:** `CandidatesTab.jsx`, `CandidateDialog.jsx`, `CandidateHistory.jsx`, `CandidateRows.jsx`, `StarPaymentDialogs.jsx` and `candidates/text.js` are in `src/screens/testing/star/candidates/`. `star/…` is under `src/screens/testing/star/`: `ResultRows.jsx` and `results.css` are in its `results/` folder, `StarEventsTab.jsx` in `events/`, `RubricsTab.jsx` and `star.css` at its top. `lib/star/…` is `src/lib/star/…`, `components/…` is `src/components/…`, and `testing/text.js` is Color Belt's `src/screens/testing/text.js`. Camps' files named for comparison are in `src/screens/camps/` and `src/lib/camps/`.
 
 ### Rules
@@ -30,7 +30,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 - **One decision at a time,** with pictures: each option drawn, its pros and cons, and a recommendation.
 - **Reviews:** a separate design reviewer (the rulebook, the approved mockups, screenshots at the four sizes, and §4's six WCAG 2.2 checks, v1.033); a separate code reviewer; a separate security reviewer for anything touching the database (handoff §6).
 - **Order (a push to main deploys):** the migration is live before the push that brings the app that uses it. A step whose app calls a new or changed database function is merged only after Jeffrey has applied its migration and the checks passed (fingerprints, security advisor, tests file — CLAUDE.md). Screen-only steps can go first.
-- **Migrations:** R1-01, R1-02 and R2-02 each need a database change (one migration can hold several if you plan them together). Ask the Main session for a migration number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`). Add a SETUP section "## Migration 00NN: …" with steps `### 00NNa.` …, a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
+- **Migrations:** R1-01, R1-02 and R2-02 each need a database change (and S-1 does, if you change the order in the database) (one migration can hold several if you plan them together). Ask the Main session for a migration number. Follow handoff §6 (`docs/Dashboard Docs/TKD-Dashboard-Handoff.md`). Add a SETUP section "## Migration 00NN: …" with steps `### 00NNa.` …, a `step00NN` in `supabase/tests/pglite/run.mjs`, a tests file and a fingerprints file. Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (`npm ci` once per worktree).
 - **Don't change a shared part on your own** (`src/components/…`, the shared helpers in `src/lib/`, `src/styles/shared.css`): every section uses them. If you need something a part can't do, ask Jeffrey first. He decides whether you change it in your branch (then list it as a shared file) or the Dashboard core session does.
 - List every CLAUDE.md shared file you touch (`src/styles/shared.css` and `src/components/text.js` are on that list).
   - Star's fake database is in `src/lib/mockStar*.js`.
@@ -76,7 +76,7 @@ High, though rare: it needs the connection to drop between two quick calls.
 - **Change:**
   - One Star migration: `star_payments` gets a school column. Existing rows take the candidate's school as it is when the migration runs (the school Finance shows for them today). `star_record_payment` takes the device's school and stores it. Undo and Edit payment (its reversal *and* its new payment row, `star_edit_payment`) copy it from the payment they correct. `star_record_refund` takes the device's school too (v1.040: a refund counts at the desk that hands the money back); its new input also has a default (blank = the candidate's school), so the live app keeps working until the push. Ask the Main session for a migration number. Jeffrey applies it. The new input has a default (blank = the candidate's school, as 0033 did for `camp_mark_paid`), so the live app keeps working. The migration is live before the push that brings the app that uses it, and that push also waits until Finance's R1-01 migration is live. Otherwise a payment taken at the other desk shows at the candidate's school, then moves when Finance switches, and a closed day reads "Changed after closing".
   - If R1-02's migration isn't written yet, plan the two together: both replace `star_record_payment`.
-  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1102–1103`); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
+  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1122–1123` on main d7b5ebf); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
   - The fake twin (`src/lib/mockStarCandidates.js`) changes too, or the check below can't pass.
   - Finance then reads the stored school (Finance's R1-01, after yours). Tell the Main session when your migration is live.
 - **Check (preview mode):** This device = Shrewsbury (account menu), top bar on Worcester: mark a Worcester candidate paid → the fake payment row stores Shrewsbury. Edit that candidate's school → the payment's school doesn't change. Undo the payment → the reversal row has Shrewsbury too.
@@ -88,7 +88,7 @@ High, though rare: it needs the connection to drop between two quick calls.
 - **Change:** copy Camps' 0033 pattern.
   - A Star migration keeps the form's own choice on the candidate (`paying_by_on_form`, never changed).
   - `star_record_payment` with another way changes Paying by (logged), and Undo payment puts the old one back. (Today it never touches `paying_by`: `0006_star_testing.sql:4759–4765`.)
-  - Then `CandidatesTab.jsx:1457` and `candidates/text.js:257` / `CandidateDialog.jsx:188` work out form / desk from Paying by vs the form's choice (like `campRules.js:466–469`).
+  - Then `CandidatesTab.jsx:1457` and `candidates/text.js:257` / `CandidateDialog.jsx:188` work out form / desk from Paying by vs the form's choice (like `campRules.js:595–598` on main d7b5ebf).
   - Ask the Main session for a migration number. Jeffrey applies it. The migration is live before the push that brings the app that uses it.
 - **Check (preview mode):** Lily Brooks → Change how they'll pay → Check → the box says "They chose Check at the desk."; pay by Card → the summary says "Card (chosen at the desk)" and History lists both changes (needs R1-03 too); Undo payment → back to Check.
 
@@ -115,6 +115,17 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Change:** after Dashboard core's R2-05 (an Undo pressed while a save runs is *queued*: it waits its turn and runs as soon as that save ends, and its toast stays as "Undoing…"), Star's `runUndo`s use Dashboard core's helper.
 - **Check (preview mode):** `__tkdPreview.setTestingDelay(2500)`; withdraw candidate A, withdraw candidate B, press A's Undo during B's save → A comes back with "Undone".
 
+### R3-02 — A possible duplicate is counted twice, and offers Mark paid · Low–Medium · decided 2026-11-04 (v1.046)
+
+- **What's wrong:** both rows of a possible-duplicate pair count in your cards (`CandidatesTab.jsx:256–260`): Not paid lists both Ava Reeds, so one child is counted twice. Both rows also offer Mark paid (`CandidateRows.jsx:114`), so a payment can land on the copy that is later withdrawn. (The checkers rated the counts Low, and Mark paid on a duplicate Low–Medium.) Black Belt leaves these rows out of its cards, with a gray line; Color Belt and Camps offer no payment on them.
+- **Rule:** v1.046 (8) (Jeffrey, 2026-11-04: "Approve all"): a row marked "Possible duplicate" stays out of Paid and Not paid until the pair is resolved, with one gray line under the cards saying so, as Black Belt does; Payments recorded still counts any money received (v1.038). Until then such a row offers no Mark paid or Record payment.
+- **Change:**
+  - Counts: leave the flagged rows (the `pairs`, `CandidatesTab.jsx:279–288`, as the ⋯ menu's `flagged` does, `:1128`) out of Paid and Not paid (`:259–260`; Candidates and its school counts don't change), and out of the Paid / Not paid filters (`:271–272`), so a card lists exactly what it counts, as Black Belt's `rosterFilter` does (`src/lib/blackBelt/rules.js:1062`). Payments recorded (`:261`, and R5-05's change) keeps any money they hold.
+  - The gray line: the shared `CountCards`' `note` (`:1490`), in words that name Paid and Not paid, drawn in your mockup for Jeffrey (Black Belt's "… isn't counted in the cards …", `src/blackBelt/staff/text.js:511–513`, would be wrong here, because Candidates still counts the row).
+  - Mark paid: `showRecord` (`CandidateRows.jsx:114`) leaves out a flagged row, as Color Belt's roster does.
+  - Mockup first.
+- **Check (preview mode):** `__tkdPreview.resetTesting()`, Fall Star Testing: neither Ava Reed row offers Mark paid; Paid and Not paid leave them out (Candidates still counts them), and the gray line says so; tap Not paid: neither Ava Reed is listed. Review → Keep this one: the kept row counts again and offers Mark paid, and the line goes.
+
 ### R4-08 — The grayed Email result has the wrong gray and doesn't tell screen readers why · Low
 
 - **What's wrong:** with Hide private details on, Star's grayed Email result uses the hairline border (`--color-border`) and a plain cursor, and screen readers aren't told why it's off. Prospects' grayed Email uses v1.103's unavailable look (`--color-border-strong`, `not-allowed`) with `aria-describedby` (an attribute that points a control at the text explaining it; a screen reader reads that text after the button's name).
@@ -129,7 +140,7 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Change:**
   - Private testing: Undo puts the old private day and time back, or clears a newly set one.
   - Make-up: an admin's Undo deletes the new row, as Add candidate's does, and resets the open picker's "added" mark.
-  - Not part of this fix: "Kept both" (no Undo in any section; the design review settles it), and Forms' Duplicate (the new students session's part of R2-08).
+  - Not part of this fix: "Kept both" (no Undo in any section, recorded as an exception: v1.049 (b)), and Forms' Duplicate (the new students session's part of R2-08).
 - **Check (preview mode):** each action → toast with Undo → Undo → "Undone", and the row is back as before.
 
 ### R2-10 — The Compare box's Keep buttons have the old hidden names · Low
@@ -138,6 +149,34 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Rule:** WCAG 2.5.3, "label in name" (the name a screen reader or voice control uses must contain the words shown on the button), written into the shared part's header at `components/CompareDialog.jsx:31–35`.
 - **Change:** drop the prop; the shared default is "Keep this one: First registration".
 - **Check (preview mode):** open Review on Ava Reed and read the two buttons' accessible names.
+
+### R4-10 = R3-08 — Two private-testing items have the wrong icons · Low · decided 2026-11-04 (v1.048)
+
+- **What's wrong:** in a candidate's ⋯, "Change private day or time" uses the Edit pencil and "Back to the testing day" uses Undo's arrow (`CandidatesTab.jsx:1146–1147`). Undo's arrow means Undo and Restore (§2.4), and Color Belt's "Change day or time" uses `ti-calendar`. It was your DR plan question 5, never answered.
+- **Rule:** v1.048 (13) (Jeffrey, 2026-11-04: "Approve all"): in Star, "Back to the testing day" uses `ti-calendar-event` instead of Undo's `ti-arrow-back-up`, and "Change private day or time" uses `ti-calendar`, as Color Belt's.
+- **Change:** `CandidatesTab.jsx:1146`: `IconEdit` → `IconCalendar`; `:1147`: `IconArrowBackUp` → `IconCalendarEvent`. §2.4's map already lists both uses (the design review added them with v1.048).
+- **Check (preview mode):** Fall Star Testing, ⋯ → Set private testing on a candidate and save, then open the same ⋯: Change private day or time shows the calendar, and Back to the testing day shows `ti-calendar-event`, at 1280 and in the 390 sheet.
+
+### R4-13 (your part) — "Ask an admin to reopen." becomes "Ask an admin to open it." · Low · decided 2026-11-04 (v1.045)
+
+- **What's wrong:** after a closing date has passed, staff read "The closing date has passed. Ask an admin to reopen." (`lib/star/eventsText.js:98`, shown in the event ⋯, `star/events/StarEventsTab.jsx:748`; and `:99`). Camps says "… Ask an admin to open it." (v0.725), which matches the Close / Open pair.
+- **Rule:** v1.045 (5) (Jeffrey, 2026-11-04: "Approve all"): staff after a closing date read "Ask an admin to open it.", as Camps' v0.725.
+- **Change:** `lib/star/eventsText.js:98–99`: "Ask an admin to reopen." → "Ask an admin to open it." (the second line keeps "Registration wasn't opened."), and update the check that asserts the old words (`src/lib/star/eventsChecks.mjs:879`).
+- **Check (preview mode):** `__tkdPreview.setRole('staff')` and reload, then `__tkdPreview.setToday()` to a day after an event's closing date: that event's ⋯ shows Open registration grayed with "The closing date has passed. Ask an admin to open it."
+
+### S-1 (your part) — On Both, Star lists Shrewsbury first: the Candidates card, the belt order, Grading, Results and the results CSV · Low · decided 2026-11-04 (v1.047)
+
+- **What's wrong:** on Both, the Candidates card's two school counts put Shrewsbury above Worcester (`CandidatesTab.jsx:258`, "as drawn"), while the location switcher and your link cards put Worcester first. Your belt order does the same within each star level (v0.117): `sortBeltOrder` (`src/lib/star/candidatesCore.js:99–106`, used for the roster at `:402`), the Results list and the results CSV from the database (`star_event_results`, `0006_star_testing.sql:5920`, order at `:5948–5951`; `star_results_csv`, live in `0023_star_result_texts.sql:614`, order at `:656–659`), and the fake grading and results stores (`src/lib/mockStarGrading.js:143`, `src/lib/mockStarResults.js:113`).
+- **Rule:** v1.047 (19) (Jeffrey, 2026-11-04: "Approve all"): Worcester comes first wherever both schools are listed, as in the location switcher.
+- **Change:** `CandidatesTab.jsx:258`: `['worcester', 'shrewsbury']`, and its comment. The belt order: plan it and show Jeffrey, as Black Belt's S-1 does. Either the screens sort what they get (stars, then Worcester before Shrewsbury, then last and first name; the CSV rows sorted before the file is written), or one migration replaces `star_event_results` and `star_results_csv` with Worcester first (ask the Main session for a number; handoff §6; a security review). Either way `sortBeltOrder` and its comment, the two fake stores and the check at `src/lib/star/resultsChecks.mjs:154–156` change too.
+- **Check (preview mode):** Fall Star Testing on Both, at 1280 and 390: the Candidates card lists Worcester, then Shrewsbury; within a star level the roster, the Grading and Results tabs and the downloaded results CSV list Worcester's candidates first.
+
+### R2-07 (the words after an Undo) — "Undone" after every Undo · Low · decided 2026-11-04 (v1.051)
+
+- **What's wrong:** two of your Undos don't say "Undone" when they work. The Undo of an edit that kept registration closed (v0.504) opens it again and says "Registration open" (`lib/star/eventsText.js:79`, passed as `doneText` at `star/events/StarEventsTab.jsx:466`). On the Results tab, the Undo in Mark as sent's toast says nothing at all (`star/results/ResultsTab.jsx:334–348`: it only reloads). Your other Undos say "Undone". Two of them should name the reopening too: the Undo of ⋯ Close registration opens registration again but says only "Undone" (`StarEventsTab.jsx:586–587`), and so does Edit event's Undo when the edit had closed registration (`:505–507`).
+- **Rule:** v1.051 (1) (Jeffrey, 2026-11-04: "Yes approved go ahead"): after an Undo the toast says "Undone" everywhere; when the Undo reopens something people depend on, it adds one short sentence: Star "Undone. Registration is open again."; the same rule covers every Undo that opens registration, sign-up or a form again (R2-07's open part).
+- **Change:** add "Undone. Registration is open again." to `lib/star/eventsText.js`, and show it after every Undo that opens registration again: the `doneText` at `StarEventsTab.jsx:466`, `switchRegistration`'s Undo (`:586–587`, when the Undo opened registration) and Edit event's Undo (`:505–507`) when it put registration back to open. An Undo that closes registration stays "Undone". Keep `TOAST_REGISTRATION_OPEN` (`:79`): Open registration's own toast still uses it (`StarEventsTab.jsx:592`). In the Results tab's `undoFromToast`, show "Undone" when the Undo worked.
+- **Check (preview mode):** `__tkdPreview.setToday()` to a day after an open event's closing date → Edit event → untick the closing date → Save: "Changes saved. Registration stays closed …" → Undo → "Undone. Registration is open again.", and the event is open again. Results tab → a finished row's Email result → Mark as sent → Undo in its toast → "Undone", and the row reads "Not sent yet" again. ⋯ Close registration on an open event → Undo → "Undone. Registration is open again."; ⋯ Open registration on a closed one → Undo → "Undone".
 
 ### R1-08 (your part) — Mark paid buttons don't gray while a save runs · Low · after Dashboard core's R1-08
 
@@ -160,21 +199,46 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 - **Change:** after Dashboard core's R3-13 puts the words in `src/components/text.js`, use "Past days can't be chosen." and give Edit payment's Date paid "Days after today can't be chosen.". Leave the family-page date-of-birth hint unless Jeffrey wants it changed too.
 - **Check (preview mode):** open each staff calendar: every calendar with gray days has exactly that one line.
 
+### R1-06 (your part) — The Undo payment box takes Black Belt's words · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-06
+
+- **What's wrong:** your box asks "Undo [Name]'s payment?" and says "The $140 card payment recorded on [date] is reversed …" (`candidates/text.js:172–174`, drawn at `CandidatesTab.jsx:1264–1280`), though the date it shows is the day the family paid. Black Belt corrected the same words (v0.964, v0.965).
+- **Rule:** v1.045 (2) (Jeffrey, 2026-11-04: "Approve all"): the Undo payment box uses Black Belt's words: "Undo [Name]'s $X [way] payment?", "Paid on [date] …" and the section's own consequence. v1.045: "Built by Dashboard core (the shared words) and by each section switching to them."
+- **Change:** after Dashboard core's R1-06, take the title and "Paid on [date]" from `src/components/text.js`, pass the amount and the way (`CandidatesTab.jsx:1267`), and keep your own consequence (the row goes back to Not paid; both stay in the history). Your Undo refund box (`candidates/text.js:176`) isn't part of this.
+- **Check (preview mode):** mark Lily Brooks paid $140 by card → ⋯ Undo payment: the box asks "Undo Lily Brooks's $140 card payment?", and its line starts "Paid on" with the payment's date.
+
+### R1-07 (your part) — One set of payment words: toasts, payment line and history · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R1-07
+
+- **What's wrong:** after Mark paid your toast says just "Payment recorded" (`candidates/text.js:141`, `CandidatesTab.jsx:617`): no name, no amount. Camps and Color Belt say "[Name] marked paid · $X [way]". Your payment line ("$140 card · paid Nov 3", `candidates/text.js:262`; phones `:93`) and history words ("Payment recorded: $140 card, paid Nov 3", `:311, 313`) differ from Camps' too.
+- **Rule:** v1.045 (3) (Jeffrey, 2026-11-04: "Approve all"): the toasts after Mark paid and Undo payment read "[Name] marked paid · $X [way]" (while hidden, "[Name] marked paid", v0.722) and "Payment undone for [Name]"; the person's payment line and the history's payment words become one set too, drawn in Dashboard core's mockup.
+- **Change:** after Dashboard core's R1-07, take the toast words from `src/components/text.js`: Mark paid's (`CandidatesTab.jsx:617`) and Undo payment's (`:813`; `lib/star/candidatesText.js:82` already has the same words). Then the payment line (`CandidateDialog.jsx:150`, `CandidateRows.jsx:169`) and the history (`CandidateHistory.jsx:61, 63`, or the `.js` file R1-03 moves them to) use the set in Dashboard core's approved mockup.
+- **Check (preview mode):** mark Lily Brooks paid $140 by card: the toast reads "Lily Brooks marked paid · $140 card"; ⋯ Undo payment → Undo payment: "Payment undone for Lily Brooks". Her summary's payment line and History read as the approved mockup.
+
+### R2-07 (your part) — One set of words for "someone else changed it" and a failed Undo · Low · decided 2026-11-04 (v1.045) · after Dashboard core's R2-07
+
+- **What's wrong:** your refusals say "Someone else changed this just now. Your change wasn't saved." and "Couldn't undo. Someone else changed this just now." (`star/text.js:231, 241`; `lib/star/candidatesText.js:22`; `lib/star/eventsText.js:92`), and two failed Undos say "Couldn't undo. Check the connection, then try again." (`candidates/text.js:151`, the Undo payment and Undo refund boxes; `lib/star/resultsText.js:123`). Black Belt's newer words name who changed and say what the screen now shows.
+- **Rule:** v1.045 (4) (Jeffrey, 2026-11-04: "Approve all"): a refused change or Undo says "Someone else changed [Name] just now, so nothing was done. Their change is shown." or "Couldn't undo: [reason].", and a failed Undo says "Undo didn't save. Check the connection, then retry." (Black Belt's words: v0.966 (2) and its own Undo lines); item (4)'s sentences are kept once in the shared words file (`src/components/text.js`).
+- **Change:** after Dashboard core's R2-07, use its three sentences from `src/components/text.js` at those lines ([Name] is the candidate's or the event's name). `star/text.js:242` already says the failed-Undo sentence: take it from the shared file too.
+- **Check (preview mode):** withdraw a candidate, then `__tkdPreview.simulateOtherAdminEdit()`, then Undo within 5 s: the bar says "Someone else changed [Name] just now, so nothing was done. Their change is shown." Then, on a paid candidate, `__tkdPreview.failNextSave('star')` and ⋯ Undo payment → Undo payment: the box says "Undo didn't save. Check the connection, then retry."
+
+### R3-06 (your part) — Your back link switches to the shared one · Low · decided 2026-11-04 (v1.048) · after Dashboard core's R3-06
+
+- **What's wrong:** each section draws its own back link. Yours (`.st-back`, `star/star.css:19–25, 589–592`) has the approved look, but six copies drift: Camps' and Black Belt's are 28 px and push the title down on touch.
+- **Rule:** v1.048 (12) (Jeffrey, 2026-11-04: "Approve all"): Dashboard core builds one shared back link in `.tc-back`'s look (24 px, a 16 px arrow, a 44 px touch box pulled back so the title doesn't move), and every section switches to it.
+- **Change:** after Dashboard core's R3-06, your three back links use it (`star/event/StarEventPage.jsx:722`, `star/grading/PrivateGradingPage.jsx:98`, `star/StarTesting.jsx:122`), with their words and screen-reader names, and `.st-back` goes from `star.css` (`:19–25, 589–592, 779`). Your focus code looks for `.st-back` (`StarEventPage.jsx:614`): point it at the shared link.
+- **Check (preview mode):** the Star testing page, an event page and a private grading page at 1280, 820 touch, 390 and 320: the back link looks as today, the title doesn't move between 1280 and 820, and focus lands on the link where it did before.
+
+### S-2 (your part) — One line when a page can't load · Low · decided 2026-11-04 (v1.051) · after Dashboard core's S-2
+
+- **What's wrong:** most of your load failures already end "Check the connection, then retry." with Retry. Three end "then try again": the Results tab (`lib/star/resultsText.js:152`), the private grading page (`star/grading/text.js:88`) and the Grading tab (`:102`; both v0.513's words). Two show the "then retry" line with nothing to press: a candidate's summary that couldn't load (`CandidateDialog.jsx:247`, Cancel only) and the signature box (`star/candidates/SignatureDialog.jsx:19`).
+- **Rule:** v1.051 (2) (Jeffrey, 2026-11-04: "Yes approved go ahead"): when a page can't load, it says "Couldn't load. Check the connection, then retry." with Retry, everywhere. A line may still name what didn't load ("Couldn't load the calendar. Check the connection, then retry."), so only the endings change. v1.051 (2) names these three lines of yours too (two of them v0.513's). A read that fails behind a menu or inside a dialog is a connection failure too: v1.004 and §8 ("always include Retry where it applies") already ask for its Retry.
+- **Change:** after Dashboard core's S-2 puts the sentence in `src/components/text.js`, the three lines end "Check the connection, then retry." (they keep naming what didn't load, as your other lines do), and the summary and the signature box get a Retry that reads again.
+- **Check (preview mode):** `failNextSave('star')` fails only writes, so add a failed-read helper in your own fake store (`src/lib/mockStar*.js`, registered in `src/lib/mockClient.js`, a CLAUDE.md shared file: list it), or a check case, as Black Belt's R4-11 does. With it armed, open a candidate: "Couldn't load this candidate. Check the connection, then retry." with Retry, and Retry opens the summary. The Results and Grading lines end "then retry".
+
 ---
 
 ## Waits on Jeffrey (don't build yet)
 
-- **R2-03** (Medium) — Undo after restoring a "Duplicate copy": your no-Undo rule (v0.517 G3, `CandidatesTab.jsx:900–910`) everywhere, which is recommended, or a real Undo everywhere (then Star gains one too). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R1-06** (Low) — one Undo payment box for every section: Black Belt's words ("Undo [Name]'s $X [way] payment?" + "Paid on [date]", recommended), or yours with "recorded on" → "paid on" (today `candidates/text.js:172–174` is fed the paid-on date, `CandidatesTab.jsx:1278`). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R1-07** (Low) — one toast after Mark paid and after Undo payment (yours, "Payment recorded", `candidates/text.js:141`, names no one and no amount). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R2-07** (Low) — one set of words for "someone else changed it" and "Undo failed" (yours include "Couldn't undo. Someone else changed this just now."). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-02** (Low) — should a "Possible duplicate" row count in Paid / Not paid until it's resolved (today `CandidatesTab.jsx:253–261` counts both Ava Reeds)? You own this one; Camps and Color Belt follow the answer. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **Mark paid on a possible duplicate** (a checked smaller line, Low–Medium, same root as R3-02) — should a row flagged "Possible duplicate" offer Mark paid? Star offers it on both Ava Reed rows (`CandidateRows.jsx:114`), and Black Belt on both Noah Silva rows; Color Belt hides it (`src/screens/testing/event/RosterRows.jsx:79`), and Camps' duplicate tag replaces the pay tag (`CampRoster.jsx:62–77`). A payment can land on the copy that is later withdrawn. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-06** (Low) — one shared back link made by Dashboard core, with your `.st-back`'s look (24 px; `star/star.css:19–25, 589–592`); you would swap your copy for it. The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R3-09** (Low) — in-list search: does Star's roster get a search box (A), or rely on the top-bar people search, v1.031 (B, recommended)? The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-02** (Low) — what an open New candidate form does when Hide private details turns on in another tab (today it keeps the typed birthday and email: `CandidateDialog.jsx:415, 456`, `hidden && !isNew`; recommended: leave it and record it in a row). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-10 = R3-08** (Low) — the icon for "Back to the testing day" (your DR plan question 5, still open; today Undo's arrow, `CandidatesTab.jsx:1147`), and for "Change private day or time": your pencil or Color Belt's calendar (`ti-calendar`, recommended). The design review asks Jeffrey; the answer reaches you through the Main session.
-- **R4-13** (Low) — "Ask an admin to open it." (Camps, recommended) or "… to reopen." (yours, `lib/star/eventsText.js:98–99`). The design review asks Jeffrey; the answer reaches you through the Main session.
+Nothing now. Jeffrey answered every pass 1 question on 2026-11-04 (v1.035–v1.051); each answer is a Fix now or Smaller item in this file.
 
 ---
 
@@ -182,6 +246,11 @@ Picture: `docs/Design Review/Rolling check/Pass 1/pictures/Q4-payments-recorded-
 
 - Two classes for the same grayed-reason line: Star's own `.st-menu-why` is used only in `RubricsTab.jsx:792` (styled in `star.css:567–572`); everywhere else uses `.ev-menu-reason`. Use one. Low.
 - Stale status line: your status file's line 12 still says "being built … one merge into main" (`docs/Testing/Star Testing/TKD-StarTesting-Status.md`). Low.
+- **R2-03 is decided** (2026-11-04, v1.043): every section now follows your no-Undo rule for a restored Duplicate copy (v0.517 G3). Nothing to change.
+- **R3-09 is decided** (2026-11-04, v1.047 (14)): your roster gets no search box. Star and Color Belt rely on the planned top-bar people search (v1.031). Nothing to build.
+- **R4-02 is decided** (2026-11-04, v1.049 (a)): an open New candidate form keeps what was typed when Hide private details is turned on from another browser tab (`CandidateDialog.jsx:415, 456`). It is recorded as a known gap in v0.249's "every screen". Nothing to build.
+- **S-9 is decided** (2026-11-04, v1.047 (17)): a roster says its sort order only when it isn't by name. Black Belt's line stays, and no other roster adds one. Nothing to build.
+- **S-10 is decided** (2026-11-04, v1.048 (20)): the browser dropdown in your result-text preview (`star/ResultTextDialog.jsx:293`) becomes the shared Select (v1.100) when you next work on that screen. No sweep, so nothing to build until then.
 
 ---
 

@@ -1,8 +1,8 @@
 # Dashboard core — status
 
-**Updated:** 2026-11-04 (Dashboard core worktree session, branch `dashboard-core`)
-**Rulebook at this update:** 1.040 on `main` 9b562b3 (the Design Review's merge; its newest Dashboard core row is v1.118); **1.121** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6), **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), **v1.114** (the date picker opened from a button) and **v1.115** (a count card's note of two lines), all 2026-10-28; **v1.116** (the dropdown and time list turned off, Finance's v0.823) and **v1.117** (Show all inside its gray line on touch, option (a)), both 2026-10-29; **v1.118** (each person's panel size: Standard, Large or Largest), 2026-11-03; **v1.119** (Show all's keyboard focus), **v1.120** (turned-off icon buttons, option A) and **v1.121** (the success colors as shared settings), all 2026-11-04 — block **1.100–1.199**, next free **1.122** (`git merge main` before any rulebook edit).
-**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); **fc3bea6** — the fact fixes (v1.113). **Merged into `main` as 95a9601** (2026-10-28, the Main session); this branch then moved forward to `main` 4c15146, and later to a3ff7ca (both fast-forwards; the second brought New students' N17 merge, rulebook v0.616). Then the date picker opener option (v1.114, committed as 1bb2683); `main` merged in up to 50022cf (2026-10-28, merge commit **bd3847e**: New students' N1, N2, Undone, class ages and classes taught together, with migration 0031 and rulebook v0.617–v0.620; the rulebook's three same-spot conflicts kept both sides, main's first); then the count cards' two-line note (v1.115, committed as 5628133). Both **merged into `main` as a287ee5** (2026-10-28, the Main session, no conflicts); this branch then moved forward to it, and later to c975428 (both fast-forwards; the second brought Star's merge, with Star's count cards on the shared part). The Main session pushed `main` c975428 on 2026-10-28, so all of this branch's work is live; `dashboard-core` itself is never pushed. On 2026-10-29 this branch moved forward to `main` 3fdbc0b (a fast-forward: New students' N4–N6 with rulebook v0.621–v0.623, and CLAUDE.md's 0030 notes); then the turned-off dropdown and time list (v1.116) was committed as cc92332, merged into `main` as e3e46d4 (the Main session; pushed and live 2026-10-29), and this branch moved forward to it (fast-forward). Later the same day it moved forward to `main` 5f28ed9 (a fast-forward: Finance's design review F1–F7 with migration 0029's files and rulebook v0.817–v0.823, and CLAUDE.md's 0029 and 0032 notes; none of it touches this branch's files), and Show all on touch (v1.117) was committed as 2bf89c6. On 2026-11-03 Main merged it into `main` as 7b665af; this branch moved forward to it, then to 1e6561d and 5f1db41 (all fast-forwards bringing other sections' work; see the log). Then Panel size (v1.118) was committed as 2baea38, and `main` was merged in up to e7fd75b (2026-11-03, merge commit **723c302**: Camps C10 and New students N10, N13, N14; the rulebook's three same-spot conflicts kept both sides, main's first). Both **merged into `main` as 942cfdd** (2026-11-04, the Main session; the same three conflicts, main's v0.627 and v0.972 kept first; pushed and live the same day), and this branch moved forward to it (fast-forward).
+**Updated:** 2026-11-05 (Dashboard core worktree session, branch `dashboard-core`)
+**Rulebook at this update:** **1.122** on this branch (R4-07, on top of `main` 392bc9e). `main` is at 6e35831 (header 0.640: New students' v0.633–v0.640), not merged in here yet; it has Dashboard core's rows up to **1.121** (801b757, live). Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6), **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), **v1.114** (the date picker opened from a button) and **v1.115** (a count card's note of two lines), all 2026-10-28; **v1.116** (the dropdown and time list turned off, Finance's v0.823) and **v1.117** (Show all inside its gray line on touch, option (a)), both 2026-10-29; **v1.118** (each person's panel size: Standard, Large or Largest), 2026-11-03; **v1.119** (Show all's keyboard focus), **v1.120** (turned-off icon buttons, option A), **v1.121** (the success colors as shared settings) and **v1.122** (R4-07: the gray "Payment history is hidden" line in every history while hidden), all 2026-11-04 — block **1.100–1.199**, next free **1.123** (`git merge main` before any rulebook edit).
+**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); **fc3bea6** — the fact fixes (v1.113). **Merged into `main` as 95a9601** (2026-10-28, the Main session); this branch then moved forward to `main` 4c15146, and later to a3ff7ca (both fast-forwards; the second brought New students' N17 merge, rulebook v0.616). Then the date picker opener option (v1.114, committed as 1bb2683); `main` merged in up to 50022cf (2026-10-28, merge commit **bd3847e**: New students' N1, N2, Undone, class ages and classes taught together, with migration 0031 and rulebook v0.617–v0.620; the rulebook's three same-spot conflicts kept both sides, main's first); then the count cards' two-line note (v1.115, committed as 5628133). Both **merged into `main` as a287ee5** (2026-10-28, the Main session, no conflicts); this branch then moved forward to it, and later to c975428 (both fast-forwards; the second brought Star's merge, with Star's count cards on the shared part). The Main session pushed `main` c975428 on 2026-10-28, so all of this branch's work is live; `dashboard-core` itself is never pushed. On 2026-10-29 this branch moved forward to `main` 3fdbc0b (a fast-forward: New students' N4–N6 with rulebook v0.621–v0.623, and CLAUDE.md's 0030 notes); then the turned-off dropdown and time list (v1.116) was committed as cc92332, merged into `main` as e3e46d4 (the Main session; pushed and live 2026-10-29), and this branch moved forward to it (fast-forward). Later the same day it moved forward to `main` 5f28ed9 (a fast-forward: Finance's design review F1–F7 with migration 0029's files and rulebook v0.817–v0.823, and CLAUDE.md's 0029 and 0032 notes; none of it touches this branch's files), and Show all on touch (v1.117) was committed as 2bf89c6. On 2026-11-03 Main merged it into `main` as 7b665af; this branch moved forward to it, then to 1e6561d and 5f1db41 (all fast-forwards bringing other sections' work; see the log). Then Panel size (v1.118) was committed as 2baea38, and `main` was merged in up to e7fd75b (2026-11-03, merge commit **723c302**: Camps C10 and New students N10, N13, N14; the rulebook's three same-spot conflicts kept both sides, main's first). Both **merged into `main` as 942cfdd** (2026-11-04, the Main session; the same three conflicts, main's v0.627 and v0.972 kept first; pushed and live the same day), and this branch moved forward to it (fast-forward). Later the same day it moved forward through `main` 5087732, 301e7f1 and 9b562b3 (fast-forwards), and the shared-file cleanup (v1.119–v1.121) was committed as 2b859b4. That was **merged into `main` as 801b757** (2026-11-04, the Main session, after Color Belt's merge 84a6e7d; pushed and live the same day), and this branch moved forward to it. It then moved forward to `main` 392bc9e (see the log), and R4-07 (v1.122) was committed on top of it on 2026-11-05 (not pushed; `main` had meanwhile moved to 6e35831).
 
 > Read `CLAUDE.md` first. This file says where the Dashboard core work stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -830,7 +830,119 @@
     - `check-parts.mjs`, the rulebook (v1.119–v1.121) and this file;
     - the question pictures CU2 and CU3 (`.html` and `.png`).
   - Shared files touched: the rulebook, `shared.css` and `tokens.css`.
+- **2026-11-04 — committed as 2b859b4** (the cleanup, v1.119–v1.121; 14 files, on top of `main` 9b562b3, so a merge into `main` is a fast-forward while `main` stays there). Not pushed.
+  - The report to Main (Done / Needs Jeffrey / Next, with the notes for Finance, Camps, New students, Black Belt and Color Belt) was queued (Main's session was busy); not confirmed read.
+  - Next: merging into `main` is Jeffrey's call, through Main. Step 2 and the rolling-check fix list each wait on Jeffrey pasting its starter.
+- **2026-11-04 — Jeffrey: "Yes, tell Main"** (the go to merge the cleanup into `main`).
+  - `main` had moved to 84a6e7d (Color Belt's design review Part 1 + Part 2, rulebook v0.420–v0.426). Only the rulebook conflicts, at 4 spots:
+    1. the Version line (keep 1.121);
+    2. **the v1.117 row, an edited row:** this branch added its "(See v1.119 …)" pointer, and main put Color Belt's new v0.420 row right after it. Keep this branch's v1.117 row, then v0.420; keeping both would duplicate the row, as 0c97e81 had to fix;
+    3. the end of the 10b rows (main's v0.426, then v1.119–v1.121);
+    4. the changelog's end (the same order).
+  - Sent to Main with Jeffrey's words and these steps. Not delivered within 20 s. Jeffrey has a short text to paste in Main.
+  - Color Belt now uses the shared count cards, so v1.119 reaches its rosters too. Its pale-green note can go to Color Belt once this is on `main`.
+- **2026-11-04 — merged into `main` as 801b757** (the Main session, on Jeffrey's own request there; not pushed).
+  - **Checked here:**
+    - its parents are 84a6e7d and 2b859b4;
+    - the rulebook has no conflict marks and its header is 1.121;
+    - v1.117 has exactly one 10b row, with the "(See v1.119 …)" pointer, and Color Belt's v0.420 is right after it;
+    - v1.119, v1.120 and v1.121 have one row each, and no changelog number is used twice;
+    - the file is stored as before and has CRLF in the folder.
+  - This branch moved forward to it (`git merge --ff-only main`). The preview was started again (the session had restarted).
+  - Checks on 801b757: check-parts 94 of 94, check-panel 38 of 38, the 19 check files, and both builds.
+  - Next: pushing `main` (which also holds Color Belt's Part 1 + 2) is Jeffrey's call, through Main. The section notes go out through Main once it's on `main`.
+- **2026-11-04 — live.** Main pushed `main` 801b757 on Jeffrey's "Push now", and Cloudflare reported success.
+  - Checked: `origin/main` is 801b757, and the live site's stylesheets contain `--color-success-bg`, the gray rule for `.tib[aria-disabled=…]`, and the High Contrast GrayText rule.
+  - The section notes (§4 item 11) can all go out now, through Main or pasted by Jeffrey.
+- **2026-11-04 — Jeffrey: "The fix list"** (the Design Review's rolling check, pass 1; he chose it over step 2).
+  - `git merge --ff-only main` to 2881413 (New students' "(now)" 5–7 and the start of its Part 2). The fix file hasn't changed since it arrived.
+  - Two read-only research helpers:
+    - **R2-05:** 26 groups of Undo handlers in 8 areas, each with its own busy flag and nothing to wait on (some have no guard). The toast removes itself before Undo runs. A failing save clears the toast, and some Undos have 10-second limits.
+    - **R1-08 and R3-12:** about 25 kinds of buttons are `aria-disabled` but look normal. A page-wide gray would also change some that shouldn't change: Camps' red Delete permanently, steppers and arrows at a limit, Finance's Copy Monday, and the kiosk. Also, how the dropdown's unavailable state fits.
+  - Plan written: plan §16. Next: Jeffrey's OK of the plan and its order.
+- **2026-11-04 — Color Belt's CB14 / M15 joint plan reviewed** (Jeffrey asked; the plan is on `color-belt` as e960d65, `docs/Testing/Color Belt Testing/TKD-ColorBelt-CB14-JointPlan.md`).
+  - **Its proposal:** Color Belt builds all of it on `color-belt`. Classes and ranks moves into Settings as a second part after Schools, and Testing keeps a "Prices" tab. Dashboard core reviews the Settings fit. No database change.
+  - **Reply sent to Color Belt: agree, with changes.** Color Belt's session held it, so it wasn't delivered (the sessions run in different permission modes). Jeffrey has the text to paste.
+    - Nothing of Dashboard core's goes into `src/screens/Settings.jsx`: neither step 2 (M12–M14, M17) nor the fix list touches it.
+    - Panel size isn't in Settings (it's in the account menu, v1.118).
+    - If D6 gives staff a read-only view inside Settings, the account-menu entry for them is Dashboard core's change (`AccountMenu.jsx`; M17 changes it too). Color Belt builds the page side, and lists any `App.jsx` route change.
+  - **Settings rules to keep:**
+    - parts one under the other, each with its h2 heading and gray line;
+    - Settings keeps ignoring the location switcher, with the school named wherever classes differ (the shared ChoiceGroup if it's a switch);
+    - dialogs report through `onModalOpenChange`;
+    - shared parts only;
+    - an address of its own (e.g. `#settings/classes-and-ranks`) if N11's hints become links.
+  - **Fix-list overlap:**
+    - R2-05's Undo helper will land in ClassesRanksTab's four Undo handlers wherever they move.
+    - R1-08's page-wide gray must not give BeltPicker's stepper a gray box.
+  - Next: Color Belt's Settings mockups. Dashboard core reviews their fit when they arrive.
+  - The held reply then expired undelivered, and nothing is waiting in Color Belt's session. Jeffrey has the text to paste.
+- **2026-11-04 — Jeffrey: "Yes, start R4-07"** (the fix list's plan OK'd as proposed, plan §16).
+  - **R4-07's picture:** `Questions/R407-history-hidden-line.png` / `.html`. It shows Camps → Thanksgiving Camp → Camper detail, with Hide private details on and the history opened.
+    - **Today:** unpaid Ella Grant's list ends with no gray line, while paid Chloe Nguyen's ends with "Payment history is hidden on this tablet." The difference tells you who hasn't paid.
+    - **With the fix** (imitated in the page): Ella's list gets the line too.
+    - Sizes: PC, phone, tablet and 320 wide.
+  - **On Jeffrey's yes:**
+    - drop `hiddenPayments > 0` in `HistoryLine.jsx`;
+    - rulebook v1.122;
+    - a check in `check-parts.mjs`;
+    - a security review, a code review and a design review.
+  - Sent to Jeffrey.
+- **2026-11-04 — Jeffrey: "Yes, build it"** (R4-07).
+  - `git merge --ff-only main` first, to cceb2bf (CLAUDE.md: migration 0035 reserved for Color Belt).
+  - **Rulebook v1.122:** the 10b row, a pointer on v1.108's row, and the changelog line. The header had been 0.632.
+  - **`HistoryLine.jsx`:**
+    - while hidden, the gray line shows in every history;
+    - the counter that limited it is gone;
+    - the comments say why.
+  - **`parts/M7.jsx`:** two new samples, `hidden-unpaid` and `hidden-empty`.
+  - **`check-parts.mjs`:** one new check. While hidden, a paid person's history, a never-paid person's and one with nothing recorded all end with the gray line; with the switch off, the history is unchanged. On the old code it fails, for never-paid and nothing-recorded.
+  - **The real screens:** Camps' Ella Grant and Chloe Nguyen at the four sizes are pixel-identical to the approved picture's "With the fix".
+  - **Checks:** check-parts 95 of 95 (its first run failed my own new check, which read two side-by-side words without their space; fixed), the 19 check files, and both builds.
+  - Next: the security and code review, and the design review (both running).
+- **2026-11-04 — R4-07's security and code review: approve, nothing must be fixed.**
+  - **Verified:**
+    - all six users of the shared history pass `hidden` from the same source that hides the rest of their screen;
+    - each section's words leave out every money row, so paid and unpaid people with the same other changes show identical histories and counts (database-shaped rows, plus 68 real summaries in the preview, hidden and not);
+    - the new check fails on the old rule;
+    - the rulebook's mechanics.
+  - **Fixed while in the file:** `HistoryLine.jsx`'s header still said Color Belt, Camps and Black Belt had no history line, and that nothing switched to it in step 1. It now says all four use it.
+  - **Notes for other sessions** (their files):
+    - Camps' `camperHistoryWords.js` (about lines 25–27) and Black Belt's `staff/candidates/historyWords.js` (about lines 33–35) still say money rows are "counted for the gray line". Suggested: "left out; the shared line shows the gray line in every history while hidden (v1.122)".
+  - **For Jeffrey, information only:**
+    - Black Belt's plan and Kukkiwon lines stay in the history while hidden (decided in v0.971 / v0.972, no amounts), though Black Belt's own details screen hides them. So a plan's name shows only there.
+    - The history readers still send money rows to the device while hidden. That's the documented model: a screen guard, not a security lock (v0.161 / v0.249).
+  - **Open for the design review:** in the new "hidden, nothing else" state the lone "History" label is gray, as in the approved M7 "can't read" state (the same rule).
+  - **Before committing:** `main` moved to 392bc9e (Black Belt, rulebook v0.974–v0.975). The usual catch-up: set v1.122 aside, fast-forward, add it again.
+- **2026-11-04 — R4-07's design review: ready**, nothing to fix.
+  - **What it covered:**
+    - 40 people in Camps, Star, Color Belt (event and private testing) and Black Belt, with the switch on and off;
+    - all four sizes in each section;
+    - Camps against the approved picture, matched at the four sizes.
+  - **The line itself:** while hidden, everyone's history ends with the gray line, paid or not. It takes the same box and spacing for paid and unpaid people, is one line even at 320, and has 5.3:1 contrast. With the switch off, nothing changes.
+  - **Nothing recorded:** that case was checked in Camps (with a camper's history emptied in a throwaway profile) and on the parts page.
+  - **Optional notes:**
+    - In the "hidden, nothing recorded" state the lone "History" label is gray. That's the same as M7's approved "can't read" look, so it's left as is unless Jeffrey wants it dark.
+    - Black Belt's "on this device" wording is settled: Black Belt's v0.974 changed it to "on this tablet", now on `main`.
+  - **Catch-up done:** v1.122 was set aside, the branch moved forward to 392bc9e, and v1.122 was added again (the same lines; the header had been 0.975).
+  - **Checks on 392bc9e plus R4-07:** check-parts 95 of 95, check-panel 38 of 38, the 19 check files, and both builds.
+  - Next: Jeffrey's OK to commit R4-07 on `dashboard-core` (no push).
+- **2026-11-04 — Main asked: New students' N3 (b6a90a7, not merged) adds `actionUnavailable` to the shared `ConfirmBox.jsx`** (rulebook v0.633; Jeffrey: "Add it in this branch").
+  - **Checked: it fits v1.008 / v1.103.** Only the action grays in the approved unavailable look, it stays focusable and a press does nothing, "Keep …" is unchanged, and it's off by default.
+  - **Two small suggestions for New students:**
+    - the first focus goes to "Keep …" when the action is unavailable, since a blue box focuses its action first;
+    - the action is linked to its reason with `aria-describedby`, as MarkPaidBox does.
+  - **No conflict:** Dashboard core isn't editing `ConfirmBox.jsx`. R1-08 (later) changes `shared.css`'s gray rules only.
+  - Reply sent to Main; not delivered within 20 s. Jeffrey has the text to paste.
   - Then the notes to pass on, through Main: Finance (its bordered buttons; the pale green), Camps, New students and Black Belt (the pale green; Black Belt also its half-strength rule; New students also the grips), and Color Belt (the pale green, after its current work).
+- **2026-11-04 — On hold: Jeffrey halted all sessions** (passed on by Main, quoting him: "I need to halt all of the chats right now, and focus on adding something to the form prospect section. Let all of the chats know").
+  - Until he says to resume: nothing new is started, merged, committed or pushed, and no messages go to other sessions about new work. Step 2 stays parked on Main's list.
+  - R4-07 stays as above: built, reviewed and checked, **not committed**.
+  - The preview server (port 5190, fake database) is stopped.
+- **2026-11-05 — Jeffrey: "Yes, commit"** (R4-07). It lifts the hold for this one item only. Everything else stays on hold until he says to resume, including catching up with `main` and the report to Main.
+  - R4-07 is committed on `dashboard-core` on top of `main` 392bc9e (the hash is in `git log`); not pushed.
+  - `main` has meanwhile moved to 6e35831: New students' N3 and its 0036 work (rulebook v0.633–v0.640) and CLAUDE.md's 0036 notes. Of R4-07's files, only the rulebook changed there, and only at the usual three spots: the header's version line, new 10b rows above v0.26, and new changelog lines at the end. So the merge needs the usual fix: keep both, main's first, with the newest version line.
+  - Main's change to line 129 (the icon map's v1.108 entry, which now also names v0.640) is not the v1.108 10b row that R4-07 adds its pointer to.
 
 ## 4. Next
 
@@ -846,7 +958,7 @@
 6. **The count cards' two-line note** (Star's v0.518: Q5 B / Q5b A, passed on by Main; Jeffrey: "Yes, build it"): built and reviewed (approve), 79 of 79 checks; **OK'd 2026-10-28** ("OK: record and commit"), rulebook **v1.115** (§12), committed on `dashboard-core` as 5628133 (not pushed). The note to Main that it is committed and reviewed was held by Main's session and expired undelivered (the two run in different permission modes); Jeffrey passed it on. **Merged into `main` as a287ee5** and **live** (pushed with `main` c975428, 2026-10-28). The note to Star (how to pass two lines) was held too; Jeffrey has the text to paste. Star's switch to the shared card is Star's own work.
 7. **"Show all" on touch screens** (merged into `main` as 7b665af on 2026-11-03, the Main session; not pushed) (Star's design reviewer, passed on by Main; `Questions/M6-show-all-on-touch.png`): Jeffrey chose **A, inline** (2026-10-29). The first build's invisible tap box didn't fit, and Jeffrey then chose **(a) room for the box** (2026-10-29, "Room for box"; `Questions/M6-show-all-tap-area.png`). Built (§14): 91 of 91 checks, pixel-identical to his option (a) on Star's screen (`Proof/parts/M6-show-all-built-vs-a.png`). Reviewed: **ready** after its fixes (re-review, 2026-10-29). **OK'd 2026-10-29** ("Yes, record it"), rulebook **v1.117**, committed on `dashboard-core` as **2bf89c6** on top of `main` 5f28ed9 (not pushed). Jeffrey's go to merge: 2026-10-29, "Yes, tell Main"; passed on to Main, not delivered within 20 s (Jeffrey has the text to paste). Next: Main merges it into `main`; Star gets it with `git merge main`.
 8. **The dropdown and time list turned off** (Finance's v0.823, "C, via Dashboard core"; §13): built, reviewed (ready; its should-fixes done), 87 of 87 checks; rulebook **v1.116**; committed on `dashboard-core` as **cc92332**, **merged into `main` as e3e46d4** (2026-10-29, the Main session, no conflicts) and **live** (pushed with Jeffrey's OK the same day; the Cloudflare deploy succeeded). Main told Finance it can merge `main` and build F2 with `<TimeList disabled={!on} … />`.
-9. **Step 2 — the dashboard's own screens** (`docs/Design Review/End review/Prompts/2-DashboardCore-step2-main-screens.md`): the top bar, Home, the account dialogs and menu, Staff accounts and Settings (design review M12–M14, M17; M15 with Color Belt; M16 later). Waits on: Jeffrey pasting its starter here. `git merge main` first; rulebook rows take the next free number in 1.100–1.199.
+9. **Step 2 — the dashboard's own screens** (`docs/Design Review/End review/Prompts/2-DashboardCore-step2-main-screens.md`): the top bar, Home, the account dialogs and menu, Staff accounts and Settings (design review M12–M14, M17; M15 with Color Belt; M16 later). **M15's joint plan agreed 2026-11-04**: Color Belt builds all of it on `color-belt`, and Dashboard core reviews the Settings fit (see the log). Waits on: Jeffrey pasting its starter here. `git merge main` first; rulebook rows take the next free number in 1.100–1.199.
 10. **A larger side panel for the Grandmaster** (Jeffrey via Main, 2026-10-29: "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster"). It is its own item, not part of step 2. If its switch lives in Settings or the account menu, step 2's designs of those include it.
    - Research done (plan §15).
    - ~~Question 1: which look~~ — **decided 2026-11-03: B**, the same 72 px panel with 14 px names on PC and tablet, as **each person's own setting** (Jeffrey keeps today's panel). That also settles who can use it: everyone, each for themselves. Picture: `Questions/SP1-large-panel-look.png`.
@@ -856,19 +968,19 @@
    - ~~Question 4: how it's remembered~~ — **decided 2026-11-03: with their account** (Supabase's per-user settings, no migration). Picture: `Questions/SP4-remembered.png`.
    - **The mockup** (`Mockups/SP-panel-size.png`): **OK'd 2026-11-03** ("OK, build it"); rulebook **v1.118**.
    - **Built 2026-11-03:** 38 of 38 checks (`tools/check-panel.mjs`); proof `Proof/panel/SP-built-vs-mockup.png`. Code and security review: done, its fixes made. Design review: ready after small fixes, made; its re-check found them all fixed. **Committed 2026-11-03** on `dashboard-core` as **2baea38** (Jeffrey: "Yes, commit"), on top of `main` 5f1db41; not pushed. `main` merged in up to e7fd75b (merge commit **723c302**; the checks pass). Jeffrey's go to merge: 2026-11-03, "Yes, tell Main"; passed on to Main (queued, not confirmed read). **Merged into `main` as 942cfdd** (2026-11-04, the Main session, on Jeffrey's own request there; the rulebook's three conflicts kept both sides, main's first), and this branch moved forward to it. **Live:** Main pushed `main` 942cfdd on Jeffrey's "push" (2026-11-04). The Cloudflare deploy succeeded, and the live site's code has Panel size.
-11. **Shared-file notes from other sessions** (passed on by Main, 2026-11-03). For the to-do list only: none is approved work yet, and each needs Jeffrey's go before anything changes.
-   - **New students (N13, not on `main` yet):** a turned-off `.tib` (the shared icon button) has no turned-off look, and still shows its hover and its tooltip. **Done 2026-11-04** (Jeffrey: "A, tooltip shows"; rulebook v1.120; checked). Not committed yet.
+11. **Shared-file notes from other sessions** (passed on by Main, 2026-11-03). For the to-do list only: none is approved work yet, and each needs Jeffrey's go before anything changes. **All six done 2026-11-04**, each with Jeffrey's go (rulebook v1.119–v1.121), committed as 2b859b4, merged into `main` as 801b757, and **live**. What's left are the notes for other sessions below (Finance, Camps, New students, Black Belt, Color Belt).
+   - **New students (N13, not on `main` yet):** a turned-off `.tib` (the shared icon button) has no turned-off look, and still shows its hover and its tooltip. **Done 2026-11-04** (Jeffrey: "A, tooltip shows"; rulebook v1.120; checked). Committed as 2b859b4.
    - **One look, three copies:** the bordered icon button exists as Finance's `.fin-ibtn`, `parts.css`'s `.parts-ibtn`, and New students' new `.tib--outline` in `shared.css` (a copy of Finance's look). Finance could switch to `.tib--outline` later.
-     - **2026-11-04** (Jeffrey: "Finance does it"): the parts page's copy is gone (not committed yet).
+     - **2026-11-04** (Jeffrey: "Finance does it"): the parts page's copy is gone (committed as 2b859b4).
      - Finance's switch is Finance's, after this cleanup is on `main`. The note to paste is below:
        > Finance: switch your bordered icon buttons to the shared one, after Dashboard core's cleanup (rulebook v1.119–v1.120) is on main (`git merge main` first). Nothing on screen changes.
        > (1) `DayReport.jsx`: Previous day, Next day and the calendar button take `className="tib--outline"` (Next day keeps its `aria-disabled`: the shared look grays any button with `aria-disabled="true"`, so `is-unavailable` isn't needed).
        > (2) `HistoryView.jsx`: Previous month and Next month, the same.
        > (3) `finance.css`: delete the copy (`.fin-ibtn.tib`, `.fin-ibtn .tib-box`, `.fin-ibtn.is-unavailable` and its `.tib-box`, about lines 142–162; in the hover section, `.fin-ibtn:not(.is-unavailable):hover .tib-box` out of the rule it shares with `.fin-hidden-chip:hover`, keeping the chip's; in the touch section, `.fin-ibtn.tib` and `.fin-ibtn .tib-box`). The first button's tooltip rule (`.fin-dayrow > .fin-ibtn:first-child .tib-tip` and its `::after`) becomes `.fin-dayrow > .tib:first-child …`.
        > Check: the Daily report and History at the four sizes look as before (at rest, with the pointer on ‹ and on the gray ›, and the tooltips). `shared.css`'s `.tib--outline` is then the only copy.
-   - **From Camps:** `shared.css` around lines 1687–1688 still mentions `camps.css`'s `.cp-popover`, which Camps removed. A harmless out-of-date comment. **Fixed 2026-11-04** (Jeffrey: "Yes, fix both"); not committed yet.
+   - **From Camps:** `shared.css` around lines 1687–1688 still mentions `camps.css`'s `.cp-popover`, which Camps removed. A harmless out-of-date comment. **Fixed 2026-11-04** (Jeffrey: "Yes, fix both"); committed as 2b859b4.
    - **From New students** (passed on by Main, 2026-11-03): the pale green `#eaf3de` is typed out by hand, with no shared color setting in `tokens.css`. On `main` 5f1db41 it appears 7 times in 6 stylesheets: `shared.css`, `finance.css` (twice), `camps.css`, `testing-events.css`, `forms-public.css` and `blackBelt/form/form.css`. On 942cfdd, New students' N14 added one more, in `forms.css`: 8 times in 7 files, one of them in a comment.
-     - **2026-11-04** (Jeffrey: "A, setting + notes"; rulebook v1.121): `tokens.css` has `--color-success-bg` (#EAF3DE) and `--color-success-border` (#CFE3B8) next to `--color-success-text`, and `shared.css`'s green tag uses them. Not committed yet.
+     - **2026-11-04** (Jeffrey: "A, setting + notes"; rulebook v1.121): `tokens.css` has `--color-success-bg` (#EAF3DE) and `--color-success-border` (#CFE3B8) next to `--color-success-text`, and `shared.css`'s green tag uses them. Committed as 2b859b4.
      - Each section switches its own copies once this cleanup is on `main` (`git merge main` first). Nothing on screen changes. The notes to pass on:
        > **Camps:** `src/styles/camps.css`, `.cp-dc--came` (about line 763): `border-color: #cfe3b8` → `var(--color-success-border)`, `background: #eaf3de` → `var(--color-success-bg)` (rulebook v1.121: use the settings, don't type the colors).
        > **New students:** `src/styles/forms.css` (Fill in's Sent tick, about line 946) and `src/styles/forms-public.css` (the family page's tick, about line 496): `background: #eaf3de` → `var(--color-success-bg)` (v1.121). Both pages load `tokens.css`.
@@ -879,11 +991,22 @@
      - Checked: Show all sits in the gray line, which disappears as soon as the filter is off. The focused button goes with it, and nothing moves focus first.
      - It's a miss in this branch's own part (v1.117's Show all), and its reviews didn't catch it.
      - Likely fix: focus the card that was on, then clear the filter. The look doesn't change.
-     - **Fixed 2026-11-04** (Jeffrey: "Yes, fix it"; rulebook v1.119; checked). Not committed yet.
+     - **Fixed 2026-11-04** (Jeffrey: "Yes, fix it"; rulebook v1.119; checked). Committed as 2b859b4.
    - **From Black Belt** (passed on by Main, 2026-11-04): `src/lib/times.js`, lines 5–6, still says Black Belt picks times every 15 minutes. Since BB13 (live on `main` 2e806e7), it uses the shared time list: every 5 minutes, 6:00 AM–10:00 PM.
      - Checked: the whole sentence is out of date. On `main`, Star, Camps and Finance use the shared list too; only Color Belt doesn't yet.
-     - A comment-only fix, best done with the next shared-file change. **Fixed 2026-11-04** (Jeffrey: "Yes, fix both"). It now names no section, so it can't go out of date again. Not committed yet.
+     - A comment-only fix, best done with the next shared-file change. **Fixed 2026-11-04** (Jeffrey: "Yes, fix both"). It now names no section, so it can't go out of date again. Committed as 2b859b4.
 12. **The Design Review's rolling check, pass 1** (`docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md`, on `main` since 5087732).
    - It has 6 "fix now" items (R2-05, R4-07, R1-08, R4-09, R3-12, R3-13), 11 that wait on Jeffrey, and a "smaller" list.
    - Four of the smaller ones are item 11's: the `.cp-popover` comment, the turned-off icon button, the three bordered copies, and the pale green.
    - Waits on: Jeffrey pasting its starter here. Then a plan, and pictures for anything that changes how a screen looks.
+   - **Started 2026-11-04** (Jeffrey: "The fix list"). The plan is plan §16, in six steps:
+     1. R4-07, privacy;
+     2. small fixes: R4-09, R3-13, and the Mark paid box on phones;
+     3. R2-05, the Undo queue;
+     4. R3-12, the dropdown's unavailable state;
+     5. R1-08, unavailable plain buttons and tags;
+     6. two refactors, nothing to see.
+
+     The plan was OK'd 2026-11-04 ("Yes, start R4-07"). Step 1, R4-07, is built, reviewed, checked and committed (2026-11-05, Jeffrey: "Yes, commit"; not pushed, not merged).
+
+     **On hold since 2026-11-04:** Jeffrey halted all sessions (see the log), so nothing else moves until he says to resume. Then: tell Main R4-07 is ready to merge (the merge is his call; `main` has moved, so the rulebook needs the usual three same-spot fixes, or this branch merges `main` in first), and step 2 of the plan.
