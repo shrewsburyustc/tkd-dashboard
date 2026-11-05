@@ -181,6 +181,7 @@ function mapEventResult(result, siteKey) {
       name: textOrNull(event.name),
       testing_date: textOrNull(event.testing_date),
       start_time: textOrNull(event.start_time),
+      end_time: textOrNull(event.end_time), // v0.520 (0041); null before 0041 or when none is saved
       note: textOrNull(event.note),
       auto_close_on: textOrNull(event.auto_close_on),
       where: whereOf(event.where),
@@ -303,6 +304,7 @@ function mapRegisterResult(result) {
         event_name: textOrNull(result.event_name),
         testing_date: textOrNull(result.testing_date),
         start_time: textOrNull(result.start_time),
+        end_time: textOrNull(result.end_time), // v0.520 (0041)
         school_name: textOrNull(result.school_name),
         where: whereOf(result.where),
       };

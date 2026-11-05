@@ -79,7 +79,7 @@ import { peekPrivateHandoff, takePrivateHandoff } from '../../../../lib/star/hom
 import { loadResults, loadResultTexts } from '../../../../lib/star/resultsApi.js';
 import { longDate } from '../../../../lib/star/resultEmail.js';
 import { shortDate, whereText } from '../../../../lib/star/eventsText.js';
-import { startTimeLabel } from '../../../../lib/star/starEventRules.js';
+import { startTimeLabel, testingTimeLabel } from '../../../../lib/star/starEventRules.js';
 import * as G from '../../../../lib/star/gradingText.js';
 import { usePrivateDetailsHidden } from '../../../../lib/privateDetails.js';
 import { loadSchools } from '../../../../lib/settings/schoolsApi.js';
@@ -687,7 +687,7 @@ export default function StarEventPage({
       opener,
       sheet: {
         title: GT.sheetTitle(event.name, danLabel),
-        whenLine: GT.sheetWhenLine(shortDate(event.testingDate), startTimeLabel(event.startTime), whereText(event.whereCode)),
+        whenLine: GT.sheetWhenLine(shortDate(event.testingDate), testingTimeLabel(event.startTime, event.endTime), whereText(event.whereCode)),
         footWhat: `${event.name} · ${danLabel}`,
         subjects: judgedSubjects(copy, dan),
         rows: gradingLive.data?.dans?.[dan]?.rows ?? [],

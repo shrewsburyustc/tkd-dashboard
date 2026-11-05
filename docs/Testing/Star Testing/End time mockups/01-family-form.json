@@ -1,0 +1,188 @@
+{
+ "title": "Star End time · 1 of 4 — family registration form, first screen",
+ "subtitle": "The event box at the top of /star/&lt;code&gt;: the line under the date becomes a range, “6:00 PM – 8:00 PM” (AM/PM on both times, an en dash with spaces). Amber = the line that changes; green = the new line.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/01-today-pc.png",
+     "crop": [
+      360,
+      100,
+      560,
+      300
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800.</b> Only the start time: “6:00 PM”.",
+     "marks": [
+      [
+       392,
+       209,
+       92,
+       24
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/01-today-tab.png",
+       "crop": [
+        130,
+        100,
+        560,
+        300
+       ],
+       "scale": 0.78,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         162,
+         209,
+         92,
+         24
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/01-today-ph.png",
+       "crop": [
+        0,
+        100,
+        390,
+        320
+       ],
+       "scale": 0.95,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         32,
+         219,
+         92,
+         24
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    },
+    {
+     "src": "shots/01-today-p320.png",
+     "crop": [
+      0,
+      100,
+      320,
+      320
+     ],
+     "scale": 1.1,
+     "caption": "<b>320 wide, touch.</b>",
+     "marks": [
+      [
+       32,
+       224,
+       92,
+       24
+      ]
+     ],
+     "shotWidth": 320
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/01-after-pc.png",
+     "crop": [
+      360,
+      100,
+      560,
+      300
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800.</b> “6:00 PM – 8:00 PM”: families see when to pick up.",
+     "marks": [
+      [
+       392,
+       209,
+       182,
+       24
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/01-after-tab.png",
+       "crop": [
+        130,
+        100,
+        560,
+        300
+       ],
+       "scale": 0.78,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         162,
+         209,
+         182,
+         24
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/01-after-ph.png",
+       "crop": [
+        0,
+        100,
+        390,
+        320
+       ],
+       "scale": 0.95,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         32,
+         219,
+         182,
+         24
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    },
+    {
+     "src": "shots/01-after-p320.png",
+     "crop": [
+      0,
+      100,
+      320,
+      320
+     ],
+     "scale": 1.1,
+     "caption": "<b>320 wide, touch.</b> The range still fits on one line.",
+     "marks": [
+      [
+       32,
+       224,
+       182,
+       24
+      ]
+     ],
+     "shotWidth": 320
+    }
+   ],
+   "note": "Nothing else in the box moves. With no end time saved, the line stays “6:00 PM”."
+  }
+ ],
+ "footer": "Rulebook decision “A” (approved): Star testing events get an End time as well as a Start time, so parents know when to pick up. Preview screenshots (fake database; the fake Fall Star Testing’s start was set to 6:00 PM in preview for these pictures, its date stays Tue, Dec 1, 2026). The “After” column is drawn over the real page — nothing in the app was changed. An event with no end time saved yet keeps showing only the start time, exactly as “Today”. Private testing times (one time) don’t change."
+}

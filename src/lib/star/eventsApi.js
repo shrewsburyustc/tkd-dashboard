@@ -36,11 +36,13 @@
 //           grades: [{ id, grade, position, value }]   (A+ … D),
 //           assistant: { id, childMaxAge, childMins:[6], adultMins:[6] } | null }
 //
-//   addStarEvent({ name, testingDate, startTime, whereCode, registrationOpen, autoCloseOn, note })   admin
+//   addStarEvent({ name, testingDate, startTime, endTime, whereCode, registrationOpen, autoCloseOn, note })   admin
+//     (endTime: v0.520 / migration 0041 — 'HH:MM' after the start, or null)
 //     → { status:'ok', id, version, publicCodeWorcester, publicCodeShrewsbury }
 //     refusals: not_allowed · invalid (past date, start time not 6:00 AM–10:00 PM on a 5-minute step,
 //               closing date before today or after the testing date, …) · duplicate_name
-//   updateStarEvent({ eventId, expectedVersion, name, testingDate, startTime, whereCode, autoCloseOn, note })   admin
+//   updateStarEvent({ eventId, expectedVersion, name, testingDate, startTime, endTime, whereCode, autoCloseOn, note })   admin
+//     (endTime is always sent: null clears it)
 //     → { status:'ok', version }      (details only — the switch is setStarRegistration)
 //     refusals: not_allowed · invalid (a CHANGED date or closing date in the past, closing date after
 //               the testing date …) · not_found · stale · duplicate_name

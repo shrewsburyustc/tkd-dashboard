@@ -34,7 +34,8 @@ export const STAR_EVENT_STATUSES = [
 const SERVER_STATUSES = new Set(STAR_EVENT_STATUSES.filter((s) => s !== 'error'));
 
 // ----- The columns we read (exactly contract 0006 §4.1; the database refuses '*') -----
-const EVENT_COLUMNS = 'id, name, testing_date, start_time, where_code, registration_open, auto_close_on, first_opened_at, public_code_worcester, public_code_shrewsbury, note, version, created_at, updated_at, created_by_name, updated_by_name';
+// end_time: v0.520 (migration 0041; this list needs 0041 live first).
+const EVENT_COLUMNS = 'id, name, testing_date, start_time, end_time, where_code, registration_open, auto_close_on, first_opened_at, public_code_worcester, public_code_shrewsbury, note, version, created_at, updated_at, created_by_name, updated_by_name';
 const EVENT_DAN_COLUMNS = 'id, event_id, dan, label, pass_mark, star_limit, standard_cents, same_day_cents, private_cents';
 const EVENT_CATEGORY_COLUMNS = 'id, event_id, dan, template_category_id, name, credits, position, from_class_count';
 const EVENT_GRADE_COLUMNS = 'id, event_id, grade, position, value';
@@ -94,6 +95,7 @@ function toStarEvent(row, today) {
     name: row.name,
     testingDate: row.testing_date,
     startTime: shortStartTime(row.start_time), // '10:00'
+    endTime: row.end_time ? shortStartTime(row.end_time) : null, // '12:00' or null (none saved yet, v0.520)
     whereCode: row.where_code, // 'worcester' | 'shrewsbury' (information only, v0.87)
     registrationOpen: row.registration_open === true,
     autoCloseOn: row.auto_close_on ?? null,
@@ -284,7 +286,7 @@ export function createStarEventsApi(getClient, getToday) {
     : null);
 
   // Add event (admin). The rubric and prices are copied into the event by the database.
-  async function addStarEvent({ name, testingDate, startTime, whereCode, registrationOpen, autoCloseOn = null, note = null } = {}) {
+  async function addStarEvent({ name, testingDate, startTime, endTime = null, whereCode, registrationOpen, autoCloseOn = null, note = null } = {}) {
     const args = {
       p_name: asText(name),
       p_testing_date: asDate(testingDate),
@@ -293,13 +295,14 @@ export function createStarEventsApi(getClient, getToday) {
       p_registration_open: asBoolean(registrationOpen),
       p_auto_close_on: asDate(autoCloseOn),
       p_note: asText(note),
+      p_end_time: asTime(endTime), // v0.520
     };
     if (isBad(Object.values(args))) return { status: 'invalid' };
     return callRpc('star_add_event', args, readAdded);
   }
 
   // Edit event's details (admin) — NOT the Registration switch (contract §11 item 7).
-  async function updateStarEvent({ eventId, expectedVersion, name, testingDate, startTime, whereCode, autoCloseOn = null, note = null } = {}) {
+  async function updateStarEvent({ eventId, expectedVersion, name, testingDate, startTime, endTime = null, whereCode, autoCloseOn = null, note = null } = {}) {
     const args = {
       p_event_id: asText(eventId),
       p_expected_version: asInteger(expectedVersion),
@@ -309,6 +312,7 @@ export function createStarEventsApi(getClient, getToday) {
       p_where_code: asText(whereCode),
       p_auto_close_on: asDate(autoCloseOn),
       p_note: asText(note),
+      p_end_time: asTime(endTime), // v0.520: always sent, so an empty one clears it
     };
     if (isBad(Object.values(args))) return { status: 'invalid' };
     if (args.p_event_id !== null && !isUuidText(args.p_event_id)) return { status: 'not_found' };

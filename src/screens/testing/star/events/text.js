@@ -13,7 +13,7 @@
 // Rubrics and prices screens do.
 import * as CB from '../../text.js';
 
-import { startTimeLabel } from '../../../../lib/star/starEventRules.js';
+import { testingTimeLabel } from '../../../../lib/star/starEventRules.js';
 import { weekdayMonthDay } from '../../../../lib/calendarDates.js';
 
 export * from '../../../../lib/star/eventsText.js';
@@ -56,6 +56,7 @@ export function editEventSub(createdIso) {
   return `Rubrics and prices were copied when this event was created (${text}).`;
 }
 export const START_TIME = 'Start time';
+export const END_TIME = 'End time'; // v0.520
 export const WHERE = 'Where';
 export const WHERE_HINT = 'Where testing takes place. Candidates from both schools take part.';
 export const CHOOSE = 'Choose…';
@@ -75,6 +76,8 @@ export const KEPT_CLOSED_HINT = 'Registration stays closed when you save; open i
 // Edit of a finished event: the Registration switch is grayed
 export const REGISTRATION_LOCKED_FINISHED = "This testing has finished, so registration can’t change.";
 export const CHOOSE_START_TIME = 'Choose a start time.'; // PROPOSAL (Save tapped while it is empty)
+export const CHOOSE_END_TIME = 'Choose an end time.'; // v0.520 (Save tapped while it is empty)
+export const END_AFTER_START = 'End time must be after the start time.'; // v0.520
 export const CHOOSE_WHERE = 'Choose where testing takes place.'; // PROPOSAL (Save tapped while it is empty)
 
 // ----- Delete event (screen 13, v0.91) -----
@@ -106,7 +109,7 @@ export const qrAlt = (school, shortLink) => `QR code for the ${school} link, ${s
 // ----- The flyer (screen 12, v0.99, v0.107) -----
 export const FLYER_SCHOOL = CB.FLYER_SCHOOL;
 export const flyerFor = (school) => `For ${school} school students`;
-export const flyerWhen = (testingDate, startTime) => `${CB.longDate(testingDate)} · ${startTimeLabel(startTime)}`;
+export const flyerWhen = (testingDate, startTime, endTime = null) => `${CB.longDate(testingDate)} · ${testingTimeLabel(startTime, endTime)}`; // the end time: v0.520
 // "Location: Shrewsbury school, 123 Main St, Shrewsbury, MA 01545" (just the school name until
 // Settings → Schools has its address).
 export const flyerLocation = (whereSchool, addressText) =>

@@ -275,6 +275,7 @@ export default function StarEventsTab({
       name: '',
       testingDate: '',
       startTime: last?.startTime ?? null,
+      endTime: null, // v0.520: chosen for each event (not copied)
       whereCode: last?.whereCode ?? null,
       open: false, // new events start Closed (v0.85)
       autoClose: true,
@@ -290,6 +291,7 @@ export default function StarEventsTab({
       name: event.name,
       testingDate: event.testingDate,
       startTime: event.startTime,
+      endTime: event.endTime ?? null, // v0.520: an older event has none; Save waits until one is chosen
       whereCode: event.whereCode,
       open: event.registrationOpen,
       autoClose: event.autoCloseOn !== null,
@@ -432,6 +434,7 @@ export default function StarEventsTab({
       name: p.name,
       testingDate: p.testingDate,
       startTime: p.startTime,
+      endTime: p.endTime,
       whereCode: p.whereCode,
       autoCloseOn: p.autoCloseOn,
       note: p.note,
@@ -489,6 +492,7 @@ export default function StarEventsTab({
         name: record.name,
         testingDate: record.testingDate,
         startTime: record.startTime,
+        endTime: record.endTime ?? null,
         whereCode: record.whereCode,
         autoCloseOn: record.autoCloseOn,
         note: record.note,
