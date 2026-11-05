@@ -56,3 +56,4 @@ Settings fit" (relayed by Jeffrey in the Color Belt session). Next: the Settings
 ## Answers (one rulebook row when all four are in)
 
 - Q1 (2026-11-04): **B** — Settings stays admins only; staff read Color Belt’s Prices tab, view only (every class, rank, price and final award; not the “Testing for” column). No account-menu change for Dashboard core.
+- Q2 (2026-11-05): **C** — links to `#settings/classes-and-ranks` only on the two "no classes yet" lines (Schedule's Add time slot with no classes; Forms → Book a class with no classes); the line under the Class choices in Add / Edit time slot stays plain text (a link there would leave the dialog mid-edit). All three say "Settings → Classes and ranks". The hint files are New students' (N11); Color Belt gives the address. Picture: `Design Review mockups/cb14/cb14-q2.png`.
