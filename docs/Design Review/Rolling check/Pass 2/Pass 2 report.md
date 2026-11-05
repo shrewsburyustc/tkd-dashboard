@@ -109,7 +109,7 @@ The four sizes the review always checks are fine (pictures 9–12), and Black Be
 
 ### Question 2 — What the results sheet on the school wall lists (M-06, Low; Star and Black Belt, or Color Belt)
 
-Picture: drawn before it is asked (see Next).
+Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-results-sheet.png` (today's three sheets, A, B; drawn on the real printed sheets).
 
 - **Today:** Color Belt's sheet lists only who passed ("the sheet is put up at the school", v0.416). Star's and Black Belt's sheets also list MAKE-UP rows (with "Needs: Breaking") and NOT FINISHED rows, and their PASSED rows keep their scores too: every row draws the score cell (Star: `src/screens/testing/star/results/StarResultsSheet.jsx:207`, "268.5 of 315 · PASS" in its header at `:17`; Black Belt: `src/blackBelt/staff/results/ResultsSheet.jsx:208`, "305.75 / pass 275 · PASS" at `:15`). The one-results-pattern row (v1.029) described Star's sheet only as "who passed to which belt", so it didn't see this difference.
 - **Jeffrey has already chosen full results twice, while warned about privacy:** for Star, v0.142 (told once that posting minors' scores and make-ups shows them to every family, he chose full results and rejected a passes-only sheet), then v0.145 (Make-up highlighted too); for Black Belt, v0.947 (the sheet "shows full results, as Star (rule 5 flagged once)"). Color Belt's passes-only sheet is the newest of these rows (v0.416, 2026-10-28): it came with its approved screen 4 mockup ("A: per class") and wasn't asked on its own. The question now is only whether the three sheets should match.
@@ -130,7 +130,7 @@ Picture: drawn before it is asked (see Next).
 
 Jeffrey approves the recommendations together, or pulls any out to see one by one. The letters stay as they were; (e) became question 2.
 
-**(a) One save, one History entry?** (M-02 = C-07 (b); Color Belt, then Star)
+**(a) One save, one History entry?** (M-02 = C-07 (b); Color Belt, then Star) · picture `pictures/Q3a-one-history-entry.png`
 - Today: in Color Belt, one Mark paid by another way is one tap, but its History shows two entries, and "History · N changes" counts both: "Paying by changed: Card → Cash" and "Payment recorded: $20 cash, paid Nov 5", at the same moment, by the same person. Undo payment adds two more. Color Belt's approved P3 picture drew it that way. Camps shows one entry per save ("Marked paid $186 check; Paying by: Cash → Check", v0.736), and Star's own rule makes an edit of several fields one entry (v0.518). Star's R1-02 will make its Mark paid change Paying by too.
 - **A (recommended): one save is one entry**, money first, joined with "; ": "Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash" (the exact payment and Paying by words follow R1-07's one set, which Dashboard core's mockup draws). Color Belt changes; Star builds it this way with its R1-02. Rows: Color Belt's v0.421 (P3) and v0.425 (History words) get notes.
   - Pros: the count matches what staff did; the same as Camps and Star's own rule.
@@ -139,7 +139,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
   - Pros: nothing changes in Color Belt; each entry stays short.
   - Cons: one tap reads as two changes; Camps works differently (or changes to match); Star copies Color Belt.
 
-**(b) Print receipt for someone removed after paying?** (M-03; Color Belt, Star, Camps, Black Belt)
+**(b) Print receipt for someone removed after paying?** (M-03; Color Belt, Star, Camps, Black Belt) · picture `pictures/Q3b-receipt-when-money.png`
 - Today: Color Belt, Star and Camps offer Print receipt only on an active record with money (each approved: v0.424 (6), v0.518, v0.734). A family whose child was removed or withdrawn after paying can't get a receipt, though v1.038 still counts that money ("includes $65 from removed students"). Black Belt offers it on every row, even with nothing paid (pass 1 already tells Black Belt to stop that, with BB2).
 - **A (recommended): Print receipt on any record with a payment (or refund) that still stands, active or removed; never with nothing paid; never while Hide private details is on.** Color Belt, Star and Camps add it to removed records with money; Black Belt keeps it there and drops it where nothing is paid. Rows: v0.424 (6), v0.518, v0.734 and Black Belt's v0.220 ("at any time") get notes.
   - Pros: a family can always get proof of money it paid; one rule in four sections.
@@ -171,7 +171,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
   - Pros: nothing changes.
   - Cons: the line doesn't name the date of birth the switch now hides.
 
-**(f) A line above the red Delete permanently on a removed person's ⋯** (C-04; Color Belt and Black Belt)
+**(f) A line above the red Delete permanently on a removed person's ⋯** (C-04; Color Belt and Black Belt) · picture `pictures/Q3f-line-above-delete.png`
 - Today: on a removed, withdrawn or cancelled person, Star and Camps show "Restore", a line, then "Delete permanently". Color Belt and Black Belt show "Restore · Delete permanently" with no line, so the red item sits right under Restore. v1.011 doesn't place Restore.
 - **A (recommended): the line everywhere**, as Star and Camps (Color Belt and Black Belt add it). §8's ⋯ menu rule gets one sentence: "On a removed person's ⋯, Restore sits above the line and the red Delete permanently below it."
   - Pros: the item that can't be undone stands apart from the harmless Restore, on the mat tablet too; Restore isn't "taking someone off".
@@ -182,7 +182,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
 - No words on screen change.
 
 **(g) Two empty lines, worded four ways** (C-05 (b) and (c); checker 1)
-- **(b) When a card filter leaves nobody.**
+- **(g1) When a card filter leaves nobody.**
   - Today: Color Belt says "No paid students in this class." / "Everyone in this class has paid." (approved: v0.420, v0.424 (4)); Star "No candidates match."; Camps "No campers match."; Black Belt "No candidates in this group."
   - **A (recommended): say what is true, in Color Belt's pattern.** For example, Star "No paid candidates." / "Every candidate has paid."; Camps' To collect "Every camper has paid."; Black Belt's four plan cards and Camps' Coming card get lines in the same pattern, drawn in their mockups. Color Belt changes nothing.
     - Pros: the Grandmaster learns what the empty list means; Color Belt's lines are already approved.
@@ -190,7 +190,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
   - **B: one short line everywhere**, "No [candidates / campers / students] match." (Star's and Camps' words); Color Belt and Black Belt change.
     - Pros: one sentence to learn.
     - Cons: says less (match what?); Color Belt changes approved lines.
-- **(c) When the Past side is empty.**
+- **(g2) When the Past side is empty.**
   - Today: Color Belt says "No past events." / "No past private testings."; Star "No past events yet."; Camps "No past camps yet."; Black Belt "No past cycles yet."
   - **A (recommended): Color Belt adds "yet":** "No past events yet." / "No past private testings yet."
     - Pros: one section, two lines; matches the other three.
@@ -199,7 +199,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
     - Pros: shorter lines.
     - Cons: three sections change.
 
-**(h) A date of birth without the weekday** (P-05; New students)
+**(h) A date of birth without the weekday** (P-05; New students) · picture `pictures/Q3h-birth-date.png`
 - Today: New students' form (the family page, the kiosk and Fill in) and the profile show "Wed, Apr 19, 2017"; the printed sheet, Star and Black Belt show "Apr 19, 2017". The approved rev 3 mockups (v0.639) drew the weekday on the form and in the profile.
 - **A (recommended): "Apr 19, 2017" everywhere**, with no weekday. New students change the form's field and the profile; a New students row records it (it changes rev 3).
   - Pros: one way to write a birthday; a weekday on a birthday tells staff nothing.
@@ -218,7 +218,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
   - Cons: the only message that says it differently.
 
 **(j) The failed Mark paid line and the Undo payment box's note** (C-06 (a) and (b); checker 1 asks for these two)
-- **(a) A Mark paid that didn't save** (in the bar, with Retry).
+- **(j1) A Mark paid that didn't save** (in the bar, with Retry).
   - Today: Color Belt (and Camps, which uses Color Belt's words) says "[Name] wasn't marked paid. Check the connection and try again."; Star says "That didn't save. Check the connection, then retry."
   - **A (recommended):** "[Name] wasn't marked paid. Check the connection, then retry." (Color Belt's line with v1.051 (2)'s ending; Camps gets it through Color Belt's words; Star's line already ends this way.)
     - Pros: the ending v1.051 (2) set for load lines, and Star's line.
@@ -226,7 +226,7 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
   - **B: keep it.**
     - Pros: nothing changes.
     - Cons: two endings for the same advice.
-- **(b) A failure inside the Undo payment box.**
+- **(j2) A failure inside the Undo payment box.**
   - Today (approved: Star's v0.518 Q2 B, Camps' v0.730): "Couldn't undo. Check the connection, then try again." in Color Belt's, Star's and Camps' boxes. The box has no Retry button: pressing Undo payment again tries again. v1.045 (4) says a failed Undo says "Undo didn't save. Check the connection, then retry." Pass 1's Star and Camps R2-07 items already switch their boxes to that sentence; pass 1's Color Belt note didn't list Color Belt's box.
   - **A (recommended):** "Undo didn't save. Check the connection, then retry." in every Undo payment box (Color Belt adds its box to its R2-07 point).
     - Pros: one sentence for every failed Undo; what pass 1 already told Star and Camps.
@@ -237,8 +237,8 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
 
 ## Next
 
-- **Jeffrey:** question 1 first, then question 2, then the batch (question 3). Question 1's picture is drawn: `pictures/Q1-roster-room.png` (today, A, B and what stays the same). Before questions 2 and 3, one picture each is drawn for question 2 and for batch items (a), (b), (f) and (h), with amber outlines, as pass 1's `pictures/`.
-- **A separate reviewer checks these files** before they are handed out, as for pass 1. Then this branch is committed (no push), and the Main session merges `design-review` when Jeffrey says so.
+- **Jeffrey:** question 1 first, then question 2, then the batch (question 3). Question 1's picture is drawn: `pictures/Q1-roster-room.png` (today, A, B and what stays the same). The pictures for question 2 and for batch items (a), (b), (f) and (h) are drawn too, with amber outlines (`pictures/Q2-results-sheet.png`, `Q3a-one-history-entry.png`, `Q3b-receipt-when-money.png`, `Q3f-line-above-delete.png`, `Q3h-birth-date.png`).
+- **A separate reviewer checked these files** before they were handed out, as for pass 1: 9 must-fix points, all applied; its re-check found 1 more, applied. They are committed on `design-review` (no push), and the Main session merges `design-review` when Jeffrey says so.
 - **The Main session** then gives each session its pass 2 file (the starter is at the top of each) and handles `Notes-Main.md`: v0.638's "Date signed" (L-08) goes to Color Belt, Star, Black Belt and Camps; and it reserves a migration number for Color Belt's M-01 when asked.
 - **Rulebook housekeeping for the design review's next rulebook edit:** §1.2's exception list names Camps' Early / Late words in school blue (L-07, approved in v0.738), as it names Star's grading grid (v0.512). Camps changes nothing unless Jeffrey asks to recolor them.
 - **The status file's "Noted for pass 2" list:** the profile stuck on "Loading…" is now P-02, and Calendar's "… and try again." is part of U-08. The two Camps lines (the count line counts both rows of a possible duplicate; the day boxes show no gray while a save runs) were seen still open by reviewer L but not checked by a checker, so they stay on the list for the next pass.
