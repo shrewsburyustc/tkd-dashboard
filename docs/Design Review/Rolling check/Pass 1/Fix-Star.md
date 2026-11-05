@@ -76,7 +76,7 @@ High, though rare: it needs the connection to drop between two quick calls.
 - **Change:**
   - One Star migration: `star_payments` gets a school column. Existing rows take the candidate's school as it is when the migration runs (the school Finance shows for them today). `star_record_payment` takes the device's school and stores it. Undo and Edit payment (its reversal *and* its new payment row, `star_edit_payment`) copy it from the payment they correct. `star_record_refund` takes the device's school too (v1.040: a refund counts at the desk that hands the money back); its new input also has a default (blank = the candidate's school), so the live app keeps working until the push. Ask the Main session for a migration number. Jeffrey applies it. The new input has a default (blank = the candidate's school, as 0033 did for `camp_mark_paid`), so the live app keeps working. The migration is live before the push that brings the app that uses it, and that push also waits until Finance's R1-01 migration is live. Otherwise a payment taken at the other desk shows at the candidate's school, then moves when Finance switches, and a closed day reads "Changed after closing".
   - If R1-02's migration isn't written yet, plan the two together: both replace `star_record_payment`.
-  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1102–1103`); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
+  - The app passes This device's school. `src/App.jsx` already hands it to Camps (`deviceLocation`, `App.jsx:1122–1123` on main d7b5ebf); passing it to your screens touches `src/App.jsx` and `src/screens/Testing.jsx` (it renders your screens), both CLAUDE.md shared files: list them.
   - The fake twin (`src/lib/mockStarCandidates.js`) changes too, or the check below can't pass.
   - Finance then reads the stored school (Finance's R1-01, after yours). Tell the Main session when your migration is live.
 - **Check (preview mode):** This device = Shrewsbury (account menu), top bar on Worcester: mark a Worcester candidate paid → the fake payment row stores Shrewsbury. Edit that candidate's school → the payment's school doesn't change. Undo the payment → the reversal row has Shrewsbury too.
@@ -88,7 +88,7 @@ High, though rare: it needs the connection to drop between two quick calls.
 - **Change:** copy Camps' 0033 pattern.
   - A Star migration keeps the form's own choice on the candidate (`paying_by_on_form`, never changed).
   - `star_record_payment` with another way changes Paying by (logged), and Undo payment puts the old one back. (Today it never touches `paying_by`: `0006_star_testing.sql:4759–4765`.)
-  - Then `CandidatesTab.jsx:1457` and `candidates/text.js:257` / `CandidateDialog.jsx:188` work out form / desk from Paying by vs the form's choice (like `campRules.js:466–469`).
+  - Then `CandidatesTab.jsx:1457` and `candidates/text.js:257` / `CandidateDialog.jsx:188` work out form / desk from Paying by vs the form's choice (like `campRules.js:595–598` on main d7b5ebf).
   - Ask the Main session for a migration number. Jeffrey applies it. The migration is live before the push that brings the app that uses it.
 - **Check (preview mode):** Lily Brooks → Change how they'll pay → Check → the box says "They chose Check at the desk."; pay by Card → the summary says "Card (chosen at the desk)" and History lists both changes (needs R1-03 too); Undo payment → back to Check.
 

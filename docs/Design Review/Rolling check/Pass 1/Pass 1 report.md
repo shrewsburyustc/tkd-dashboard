@@ -47,7 +47,7 @@ Each file starts with a short starter to paste into that session. The file reach
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
 | Star | `Fix-Star.md` | 13 + 9 after another session's fix | 0 | 7 |
-| New students | `Fix-NewStudents.md` | 13 + 4 after another session's fix | 0 | 15 |
+| New students | `Fix-NewStudents.md` | 12 + 4 after another session's fix, and 1 check (already done on main) | 0 | 15 |
 | Black Belt | `Fix-BlackBelt.md` | 22 + 10 after another session's fix | 0 | 12 |
 | Camps | `Fix-Camps.md` | 10 + 8 after another session's fix | 0 | 13 |
 | Finance | `Fix-Finance.md` | 8 + 4 after another session's fix | 0 | 3 |
@@ -143,7 +143,7 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
 
 ## Next
 
-- **Jeffrey:** every pass 1 question is answered (2026-11-04): questions 1–11 and 5b, and the follow-up batch. The fix files carry the answers, and the design review has no open questions left; six Smaller lines are questions the sections ask Jeffrey themselves (New students 3, Black Belt 1, Finance 1, Color Belt 1). What was still to ask after question 10:
+- **Jeffrey:** every pass 1 question is answered (2026-11-04): questions 1–11 and 5b, and the follow-up batch. The fix files carry the answers, and the design review has no open questions left; five Smaller lines are questions the sections ask Jeffrey themselves (New students 2, Black Belt 1, Finance 1, Color Belt 1). What was still to ask after question 10:
   - (a) the in-list search's words, place and no-match line (v1.047 (14)): **answered as question 11, "A: Find a …"** (v1.050).
   - (b) R2-07's open part: the words after an Undo (Finance's "Close undone. The day is open again.", Star's "Registration open") and the load-failure words (S-2: Camps / Finance "then retry", Black Belt "then try again", Calendar "and try again"): **answered** (v1.051 (1) and (2)).
   - (c) Finance's row chevrons (S-11): **answered** (v1.051 (3)).
@@ -157,12 +157,15 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
     4. "Color Belt's family-page text (Star's and Camps' family pages use the same file) goes from weight 600 to 500, like all other screen text."
     5. "Toasts: a one-sentence toast has no full stop at the end ('Ava Reed restored'); a two-sentence toast keeps them. Prospects, Forms, Finance and Calendar change."
 - **Next:** the Main session merges `design-review` when Jeffrey says so; then pass 2. This branch also removes the duplicate v0.737 row that main carries (392bc9e, lines 939 and 942); the merge keeps the copy with the notes.
+- **Re-merged 2026-11-05:** `main` moved on while Jeffrey paused the sessions (New students' N3 confirm boxes, v0.633, and visitor profile, migration 0036 and v0.634–v0.641; Camps' v0.738), so this branch merged it in (main d7b5ebf, merge fdf2770; only the rulebook conflicted). The New students and Camps fix files were then checked again against that code: their references cite main d7b5ebf's lines; New students' R2-06 and two of its smaller lines were already done, so they are checks now; three new places were added to items New students already had (R2-01, S-2); and Camps' two items about the pizza line (R3-02, R3-10) name v0.738's count line instead. Main's new v0.738 note sits on the kept v0.737 row.
 - **Pass 2:** what merged into `main` after pass 1's cut (e7fd75b):
   - N15 + Calendar Event types (e640af5)
   - Black Belt BB13 (2e806e7) and BB8 History (b428666)
-  - new students "(now)" 2–4 (7456636, 9b562b3)
+  - new students "(now)" 1–4 (c5e38f8, 7456636, 9b562b3)
   - Dashboard core v1.118 (942cfdd) and v1.119–v1.121 (801b757)
   - Color Belt Part 1 + 2 (84a6e7d)
   - new students "(now)" 5–7 and its Part 2 start (2881413)
   - Black Belt v0.974–v0.975 (392bc9e)
+  - new students' N3 confirm boxes (v0.633) and visitor profile: migration 0036 and v0.634–v0.640 (a5d0e1d), and v0.641 (d7b5ebf)
+  - Camps v0.738, Early drop-off and Late pick-up on the roster (3a8dc70)
 - **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.
