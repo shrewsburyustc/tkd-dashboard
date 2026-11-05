@@ -20,14 +20,17 @@
 // What is sent (POST /api/forms/<name>, checked again by the Function and the database):
 //   submission_key   made once per sign-up (crypto.randomUUID); a repeat Submit after a dropped
 //                    connection reuses it, so the database saves the sign-up only once
-//   published_version, answers (visible questions only), children [{ first_name, age }],
+//   published_version, answers (visible questions only; an Address answer is { street, city,
+//   state, zip }), children [{ first_name, last_name, dob }] (migration 0036, rulebook v0.634),
 //   bookings [{ child, class_id, date, starts_at }], signature (PNG data URL or null),
 //   website (the hidden "honeypot" — always empty for people), started_at / sent_at (ms),
 //   turnstile_token (not in preview mode)
 import { useEffect, useRef, useState } from 'react';
 import FormFields from '../screens/forms/FormFields.jsx';
 import Notice from '../components/Notice.jsx';
-import { cleanAnswers, emptyFillValues, isTimeKey, NO_TIME_KEY, stepProblems, stepsOf } from '../lib/forms/fields.js';
+import {
+  addressBlank, bookingsWithoutChild, cleanAnswers, emptyFillValues, isTimeKey, NO_TIME_KEY, removedChildIndex, stepProblems, stepsOf,
+} from '../lib/forms/fields.js';
 import { cleanText } from '../lib/calendar/rules.js';
 import { getForm, submitForm } from './publicApi.js';
 import { getTurnstileToken, removeTurnstile } from './turnstile.js';
@@ -123,12 +126,28 @@ export default function FormsApp({ kiosk = null }) {
   // The problems on this step right now, and the ones to show: a field's problem shows once the
   // family has filled it and left it (so errors appear as they type), and every problem shows
   // after Next / Submit was pressed on this step.
+  // (Each child has its own key, "child-0", "child-1" …: a child's problems show once the family has
+  // left that child with its date of birth picked, so a brother or sister just added isn't marked.)
   const problems = current ? stepProblems(current.fields, form.fields, values, times) : {};
   const shown = Object.fromEntries(Object.entries(problems).filter(([key]) => tried.has(step) || touched.has(key)));
 
   function onChange(patch) {
     if (sending) return;
-    setValues((v) => ({ ...v, ...patch }));
+    let next = patch;
+    // A child removed: its free-class pick goes, and the children after it move up one place with
+    // their picks and their "left" marks (code review).
+    const gone = patch.children ? removedChildIndex(values.children, patch.children) : -1;
+    if (gone >= 0) {
+      next = { ...patch, bookings: bookingsWithoutChild(values.bookings, gone) };
+      setTouched((t) => new Set([...t].flatMap((key) => {
+        const m = /^child-(\d+)$/.exec(key);
+        if (!m) return [key];
+        const i = Number(m[1]);
+        if (i === gone) return [];
+        return [i > gone ? `child-${i - 1}` : key];
+      })));
+    }
+    setValues((v) => ({ ...v, ...next }));
     if (note === 'TIME_TAKEN' && patch.bookings) setNote(null);
   }
 
@@ -137,10 +156,20 @@ export default function FormsApp({ kiosk = null }) {
     const el = e.target;
     const raw = (el.id || el.name || '').startsWith(`${ID_BASE}-`) ? (el.id || el.name).slice(ID_BASE.length + 1) : null;
     if (!raw || raw.startsWith('book-')) return;
+    // Moving between the boxes of one child or of one address isn't leaving it yet (a date of
+    // birth's calendar opens in the page, inside its child, so going into it isn't either).
+    const group = el.closest('.fchild, .faddress');
+    if (group && e.relatedTarget instanceof Node && group.contains(e.relatedTarget)) return;
     let key = raw;
-    if (raw.startsWith('child-')) {
-      if (!raw.endsWith('-age') || el.value === '') return; // a child counts once its age is typed
-      key = 'children';
+    if (el.dataset.field) {
+      // a box of an Address question: the question counts once street, city or ZIP code is typed
+      key = el.dataset.field;
+      if (addressBlank(values.answers[key])) return;
+    } else if (raw.startsWith('child-')) {
+      // a child counts once its date of birth is picked (its last box)
+      const i = Number(raw.split('-')[1]);
+      if (!values.children[i]?.dob) return;
+      key = `child-${i}`;
     } else if (isEmpty(values.answers[raw])) return; // an empty field waits for Next
     if (!touched.has(key)) setTouched((t) => new Set(t).add(key));
   }
@@ -198,7 +227,7 @@ export default function FormsApp({ kiosk = null }) {
       }
       // 2. The same payload as the staff Fill in (useFillIn.js).
       const v = values;
-      const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age }));
+      const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), last_name: cleanText(c.last_name), dob: c.dob }));
       const bookings = Object.entries(v.bookings)
         .filter(([i, key]) => isTimeKey(key) && Number(i) < children.length)
         .map(([i, key]) => {

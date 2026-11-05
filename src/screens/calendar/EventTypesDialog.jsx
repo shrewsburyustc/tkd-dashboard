@@ -6,11 +6,13 @@
 //   'list'   — every type with its color; click one to edit it; reorder by dragging the grip
 //              or with ⋯ → Move up / Move down, like Testing's lists (Jeffrey, C3); "+ Add type"
 //   'add'    — Name + Color
-//   'edit'   — Name + Color, "Used by 3 events", Delete
+//   'edit'   — Name + Color, "Used by 3 events", Delete type
 //   'delete' — the confirmation: if events use the type, it says how many and asks which type
-//              they move to (Delete is permanent — no Undo)
+//              they move to (Delete is permanent — no Undo); the shared button row
+//              (ConfirmButtons, design review N3): "Keep type" · "Delete type"
 import { useState } from 'react';
 import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import { ConfirmButtons } from '../../components/ConfirmBox.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -137,17 +139,32 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
   }
 
   // ----- Delete (confirmation) -----
+  // Its own small confirm box, because it holds the "Move to" picker (the shared ConfirmBox's
+  // sentence is a plain <p>), with the shared button row (ConfirmButtons, design review N3):
+  // "Keep type" · "Delete type" (red, first focus on Keep). While the delete works, Esc, a click
+  // outside and Back wait. "Delete type" grays while it can't delete yet (actionUnavailable,
+  // rulebook v0.633): still checking, no Move to choice, or the only type in use (its reason is the
+  // note under the buttons).
   if (state.step === 'delete') {
     const others = types.filter((t) => t.id !== state.typeId);
     const loading = state.count === null;
     const count = state.count ?? 0;
     const blockedLast = count > 0 && others.length === 0;
-    const canDelete = !state.saving && !loading && !blockedLast && (count === 0 || Boolean(state.moveTo));
     const back = () => onStep(state.deleteFrom ?? 'edit', type);
+    const unavailable = loading || blockedLast || (count > 0 && !state.moveTo);
+    const note = blockedLast ? T.LAST_TYPE_IN_USE : state.note ? NOTES[state.note] : null;
     return (
-      <Dialog title={T.deleteTypeTitle(type?.name ?? '')} variant="confirm" describedBy={`${idBase}-del`} onRequestClose={back}>
+      <Dialog
+        title={T.deleteTypeTitle(type?.name ?? '')}
+        variant="confirm"
+        describedBy={`${idBase}-del`}
+        busy={state.saving}
+        onRequestClose={() => {
+          if (!state.saving) back();
+        }}
+      >
         <p id={`${idBase}-del`} className="tdialog-sub tdialog-body">
-          {loading ? T.CHECKING : blockedLast ? T.LAST_TYPE_IN_USE : T.deleteTypeBody(type?.name ?? '', count)}
+          {loading ? T.CHECKING : blockedLast ? T.typeInUse(type?.name ?? '', count) : T.deleteTypeBody(type?.name ?? '', count)}
         </p>
         {count > 0 && !blockedLast && (
           <div className="field">
@@ -162,18 +179,23 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
             </select>
           </div>
         )}
-        <div className="dialog-actions">
-          <button type="button" className="btn" data-autofocus onClick={back}>
-            {T.CANCEL}
-          </button>
-          {!blockedLast && (
-            <button type="button" className={`btn btn-delete${canDelete ? '' : ' is-unavailable'}`} aria-disabled={canDelete ? undefined : 'true'} onClick={() => canDelete && onDelete()}>
-              <IconTrash size={16} aria-hidden="true" />
-              {state.saving ? T.DELETING : T.DELETE}
-            </button>
-          )}
-        </div>
-        {noteBlock}
+        <ConfirmButtons
+          autoFocus
+          keepLabel={T.KEEP_TYPE}
+          actionLabel={T.DELETE_TYPE}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={Boolean(state.saving)}
+          actionUnavailable={unavailable}
+          onKeep={back}
+          onConfirm={onDelete}
+        />
+        {note && (
+          <div className="tdialog-note">
+            <Notice>{note}</Notice>
+          </div>
+        )}
       </Dialog>
     );
   }
@@ -248,7 +270,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
               <div className="sdialog-remove-row">
                 <button type="button" className="btn sdialog-remove" disabled={state.saving} onClick={() => onStep('delete', type, 'edit')}>
                   <IconTrash size={16} aria-hidden="true" />
-                  {T.DELETE}
+                  {T.DELETE_TYPE}
                 </button>
               </div>
             )}
@@ -264,7 +286,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
               ) : (
                 <button type="button" className="btn sdialog-remove" disabled={state.saving} onClick={() => onStep('delete', type, 'edit')}>
                   <IconTrash size={16} aria-hidden="true" />
-                  {T.DELETE}
+                  {T.DELETE_TYPE /* the same words as the ⋯ item and the confirm box (N3) */}
                 </button>
               )}
               <span className="sdialog-actions-right">

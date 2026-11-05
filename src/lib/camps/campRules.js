@@ -401,10 +401,67 @@ const dateOfDay = (days, dayId) => (days ?? []).find((d) => d.dayId === dayId)?.
 // extra isn't offered that day.
 // rows = RosterRow[], days = the camp's Day[] (needed to know who comes every day of the week).
 export function extraCountOnDay(rows, extra, dayId, days) {
+  return (rows ?? []).filter((r) => r.status === 'active' && getsExtraOnDay(r, extra, dayId, days)).length;
+}
+
+// Does this child get this per-day extra on that day? The same test extraCountOnDay counts with:
+// the extra is offered that day, the child comes that day, and either chose it for that day or (a
+// "not charged to all-days campers" extra) comes every camp day of that day's week (R6: included).
+export function getsExtraOnDay(row, extra, dayId, days) {
   const date = dateOfDay(days, dayId);
-  if (extra?.per !== 'day' || !extraOfferedOn(extra, date)) return 0;
-  return (rows ?? []).filter((r) => r.status === 'active' && comesOn(r, dayId)
-    && (choseOn(r, extra, dayId) || (extra.notForAllDays && comesAllWeek(rowDayIds(r), days, date)))).length;
+  if (extra?.per !== 'day' || !extraOfferedOn(extra, date) || !comesOn(row, dayId)) return false;
+  return choseOn(row, extra, dayId) || Boolean(extra.notForAllDays && comesAllWeek(rowDayIds(row), days, date));
+}
+
+// ----- Extras offered EVERY day on the roster (Early drop-off, Late pick-up; picture 19, option A) -----
+// Jeffrey 2026-11-04: "We have Early Drop Off and Late Pick-Up always and we need to see on the
+// roster." Each signed-up day box shows the first word of each every-day extra the child gets that
+// day ("Early", "Late"); the legend explains the words; the line under the count cards counts them.
+
+// An extra's name before any comma: "Early drop-off, 7:30–9:00 AM" → "Early drop-off".
+export function extraShortName(name) {
+  return String(name ?? '').split(',')[0].trim();
+}
+
+// The word in the day box: the short name's first word, first letter uppercase ("Early").
+// (Known and accepted: two every-day extras with the same first word — "Late pick-up" and "Late
+// lunch" — would both show "Late"; the legend and the screen-reader label still name them in full.)
+export function extraDayWord(name) {
+  const word = extraShortName(name).split(/\s+/)[0] ?? '';
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+// The camp's per-day extras offered on every camp day (onlyOn empty), in the camp's order (sort).
+// An extra set up with every camp day ticked under "Only on these days" counts as a some-days extra
+// here, as it does everywhere else in Camps (the "No pizza"-style note, the receipt, Camper detail),
+// so the roster and those places never disagree (design review of picture 19, low 2: accepted).
+export function everyDayExtras(extras) {
+  return (extras ?? []).filter((e) => e?.per === 'day' && (e.onlyOn ?? []).length === 0).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+}
+
+// The every-day extras one child gets on one camp day, in the camp's order (Extra[]). A day the
+// child isn't signed up for gets none; an extra offered only on some days is never in this list.
+export function dayExtrasFor(row, dayId, extras, days) {
+  return everyDayExtras(extras).filter((e) => getsExtraOnDay(row, e, dayId, days));
+}
+
+// The parts of the gray line under the count cards, for the Coming card's day (campCardCounts):
+//   { day, isToday, counts: [{ name, count }] } — every every-day extra (0 included), then, on a
+//   camp day only, each extra offered only on some days that is offered that day ("Pizza party").
+//   null after the camp (mode 'after') or when the camp has nothing to count.
+// rows = the ACTIVE roster rows (removed ones are skipped anyway); names are the short names.
+export function dayExtraCounts(rows, extras, days, mode, day) {
+  if (!day || mode === 'after') return null;
+  const someDays = mode === 'today'
+    ? (extras ?? []).filter((e) => e?.per === 'day' && (e.onlyOn ?? []).length > 0 && extraOfferedOn(e, day.day)).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    : [];
+  const counted = [...everyDayExtras(extras), ...someDays];
+  if (counted.length === 0) return null;
+  return {
+    day: day.day,
+    isToday: mode === 'today',
+    counts: counted.map((e) => ({ name: extraShortName(e.name), count: extraCountOnDay(rows, e, day.dayId, days) })),
+  };
 }
 
 // The dates an extra is no longer offered on after an edit, among the camp days that remain:

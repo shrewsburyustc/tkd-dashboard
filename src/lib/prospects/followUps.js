@@ -6,8 +6,9 @@
 //   - A Joined or Not interested child is finished: an old follow-up date left on it never counts
 //     (marking a child Joined doesn't clear the date in the database).
 //   - Everyone else with a follow-up date has an open follow-up on that date.
-//   - A child is named "Ava R.": first name + the parent's last initial (v0.245) — never the
-//     parent's full name, phone or age.
+//   - A child is named "Ava N.": first name + the initial of the child's OWN last name (v0.637).
+//     Children who signed up before last names were asked keep the parent's last initial
+//     ("Ava R.", v0.245). Never the parent's full name, phone, age or date of birth.
 // Dates are 'YYYY-MM-DD' text (Massachusetts dates).
 
 const FINISHED = ['joined', 'not_interested'];
@@ -19,6 +20,14 @@ export const isFinished = (builtin) => FINISHED.includes(builtin ?? '');
 export function lastInitial(name) {
   const parts = String(name ?? '').trim().split(/\s+/);
   return parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() : '';
+}
+
+// The initial after a child's first name in the List, the Board and the Calendar: the first letter
+// of the child's own last name ("Nguyen" → "N"); without one (signed up before v0.637), the
+// parent's last initial as before. (Array.from keeps a letter made of two code units whole.)
+export function childInitial(p) {
+  const own = String(p?.childLastName ?? '').trim();
+  return own ? Array.from(own)[0].toUpperCase() : lastInitial(p?.parentName);
 }
 
 // The date of this child's open follow-up, or null.
@@ -36,14 +45,14 @@ export function isDueToday(p, builtin, today) {
 }
 
 // For the Calendar: one school's prospect list → only the open follow-ups, with only what the
-// Calendar shows: [{ id, code, childFirstName, initial, followUpOn }]. Everything else in the
-// list answer (booking, family, sign-up date …) is dropped here on purpose.
+// Calendar shows: [{ id, code, childFirstName, initial, followUpOn }] (initial = childInitial).
+// Everything else in the list answer (booking, family, sign-up date …) is dropped here on purpose.
 export function calendarFollowUps(list, statuses, code) {
   const builtinOf = new Map((statuses ?? []).map((s) => [s.id, s.builtin]));
   const out = [];
   for (const p of list ?? []) {
     const on = openFollowUpOn(p, builtinOf.get(p.statusId));
-    if (on) out.push({ id: p.id, code, childFirstName: p.childFirstName, initial: lastInitial(p.parentName), followUpOn: on });
+    if (on) out.push({ id: p.id, code, childFirstName: p.childFirstName, initial: childInitial(p), followUpOn: on });
   }
   return out;
 }

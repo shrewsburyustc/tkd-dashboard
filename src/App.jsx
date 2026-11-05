@@ -1182,6 +1182,8 @@ export default function App() {
                 staffId={profile.id}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
+                // "Printed … by [name]" on the visitor sheet (rulebook v0.636), as Finance's report
+                profileName={profile.full_name}
                 screenLocked={phase === 'locked'}
                 onNoAccess={handleNoAccess}
                 onRefreshProfile={refreshProfile}

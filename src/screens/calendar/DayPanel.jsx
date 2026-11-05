@@ -11,8 +11,9 @@
 //   - free classes booked through Forms (child's first name, class, time, form); one whose class
 //     no longer runs then is amber: "Class cancelled — call the family" (v0.241 answer 6); on
 //     the class day each free class has Check in (ti-user-check) when the family walks in (v0.236)
-//   - prospects' follow-ups (v0.612 / v0.615): "Ruby A." with "Overdue" / "Due today" in amber;
-//     a tap opens that child in Prospects (on Both: each school under its own heading)
+//   - prospects' follow-ups (v0.612 / v0.615): "Ruby M." (the child's own last initial since
+//     v0.637; the parent's for older sign-ups) with "Overdue" / "Due today" in amber; a tap opens
+//     that child's profile in Prospects (on Both: each school under its own heading)
 // What the Show menu hides is already gone from `info` (showKinds.js applyShow); a hidden kind's
 // heading goes too (no "No classes" line when Classes are hidden).
 //

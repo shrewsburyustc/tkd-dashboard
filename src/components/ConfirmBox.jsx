@@ -45,6 +45,11 @@
 //   failed        optional amber note under the buttons — the section's own failure sentence. The
 //                 box never words a failure itself: when the action fails, the section sets this.
 //   busy          optional: true while the section's action works, for a section that tracks it itself
+//   actionUnavailable  optional (rulebook v0.633): true when the action can't be used right now — e.g.
+//                 Forms' "Delete form" on a form with sign-ups, a "Move to" not picked yet. Only the
+//                 action grays (the approved unavailable look), stays focusable (aria-disabled) and
+//                 pressing it does nothing; "Keep …" stays as it is. The section says why (`failed`, or
+//                 its own line). Default false: every other box is unchanged.
 //   onKeep()      "Keep …", Esc, a click outside, Back (ignored while it works)
 //   onConfirm()   the action; may return a promise — the box shows the busy look until it settles.
 //                 A promise that fails is the section's to handle (it sets `failed`); one it leaves
@@ -60,7 +65,7 @@ import Notice from './Notice.jsx';
 // The action's look: red only when something is lost for good (guidelines 7), blue otherwise.
 const actionClass = (loses) => (loses === 'forGood' ? 'btn btn-delete' : 'btn btn-primary');
 
-export function ConfirmButtons({ keepLabel, actionLabel, actionIcon: ActionIcon = null, busyLabel, loses = 'forGood', busy = false, autoFocus = false, onKeep, onConfirm }) {
+export function ConfirmButtons({ keepLabel, actionLabel, actionIcon: ActionIcon = null, busyLabel, loses = 'forGood', busy = false, actionUnavailable = false, autoFocus = false, onKeep, onConfirm }) {
   const rowRef = useRef(null);
   const sizerRef = useRef(null);
   const [stacked, setStacked] = useState(false);
@@ -138,13 +143,13 @@ export function ConfirmButtons({ keepLabel, actionLabel, actionIcon: ActionIcon 
       </button>
       <button
         type="button"
-        className={`${actionClass(loses)}${busy ? ' is-unavailable' : ''}`}
-        aria-disabled={busy ? 'true' : undefined}
+        className={`${actionClass(loses)}${busy || actionUnavailable ? ' is-unavailable' : ''}`}
+        aria-disabled={busy || actionUnavailable ? 'true' : undefined}
         aria-busy={busy ? 'true' : undefined}
         data-autofocus={focusAction ? true : undefined}
         style={holdWidth ? { minWidth: widest } : undefined}
         onClick={() => {
-          if (!busy) onConfirm();
+          if (!busy && !actionUnavailable) onConfirm();
         }}
       >
         {ActionIcon && <ActionIcon size={16} aria-hidden="true" />}
@@ -183,6 +188,7 @@ export default function ConfirmBox({
   loses = 'forGood',
   failed = null,
   busy = false,
+  actionUnavailable = false,
   onKeep,
   onConfirm,
   onTop = false,
@@ -239,6 +245,7 @@ export default function ConfirmBox({
         busyLabel={busyLabel}
         loses={loses}
         busy={working}
+        actionUnavailable={actionUnavailable}
         onKeep={onKeep}
         onConfirm={confirm}
       />

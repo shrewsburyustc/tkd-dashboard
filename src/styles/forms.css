@@ -864,14 +864,77 @@
   font-weight: 500;
 }
 
+/* Label sizes (design review). The name of each box of a question (Street address, City, State, ZIP
+   code; a child's First name, Last name, Date of birth) is 12px gray everywhere. On the family page
+   and the kiosk a question's own label is 13px (forms-public.css ".fp-card .field label", mockup
+   rev 3), so the question reads as the heading of its boxes; three classes here, so the part's
+   12px beats that rule whatever order the files load in. */
+.ffields .field .fpart-label {
+  font-size: var(--text-12);
+}
+
+/* Staff Fill in and Preview (the dashboard's dialog) keep every label at 12px (rulebook §7), so
+   there the two group labels — "Home address" over its four boxes, "Children" over each child —
+   read as the heading of their parts by weight (500) instead (design review, 2026-11-04). */
+:is(.tdialog, .tdialog-page) .faddress > .field-label,
+:is(.tdialog, .tdialog-page) .fchildren > .field-label {
+  font-weight: 500;
+}
+
+/* First name · Last name side by side (v0.637; one above the other on phones, below) */
 .fchild-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-8);
 }
 
 .fchild-row .field {
   margin-bottom: 0;
+}
+
+/* Date of birth under the names (v0.634): the field as wide as the first name on PC and tablet; its
+   calendar, when it opens in the page, takes the child's whole box. "N years old" under it. */
+.field.fchild-dob {
+  margin: var(--space-8) 0 0;
+}
+
+.fchild-dob .dp-field {
+  width: calc(50% - var(--space-4));
+}
+
+/* Staff Fill in on a phone: the calendar runs edge to edge of the screen, out of the child's box
+   too (the page's 16px gutter + the box's 1px border and 12px padding) */
+.dialog-page .fchild .dp-pop.is-inline {
+  margin-right: calc(-1 * (var(--space-16) + var(--space-12) + 1px));
+  margin-left: calc(-1 * (var(--space-16) + var(--space-12) + 1px));
+}
+
+/* The Address question (v0.634): Street address, then City · State · ZIP code in one row (mockup
+   rev 3: State 72px, ZIP code 112px) */
+.faddress > .field {
+  margin-bottom: var(--space-8);
+}
+
+.faddress-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px 112px;
+  gap: var(--space-8);
+}
+
+.faddress-row .field {
+  margin-bottom: 0;
+}
+
+/* Date signed under the signature (v0.635): today's date in a gray box that can't be changed */
+.field.fsigned {
+  margin: var(--space-12) 0 0;
+}
+
+.input.fsigned-box {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: default;
 }
 
 .fnotimes {
@@ -1052,6 +1115,24 @@
 
   .fhead {
     flex-wrap: nowrap;
+  }
+
+  /* each child: First name, Last name and Date of birth one above the other, full width */
+  .fchild-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fchild-dob .dp-field {
+    width: 100%;
+  }
+
+  /* the address: City on its own line, State and ZIP code side by side */
+  .faddress-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .faddress-city {
+    grid-column: 1 / -1;
   }
 }
 

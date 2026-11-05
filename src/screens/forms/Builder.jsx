@@ -517,6 +517,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   let stepNo = 1;
   const fieldHint = (f) => {
     if (f.type === 'children') return T.CHILD_HINT;
+    if (f.type === 'address') return T.ADDRESS_HINT; // its four boxes, like a choice's options (v0.634)
     if (f.type === 'booking') return T.bookingHint(booking.offered.length, booking.offered.reduce((n, c) => n + timesFor(c).filter((t) => (booking.times[timeSlotKey(c, t.weekday, t.start)] ?? { on: true }).on).length, 0));
     if (f.type === 'waiver') return (f.text ?? '').trim() ? T.WAIVER_HINT : T.WAIVER_HINT_EMPTY;
     if (f.options) return f.options.join(' / ');

@@ -682,7 +682,7 @@
   border-radius: 2px;
 }
 
-/* The small amber note under a name, today only ("Late pick-up … today", "No pizza party") */
+/* The small amber note under a name, today only ("No pizza"; Early / Late are in the day boxes) */
 .cp-rnote {
   display: block;
   max-width: 100%;
@@ -757,6 +757,34 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
+}
+
+/* "Early" / "Late" under a day box's content: the extras offered every day that the child gets that
+   day (picture 19, option A). PC / tablet: under the button, centered, side by side (wraps if
+   needed); phone cards: inside the box, stacked, left-aligned (below). */
+.cp-dc-extras {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 6px;
+  margin-top: 2px;
+  color: var(--color-blue);
+  font-size: var(--text-12);
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.cp-rdays .cp-dc-extras {
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 1px;
+}
+
+/* The same word in the legend under the grid ("· Early early drop-off") */
+.cp-legend-word {
+  color: var(--color-blue);
+  font-weight: 500;
 }
 
 .cp-dc--came {
