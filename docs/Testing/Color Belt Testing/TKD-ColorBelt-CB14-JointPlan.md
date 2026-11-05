@@ -59,3 +59,13 @@ Settings fit" (relayed by Jeffrey in the Color Belt session). Next: the Settings
 - Q2 (2026-11-05): **C** — links to `#settings/classes-and-ranks` only on the two "no classes yet" lines (Schedule's Add time slot with no classes; Forms → Book a class with no classes); the line under the Class choices in Add / Edit time slot stays plain text (a link there would leave the dialog mid-edit). All three say "Settings → Classes and ranks". The hint files are New students' (N11); Color Belt gives the address. Picture: `Design Review mockups/cb14/cb14-q2.png`.
 - Q3 (2026-11-05): **B** — a school switch inside the Classes and ranks part: the shared ChoiceGroup "Worcester | Shrewsbury" at the top of the part, Add class on its right (wraps under it at 320); it starts on the top bar's school (Worcester when the top bar says Both), then Settings keeps ignoring the top bar; only the chosen school's classes show, and the empty line names the school ("No classes yet at Shrewsbury."). Picture: `Design Review mockups/cb14/cb14-q3.png`.
 - Q4 (2026-11-05): **A** — the tab is called **"Prices"** (tab bar: Events · Prices · Private testing). A gray line above the list: "Testing prices, sparring gear and each class's final award. Classes and ranks are in Settings." (staff: "… Classes and ranks are set by an admin."). Picture: `Design Review mockups/cb14/cb14-q4.png`.
+
+## Dashboard core's review of the Settings mockups (2026-11-05, relayed by Jeffrey)
+
+**OK, it fits Settings** (sheets `cb14.png`, `cb14-q3.png`; v0.427). Small points, none blocking, all taken into the build plan (`TKD-ColorBelt-CB14-BuildPlan.md`):
+1. the ChoiceGroup's accessible name is "School";
+2. Add class's screen-reader name says the school ("Add class, Worcester", v1.111's pattern);
+3. `#settings/classes-and-ranks` scrolls the part into view and puts focus on its heading; `src/lib/pageAddress.js` is listed with the shared files;
+4. the part's load-failure line ends "Check the connection, then retry." with Retry (S-2; the shared sentence once Dashboard core's fix-list step 3 is on main);
+5. optional: "Testing prices are in Color belt testing → Prices.";
+6. coordination: R3-06 later adds one class to Testing.jsx's back-link focus helper; the moved Undo handlers take R2-05's queued Undo later; toasts get their own room through R2-04.
