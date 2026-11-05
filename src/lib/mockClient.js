@@ -128,7 +128,8 @@
 // Finance helpers (contract 0011 §3, mockFinance.js; setToday, setRole and failNextSave cover Finance too —
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
-//   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
+//   __tkdPreview.resetFinance()           back to the start: reminder times Off, no exports (Star money comes from
+//                                         Star's own preview store; the sample Star payments only when it has none)
 //   __tkdPreview.bbFinanceSample()        Black Belt money for the Daily report (migration 0026, mockups B1–B9):
 //                                         bbSampleEdge + setToday('2027-04-26'), then — through Black Belt's own
 //                                         functions — today's payments (Payment 2 by check, Payment 1 + Kukkiwon in
@@ -202,7 +203,7 @@ const CAMPS_KEY = 'tkd.preview.camps'; // fake Camps tables (mockCamps.js)
 const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
 const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
 const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
-const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample (mockFinance.js)
+const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample used only when Star's store has no payments (mockFinance.js)
 const ACCOUNT_SETTINGS_KEY = 'tkd.preview.userMetadata'; // fake per-person settings (Supabase's user_metadata): Panel size
 const FIRST_UPDATED_AT = '2026-10-01T12:00:00.000Z'; // the fake account's updated_at before anything is saved
 
@@ -840,6 +841,7 @@ export function createMockClient() {
     readColorBelt: () => events.snapshot(),
     readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     readBlackBelt: () => blackBelt.snapshot(), // Black Belt payments are the fourth (migration 0026)
+    readStar: () => starCandidates.snapshot(), // Star payments from Star's own store, 'tkd.preview.star' (R1-09)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
@@ -1201,7 +1203,7 @@ export function createMockClient() {
     },
     resetFinance() {
       finance.reset();
-      return 'Finance is back to the sample: a few closed Shrewsbury days, the sample Star payments and refunds, reminder times Off, no exports. Reload to see it.';
+      return 'Finance is back to the start: reminder times Off, no exports. Star money comes from Star’s own preview store (the sample Star payments, refunds and closed Shrewsbury days only when Star has no payments). Reload to see it.';
     },
     // Black Belt money in the Daily report (migration 0026). Everything goes through Black Belt's
     // own preview functions (the same rules as its Candidates screens), so Finance reads exactly
