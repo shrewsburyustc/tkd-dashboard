@@ -169,4 +169,4 @@ Each answer becomes a 10b row and a changelog line from the design review's bloc
   - new students' N3 confirm boxes (v0.633) and visitor profile: migration 0036 and v0.634–v0.640 (a5d0e1d), and v0.641 (d7b5ebf)
   - Camps v0.738, Early drop-off and Late pick-up on the roster (3a8dc70)
   - Dashboard core R4-07, the gray line in every history while hidden, v1.122 (7511656)
-- **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applies the screen size on every command. On phones that can re-draw a page between two commands. It gets fixed on this branch before pass 2. The tool is the review's own, not part of the app.
+- **The review's screenshot tool** (`docs/Design Review/tools/cdp.mjs`) re-applied the screen size on every command, so between two commands the page was drawn at another size; on phones that can move a popup in a picture. **Fixed 2026-11-05** on this branch: one connection to the page stays open, so the size stays put (12 page resizes over 4 commands before, none after). The tool is the review's own, not part of the app.
