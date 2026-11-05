@@ -1,8 +1,8 @@
 // CampRoster.jsx — the camp page's ONE roster (CP5, 2026-10-21: Camps-one-roster.html and
 // Camps-multiweek-roster.html option A; replaces the three tabs Check in / Payments / Attendance).
 // Why it exists: the door, the money and the week on one screen. One row per child:
-//   Camper (A–Z; click → Camper detail; a small amber note under the name only for TODAY:
-//          "Late pick-up … today", "No pizza party") ·
+//   Camper (A–Z; click → Camper detail; a small amber note under the name only for TODAY, when the
+//          child misses an extra offered only on some days: "No pizza") ·
 //   Paid   (Paid green · "$219 due" gray · "Owes $15" amber — tapping one that isn't Paid opens
 //          the shared Mark paid box (components/MarkPaidBox.jsx; design review C2, rulebook
 //          v0.735): the name and the amount, Paid by Cash / Check / Card preset to Paying by with
@@ -13,7 +13,11 @@
 //          [user-x] = a past day not checked in (still tappable, to fix a missed one) · — = not
 //          signed up that day. The two icons are ti-user-check / ti-user-x since v0.723 (design
 //          review C16: one icon per meaning, as Prospects and the Calendar; was ti-check / ti-x).
-//          The printed roster (PrintRoster.jsx) still prints ✓ / ✗ ·
+//          The printed roster (PrintRoster.jsx) still prints ✓ / ✗.
+//          Under a signed-up day's content, in small blue words, the extras offered EVERY day that
+//          the child gets that day — "Early" (Early drop-off), "Late" (Late pick-up) — every day of
+//          the week (Jeffrey 2026-11-04, picture 19 option A); the legend under the grid explains
+//          them ·
 //   ⋯     (mouse only; on touch screens the ⋯ items live in Camper detail).
 // Above the table: a quiet "Updated 2:41:07 PM" on the right, then the shared count cards
 // (components/CountCards.jsx; design review C10, rulebook v0.737, picture 18 — they replaced the old
@@ -23,8 +27,9 @@
 //   the card is "Came" — days attended, "of 150 days", not a button) · To collect (filters to the
 //   campers who still owe; the money under the number, or "All paid") · Payments recorded (every
 //   payment of the camp, reversals taken off — a total, never a button).
-//   The numbers come from campRules.campCardCounts. Under the row, only on that day, the gray
-//   "Pizza party today: 11" line. A pressed card filters the roster ("Showing to collect only ·
+//   The numbers come from campRules.campCardCounts. Under the row, the gray line for the Coming
+//   card's day (picture 19): "Mon, Apr 19 · Early drop-off: 5 · Late pick-up: 6", on a camp day
+//   "Today · Early drop-off: 5 · Late pick-up: 6 · Pizza party: 11" (none after the camp). A pressed card filters the roster ("Showing to collect only ·
 //   Show all"); the filter and Find a camper apply together, and "Removed" is hidden while a filter
 //   is on (as Star hides its removed candidates). Tapping Coming in a camp of more than one week
 //   moves the week switch to that day's week. The page (CampPage.jsx) keeps the filter, beside
@@ -58,7 +63,9 @@ import CountCards from '../../components/CountCards.jsx';
 // The shared Mark paid box (design review C2, rulebook v0.735) under the "$X due" / "Owes $X" tag
 import MarkPaidBox from '../../components/MarkPaidBox.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import { campCardCounts, extraCountOnDay, extraOfferedOn, matchesCardFilter, missingExtraOnDay, payTag, payingByChoiceWhere } from '../../lib/camps/campRules.js';
+import {
+  campCardCounts, dayExtraCounts, dayExtrasFor, everyDayExtras, extraDayWord, extraShortName, matchesCardFilter, missingExtraOnDay, payTag, payingByChoiceWhere,
+} from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { formatMoney } from '../../lib/money.js';
 import DuplicateBox from '../../components/DuplicateBox.jsx';
@@ -117,44 +124,75 @@ export function CamperTag({ row, onReview, onPay, busy = false }) {
 }
 
 // The one small amber note under a name — only for TODAY, and only when the child comes today:
-// an extra offered only on some days that they didn't choose ("No pizza party"), else their first
-// other per-day extra today ("Late pick-up, 3:00–4:00 PM today").
+// an extra offered only on some days that they didn't choose ("No pizza"). (Their Early drop-off /
+// Late pick-up used to be here too; since picture 19, option A, the day boxes show those.)
 function todayNote(row, todayDay, extras, days) {
   if (!todayDay || !(row.days ?? []).some((d) => d.dayId === todayDay.dayId)) return null;
   const sorted = [...extras].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
   for (const extra of sorted) {
     if ((extra.onlyOn ?? []).length > 0 && missingExtraOnDay(row, extra, todayDay.dayId, days)) return T.noExtraShort(extra.name);
   }
-  const limited = new Set(sorted.filter((e) => (e.onlyOn ?? []).length > 0).map((e) => e.extraId));
-  const mine = (row.extras ?? []).find((e) => e.per === 'day' && e.dayId === todayDay.dayId && !limited.has(e.extraId));
-  return mine ? T.extraShort(mine.name) : null;
+  return null;
+}
+
+// The words under a day box's content: the first word of each every-day extra the child gets that
+// day ("Early", "Late"; picture 19). Hidden from screen readers — the day box's label already says
+// them in full (", early drop-off, late pick-up"). null when there are none — unless `reserve`
+// (PC / tablet: another day in the same row has words), then an empty line of the same height, so
+// every button in the row stays on one straight line (design review of picture 19, low 1).
+function DayWords({ dayExtras, reserve = false }) {
+  if (dayExtras.length === 0) {
+    return reserve ? <span className="cp-dc-extras" aria-hidden="true">{' '}</span> : null;
+  }
+  return (
+    <span className="cp-dc-extras" aria-hidden="true">
+      {dayExtras.map((e) => (
+        <span key={e.extraId}>{extraDayWord(e.name)}</span>
+      ))}
+    </span>
+  );
 }
 
 // One day of one child: [user-check] time / Check in / [user-x] / —.  compact = phone card (weekday letter on top).
-function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
+// dayExtras = the every-day extras the child gets that day (campRules.dayExtrasFor): their words go
+// INSIDE the box on a phone card, under the box (same day column) on PC / tablet.
+// reserveWords = PC / tablet only: some day of this row shows words, so a day without any keeps an
+// empty line under its box (the buttons of the row stay in line).
+function DayCell({ row, day, today, busy, compact, dayExtras = [], reserveWords = false, onCheckIn, onUndoCheckIn }) {
   const mine = (row.days ?? []).find((d) => d.dayId === day.dayId);
   const name = T.camperLabel(row);
   const letter = compact ? <span className="cp-dc-day" aria-hidden="true">{T.weekdayLetter(day.day)}</span> : null;
   const today_ = day.day === today ? ' is-today' : '';
+  const reserve = !compact && reserveWords;
   if (!mine) {
-    return (
+    // Not signed up: never any extras (dayExtrasFor gives none for a day the child doesn't come).
+    const none = (
       <span className={`cp-dc cp-dc--none${today_}`} aria-label={T.notSignedUpLabel(day.day)}>
         {letter}
         <span aria-hidden="true">—</span>
       </span>
     );
+    return reserve ? (
+      <>
+        {none}
+        <DayWords dayExtras={[]} reserve />
+      </>
+    ) : none;
   }
+  const shortNames = dayExtras.map((e) => extraShortName(e.name)); // for the screen-reader label
+  const words = <DayWords dayExtras={dayExtras} reserve={reserve} />;
   const common = {
     type: 'button',
     'data-day-cell': `${row.id}:${day.dayId}`,
     'aria-disabled': busy ? 'true' : undefined,
   };
+  let box;
   if (mine.checkedInAt) {
-    return (
+    box = (
       <button
         {...common}
         className={`cp-dc cp-dc--came${today_}`}
-        aria-label={T.undoCheckInDayLabel(name, day.day, mine.checkedInAt)}
+        aria-label={T.undoCheckInDayLabel(name, day.day, mine.checkedInAt, shortNames)}
         onClick={(event) => {
           event.stopPropagation();
           if (!busy) onUndoCheckIn(row, day);
@@ -165,30 +203,43 @@ function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
           <IconUserCheck size={14} aria-hidden="true" />
           {T.clockShort(mine.checkedInAt)}
         </span>
+        {compact && words}
+      </button>
+    );
+  } else {
+    const missed = day.day < today;
+    box = (
+      <button
+        {...common}
+        className={`cp-dc ${missed ? 'cp-dc--missed' : 'cp-dc--checkin'}${today_}`}
+        aria-label={missed ? T.missedDayLabel(name, day.day, shortNames) : T.checkInDayLabel(name, day.day, shortNames)}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (!busy) onCheckIn(row, day);
+        }}
+      >
+        {letter}
+        <span className="cp-dc-val">{missed ? <IconUserX size={14} aria-hidden="true" /> : T.CHECK_IN}</span>
+        {compact && words}
       </button>
     );
   }
-  const missed = day.day < today;
+  // PC / tablet: the words sit under the button, in the same table cell.
+  if (compact) return box;
   return (
-    <button
-      {...common}
-      className={`cp-dc ${missed ? 'cp-dc--missed' : 'cp-dc--checkin'}${today_}`}
-      aria-label={missed ? T.missedDayLabel(name, day.day) : T.checkInDayLabel(name, day.day)}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (!busy) onCheckIn(row, day);
-      }}
-    >
-      {letter}
-      <span className="cp-dc-val">{missed ? <IconUserX size={14} aria-hidden="true" /> : T.CHECK_IN}</span>
-    </button>
+    <>
+      {box}
+      {words}
+    </>
   );
 }
 
 // The legend under the grid (v0.723, design review C16): the same two icons as the day cells, in front
 // of their words. The icons are hidden from screen readers: the words already say "came" and
-// "didn't come", so nothing is read twice.
-function RosterLegend({ touch }) {
+// "didn't come", so nothing is read twice. Then, when the camp has extras offered every day
+// (picture 19): " · Early early drop-off · Late late pick-up" — each word in the day boxes' blue,
+// then what it means. Here the word is NOT hidden, so a screen reader hears "Early early drop-off".
+function RosterLegend({ touch, extras }) {
   const parts = T.rosterLegendParts(touch);
   return (
     <p className="field-hint cp-hint-line">
@@ -198,6 +249,13 @@ function RosterLegend({ touch }) {
       <IconUserX size={14} aria-hidden="true" className="cp-legend-icon" />
       {parts.missed}
       {parts.rest}
+      {everyDayExtras(extras).map((e) => (
+        <span key={e.extraId}>
+          {T.EXTRAS_JOIN}
+          <span className="cp-legend-word">{extraDayWord(e.name)}</span>
+          {T.legendExtraMeaning(extraShortName(e.name))}
+        </span>
+      ))}
     </p>
   );
 }
@@ -275,10 +333,12 @@ export default function CampRoster({
           { key: 'recorded', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(counts.recordedCents), kind: 'total' }, // ti-sum = a money total
         ]),
   ];
-  // The gray line under the cards, only on a camp day: each extra offered only on some days and
-  // offered today, with its count ("Pizza party today: 11").
-  const dayExtras = counts.mode === 'today' ? extras.filter((e) => e.per === 'day' && (e.onlyOn ?? []).length > 0 && extraOfferedOn(e, cardDay.day)) : [];
-  const extrasNote = dayExtras.map((e) => T.extraTodayCount(e.name, extraCountOnDay(active, e, cardDay.dayId, days))).join(T.EXTRAS_JOIN) || null;
+  // The gray line under the cards, for the Coming card's day (picture 19): every extra offered every
+  // day with its count, 0 included ("Mon, Apr 19 · Early drop-off: 5 · Late pick-up: 6"); on a camp
+  // day also each extra offered only on some days that is offered today ("Today · … · Pizza party:
+  // 11"). Active campers only. No line after the camp, or when the camp has nothing to count.
+  const extraParts = dayExtraCounts(active, extras, days, counts.mode, cardDay);
+  const extrasNote = extraParts ? T.dayExtrasLine(extraParts) : null;
   const showingText =
     shownFilter === 'coming' ? (counts.mode === 'today' ? T.SHOWING_COMING_TODAY : T.showingComingOn(cardDay.day)) : shownFilter === 'collect' ? T.SHOWING_TO_COLLECT : '';
   // A card was pressed (key = 'coming' / 'collect' to filter, null = everyone). Coming in a camp of
@@ -372,8 +432,21 @@ export default function CampRoster({
         }}
       />
     ) : null;
-  const cell = (row, day, compact) => (
-    <DayCell key={day.dayId} row={row} day={day} today={today} busy={busy} compact={compact} onCheckIn={handlers.onCheckIn} onUndoCheckIn={handlers.onUndoCheckIn} />
+  // reserveWords: does any shown day of this row have words? (PC / tablet keep the buttons in line.)
+  const rowHasWords = (row) => shownDays.some((d) => dayExtrasFor(row, d.dayId, extras, days).length > 0);
+  const cell = (row, day, compact, reserveWords = false) => (
+    <DayCell
+      key={day.dayId}
+      row={row}
+      day={day}
+      today={today}
+      busy={busy}
+      compact={compact}
+      dayExtras={dayExtrasFor(row, day.dayId, extras, days)}
+      reserveWords={reserveWords}
+      onCheckIn={handlers.onCheckIn}
+      onUndoCheckIn={handlers.onUndoCheckIn}
+    />
   );
 
   // ----- The week switch (only when the camp crosses more than one week) -----
@@ -458,6 +531,7 @@ export default function CampRoster({
           <tbody {...nav.containerProps}>
             {rows.map((row) => {
               const note = todayNote(row, noteDay, extras, days);
+              const reserveWords = rowHasWords(row);
               return (
                 <tr key={row.id} className={menuFor === row.id ? 'is-selected' : undefined} {...nav.groupProps(row.id)}>
                   <th scope="row" className="cp-rcol-name">
@@ -480,7 +554,7 @@ export default function CampRoster({
                   )}
                   {shownDays.map((d) => (
                     <td key={d.dayId} className={`cp-rcol-day${d.day === today ? ' is-today' : ''}`}>
-                      {cell(row, d, false)}
+                      {cell(row, d, false, reserveWords)}
                     </td>
                   ))}
                   {showMore && <td className="cp-rcol-more">{more(row)}</td>}
@@ -580,7 +654,7 @@ export default function CampRoster({
       {weekSwitch}
       {list}
       {removedGroup}
-      {!isPhone && active.length > 0 && <RosterLegend touch={isTouch} />}
+      {!isPhone && active.length > 0 && <RosterLegend touch={isTouch} extras={extras} />}
       {popover && popoverRow && !detailsHidden && (
         // The shared box (v0.735): the amount owed now, shown and never typed; Paid by preset to
         // Paying by; the hint says where that choice was made — "on the form", or "at the desk"

@@ -15,6 +15,7 @@ import {
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
   gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
   comingCardDay, comesOnDay, campCardCounts, matchesCardFilter,
+  getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
@@ -1823,7 +1824,7 @@ check('count cards: which day Coming means (before / on / between / after the ca
   assert.equal(CampText.showingComingOn('2027-04-19'), 'Showing coming Mon, Apr 19 only');
   assert.equal(CampText.cardOfDays(1), 'of 1 day');
   assert.equal(CampText.cardOfDays(150), 'of 150 days');
-  assert.equal(CampText.extraTodayCount('Pizza party', 11), 'Pizza party today: 11');
+  assert.equal(CampText.extraCount('Pizza party', 11), 'Pizza party: 11');
 });
 
 check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payments recorded)', () => {
@@ -1869,6 +1870,99 @@ check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payme
   assert.equal(roster.every((r) => matchesCardFilter(r, null, monDay)), true);
   assert.equal(comesOnDay(roster[2], 'mon'), false);
   assert.equal(comesOnDay(roster[2], 'tue'), true);
+});
+
+// ======================= Early drop-off / Late pick-up on the roster (picture 19, option A) =======================
+
+// The April camp's extras with the names the preview camp really uses (the part after the comma is
+// a time), listed out of order on purpose (sort decides the order).
+const ROSTER_EXTRAS = [
+  { extraId: PICK, name: 'Late pick-up, 3:00–4:00 PM', per: 'day', notForAllDays: false, onlyOn: [], sort: 1 },
+  { extraId: PIZZA, name: 'Pizza party', per: 'day', notForAllDays: true, onlyOn: ['2027-04-21', '2027-04-23'], sort: 2 },
+  { extraId: DROP, name: 'Early drop-off, 7:30–9:00 AM', per: 'day', notForAllDays: false, onlyOn: [], sort: 0 },
+  { extraId: 'lunch', name: 'Pizza lunch', per: 'once', notForAllDays: false, onlyOn: [], sort: 3 }, // once: never in a day box
+];
+const rosterRow = (id, dayIds, extras = [], o = {}) => ({
+  id, status: 'active', duplicateState: 'none', paidCents: 0, owesCents: 0,
+  days: dayIds.map((dayId) => ({ dayId, day: APRIL_DAYS.find((d) => d.dayId === dayId).day, checkedInAt: null })),
+  extras: extras.map(([extraId, dayId]) => ({ extraId, name: ROSTER_EXTRAS.find((e) => e.extraId === extraId).name, per: 'day', dayId })), ...o,
+});
+const ids = (list) => list.map((e) => e.extraId);
+
+check('roster extras: the words, the every-day list, the day boxes', () => {
+  // Short name = before the comma; the day box's word = its first word, first letter uppercase.
+  assert.equal(extraShortName('Early drop-off, 7:30–9:00 AM'), 'Early drop-off');
+  assert.equal(extraShortName('Pizza party'), 'Pizza party');
+  assert.equal(extraDayWord('Early drop-off, 7:30–9:00 AM'), 'Early');
+  assert.equal(extraDayWord('Late pick-up, 3:00–4:00 PM'), 'Late');
+  assert.equal(extraDayWord('late pick-up'), 'Late');
+  assert.equal(extraDayWord('  Aftercare  , 3–5'), 'Aftercare');
+  // Every-day extras: per day, no onlyOn, by sort (Early before Late); pizza (some days) and lunch (once) out.
+  assert.deepEqual(ids(everyDayExtras(ROSTER_EXTRAS)), [DROP, PICK]);
+  assert.deepEqual(everyDayExtras([]), []);
+  assert.deepEqual(everyDayExtras(null), []);
+  // Ava: both extras every day → Early, Late in every box, in that order.
+  const ava = rosterRow('ava', DAY_IDS, DAY_IDS.flatMap((d) => [[PICK, d], [DROP, d]]));
+  for (const d of DAY_IDS) assert.deepEqual(ids(dayExtrasFor(ava, d, ROSTER_EXTRAS, APRIL_DAYS)), [DROP, PICK]);
+  // Ethan: Early only on the days he chose it (Mon, Thu, Fri); his chosen pizza on Fri never shows in a box.
+  const ethan = rosterRow('ethan', [MON, THU, FRI], [[DROP, MON], [DROP, THU], [DROP, FRI], [PIZZA, FRI]]);
+  assert.deepEqual(ids(dayExtrasFor(ethan, MON, ROSTER_EXTRAS, APRIL_DAYS)), [DROP]);
+  assert.deepEqual(ids(dayExtrasFor(ethan, FRI, ROSTER_EXTRAS, APRIL_DAYS)), [DROP]); // pizza (some days) excluded
+  // The "—" day (not signed up) gets nothing, even with a stray extra row for that day.
+  assert.deepEqual(dayExtrasFor(ethan, TUE, ROSTER_EXTRAS, APRIL_DAYS), []);
+  assert.deepEqual(dayExtrasFor(rosterRow('x', [MON], [[DROP, TUE]]), TUE, ROSTER_EXTRAS, APRIL_DAYS), []);
+  // No extras at all → nothing.
+  assert.deepEqual(dayExtrasFor(rosterRow('noah', [MON, TUE]), MON, ROSTER_EXTRAS, APRIL_DAYS), []);
+  // getsExtraOnDay = what extraCountOnDay counts: a "not charged to all-days campers" every-day extra
+  // is included for a child who comes the whole week, without choosing it.
+  const included = { ...ROSTER_EXTRAS[2], notForAllDays: true };
+  assert.equal(getsExtraOnDay(rosterRow('all', DAY_IDS), included, WED, APRIL_DAYS), true);
+  assert.equal(getsExtraOnDay(rosterRow('three', [MON, TUE, WED]), included, WED, APRIL_DAYS), false);
+  // The screen-reader labels end with the lower-cased short names; none → as before.
+  assert.equal(CampText.checkInDayLabel('Ava Thompson', '2027-04-19', ['Early drop-off', 'Late pick-up']), 'Check in Ava Thompson, Mon, Apr 19, early drop-off, late pick-up');
+  assert.equal(CampText.checkInDayLabel('Ava Thompson', '2027-04-19', []), 'Check in Ava Thompson, Mon, Apr 19');
+  assert.equal(CampText.checkInDayLabel('Ava Thompson', '2027-04-19'), 'Check in Ava Thompson, Mon, Apr 19');
+  assert.equal(CampText.missedDayLabel('Ethan Brooks', '2027-04-19', ['Early drop-off']), 'Ethan Brooks didn’t come Mon, Apr 19, early drop-off. Check in');
+  assert.match(CampText.undoCheckInDayLabel('Ava Thompson', '2027-04-19', '2027-04-19T12:42:00Z', ['Late pick-up']), /^Ava Thompson checked in Mon, Apr 19 at .+, late pick-up\. Undo check-in$/);
+  // The legend's meaning after the blue word.
+  assert.equal(CampText.legendExtraMeaning('Early drop-off'), ' early drop-off');
+});
+
+check('roster extras: the count line under the cards (before / on / between / after the camp)', () => {
+  const rows = [
+    rosterRow('ava', DAY_IDS, DAY_IDS.flatMap((d) => [[DROP, d], [PICK, d]])), // all days: pizza included too
+    rosterRow('ethan', [MON, THU, FRI], [[DROP, MON], [DROP, THU], [DROP, FRI], [PIZZA, FRI]]),
+    rosterRow('mia', [MON, WED], [[PICK, WED], [PIZZA, WED]]),
+    rosterRow('leo', DAY_IDS, DAY_IDS.map((d) => [DROP, d]), { status: 'withdrawn' }), // removed: never counted
+  ];
+  const line = (today) => {
+    const { mode, day } = comingCardDay(APRIL_DAYS, today);
+    const parts = dayExtraCounts(rows, ROSTER_EXTRAS, APRIL_DAYS, mode, day);
+    return parts ? CampText.dayExtrasLine(parts) : null;
+  };
+  // Before the camp: Monday's every-day extras only (no pizza, even though it's not offered Mon anyway).
+  assert.equal(line('2027-04-10'), 'Mon, Apr 19 · Early drop-off: 2 · Late pick-up: 1');
+  // On Wednesday (a pizza day): Today, both every-day extras (Early 0 is listed), then the pizza.
+  assert.equal(line('2027-04-21'), 'Today · Early drop-off: 1 · Late pick-up: 2 · Pizza party: 2');
+  // On Tuesday: no pizza that day → only the every-day extras.
+  assert.equal(line('2027-04-20'), 'Today · Early drop-off: 1 · Late pick-up: 1');
+  // A Mon / Wed camp, on the Tuesday between: the next camp day, never the some-days extras.
+  const monWed = [APRIL_DAYS[0], APRIL_DAYS[2]];
+  const between = comingCardDay(monWed, '2027-04-20');
+  assert.equal(between.mode, 'next');
+  assert.equal(CampText.dayExtrasLine(dayExtraCounts(rows, ROSTER_EXTRAS, monWed, between.mode, between.day)), 'Wed, Apr 21 · Early drop-off: 1 · Late pick-up: 2');
+  // Zero counts are still listed.
+  const zero = dayExtraCounts([], ROSTER_EXTRAS, APRIL_DAYS, 'next', APRIL_DAYS[0]);
+  assert.deepEqual(zero.counts, [{ name: 'Early drop-off', count: 0 }, { name: 'Late pick-up', count: 0 }]);
+  // After the camp: no line.
+  assert.equal(line('2027-05-01'), null);
+  assert.equal(dayExtraCounts(rows, ROSTER_EXTRAS, APRIL_DAYS, 'after', null), null);
+  // Nothing to count: no line (no extras; only a once extra; a pizza on a day it isn't offered).
+  assert.equal(dayExtraCounts(rows, [], APRIL_DAYS, 'today', APRIL_DAYS[0]), null);
+  assert.equal(dayExtraCounts(rows, [ROSTER_EXTRAS[3]], APRIL_DAYS, 'today', APRIL_DAYS[0]), null);
+  assert.equal(dayExtraCounts(rows, [ROSTER_EXTRAS[1]], APRIL_DAYS, 'today', APRIL_DAYS[0]), null);
+  // A camp with only a pizza party: on a pizza day the line is "Today · Pizza party: 2" (as the old line, new words).
+  assert.equal(CampText.dayExtrasLine(dayExtraCounts(rows, [ROSTER_EXTRAS[1]], APRIL_DAYS, 'today', APRIL_DAYS[2])), 'Today · Pizza party: 2');
 });
 
 console.log(`${count} groups of checks ran.`);

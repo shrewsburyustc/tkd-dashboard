@@ -1,0 +1,44 @@
+{
+  "title": "Camps — Early drop-off and Late pick-up on the roster (two ways to show them)",
+  "subtitle": "Jeffrey 2026-11-04: “We have Early Drop Off and Late Pick-Up always and we need to see on the roster.” <b>Today</b> the roster shows only one small note under a name, only on a camp day, and only the first extra (a child with both shows just one); there is no count of drop-offs or pick-ups, and before the camp nothing shows at all. <b>Both options add (1)</b> a count under the cards for the day the Coming card shows: “Mon, Apr 19 · Early drop-off: 5 · Late pick-up: 6” (on a camp day “Today · Early drop-off: 5 · Late pick-up: 6 · Pizza party: 11”, so today’s pizza line joins it). <b>Option A (2)</b> puts the extra’s first word, <b>Early</b> / <b>Late</b>, inside every signed-up day box, for every day of the week, and adds them to the legend under the grid (“· Early early drop-off · Late late pick-up”). <b>Option B (2)</b> writes the extras under the camper’s name, in full, for <i>one</i> day only (today on a camp day, else the Coming card’s day). The words come from each extra’s own name (the part before the comma), so a camp whose extras are named differently still works. Real preview data (April Vacation Camp). Amber = what changes.",
+  "width": 2320,
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/x1-pc-today.png", "crop": [60, 90, 1220, 710], "scale": 0.55, "marks": [[700, 450, 505, 350]],
+        "caption": "<b>PC 1280×800.</b> Before the camp: no extras anywhere on the roster. Ava Thompson has Early drop-off and Late pick-up every day; nothing says so." },
+      { "src": "shots/x1-tab-today.png", "crop": [72, 90, 748, 760], "scale": 0.6, "shotWidth": 820, "marks": [[376, 500, 412, 345]],
+        "caption": "<b>Tablet 820×1180 touch.</b>" },
+      { "row": [
+        { "src": "shots/x1-ph-today-cards.png", "crop": [0, 180, 390, 600], "scale": 0.6, "shotWidth": 390,
+          "caption": "<b>Phone 390×844 touch.</b>" },
+        { "src": "shots/x1-320-today-cards.png", "crop": [0, 180, 320, 600], "scale": 0.6, "shotWidth": 320,
+          "caption": "<b>320 wide.</b>" }
+      ] }
+    ] },
+    { "label": "Option A — in the day boxes (recommended)", "tone": "after", "items": [
+      { "src": "shots/x1-pc-A.png", "crop": [60, 90, 1220, 710], "scale": 0.55, "marks": [[76, 313, 274, 20], [700, 482, 505, 318]],
+        "caption": "<b>PC.</b> The count under the cards; <b>Early</b> / <b>Late</b> under each day’s Check in (or check-in time). Ethan Brooks: Early only on the days he chose it." },
+      { "src": "shots/x1-tab-A.png", "crop": [72, 90, 748, 760], "scale": 0.6, "shotWidth": 820, "marks": [[96, 347, 272, 20], [376, 530, 412, 320]],
+        "caption": "<b>Tablet 820 touch.</b> Fits in the day columns as they are; rows are a little taller." },
+      { "row": [
+        { "src": "shots/x1-ph-A-cards.png", "crop": [0, 180, 390, 600], "scale": 0.6, "shotWidth": 390, "marks": [[16, 246, 358, 78], [16, 398, 358, 62], [16, 534, 358, 62], [16, 670, 358, 62]],
+          "caption": "<b>Phone 390.</b> Inside each day box, under Check in." },
+        { "src": "shots/x1-320-A-cards.png", "crop": [0, 180, 320, 600], "scale": 0.6, "shotWidth": 320, "marks": [[16, 246, 288, 78], [16, 398, 288, 62], [16, 534, 288, 62], [16, 670, 288, 62]],
+          "caption": "<b>320.</b> Still fits; “Early” and “Late” stack." }
+      ] }
+    ] },
+    { "label": "Option B — under the name, one day", "tone": "after", "items": [
+      { "src": "shots/x1-pc-B.png", "crop": [60, 90, 1220, 710], "scale": 0.55, "marks": [[76, 313, 274, 20], [80, 484, 170, 316]],
+        "caption": "<b>PC.</b> The same count; the full names under each camper, for Mon, Apr 19 only (the Coming card’s day). The day boxes stay as they are." },
+      { "src": "shots/x1-tab-B.png", "crop": [72, 90, 748, 760], "scale": 0.6, "shotWidth": 820, "marks": [[96, 347, 272, 20], [100, 532, 135, 420]],
+        "caption": "<b>Tablet 820 touch.</b> “Early drop-off · Late pick-up” wraps to two lines in the narrow Camper column." },
+      { "row": [
+        { "src": "shots/x1-ph-B-cards.png", "crop": [0, 180, 390, 600], "scale": 0.6, "shotWidth": 390, "marks": [[14, 240, 168, 18], [14, 379, 90, 18], [14, 519, 90, 18], [14, 659, 90, 18]],
+          "caption": "<b>Phone 390.</b> A line under the name." },
+        { "src": "shots/x1-320-B-cards.png", "crop": [0, 180, 320, 600], "scale": 0.6, "shotWidth": 320, "marks": [[14, 240, 168, 18], [14, 379, 90, 18], [14, 519, 90, 18], [14, 659, 90, 18]],
+          "caption": "<b>320.</b>" }
+      ] }
+    ] }
+  ],
+  "footer": "<b>A — in the day boxes.</b> Pros: you see every day at once (who stays late on Thursday, before the camp starts, and on the paper roster later if we want it); works the same in a two-week camp; the camp-day amber “Pick-up” note under the name goes away (a missing pizza party keeps its amber “No pizza”). Cons: each row is a bit taller; “Early” / “Late” are short words, explained in the legend under the grid. <b>B — under the name.</b> Pros: full words, no legend; rows only grow for campers with extras. Cons: only one day at a time (before the camp it shows the first day, so Thursday-only pick-ups are invisible until Thursday); the line can wrap on tablets. <b>Same in both:</b> no database change (each camper’s extras per day are already loaded); Hide private details keeps them (extras aren’t private); a printed roster isn’t part of this. <b>Recommendation: A</b> — the desk sees the whole week, which is what “always” needs. <br><b>How it was drawn:</b> <code>mock-x1-roster-extras.js</code> adds the words on top of the real preview roster from each camper’s real extras; nothing in the app changed. <br><br><b>Your choice:</b> A, B, or change a point (say which)."
+}
