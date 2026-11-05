@@ -7,6 +7,7 @@
 // One dialog with four steps (state.step): 'list' | 'add' | 'edit' | 'delete'.
 import { useState } from 'react';
 import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import { ConfirmButtons } from '../../components/ConfirmBox.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -128,19 +129,32 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
     );
   }
 
+  // The Delete status step (design review N3): its own small confirm box, because it holds the
+  // "Move them to" picker (the shared ConfirmBox's sentence is a plain <p>), with the shared button
+  // row (ConfirmButtons): "Keep status" · "Delete status" (red, first focus on Keep). While the
+  // delete works, Esc, a click outside and Back wait (they used to close it).
   if (state.step === 'delete') {
     const n = counts.get(state.statusId) ?? 0;
     const others = statuses.filter((s) => s.id !== state.statusId);
-    const canDelete = !state.saving && (n === 0 || Boolean(state.moveTo));
+    // People to move and no status chosen yet: "Delete status" grays (actionUnavailable,
+    // rulebook v0.633) until one is picked.
     return (
-      <Dialog title={T.deleteStatusTitle(status?.name ?? '')} variant="confirm" describedBy={`${idBase}-del`} onRequestClose={() => onStep('list')}>
+      <Dialog
+        title={T.deleteStatusTitle(status?.name ?? '')}
+        variant="confirm"
+        describedBy={`${idBase}-del`}
+        busy={state.saving}
+        onRequestClose={() => {
+          if (!state.saving) onStep('list');
+        }}
+      >
         <p id={`${idBase}-del`} className="tdialog-sub tdialog-body">
           {T.deleteStatusBody(status?.name ?? '', n)}
         </p>
         {n > 0 && (
           <div className="field">
             <label htmlFor={`${idBase}-move`}>{T.MOVE_TO}</label>
-            <select id={`${idBase}-move`} className="input sdialog-select" value={state.moveTo ?? ''} disabled={state.saving} onChange={(e) => onChange({ moveTo: e.target.value || null }, 'delete')}>
+            <select id={`${idBase}-move`} className="input sdialog-select" value={state.moveTo ?? ''} disabled={state.saving} onChange={(e) => onChange({ moveTo: e.target.value || null, note: null }, 'delete')}>
               <option value="">{T.CHOOSE}</option>
               {others.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -150,15 +164,18 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
             </select>
           </div>
         )}
-        <div className="dialog-actions">
-          <button type="button" className="btn" data-autofocus onClick={() => onStep('list')}>
-            {T.CANCEL}
-          </button>
-          <button type="button" className={`btn btn-delete${canDelete ? '' : ' is-unavailable'}`} aria-disabled={canDelete ? undefined : 'true'} onClick={() => canDelete && onDelete()}>
-            <IconTrash size={16} aria-hidden="true" />
-            {state.saving ? T.DELETING : T.DELETE}
-          </button>
-        </div>
+        <ConfirmButtons
+          autoFocus
+          keepLabel={T.KEEP_STATUS}
+          actionLabel={T.DELETE_STATUS}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={state.saving}
+          actionUnavailable={n > 0 && !state.moveTo}
+          onKeep={() => onStep('list')}
+          onConfirm={onDelete}
+        />
         {noteBlock}
       </Dialog>
     );

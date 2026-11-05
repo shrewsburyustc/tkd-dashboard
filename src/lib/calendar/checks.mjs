@@ -10,7 +10,7 @@ import { cleanNotes, datesProblem, eventTimesProblem, notesProblem, textProblem 
 import { addMonths, buildDay, eventTimeOn, monthWeeks, recordMatches, versionInEffect, weekDates } from './days.js';
 import { createCalendarBackend } from '../mockCalendar.js';
 import { KINDS, applyShow, hiddenKey, loadHidden, saveHidden, shownCount, toggleKind } from './showKinds.js';
-import { calendarFollowUps, isDueToday, lastInitial, openFollowUpOn } from '../prospects/followUps.js';
+import { calendarFollowUps, childInitial, isDueToday, lastInitial, openFollowUpOn } from '../prospects/followUps.js';
 import { clearOpenProspect, requestOpenProspect, takeOpenProspect } from '../prospects/openRequest.js';
 
 let groups = 0;
@@ -258,6 +258,12 @@ group('follow-ups: which count, and what the Calendar keeps (v0.612 / v0.615)', 
   assert.deepEqual(out[0], { id: 'Ruby', code: 'worcester', childFirstName: 'Ruby', initial: 'A', followUpOn: '2027-01-15' });
   assert.equal(out[2].initial, ''); // one-word parent name
   assert.equal(lastInitial('  dan  de la cruz '), 'C');
+  // "Ava N.": the child's own last initial since last names are asked (v0.637); older sign-ups
+  // (no last name) keep the parent's, as above
+  const own = calendarFollowUps([{ ...p('Ava', 's-con', '2027-01-15'), childLastName: 'Nguyen' }], statuses, 'worcester');
+  assert.deepEqual(own[0], { id: 'Ava', code: 'worcester', childFirstName: 'Ava', initial: 'N', followUpOn: '2027-01-15' });
+  assert.equal(childInitial({ childLastName: ' de la Cruz ', parentName: 'Jo Allen' }), 'D');
+  assert.equal(childInitial({ childLastName: null, parentName: 'Jo Allen' }), 'A');
   assert.equal(openFollowUpOn({ followUpOn: '2027-01-15' }, 'joined'), null);
   // Prospects' "Follow up today" uses the same rule
   assert.equal(isDueToday({ followUpOn: '2027-01-14' }, 'joined', '2027-01-15'), false);

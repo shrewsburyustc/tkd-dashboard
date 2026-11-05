@@ -5,21 +5,28 @@
 //
 // Props:
 //   fields      the fields of THIS step (already in order)
-//   values      { answers, children: [{ first_name, age }], bookings: { childIndex: timeKey }, signature, agreed }
-//   problems    { fieldId | 'children' | 'signature': code } — shown under the field
+//   values      { answers, children: [{ first_name, last_name, dob }], bookings: { childIndex: timeKey }, signature, agreed }
+//               (an Address question's answer is { street, city, state, zip } — rulebook v0.634)
+//   problems    { fieldId | 'children' | 'child-0' … | 'signature': code } — shown under the field
+//               ('child-0' …: that child has a wrong box; all its wrong boxes are marked at once)
 //   times       the open free-class times [{ classId, className, date, start, end, spotsLeft }] | null (loading) | 'error'
 //   readOnly    true while sending
 //   idBase      unique prefix for ids
 //   noTimesText optional: the words when no free-class time is open (the public page says it to
 //               the family; staff see the staff wording by default)
-//   inlineDates true: a Date question's calendar opens IN the page under its field (the family
-//               page and the kiosk, like Star's date of birth; staff Fill in: only on phones)
+//   inlineDates true: a Date question's calendar (and each child's date of birth) opens IN the page
+//               under its field (the family page and the kiosk, like Star's date of birth; staff
+//               Fill in: only on phones)
 //   onAnswer(fieldId, value)  onChildren(list)  onBooking(childIndex, timeKey | '')  onSignature(dataUrl | null)
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import DatePicker from '../../components/DatePicker.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
-import { isVisible, MAX_CHILDREN, NO_TIME_KEY } from '../../lib/forms/fields.js';
+import {
+  ADDRESS_STATE, addressBlank, addressPartProblems, addressParts, ageOn, childBoxProblems, childrenProblemKinds, emptyChild, isVisible, MAX_CHILDREN,
+  NO_TIME_KEY,
+} from '../../lib/forms/fields.js';
+import { shortDate } from '../../lib/calendarDates.js';
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 import { classWithAges } from '../../lib/schedule/ages.js';
@@ -38,6 +45,18 @@ const dateYears = (todayIso) => {
   for (let y = year + 2; y >= year - 100; y -= 1) list.push(y);
   return list;
 };
+// A child's date of birth (v0.634), set up like Star's: no day after today, and the Year list runs
+// from this year back 100 years, newest first, so every age up to 99 can be picked.
+const dobYears = (todayIso) => {
+  const year = Number(todayIso.slice(0, 4));
+  const list = [];
+  for (let y = year; y >= year - 100; y -= 1) list.push(y);
+  return list;
+};
+// The Address question's boxes: the browser's own address filling (not on the kiosk), and how many
+// characters each box takes (a little over the rule, so "too long" can show).
+const ADDRESS_AUTOFILL = { street: 'address-line1', city: 'address-level2', state: 'address-level1', zip: 'postal-code' };
+const ADDRESS_TYPING_MAX = { street: 150, city: 80, state: 40, zip: 10 };
 const nextWeek = (monday) => {
   const d = new Date(`${monday}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 7);
@@ -49,8 +68,9 @@ function Problem({ id, code }) {
   return <Notice id={id}>{T.FIELD_PROBLEM[code] ?? T.FIELD_PROBLEM.required}</Notice>;
 }
 
-// noAutofill (the front-desk kiosk): the browser must not offer the previous family's name, phone
-// or email on a shared tablet (kiosk plan), so every box says autocomplete="off".
+// noAutofill (the front-desk kiosk and staff Fill in): the browser must not offer the previous
+// family's name, phone, email or address on a shared tablet or desk computer (kiosk plan; security
+// review), so every box says autocomplete="off". Only the family's own device gets the codes.
 export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, noAutofill = false, inlineDates = false, onAnswer, onChildren, onBooking, onSignature }) {
   const off = noAutofill ? 'off' : undefined;
   // (on the kiosk the keyboard's spell-check and word suggestions are off too: they would learn
@@ -169,52 +189,160 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
     );
   }
 
+  // Each child: First name and Last name side by side (one above the other on phones), then the
+  // Date of birth with "N years old" under it once picked (rulebook v0.634, v0.637; mockup rev 3).
   function childrenBlock(f) {
     const set = (i, patch) => onChildren(children.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+    const errId = `${idBase}-children-err`;
+    const day = today();
+    // A child whose problems show ('child-0' … in problems) has EVERY wrong box marked at once, and
+    // one line under the children says what is wrong in those children (design review).
+    const shows = (i) => Boolean(problems[`child-${i}`]);
+    const line = problems.children
+      ? T.FIELD_PROBLEM[problems.children]
+      : T.childrenProblemLine(childrenProblemKinds(children.filter((_, i) => shows(i)), day));
     return (
       <div key={f.id} className="fchildren">
         <span className="field-label">{f.label}</span>
-        {children.map((c, i) => (
-          <div key={i} className="fchild">
-            <div className="fchild-head">
-              <span className="fchild-title">{T.CHILD(i + 1)}</span>
-              {children.length > 1 && !readOnly && (
-                <IconButton label={T.removeChild(i + 1)} onClick={() => onChildren(children.filter((_, j) => j !== i))} Icon={IconTrash} />
-              )}
+        {children.map((c, i) => {
+          const base = `${idBase}-child-${i}`;
+          const wrong = shows(i) ? childBoxProblems(c, day) : {};
+          const marked = (box) => Boolean(wrong[box]);
+          const describedBy = (box, more = null) => [marked(box) ? errId : null, more].filter(Boolean).join(' ') || undefined;
+          const age = ageOn(c.dob, day);
+          // a box's own name is smaller than the question's (12 px, as mockup rev 3: .fpart-label)
+          const nameBox = (box, idEnd, label) => (
+            <div className="field">
+              <label htmlFor={`${base}-${idEnd}`} className="fpart-label">
+                {label}
+              </label>
+              <input
+                id={`${base}-${idEnd}`}
+                className="input"
+                maxLength={60}
+                autoComplete={off}
+                {...noLearn}
+                readOnly={readOnly}
+                aria-invalid={marked(box) ? true : undefined}
+                aria-describedby={describedBy(box)}
+                value={c[box] ?? ''}
+                onChange={(e) => set(i, { [box]: e.target.value })}
+              />
             </div>
-            <div className="fchild-row">
-              <div className="field">
-                <label htmlFor={`${idBase}-child-${i}-name`}>{T.FIRST_NAME}</label>
-                <input id={`${idBase}-child-${i}-name`} className="input" maxLength={60} autoComplete={off} {...noLearn} readOnly={readOnly} aria-invalid={problems.children ? true : undefined} aria-describedby={problems.children ? `${idBase}-children-err` : undefined} value={c.first_name} onChange={(e) => set(i, { first_name: e.target.value })} />
+          );
+          return (
+            <div key={i} className="fchild" role="group" aria-labelledby={`${base}-title`}>
+              <div className="fchild-head">
+                <span id={`${base}-title`} className="fchild-title">{T.CHILD(i + 1)}</span>
+                {children.length > 1 && !readOnly && (
+                  <IconButton label={T.removeChild(i + 1)} onClick={() => onChildren(children.filter((_, j) => j !== i))} Icon={IconTrash} />
+                )}
               </div>
-              <div className="field fchild-age">
-                <label htmlFor={`${idBase}-child-${i}-age`}>{T.AGE}</label>
-                <input
-                  id={`${idBase}-child-${i}-age`}
-                  className="input"
-                  autoComplete={off}
-                  type="number"
-                  inputMode="numeric"
-                  min={2}
-                  max={99}
-                  readOnly={readOnly}
-                  aria-invalid={problems.children ? true : undefined}
-                  aria-describedby={problems.children ? `${idBase}-children-err` : undefined}
-                  value={c.age ?? ''}
-                  onChange={(e) => set(i, { age: e.target.value === '' ? null : Number(e.target.value) })}
+              <div className="fchild-row">
+                {nameBox('first_name', 'name', T.FIRST_NAME)}
+                {nameBox('last_name', 'last', T.LAST_NAME)}
+              </div>
+              {/* The dashboard's calendar, set up like Star's date of birth. Its name is plain text,
+                  as a Date question's: a <label> would open the calendar when clicked. */}
+              <div className="field fchild-dob">
+                <span className="field-label fpart-label">{T.DOB}</span>
+                <DatePicker
+                  id={`${base}-dob`}
+                  label={T.DOB}
+                  value={c.dob ?? ''}
+                  today={day}
+                  max={day}
+                  years={dobYears(day)}
+                  yearsNewestFirst
+                  emptyFocus="month"
+                  hint={T.DOB_CALENDAR_HINT}
+                  placeholder={T.PICK}
+                  disabled={readOnly}
+                  invalid={marked('dob')}
+                  describedBy={describedBy('dob', age !== null ? `${base}-years` : null)}
+                  inline={inlineDates}
+                  onChange={(iso) => set(i, { dob: iso || null })}
                 />
+                {age !== null && (
+                  <p id={`${base}-years`} className="field-hint">
+                    {T.yearsOld(age)}
+                  </p>
+                )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {children.length < MAX_CHILDREN && !readOnly && (
-          <button type="button" className="btn fchild-add" onClick={() => onChildren([...children, { first_name: '', age: null }])}>
+          <button type="button" className="btn fchild-add" onClick={() => onChildren([...children, emptyChild()])}>
             <IconPlus size={16} aria-hidden="true" />
             {T.ADD_CHILD}
           </button>
         )}
-        <Problem id={`${idBase}-children-err`} code={problems.children} />
+        {line && <Notice id={errId}>{line}</Notice>}
       </div>
+    );
+  }
+
+  // The Address question (v0.634): Street address; then City, State and ZIP code in one row (on
+  // phones City on its own line, State and ZIP code side by side). State starts as MA. Every box
+  // carries the question's id (data-field), so the family page knows which question was left.
+  function addressBlock(f) {
+    const id = `${idBase}-${f.id}`;
+    const errId = `${id}-error`;
+    const code = problems[f.id];
+    const parts = addressParts(answers[f.id]);
+    // With a problem showing, EVERY wrong box is marked at once (a missing part, the ZIP code, a part
+    // too long) and one line says all of it, like the children; nothing typed: "This one is needed."
+    const wrong = code ? addressPartProblems(parts) : {};
+    const marked = (part) => Boolean(wrong[part]);
+    const line = code === 'required' ? T.FIELD_PROBLEM.required : code ? T.addressProblemLine(Object.values(wrong)) : '';
+    const set = (part, value) => {
+      const next = { ...parts, [part]: value };
+      // back to how it started (nothing typed, State MA): no answer, so the form isn't "started"
+      onAnswer(f.id, addressBlank(next) && next.state === ADDRESS_STATE ? undefined : next);
+    };
+    // each box's own name is smaller than the question's (12 px, as mockup rev 3: .fpart-label)
+    const box = (part, label, more = {}) => (
+      <div className={`field${part === 'city' ? ' faddress-city' : ''}`}>
+        <label htmlFor={`${id}-${part}`} className="fpart-label">
+          {label}
+        </label>
+        <input
+          id={`${id}-${part}`}
+          data-field={f.id}
+          className="input"
+          type="text"
+          maxLength={ADDRESS_TYPING_MAX[part]}
+          autoComplete={off ?? ADDRESS_AUTOFILL[part]}
+          {...noLearn}
+          readOnly={readOnly}
+          aria-invalid={marked(part) ? true : undefined}
+          aria-describedby={marked(part) ? errId : undefined}
+          value={parts[part]}
+          onChange={(e) => set(part, e.target.value)}
+          {...more}
+        />
+      </div>
+    );
+    return (
+      <fieldset key={f.id} className="field cfieldset faddress" aria-describedby={f.help ? `${id}-help` : undefined}>
+        <legend className="field-label">
+          {f.label}
+          {!f.required && <span className="fopt"> (optional)</span>}
+        </legend>
+        {f.help && (
+          <p id={`${id}-help`} className="field-hint">
+            {f.help}
+          </p>
+        )}
+        {box('street', T.STREET)}
+        <div className="faddress-row">
+          {box('city', T.CITY)}
+          {box('state', T.STATE)}
+          {box('zip', T.ZIP_CODE, { inputMode: 'numeric' })}
+        </div>
+        {line && <Notice id={errId}>{line}</Notice>}
+      </fieldset>
     );
   }
 
@@ -318,6 +446,15 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
         </p>
         <SignaturePad value={values.signature} onChange={onSignature} disabled={readOnly} labelId={`${id}-sig-label`} hintId={`${id}-sig-hint`} />
         <Problem id={`${id}-sig-err`} code={problems.signature} />
+        {/* Date signed (v0.635): today's date in a gray box that can't be changed. It is not one of
+            the form's answers: the database saves the day the form is sent (signed_at). */}
+        <div className="field fsigned">
+          <label htmlFor={`${id}-signed`}>{T.DATE_SIGNED}</label>
+          <input id={`${id}-signed`} className="input fsigned-box" type="text" readOnly value={shortDate(today())} aria-describedby={`${id}-signed-hint`} />
+          <p id={`${id}-signed-hint`} className="field-hint">
+            {T.DATE_SIGNED_HINT}
+          </p>
+        </div>
       </div>
     );
   }
@@ -335,6 +472,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
           );
         }
         if (f.type === 'children') return childrenBlock(f);
+        if (f.type === 'address') return addressBlock(f);
         if (f.type === 'booking') return bookingBlock(f);
         if (f.type === 'waiver') return waiverBlock(f);
         return question(f);

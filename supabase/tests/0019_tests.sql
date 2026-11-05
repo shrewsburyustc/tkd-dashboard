@@ -248,7 +248,9 @@ begin
   v_f1 := (v_r ->> 'id')::uuid;
   -- (a form needs its waiver wording before it can be published)
   v_r := public.forms_save_draft(v_f1, (v_r ->> 'version')::integer, v_tag || ' form', v_slug,
-           jsonb_set(public.forms_template('free_class'), '{8,text}', to_jsonb('Our wording.'::text)),
+           -- (the waiver found by id, so this works before and after 0036 adds the Address question)
+           (select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', to_jsonb('Our wording.'::text)) else e end order by n)
+              from jsonb_array_elements(public.forms_template('free_class')) with ordinality as t(e, n)),
            '{"thank_you":"","alert_email":null,"confirm_email":false,"add_to_calendar":false}');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST SETUP: save draft: %', v_r; end if;
   v_r := public.forms_publish(v_f1, (v_r ->> 'version')::integer);

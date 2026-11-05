@@ -3004,3 +3004,67 @@ Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as name
 - **The form's choice from the history:** every camper since 0013 has an insert row in change_log written by the family form, which holds the way they chose; today's Paying by is only the fallback.
 
 ---
+
+## Migration 0036: each child's last name and date of birth, the Address question
+
+**Status: not applied yet.** Built on `claude/prospect-form-system-cd893d` (rulebook v0.634–v0.639; plan `docs/Prospects/TKD-ProspectProfile-Build-Plan.md` §2). Apply it **before** the app version that asks for last names, dates of birth and addresses is deployed (that app reads the new columns and keys). The live app keeps working after it: it still sends each child as first name + age, and that is still accepted.
+
+**Production order:** … 0031 → 0030 → 0032 → 0033 → 0034 (all live) → **0036**. It needs 0009 (Forms), 0012 (Prospects) and 0031 (class ages) — it stops with "0036 needs migration 0009 / 0012 / 0031 … first" if one is missing.
+
+**What it does** (`supabase/migrations/0036_new_students_profile.sql`):
+- **Two child shapes during the switch.** A child is accepted as `{ first_name, age }` — what the live app sends, and a kiosk tablet whose old page is still open (up to 12 hours); the rules as before — **or** as `{ first_name, last_name, dob }` (the new app): first and last name 1–40 characters (the dashboard's usual text rules), `dob` a real `YYYY-MM-DD` date, and the child **2–99 years old on the school's today** (America/New_York, the same "today" as the free-class times). A child outside 2–99 makes the whole sign-up `invalid`, nothing saved. The sign-up keeps `{ first_name, last_name, dob, age }`, the age worked out from the date of birth. A later small clean-up migration removes the old shape (and the one-text address below) **at least 12 hours after the push** — a kiosk keeps its page up to 12 hours.
+- **New question type "Address"** (`forms_fields_are_valid`): at most one per form, no options or text on it, "Show only if" like any question. The answer is `{ street, city, state, zip }` — exactly those four, all filled: street up to 120, city up to 60, state up to 30 characters, ZIP code `01604` or `01604-1234` (the digits 0–9 only) — **or one plain text of up to 200 characters**: the live page shows a question type it doesn't know as a text box (removed with the old child shape). Required or not, like any question.
+- **Templates** (`forms_template`): a new Free class or Walk-in form gets `{"id":"address","type":"address","label":"Home address","required":true}` right after Email; Event the same, not required; Blank nothing. **Live forms don't change** — they ask the address once an admin adds it and publishes.
+- **`form_submissions`:** its size rule allows a children list of **4000 bytes** (was 2000; six long first and last names in another alphabet could pass 2000). It only widens the rule.
+- **`prospects`:** two new columns, **`child_last_name`** (text: empty, or 1–40 characters) and **`child_dob`** (date: empty, or 1900–2100), each with its own rule. Empty for everyone who signed up before — nothing is filled in and no version moves (a sign-up is never changed). Like every prospects column, granted to nobody: read only through the functions below.
+- **Eight functions replaced**, word for word except the lines marked "0036" (same arguments, owner, security definer / invoker, `search_path = ''` and rights): `forms_fields_are_valid`, `forms_template`, `forms_check_answers` (0009, internal); `forms_submit_core` (0031's, internal); `prospects_from_submission` (0012, the trigger: also copies the last name and date of birth); and, for signed-in unlocked staff only as before, `prospects_list` (each row also has `child_last_name` — never the date of birth or age), `prospects_search` (also matches the child's last name) and `prospects_get` (also `child_last_name`, `child_dob` and each sibling's `child_last_name` and `child_dob`, so the profile shows a brother's or sister's age today) (0012).
+- **Reading `form_submissions` straight from the table** (security review): 0009 let signed-in staff read most of a sign-up directly — from now on that would include every family's home address and every child's last name and date of birth. The app never reads those that way (it counts sign-ups with `id, form_id, created_at`; a family's details come one family at a time through `prospects_get`), so the app may now read only **`id, form_id, location_code, created_at`**, still only while unlocked. Every function that reads a sign-up runs as its owner, and no view or table rule reads this table, so nothing else changes. The live app's own direct read uses only those columns, so it keeps working between the paste and the push.
+- Nothing new for anon; `forms_registrar` keeps exactly its three public functions.
+
+### 0036a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0036_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `new_columns 0`, `size_rule_4000 false`, `staff_submission_columns 15` (0009's read rights), `replaced_found 8`, `replaced_as_tested 8`, `forms_with_address 0`, `signups_over_2000 0`, `prospects_with_new_details 0`. **`replaced_as_tested` below 8, or `staff_submission_columns` not 15 → stop**: something changed since 0036 was built, and pasting would undo that change — 0036 must be rebuilt on the newer state first. `2 / true / 4 / 8 / 0 / …` = already applied.
+2. Claude runs `0009_fingerprints.sql`, `0012_fingerprints.sql`, `0031_fingerprints.sql` and `0036_fingerprints.sql` and keeps the results (the "before" record for 0036c and the undo).
+
+### 0036b. Apply 0036 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0036_new_students_profile.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about destructive operations. One `drop constraint if exists` line is real on the first run: the old size rule of `form_submissions`, added again right after it (4000 bytes) in the same transaction. The other two only make re-running safe (each new prospects rule is added right after it), and the remaining words are inside functions that run later. No data is removed. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Push the app right after the paste; don't create forms in between.** From the paste on, a new Free class, Walk-in or Event form starts from 0036's template, with the Address question — and the live app's builder doesn't know that question, so it won't save the form until the Address question is deleted. Forms that already exist are not affected, and families can keep signing up the whole time.
+5. **The clean-up migration** (it removes the old child shape and the one-text address) comes **at least 12 hours after the push**, so a kiosk tablet still showing the old page has reloaded by then.
+
+**Running it again is safe** (tested: no fingerprint, row or history change). **If 0009, 0012 or 0031 is ever re-run after 0036, re-run 0036 straight after it** — they put their older functions back (the new child shape and the Address answer refused, or a new-shape child saved without its age). **Don't paste 0031's undo (0031e) after 0036 without asking Claude:** it puts back 0009's `forms_submit_core`.
+
+### 0036c. Read-only checks (Claude runs these through the connection)
+
+1. **Pre-apply check again:** `2 / true / 4 / 8 / 0 / 0 / 0 / 0`.
+2. **Fingerprints:** `supabase/tests/0036_fingerprints.sql` must match what `run.mjs` printed ("0036 fingerprints"): 22 rows — the `form_submissions` table row (`rls=true`, the owner's table rights only, `columns=created_at:authenticated=r/postgres,form_id:…,id:…,location_code:…`), the eight functions and their kinds (`forms_fields_are_valid`, `forms_template`, `forms_check_answers`, `forms_submit_core`: `definer=false`, `rights=postgres:EXECUTE`; `prospects_from_submission`: `definer=true`, `rights=postgres:EXECUTE`; `prospects_list`, `prospects_search`, `prospects_get`: `definer=true`, `rights=authenticated:EXECUTE,postgres:EXECUTE`; all `settings=search_path=""`), the two columns (`text notnull=false rights=` and `date notnull=false rights=`: nobody may read them directly) and the three rules. The file contains neither of the words the connection refuses.
+3. `0009_fingerprints.sql`, `0012_fingerprints.sql` and `0031_fingerprints.sql` differ from 0036a's record **only** in: the `function` lines of the eight functions (body md5; rights, owner and settings the same), 0009's `form_submissions_size_check` line (`<= 2000` → `<= 4000`), 0009's `table  form_submissions` line (its `columns=` list keeps only `created_at`, `form_id`, `id`, `location_code`; the rest of the line the same), and 0012's two new `prospects_child_…_check` lines. Every other migration's fingerprints: unchanged (`run.mjs` step0036 checks exactly that).
+4. **Security advisor:** nothing new.
+
+### 0036d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0036_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0036 TESTS PASSED**. It makes its own `zz test …` class, a Worcester time slot three days from now and a Free class form, sends test families (the new shape, the old shape, ages 1 / 2 / 99 / 100, six long names), and rolls everything back.
+2. Then `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0019_tests.sql`, `0021_tests.sql` and `0031_tests.sql` again — all must still pass (they now find the template's fields by id, and the ones that send families leave the Address question out of their own test form).
+3. Put the placeholders back afterwards.
+
+### 0036e. Undo 0036 (only with Jeffrey's OK)
+
+1. The app version that sends last names, dates of birth or addresses must **not** be live.
+2. Paste **the whole file** `supabase/manual/0036u_undo_new_students_profile.sql` in the SQL Editor → **Run**. It puts back 0009's `forms_fields_are_valid`, `forms_template` and `forms_check_answers`, 0031's `forms_submit_core` and 0012's `prospects_from_submission`, `prospects_list`, `prospects_search` and `prospects_get` (word for word, same rights), removes the two prospects columns with their rules, puts back the 2000-byte rule, and puts back 0009's read rights on `form_submissions` exactly (its 15 columns). One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. **It refuses — and changes nothing — while anything already uses 0036:** a form with an Address question (it could no longer be saved under 0009's rules), a sign-up whose children list is over 2000 bytes (the old rule can't go back), or a prospect with a last name or date of birth (they would be lost; pasting 0036 again doesn't copy them back). Claude checks first with `0036_preapply_check.sql`: `forms_with_address`, `signups_over_2000` and `prospects_with_new_details` must all be 0. The undo is meant for right after the paste, before the new app is used; after that, ask Claude.
+4. Claude checks afterwards: the pre-apply check answers `0 / false / 15 / 8 / 8 / 0 / 0 / 0` again; `0009_fingerprints.sql`, `0012_fingerprints.sql` and `0031_fingerprints.sql` match 0036a's record. Then run `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0019_tests.sql`, `0021_tests.sql`, `0031_tests.sql`.
+5. To redo: paste 0036 again (safe). Running the undo twice is safe too.
+
+Tested in PGlite on every run (`run.mjs` step0036: a form and a family from before 0036 kept unchanged; the undo file exactly as named here, first refused with a planted Address form and new-shape families, then on the clean database: every fingerprint file equals the one before 0036 and the tests pass; 0036 again gives the tested fingerprints and `0036_tests.sql` passes).
+
+**Why:**
+- **Both child shapes for a day:** the live app and an open kiosk page send ages; refusing them between the paste and the push would turn families away. 0036 goes live first, then the app; a small clean-up migration removes the old shape later.
+- **The age checked in `forms_submit_core`:** it depends on today's date, and `forms_check_answers` is "immutable" on purpose (no clock). `forms_submit_core` already runs when the form is sent, and uses `schedule_today()`, the same "today" as the free-class times.
+- **Last name and date of birth copied onto `prospects`:** the List and the profile read prospects; the sign-up keeps the original. Older prospects stay empty (the profile shows "Not asked") — a sign-up is never changed, so nothing is backfilled.
+- **ZIP digits written as `[0-9]`:** on a database with ICU text rules (as production) the shorthand `\d` also matches other alphabets' digits; `[0-9]` matches only 0–9, like the app's check.
+- **The undo refuses instead of losing data:** Postgres doesn't re-check saved rows when a function inside a table rule changes, so putting the old field rules back under a form with an Address question would block every later save of that form.
+- **Staff read sign-ups only through the functions:** a home address and a child's date of birth are private (rulebook section 5). Read rights on the table would let anyone with a staff login pull every family at once; `prospects_get` gives one family at a time, to an unlocked session.
+
+---

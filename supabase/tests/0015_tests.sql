@@ -117,7 +117,12 @@ begin
   -- a Live free-class form offering the class
   select max(id) into v_fmark from public.change_log;
   reset role;
-  v_fields := jsonb_set(public.forms_template('free_class'), '{8,text}', to_jsonb('Our wording.'::text));
+  -- (the waiver found by id, and without 0036's Address question - 0036_tests.sql
+  -- tests it - so the answers below work before and after 0036)
+  select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', to_jsonb('Our wording.'::text)) else e end order by n)
+    into v_fields
+    from jsonb_array_elements(public.forms_template('free_class')) with ordinality as t(e, n)
+   where e ->> 'type' <> 'address';
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.forms_create('worcester', 'free_class', v_tag || ' form', v_slug);
   v_f1 := (v_r ->> 'id')::uuid;

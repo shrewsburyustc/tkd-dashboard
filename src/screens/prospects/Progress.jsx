@@ -1,8 +1,10 @@
 // Progress.jsx — the progress track, drawn two ways (rulebook v0.246, mockup screens 11 and 13).
 // Why it exists: one look shows where a child is: Signed up → Class booked → Came → Joined.
 //   Track     the small dots + one line, in each List row (and on the phone's list cards)
-//   BigTrack  the large track at the top of the side panel: each step's name and date under it,
-//             then a "Next:" line saying what to do
+//   BigTrack  the large track at the top of the profile window: each step's name and date under
+//             it, then a "Next:" line saying what to do — left out (showNext false) while a box
+//             that needs staff sits under the track (Check in, Did … come?, Class cancelled), as
+//             the box says it already (mockup rev 3 screen 3c)
 // Green = done, blue ring = the next step, gray = not yet; a No-show is amber, a side exit gray.
 // The colors never carry the meaning alone: the line, the step names and the screen-reader words
 // say it too (rulebook section 5).
@@ -38,9 +40,10 @@ export function Track({ progress }) {
   );
 }
 
-// The big one at the top of the panel
-export function BigTrack({ progress }) {
-  const { steps, next } = progress;
+// The big one at the top of the profile window
+export function BigTrack({ progress, showNext = true }) {
+  const { steps } = progress;
+  const next = showNext ? progress.next : null;
   return (
     <div className="pbigtrack">
       <ol className="pbigtrack-steps" aria-label={T.PROGRESS_LABEL}>
