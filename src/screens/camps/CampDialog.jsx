@@ -28,7 +28,7 @@
 //     returned, and RETURNS the database's answer plus `undoText` (the amber bar's words when the
 //     database refused for a reason it named, else null). The page shows the result. A change by
 //     someone else in between makes it 'stale' (the version no longer matches).
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -129,49 +129,86 @@ export default function CampDialog({
   const [undoBase, setUndoBase] = useState(() => (mode === 'template' ? checkForm(values, { mode, today, server: {} }).payload : null));
 
   // ----- Loading what the dialog needs -----
-  useEffect(() => {
-    let stale = false;
-    async function load() {
-      if (mode === 'add') {
-        const result = await loadTemplates();
-        if (stale) return;
-        // Templates are only a convenience here: if they don't load, Blank camp still works.
-        const list = result.status === 'ok' ? (result.templates ?? []) : [];
-        setTemplates(list.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })));
-        if (result.status === 'no_access') onNoAccess();
-        if (startTemplate) {
-          // Use (C2): Add camp opens with this template already chosen. That isn't a change the
-          // admin made, so Cancel closes without asking.
-          const next = applyTemplate(values, startTemplate, today);
-          setValues(next);
-          setInitial(formSnapshot(next));
-        }
-        setStatus('ready');
-      } else if (mode === 'edit') {
-        const result = await loadCamp(campId);
-        if (stale) return;
-        if (result.status !== 'ok') {
-          if (result.status === 'no_access') onNoAccess();
-          setStatus(result.status === 'not_found' ? 'gone' : 'error');
-          return;
-        }
-        const days = [...(result.days ?? [])].sort((a, b) => (a.day < b.day ? -1 : 1));
-        const loaded = valuesFromCamp(result.camp, days, result.prices ?? [], result.extras ?? []);
-        if (result.today) setToday(result.today);
-        setRecord({ camp: result.camp, days });
-        setUndoBase(checkForm(loaded, { mode, today: result.today ?? today, initialDays: days.map((d) => d.day), server: {} }).payload);
-        setValues(loaded);
-        setInitial(formSnapshot(loaded));
-        setStatus('ready');
+  // load() runs once when the dialog opens, and again from Retry when the camp couldn't be read
+  // (design review S-2, rulebook v1.051: a read that fails offers Retry, which repeats the read).
+  // Two refs decide whether an answer still counts (a "ref" is a value React keeps between
+  // drawings without redrawing when it changes):
+  //   aliveRef — false once the dialog has closed.
+  //   runRef   — each load() takes the next number. Only the NEWEST run's answer is used, so an
+  //              older read that answers late can't overwrite a newer one. (In development React's
+  //              StrictMode starts the opening effect twice on purpose; the first run is thrown away.)
+  const aliveRef = useRef(true);
+  const runRef = useRef(0);
+  async function load() {
+    runRef.current += 1;
+    const run = runRef.current;
+    const stale = () => !aliveRef.current || run !== runRef.current;
+    if (mode === 'add') {
+      const result = await loadTemplates();
+      if (stale()) return;
+      // Templates are only a convenience here: if they don't load, Blank camp still works.
+      const list = result.status === 'ok' ? (result.templates ?? []) : [];
+      setTemplates(list.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })));
+      if (result.status === 'no_access') onNoAccess();
+      if (startTemplate) {
+        // Use (C2): Add camp opens with this template already chosen. That isn't a change the
+        // admin made, so Cancel closes without asking.
+        const next = applyTemplate(values, startTemplate, today);
+        setValues(next);
+        setInitial(formSnapshot(next));
       }
+      setStatus('ready');
+    } else if (mode === 'edit') {
+      const result = await loadCamp(campId);
+      if (stale()) return;
+      if (result.status !== 'ok') {
+        if (result.status === 'no_access') onNoAccess();
+        setStatus(result.status === 'not_found' ? 'gone' : 'error');
+        return;
+      }
+      const days = [...(result.days ?? [])].sort((a, b) => (a.day < b.day ? -1 : 1));
+      const loaded = valuesFromCamp(result.camp, days, result.prices ?? [], result.extras ?? []);
+      if (result.today) setToday(result.today);
+      setRecord({ camp: result.camp, days });
+      setUndoBase(checkForm(loaded, { mode, today: result.today ?? today, initialDays: days.map((d) => d.day), server: {} }).payload);
+      setValues(loaded);
+      setInitial(formSnapshot(loaded));
+      setStatus('ready');
     }
+  }
+  useEffect(() => {
+    aliveRef.current = true;
     load();
     return () => {
-      stale = true;
+      // Closed (or StrictMode's throwaway first run): whatever is still on its way is ignored.
+      aliveRef.current = false;
+      runRef.current += 1;
     };
     // Runs once when the dialog opens (the dialog gets a new key each time it opens).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Retry (Edit camp only, when the camp couldn't be read): "Loading…" shows again while it reads.
+  // The Retry button disappears with the failed note, so keyboard focus first moves to the dialog
+  // box itself (it can hold focus) instead of falling to the page behind. If the read works, the
+  // effect further down moves focus on to the first field.
+  // retryRef = this dialog's own Retry button; the box is found from it (closest), so another
+  // dialog on the page can never be picked by mistake.
+  const retryRef = useRef(null);
+  const dialogBox = () => retryRef.current?.closest('.tdialog, .tdialog-page') ?? null;
+  function retryLoad() {
+    dialogBox()?.focus();
+    setStatus('loading');
+    load();
+  }
+  // Whenever the read fails — the first time too, and after a Retry — focus goes to Retry, but only
+  // while focus is on the dialog box itself (where it waits while "Loading…" shows on PC / tablet,
+  // and where retryLoad puts it), never away from something the person moved to.
+  useEffect(() => {
+    if (status !== 'error' || hidden) return;
+    const box = dialogBox();
+    if (box && document.activeElement === box) retryRef.current?.focus();
+  }, [status, hidden]);
 
   // The fields appear only once loading is done: then put keyboard focus on the first one (the
   // Dialog frame could only focus itself while "Loading…" showed).
@@ -419,16 +456,26 @@ export default function CampDialog({
   if (status === 'loading') {
     body = <p className="field-hint cp-loading">{T.LOADING_CAMPER}</p>;
   } else if (status === 'error' || status === 'gone') {
+    // A camp that couldn't be read ('error') offers Retry, which reads it again (S-2, v1.051), as
+    // Camper detail does. A deleted camp ('gone') has nothing to retry. PC / tablet: Retry, then
+    // Close. Phone: Retry under the line (the back arrow closes the page).
+    const retryButton = status === 'error' && (
+      <button type="button" className="btn" ref={retryRef} onClick={retryLoad}>
+        {T.RETRY}
+      </button>
+    );
     body = (
       <>
         <Notice>{status === 'gone' ? T.CAMP_GONE : T.LOAD_CAMP_FAILED}</Notice>
         {!isPhone && (
           <div className="dialog-actions">
+            {retryButton}
             <button type="button" className="btn" data-autofocus onClick={onClose}>
               {T.CLOSE}
             </button>
           </div>
         )}
+        {isPhone && retryButton && <div className="dialog-actions">{retryButton}</div>}
       </>
     );
   } else {

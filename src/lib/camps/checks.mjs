@@ -775,6 +775,67 @@ check('mock: scripted run — add camp → sign up → check in → mark paid �
   assert.equal(rows(b, 'camp_templates', 'id', [{ col: 'id', value: saved.id }]).length, 1); // templates stay
 });
 
+// failNextCampRead (design review S-2, rulebook v1.051): the next Camps READ — a select on a Camps
+// table or a read function — fails like a dropped connection, so the preview can show each failed
+// read's Retry. "The next read" = the first matching read and every other one started in the same
+// moment (until `defer` runs: here we hold the deferred step and run it by hand). Saves don't use
+// it up; a target ('camp_camper_detail', 'camps', …) leaves every other read alone; once the
+// moment is over the read works again (that's the Retry).
+check('mock: failNextCampRead — same-moment reads fail, a target ignores other reads, then it clears', () => {
+  let store = null;
+  const later = []; // the deferred "end of the moment" steps, run by hand below
+  const endMoment = () => later.splice(0).forEach((fn) => fn());
+  const b = createCampsBackend({
+    loadStore: () => store,
+    saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); },
+    now: () => Date.parse('2027-04-21T14:00:00Z'),
+    today: () => '2027-04-21',
+    newId: () => randomUUID(),
+    defer: (fn) => later.push(fn),
+  });
+  const failed = (res) => res.data === null && res.status === 0 && /failNextCampRead/.test(res.error?.message ?? '');
+  const april = rows(b, 'camps', 'id, name, version').find((c) => c.name === 'April Vacation Camp');
+  const camper = toCamel(rows(b, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]))[0];
+  const readCamp = () => b.select('camps', 'id', [{ col: 'id', value: april.id }], [], ADMIN);
+
+  // No target: two reads in the same moment (StrictMode's double start; a camp's five tables) both fail.
+  b.failNextCampRead();
+  assert.equal(failed(readCamp()), true);
+  assert.equal(failed(b.select('camp_days', 'id', [], [], ADMIN)), true);
+  assert.equal(failed(b.rpc('camp_camper_detail', { p_camper_id: camper.id }, ADMIN)), true);
+  endMoment(); // the moment is over: cleared
+  assert.equal(readCamp().error, null);
+  assert.equal(rpcOk(b, 'camp_camper_detail', { p_camper_id: camper.id }).status, 'ok');
+  assert.equal(later.length, 0);
+
+  // A target: other reads go through and don't use it up; only that read fails, then it clears.
+  b.failNextCampRead('camp_camper_detail');
+  assert.equal(readCamp().error, null);
+  assert.equal(b.select('camp_roster', 'id', [], [], ADMIN).error, null);
+  assert.equal(later.length, 0); // nothing matched yet: still armed
+  assert.equal(failed(b.rpc('camp_camper_detail', { p_camper_id: camper.id }, ADMIN)), true);
+  assert.equal(failed(b.rpc('camp_camper_detail', { p_camper_id: camper.id }, ADMIN)), true); // same moment
+  assert.equal(readCamp().error, null); // still only the target
+  endMoment();
+  assert.equal(rpcOk(b, 'camp_camper_detail', { p_camper_id: camper.id }).status, 'ok');
+
+  // A table target ('camps' = what Edit camp and Delete camp read first).
+  b.failNextCampRead('camps');
+  assert.equal(b.select('camp_templates', 'id', [], [], ADMIN).error, null);
+  assert.equal(failed(readCamp()), true);
+  endMoment();
+  assert.equal(readCamp().error, null);
+
+  // A save neither fails nor uses it up: the read after the save is the one that fails.
+  b.failNextCampRead();
+  const before = JSON.stringify(store);
+  assert.equal(rpcOk(b, 'camp_set_signup', { p_camp_id: april.id, p_expected_version: april.version, p_open: false }).status, 'ok');
+  assert.notEqual(JSON.stringify(store), before);
+  assert.equal(failed(b.select('camp_templates', 'id', [], [], ADMIN)), true);
+  endMoment();
+  assert.equal(b.select('camp_templates', 'id', [], [], ADMIN).error, null);
+});
+
 check('mock: removing a day / extra only withdrawn campers picked; rate limit; failNextSave', () => {
   const { backend: b, env, store } = makeBackend({ today: '2027-05-20' });
   const added = rpcOk(b, 'camp_add_camp', addCampArgs('2027-06-07', { p_signup_opens_on: '2027-05-01' }));

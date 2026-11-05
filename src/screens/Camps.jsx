@@ -39,6 +39,7 @@ import CampsTab from './camps/CampsTab.jsx';
 import TemplatesTab from './camps/TemplatesTab.jsx';
 import CampPage from './camps/CampPage.jsx';
 import CampDialog from './camps/CampDialog.jsx';
+import { focusSoon } from './camps/focusSoon.js';
 import * as T from './camps/text.js';
 import '../styles/testing-events.css';
 import '../styles/camps.css';
@@ -106,12 +107,11 @@ export default function Camps({
     if (editor || screenLocked || !focusBackRef.current) return undefined;
     const target = focusBackRef.current;
     focusBackRef.current = null;
-    // Wait a frame: the page is "inert" until the App hears the dialog closed.
-    const frame = window.requestAnimationFrame(() => {
-      if (target.isConnected) target.focus();
-      else document.querySelector('[data-add-camp]')?.focus();
-    });
-    return () => window.cancelAnimationFrame(frame);
+    // The page is "inert" until the App hears the dialog closed — that can take more than one
+    // frame, and focus() on an inert button does nothing (focus fell to <body> after Cancel in
+    // Edit camp, design review). focusSoon waits until it is usable, as the camp page does.
+    focusSoon(() => (target.isConnected ? target : document.querySelector('[data-add-camp]')));
+    return undefined;
   }, [editor, screenLocked]);
 
   // After a save: close, reload, toast with Undo for 5 seconds (rulebook v0.726, design review C5):

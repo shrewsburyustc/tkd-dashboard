@@ -4,13 +4,14 @@
 // once (as a React "hook", a function that keeps its own state for the screen that uses it)
 // means the two can never drift apart.
 //
-// The items, in the approved order (C1 phone sheet, follows Star v0.92):
-//   Edit camp (admin; on PC / tablet rows it's the pencil instead, so it's left out there)
+// The items, in the approved order (one order for every event list's ⋯: Close / Open, then
+// Edit, then the rest — design review S-8, rulebook v1.047; it was Edit first, C1 / Star v0.92):
 //   Close sign-up / Open sign-up     (no icon; Close is hidden while Not open yet; nothing once
 //                                     the camp is over; staff can't Open after the closing
 //                                     date — grayed, with "The closing date has passed. Ask an
 //                                     admin to open it." — Star v0.86; "Open", not "Reopen",
 //                                     since rulebook v0.725, design review C12)
+//   Edit camp (admin; on PC / tablet rows it's the pencil instead, so it's left out there)
 //   Save as template (admin)  → SaveTemplateDialog (toast "Template saved · <name>" with Undo =
 //                               delete the new template, rulebook v0.726)
 //   Print roster              → PrintRoster (the attendance grid on paper)
@@ -29,6 +30,7 @@ import { deleteTemplate, loadCamp, setSignup } from '../../lib/camps/campsApi.js
 import { signupState } from '../../lib/camps/campRules.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import DeleteCampDialog from './DeleteCampDialog.jsx';
+import { focusSoon } from './focusSoon.js';
 import PrintRoster from './PrintRoster.jsx';
 import SaveTemplateDialog from './SaveTemplateDialog.jsx';
 import * as T from './text.js';
@@ -85,7 +87,9 @@ export function useCampActions({
       setBanner((current) => (current?.kind === 'switch' ? null : current));
       reload();
       if (isUndo) {
-        showToast(T.TOAST_UNDONE, { icon: false });
+        // An Undo that opened sign-up again says so; one that closed it says just "Undone"
+        // (design review R2-07, rulebook v1.051 (1)).
+        showToast(open ? T.TOAST_UNDONE_SIGNUP_OPEN : T.TOAST_UNDONE, { icon: false });
         return;
       }
       // An admin opening it after the closing date: the database moved that date to the last day.
@@ -129,8 +133,24 @@ export function useCampActions({
       return;
     }
     if (fresh.status !== 'ok') {
-      setBanner({ text: fresh.status === 'not_found' ? T.STALE : T.LOAD_CAMP_FAILED });
-      reload();
+      // Couldn't read it (no connection): the bar offers Retry, which clears the bar and reads the
+      // camp again (design review S-2, rulebook v1.051). Deleted meanwhile ('not_found'): nothing
+      // to retry — "Someone else changed this just now", and the list reloads without it. (No
+      // reload after a failed read: it would fail too and put its own bar over this one's Retry.)
+      if (fresh.status === 'not_found') {
+        setBanner({ text: T.STALE });
+        reload();
+      } else {
+        setBanner({
+          text: T.LOAD_CAMP_FAILED,
+          reveal: true, // the page brings it into view and focuses its Retry (revealRetryBar.js)
+          opener, // the ⋯ that started it: focus may move from there to Retry
+          retry: () => {
+            setBanner(null);
+            startDelete(camp, opener);
+          },
+        });
+      }
       return;
     }
     clearToast();
@@ -204,13 +224,13 @@ export function useCampActions({
     setDialog(null);
   }
   useEffect(() => {
-    if (dialog || screenLocked || !focusRef.current) return undefined;
+    if (dialog || screenLocked || !focusRef.current) return;
     const target = focusRef.current;
     focusRef.current = null;
-    const frame = window.requestAnimationFrame(() => {
-      if (target.isConnected) target.focus();
-    });
-    return () => window.cancelAnimationFrame(frame);
+    // focusSoon waits until the page behind is no longer inert: one frame was not enough on the
+    // Camps list (the "dialog closed" news goes CampsTab → Camps → App first), so focus fell to
+    // <body> after Keep camp (design review, 390 and PC).
+    focusSoon(target);
   }, [dialog, screenLocked]);
 
   // ----- The menu items -----
@@ -218,7 +238,6 @@ export function useCampActions({
   function items(camp, days, { includeEdit = false, onEdit = null, anchor = null, onPrint = null } = {}) {
     const state = signupState(camp, days, today);
     const list = [];
-    if (isAdmin && includeEdit && onEdit) list.push({ key: 'edit', label: T.EDIT_CAMP, Icon: IconEdit, disabled: busy, onSelect: () => onEdit(camp, anchor) });
     if (state === 'open') {
       list.push({ key: 'close', label: T.CLOSE_SIGNUP, Icon: NoIcon, disabled: busy, onSelect: () => switchSignup(camp, days, false) });
     } else if (state === 'closed') {
@@ -238,6 +257,9 @@ export function useCampActions({
         onSelect: () => switchSignup(camp, days, true),
       });
     }
+    // Edit camp comes right after Close / Open sign-up, as in every event list's ⋯ (design review
+    // S-8, rulebook v1.047). On PC / tablet rows it's the row's pencil instead, so it's left out there.
+    if (isAdmin && includeEdit && onEdit) list.push({ key: 'edit', label: T.EDIT_CAMP, Icon: IconEdit, disabled: busy, onSelect: () => onEdit(camp, anchor) });
     // ti-template = Save as template (C2b)
     if (isAdmin) list.push({ key: 'template', label: T.SAVE_AS_TEMPLATE, Icon: IconTemplate, onSelect: () => startSaveTemplate(camp, days, anchor) });
     // ti-printer = print

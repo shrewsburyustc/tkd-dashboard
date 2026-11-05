@@ -25,6 +25,7 @@ import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useCampActions } from './CampRowMenu.jsx';
+import { useRevealRetryBar } from './revealRetryBar.js';
 import * as T from './text.js';
 
 // Upcoming / Past, per school, kept while the page is open (like Color Belt's Events tab).
@@ -132,6 +133,10 @@ export default function CampsTab({
     setBanner,
     reload: reloadQuiet,
   });
+  // ⋯ Delete camp's failed read (S-2): its amber bar (the first thing in this tab's panel) is
+  // brought into view with focus on its Retry — the list may be scrolled far below it.
+  const panelRef = useRef(null);
+  useRevealRetryBar(banner, () => panelRef.current?.querySelector(':scope > .errbar') ?? null);
   useEffect(() => {
     onModalOpenChange(actions.dialogOpen);
   }, [actions.dialogOpen, onModalOpenChange]);
@@ -316,7 +321,7 @@ export default function CampsTab({
   const sideLabelId = `${panelId}-side`;
   return (
     <>
-      <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
+      <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel" ref={panelRef}>
         {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={actions.busy} onDismiss={() => setBanner(null)} />}
         {live.status === 'ready' && (
           <div className="ev-side">
