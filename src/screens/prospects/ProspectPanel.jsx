@@ -1,34 +1,63 @@
-// ProspectPanel.jsx — one prospect, beside the list (mockup screens 1, 3, 4, 5, 10).
-// Why it exists: everything staff need while calling a family:
-//   - Call / Text / Email open the device's own apps (nothing is sent by the dashboard); on a PC,
-//     Call shows the number large with Copy
-//   - Check in on the free-class day, or "Did … come?" Came / No-show after the class
-//   - The big progress track at the top: Signed up → Class booked → Came → Joined with dates,
-//     and a "Next:" line (v0.246)
-//   - Status: the colored tag with a chevron opens a menu (stages, then side exits; P4 difference 2)
-//   - Follow up: the date as words ("Today", "Overdue · Oct 16") with a clock; click for the quick
-//     choices Tomorrow / In 3 days / Next week / Pick a date / No follow-up (P4 difference 3).
-//     "Pick a date" opens the dashboard's own calendar (DatePicker's opener mode, design review N6);
-//     picking a day saves it at once, as the quick choices do
-//   - Free class: the time, amber "Class cancelled — call the family" when it no longer runs,
-//     Book a free class / Change time / Cancel booking (v0.244 answer 2)
-//   - Siblings (same sign-up), Notes and calls (a note + one-tap follow-up; its "Pick a date" shows
-//     a DatePicker field, N6); the notes people
-//     typed always show, the automatic changes (status, follow-up, booking, sign-up) sit in a
-//     closed "History · 6 changes" dropdown (v0.255)
-//   - Form answers and waiver: every answer as the form was, and the signature picture while it
-//     is kept (each look recorded), then "signed on <date>" (v0.242)
-//   - While this device's "Hide private details" switch is on (v1.000, D2a): Email grays with one
-//     line saying why, and every form answer reads "Hidden on this tablet"; Call, Text and the
-//     phone number stay (N17)
-// PC: a column beside the list; tablet upright: under the list; phone: a full-screen page
-// (Prospects.jsx wraps it in a Dialog). The note being typed lives in Prospects.jsx.
-import { useRef, useState } from 'react';
+// ProspectPanel.jsx — one child's profile window (rulebook v0.639; approved mockup
+// docs/Prospects/TKD-Prospect-Profile-Mockups.html rev 3, screens 3a–3c). It replaced the side
+// panel beside the list (v0.236) in November 2026; the file keeps its old name.
+// Why it exists: clicking a child in the List or the Board opens everything about them in one big
+// window, with what staff need easy to see at a glance:
+//   - the window: the dashboard's detail view (the shared Dialog, v0.46) sized for a big record —
+//     about 960px wide over the list on a PC, nearly the whole width on a tablet, the whole page
+//     with the back arrow on a phone. Its heading is the child's full name ("Ava Nguyen"; children
+//     who signed up before last names were asked show their first name, v0.637) with × beside it
+//     (PC / tablet); the heading row stays at the top while the window scrolls.
+//   - a gray strip with the form the family filled out: its name; "Sent online", "Sent on the
+//     kiosk at the desk" or "Entered at the desk by …"; the date, time and school
+//   - the age ("7 years old": from the date of birth on the school's today, else the age typed on
+//     the form), the status tag button (its menu: stages, a line, side exits — P4 difference 2) and
+//     Print with its word on every size (v0.636)
+//   - the big progress track (v0.246) and under it the boxes that need staff: Check in on the
+//     free-class day, "Did … come?" after it, "Class cancelled — call the family". While a box
+//     shows, the track's own "Next:" line is left out (the box says what to do).
+//   - then the dashboard's label · value rows (shared.css .ev-sum-row, §1.2 — no boxed cards):
+//       Child and family: date of birth, parent or guardian, phone, email, home address (the
+//         form's Address answer; "Not asked on this form" when it had no Address question), each
+//         brother or sister (opens their own profile); Call / Text / Email open the device's own
+//         apps (nothing is sent by the dashboard) — on a PC, Call shows the number large with Copy
+//       Form answers: every other question of the form, the question above its answer (two
+//         columns; one on phones; a long one takes the whole row)
+//       Waiver: Agreed, Date signed (v0.635), the signature picture behind Show signature (each look
+//         recorded, v0.242) with how long it is kept, and "Read the waiver" (the text they signed)
+//       Free class and follow-up: Follow up as words with a clock — its quick choices and "Pick a
+//         date" (P4 difference 3, N6); the free class; Book a free class / Change time / Cancel booking
+//       Notes and calls: a note + one-tap follow-up; typed notes always show; the automatic changes
+//         sit in a closed "History · 6 changes" row (v0.255)
+//       Delete prospect (admins)
+//     PC (1024px and wider): two columns — family, answers, waiver on the left; free class and
+//     notes on the right. Tablet and phone: one column — family, free class, answers, waiver, notes.
+//   - "Hide private details" on (v1.000, v0.639): date of birth, email, home address and every
+//     answer read "Hidden on this tablet"; Email and Print gray (still focusable), each with one gray
+//     line saying why; Call, Text, the phone, the date signed and Show signature stay.
+//   - Print (v0.636): one child prints straight away; with brothers or sisters in the same sign-up a
+//     small menu (a sheet on phones) asks "Ava only" or "Ava and Noah · 2 sheets". Each child's
+//     profile and the signature are loaded first — loading the signature records a look (printing
+//     counts as one) — then PrintSheet.jsx prints one letter page per child.
+// Book / Change time, Joined, Delete and the status menu open ON TOP of this window (Prospects.jsx).
+// The note being typed lives in Prospects.jsx, so a lock or a brother's profile never loses it.
+//
+// Props: name (the heading; while loading, the name from the list), detail (null while loading),
+//   listItem, statuses, statusById, today, isPc, isWide, isPhone, isAdmin, busy, note, noteWarning,
+//   idBase, familyBookingDates (every free-class date of the sign-up, for "Kept until"),
+//   printedBy (the signed-in person's name, for "Printed … by …"), banner ({ text } — the
+//   section's amber bar, shown at the top of the window while it is open) and onDismissBanner,
+//   and the actions: onNote,
+//   onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete,
+//   onClose (Esc, ×, the back arrow, a click outside), onNoAccess.
+import { useEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconCalendarPlus, IconCheck, IconChevronDown, IconChevronRight, IconClockEdit, IconClockHour4, IconCopy, IconCurrencyDollarOff, IconMail, IconMessage,
-  IconPhone, IconTrash, IconUserCheck, IconUserX, IconX,
+  IconAlertTriangle, IconCalendarPlus, IconCheck, IconChevronDown, IconChevronRight, IconClipboardText, IconClockEdit, IconClockHour4, IconCopy,
+  IconCurrencyDollarOff, IconMail, IconMessage, IconPhone, IconPrinter, IconTrash, IconUserCheck, IconUserX, IconX,
 } from '@tabler/icons-react';
 import DatePicker, { datePickerOpener } from '../../components/DatePicker.jsx';
+import Dialog from '../../components/Dialog.jsx';
+import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
@@ -36,10 +65,13 @@ import { colorOf } from '../../lib/schedule/colors.js';
 import { addDays } from '../../lib/schedule/versions.js';
 import { longTextProblem } from '../../lib/forms/fields.js';
 import { loadSignature } from '../../lib/forms/api.js';
+import { getProspect } from '../../lib/prospects/api.js';
+import { addressFieldOf, addressLine, answerFieldsOf, childAge, childFullName, isWideAnswer, signatureKeptUntil, waiverFieldOf } from '../../lib/prospects/child.js';
+import { HIDDEN_ON_THIS_TABLET, usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import { StatusTag } from './ProspectList.jsx';
 import { BigTrack } from './Progress.jsx';
 import { localDay, progressOf } from './progress.js';
-import { HIDDEN_ON_THIS_TABLET, usePrivateDetailsHidden } from '../../lib/privateDetails.js';
+import PrintSheet from './PrintSheet.jsx';
 import * as T from './text.js';
 
 const telOf = (phone) => `tel:${String(phone).replace(/[^0-9+]/g, '')}`;
@@ -53,43 +85,79 @@ function followUpDate(choice, today, picked) {
   return null;
 }
 
-function answerText(f, v) {
-  if (v === undefined || v === null || v === '') return T.NONE;
-  if (Array.isArray(v)) return v.join(', ');
-  if (v === true) return 'Yes';
-  return String(v);
+// One label · value row of a detail list (shared.css .ev-sum-row)
+function Row({ label, link = false, children }) {
+  return (
+    <div className={`ev-sum-row${link ? ' is-link' : ''}`}>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
 }
 
-export default function ProspectPanel({
-  detail, listItem, statuses, statusById, today, isPc, isPhone, isAdmin, busy, note, idBase,
-  onNote, onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete, onClose, noteWarning,
+// A gray value: "Hidden on this tablet", "Not asked on this form", an empty answer
+const Muted = ({ children }) => <span className="pp-hid">{children}</span>;
+
+// Everything inside the window once the child has loaded (a new key for each child, so the menus,
+// the signature, the open History and the waiver text start closed again).
+function Profile({
+  detail: p, listItem, statuses, statusById, today, isPc, isWide, isPhone, isAdmin, busy, note, noteWarning, idBase, familyBookingDates, printedBy,
+  onNote, onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete, onNoAccess,
 }) {
-  const p = detail;
-  // This device's "Hide private details" switch (v0.506; what it hides here: v1.000); updates live.
+  // This device's "Hide private details" switch (v0.506; what it hides here: v1.000, v0.639); updates live.
   const [hidden] = usePrivateDetailsHidden();
+  const hiddenRef = useRef(hidden);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    hiddenRef.current = hidden;
+  });
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const [showNumber, setShowNumber] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [openAnswers, setOpenAnswers] = useState(false);
-  const [sig, setSig] = useState(null); // { loading } | { signature, signedAt } | { error }
-  const [statusMenu, setStatusMenu] = useState(null); // the ⋯-style menu under the status tag
+  const [sig, setSig] = useState(null); // { loading } | { signature } | { error }
+  const [statusMenu, setStatusMenu] = useState(null); // the menu under the status tag
   const [followOpen, setFollowOpen] = useState(false); // the quick follow-up choices
   const [followCal, setFollowCal] = useState(false); // the follow-up calendar ("Pick a date") is open
   const followPickRef = useRef(null); // the "Pick a date" button the calendar opens from
   const [historyOpen, setHistoryOpen] = useState(false); // the automatic changes start closed (v0.255)
+  const [waiverOpen, setWaiverOpen] = useState(false); // "Read the waiver"
+  const [printMenu, setPrintMenu] = useState(null); // "Ava only" / "Ava and Noah · 2 sheets"
+  const [preparing, setPreparing] = useState(false); // loading the pages to print
+  const [printError, setPrintError] = useState(null); // { ids } — the amber bar's Retry prints these again
+  const [printJob, setPrintJob] = useState(null); // what PrintSheet prints
+
+  // The switch going on (from another tab) closes the Print menu and drops a print that hasn't
+  // opened yet (its sheet leaves the page); one still loading stops before it prints (print below).
+  useEffect(() => {
+    if (!hidden) return;
+    setPrintMenu(null);
+    setPrintJob(null);
+  }, [hidden]);
+
   const status = statusById.get(p.statusId);
   const builtin = status?.builtin ?? null;
   const b = p.booking;
-  const booked = b && b.status === 'booked';
+  const booked = Boolean(b && b.status === 'booked');
   const canCheckIn = booked && b.classRunning && b.date === today && !p.checkedInAt && !['joined', 'not_interested', 'came', 'no_show'].includes(builtin ?? '');
-  const askCame = listItem?.askCame && !p.checkedInAt;
+  const askCame = Boolean(listItem?.askCame && !p.checkedInAt);
+  const classGone = booked && !b.classRunning;
   const stages = statuses.filter((s) => s.kind === 'stage');
   const exits = statuses.filter((s) => s.kind === 'exit');
-  const answers = p.fields.filter((f) => !['heading', 'step', 'children', 'booking', 'waiver', 'parent_name', 'parent_phone', 'parent_email'].includes(f.type));
+  const age = childAge(p, today);
+  const addressField = addressFieldOf(p.fields);
+  const waiver = waiverFieldOf(p.fields);
+  const answers = answerFieldsOf(p.fields);
   const noteProblem = note.body.trim() ? longTextProblem(note.body.trim(), 1000) : null;
   // The Year lists of the follow-up and note calendars: this year and next (past days are gray).
   const thisYear = Number(today.slice(0, 4));
   const followYears = [thisYear, thisYear + 1];
   const canSaveNote = note.body.trim() !== '' && !noteProblem && !busy && (note.when !== 'pick' || Boolean(note.picked));
+  const hiddenValue = <Muted>{HIDDEN_ON_THIS_TABLET}</Muted>;
 
   async function copyNumber() {
     try {
@@ -102,32 +170,84 @@ export default function ProspectPanel({
   }
   async function showSignature() {
     setSig({ loading: true });
-    const res = await loadSignature(p.familyId);
-    setSig(res.status === 'ok' ? { signature: res.signature, signedAt: res.signedAt } : { error: true });
+    const res = await loadSignature(p.familyId); // every look is recorded (v0.242)
+    if (!mountedRef.current) return;
+    if (res.status === 'no_access') onNoAccess();
+    setSig(res.status === 'ok' ? { signature: res.signature } : { error: true });
   }
 
-  return (
-    // Esc anywhere in the panel closes it (PC / tablet; the phone page has its own back arrow)
-    <div className="ppanel" onKeyDown={(e) => {
-      if (e.key === 'Escape' && onClose && !e.defaultPrevented && !e.target.closest('select')) {
-        e.preventDefault();
-        onClose();
-      }
-    }}>
-      <div className="ppanel-top">
-        <h2 className="ppanel-name" tabIndex={-1} data-panel-heading>
-          {p.childFirstName}, {p.childAge}
-        </h2>
-        {onClose && (
-          <IconButton label={T.CLOSE_PANEL} onClick={onClose} Icon={IconX} />
-        )}
-      </div>
-      <p className="ppanel-who">
-        {p.parentName} · {T.fromForm(p.formName, localDay(p.signedUpAt))}
-        {p.enteredBy && ` · ${T.enteredBy(p.enteredBy)}`}
-      </p>
-      <BigTrack progress={progressOf({ ...p, askCame: Boolean(askCame) }, status, today)} />
+  // ----- Print (v0.636) -----
+  // Loads each child's profile and the family's signature (one look, recorded), then hands the
+  // pages to PrintSheet. Nothing prints while private details are hidden.
+  const preparingRef = useRef(false); // a second press while the first is still loading does nothing
+  async function print(ids) {
+    if (hiddenRef.current || preparingRef.current) return;
+    preparingRef.current = true;
+    setPrintError(null);
+    setPreparing(true);
+    const loaded = await Promise.all(ids.map((id) => getProspect(id)));
+    let failed = loaded.find((r) => r.status !== 'ok') ?? null;
+    let signature = null;
+    const first = loaded[0]?.prospect;
+    if (!failed && first?.signedAt && first.hasSignature) {
+      const s = await loadSignature(first.familyId); // brothers and sisters share one sign-up and one signature
+      if (s.status === 'ok') signature = s.signature; // null when it was just deleted: "Signed on …"
+      else failed = s;
+    }
+    preparingRef.current = false;
+    if (!mountedRef.current) return; // the window closed meanwhile
+    setPreparing(false);
+    if (failed) {
+      if (failed.status === 'no_access') onNoAccess();
+      else setPrintError({ ids });
+      return;
+    }
+    if (hiddenRef.current) return; // the switch went on while the pages loaded
+    setPrintJob({ key: Date.now(), children: loaded.map((r) => ({ detail: r.prospect, signature })), today, printedBy });
+  }
+  const familyIds = [p.id, ...p.siblings.map((s) => s.id)];
+  const printOff = hidden || preparing;
+  function onPrintClick(event) {
+    if (printOff) return; // the gray look: still focusable, pressing it does nothing
+    if (p.siblings.length === 0) print([p.id]);
+    else setPrintMenu(printMenu ? null : { anchor: event.currentTarget });
+  }
 
+  // ----- The parts -----
+  const followText = T.followUpText(p.followUpOn, today);
+  const addressValue = addressField ? addressLine(p.answers?.[addressField.id]) : '';
+  const kept = signatureKeptUntil(familyBookingDates, p.signedAt);
+  const sigGone = !p.hasSignature || Boolean(sig && !sig.loading && !sig.error && !sig.signature);
+  const answerRows = answers.map((f) => {
+    const words = T.answerWords(f, p.answers?.[f.id]);
+    return { f, words, wide: isWideAnswer(f, words) };
+  });
+  // The items in the answers' first row have no line above them (one item, or two narrow ones).
+  const topRow = new Set([0]);
+  if (answerRows.length > 1 && !answerRows[0].wide && !answerRows[1].wide) topRow.add(1);
+
+  const family = (
+    <div className="pp-section">
+      <h3 className="pp-sec">{T.HEAD_FAMILY}</h3>
+      <dl className="pp-sum">
+        <Row label={T.DATE_OF_BIRTH}>{hidden ? hiddenValue : p.childDob ? T.longDate(p.childDob) : <Muted>{T.notAskedAge(p.childAge)}</Muted>}</Row>
+        <Row label={T.PARENT}>{p.parentName}</Row>
+        <Row label={T.PHONE}>{p.parentPhone}</Row>
+        <Row label={T.EMAIL}>{hidden ? hiddenValue : p.parentEmail}</Row>
+        <Row label={T.HOME_ADDRESS}>{hidden ? hiddenValue : !addressField ? <Muted>{T.NOT_ASKED_ON_FORM}</Muted> : addressValue || <Muted>{T.NONE}</Muted>}</Row>
+        {p.siblings.map((s) => {
+          // the age from the date of birth on today, like the child's own (the typed age for older sign-ups)
+          const line = T.siblingLine(childFullName(s), childAge(s, today), statusById.get(s.statusId)?.name);
+          return (
+            <Row key={s.id} label={T.SIBLING} link>
+              <button type="button" className="pp-link" aria-label={T.openSibling(line)} onClick={(e) => onOpenSibling(s.id, e.currentTarget)}>
+                <span className="pp-link-text">{line}</span>
+                <IconChevronRight size={16} aria-hidden="true" />
+              </button>
+            </Row>
+          );
+        })}
+      </dl>
       <div className="pcontact">
         {isPc ? (
           <button type="button" className="btn btn-sm" aria-expanded={showNumber} onClick={() => setShowNumber((x) => !x)}>
@@ -175,101 +295,34 @@ export default function ProspectPanel({
           </button>
         </div>
       )}
+    </div>
+  );
 
-      {canCheckIn && (
-        <div className="pask">
-          <b>{T.freeToday(b)}</b>
-          <div className="pask-row">
-            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onCheckIn(true, false)}>
-              <IconUserCheck size={16} aria-hidden="true" />
-              {T.CHECK_IN}
-            </button>
-          </div>
-        </div>
-      )}
-      {askCame && (
-        <div className="pask">
-          <b>{T.didCome(p.childFirstName)}</b>
-          <span className="field-hint">{T.classLine(b)}</span>
-          <div className="pask-row">
-            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onCheckIn(true, true)}>
-              <IconUserCheck size={16} aria-hidden="true" />
-              {T.CAME}
-            </button>
-            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onCheckIn(false, true)}>
-              <IconUserX size={16} aria-hidden="true" />
-              {T.NO_SHOW}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="pkv">
-        <span className="pkv-k" id={`${idBase}-status-k`}>
-          {T.STATUS}
-        </span>
-        <span className="pkv-v">
+  const free = (
+    <div className="pp-section">
+      <h3 className="pp-sec">{T.HEAD_FREE}</h3>
+      <dl className="pp-sum">
+        <Row label={T.FOLLOW_UP} link>
           <button
             type="button"
-            className="pstatus-btn"
-            aria-haspopup="menu"
-            aria-expanded={statusMenu ? 'true' : 'false'}
-            aria-labelledby={`${idBase}-status-k ${idBase}-status-v`}
+            className="pp-link"
+            aria-label={T.followUpButton(followText ? followText.text : T.NONE)}
+            aria-expanded={followOpen}
+            aria-controls={`${idBase}-follow`}
             disabled={busy}
-            onClick={(e) => setStatusMenu(statusMenu ? null : { anchor: e.currentTarget })}
+            onClick={() => {
+              setFollowOpen((x) => !x);
+              setFollowCal(false);
+            }}
           >
-            <span id={`${idBase}-status-v`}>
-              <StatusTag status={status} />
+            <span className={`pp-link-text${followText?.warn ? ' is-warn' : ''}`}>
+              {followText?.warn && <IconAlertTriangle size={16} aria-hidden="true" className="plist-warn" />}
+              {followText ? followText.text : T.NONE}
             </span>
-            <IconChevronDown size={16} aria-hidden="true" />
+            <IconClockHour4 size={16} aria-hidden="true" />
           </button>
-        </span>
-      </div>
-      {statusMenu && (
-        <RowMenu
-          anchor={statusMenu.anchor}
-          isSheet={isPhone}
-          title={T.STATUS}
-          subtitle={`${p.childFirstName}, ${p.childAge}`}
-          label={T.STATUS}
-          items={[...stages, ...exits].map((s, i) => ({
-            key: s.id,
-            label: s.id === p.statusId ? `${s.name} ${T.CURRENT}` : s.name,
-            Icon: s.id === p.statusId ? IconCheck : ({ className }) => <i className={`pdot-menu ${className ?? ''}`} style={{ background: colorOf(s.color).edge }} aria-hidden="true" />,
-            separatorBefore: i === stages.length && exits.length > 0,
-            onSelect: () => s.id !== p.statusId && onStatus(s.id),
-          }))}
-          onClose={(reason) => {
-            const el = statusMenu.anchor;
-            setStatusMenu(null);
-            if (reason === 'escape' || reason === 'tab') el?.focus();
-          }}
-        />
-      )}
-      {builtin === 'joined' && p.joinedOn && <p className="field-hint pkv-note">{T.joinedLine(p.joinedOn)}</p>}
-      <button
-        type="button"
-        className="pkv pkv-btn"
-        aria-expanded={followOpen}
-        aria-controls={`${idBase}-follow`}
-        disabled={busy}
-        onClick={() => {
-          setFollowOpen((x) => !x);
-          setFollowCal(false);
-        }}
-      >
-        <span className="pkv-k">{T.FOLLOW_UP}</span>
-        {(() => {
-          const f = T.followUpText(p.followUpOn, today);
-          return (
-            <span className={`pkv-v${f?.warn ? ' is-warn' : ''}`}>
-              {f?.warn && <IconAlertTriangle size={16} aria-hidden="true" className="plist-warn" />}
-              {f ? f.text : T.NONE}
-            </span>
-          );
-        })()}
-        <IconClockHour4 size={16} aria-hidden="true" />
-      </button>
+        </Row>
+      </dl>
       {followOpen && (
         <div id={`${idBase}-follow`} className="pfollow">
           <div className="pwhen" role="group" aria-label={T.FOLLOW_UP}>
@@ -288,15 +341,8 @@ export default function ProspectPanel({
               </button>
             ))}
             {/* "Pick a date" opens the dashboard's calendar (N6) under itself (on phones: in the page,
-                under these choices). Picking a day saves it straight away, like the choices beside
-                it — the old date box needed a second click on "Set date". */}
-            <button
-              ref={followPickRef}
-              type="button"
-              className="pwhen-item"
-              disabled={busy}
-              {...datePickerOpener(followCal, setFollowCal, { disabled: busy })}
-            >
+                under these choices). Picking a day saves it straight away, like the choices beside it. */}
+            <button ref={followPickRef} type="button" className="pwhen-item" disabled={busy} {...datePickerOpener(followCal, setFollowCal, { disabled: busy })}>
               {T.WHEN_OPTIONS.find(([key]) => key === 'pick')[1]}
             </button>
           </div>
@@ -320,20 +366,10 @@ export default function ProspectPanel({
           />
         </div>
       )}
-
-      <div className="pkv pkv--block">
-        <span className="pkv-k">{T.FREE_CLASS}</span>
-        <span className="pkv-v">
-          {booked ? T.classLine(b) : b?.status === 'cancelled' ? `${T.BOOKING_CANCELLED} (${T.classLine(b)})` : T.NO_TIME_YET}
-        </span>
-      </div>
-      {booked && !b.classRunning && (
-        <div className="pwarn">
-          <IconAlertTriangle size={16} aria-hidden="true" />
-          <span>{T.CLASS_GONE}</span>
-        </div>
-      )}
-      {p.checkedInAt && <p className="field-hint pkv-note">{T.checkedIn(p.checkedInByName, p.checkedInAt)}</p>}
+      <dl className="pp-sum pp-sum--after">
+        <Row label={T.FREE_CLASS}>{booked ? T.classLine(b) : b?.status === 'cancelled' ? `${T.BOOKING_CANCELLED} (${T.classLine(b)})` : T.NO_TIME_YET}</Row>
+      </dl>
+      {p.checkedInAt && <p className="field-hint pp-line">{T.checkedIn(p.checkedInByName, p.checkedInAt)}</p>}
       {!p.checkedInAt && (
         <div className="pfree-acts">
           {booked ? (
@@ -354,22 +390,94 @@ export default function ProspectPanel({
           )}
         </div>
       )}
+    </div>
+  );
 
-      <div className="pkv">
-        <span className="pkv-k">{T.PHONE}</span>
-        <span className="pkv-v">{p.parentPhone}</span>
-      </div>
-      {p.siblings.map((s) => (
-        <button key={s.id} type="button" className="pkv pkv-btn" onClick={(e) => onOpenSibling(s.id, e.currentTarget)}>
-          <span className="pkv-k">{T.SIBLINGS}</span>
-          <span className="pkv-v">
-            {s.childFirstName}, {s.childAge} · {statusById.get(s.statusId)?.name}
-          </span>
-          <IconChevronRight size={16} aria-hidden="true" />
-        </button>
-      ))}
+  const answersPart = (
+    <div className="pp-section">
+      <h3 className="pp-sec">
+        <span>{T.HEAD_ANSWERS}</span>
+        {p.signedUpAt && <span className="pp-sec-hint">{T.asSentOn(localDay(p.signedUpAt))}</span>}
+      </h3>
+      {answerRows.length === 0 ? (
+        <p className="pp-line pp-hid">{T.NO_QUESTIONS}</p>
+      ) : (
+        <dl className="pp-answers">
+          {answerRows.map(({ f, words, wide }, i) => (
+            <div key={f.id} className={`pp-answer${wide ? ' is-wide' : ''}${topRow.has(i) ? ' is-top' : ''}`}>
+              <dt>{f.label}</dt>
+              {/* hidden: every answer, because a form can ask a birthday, an email or health notes (v1.000) */}
+              <dd className={hidden || !words ? 'pp-hid' : undefined}>{hidden ? HIDDEN_ON_THIS_TABLET : words || T.NONE}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
 
-      <h3 className="psec">{T.NOTES}</h3>
+  const waiverPart = (
+    <div className="pp-section">
+      <h3 className="pp-sec">{T.HEAD_WAIVER}</h3>
+      <dl className="pp-sum">
+        {waiver ? (
+          <>
+            <Row label={T.HEAD_WAIVER}>
+              {p.answers?.[waiver.id] === true ? (
+                <span className="pp-agreed">
+                  <IconCheck size={16} aria-hidden="true" />
+                  {T.AGREED}
+                </span>
+              ) : (
+                <Muted>{T.NONE}</Muted>
+              )}
+            </Row>
+            <Row label={T.DATE_SIGNED}>{p.signedAt ? T.dayOf(p.signedAt) : <Muted>{T.NONE}</Muted>}</Row>
+            {p.signedAt && (
+              <Row label={T.SIGNATURE}>
+                {sigGone ? (
+                  <Muted>{T.SIGNATURE_GONE}</Muted>
+                ) : (
+                  <>
+                    {sig?.signature ? (
+                      <img className="psig" src={sig.signature} alt={T.SIGNATURE} />
+                    ) : (
+                      <button type="button" className="btn btn-sm" disabled={Boolean(sig?.loading)} onClick={showSignature}>
+                        {T.SHOW_SIGNATURE}
+                      </button>
+                    )}
+                    {kept && <span className="pp-sig-hint">{T.keptUntil(T.longDate(kept.until, false), kept.afterClass)}</span>}
+                    {sig?.error && <Notice>{T.SIGNATURE_FAILED}</Notice>}
+                  </>
+                )}
+              </Row>
+            )}
+          </>
+        ) : (
+          <Row label={T.HEAD_WAIVER}>
+            <Muted>{T.WAIVER_NOT_ON_FORM}</Muted>
+          </Row>
+        )}
+      </dl>
+      {waiver && (
+        <>
+          <button type="button" className="pp-rowlink" aria-expanded={waiverOpen} aria-controls={`${idBase}-waiver`} onClick={() => setWaiverOpen((x) => !x)}>
+            <span>{T.READ_WAIVER}</span>
+            {waiverOpen ? <IconChevronDown size={16} aria-hidden="true" /> : <IconChevronRight size={16} aria-hidden="true" />}
+          </button>
+          {waiverOpen && (
+            // the school's own wording as it was signed (the form's fields are kept with the sign-up)
+            <div id={`${idBase}-waiver`} className="pp-waiver-text" tabIndex={0} role="region" aria-label={T.WAIVER_TEXT}>
+              {waiver.text || T.NONE}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  const notesPart = (
+    <div className="pp-section">
+      <h3 className="pp-sec">{T.NOTES}</h3>
       <label className="visually-hidden" htmlFor={`${idBase}-note`}>
         {T.NOTE_LABEL}
       </label>
@@ -429,7 +537,7 @@ export default function ProspectPanel({
         </>
       )}
       {p.notes.length > 0 && (
-        <ul className="plog">
+        <ul className="plog pp-log">
           {[...p.notes].sort((x, y) => (x.createdAt < y.createdAt ? 1 : -1)).map((n) => (
             <li key={n.id} className="plog-item is-note">
               <span className="plog-text">{n.body}</span>
@@ -440,8 +548,8 @@ export default function ProspectPanel({
       )}
       {p.activity.length > 0 && (
         <>
-          <button type="button" className="pkv pkv-btn phistory-btn" aria-expanded={historyOpen} aria-controls={`${idBase}-history`} onClick={() => setHistoryOpen((x) => !x)}>
-            <span className="pkv-v phistory-label">{T.historyLine(p.activity.length)}</span>
+          <button type="button" className="pp-rowlink" aria-expanded={historyOpen} aria-controls={`${idBase}-history`} onClick={() => setHistoryOpen((x) => !x)}>
+            <span>{T.historyLine(p.activity.length)}</span>
             {historyOpen ? <IconChevronDown size={16} aria-hidden="true" /> : <IconChevronRight size={16} aria-hidden="true" />}
           </button>
           {historyOpen && (
@@ -456,46 +564,217 @@ export default function ProspectPanel({
           )}
         </>
       )}
+    </div>
+  );
 
-      <h3 className="psec">{T.FORM_AND_WAIVER}</h3>
-      <button type="button" className="pkv pkv-btn" aria-expanded={openAnswers} onClick={() => setOpenAnswers((x) => !x)}>
-        <span className="pkv-v">
-          {T.answersLine(answers.length)} · {T.signedLine(p.signedAt, p.hasSignature)}
-        </span>
-        {openAnswers ? <IconChevronDown size={16} aria-hidden="true" /> : <IconChevronRight size={16} aria-hidden="true" />}
-      </button>
-      {openAnswers && (
-        <div className="panswers">
-          <dl>
-            {answers.map((f) => (
-              <div key={f.id} className="panswer">
-                <dt>{f.label}</dt>
-                {/* hidden: every answer, because a form can ask a birthday, an email or health notes (v1.000) */}
-                <dd className={hidden ? 'panswer-hidden' : undefined}>{hidden ? HIDDEN_ON_THIS_TABLET : answerText(f, p.answers[f.id])}</dd>
-              </div>
-            ))}
-          </dl>
-          {p.signedAt && (p.hasSignature ? (
-            sig?.signature ? (
-              <img className="psig" src={sig.signature} alt={T.SIGNATURE} />
-            ) : (
-              <button type="button" className="btn btn-sm" disabled={sig?.loading} onClick={showSignature}>
-                {T.SHOW_SIGNATURE}
-              </button>
-            )
-          ) : (
-            <p className="field-hint">{T.SIGNATURE_GONE}</p>
-          ))}
-          {sig?.error && <Notice>{T.SAVE_FAILED}</Notice>}
+  const deletePart = isAdmin && (
+    <button type="button" className="btn btn-sm sdialog-remove pdelete" disabled={busy} onClick={onDelete}>
+      <IconTrash size={16} aria-hidden="true" />
+      {T.DELETE_PROSPECT}
+    </button>
+  );
+
+  return (
+    <>
+      {/* The form they filled out (v0.639): name; how and when it was sent; the school */}
+      <div className="pp-strip">
+        <IconClipboardText size={20} aria-hidden="true" />
+        <div className="pp-strip-text">
+          <p className="pp-strip-form">{p.formName}</p>
+          <p className="pp-strip-sent">{T.stripLine(T.sentHow(p), T.dayOf(p.signedUpAt), T.clockOf(p.signedUpAt), T.SCHOOL_NAME[p.locationCode])}</p>
+        </div>
+      </div>
+
+      <div className="pp-meta">
+        {age !== null && <span>{T.yearsOld(age)}</span>}
+        <button
+          type="button"
+          className="pstatus-btn"
+          aria-haspopup="menu"
+          aria-expanded={statusMenu ? 'true' : 'false'}
+          aria-label={T.statusButton(status?.name ?? '')}
+          disabled={busy}
+          onClick={(e) => setStatusMenu(statusMenu ? null : { anchor: e.currentTarget })}
+        >
+          <StatusTag status={status} />
+          <IconChevronDown size={16} aria-hidden="true" />
+        </button>
+        {builtin === 'joined' && p.joinedOn && <span className="field-hint">{T.joinedLine(p.joinedOn)}</span>}
+        <span className="pp-grow" />
+        {/* Print (v0.636): grayed but still focusable while private details are hidden (the line
+            under it says why) and while the pages are being prepared */}
+        <button
+          type="button"
+          className={`btn btn-sm${printOff ? ' is-unavailable' : ''}`}
+          aria-disabled={printOff ? 'true' : undefined}
+          aria-describedby={hidden ? `${idBase}-print-off` : undefined}
+          aria-haspopup={p.siblings.length > 0 ? 'menu' : undefined}
+          aria-expanded={p.siblings.length > 0 ? (printMenu ? 'true' : 'false') : undefined}
+          onClick={onPrintClick}
+        >
+          {/* ti-printer = print */}
+          <IconPrinter size={16} aria-hidden="true" />
+          {preparing ? T.PRINT_PREPARING : T.PRINT}
+        </button>
+      </div>
+      {hidden && (
+        <p className="phidden-line pp-print-off" id={`${idBase}-print-off`}>
+          <IconCurrencyDollarOff size={16} aria-hidden="true" />
+          <span>{T.PRINT_OFF_WHILE_HIDDEN}</span>
+        </p>
+      )}
+      {printError && (
+        <div className="pp-banner">
+          <ErrorBanner text={T.PRINT_FAILED} onRetry={() => print(printError.ids)} onDismiss={() => setPrintError(null)} />
         </div>
       )}
 
-      {isAdmin && (
-        <button type="button" className="btn sdialog-remove pdelete" disabled={busy} onClick={onDelete}>
-          <IconTrash size={16} aria-hidden="true" />
-          {T.DELETE_PROSPECT}
-        </button>
+      {/* The track; under it, the box that needs staff (then the box says what's next, not the track) */}
+      <BigTrack progress={progressOf({ ...p, askCame }, status, today)} showNext={!canCheckIn && !askCame && !classGone} />
+      {canCheckIn && (
+        <div className="pask">
+          <b>{T.freeToday(b)}</b>
+          <div className="pask-row">
+            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onCheckIn(true, false)}>
+              <IconUserCheck size={16} aria-hidden="true" />
+              {T.CHECK_IN}
+            </button>
+          </div>
+        </div>
       )}
-    </div>
+      {askCame && (
+        <div className="pask">
+          <p>
+            <b>{T.didCome(p.childFirstName)}</b> <span className="field-hint">{T.classLine(b)}</span>
+          </p>
+          <div className="pask-row">
+            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onCheckIn(true, true)}>
+              <IconUserCheck size={16} aria-hidden="true" />
+              {T.CAME}
+            </button>
+            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => onCheckIn(false, true)}>
+              <IconUserX size={16} aria-hidden="true" />
+              {T.NO_SHOW}
+            </button>
+          </div>
+        </div>
+      )}
+      {classGone && (
+        <div className="pp-gone">
+          <IconAlertTriangle size={16} aria-hidden="true" />
+          <p className="pp-gone-text">
+            <b>{T.CLASS_GONE}</b> <span>{T.classLine(b)}</span>
+          </p>
+        </div>
+      )}
+
+      {/* PC: two columns. Tablet and phone: one column, the free class right after the family. */}
+      {isWide ? (
+        <div className="pp-cols">
+          <div className="pp-col">
+            {family}
+            {answersPart}
+            {waiverPart}
+          </div>
+          <div className="pp-col">
+            {free}
+            {notesPart}
+            {deletePart}
+          </div>
+        </div>
+      ) : (
+        <>
+          {family}
+          {free}
+          {answersPart}
+          {waiverPart}
+          {notesPart}
+          {deletePart}
+        </>
+      )}
+
+      {statusMenu && (
+        <RowMenu
+          anchor={statusMenu.anchor}
+          isSheet={isPhone}
+          title={T.STATUS}
+          subtitle={age !== null ? `${p.childFirstName}, ${age}` : p.childFirstName}
+          label={T.STATUS}
+          items={[...stages, ...exits].map((s, i) => ({
+            key: s.id,
+            label: s.id === p.statusId ? `${s.name} ${T.CURRENT}` : s.name,
+            Icon: s.id === p.statusId ? IconCheck : ({ className }) => <i className={`pdot-menu ${className ?? ''}`} style={{ background: colorOf(s.color).edge }} aria-hidden="true" />,
+            separatorBefore: i === stages.length && exits.length > 0,
+            // the Status button, so a dialog this opens (Joined) gives focus back to it
+            onSelect: () => s.id !== p.statusId && onStatus(s.id, statusMenu.anchor),
+          }))}
+          onClose={(reason) => {
+            const el = statusMenu.anchor;
+            setStatusMenu(null);
+            if (reason === 'escape' || reason === 'tab') el?.focus();
+          }}
+        />
+      )}
+      {printMenu && (
+        <RowMenu
+          anchor={printMenu.anchor}
+          isSheet={isPhone}
+          title={T.PRINT}
+          subtitle={age !== null ? `${p.childFirstName}, ${age}` : p.childFirstName}
+          label={T.PRINT}
+          items={[
+            { key: 'one', label: T.printOnly(p.childFirstName), Icon: IconPrinter, onSelect: () => print([p.id]) },
+            { key: 'family', label: T.printFamily([p.childFirstName, ...p.siblings.map((s) => s.childFirstName)]), Icon: IconPrinter, onSelect: () => print(familyIds) },
+          ]}
+          onClose={(reason) => {
+            const el = printMenu.anchor;
+            setPrintMenu(null);
+            if (reason !== 'outside') el?.focus();
+          }}
+        />
+      )}
+      {printJob && <PrintSheet key={printJob.key} job={printJob} onDone={() => setPrintJob(null)} />}
+    </>
+  );
+}
+
+export default function ProspectPanel(props) {
+  const { name, detail, isPhone, onClose, banner = null, onDismissBanner } = props;
+  // A problem while the window is open (a save refused, someone else's change — v1.004's amber bar)
+  // shows at the top of the window's body: the page's own bar would be hidden behind the window.
+  // When it appears, it is scrolled into view (under the heading row that stays on top); like the
+  // page's bar it never takes the focus — its role="alert" has screen readers read it out.
+  const barRef = useRef(null);
+  useEffect(() => {
+    if (banner) barRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [banner]);
+  return (
+    // The shared detail view (v0.46). className: the profile's own size and heading row (prospects.css).
+    // ariaLabel names the window; the box's own heading is replaced by the row below (PC / tablet).
+    <Dialog title={name} ariaLabel={name} className="pp-dialog" fullScreen={isPhone} onRequestClose={onClose}>
+      {!isPhone && (
+        <div className="pp-head">
+          {/* focused when the window opens (data-autofocus) and when a brother or sister opens in it */}
+          <h2 className="pp-name" tabIndex={-1} data-autofocus data-profile-heading>
+            {name}
+          </h2>
+          <IconButton label={T.CLOSE_PANEL} Icon={IconX} onClick={onClose} />
+        </div>
+      )}
+      <div className="pp-body">
+        {banner && (
+          <div ref={barRef} className="pp-window-bar">
+            <ErrorBanner text={banner.text} onDismiss={onDismissBanner} />
+          </div>
+        )}
+        {detail ? (
+          <Profile key={detail.id} {...props} />
+        ) : (
+          <p className="pp-loading" aria-busy="true">
+            {T.LOADING_PANEL}
+          </p>
+        )}
+      </div>
+    </Dialog>
   );
 }

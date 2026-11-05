@@ -12,7 +12,7 @@
 
 The design review decided 20 changes for Camps (C1–C20). They are already rulebook rows **v1.000–v1.034**.
 - **Part 1** needs no shared part.
-- **Part 2** switches to the shared parts the Dashboard core session built and Jeffrey approved (rows **v1.100–v1.111**).
+- **Part 2** switches to the shared parts the Dashboard core session built and Jeffrey approved (rows **v1.100–v1.113**).
 
 Each item keeps its change-list ID, so Jeffrey can trace it. Line numbers are main's on 2026-10-28; they may have moved.
 
@@ -35,7 +35,7 @@ Each item keeps its change-list ID, so Jeffrey can trace it. Line numbers are ma
 
 ### Read first
 - **Docs:** your status file, `docs/Camps/TKD-Camps-Status.md`; the change list `docs/Design Review/End review/TKD-DesignReview-ChangeList.md` (§1, §2.5, §4, §6); `docs/Design Review/Walkthrough/Decisions.md` (§2.5's Item column points to each decision); and handoff §6, before the migration.
-- **The rulebook:** the rows each item names, plus **v1.004** (problems stay on screen), **v1.033** (WCAG 2.2 AA), Color Belt's **v0.412** (the built model for hiding money) and, before Part 2, Dashboard core's **v1.100–v1.111**.
+- **The rulebook:** the rows each item names, plus **v1.004** (problems stay on screen), **v1.033** (WCAG 2.2 AA), Color Belt's **v0.412** (the built model for hiding money) and, before Part 2, Dashboard core's **v1.100–v1.113**.
 - **The pictures each item names**, in `docs/Design Review/Walkthrough/` (e.g. `02-camps-hide-private-details.png`) and `docs/Design Review/End review/` (`d1a`–`d1c`). Each picture shows today in amber and the drawn options in green. Copy only the option the rulebook row names as chosen. These also draw rejected options in green: 08 picture 10; 10b picture 6; 11 picture 5; 11b picture 3; 15c picture 6; 17a picture 4; d1b picture 4.
 
 ## Part 1 — ready now (no shared part needed)
@@ -131,7 +131,7 @@ Run the PGlite tests with `cd supabase/tests/pglite && npm ci && node run.mjs` (
 
 ### Before you use a shared part
 
-The parts' looks are approved (v1.102–v1.109, v1.111). Switching to one needs no new mockup of the part itself. Draw your screens with the parts where your own layout changes.
+The parts' looks are approved (v1.102–v1.109, v1.111, v1.112). Switching to one needs no new mockup of the part itself. Draw your screens with the parts where your own layout changes.
 
 Check each shared part in three places before you use it: its own header comment (the built version; it wins where the plan differs), the plan `docs/Dashboard Core/TKD-DashboardCore-Plan.md`, and the parts page `/parts.html` (preview mode only; each state has its own address, e.g. `parts.html#M2/busy`).
 
@@ -218,7 +218,7 @@ Confirm each point in the preview. Where the shared part already fixes it, fix i
 
 - **A failure note can slide under the pinned buttons,** in Camps' Compare dialog (`CompareDialog.jsx:111–126`) and in confirm boxes on screens under 700 px tall. Part 2's switch fixes both.
 - **The ⋯ menu sometimes opens in the top-left corner on PC** (`RowMenu.jsx`, Dashboard core's file). Tell Jeffrey if you see it; don't fix it here.
-- **Weight 600 breaks §7** (400 and 500 only): `src/styles/camps.css:1141` (the printed roster's headers) and `src/styles/camp.css:186` (the family page's week heading). Ask Jeffrey after Dashboard core's D6 (the receipt's font weights).
+- **Weight 600 breaks §7** (400 and 500 only): `src/styles/camps.css:1141` (the printed roster's headers) and `src/styles/camp.css:186` (the family page's week heading). Dashboard core's D6 is decided: the shared receipt uses 500, as §7 says (v1.112). Your own 600s are a separate question: ask Jeffrey once whether they go to 500 too (in Chrome on Windows the two look the same).
 
 ## Also found (not decided)
 

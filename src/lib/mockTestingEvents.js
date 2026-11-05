@@ -43,6 +43,29 @@
 // The preview also keeps a small history list `change_log` (the newest 500 rows) for the phase 4
 // writes — the database's action names and one batch id per call — so checks.mjs can test them.
 // The app can't read it (like the real change_log).
+//
+// Migration 0030 (the Color Belt design review's database half, plan TKD-ColorBelt-0030-Plan.md)
+// adds five functions and changes two:
+//   testing_mark_paid_by / testing_private_mark_paid_by (CB1): Mark paid with a way to pay
+//     (cash / check / card) and the amount the box SHOWED. A different amount → price_changed
+//     (nothing written). A way other than "Paying by" changes "Paying by" too, and the payment
+//     remembers the old one (paying_by_before) so Undo payment can put it back.
+//   testing_undo_payment / testing_private_undo_payment: the same answer as before, plus that
+//     "put it back" (only while "Paying by" is still the payment's way).
+//   testing_edit_payment / testing_private_edit_payment (v0.419): an edit that changes the way
+//     changes "Paying by" too, and the new payment keeps the family's choice, so Undo payment
+//     still puts it back (editPayingBy). testing_move_to_private / testing_private_undo_move copy
+//     paying_by_before with the payments they copy. Answers unchanged.
+//   testing_registration_history / testing_private_history (CB7): the History line, read from
+//     the preview's change_log. Since 0030 EVERY ok write here keeps history rows with their
+//     before / after (worked out by comparing the data before and after the call, like the
+//     database's log triggers). Rows that are older than that — the default preview data, or a
+//     store saved by an older build — have no log rows, so the History reader makes plausible
+//     ones from what is stored (registered, paid, undone, withdrawn, cancelled, graded).
+//   testing_results_csv (CB18, admins): one event's active students for the CSV, and a row in
+//     the list `downloads` (the table testing_downloads) for every download.
+//   Preview only (CB7): a store value `fail_history_reads` (a number) makes that many History reads
+//     fail like a dropped connection, to see the History line's amber bar with Retry (see rpc).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { RESULTS, normalizeGradingNote, gradingNoteProblem } from './testing/gradingRules.js';
 import { defaultTestingData } from './mockTesting.js';
@@ -387,7 +410,8 @@ const PRIVATE_COLS = ['id', 'location_code', 'first_name', 'last_name', 'class_i
   'to_kind', 'to_name', ...BELT_KEYS.map((k) => `to_${k}`), 'private_cents', 'paying_by', 'stripes_confirmed', 'private_date', 'private_time',
   'status', 'cancelled_at', 'cancelled_by_name', 'moved_from_event_id', 'moved_from_registration_id', 'moved_from_event_name',
   'moved_cleared_no_show', 'moved_registration_version', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'];
-const PRIVATE_PAYMENT_COLS = ['id', 'private_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id', 'moved_from_payment_id'];
+// 0030 adds paying_by_before; 0014's rule ("every column but the login ids") makes it readable here.
+const PRIVATE_PAYMENT_COLS = ['id', 'private_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id', 'moved_from_payment_id', 'paying_by_before'];
 const PRIVATE_RESULT_COLS = ['private_id', 'result', 'note', 'updated_at', 'updated_by_name'];
 // The view: every granted column + the payment summary + what is owed (computed inline).
 const PRIVATE_LIST_COLS = [...PRIVATE_COLS, 'paid_cents', 'paid', 'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'amount_due_cents'];
@@ -413,7 +437,7 @@ const HIDDEN = {
   testing_event_classes: [],
   testing_event_ranks: [],
   testing_registrations: ['signature', 'submission_id', 'withdrawn_by', 'created_by', 'updated_by'],
-  testing_payments: ['recorded_by'],
+  testing_payments: ['recorded_by', 'paying_by_before'], // 0030's column: 0005 lists the readable ones one by one, and it isn't added
   testing_roster: [],
   testing_public_attempts: ['id', 'client_key', 'event_id', 'at', 'outcome'],
   testing_results: ['updated_by'],
@@ -462,13 +486,23 @@ const RPC_ARGS = {
   testing_private_set_result_note: [ID('p_private_id'), ['p_note', 'text']],
   testing_move_to_private: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
   testing_private_undo_move: [ID('p_private_id'), ['p_expected_version', 'int']],
+  // 0030 (S unless marked A): Mark paid with a way to pay, History, the results CSV.
+  testing_mark_paid_by: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_expected_cents', 'int']],
+  testing_private_mark_paid_by: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_expected_cents', 'int']],
+  testing_registration_history: [ID('p_registration_id')],
+  testing_private_history: [ID('p_private_id')],
+  testing_results_csv: [ID('p_event_id')], // A
 };
+// The functions that only READ (0030's History readers): failNextSave doesn't fail them (it waits
+// for the next save), and they never save the store.
+const READ_ONLY_RPCS = new Set(['testing_registration_history', 'testing_private_history']);
 // Who may call (§1.8): A = admins only, S = staff and admins. testing_restore_student is not in
 // this list: staff may undo their OWN "keep one" for 10 seconds, so it checks who inside (14o).
 const ADMIN_ONLY = new Set([
   'testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment',
   'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address', 'settings_update_school_contact',
   'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete', // phase 4
+  'testing_results_csv', // 0030: no_access first, then not_allowed for staff (as the SQL)
 ]);
 export const EVENT_RPC_NAMES = Object.keys(RPC_ARGS);
 // Functions that exist but that a signed-in staff member may NOT call (only testing_registrar, or
@@ -477,6 +511,7 @@ export const EVENT_RPC_NAMES = Object.keys(RPC_ARGS);
 export const EVENT_RESTRICTED_RPC_NAMES = [
   'testing_public_event', 'testing_public_register', 'testing_purge_old_signatures', 'testing_event_state',
   'testing_private_time_is_valid', 'testing_private_amount_due', 'testing_private_lock', 'testing_private_lock_payment', 'testing_private_rank_copy',
+  'testing_history_strip', // 0030's helper: granted to nobody
 ];
 export { ADMIN_ONLY as EVENT_ADMIN_ONLY_RPCS };
 
@@ -617,6 +652,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     for (const key of ['private', 'private_payments', 'private_results', 'change_log']) {
       if (!Array.isArray(store[key])) store[key] = [];
     }
+    // 0030: the results CSV download log (testing_downloads). Missing → an empty list.
+    if (!Array.isArray(store.downloads)) store.downloads = [];
     return store;
   }
   const write = (db) => saveStore?.(db);
@@ -851,10 +888,215 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
 
   // One history row per changed row (0014's tkd.action + tkd.batch_id). Keeps the newest 500 rows
   // so the preview store stays small.
+  // 0030: each row also has `seq` (a counter, like the database's change_log id: it keeps rows of
+  // the same moment in order) and `before` / `after`. Those two are filled in after the call by
+  // fillChangeLog (below), which compares the data before and after it.
   const LOG_KEEP = 500;
+  const lastLogSeq = (db) => db.change_log.reduce((max, l) => Math.max(max, l.seq ?? 0), 0);
   function logChange(db, batchId, action, tableName, op, recordId, ctx) {
-    db.change_log.push({ table_name: tableName, op, record_id: recordId, action, batch_id: batchId, actor_name: ctx.actorName, at: stamp() });
+    db.change_log.push({
+      table_name: tableName, op, record_id: recordId, action, batch_id: batchId, actor_name: ctx.actorName, at: stamp(),
+      seq: lastLogSeq(db) + 1, before: null, after: null,
+    });
     if (db.change_log.length > LOG_KEEP) db.change_log.splice(0, db.change_log.length - LOG_KEEP);
+  }
+
+  // ----- 0030: history rows with before / after, for every write -----
+  // The tables History reads: [the list in the store, the database table, the row's record id].
+  // (A result row's record id is its registration's / private testing's id, as in the database.)
+  const LOGGED_TABLES = [
+    ['registrations', 'testing_registrations', 'id'],
+    ['payments', 'testing_payments', 'id'],
+    ['results', 'testing_results', 'registration_id'],
+    ['private', 'testing_private', 'id'],
+    ['private_payments', 'testing_private_payments', 'id'],
+    ['private_results', 'testing_private_results', 'private_id'],
+  ];
+  // A row as the log stores it: never the form's submission id, and a signature only as "on file"
+  // (0005's testing_registrations_log).
+  function logValues(row) {
+    const out = { ...row };
+    delete out.submission_id;
+    if ('signature' in out) out.signature = out.signature === null ? null : 'on file';
+    return out;
+  }
+  // Every logged table's rows, keyed "table|record id" (taken before a call).
+  function loggedRows(db) {
+    const map = new Map();
+    for (const [list, table, key] of LOGGED_TABLES) {
+      for (const row of db[list] ?? []) map.set(`${table}|${row[key]}`, { table, recordId: row[key], values: logValues(row) });
+    }
+    return map;
+  }
+  // The action name the database's functions set (tkd.action) for a function of this file.
+  // batchAction = the action the function itself logged first in this call (one action per call).
+  function actionOf(fnName, table, op, after, batchAction) {
+    // The signature clean-up runs inside other saves with its own action name.
+    if (table === 'testing_registrations' && op === 'update'
+      && Object.keys(after).every((k) => k === 'signature' || k === 'signature_deleted_at')) return 'purge_old_signatures';
+    if (table === 'testing_results' && op === 'delete' && fnName === 'testing_update_student') return 'clear_result';
+    if (batchAction) return batchAction;
+    if (fnName === 'testing_mark_paid_by') return 'mark_paid';
+    if (fnName === 'testing_private_mark_paid_by') return 'private_mark_paid';
+    if (fnName.startsWith('settings_')) return fnName.replace('settings_', '');
+    return fnName.replace(/^testing_/, '');
+  }
+  // After an ok call: compares the data with `beforeMap` and gives every changed row a history
+  // row with before / after — the same shape as the database's log triggers: insert → after only,
+  // delete → before only, update → only the columns that changed (nothing changed → no row).
+  // A row the function already logged itself (the phase 4 functions) just gets its values; any
+  // other change gets a new row in the same batch.
+  function fillChangeLog(db, beforeMap, fromSeq, fnName, ctx) {
+    const afterMap = loggedRows(db);
+    const fresh = db.change_log.filter((l) => (l.seq ?? 0) > fromSeq);
+    const batchId = fresh[0]?.batch_id ?? newId();
+    const keys = new Set([...beforeMap.keys(), ...afterMap.keys()]);
+    for (const k of keys) {
+      const b = beforeMap.get(k);
+      const a = afterMap.get(k);
+      const { table, recordId } = a ?? b;
+      let op;
+      let before = null;
+      let after = null;
+      if (!b) {
+        op = 'insert';
+        after = a.values;
+      } else if (!a) {
+        op = 'delete';
+        before = b.values;
+      } else {
+        const cols = new Set([...Object.keys(b.values), ...Object.keys(a.values)]);
+        const changed = [...cols].filter((c) => JSON.stringify(b.values[c] ?? null) !== JSON.stringify(a.values[c] ?? null));
+        if (changed.length === 0) continue;
+        op = 'update';
+        before = Object.fromEntries(changed.map((c) => [c, b.values[c] ?? null]));
+        after = Object.fromEntries(changed.map((c) => [c, a.values[c] ?? null]));
+      }
+      const own = fresh.find((l) => l.table_name === table && l.record_id === recordId && l.op === op && l.before === null && l.after === null);
+      if (own) {
+        Object.assign(own, { before, after });
+      } else {
+        logChange(db, batchId, actionOf(fnName, table, op, after ?? {}, fresh[0]?.action), table, op, recordId, ctx);
+        Object.assign(db.change_log[db.change_log.length - 1], { before, after });
+      }
+    }
+  }
+
+  // 0030: Undo payment's "put Paying by back" — only when the payment remembered an earlier one
+  // (Mark paid by a different way changed it) and nobody changed "Paying by" since. → the change
+  // to make ({} = nothing extra; a payment made by the old Mark paid has no paying_by_before).
+  const payingByBack = (row, payment) => ((payment.paying_by_before ?? null) !== null && row.paying_by === payment.method
+    ? { paying_by: payment.paying_by_before } : {});
+
+  // 0030 (v0.419): Edit payment's "Paying by" rule (the migration's section 4b), for the event and
+  // the private Edit payment alike. row = the registration / private testing, payment = the one
+  // being edited, method = the edit's way. → { changes, before }:
+  //   the family's choice = what Undo of the old payment would leave (its paying_by_before while
+  //     "Paying by" is still its way, otherwise "Paying by" itself — a choice made since wins);
+  //   changes  = { paying_by: method } only when the edit CHANGES the way (an amount / day edit
+  //              leaves "Paying by" alone);
+  //   before   = the new payment's paying_by_before: the family's choice, but only when "Paying
+  //              by" will equal the new way and the choice is a different way (else null).
+  const editPayingBy = (row, payment, method) => {
+    const choice = (payment.paying_by_before ?? null) !== null && row.paying_by === payment.method ? payment.paying_by_before : row.paying_by;
+    const after = method !== payment.method ? method : row.paying_by;
+    return {
+      changes: after !== row.paying_by ? { paying_by: after } : {},
+      before: after === method && choice !== method ? choice : null,
+    };
+  };
+
+  // ----- 0030: History (testing_registration_history / testing_private_history) -----
+  // What History shows of before / after: no login ids, and a signature only as "on file"
+  // (0030's testing_history_strip).
+  const HISTORY_HIDDEN_KEYS = ['created_by', 'updated_by', 'withdrawn_by', 'recorded_by', 'cancelled_by', 'submission_id'];
+  function historyStrip(values) {
+    if (values === null || values === undefined) return null;
+    const out = { ...values };
+    for (const key of HISTORY_HIDDEN_KEYS) delete out[key];
+    if (out.signature !== undefined && out.signature !== null) out.signature = 'on file';
+    return out;
+  }
+  // The rows of one record: its own tables (matched by record id) + its payments (found through
+  // their insert rows, whose "after" names this record; then matched by table + id). `seeded` =
+  // the plausible rows for data older than the log. Newest first, at most 500.
+  function historyRows(db, ownTables, paymentTable, parentKey, id, seeded) {
+    const pairs = new Set(db.change_log
+      .filter((l) => l.table_name === paymentTable && l.op === 'insert' && l.after?.[parentKey] === id)
+      .map((l) => l.record_id));
+    const logged = db.change_log.filter((l) => (ownTables.includes(l.table_name) && l.record_id === id)
+      || (l.table_name === paymentTable && pairs.has(l.record_id)));
+    return [...logged, ...seeded]
+      .sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : (y.seq ?? 0) - (x.seq ?? 0)))
+      .slice(0, 500)
+      .map((l) => ({
+        occurred_at: l.at, actor_name: l.actor_name, action: l.action, table_name: l.table_name, op: l.op,
+        before: historyStrip(l.before), after: historyStrip(l.after),
+      }));
+  }
+  // A made-up history row for data that is older than the log (seq 0 = before any real row).
+  const seedRow = (at, actorName, action, table, op, before, after) => ({
+    at, seq: 0, actor_name: actorName ?? null, action, table_name: table, op, before, after,
+  });
+  const loggedAt = (db, table, id, test = () => true) => db.change_log.some((l) => l.table_name === table && l.record_id === id && test(l));
+  const statusLogged = (db, table, id) => loggedAt(db, table, id, (l) => l.after && 'status' in l.after);
+
+  // Plausible rows for an event registration (and its payments / result) that have no log rows:
+  // registered (form or staff), each payment / reversal, withdrawn, graded.
+  function seedRegistrationRows(db, reg) {
+    const out = [];
+    const moved = db.private.some((p) => p.moved_from_registration_id === reg.id);
+    if (!loggedAt(db, 'testing_registrations', reg.id, (l) => l.op === 'insert')) {
+      const asAdded = {
+        ...logValues(reg), status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
+        version: 1, updated_at: reg.created_at, updated_by_name: reg.created_by_name,
+      };
+      out.push(seedRow(reg.registered_at, reg.created_by_name, reg.source === 'form' ? 'public_register' : 'add_student',
+        'testing_registrations', 'insert', null, asAdded));
+      if (reg.status === 'withdrawn' && reg.withdrawn_at && !statusLogged(db, 'testing_registrations', reg.id)) {
+        const action = moved ? 'move_to_private' : reg.withdrawn_reason === 'duplicate_copy' ? 'resolve_duplicate' : 'withdraw_student';
+        out.push(seedRow(reg.withdrawn_at, reg.withdrawn_by_name, action, 'testing_registrations', 'update',
+          { status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by_name: null },
+          { status: 'withdrawn', withdrawn_reason: reg.withdrawn_reason, withdrawn_at: reg.withdrawn_at, withdrawn_by_name: reg.withdrawn_by_name }));
+      }
+    }
+    for (const p of paymentsOf(db, reg.id)) {
+      if (loggedAt(db, 'testing_payments', p.id, (l) => l.op === 'insert')) continue;
+      const action = p.kind === 'payment' ? 'mark_paid' : moved ? 'move_to_private' : 'undo_payment';
+      out.push(seedRow(p.recorded_at, p.recorded_by_name, action, 'testing_payments', 'insert', null, { paying_by_before: null, ...p }));
+    }
+    const res = resultOf(db, reg.id);
+    if (res && !loggedAt(db, 'testing_results', reg.id)) {
+      out.push(seedRow(res.updated_at, res.updated_by_name, res.result === null ? 'set_result_note' : 'set_result', 'testing_results', 'insert', null, res));
+    }
+    return out;
+  }
+
+  // The same for a private testing: added (or moved in), each payment, cancelled, graded.
+  function seedPrivateRows(db, row) {
+    const out = [];
+    const moved = row.moved_from_registration_id !== null;
+    if (!loggedAt(db, 'testing_private', row.id, (l) => l.op === 'insert')) {
+      const asAdded = { ...row, status: 'active', cancelled_at: null, cancelled_by_name: null, cancelled_by: null, version: 1, updated_at: row.created_at, updated_by_name: row.created_by_name };
+      out.push(seedRow(row.created_at, row.created_by_name, moved ? 'move_to_private' : 'private_add', 'testing_private', 'insert', null, asAdded));
+      if (row.status === 'cancelled' && row.cancelled_at && !statusLogged(db, 'testing_private', row.id)) {
+        out.push(seedRow(row.cancelled_at, row.cancelled_by_name, 'private_cancel', 'testing_private', 'update',
+          { status: 'active', cancelled_at: null, cancelled_by_name: null },
+          { status: 'cancelled', cancelled_at: row.cancelled_at, cancelled_by_name: row.cancelled_by_name }));
+      }
+    }
+    for (const p of privatePaymentsOf(db, row.id)) {
+      if (loggedAt(db, 'testing_private_payments', p.id, (l) => l.op === 'insert')) continue;
+      const action = p.moved_from_payment_id ? 'move_to_private' : p.kind === 'reversal' ? 'private_undo_payment' : 'private_mark_paid';
+      // a moved-in payment keeps the original's recorded_at, so its row is dated at the move
+      const at = p.moved_from_payment_id && moved ? row.created_at : p.recorded_at;
+      out.push(seedRow(at, p.recorded_by_name, action, 'testing_private_payments', 'insert', null, { paying_by_before: null, ...p }));
+    }
+    const res = privateResultOf(db, row.id);
+    if (res && !loggedAt(db, 'testing_private_results', row.id)) {
+      out.push(seedRow(res.updated_at, res.updated_by_name, res.result === null ? 'private_set_result_note' : 'private_set_result', 'testing_private_results', 'insert', null, res));
+    }
+    return out;
   }
 
   // The day rule (§1.2): today ≤ day ≤ today + 1 year. → a refusal, or null when fine.
@@ -1072,8 +1314,52 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', payment_id: payment.id, amount_cents: owed, method: payment.method, version: row.version };
     },
 
+    // 0030 (CB1): Mark paid with a way to pay. The same as testing_private_mark_paid, plus:
+    //   p_method         cash / check / card — the payment's way (Finance's totals read only this)
+    //   p_expected_cents what the Mark paid box SHOWED. The amount is still worked out here (what
+    //                    is owed: the price, or the rest after a part payment); if they differ,
+    //                    nothing is written and the answer is price_changed with the new amount.
+    //   a way other than "Paying by" changes "Paying by" too, and the payment remembers the old
+    //   one (paying_by_before) so Undo payment can put it back.
+    // Refused in this order: (no_access in rpc) invalid → not_found → stale → cancelled →
+    // already_paid → price_changed.
+    testing_private_mark_paid_by(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null || !PAYING_BY.includes(a.p_method)
+        || a.p_expected_cents === null || a.p_expected_cents < 0) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
+      if (refusal) return refusal;
+      const owed = privateAmountDue(db, row);
+      if (owed <= 0) return st('already_paid'); // also a $0 price
+      if (owed !== a.p_expected_cents) return { status: 'price_changed', amount_cents: owed }; // writes nothing
+      if (owed > MAX_PAYMENT_CENTS) return st('invalid'); // the payments table's own limit
+      const before = a.p_method !== row.paying_by ? row.paying_by : null;
+      const batchId = newId();
+      const payment = newPrivatePayment(db, {
+        private_id: row.id, amount_cents: owed, method: a.p_method, paid_on: today(), paying_by_before: before,
+      }, ctx);
+      // One update: the version goes up (a double click gets 'stale') and "Paying by" = the way they paid.
+      updatePrivate(row, { paying_by: a.p_method }, ctx, true);
+      logChange(db, batchId, 'private_mark_paid', 'testing_private_payments', 'insert', payment.id, ctx);
+      logChange(db, batchId, 'private_mark_paid', 'testing_private', 'update', row.id, ctx);
+      return {
+        status: 'ok', payment_id: payment.id, amount_cents: owed, method: a.p_method, paid_on: payment.paid_on,
+        paying_by: a.p_method, version: row.version,
+      };
+    },
+
+    // 0030 (CB7): the History line of a private testing — ONLY its own rows (a moved one starts
+    // with its own insert row; the registration's earlier rows stay on the event side).
+    testing_private_history(db, a) {
+      if (a.p_private_id === null) return st('invalid');
+      const row = findPrivate(db, a.p_private_id);
+      if (!row) return st('not_found');
+      return { status: 'ok', rows: historyRows(db, ['testing_private', 'testing_private_results'], 'testing_private_payments', 'private_id', row.id, seedPrivateRows(db, row)) };
+    },
+
     // Undo payment: staff only their OWN payment, less than 10 seconds old, and never one that
     // arrived with a move (M2); admins any time.
+    // 0030: if the payment remembered an earlier "Paying by" (paying_by_before) and "Paying by" is
+    // still the payment's way, it is put back in the same update. The answer is unchanged.
     testing_private_undo_payment(db, a, ctx) {
       if (a.p_payment_id === null) return st('invalid');
       const payment = db.private_payments.find((p) => p.id === a.p_payment_id);
@@ -1089,13 +1375,15 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const reversal = newPrivatePayment(db, {
         private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
       }, ctx);
-      updatePrivate(row, {}, ctx, true);
+      updatePrivate(row, payingByBack(row, payment), ctx, true);
       logChange(db, batchId, 'private_undo_payment', 'testing_private_payments', 'insert', reversal.id, ctx);
       logChange(db, batchId, 'private_undo_payment', 'testing_private', 'update', row.id, ctx);
       return { status: 'ok', version: row.version };
     },
 
     // Edit payment (admins): the old payment is reversed and a new one recorded.
+    // 0030 (v0.419): a changed way changes "Paying by" too, and the new payment keeps the
+    // family's choice (editPayingBy). The answer is unchanged.
     testing_private_edit_payment(db, a, ctx) {
       if (a.p_payment_id === null || !PAYING_BY.includes(a.p_method) || a.p_paid_on === null || a.p_paid_on > today()) return st('invalid');
       if (a.p_amount_cents === null || a.p_amount_cents <= 0 || a.p_amount_cents > MAX_PAYMENT_CENTS) return st('invalid');
@@ -1109,8 +1397,11 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const reversal = newPrivatePayment(db, {
         private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
       }, ctx);
-      const replacement = newPrivatePayment(db, { private_id: row.id, amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on }, ctx);
-      updatePrivate(row, {}, ctx, true);
+      const follow = editPayingBy(row, payment, a.p_method);
+      const replacement = newPrivatePayment(db, {
+        private_id: row.id, amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, paying_by_before: follow.before,
+      }, ctx);
+      updatePrivate(row, follow.changes, ctx, true);
       for (const p of [reversal, replacement]) logChange(db, batchId, 'private_edit_payment', 'testing_private_payments', 'insert', p.id, ctx);
       logChange(db, batchId, 'private_edit_payment', 'testing_private', 'update', row.id, ctx);
       return { status: 'ok', payment_id: replacement.id, version: row.version };
@@ -1239,7 +1530,11 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       // (d) one private payment per moved payment (same amount, method and day).
       for (const p of live) {
         // recorded_at stays the ORIGINAL payment's, so "the most recent payment" stays the same one (M1).
-        const moved = newPrivatePayment(db, { private_id: row.id, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, moved_from_payment_id: p.id, recorded_at: p.recorded_at }, ctx);
+        // 0030 (v0.419): the family's choice (paying_by_before) moves with the payment.
+        const moved = newPrivatePayment(db, {
+          private_id: row.id, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, moved_from_payment_id: p.id, recorded_at: p.recorded_at,
+          paying_by_before: p.paying_by_before ?? null,
+        }, ctx);
         logChange(db, batchId, 'move_to_private', 'testing_private_payments', 'insert', moved.id, ctx);
       }
       // (e) a testing-day No show (and its note) is removed.
@@ -1274,6 +1569,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         const back = {
           id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on,
           recorded_at: p.recorded_at, recorded_by: null, recorded_by_name: ctx.actorName, reverses_payment_id: null, // its original moment (M1)
+          paying_by_before: p.paying_by_before ?? null, // 0030 (v0.419): the family's choice comes back with it
         };
         db.payments.push(back);
         logChange(db, batchId, 'undo_move_to_private', 'testing_payments', 'insert', back.id, ctx);
@@ -1495,8 +1791,96 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         id: newId(), registration_id: reg.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method,
         paid_on: today(), recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: payment.id,
       });
-      updateRow(reg, {}, ctx, true);
+      // 0030: the old "Paying by" back, if Mark paid changed it and nobody changed it since.
+      updateRow(reg, payingByBack(reg, payment), ctx, true);
       return { status: 'ok', version: reg.version };
+    },
+
+    // 0030 (CB1): Mark paid with a way to pay — testing_mark_paid plus p_method and
+    // p_expected_cents, exactly as testing_private_mark_paid_by above. The amount is still worked
+    // out here (the early price before the testing day, the testing-day price on and after it).
+    // Refused in this order: (no_access in rpc) invalid → not_found → stale → withdrawn →
+    // already_paid → price_changed.
+    testing_mark_paid_by(db, a, ctx) {
+      if (a.p_registration_id === null || a.p_expected_version === null || !PAYING_BY.includes(a.p_method)
+        || a.p_expected_cents === null || a.p_expected_cents < 0) return st('invalid');
+      const reg = findReg(db, a.p_registration_id);
+      if (!reg) return st('not_found');
+      if (reg.version !== a.p_expected_version) return st('stale');
+      if (reg.status === 'withdrawn') return st('withdrawn');
+      if (paymentSummary(db, reg.id).paid) return st('already_paid');
+      const event = findEvent(db, reg.event_id);
+      const t = today();
+      const amount = feeFor(rankRow(db, reg.event_rank_id), t, event.testing_date);
+      if (amount !== a.p_expected_cents) return { status: 'price_changed', amount_cents: amount }; // writes nothing
+      if (!(amount > 0 && amount <= MAX_PAYMENT_CENTS)) return st('invalid'); // the payments table's own rule ($0 can't be "paid")
+      const payment = {
+        id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: amount, method: a.p_method,
+        paid_on: t, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
+        paying_by_before: a.p_method !== reg.paying_by ? reg.paying_by : null,
+      };
+      db.payments.push(payment);
+      // One update: the version goes up (a double click gets 'stale') and "Paying by" = the way they paid.
+      updateRow(reg, { paying_by: a.p_method }, ctx, true);
+      purgeOldSignatures(db); // the last step, as the old Mark paid
+      return {
+        status: 'ok', payment_id: payment.id, amount_cents: amount, method: a.p_method, paid_on: t,
+        paying_by: a.p_method, version: reg.version,
+      };
+    },
+
+    // 0030 (CB7): the History line of an event registration — its own rows, its result's and its
+    // payments'. A registration moved to a private testing keeps its rows up to the move; the
+    // private testing's rows are not here.
+    testing_registration_history(db, a) {
+      if (a.p_registration_id === null) return st('invalid');
+      const reg = findReg(db, a.p_registration_id);
+      if (!reg) return st('not_found');
+      return { status: 'ok', rows: historyRows(db, ['testing_registrations', 'testing_results'], 'testing_payments', 'registration_id', reg.id, seedRegistrationRows(db, reg)) };
+    },
+
+    // 0030 (CB18, admins): one event's ACTIVE students for the results CSV (removed students,
+    // duplicate copies and students moved to a private testing are all 'withdrawn' — left out),
+    // in roster order: class position, belt position, last name, first name, then id. Writes one
+    // row in `downloads` first (who, when, which event, how many rows). Raw values: making
+    // = + - @ cells safe is the app's job when it writes the file.
+    testing_results_csv(db, a, ctx) {
+      if (a.p_event_id === null) return st('invalid');
+      const event = findEvent(db, a.p_event_id);
+      if (!event) return st('not_found');
+      const active = db.registrations.filter((r) => r.event_id === event.id && r.status === 'active');
+      db.downloads.push({
+        id: newId(), event_id: event.id, event_name: event.name, row_count: active.length,
+        downloaded_at: stamp(), downloaded_by: ctx.userId ?? null, downloaded_by_name: ctx.actorName,
+      });
+      const copy = copyOf(db, event.id);
+      const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+      const rows = active.map((r) => {
+        const rank = rankRow(db, r.event_rank_id);
+        const cls = classOfRank(db, r.event_rank_id);
+        const res = resultOf(db, r.id);
+        const pay = paymentSummary(db, r.id);
+        return {
+          sort: [cls.position, rank.position, r.last_name.toLowerCase(), r.first_name.toLowerCase(), r.id],
+          row: {
+            registration_id: r.id, reference: r.reference, first_name: r.first_name, last_name: r.last_name,
+            class_name: cls.class_name, start_time: cls.start_time, end_time: cls.end_time, current_belt: rank.name,
+            testing_for: testingFor(copy, rank)?.name ?? null, result: res?.result ?? null, note: res?.note ?? null,
+            paying_by: r.paying_by, paid: pay.paid_cents > 0, paid_cents: pay.paid_cents, paid_on: pay.paid_on, paid_method: pay.paid_method,
+          },
+        };
+      }).sort((x, y) => {
+        for (let i = 0; i < x.sort.length; i += 1) {
+          const c = cmp(x.sort[i], y.sort[i]);
+          if (c !== 0) return c;
+        }
+        return 0;
+      }).map((x) => x.row);
+      return {
+        status: 'ok',
+        event: { id: event.id, name: event.name, testing_date: event.testing_date, location_code: event.location_code, location_name: location(db, event.location_code)?.name ?? null },
+        rows,
+      };
     },
 
     testing_edit_payment(db, a, ctx) {
@@ -1510,9 +1894,14 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const at = stamp();
       const common = { registration_id: reg.id, recorded_at: at, recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName };
       db.payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id });
-      const replacement = { id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null };
+      // 0030 (v0.419): a changed way changes "Paying by" too; the new payment keeps the family's choice.
+      const follow = editPayingBy(reg, payment, a.p_method);
+      const replacement = {
+        id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null,
+        paying_by_before: follow.before,
+      };
       db.payments.push(replacement);
-      updateRow(reg, {}, ctx, true);
+      updateRow(reg, follow.changes, ctx, true);
       return { status: 'ok', payment_id: replacement.id, version: reg.version };
     },
 
@@ -1736,6 +2125,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   function publicRegister(args = {}, { forceRateLimited = false } = {}) {
     const db = read();
     const nowMs = now();
+    const beforeRows = loggedRows(db); // 0030: for the history rows of what this call changes
+    const fromSeq = lastLogSeq(db);
     const clientKey = typeof args.clientKey === 'string' ? args.clientKey : '';
     // Clean-up first: rate-limit rows older than 2 days, and old signatures.
     db.public_attempts = db.public_attempts.filter((row) => nowMs - Date.parse(row.at) <= ATTEMPT_KEEP_MS);
@@ -1779,6 +2170,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
 
     // The rate-limit row is written whatever happened (outside the part that can roll back).
     db.public_attempts.push({ id: db.next_attempt_id++, client_key: clientKey.slice(0, 200), event_id: eventId, at: new Date(nowMs).toISOString(), outcome: answer.status });
+    // 0030: history rows for the new registration (public_register) and any signature clean-up.
+    fillChangeLog(db, beforeRows, fromSeq, 'testing_public_register', ctx);
     write(db);
     return answer;
   }
@@ -1861,7 +2254,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return denied(`function ${name}`); // only testing_registrar (or nobody) may call these
     }
     if (!(name in handlers)) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
-    if (failNext) {
+    // A read (0030's History) never fails from failNextSave: the flag stays on for the next save.
+    if (failNext && !READ_ONLY_RPCS.has(name)) {
       failNext = false; // pretend the connection dropped: nothing changes (failNextSave helper)
       return { data: null, error: { message: 'Failed to fetch (preview: failNextSave)' }, count: null, status: 0, statusText: '' };
     }
@@ -1877,10 +2271,29 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     if (!ctx.hasDataAccess) return ok(st('no_access'));
     if (ADMIN_ONLY.has(name) && !ctx.isAdmin) return ok(st('not_allowed'));
     const db = read(); // a private copy = a transaction: only an 'ok' is saved
-    const answer = handlers[name](db, parsed, {
-      actorName: ctx.actorName ?? 'Database admin', userId: ctx.userId ?? null, isAdmin: Boolean(ctx.isAdmin),
-    });
-    if (answer.status === 'ok') write(db);
+    const callCtx = { actorName: ctx.actorName ?? 'Database admin', userId: ctx.userId ?? null, isAdmin: Boolean(ctx.isAdmin) };
+    if (READ_ONLY_RPCS.has(name)) {
+      // CB7's failed History read in the preview (failNextSave never fails a read): while the
+      // store's `fail_history_reads` is above 0, each History read fails like a dropped connection
+      // and counts it down — so Retry works once it reaches 0. Set it from the browser console
+      // (2, because the dev preview's React "strict mode" reads the history twice when it appears):
+      //   s = JSON.parse(localStorage['tkd.preview.testing']); s.fail_history_reads = 2;
+      //   localStorage['tkd.preview.testing'] = JSON.stringify(s)
+      if (Number.isInteger(db.fail_history_reads) && db.fail_history_reads > 0) {
+        db.fail_history_reads -= 1;
+        write(db);
+        return { data: null, error: { message: 'Failed to fetch (preview: fail_history_reads)' }, count: null, status: 0, statusText: '' };
+      }
+      return ok(handlers[name](db, parsed, callCtx)); // reads save nothing
+    }
+    // 0030: what the data looked like before the call, so its history rows get before / after.
+    const beforeRows = loggedRows(db);
+    const fromSeq = lastLogSeq(db);
+    const answer = handlers[name](db, parsed, callCtx);
+    if (answer.status === 'ok') {
+      fillChangeLog(db, beforeRows, fromSeq, name, callCtx);
+      write(db);
+    }
     return ok(answer);
   }
 

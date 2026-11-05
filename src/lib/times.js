@@ -2,9 +2,9 @@
 // Why it exists: rulebook v1.019 / v1.109 — one time list everywhere: every 5 minutes, AM/PM on
 // every time ("4:40 PM" can't be read as 4:40 in the morning), and a range that fits the job:
 // 6:00 AM–10:00 PM for classes, testing and camps; Finance's reminder Off, then 11:00 AM–11:00 PM.
-// Today each section builds its own list (Star 8 AM–8 PM every 15 minutes, Black Belt 6 AM–10 PM
-// every 15, Color Belt and Camps the browser's own list every 5, Finance every 15). This file
-// builds the one list, so every section gets the same choices and the same words.
+// Before this file, each section built its own list (different ranges, some every 15 minutes).
+// Each section switches to this one in its own design-review step. This file builds the one
+// list, so every section gets the same choices and the same words.
 // Plain functions with no React and no browser, so src/lib/shared/checks.mjs can test them with
 // plain `node` (193 choices for 6 AM–10 PM, 146 for Finance's Off + 11 AM–11 PM, …).
 //

@@ -16,19 +16,27 @@
 // restricted login forms_registrar).
 // Prospects (migration 0012) live in the same fake store: mockProspects.js is plugged in below, so
 // a sign-up makes its prospects and a booking moves them, like 0012's triggers.
+// Migration 0036 (rulebook v0.634, v0.637): each child is sent as { first_name, last_name, dob } —
+// or, from a page opened before it, the old { first_name, age }; both are accepted. A child with a
+// date of birth is saved with its age worked out on the school's today. The Address question's
+// answer is { street, city, state, zip } (or a plain text from an old page).
 import { parseTime, toTimeText } from './schedule/time.js';
 import { addDays, weekdayOf } from './schedule/versions.js';
 import { versionInEffect } from './calendar/days.js';
 import { cleanText, textProblem } from './calendar/rules.js';
-import { emailOk, fieldsProblem, longTextProblem, phoneOk, publishProblem, slugOk, template } from './forms/fields.js';
+import { ageOn, CHILD_AGE_MAX, CHILD_AGE_MIN, emailOk, fieldsProblem, longTextProblem, phoneOk, publishProblem, slugOk, template } from './forms/fields.js';
 import { createProspectsPart, emptyProspectsTables, PROSPECTS_ADMIN_ONLY, PROSPECTS_RPC_ARGS, PROSPECTS_SAVE_ALWAYS } from './mockProspects.js';
 
-export const FORMS_STORE_SCHEMA = 2; // 2: + the Prospects tables (0012)
+// 2: + the Prospects tables (0012). 3: children with a last name and a date of birth, and the
+// Address question (0036) — a store saved before is replaced by fresh samples.
+export const FORMS_STORE_SCHEMA = 3;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const KINDS = ['free_class', 'walk_in', 'event', 'blank'];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const ADDRESS_KEYS = ['street', 'city', 'state', 'zip'];
+const ZIP_PATTERN = /^[0-9]{5}(-[0-9]{4})?$/;
 const SIGNATURE_DAYS = 90; // Jeffrey, 2026-10-18 (rulebook v0.242)
 
 // The columns staff may read (0009's column grants). signature, submission_key and booking_key
@@ -40,8 +48,15 @@ const GRANTED_COLUMNS = {
   form_booking_limits: ['id', 'form_id', 'location_code', 'class_id', 'weekday', 'starts_at', 'spot_limit', 'version'],
   // classes taught together: one spot number for the combined time (migration 0031, v0.620)
   form_booking_group_limits: ['id', 'form_id', 'location_code', 'class_ids', 'weekday', 'starts_at', 'spot_limit', 'version'],
-  form_submissions: ['id', 'form_id', 'location_code', 'published_version', 'fields', 'answers', 'parent_name', 'parent_phone', 'parent_email',
-    'children', 'signed_at', 'entered_by', 'source', 'created_at', 'created_by_name'],
+  // 0036 (security review): only these four, enough to count sign-ups; a family's details come
+  // through prospects_get, one family at a time
+  form_submissions: ['id', 'form_id', 'location_code', 'created_at'],
+};
+// Columns that are there but that staff may not read (0036 took them back): the database says
+// "permission denied" (42501), as it does for the hidden columns below.
+const NOT_GRANTED = {
+  form_submissions: ['published_version', 'fields', 'answers', 'parent_name', 'parent_phone', 'parent_email', 'children', 'signed_at',
+    'entered_by', 'source', 'created_by_name', 'version', 'updated_at', 'updated_by_name'],
 };
 GRANTED_COLUMNS.prospect_statuses = ['id', 'location_code', 'name', 'kind', 'position', 'color', 'builtin', 'version'];
 const TABLE_KEY = { forms: 'forms', form_booking_offers: 'offers', form_booking_limits: 'limits', form_booking_group_limits: 'groupLimits', form_submissions: 'submissions', prospect_statuses: 'statuses' };
@@ -199,6 +214,14 @@ export function checkAnswers(fields, answers, children, signature) {
       case 'date':
         if (!realDate(v)) return false;
         break;
+      case 'address':
+        // 0036: exactly { street, city, state, zip }, all four filled — or a plain text of up to 200
+        // characters (only what a page opened before the Address question existed sends)
+        if (typeof v === 'string') {
+          if (!textOk(v, 200)) return false;
+        } else if (!isObject(v) || Object.keys(v).some((k) => !ADDRESS_KEYS.includes(k))
+          || !textOk(v.street, 120) || !textOk(v.city, 60) || !textOk(v.state, 30) || typeof v.zip !== 'string' || !ZIP_PATTERN.test(v.zip)) return false;
+        break;
       case 'choice':
       case 'dropdown':
         if (typeof v !== 'string' || !opts.includes(v)) return false;
@@ -218,8 +241,16 @@ export function checkAnswers(fields, answers, children, signature) {
   if (hasWaiver ? !signatureOk(signature) : signature !== null) return false;
   if (!Array.isArray(children) || children.length < 1 || children.length > 6) return false;
   for (const c of children) {
-    if (!isObject(c) || Object.keys(c).some((k) => !['first_name', 'age'].includes(k))) return false;
-    if (!textOk(c.first_name, 40) || !Number.isInteger(c.age) || c.age < 2 || c.age > 99) return false;
+    if (!isObject(c)) return false;
+    const keys = Object.keys(c).sort().join(',');
+    if (keys === 'age,first_name') {
+      // the old shape (a page opened before 0036): the typed age, 2-99
+      if (!textOk(c.first_name, 40) || !Number.isInteger(c.age) || c.age < 2 || c.age > 99) return false;
+    } else if (keys === 'dob,first_name,last_name') {
+      // the new shape (0036): names like the first name, a real date of birth; its age (2-99) is
+      // checked by submitCore, which knows today's date
+      if (!textOk(c.first_name, 40) || !textOk(c.last_name, 40) || !realDate(c.dob)) return false;
+    } else return false;
   }
   return true;
 }
@@ -233,7 +264,9 @@ export function defaultFormsData({ today, newId, stamp, classes, schedule, calen
   const book = (row) => ({ ...row, version: 1, created_at: stamp, updated_at: stamp, created_by_name: actorName, updated_by_name: actorName });
   const classOf = (code, name) => classes.find((c) => c.location_code === code && c.name === name) ?? null;
   const form = (row) => {
-    const fields = template(row.kind);
+    // withoutAddress: a form that went live before the Address question existed (0036) — it asks it
+    // only once an admin adds it and publishes (rulebook v0.634)
+    const fields = template(row.kind).filter((f) => !(row.withoutAddress && f.type === 'address'));
     const waiver = fields.find((f) => f.type === 'waiver');
     if (waiver && row.waiverText) waiver.text = row.waiverText;
     const live = row.status !== 'draft';
@@ -247,7 +280,8 @@ export function defaultFormsData({ today, newId, stamp, classes, schedule, calen
   };
   const WAIVER = 'Sample wording for preview only. The school writes its own waiver in the builder before a form goes live.';
   const insta = form({ location_code: 'worcester', name: 'Free class — Instagram', slug: 'free-class-instagram', kind: 'free_class', status: 'live', waiverText: WAIVER });
-  form({ location_code: 'shrewsbury', name: 'Walk-in', slug: 'walk-in-shrewsbury', kind: 'walk_in', status: 'live', waiverText: WAIVER });
+  // (Shrewsbury's walk-in form is older: no Address question yet, so its sign-up shows "Not asked")
+  form({ location_code: 'shrewsbury', name: 'Walk-in', slug: 'walk-in-shrewsbury', kind: 'walk_in', status: 'live', waiverText: WAIVER, withoutAddress: true });
   form({ location_code: 'worcester', name: 'Summer camp sign-up', slug: 'summer-camp', kind: 'event', status: 'draft' });
   form({ location_code: 'shrewsbury', name: 'Free class — Facebook', slug: 'free-class-facebook', kind: 'free_class', status: 'closed', waiverText: WAIVER });
 
@@ -288,14 +322,24 @@ export function defaultFormsData({ today, newId, stamp, classes, schedule, calen
     while (!weekdays.includes(weekdayOf(d))) d = addDays(d, 1);
     return d;
   };
+  // Each child as 0036 saves it: names, date of birth and the age worked out from it. The birthday
+  // is `daysAgo` days before today's date, `age` years back, so the age stays the same every day.
+  const childRow = (firstName, lastName, age, daysAgo) => {
+    const d = addDays(today, -daysAgo);
+    const dob = `${Number(d.slice(0, 4)) - age}-${d.slice(5) === '02-29' ? '02-28' : d.slice(5)}`;
+    return { first_name: firstName, last_name: lastName, dob, age: ageOn(dob, today) };
+  };
   const s1 = submission(insta, {
-    answers: { parent_name: 'Dana Rivera', parent_phone: '508-555-0142', parent_email: 'dana.rivera@example.com', heard: 'Instagram', waiver: true },
-    parent_name: 'Dana Rivera', parent_phone: '508-555-0142', parent_email: 'dana.rivera@example.com', children: [{ first_name: 'Maya', age: 7 }],
+    answers: { parent_name: 'Dana Rivera', parent_phone: '508-555-0142', parent_email: 'dana.rivera@example.com',
+      address: { street: '45 Pleasant Street', city: 'Worcester', state: 'MA', zip: '01609' }, heard: 'Instagram', waiver: true },
+    parent_name: 'Dana Rivera', parent_phone: '508-555-0142', parent_email: 'dana.rivera@example.com', children: [childRow('Maya', 'Rivera', 7, 120)],
   }, 1);
   bookOn(s1, white, nextDay(addDays(today, 1), [1, 3]));
   const s2 = submission(insta, {
-    answers: { parent_name: 'Chris Nguyen', parent_phone: '774-555-0199', parent_email: 'chris.n@example.com', heard: 'A friend', waiver: true },
-    parent_name: 'Chris Nguyen', parent_phone: '774-555-0199', parent_email: 'chris.n@example.com', children: [{ first_name: 'Leo', age: 9 }, { first_name: 'Ava', age: 6 }],
+    answers: { parent_name: 'Chris Nguyen', parent_phone: '774-555-0199', parent_email: 'chris.n@example.com',
+      address: { street: '12 Elm Street', city: 'Worcester', state: 'MA', zip: '01602' }, heard: 'A friend', waiver: true },
+    parent_name: 'Chris Nguyen', parent_phone: '774-555-0199', parent_email: 'chris.n@example.com',
+    children: [childRow('Leo', 'Nguyen', 9, 200), childRow('Ava', 'Nguyen', 6, 45)],
   }, 3);
   // The storm closure (mockCalendar) cancels Worcester's first evening classes on its Monday.
   const storm = (calendar?.closures ?? []).find((c) => !c.whole_day && c.location_code === 'worcester');
@@ -304,7 +348,7 @@ export function defaultFormsData({ today, newId, stamp, classes, schedule, calen
   const walkIn = db.forms.find((f) => f.slug === 'walk-in-shrewsbury');
   submission(walkIn, {
     answers: { parent_name: 'Sam Patel', parent_phone: '508-555-0110', parent_email: 'sam.patel@example.com', heard: 'Walked by', waiver: true },
-    parent_name: 'Sam Patel', parent_phone: '508-555-0110', parent_email: 'sam.patel@example.com', children: [{ first_name: 'Rohan', age: 11 }],
+    parent_name: 'Sam Patel', parent_phone: '508-555-0110', parent_email: 'sam.patel@example.com', children: [childRow('Rohan', 'Patel', 11, 300)],
     source: 'staff', entered_by: actorName,
   }, 0);
   return db;
@@ -493,6 +537,14 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     if (again) return answerOf(db, again.id, true);
     if (a.p_published_version !== form.published_version) return st('form_changed', { published_version: form.published_version });
     if (!checkAnswers(form.published, a.p_answers, a.p_children, a.p_signature)) return st('invalid');
+    // 0036: a child sent with a date of birth is saved as { first_name, last_name, dob, age }, the
+    // age worked out on the school's today; one who isn't 2-99 years old is refused. A child in
+    // the old shape is saved as before ({ first_name, age }).
+    const day = today();
+    const children = a.p_children.map((c) => ('dob' in c
+      ? { first_name: cleanText(c.first_name), last_name: cleanText(c.last_name), dob: c.dob, age: ageOn(c.dob, day) }
+      : { first_name: cleanText(c.first_name), age: c.age }));
+    if (children.some((c) => !Number.isInteger(c.age) || c.age < CHILD_AGE_MIN || c.age > CHILD_AGE_MAX)) return st('invalid');
     const answers = a.p_answers;
     const bookingField = form.published.find((e) => e.type === 'booking'
       && (!e.show_if || JSON.stringify(answers[e.show_if.field]) === JSON.stringify(e.show_if.value)));
@@ -506,7 +558,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     const sub = insertRow(db.submissions, {
       id: newId(), form_id: form.id, location_code: form.location_code, published_version: form.published_version, fields: clone(form.published),
       answers, parent_name: cleanText(answers.parent_name), parent_phone: answers.parent_phone.trim(), parent_email: answers.parent_email.trim(),
-      children: a.p_children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age })),
+      children,
       signature: a.p_signature, signed_at: a.p_signature === null ? null : stamp(), entered_by: enteredBy, source, submission_key: a.p_submission_key,
     }, ctx);
     prospects().afterSubmission(db, sub, ctx); // = 0012's trigger on form_submissions
@@ -734,7 +786,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     if (!ctx.signedIn) return denied(`table ${table}`);
     const wanted = String(columns ?? '*').split(',').map((c) => c.trim()).filter(Boolean);
     for (const col of [...wanted, ...filters.map((f) => f.col), ...orders.map((o) => o.col)]) {
-      if (col === '*' || HIDDEN.includes(col)) return denied(`table ${table}`);
+      if (col === '*' || HIDDEN.includes(col) || (NOT_GRANTED[table] ?? []).includes(col)) return denied(`table ${table}`);
       if (!granted.includes(col)) return fail('42703', `column ${table}.${col} does not exist`, 400);
     }
     if (!ctx.hasDataAccess) return ok([]);

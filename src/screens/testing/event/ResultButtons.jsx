@@ -3,7 +3,7 @@
 // Why it exists: a grader records a result with ONE tap, and taps the chosen button again to
 // clear it. The three buttons are drawn as one joined control (a "segmented" control):
 //   - the chosen one shows its icon and bold words on a soft color — Pass ti-check on green,
-//     Not passed ti-x on amber, No show ti-user-off on solid gray with a darker inside border —
+//     Not passed ti-x on amber, No show ti-user-x (v1.024) on solid gray with a darker inside border —
 //     so meaning never depends on color alone (ti-check / ti-x here are the recorded exception
 //     to guidelines 2.4, v0.190)
 //   - 28px tall with a mouse, 44px on touch screens; full width on phones
@@ -20,13 +20,13 @@
 //
 // ResultTag (also here): the same result as a read-only tag — staff after the testing day, and
 // the Students tab's detail view.
-import { IconCheck, IconUserOff, IconX } from '@tabler/icons-react';
+import { IconCheck, IconUserX, IconX } from '@tabler/icons-react';
 import * as T from '../text.js';
 
 const BUTTONS = [
   { key: 'pass', label: T.RESULT_PASS, Icon: IconCheck },
   { key: 'not_passed', label: T.RESULT_NOT_PASSED, Icon: IconX },
-  { key: 'no_show', label: T.RESULT_NO_SHOW, Icon: IconUserOff },
+  { key: 'no_show', label: T.RESULT_NO_SHOW, Icon: IconUserX },
 ];
 
 // The read-only result of a row (staff after the testing day; also the Students detail view).
@@ -50,7 +50,7 @@ export function ResultTag({ result }) {
   if (result === 'no_show') {
     return (
       <span className="ttag">
-        <IconUserOff size={12} aria-hidden="true" />
+        <IconUserX size={12} aria-hidden="true" />
         {T.TAG_NO_SHOW}
       </span>
     );

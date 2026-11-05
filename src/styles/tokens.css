@@ -29,6 +29,8 @@
   --color-tag-warn-border: #f2d9b0; /* outline of an amber tag such as "Not saved" */
   --color-disabled-text: #8a8a85; /* text on an unavailable (gray) button or menu item */
   --color-success-text: #3b6d11; /* green "good" text, e.g. Staff accounts' "Long enough" (guidelines 7) */
+  --color-success-bg: #eaf3de; /* pale green behind it: a green tag ("Paid"), a tick's circle (v1.121) */
+  --color-success-border: #cfe3b8; /* a green tag's edge (v1.121) */
 
   /* Belt colors (Belt.jsx, decided v0.64): the REAL colors of the school's belts. Pictures of
      belts only — never used for buttons or messages. Red is allowed here: a recorded exception
@@ -73,6 +75,7 @@
   --tap-size: 44px; /* minimum finger tap area */
   --topbar-height: 48px;
   --rail-width: 52px; /* PC, icons only */
-  --rail-width-labeled: 72px; /* tablet, labels under icons */
+  --rail-width-labeled: 72px; /* tablet, labels under icons; also Panel size Large (v1.118) */
+  --rail-width-largest: 96px; /* Panel size Largest (v1.118): 24px icons, 14px names */
   --bottombar-height: 60px; /* phone bottom bar: 4px + 48px item + 8px (plus the iPhone home-bar space) */
 }

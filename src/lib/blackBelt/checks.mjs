@@ -22,6 +22,8 @@
 // preview writes like the real log triggers: masks, own rows only, newest first, who may read it)
 // and bb_undo_cycle_edit (its refusals, 'registered' after a family registration, and the switch
 // and the values together or not at all).
+// Design review BB8 (+ migration 0034's record_id) adds: the History line's grouping and words
+// (historyWords.js) on made-up rows and on the preview store's own history.
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -31,11 +33,12 @@ import {
   hasProblems, followApplicationDue, setPaymentDueDate, buildAddPayload, buildUpdatePayload, cycleToForm, planTotals,
   kukkiwonRange, ageOn, isUnder18OnFirstDay, scheduleFor, planSummary, emailIsValid, codeIsValid, waiverVersionOk,
   nextWaiverVersionName, waiverBodyProblem, keepYearsProblem, purgeDueOn, addYears, placeProblem, findDuplicateCycle,
-  partsAlsoOnOtherDays, effectiveDueOn, PARTS,
+  partsAlsoOnOtherDays, effectiveDueOn, PARTS, FIRST_TIME, LAST_TIME, TIME_STEP_MINUTES,
   candidateItems, candidateMoney, liveLines, hasLivePayment, cycleCandidateItems, predictMoney, dueNowItems, nextItems, defaultTicks,
   sumRemaining, rosterCards, rosterFilter, searchMatches, duplicatePairs, pairReturnedLines,
 } from './rules.js';
 import { blackBeltLink, qrSvgDataUrl, qrFileName, qrPngBlob } from './qr.js';
+import { timeOptions } from '../times.js'; // the shared time list's choices (BB13)
 import {
   STARTING_POINT_SCHEDULE, STARTING_POINT_REQUIREMENTS, STARTING_POINT_NAME, SEED_WAIVER_BODY, SEED_WAIVER_VERSION_NAME,
 } from './startingPoint.js';
@@ -59,6 +62,8 @@ import {
   RESULT_KINDS, STARTING_TEXTS, resultTextProblem, resultTextProblemDetail, blankValues, buildResultMessage, resultKind, mailtoFor,
   csvFileName, csvRows, csvText, csvCell, CSV_COLUMNS,
 } from './resultEmail.js';
+// BB8: the History line's grouping and words (pure; they import only the staff words and grading.js)
+import { groupHistory, describeEntry } from '../../blackBelt/staff/candidates/historyWords.js';
 
 let count = 0;
 function check(label, fn) {
@@ -185,10 +190,11 @@ check('money: priceIsValid = bb_price_is_valid', () => {
 
 // ======================= rules.js: times =======================
 
-check('rules: time rule (06:00–22:00, 15-minute steps)', () => {
+check('rules: time rule (06:00–22:00, 5-minute steps)', () => {
   assert.equal(timeIsValid('07:45'), true);
   assert.equal(timeIsValid('22:15'), false); // after 10 PM
-  assert.equal(timeIsValid('10:10'), false); // not on a 15-minute step
+  assert.equal(timeIsValid('10:10'), true); // 5-minute steps since 0032 (BB13)
+  assert.equal(timeIsValid('10:07'), false); // not on a 5-minute step
   assert.equal(timeIsValid('06:00'), true);
   assert.equal(timeIsValid('22:00'), true);
   assert.equal(timeIsValid('05:45'), false);
@@ -197,10 +203,12 @@ check('rules: time rule (06:00–22:00, 15-minute steps)', () => {
   assert.equal(timeIsValid('25:00'), false);
   assert.equal(timeIsValid(''), false);
   assert.equal(timeIsValid(null), false);
-  assert.equal(TIME_OPTIONS.length, 65);
+  assert.equal(TIME_OPTIONS.length, 193);
   assert.equal(TIME_OPTIONS[0], '06:00');
   assert.equal(TIME_OPTIONS[TIME_OPTIONS.length - 1], '22:00');
   assert.ok(TIME_OPTIONS.every(timeIsValid));
+  // the testing day dialog's list (the shared TimeList) offers exactly these times (BB13)
+  assert.deepEqual(timeOptions({ from: FIRST_TIME, to: LAST_TIME, step: TIME_STEP_MINUTES }).map((o) => o.value), TIME_OPTIONS);
   assert.equal(timeLabel('14:30'), '2:30 PM');
   assert.equal(timeLabel('12:00'), '12:00 PM');
   assert.equal(timeRangeLabel('12:30', '14:30'), '12:30–2:30 PM');
@@ -299,7 +307,8 @@ check('rules: dayProblems', () => {
   assert.deepEqual(dayProblems(goodDay({ end: '12:00' }), { today: TODAY }), { end: 'notAfterStart' }); // end before start
   assert.deepEqual(dayProblems(goodDay({ start: '07:45', end: '08:00', second: null }), { today: TODAY }), {});
   assert.deepEqual(dayProblems(goodDay({ end: '22:15' }), { today: TODAY }), { end: 'badTime' });
-  assert.deepEqual(dayProblems(goodDay({ start: '10:10' }), { today: TODAY }), { start: 'badTime' });
+  assert.deepEqual(dayProblems(goodDay({ start: '10:07' }), { today: TODAY }), { start: 'badTime' }); // off the 5-minute step
+  assert.deepEqual(dayProblems(goodDay({ start: '10:10' }), { today: TODAY }), {}); // on it (BB13)
   assert.deepEqual(dayProblems(goodDay({ name: '  ' }), { today: TODAY }), { name: 'empty' });
   assert.deepEqual(dayProblems(goodDay({ place: null }), { today: TODAY }), { place: 'missing' });
   assert.deepEqual(dayProblems(goodDay({ place: { other: 'x'.repeat(101) } }), { today: TODAY }), { place: 'tooLong' });
@@ -338,7 +347,7 @@ check('rules: cycleFormProblems (each T4b input)', () => {
   assert.equal(edit((f) => { f.days[1].end = '12:00'; }).days[1].end, 'notAfterStart'); // end before start
   assert.equal(edit((f) => { f.days[1].start = '07:45'; }).days, undefined); // 07:45 is fine
   assert.equal(edit((f) => { f.days[1].end = '22:15'; }).days[1].end, 'badTime');
-  assert.equal(edit((f) => { f.days[1].start = '10:10'; }).days[1].start, 'badTime');
+  assert.equal(edit((f) => { f.days[1].start = '10:07'; }).days[1].start, 'badTime'); // off the 5-minute step (BB13)
   assert.equal(edit((f) => { f.days[0].second.end = null; }).days[0].secondEnd, 'missing'); // half a second part
   assert.equal(edit((f) => { f.days[0].parts = ['jumping']; }).days[0].parts, 'invalid'); // unknown part
   assert.deepEqual(edit((f) => { f.days = f.days.slice(0, 2); }).partsWithoutDay, ['curriculum']); // part on no day
@@ -3943,7 +3952,14 @@ check('0032 store: bb_candidate_history — masks, own rows only, newest first, 
   const h = call('bb_candidate_history', { p_candidate_id: kim }, STAFF);
   assert.equal(h.status, 'ok');
   assert.deepEqual(Object.keys(h).sort(), ['rows', 'status']);
-  for (const row of h.rows) assert.deepEqual(Object.keys(row).sort(), ['action', 'actor_name', 'after', 'before', 'occurred_at', 'op', 'table_name']);
+  for (const row of h.rows) assert.deepEqual(Object.keys(row).sort(), ['action', 'actor_name', 'after', 'before', 'occurred_at', 'op', 'record_id', 'table_name']);
+  // 0034: record_id = the logged row's own id (the candidate's for her own rows; an insert row's id
+  // for a child row) — and no other candidate's id
+  for (const row of h.rows) {
+    assert.equal(typeof row.record_id, 'string');
+    if (row.table_name === 'bb_candidates') assert.equal(row.record_id, kim);
+    if (row.op === 'insert' && row.after?.id) assert.equal(row.record_id, row.after.id);
+  }
   const text = JSON.stringify(h);
   for (const secret of ['1990-01-01', '1989-03-03', 'kim.zz@example.com', 'Zzfamily', fay, 'u1', 'u2']) assert.ok(!text.includes(secret), secret);
   assert.ok(!HISTORY_SECRET_KEYS.test(text), 'a removed key in the history');
@@ -3990,6 +4006,179 @@ check('0032 store: bb_candidate_history — masks, own rows only, newest first, 
   assert.deepEqual(call('bb_candidate_history', { p_candidate_id: zed }), { status: 'not_found' });
   // the change log is never readable as a table
   assert.ok(!BB_TABLES.includes('change_log'));
+});
+
+// ----- BB8: the History line's words (src/blackBelt/staff/candidates/historyWords.js, v0.971 / v0.972) -----
+
+// A history row as api.js hands it to the screens (camelCase around the snake_case before / after).
+const historyRowOf = (r) => ({
+  occurredAt: r.occurred_at, actorName: r.actor_name, action: r.action, tableName: r.table_name, op: r.op,
+  before: r.before ?? null, after: r.after ?? null, recordId: typeof r.record_id === 'string' ? r.record_id : null,
+});
+// The words of a list of history rows, newest first (null lines left out).
+const historyTexts = (rows, ctx) => groupHistory(rows).map((e) => describeEntry(e, ctx)).filter(Boolean).map((w) => w.text ?? w);
+
+check('BB8 words: grades, counts, batches, money, the candidate row (synthetic rows)', () => {
+  const rubric = DEFAULT_RUBRIC;
+  const push = subjectId(1, 'Push-up (1 min)');
+  const free = subjectId(1, 'Free sparring');
+  const mile = subjectId(1, '1/2 or 1 mile');
+  const pull = subjectId(1, 'Pull-up or hold');
+  let n = 0;
+  // one row; `at` = its moment (rows are written oldest first here, then reversed like the reader)
+  const r = (tableName, op, before, after, extra = {}) => ({ occurredAt: `2027-03-${String(10 + (n += 1)).padStart(2, '0')}T15:00:00Z`, actorName: 'Jeffrey Berg', action: 'x', tableName, op, before, after, recordId: null, ...extra });
+  const words = (rows, ctx = { rubric }) => historyTexts([...rows].reverse(), ctx);
+  const one = (row, ctx) => words([row], ctx)[0];
+
+  // grades: insert / update / delete, the Grading tab's number formats, two ways, no subject name
+  const gIns = r('bb_grades', 'insert', null, { id: 'g1', dan: 1, subject_id: push, letter: null, measured: 28, way: 0, kept: false }, { recordId: 'g1' });
+  const gUpd = r('bb_grades', 'update', { measured: 28, version: 1 }, { measured: 32, version: 2 }, { recordId: 'g1' });
+  assert.deepEqual(words([gIns, gUpd]), ['Grade changed: Push-up (1 min) 28 → 32', 'Graded: Push-up (1 min) 28']);
+  // before 0034 (no record id): the change without its subject; the insert still names it
+  assert.deepEqual(words([{ ...gIns, recordId: null }, { ...gUpd, recordId: null }]), ['Grade changed: 28 → 32', 'Graded: Push-up (1 min) 28']);
+  // the insert past the 500 rows: no subject either
+  assert.equal(one(gUpd), 'Grade changed: 28 → 32');
+  const lIns = r('bb_grades', 'insert', null, { id: 'g2', dan: 1, subject_id: free, letter: 'B', measured: null, way: null, kept: false }, { recordId: 'g2' });
+  const lUpd = r('bb_grades', 'update', { letter: 'B' }, { letter: 'B+' }, { recordId: 'g2' });
+  const lDel = r('bb_grades', 'delete', { id: 'g2', dan: 1, subject_id: free, letter: 'B+', measured: null, way: null, kept: false }, null, { recordId: 'g2' });
+  assert.deepEqual(words([lIns, lUpd, lDel]), ['Grade cleared: Free sparring (was B+)', 'Grade changed: Free sparring · B → B+', 'Graded: Free sparring · B']);
+  assert.equal(one(r('bb_grades', 'insert', null, { dan: 1, subject_id: mile, letter: null, measured: 2.1667, way: 0 })), 'Graded: 1/2 or 1 mile 2:10');
+  assert.equal(one(r('bb_grades', 'insert', null, { dan: 1, subject_id: pull, letter: null, measured: 31, way: 1 })), 'Graded: Pull-up or hold · Hold 31');
+  // the way switched (Pull-up 5 → Hold 31): the old value in the old way's words
+  const wIns = r('bb_grades', 'insert', null, { id: 'g3', dan: 1, subject_id: pull, letter: null, measured: 5, way: 0 }, { recordId: 'g3' });
+  const wUpd = r('bb_grades', 'update', { measured: 5, way: 0 }, { measured: 31, way: 1 }, { recordId: 'g3' });
+  assert.equal(words([wIns, wUpd])[0], 'Grade changed: Pull-up or hold · Pull-up 5 → Hold 31');
+  // a possible duplicate cleared: "kept this" only from the duplicate choice itself; Withdraw (status
+  // changes in the same row) and the re-check after an edit add no duplicate words
+  const dup = (action, extraAfter = {}, extraBefore = {}) => one(r('bb_candidates', 'update',
+    { duplicate_state: 'possible', ...extraBefore }, { duplicate_state: 'none', ...extraAfter }, { action }));
+  assert.equal(dup('bb_resolve_duplicate'), 'Possible duplicate: kept this registration');
+  assert.equal(dup('bb_withdraw_candidate', { status: 'withdrawn', withdrawn_reason: 'withdrawn' }, { status: 'active' }), 'Withdrawn');
+  assert.equal(dup('bb_resolve_duplicate', { status: 'withdrawn', withdrawn_reason: 'duplicate_copy' }, { status: 'active' }), 'Moved to Removed as a duplicate copy');
+  assert.equal(dup('bb_update_candidate'), undefined);
+  // a subject the rubric doesn't have; no rubric at all (the read failed) → no subject, never an error
+  assert.equal(one(r('bb_grades', 'insert', null, { dan: 1, subject_id: 'zzzzzzzz', letter: 'B+' })), 'Graded: a subject · B+');
+  assert.equal(one(r('bb_grades', 'insert', null, { dan: 1, subject_id: free, letter: 'B+' }), { rubric: null }), 'Graded: B+');
+  assert.equal(one(lDel, { rubric: null }), 'Grade cleared (was B+)');
+  // an update that only moved the version says nothing
+  assert.equal(one(r('bb_grades', 'update', { version: 1 }, { version: 2 }, { recordId: 'g9' })), undefined);
+
+  // extra-points counts (the same rule, with the item's name)
+  const cIns = r('bb_extra_counts', 'insert', null, { id: 'c1', dan: 1, item_name: 'Competitions', count: 3, kept: false }, { recordId: 'c1' });
+  const cUpd = r('bb_extra_counts', 'update', { count: 3 }, { count: 4 }, { recordId: 'c1' });
+  const cDel = r('bb_extra_counts', 'delete', { id: 'c1', dan: 1, item_name: 'Competitions', count: 4, kept: false }, null, { recordId: 'c1' });
+  assert.deepEqual(words([cIns, cUpd, cDel]), ['Extra points cleared: Competitions (was 4)', 'Extra points: Competitions 3 → 4', 'Extra points: Competitions 3']);
+  assert.equal(one({ ...cUpd, recordId: null }), 'Extra points: 3 → 4');
+
+  // make-up subjects (chosen: added / removed)
+  assert.equal(one(r('bb_makeup_subjects', 'insert', null, { dan: 1, subject_id: free, kind: 'chosen' })), 'Make-up subject added: Free sparring');
+  assert.equal(one(r('bb_makeup_subjects', 'delete', { dan: 1, subject_id: free, kind: 'chosen' }, null)), 'Make-up subject removed: Free sparring');
+
+  // BATCH 1: a Dan change that clears the grades = ONE line (the deletes carry the clear's tag)
+  const at = '2027-04-01T15:00:00Z';
+  const dan = [
+    ...[push, free, mile].map((s, i) => ({ ...r('bb_grades', 'delete', { id: `d${i}`, dan: 1, subject_id: s, letter: 'B', kept: false }, null), occurredAt: at, action: 'bb_clear_dan_grading' })),
+    { ...r('bb_extra_counts', 'delete', { dan: 1, item_name: 'Competitions', count: 3, kept: false }, null), occurredAt: at, action: 'bb_clear_dan_grading' },
+    { ...r('bb_candidates', 'update', { dan: 1, version: 3 }, { dan: 2, version: 4 }), occurredAt: at, action: 'bb_update_candidate' },
+  ];
+  assert.deepEqual(words(dan), ['Dan: 1st → 2nd Dan · 3 grades cleared · 1 extra-points count cleared']);
+  assert.equal(one(r('bb_candidates', 'update', { dan: 1 }, { dan: 2 })), 'Dan: 1st → 2nd Dan');
+
+  // BATCH 2: Add make-up — the make-up row + its kept grades / count + retest subjects = ONE line
+  const at2 = '2027-09-01T15:00:00Z';
+  const mk = [
+    { ...r('bb_candidates', 'insert', null, { source: 'makeup', makeup_of_cycle_name: 'Spring 2027', first_name: 'Mia', dan: 1 }), occurredAt: at2, action: 'bb_add_makeup' },
+    ...[free, push].map((s) => ({ ...r('bb_grades', 'insert', null, { dan: 1, subject_id: s, letter: 'A', kept: true, kept_from_cycle_name: 'Spring 2027' }), occurredAt: at2, action: 'bb_add_makeup' })),
+    { ...r('bb_extra_counts', 'insert', null, { dan: 1, item_name: 'Competitions', count: 2, kept: true }), occurredAt: at2, action: 'bb_add_makeup' },
+    { ...r('bb_makeup_subjects', 'insert', null, { dan: 1, subject_id: mile, kind: 'retest' }), occurredAt: at2, action: 'bb_add_makeup' },
+  ];
+  assert.deepEqual(words(mk), ['Added as a make-up from Spring 2027 · 2 kept grades copied · 1 kept extra-points count copied']);
+
+  // money: payments, refunds, undos, returned checks; Edit payment (BATCH 3) = one line; "$870" as the page
+  const pay = r('bb_payments', 'insert', null, { id: 'p1', kind: 'payment', amount_cents: 87000, method: 'card', paid_on: '2027-03-20' });
+  const at3 = '2027-03-25T15:00:00Z';
+  const edit = [
+    { ...r('bb_payments', 'insert', null, { id: 'p2', kind: 'reversal', amount_cents: -87000, method: 'card', paid_on: '2027-03-20', reverses_payment_id: 'p1' }), occurredAt: at3, action: 'bb_edit_payment' },
+    { ...r('bb_payments', 'insert', null, { id: 'p3', kind: 'payment', amount_cents: 90000, method: 'check', paid_on: '2027-03-21' }), occurredAt: at3, action: 'bb_edit_payment' },
+  ];
+  assert.deepEqual(words([pay, ...edit]), ['Payment changed: $900 check, paid Mar 21', 'Payment recorded: $870 card, paid Mar 20']);
+  const undo = r('bb_payments', 'insert', null, { id: 'p4', kind: 'reversal', amount_cents: -87000, method: 'card', paid_on: '2027-03-26', reverses_payment_id: 'p1' });
+  assert.equal(words([pay, undo])[0], 'Payment undone: $870');
+  assert.equal(one(r('bb_payments', 'insert', null, { kind: 'refund', amount_cents: -5000, method: 'cash', paid_on: '2027-03-22' })), 'Refund recorded: $50 cash, Mar 22');
+  const ret = r('bb_payments', 'insert', null, { id: 'p5', kind: 'returned', amount_cents: -87000, method: 'check', paid_on: '2027-03-27', reverses_payment_id: 'p1' });
+  const retUndo = r('bb_payments', 'insert', null, { id: 'p6', kind: 'reversal', amount_cents: 87000, method: 'check', paid_on: '2027-03-28', reverses_payment_id: 'p5' });
+  assert.deepEqual(words([pay, ret, retUndo]).slice(0, 2), ['Returned check undone: $870', 'Check returned: $870']);
+  assert.equal(one(r('bb_payments', 'insert', null, { kind: 'payment', amount_cents: 29050, method: 'cash', paid_on: '2027-03-20' })), 'Payment recorded: $290.50 cash, paid Mar 20');
+  // hidden: every money row is left out (counted for the gray line); plan and Kukkiwon lines stay
+  const hiddenCtx = { rubric, hidden: true, plans: [{ id: 'pl1', name: 'In full' }, { id: 'pl3', name: '3 payments' }] };
+  assert.deepEqual(groupHistory([...edit].reverse()).map((e) => describeEntry(e, hiddenCtx)), [{ hiddenPayment: true }]);
+  assert.equal(one(r('bb_candidates', 'update', { cycle_plan_id: 'pl1' }, { cycle_plan_id: 'pl3' }), hiddenCtx), 'Plan: In full → 3 payments');
+  assert.equal(one(r('bb_candidates', 'update', { kukkiwon: false, kukkiwon_added_on: null }, { kukkiwon: true, kukkiwon_added_on: '2027-03-01' }), hiddenCtx), 'Kukkiwon certificate added');
+
+  // the candidate row: registered, edits joined with "; ", DOB and email only "changed", the purge, states
+  const form = one(r('bb_candidates', 'insert', null, { source: 'form' }, { actorName: 'Family form' }), { rubric });
+  assert.equal(form, 'Registered on the family form');
+  const formEntry = groupHistory([r('bb_candidates', 'insert', null, { source: 'form' }, { actorName: 'Family form' })]).map((e) => describeEntry(e, {}))[0];
+  assert.equal(formEntry.who, 'Family form');
+  assert.equal(groupHistory([r('bb_candidates', 'insert', null, { source: 'desk' }, { actorName: null })]).map((e) => describeEntry(e, {}))[0].who, 'Staff');
+  assert.equal(one(r('bb_candidates', 'insert', null, { source: 'desk' })), 'Added at the desk');
+  assert.equal(one(r('bb_candidates', 'update', { first_name: 'Mia', location_code: 'worcester', version: 1, updated_at: 'x', updated_by_name: 'A' }, { first_name: 'Mya', location_code: 'shrewsbury', version: 2, updated_at: 'y', updated_by_name: 'B' })),
+    'First name: Mia → Mya; School: Worcester → Shrewsbury');
+  assert.equal(one(r('bb_candidates', 'update', { date_of_birth: 'on file', email_for_results: 'on file' }, { date_of_birth: 'changed', email_for_results: 'changed' })), 'Date of birth changed; Email for results changed');
+  assert.equal(one(r('bb_candidates', 'update', { date_of_birth: 'on file', email_for_results: 'on file', personal_removed_at: null, version: 2 }, { date_of_birth: null, email_for_results: null, personal_removed_at: '2031-01-01T00:00:00Z', version: 3 })),
+    'Date of birth and email removed (after the keeping time)');
+  assert.equal(one(r('bb_candidates', 'update', { version: 1 }, { version: 2 })), undefined); // a payment's version bump
+  assert.equal(one(r('bb_candidates', 'update', { status: 'active', withdrawn_reason: null }, { status: 'withdrawn', withdrawn_reason: 'withdrawn' })), 'Withdrawn');
+  assert.equal(one(r('bb_candidates', 'update', { status: 'active' }, { status: 'withdrawn', withdrawn_reason: 'duplicate_copy' })), 'Moved to Removed as a duplicate copy');
+  assert.equal(one(r('bb_candidates', 'update', { status: 'withdrawn' }, { status: 'active' })), 'Restored');
+  assert.equal(one(r('bb_candidates', 'update', { duplicate_state: 'none' }, { duplicate_state: 'possible' })), 'Possible duplicate found');
+  // the waiver, the result email
+  assert.equal(one(r('bb_candidate_waivers', 'insert', null, { how: 'drawn', signature: 'on file', signer_name: 'on file' })), 'Waiver signed on the family form');
+  assert.equal(one(r('bb_candidate_waivers', 'insert', null, { how: 'paper' })), 'Waiver signed on paper');
+  assert.equal(one(r('bb_candidate_waivers', 'update', { signature: 'on file', removed_at: null }, { signature: null, removed_at: '2031-01-01' })), 'Signature removed (after the keeping time)');
+  assert.equal(one(r('bb_result_sends', 'insert', null, { result_status: 'makeup' })), 'Result email marked sent (Make-up)');
+  assert.equal(one(r('bb_result_sends', 'insert', null, { result_status: 'passed' })), 'Result email marked sent (Passed)');
+  assert.equal(one(r('bb_result_sends', 'update', { undone_at: null }, { undone_at: '2027-06-12T15:00:00Z' })), 'Mark as sent undone');
+  // rows of other shapes never break the list
+  assert.deepEqual(groupHistory(null), []);
+  assert.deepEqual(historyTexts([null, { tableName: 'bb_other', op: 'insert' }], {}), []);
+});
+
+check('BB8 words: the preview store end to end — grade changes name the subject, a Dan change and Add make-up are one line', () => {
+  loadCast();
+  const spring = springCycle();
+  const ctx = { rubric: spring.requirements, plans: db().bb_cycle_plans.filter((p) => p.cycle_id === spring.id) };
+  const read = (id) => call('bb_candidate_history', { p_candidate_id: id }, STAFF).rows.map(historyRowOf);
+  const ava = castRow('Ava', 'Brooks');
+  // a grade correction: names the subject (through its insert row, record_id)
+  const ref = subjectId(2, 'Referee seminar');
+  const old = db().bb_grades.find((g) => g.candidate_id === ava.id && g.subject_id === ref)?.letter ?? null;
+  const next = old === 'C' ? 'B' : 'C';
+  advance(60 * 1000);
+  assert.equal(call('bb_set_grade', { p_candidate_id: ava.id, p_dan: 2, p_subject_id: ref, p_letter: next }, STAFF).status, 'ok');
+  const texts = historyTexts(read(ava.id), ctx);
+  assert.equal(texts[0], old ? `Grade changed: Referee seminar · ${old} → ${next}` : `Graded: Referee seminar · ${next}`);
+  // without record_id (a database before 0034): the same change without the subject
+  if (old) assert.equal(historyTexts(read(ava.id).map((x) => ({ ...x, recordId: null })), ctx)[0], `Grade changed: ${old} → ${next}`);
+  // a Dan change that clears 27 grades and 5 counts: ONE line, no "Grade cleared" lines
+  advance(60 * 1000);
+  const v = db().bb_candidates.find((c) => c.id === ava.id).version;
+  const done = call('bb_update_candidate_clear', {
+    p_candidate_id: ava.id, p_expected_version: v, p_first: 'Ava', p_last: 'Brooks', p_date_of_birth: ava.date_of_birth, p_email: ava.email_for_results,
+    p_location_code: ava.location_code, p_dan: 3, p_expected_grade_count: 27, p_expected_count_count: 5, p_expected_chosen_count: 0,
+  });
+  assert.equal(done.status, 'ok');
+  const after = historyTexts(read(ava.id), ctx);
+  assert.equal(after[0], 'Dan: 2nd → 3rd Dan · 27 grades cleared · 5 extra-points counts cleared');
+  assert.ok(!after.some((t) => t.startsWith('Grade cleared')));
+  // the cast's Fall make-up (Mia): its own row and the kept grades it copied in = one line
+  const miaFall = castRow('Mia', 'Chen', fallCycle());
+  const fallCtx = { rubric: fallCycle().requirements, plans: [] };
+  const mt = historyTexts(read(miaFall.id), fallCtx);
+  assert.ok(mt.some((t) => /^Added as a make-up from Spring 2027 · \d+ kept grades copied/.test(t)), JSON.stringify(mt));
+  assert.ok(!mt.some((t) => t.startsWith('Graded:')), JSON.stringify(mt));
+  // no login id, date of birth or email anywhere in the words
+  for (const t of [...after, ...mt]) assert.ok(!/@|\d{4}-\d{2}-\d{2}/.test(t), t);
 });
 
 check('0032 store: the purge inside a read logs its own rows as bb_purge_due (as the real database), once', () => {

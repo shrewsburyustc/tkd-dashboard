@@ -17,7 +17,7 @@ import { IconAlertTriangle, IconCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { findDuplicateRank, nameProblem, normalizeName } from '../../lib/testing/names.js';
-import { formatDollars, parseDollars } from '../../lib/money.js';
+import { formatMoney, parseDollars } from '../../lib/money.js';
 import { beltOf, describeBelt, sameBelt } from '../../lib/testing/belts.js';
 import Belt from '../../components/Belt.jsx';
 import BeltPicker, { beltFormProblem } from './BeltPicker.jsx';
@@ -216,7 +216,7 @@ export default function RankDialog({
             <div key={field.key} className="ro">
               <p className="ro-label">{field.label}</p>
               <p className="ro-value">
-                {formatDollars(rank[field.column])}
+                {formatMoney(rank[field.column])}
                 {isPhone && field.key === 'early' && <span className="ro-muted">{T.EARLY_VIEW_PHONE_SUFFIX}</span>}
               </p>
             </div>

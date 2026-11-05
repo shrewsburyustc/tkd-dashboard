@@ -9,8 +9,9 @@
 //   - the tab bar: Events · Classes and ranks (← → move between the tabs)
 //   - for staff, a gray line under the tabs: the Events line (Star v0.86) or "View only. Ask an
 //     admin to make changes." (v0.40)
-//   - when the location switcher is on Both: no tabs and no data, just the choose-a-school
-//     message (decided v0.35) — and NO request is sent to the database
+//   - when the location switcher is on Both: no tabs; "Both schools" under the title and one
+//     read-only box per school (testing/BothSummary.jsx, CB13, v1.022 / v0.415; was v0.35's
+//     choose-a-school message)
 //   - when an event is open (address #testing/event/<id>, or .../grading for its Grading tab):
 //     that event's page instead (with the switch on: #testing/color-belt/event/<id>…)
 // Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
@@ -62,7 +63,7 @@
 //   (eventId / eventTab / onEventTab carry Black Belt's open cycle and tab while it is the page)
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { IconAward, IconChevronRight } from '@tabler/icons-react';
-import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
+import BothSummary from './testing/BothSummary.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
@@ -71,7 +72,7 @@ import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
 import TestingChooser from './testing/chooser/TestingChooser.jsx';
 import BackToTesting from './testing/chooser/BackToTesting.jsx';
 import { COLOR_BELT_TITLE } from './testing/chooser/text.js';
-import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
+import { BOTH_SCHOOLS, PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
 import { loadStarTesting, STAR_TESTING_ON } from '../lib/features.js';
 import '../styles/testing-events.css';
 
@@ -340,7 +341,7 @@ export default function Testing({
   ) : null;
 
   if (location === 'Both') {
-    // Title only — no school line, no tabs (there's nothing in either tab to show).
+    // No tabs: "Both schools" under the title, then one read-only box per school (CB13, v0.415).
     return (
       <div className="testing">
         {blackBeltLink}
@@ -348,9 +349,10 @@ export default function Testing({
           <div className="phead-titles">
             {onBack && <BackToTesting onBack={onBack} />}
             <h1 className="ptitle">{COLOR_BELT_PAGE_TITLE}</h1>
+            <p className="psub">{BOTH_SCHOOLS}</p>
           </div>
         </div>
-        <BlockedOnBoth onChoose={chooseSchool} />
+        <BothSummary onChoose={chooseSchool} screenLocked={tabProps.screenLocked} onNoAccess={tabProps.onNoAccess} />
       </div>
     );
   }

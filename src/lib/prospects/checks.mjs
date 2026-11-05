@@ -2,13 +2,18 @@
 // mockForms.js). Why it exists: the fake database must answer like migration 0012 — prospects
 // made from sign-ups, New ↔ Booked from bookings, the list without contact details, check in and
 // "did they come?", booking from the panel with the shared limit, each school's statuses, deleting
-// and the 2-year clean-up. Runs in Node without a browser:
+// and the 2-year clean-up — and like 0036: each child's last name and date of birth (the list
+// carries the last name only). Also the profile's small rules (child.js, followUps.js): "Ava N.",
+// the age from the date of birth, the address line, how long the signature picture is kept.
+// Runs in Node without a browser:
 //   node src/lib/prospects/checks.mjs
 // Prints "ALL PROSPECTS LIB CHECKS PASSED", or stops at the first failed check.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { template } from '../forms/fields.js';
 import { createFormsBackend } from '../mockForms.js';
+import { addressFieldOf, addressLine, ageOn, answerFieldsOf, childAge, childFullName, signatureKeptUntil, waiverFieldOf } from './child.js';
+import { childInitial } from './followUps.js';
 
 let groups = 0;
 function group(name, fn) {
@@ -29,7 +34,8 @@ const calendar = { closures: [], closureClasses: [] };
 const SIG = `data:image/png;base64,${'A'.repeat(300)}`;
 
 let clock = NOW;
-let store = { schema: 2, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
+// schema 3: the store's version since migration 0036 (mockForms.js FORMS_STORE_SCHEMA)
+let store = { schema: 3, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
 const backend = createFormsBackend({
   loadStore: () => store,
   saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); },
@@ -54,9 +60,12 @@ let v = call('forms_save_draft', { p_form_id: made.id, p_expected_version: made.
 v = call('forms_set_booking', { p_form_id: made.id, p_expected_version: v, p_offers: [{ class_id: white, default_limit: 2, days_ahead: 14, min_hours_ahead: 0 }], p_limits: [] }, admin).version;
 call('forms_publish', { p_form_id: made.id, p_expected_version: v }, admin);
 const formId = made.id;
+// Since 0036 the Free class template asks the home address (required): answer it when the form has it.
+const ADDRESS_FIELD = addressFieldOf(draft);
+const ADDRESS = ADDRESS_FIELD ? { [ADDRESS_FIELD.id]: { street: '1 Main Street', city: 'Worcester', state: 'MA', zip: '01602' } } : {};
 const send = (children, bookings = []) => call('forms_staff_submit', {
   p_form_id: formId, p_submission_key: randomUUID(), p_published_version: 1,
-  p_answers: { parent_name: 'Kim Ruiz', parent_phone: '(508) 555-7731', parent_email: 'kim@example.com', waiver: true },
+  p_answers: { parent_name: 'Kim Ruiz', parent_phone: '(508) 555-7731', parent_email: 'kim@example.com', waiver: true, ...ADDRESS },
   p_children: children, p_bookings: bookings, p_signature: SIG,
 });
 
@@ -77,6 +86,9 @@ group('the list has list columns only; search; badge per person', () => {
   assert.equal(l.status, 'ok');
   assert.equal(l.prospects.length, 2);
   assert.ok(!JSON.stringify(l.prospects).includes('555-7731') && !JSON.stringify(l.prospects).includes('kim@'));
+  // never an age or a date of birth in the list (v0.245, rule 5); an older child has no last name
+  assert.ok(l.prospects.every((p) => !('child_age' in p) && !('child_dob' in p)));
+  assert.ok(l.prospects.every((p) => p.child_last_name === null));
   assert.deepEqual(call('prospects_search', { p_location_code: 'worcester', p_text: '7731' }).ids.sort(), [ava.id, max.id].sort());
   assert.deepEqual(call('prospects_search', { p_location_code: 'worcester', p_text: '77' }).ids, []);
   assert.equal(call('prospects_search', { p_location_code: 'worcester', p_text: 'x' }).status, 'invalid');
@@ -189,6 +201,74 @@ group('Not interested families go after 6 months (migration 0021, rulebook v0.61
   assert.equal(kept(niRecent), true, 'Not interested 5 months: kept');
   assert.equal(kept(mixed), true, 'one child not Not interested: the 2 years apply');
   assert.equal(kept(newMid), true, 'New, quiet 7 months: kept (2 years)');
+});
+
+group("each child's last name and date of birth (migration 0036, rulebook v0.634 / v0.637)", () => {
+  const r = send([{ first_name: 'Ivy', last_name: 'Chen', dob: '2019-03-04' }, { first_name: 'Ben', last_name: 'Chen-Ortiz', dob: '2016-01-20' }]);
+  assert.equal(r.status, 'ok', 'a sign-up with { first_name, last_name, dob } children is accepted');
+  const ivy = store.prospects.find((p) => p.child_first_name === 'Ivy');
+  const ben = store.prospects.find((p) => p.child_first_name === 'Ben');
+  // the prospect copies both; the age is worked out from the date of birth on the school's today
+  assert.equal(ivy.child_last_name, 'Chen');
+  assert.equal(ivy.child_dob, '2019-03-04');
+  assert.equal(ivy.child_age, 7); // Jan 11, 2027: her March birthday is still ahead
+  assert.equal(ben.child_age, 10);
+  // the list: the last name (for "Ivy C."), never the date of birth or age
+  const row = call('prospects_list', { p_location_code: 'worcester' }).prospects.find((p) => p.id === ivy.id);
+  assert.equal(row.child_last_name, 'Chen');
+  assert.ok(!('child_dob' in row) && !('child_age' in row) && !JSON.stringify(row).includes('2019-03-04'));
+  // the search finds the child's last name too
+  assert.deepEqual(call('prospects_search', { p_location_code: 'worcester', p_text: 'chen' }).ids.sort(), [ivy.id, ben.id].sort());
+  assert.deepEqual(call('prospects_search', { p_location_code: 'worcester', p_text: 'ORTIZ' }).ids, [ben.id]);
+  // the profile: both, and the brother's last name and date of birth (his age is worked out from it)
+  const g = call('prospects_get', { p_prospect_id: ivy.id }).prospect;
+  assert.equal(g.child_last_name, 'Chen');
+  assert.equal(g.child_dob, '2019-03-04');
+  assert.deepEqual(g.siblings.map((s) => [s.child_last_name, s.child_dob]), [['Chen-Ortiz', '2016-01-20']]);
+  assert.equal(childAge({ childDob: g.siblings[0].child_dob, childAge: g.siblings[0].child_age }, '2027-01-20'), 11); // his birthday
+  // a child sent the old way (first name and age, an old page on a kiosk) has neither
+  assert.equal(send([{ first_name: 'Olga', age: 9 }]).status, 'ok');
+  const olga = store.prospects.find((p) => p.child_first_name === 'Olga');
+  const go = call('prospects_get', { p_prospect_id: olga.id }).prospect;
+  assert.equal(go.child_last_name, null);
+  assert.equal(go.child_dob, null);
+  assert.equal(go.child_age, 9);
+});
+
+group('the profile\'s small rules: "Ava N.", the age, the address line, how long the signature is kept', () => {
+  // "Ava N." from the child's own last name (v0.637); without one, the parent's last initial (v0.245)
+  assert.equal(childInitial({ childLastName: 'Nguyen', parentName: 'Jo Allen' }), 'N');
+  assert.equal(childInitial({ childLastName: '  martinez ', parentName: 'Jo Allen' }), 'M');
+  assert.equal(childInitial({ childLastName: null, parentName: 'Jo Allen' }), 'A');
+  assert.equal(childInitial({ childLastName: '', parentName: 'Cher' }), '');
+  // whole years on the school's today; the birthday counts on the day itself
+  assert.equal(ageOn('2019-03-04', '2027-03-03'), 7);
+  assert.equal(ageOn('2019-03-04', '2027-03-04'), 8);
+  assert.equal(ageOn('2020-02-29', '2027-02-28'), 6); // a leap-day birthday counts from Mar 1
+  assert.equal(ageOn('2020-02-29', '2027-03-01'), 7);
+  assert.equal(ageOn(null, '2027-03-01'), null);
+  assert.equal(childAge({ childDob: '2019-03-04', childAge: 6 }, '2027-03-04'), 8); // the date of birth wins
+  assert.equal(childAge({ childDob: null, childAge: 9 }, '2027-03-04'), 9); // older sign-ups keep the typed age
+  assert.equal(childFullName({ childFirstName: 'Ava', childLastName: 'Nguyen' }), 'Ava Nguyen');
+  assert.equal(childFullName({ childFirstName: 'Leo', childLastName: null }), 'Leo');
+  // the home address on one line; a plain text (an old kiosk page) as it is
+  assert.equal(addressLine({ street: '12 Elm Street', city: 'Worcester', state: 'MA', zip: '01602' }), '12 Elm Street, Worcester, MA 01602');
+  assert.equal(addressLine(' 12 Elm St, Worcester '), '12 Elm St, Worcester');
+  assert.equal(addressLine(null), '');
+  // the answers: never layout, the children, the booking, the waiver, the parent's fields or the address
+  const fields = [
+    { id: 'parent_name', type: 'parent_name' }, { id: 'parent_phone', type: 'parent_phone' }, { id: 'parent_email', type: 'parent_email' },
+    { id: 'address', type: 'address' }, { id: 'children', type: 'children' }, { id: 'step_2', type: 'step' }, { id: 'booking', type: 'booking' },
+    { id: 'h1', type: 'heading' }, { id: 'heard', type: 'choice' }, { id: 'notes', type: 'long_text' }, { id: 'waiver', type: 'waiver', text: 'Our wording.' },
+  ];
+  assert.deepEqual(answerFieldsOf(fields).map((f) => f.id), ['heard', 'notes']);
+  assert.equal(addressFieldOf(fields).id, 'address');
+  assert.equal(addressFieldOf(fields.filter((f) => f.type !== 'address')), null); // "Not asked on this form"
+  assert.equal(waiverFieldOf(fields).text, 'Our wording.');
+  // the signature picture: 90 days after the family's latest free class, else after signing (v0.242, 0009)
+  assert.deepEqual(signatureKeptUntil(['2027-01-13', '2027-02-01'], '2027-01-10T15:00:00Z'), { until: '2027-05-02', afterClass: true });
+  assert.deepEqual(signatureKeptUntil([], '2027-01-11T01:30:00Z'), { until: '2027-04-10', afterClass: false }); // signed Jan 10, 8:30 pm in Massachusetts
+  assert.equal(signatureKeptUntil([], null), null);
 });
 
 console.log(`ALL PROSPECTS LIB CHECKS PASSED (${groups} groups)`);

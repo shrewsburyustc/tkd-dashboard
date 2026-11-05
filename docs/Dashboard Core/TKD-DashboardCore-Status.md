@@ -1,8 +1,8 @@
 # Dashboard core — status
 
-**Updated:** 2026-10-29 (Dashboard core worktree session, branch `dashboard-core`)
-**Rulebook at this update:** 0.823 on `main` (Finance's merge; its newest Dashboard core row is v1.116); **1.117** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6), **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), **v1.114** (the date picker opened from a button) and **v1.115** (a count card's note of two lines), all 2026-10-28; **v1.116** (the dropdown and time list turned off, Finance's v0.823) and **v1.117** (Show all inside its gray line on touch, option (a)), both 2026-10-29 — block **1.100–1.199**, next free **1.118** (`git merge main` before any rulebook edit).
-**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); **fc3bea6** — the fact fixes (v1.113). **Merged into `main` as 95a9601** (2026-10-28, the Main session); this branch then moved forward to `main` 4c15146, and later to a3ff7ca (both fast-forwards; the second brought New students' N17 merge, rulebook v0.616). Then the date picker opener option (v1.114, committed as 1bb2683); `main` merged in up to 50022cf (2026-10-28, merge commit **bd3847e**: New students' N1, N2, Undone, class ages and classes taught together, with migration 0031 and rulebook v0.617–v0.620; the rulebook's three same-spot conflicts kept both sides, main's first); then the count cards' two-line note (v1.115, committed as 5628133). Both **merged into `main` as a287ee5** (2026-10-28, the Main session, no conflicts); this branch then moved forward to it, and later to c975428 (both fast-forwards; the second brought Star's merge, with Star's count cards on the shared part). The Main session pushed `main` c975428 on 2026-10-28, so all of this branch's work is live; `dashboard-core` itself is never pushed. On 2026-10-29 this branch moved forward to `main` 3fdbc0b (a fast-forward: New students' N4–N6 with rulebook v0.621–v0.623, and CLAUDE.md's 0030 notes); then the turned-off dropdown and time list (v1.116) was committed as cc92332, merged into `main` as e3e46d4 (the Main session; pushed and live 2026-10-29), and this branch moved forward to it (fast-forward). Later the same day it moved forward to `main` 5f28ed9 (a fast-forward: Finance's design review F1–F7 with migration 0029's files and rulebook v0.817–v0.823, and CLAUDE.md's 0029 and 0032 notes; none of it touches this branch's files), and Show all on touch (v1.117) was committed.
+**Updated:** 2026-11-04 (Dashboard core worktree session, branch `dashboard-core`)
+**Rulebook at this update:** 1.040 on `main` 9b562b3 (the Design Review's merge; its newest Dashboard core row is v1.118); **1.121** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6), **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), **v1.114** (the date picker opened from a button) and **v1.115** (a count card's note of two lines), all 2026-10-28; **v1.116** (the dropdown and time list turned off, Finance's v0.823) and **v1.117** (Show all inside its gray line on touch, option (a)), both 2026-10-29; **v1.118** (each person's panel size: Standard, Large or Largest), 2026-11-03; **v1.119** (Show all's keyboard focus), **v1.120** (turned-off icon buttons, option A) and **v1.121** (the success colors as shared settings), all 2026-11-04 — block **1.100–1.199**, next free **1.122** (`git merge main` before any rulebook edit).
+**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); **fc3bea6** — the fact fixes (v1.113). **Merged into `main` as 95a9601** (2026-10-28, the Main session); this branch then moved forward to `main` 4c15146, and later to a3ff7ca (both fast-forwards; the second brought New students' N17 merge, rulebook v0.616). Then the date picker opener option (v1.114, committed as 1bb2683); `main` merged in up to 50022cf (2026-10-28, merge commit **bd3847e**: New students' N1, N2, Undone, class ages and classes taught together, with migration 0031 and rulebook v0.617–v0.620; the rulebook's three same-spot conflicts kept both sides, main's first); then the count cards' two-line note (v1.115, committed as 5628133). Both **merged into `main` as a287ee5** (2026-10-28, the Main session, no conflicts); this branch then moved forward to it, and later to c975428 (both fast-forwards; the second brought Star's merge, with Star's count cards on the shared part). The Main session pushed `main` c975428 on 2026-10-28, so all of this branch's work is live; `dashboard-core` itself is never pushed. On 2026-10-29 this branch moved forward to `main` 3fdbc0b (a fast-forward: New students' N4–N6 with rulebook v0.621–v0.623, and CLAUDE.md's 0030 notes); then the turned-off dropdown and time list (v1.116) was committed as cc92332, merged into `main` as e3e46d4 (the Main session; pushed and live 2026-10-29), and this branch moved forward to it (fast-forward). Later the same day it moved forward to `main` 5f28ed9 (a fast-forward: Finance's design review F1–F7 with migration 0029's files and rulebook v0.817–v0.823, and CLAUDE.md's 0029 and 0032 notes; none of it touches this branch's files), and Show all on touch (v1.117) was committed as 2bf89c6. On 2026-11-03 Main merged it into `main` as 7b665af; this branch moved forward to it, then to 1e6561d and 5f1db41 (all fast-forwards bringing other sections' work; see the log). Then Panel size (v1.118) was committed as 2baea38, and `main` was merged in up to e7fd75b (2026-11-03, merge commit **723c302**: Camps C10 and New students N10, N13, N14; the rulebook's three same-spot conflicts kept both sides, main's first). Both **merged into `main` as 942cfdd** (2026-11-04, the Main session; the same three conflicts, main's v0.627 and v0.972 kept first; pushed and live the same day), and this branch moved forward to it (fast-forward).
 
 > Read `CLAUDE.md` first. This file says where the Dashboard core work stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -565,6 +565,272 @@
   - Checked again on 5f28ed9: `check-parts.mjs` 91 of 91; both builds pass (exit 0, the real build last); the check files 19 of 19.
   - Committed on `dashboard-core` (the hash is in `git log`); not pushed. Shared files touched: `src/styles/shared.css` and the rulebook.
 - **2026-10-29 — new item from Jeffrey, passed on by Main:** "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster". It is §4 item 10, its own item rather than part of step 2: its questions can start now, while step 2 waits on its starter. Next: check what the rulebook, the approved mockups and the code already say about the side panel, then ask Jeffrey one question at a time, with pictures at the four sizes. Nothing is built before he OKs the mockup.
+- **2026-10-29 — committed as 2bf89c6** (Show all, v1.117). The report to Main (Done / Needs Jeffrey / Next) wasn't delivered within 20 s.
+- **2026-10-29 — Jeffrey: "Yes, tell Main"** (to "Have Main merge Show all (2bf89c6) into main?"). Passed on to Main with his words; it wasn't delivered within 20 s either (Main may still pick both up). Jeffrey has a text to paste in Main.
+- **2026-10-29 — Jeffrey: "Yes, that's it"** (the side panel for the Grandmaster is the task he gave Main). Research and question 1 (plan §15):
+  - **Research** (a read-only agent, its key lines checked here):
+    - Today the PC panel is icon-only and 52 px wide (v0.4); tablets get 72 px with 12 px names; phones get the bottom bar with names. Nothing expands or collapses.
+    - "Hide private details" is the model for a per-device switch: the account menu, saved in that browser (v0.252, v0.253, v0.506). A per-account setting would need a migration.
+    - Which device the Grandmaster uses isn't recorded.
+  - **Question 1, which look:**
+    - The pictures are Home with each option's CSS put on the real page, at the four sizes.
+    - A sideways-scroll check on all 19 screens at 640, 820 and 1024 px found none.
+  - **Review** (a fresh reviewer agent): **changes needed**. Must-fix: a placeholder left in the text, and C's height cost missing. Should-fix: the mouse's grey area, uneven pros and cons, a missing middle option, and the presentation. All done:
+    - three options: A, the tablet's panel on PC; B, the same panel with 14 px names (the reviewer's middle option; recommended); C, a bigger panel;
+    - the heights each needs: 492, 510 and 556 px;
+    - the mouse greys only the pill;
+    - amber boxes on the panel only, and tighter crops.
+    - **Re-review** (the same reviewer): **ready after one wording fix**. C's names are as big as B's, not bigger. That fix and its minor points are done: the window height is a neutral fact rather than a plus; "12 → 14 px" for B; §1.3's tablet row is named for B and C; only Finance goes off-screen in C's short window; the quote is the design review's own checklist question; the phone row is smaller.
+    - Final picture: `Questions/SP1-large-panel-look.png` (and `.html`); it is best viewed at 100% and scrolled. Sent to Jeffrey.
+- **2026-11-03 — Remote Control turned on** for this session (Jeffrey: "turn on remote access").
+- **2026-11-03 — Jeffrey answered question 1:** "B but make it a setting that I can change. For example, I dont need the icons that big but he might, so let us be able to change based on who is using the it."
+  - The large panel is **B**: 72 px wide, 20 px icons, 14 px names, on PC and tablet. B doesn't make the icons bigger (20 px, the tablet's size); only the names grow, from 12 px to 14 px. That was said to Jeffrey.
+  - It is **each person's own setting**: Jeffrey keeps today's panel, and the Grandmaster turns the large one on. That also answers question 4 (who can use it): everyone, each for themselves.
+  - It works per person only when each person signs in with their own account (rulebook v0.13). On the shared front-desk login "Staff" (v0.27), everyone at the desk shares one setting.
+  - Jeffrey's next message: **"Also allow for bigger icons as well"**.
+    - Read as **one size setting per person, with three sizes**: Standard (today), Large (B) and Largest (C, with 24 px icons).
+    - Question 2 confirms that shape against the other reading, two separate switches. Picture: `Questions/SP2-three-sizes.png`.
+    - Then question 3, how each person's choice is remembered, and question 4, where it lives.
+    - Found for question 3: a per-account setting can be built without a migration, in Supabase's own per-user settings (`user_metadata`, unused in the app today). See plan §15.
+    - **Review of question 2's sheet** (the same reviewer): **changes needed, small**; all done.
+      - The options are named "Three sizes" and "Two switches", not A/B, which clashed with question 1.
+      - The other reading is named: Jeffrey setting each person's size. It is decided with where the setting lives.
+      - Largest's costs are listed: the 24 px icon exception and the 556 px window.
+      - Two switches' fourth look ("bigger icons alone") is drawn: PC 52 px with 24 px icons in 36×36 squares; tablet 72 px with 24 px icons over 12 px names.
+      - "For example" replaces assuming Jeffrey stays on Standard. A new person or device starts on Standard. The PC labels are clearer, and there is a phone row.
+      - The preview server was restarted (`npm run dev:preview-mode`, port 5190; the session had restarted), and all pictures were re-shot the same day; the numbers are unchanged.
+- **2026-11-03 — Jeffrey answered question 2: "Three sizes".** One choice per person: **Standard** (today), **Large** (the 72 px panel with 14 px names) or **Largest** (96 px, 24 px icons, 14 px names). A new person or device starts on Standard.
+  - Next, question 3: **who changes a person's size, and where.** Each person in their own account menu, Jeffrey for each person in Staff accounts, or both.
+  - It comes before "how it's remembered" because it limits the choice. An admin setting another person's size must be saved with that person's account in the database, which needs a migration (the app can't change another person's sign-in settings).
+- **2026-11-03 — Main merged 2bf89c6 (Show all, v1.117) into `main` as 7b665af** (not pushed). Main quoted Jeffrey: "For step one let all of the session that need to merge to do so". `main` also gained Camps, New students N8/N9 and Black Belt up to bf4d13f; the rulebook header is 1.117.
+  - This branch moved forward to 7b665af with `git merge --ff-only main` (a fast-forward; 64 commits). The uncommitted plan, status and question files were untouched.
+  - None of the incoming changes touch the side panel, the account menu, Staff accounts or the app shell, so the question pictures stay valid. Of CLAUDE.md's shared files, only the rulebook changed (other sessions' rows; CRLF intact).
+  - `npm ci` was skipped: `package.json` and `package-lock.json` didn't change, so it would reinstall exactly what's there (and stop the preview server).
+  - Checked on 7b665af: both builds pass (exit 0, the real build last); the check files 19 of 19; `check-parts.mjs` 91 of 91.
+- **2026-11-03 — question 3's sheet reviewed** (the same reviewer): **changes needed, small**; all done.
+  - The step-2 note now covers both places: step 2 hasn't started, and it will redesign the account menu and Staff accounts.
+  - The shared front-desk "Staff" login (v0.27) means one size for everyone at the desk, whichever option is picked.
+  - The row is left out of the phone's menu.
+  - "You" and "Both" also settle question 4 (saved with each account, in the database).
+  - A caption the crop couldn't show was removed, and the keyboard ring now sits on the new item only.
+  - Its build notes are in plan §15: the account menu's own scroll, keyboard behaviour like "This device", radio-group keys in the box, and the icon map.
+  - Final picture: `Questions/SP3-who-changes-it.png`. Sent to Jeffrey.
+- **2026-11-03 — Jeffrey answered question 3: "Each person".**
+  - Each person changes their own size, in their own account menu: a "Panel size" row under "This device", opening to Standard / Large / Largest, like "This device". It is left out of the phone's menu.
+  - No Staff accounts change.
+  - Next, question 4 (the last): how each person's choice is remembered, on each device or with their account. With their account would use Supabase's per-user settings, with no migration.
+- **2026-11-03 — question 4's sheet reviewed** (the same reviewer): **ready**. Its minor points are done:
+  - the account option's missing con: saving needs the internet, and a failed save shows "couldn't save";
+  - a fair pro: after an iPad clears its storage he signs in again anyway, and the size comes back with that sign-in;
+  - the timing: "the next time the dashboard opens there, or within about an hour if it stays open";
+  - a note on the "Calendar" bubble in the picture.
+  - Its build notes are in plan §15: read with `getUser()` at load; accept only the three sizes; fake `getUser`/`updateUser({ data })` in `mockClient.js`; what the 10b row says. It checked that nothing in `supabase/` or `src/` reads `user_metadata` today.
+  - Final picture: `Questions/SP4-remembered.png`. Sent to Jeffrey.
+- **2026-11-03 — Jeffrey answered question 4: "With their account".** Every question is now decided:
+  - **Panel size** is each person's own choice, in their own account menu under "This device": Standard (today), Large (72 px, 20 px icons, 14 px names) or Largest (96 px, 24 px icons, 14 px names).
+  - It applies on PC and tablet. Phones don't change, and the row is left out of the phone's menu.
+  - It is saved **with the person's account**, in Supabase's per-user settings (`user_metadata`), with no migration. It follows them to every device, and new people start on Standard.
+  - Next: the full mockup at the four sizes, a design review, then Jeffrey's OK. After that come the rulebook row (next free 1.118) and the build. Nothing is built before his OK.
+- **2026-11-03 — the mockup** (`Mockups/SP-panel-size.png` / `.html`):
+  - **What it shows:**
+    - the three sizes at PC and tablet;
+    - the "Panel size" row at PC and tablet, and the phone menu with no row;
+    - Testing's menu beside the Large panel;
+    - a short window (1093×514) where the panel and the menu scroll on their own;
+    - a failed save: the amber bar under the top bar.
+  - New pictures were staged on the preview by a scratch script. One run came out as the lock screen and couldn't be reproduced; the script now stops if the preview is locked.
+  - **Design review** (the same reviewer): **changes needed**.
+    - Must-fix: a scrolling panel would cut off the PC name labels and Testing's menu.
+    - Should-fix: the thin scrollbar squeezed the buttons; open at the saved size with no jump; the failed-save bar belongs on the frame, not in one page; list what the OK records in the rulebook; the Color Belt roster overlap at 640–700 px.
+    - Minor: "phones held upright"; read from `session.user` on refresh; keep the current section in view.
+  - All done (plan §15 build notes).
+  - **Re-review: ready after one CSS change and two wording fixes**, all done:
+    - the buttons keep 4 px each side for the keyboard ring (`calc(100% - 8px)`);
+    - the Color Belt note says "11 overlapping pairs in 4 rows; with Largest also at 700 px, not 768";
+    - the keyboard note says only Tab moves between the panel's sections.
+  - It confirmed that showing Testing's menu beside the panel is honest; the build's review checks it with the panel scrolled.
+  - Final: `Mockups/SP-panel-size.png` / `.html`. Sent to Jeffrey for his OK.
+  - Checked first: `main` hasn't moved since 5f28ed9 (2026-10-29), and 2bf89c6 (Show all) is still not merged. Main never received Jeffrey's "Yes, tell Main".
+
+  - **Found on the way:** a phone turned sideways (844×390) gets the tablet panel, which doesn't fit. Prospects and Finance start off-screen, and the page scrolls 94 px. The fix is the panel's own scroll, a build note in plan §15.
+- **2026-11-03 — Jeffrey: "OK, build it"** (the mockup). Built the same day (plan §15, "Built"):
+  - `git merge --ff-only main` first (to 1e6561d; only CLAUDE.md had changed: Camps' migration 0033).
+  - **Rulebook v1.118:** the 10b row, the changelog line, and short lines in §1.3, §2.2, §2.3, §2.4 (`ti-layout-sidebar`) and §6.
+  - **Shared files touched:** the rulebook; `src/App.jsx` (two lines); `src/styles/tokens.css` (`--rail-width-largest`); `src/lib/mockClient.js` (the preview fakes `getUser` and `updateUser({ data })`, plus three helpers). The rest is Dashboard core's own: `src/lib/panelSize.js` (new), `Rail.jsx`, `RailMenu.jsx`, `AccountMenu.jsx`, `Shell.jsx`, `app.css`, `rail-menu.css`, and the tools.
+  - **Checks:** `tools/check-panel.mjs` (new): 33 of 33 at first; 35 checks after the code review's fixes (below). check-parts: 91 of 91. The 19 check files pass. Both builds pass (the real one last).
+  - **Proof:** `Proof/panel/SP-built-vs-mockup.png`. Compared pixel by pixel with the mockup's pictures, the panel and the account menu match exactly. The only differences:
+    - the greeting on Home (the mockup was shot earlier in the day);
+    - Standard's bubble and Testing's menu sit in the same place, with the same shadow, but their letters are smoothed slightly differently, because they are now drawn above the page;
+    - the failed-save bar is the real shared bar (the mockup's hand-made copy had a taller ×);
+    - the short-window menu uses the thin scrollbar.
+  - **Found and fixed on the way:**
+    - In a very short window, Standard's buttons were squashed (36 → about 29 px) instead of the panel scrolling (today too). They no longer shrink.
+    - A dropdown that always had its own scroll changed Chrome's text smoothing. It now scrolls only when the window is too short.
+    - The bubble now measures its icon again as it's pointed at or focused, so it can't be left behind if the panel moves without a redraw.
+    - `tools/chrome.mjs` reused old browser profiles (337 were left in the temp folder). One held an old preview sign-in and opened on the lock screen: that was the "couldn't reproduce" lock while shooting the mockup. Now each run gets a fresh profile, removed afterwards.
+  - **A quirk of the hidden Chrome, not of the app** (the same on `main`'s code): right after a sign-in through the form, the page gets no mouse input until it is opened again. The tools reload after signing in.
+  - **A small call of mine, not in the mockup:** opening "This device" closes Panel size's choices, and the other way round (one open at a time).
+  - **Code and security review:** no security problems. Fixed:
+    - Must-fix (rare): when a sign-out can't reach Supabase with an expired sign-in, Supabase sends no signal. The next person could then see the last person's amber bar, and Retry would have saved the last person's size into their own account. Now a copy of another person's account starts afresh.
+    - The buttons were 63 and 87 px in every window (the 1 px border). They now narrow only while the panel scrolls (`rail--scrolls`), so they are 64 and 88 px again, exactly as before; the checks assert the exact widths.
+    - The preview now repeats Supabase re-sending the browser's older saved copy when a tab is shown again (`__tkdPreview.refocusTab()`), with a check that it can't undo a newer copy.
+    - After × on a failed save, choosing the ticked size again now saves it.
+    - The current section is kept in view when the lock screen closes.
+    - Accepted (plan §15): two tabs saving at the same moment; a sign-in ended elsewhere can now land the person on Home after they sign in again.
+  - **After the fixes:** `check-panel.mjs` 35 of 35. Its first run straight after the edits failed one check (the ticked size saved again). Three runs since, with the module's state printed at that step, passed, and the state was right each time; not reproduced.
+  - **Design review: ready after small fixes.** It matches the mockup (10 scenes compared pixel by pixel), Standard is unchanged, and the menu row, the short windows and the failed-save bar work as specified. Fixed:
+    - Must-fix: when Tab scrolled the rail in a short window, the keyboard ring's top or bottom line was cut off. Now `scroll-padding-block: 8px` on a scrolling rail. A new check tabs through the rail and back at 1093×514; it fails with the fix switched off and passes with it.
+    - Should-fix: in normal windows the ring's right side lost 1 px, because the rail now always clipped. Now the rail scrolls and clips only while it must (`rail--scrolls`); a rail that fits is exactly as before (buttons 64 and 88 px, whole ring).
+    - Minor: on a page with its own scrollbar (Schedule, Calendar, long rosters), the amber bar stuck out 15 px past the page's right edge. It now clears that scrollbar.
+    - Its view of my one-list-open-at-a-time call: right. Recorded in the v1.118 row, so step 2's menu redesign (M17) keeps it.
+    - Accepted: a keyboard ring on "Prospects" in a scrolling Large rail crosses its first and last letters; focus goes to the page after × or Retry (as with the shared bar everywhere).
+    - Found in other sections, theirs to fix (plan §15): the Prospects board scrolls the page sideways at 640 px with a mouse (New students; already on `main`); the Color Belt and Star event lists are crushed at 640 px on touch (Color Belt with Largest; Star already with Standard).
+  - **`main` moved** (Camps and Black Belt merged; 18 commits, to 5f1db41). Only the rulebook overlapped. I set my rulebook lines aside, fast-forwarded with `git merge --ff-only main`, and re-added v1.118 on top of the new rulebook (header 0.736 before). No conflicts.
+  - **Checks after these fixes:** `check-panel.mjs` 38 of 38. check-parts 91 of 91, the 19 check files and both builds pass (on the merged code). The pixel comparison with the mockup is unchanged; the proof was rebuilt.
+  - **The design reviewer's re-check: all three fixed, no new problems.** It tabbed through every short-window case (1093×514 Large and Largest, 844×390 touch at all three sizes, 1093×330 Standard) with no ring cut. Normal windows clip nothing (buttons 64 and 88 px, rings whole), and the bar lines up on Schedule, Calendar, other pages, the tablet and the phone. Resizing and switching sizes never let the page scroll, and the open section stayed in view.
+  - Next: Jeffrey's OK to commit on `dashboard-core` (no push).
+- **2026-11-03 — Jeffrey: "Yes, commit".** Committed on `dashboard-core` (the hash is in `git log`), on top of `main` 5f1db41; not pushed.
+  - In it: the code, the rulebook (v1.118), the plan and this file, `tools/check-panel.mjs` and `tools/chrome.mjs`, the question pictures SP1–SP4 and the mockup (`.html` and `.png`), and the side-by-side proof `Proof/panel/SP-built-vs-mockup.png`. The proof sheet's `.html` stays on this PC (v1.110).
+  - Shared files touched: the rulebook, `src/App.jsx`, `src/styles/tokens.css`, `src/lib/mockClient.js`.
+  - Next: merging it into `main` is Jeffrey's call, through the Main session.
+- **2026-11-03 — committed as 2baea38** (Panel size, v1.118; 26 files, on top of `main` 5f1db41). The report to Main (Done / Needs Jeffrey / Next, with the three notes for other sections) wasn't delivered within 20 s; Main may still pick it up. Jeffrey has the text to paste.
+- **2026-11-03 — Jeffrey: "Yes, tell Main"** (the go to merge Panel size into `main`).
+  - `main` had moved to e7fd75b (Camps C10; New students N10, N13, N14; rulebook v0.626 and v0.737). Only the rulebook overlapped.
+  - So `git merge main` was run here first. It hit the usual three same-spot conflicts: the Version line, the 10b rows, and the changelog's last lines. They were resolved as always: both sides kept, main's first, with this branch's Version line (1.118).
+  - Checked: the merged rulebook is main's plus exactly the v1.118 lines.
+  - Checks on the merged code: the 19 check files, check-parts 91 of 91, check-panel 38 of 38, and both builds (the real one last). Committed as merge commit **723c302**.
+  - Passed on to Main with Jeffrey's words quoted: queued (Main's session was busy), not confirmed read. If `main` is still e7fd75b, Main's merge is a fast-forward with no conflicts.
+  - Next: Main merges. Pushing `main`, which puts it live, needs a separate OK.
+- **2026-11-04 — `main` moved again, to 2e806e7, and was pushed** (Black Belt BB13, rulebook v0.971–v0.972; New students N15, v0.627). Panel size isn't in it yet.
+  - Merging `dashboard-core` (723c302) into it now hits the same three rulebook conflicts again. No code file overlaps.
+  - A correction to the go message was sent to Main: no longer a fast-forward, and how this branch resolves these clashes. It wasn't delivered within 20 s.
+- **2026-11-04 — Jeffrey: "go ahead and tell main again".** `main` was still 2e806e7, without Panel size.
+  - The go was sent again, complete in itself: what to merge (723c302), the three rulebook conflicts and how this branch resolves them, the checks, and the notes for other sections.
+  - It wasn't delivered within 20 s; Main may be holding it for approval. Jeffrey has a short text to paste in Main.
+- **2026-11-04 — merged into `main` as 942cfdd** (the Main session, on Jeffrey's own request there).
+  - Checked here: its parents are 2e806e7 and 723c302. The rulebook has no conflict marks and its header is 1.118. It holds main's v0.627 and v0.972 rows plus exactly the v1.118 lines, and no changelog number is used twice.
+  - This branch moved forward to it with `git merge --ff-only main`, as Main asked. Jeffrey then said the same: "go ahead and merge and report to main".
+  - Checks on 942cfdd: the 19 check files, check-parts 91 of 91, check-panel 38 of 38, and both builds (the real one last).
+- **2026-11-04 — live.** Main pushed `main` 942cfdd on Jeffrey's "push", and Cloudflare reported success. Checked: `origin/main` is 942cfdd, and the live site's code has Panel size.
+- **2026-11-04 — Jeffrey: "ok lets go through them"** (the cleanup notes, §4 item 11).
+  - Checked first: of all their files, only `testing-events.css` has work waiting elsewhere (on `color-belt`, and uncommitted in Color Belt's worktree).
+  - Suggested order:
+    1. the two out-of-date comments;
+    2. Show all's keyboard focus;
+    3. the turned-off icon button look;
+    4. the three copies of the bordered icon button;
+    5. the pale green.
+  - Question 1: fix the two comments.
+- **2026-11-04 — Jeffrey: "Yes, fix both".** Both comments are fixed: `shared.css` above the Mark paid box, and `times.js` lines 5–7. Not committed yet. Next, question 2: Show all's keyboard focus.
+- **2026-11-04 — question 2's picture** (`Questions/CU2-show-all-focus.png` / `.html`; PC, parts page M6, keyboard only).
+  - **Today:** after Enter on Show all, the focus falls to the page. No ring shows, and the next Tab starts again at the top of the page.
+  - **With the fix** (imitated in the picture): the ring is back on the card that was on ("Not paid").
+  - The fix moves the focus only when Show all had it, so a click or a tap shows no ring.
+  - On Jeffrey's yes: rulebook v1.119.
+  - Sent to Jeffrey.
+- **2026-11-04 — Jeffrey: "Yes, fix it"** (question 2).
+  - **Rulebook v1.119:** the 10b row, a pointer on v1.117's row, a line under Metric cards, and the changelog line.
+  - **`CountCards.jsx`:** when Show all had the focus, the focus goes to the card that was on, then the filter clears.
+  - **`check-parts.mjs`:** one new check. With the keyboard: the focus is back on "Not paid", ring showing. After a click: no ring.
+  - Checks: check-parts 92 of 92, the 19 check files, and both builds.
+  - Not committed yet (the review comes at the end of the cleanup).
+  - Next, question 3: turned-off icon buttons.
+- **2026-11-04 — question 3's picture** (`Questions/CU3-turned-off-icon-buttons.png` / `.html`).
+  - **Found:**
+    - The turned-off icon buttons (`disabled`) are Calendar's and Prospects' ⋯ while they save, and Forms' while read-only.
+    - The unavailable ones (`aria-disabled`) are Finance's › on today (its own gray), the parts page's copy of it, and Black Belt's Delete day.
+    - Black Belt's Delete day is meant to be gray, but no shared rule draws `.tib.is-unavailable`, so it looks normal. **Wrong, corrected by the code review:** `blackBelt.css` already grays it (`.bb-day-acts .tib[aria-disabled='true']`, at half strength), and only the square under the pointer reacted. Also, Forms' remove-option × is never read-only; the Forms button that turns off is the list's ⋯ while it works. And the picture's "Today" column for Finance's › missed that it too grayed the square under the pointer.
+  - **The options:**
+    - **A** (recommended): Finance's gray for all of them, shared, with the tooltip still showing the name.
+    - **B:** the same gray, with no tooltip.
+  - The plain-button half of the gray (a page-wide `.btn.is-unavailable`) stays with step 2.
+  - Sent to Jeffrey.
+- **2026-11-04 — `main` moved to 5087732.** It brought:
+  - the Design Review's rolling check, pass 1: fix lists for six sessions, and rulebook v1.035–v1.039;
+  - New students' v0.628–v0.629: Fill in grayed on Draft / Closed forms, with its reason as the tooltip.
+
+  Only the rulebook overlapped this work. v1.119 was set aside, the branch moved forward (`git merge --ff-only main`), and v1.119 was added again on top (the same lines).
+  - **The Design Review's fix list for this session** came with it: `docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md` (§4 item 12).
+- **2026-11-04 — Jeffrey: "A, tooltip shows"** (question 3).
+  - **Rulebook v1.120:** the 10b row, a pointer on v1.116's row, a line under §1.4's tooltip rule, and the changelog line.
+  - **`shared.css`:**
+    - `.tib:disabled` and `.tib[aria-disabled='true']` get the icon in `--color-disabled-text` and the plain pointer;
+    - the bordered one gets the light border;
+    - no gray square under the pointer;
+    - GrayText in High Contrast.
+
+    `IconButton.jsx`'s header comment says so.
+  - **`check-parts.mjs`:** one new check. It covers both kinds, plain and bordered, under a real pointer: the tooltip still shows, and High Contrast gives GrayText.
+  - Checks: check-parts 93 of 93, the 19 check files, and both builds. Not committed yet.
+  - **What changes on screen:**
+    - The Forms list's ⋯ turns gray while it works, and Prospects' Statuses ⋯ while a status is being deleted. Calendar's Event types ⋯ never reach that state today. (Corrected after the reviews; the picture's "while saving" list was wrong too.)
+    - Finance's gray › and Black Belt's gray Delete day look the same at rest. Under the pointer they no longer gray the square (corrected: Black Belt's already had its own gray).
+  - Next, question 4: one bordered icon button.
+- **2026-11-04 — Jeffrey: "Finance does it"** (question 4: who switches Finance's bordered ‹ › to the shared `.tib--outline`).
+  - **Why not here:** Finance's own rolling-check fix list edits the same files (`finance.css` next to these rules, `DayReport.jsx`, `HistoryView.jsx`). v0.626 already says Finance's ‹ › "may move to it later". No rulebook row, as nothing on screen or in the rules changes.
+  - **Done here:** the parts page's copy is gone.
+    - `DP.jsx`'s four buttons use `tib--outline`.
+    - `parts.css` lost `.parts-ibtn` and its touch rules; the first button's tooltip rule now names `.tib`.
+  - **Proof** (before and after, pixel by pixel):
+    - At rest, at the four sizes and with the calendar button turned off: the same pixels.
+    - With the pointer on ‹ or ›: the copy had no hover rules of its own, so it grayed the whole square. It now has Finance's real hover (white inside, darker border). This is the parts page only.
+  - **Finance's note:** to paste into Finance's session after this cleanup is on `main`; the text is in §4 item 11. Not committed yet.
+  - Checks: check-parts 93 of 93 (the date picker's checks press these buttons), the 19 check files, and both builds.
+  - **Next, question 5: the pale green.**
+    - `tokens.css` already has `--color-success-text` (#3B6D11), but nothing for the pale green (#EAF3DE) or the green tag's edge (#CFE3B8).
+    - Every page loads `tokens.css` (the family and kiosk pages too).
+    - Every section's rolling-check fix list edits its own stylesheet.
+- **2026-11-04 — `main` moved to 301e7f1.** It brought Black Belt's BB8 (migration 0034), New students' "(now)" 2 and 3, and the Design Review's v1.040. Again only the rulebook overlapped: v1.119–v1.120 were set aside, the branch moved forward, and they were added again on top (the same lines).
+- **2026-11-04 — Jeffrey: "A, setting + notes"** (question 5).
+  - **Rulebook v1.121:** the 10b row, a line under §7's color rules, and the changelog line.
+  - **`tokens.css`:** `--color-success-bg` (#EAF3DE) and `--color-success-border` (#CFE3B8). **`shared.css`:** the green tag (`.ttag--ok`) uses them.
+  - **`check-parts.mjs`:** one new check: the settings exist, and the green tag's colors are unchanged.
+  - The notes for Camps, New students, Finance, Black Belt and Color Belt are in §4 item 11.
+  - Checks on the whole cleanup (`main` 301e7f1 plus items 1–5): check-parts 94 of 94, check-panel 38 of 38, the 19 check files, and both builds. Not committed yet.
+  - Next: a code reviewer and a design reviewer check the whole cleanup. Then Jeffrey's OK to commit.
+- **2026-11-04 — code review of the cleanup:** one must-fix, three should-fix facts, small points; all done.
+  - **Must-fix:** a click or a tap on Show all could scroll the page. Chrome, Edge and Android focus a clicked button, so focusing the card scrolled it into view when it sat partly off the screen (measured: up to 546 px). Now `focus({ preventScroll: event.detail > 0 })`, so only the keyboard brings the card into view. The check scrolls the card 20 px off the top and asserts that a click doesn't move the page.
+  - **Should-fix (the v1.120 row's facts, corrected):**
+    - Black Belt's Delete day already had its own gray.
+    - The Forms button that turns off is the list's ⋯ while it works.
+    - High Contrast didn't reach Finance's and Black Belt's own grays (their normal colours were swapped for the "works" colour). The High Contrast rules are now `!important`, and the check adds a button with a section's own gray.
+  - **Small:**
+    - The v1.119 row no longer says every browser restarts Tab at the top; that's only some.
+    - The checks move the mouse away and remove their injected parts in `finally`.
+  - **Left as they are:**
+    - A turned-off ⋯ with its menu open would look pressed. No screen reaches that state.
+    - A screen reader may say "pressed" then "not pressed" as the focus lands. That's the cost of keeping the ring.
+  - **For Finance and Black Belt (notes to pass on):**
+    - Under the pointer, their gray › / Delete day no longer gray the square (v1.120).
+    - Black Belt's own rule (`.bb-day-acts .tib[aria-disabled='true']`, half strength) now draws it lighter than the shared gray and fades its tooltip to half. Black Belt can drop that rule; the shared look covers it.
+  - **After the fixes:** check-parts 94 of 94, the 19 check files, and both builds. A probe shows the new scroll step catches the bug: with the old focus call, a click moved the page 20 px; as built, it doesn't move.
+  - Next: the design reviewer's report.
+- **2026-11-04 — design review of the cleanup** (real screens at the four sizes, with real keys, mouse and taps): **changes needed**; all done.
+  - **Must-fix:** the same click-or-tap scroll as the code review (Star and Camps on phones jumped about 260–365 px); already fixed the same way (`preventScroll` unless it's the keyboard).
+  - **Should-fix (facts, corrected):**
+    - **Black Belt's Delete day** already had its own gray, and only the pointer reaction was wrong.
+    - **Finance's gray ›** changes under the pointer (no square now), as option A says. At rest and on keyboard focus it is unchanged.
+    - **The real turned-off cases** are the Forms list's ⋯ while it works and Prospects' Statuses ⋯ while a status is being deleted. Calendar's Event types ⋯ never reach it. The v1.120 row and this file now say so.
+  - **Noted:**
+    - A plain gray icon is only a little lighter than a working one (Jeffrey was told with question 3).
+    - Outside this batch, for New students: in Edit statuses, while a delete saves, the drag grips stay dark although dragging is off.
+  - **For Black Belt** (with the note above): its half-strength rule also fades the keyboard ring (about 2.9:1, not school blue, §4) and the tooltip (white on about #8E8E8E, about 3.3:1). Deleting the rule fixes both.
+  - **Passed:**
+    - The keyboard path on Star and Camps: the ring lands on the card, the next Tab carries on, and Enter turns the filter back on.
+    - No ring after a click or a tap at 820, 390 and 320.
+    - v1.120 on the Forms list, Prospects, Finance and the parts page. Tap areas unchanged. GrayText in High Contrast.
+    - The parts page's date row: pixel-identical at rest at the four sizes.
+    - v1.121: the same pixels on 5 screens.
+    - The rulebook's mechanics.
+- **2026-11-04 — `main` moved to 9b562b3** (New students' "(now)" 4, the kiosk's stylesheet; nothing in this cleanup's files). The branch moved forward with the cleanup in place (`git merge --ff-only main`).
+  - Next: Jeffrey's OK to commit the cleanup on `dashboard-core` (no push).
+- **2026-11-04 — Jeffrey: "Yes, commit".** The cleanup is committed on `dashboard-core` (the hash is in `git log`), on top of `main` 9b562b3; not pushed.
+  - **In it:**
+    - the code: `shared.css`, `tokens.css`, `CountCards.jsx`, `IconButton.jsx`, `times.js`, and the parts page's `DP.jsx` and `parts.css`;
+    - `check-parts.mjs`, the rulebook (v1.119–v1.121) and this file;
+    - the question pictures CU2 and CU3 (`.html` and `.png`).
+  - Shared files touched: the rulebook, `shared.css` and `tokens.css`.
+  - Then the notes to pass on, through Main: Finance (its bordered buttons; the pale green), Camps, New students and Black Belt (the pale green; Black Belt also its half-strength rule; New students also the grips), and Color Belt (the pale green, after its current work).
 
 ## 4. Next
 
@@ -578,7 +844,46 @@
 4. ~~**Merge `dashboard-core` into `main`**~~ — **done 2026-10-28: 95a9601** (the Main session, `--no-ff`, no conflicts; pushed later, live). The request was sent on Jeffrey's "Send it to Main"; it queued without reaching Main until Jeffrey pointed Main to it. CLAUDE.md's shared-files list gained `src/styles/shared.css` and `src/components/text.js` (4c15146, code review N6).
 5. **The date picker opener option** (§11, Finance's v0.817): ~~Jeffrey reviews `Proof/parts/DP-built-vs-F1.png`~~ **OK'd 2026-10-28** ("OK: record and commit"), rulebook **v1.114**, committed on `dashboard-core` as 1bb2683, **merged into `main` as a287ee5** and **live** (pushed with `main` c975428, 2026-10-28). The notes to Finance ("Daily report finance tab": how to use the opener) and Star (its date fields get the re-placement fix) were held by those sessions and not delivered (different permission modes); Jeffrey has the texts to paste.
 6. **The count cards' two-line note** (Star's v0.518: Q5 B / Q5b A, passed on by Main; Jeffrey: "Yes, build it"): built and reviewed (approve), 79 of 79 checks; **OK'd 2026-10-28** ("OK: record and commit"), rulebook **v1.115** (§12), committed on `dashboard-core` as 5628133 (not pushed). The note to Main that it is committed and reviewed was held by Main's session and expired undelivered (the two run in different permission modes); Jeffrey passed it on. **Merged into `main` as a287ee5** and **live** (pushed with `main` c975428, 2026-10-28). The note to Star (how to pass two lines) was held too; Jeffrey has the text to paste. Star's switch to the shared card is Star's own work.
-7. **"Show all" on touch screens** (Star's design reviewer, passed on by Main; `Questions/M6-show-all-on-touch.png`): Jeffrey chose **A, inline** (2026-10-29). The first build's invisible tap box didn't fit, and Jeffrey then chose **(a) room for the box** (2026-10-29, "Room for box"; `Questions/M6-show-all-tap-area.png`). Built (§14): 91 of 91 checks, pixel-identical to his option (a) on Star's screen (`Proof/parts/M6-show-all-built-vs-a.png`). Reviewed: **ready** after its fixes (re-review, 2026-10-29). **OK'd 2026-10-29** ("Yes, record it"), rulebook **v1.117**, committed on `dashboard-core` on top of `main` 5f28ed9 (not pushed). Next: Main merges it into `main` on Jeffrey's go; Star gets it with `git merge main`.
+7. **"Show all" on touch screens** (merged into `main` as 7b665af on 2026-11-03, the Main session; not pushed) (Star's design reviewer, passed on by Main; `Questions/M6-show-all-on-touch.png`): Jeffrey chose **A, inline** (2026-10-29). The first build's invisible tap box didn't fit, and Jeffrey then chose **(a) room for the box** (2026-10-29, "Room for box"; `Questions/M6-show-all-tap-area.png`). Built (§14): 91 of 91 checks, pixel-identical to his option (a) on Star's screen (`Proof/parts/M6-show-all-built-vs-a.png`). Reviewed: **ready** after its fixes (re-review, 2026-10-29). **OK'd 2026-10-29** ("Yes, record it"), rulebook **v1.117**, committed on `dashboard-core` as **2bf89c6** on top of `main` 5f28ed9 (not pushed). Jeffrey's go to merge: 2026-10-29, "Yes, tell Main"; passed on to Main, not delivered within 20 s (Jeffrey has the text to paste). Next: Main merges it into `main`; Star gets it with `git merge main`.
 8. **The dropdown and time list turned off** (Finance's v0.823, "C, via Dashboard core"; §13): built, reviewed (ready; its should-fixes done), 87 of 87 checks; rulebook **v1.116**; committed on `dashboard-core` as **cc92332**, **merged into `main` as e3e46d4** (2026-10-29, the Main session, no conflicts) and **live** (pushed with Jeffrey's OK the same day; the Cloudflare deploy succeeded). Main told Finance it can merge `main` and build F2 with `<TimeList disabled={!on} … />`.
 9. **Step 2 — the dashboard's own screens** (`docs/Design Review/End review/Prompts/2-DashboardCore-step2-main-screens.md`): the top bar, Home, the account dialogs and menu, Staff accounts and Settings (design review M12–M14, M17; M15 with Color Belt; M16 later). Waits on: Jeffrey pasting its starter here. `git merge main` first; rulebook rows take the next free number in 1.100–1.199.
-10. **A larger side panel for the Grandmaster** (Jeffrey via Main, 2026-10-29: "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster"). Not started. Its own item, not part of step 2, so its questions can start now; if its switch lives in Settings or the account menu, step 2's designs of those include it. First: what the rulebook, the approved mockups and the code already say about the side panel (rail and labels, touch sizes, per-device vs per-account settings, Hide private details as a per-tablet switch). Then the open questions to Jeffrey, one at a time, with pictures at the four sizes. Nothing is built before he OKs the mockup.
+10. **A larger side panel for the Grandmaster** (Jeffrey via Main, 2026-10-29: "Add to Dashboard core: a side-panel toggle for a large panel with names under the icons, for the Grandmaster"). It is its own item, not part of step 2. If its switch lives in Settings or the account menu, step 2's designs of those include it.
+   - Research done (plan §15).
+   - ~~Question 1: which look~~ — **decided 2026-11-03: B**, the same 72 px panel with 14 px names on PC and tablet, as **each person's own setting** (Jeffrey keeps today's panel). That also settles who can use it: everyone, each for themselves. Picture: `Questions/SP1-large-panel-look.png`.
+   - Then: "Also allow for bigger icons as well".
+   - ~~Question 2: the setting's shape~~ — **decided 2026-11-03: three sizes**, one choice per person: Standard, Large (B) or Largest (C). Picture: `Questions/SP2-three-sizes.png`.
+   - ~~Question 3: who changes it, and where~~ — **decided 2026-11-03: each person**, in their own account menu (a "Panel size" row like "This device"). Picture: `Questions/SP3-who-changes-it.png`.
+   - ~~Question 4: how it's remembered~~ — **decided 2026-11-03: with their account** (Supabase's per-user settings, no migration). Picture: `Questions/SP4-remembered.png`.
+   - **The mockup** (`Mockups/SP-panel-size.png`): **OK'd 2026-11-03** ("OK, build it"); rulebook **v1.118**.
+   - **Built 2026-11-03:** 38 of 38 checks (`tools/check-panel.mjs`); proof `Proof/panel/SP-built-vs-mockup.png`. Code and security review: done, its fixes made. Design review: ready after small fixes, made; its re-check found them all fixed. **Committed 2026-11-03** on `dashboard-core` as **2baea38** (Jeffrey: "Yes, commit"), on top of `main` 5f1db41; not pushed. `main` merged in up to e7fd75b (merge commit **723c302**; the checks pass). Jeffrey's go to merge: 2026-11-03, "Yes, tell Main"; passed on to Main (queued, not confirmed read). **Merged into `main` as 942cfdd** (2026-11-04, the Main session, on Jeffrey's own request there; the rulebook's three conflicts kept both sides, main's first), and this branch moved forward to it. **Live:** Main pushed `main` 942cfdd on Jeffrey's "push" (2026-11-04). The Cloudflare deploy succeeded, and the live site's code has Panel size.
+11. **Shared-file notes from other sessions** (passed on by Main, 2026-11-03). For the to-do list only: none is approved work yet, and each needs Jeffrey's go before anything changes.
+   - **New students (N13, not on `main` yet):** a turned-off `.tib` (the shared icon button) has no turned-off look, and still shows its hover and its tooltip. **Done 2026-11-04** (Jeffrey: "A, tooltip shows"; rulebook v1.120; checked). Not committed yet.
+   - **One look, three copies:** the bordered icon button exists as Finance's `.fin-ibtn`, `parts.css`'s `.parts-ibtn`, and New students' new `.tib--outline` in `shared.css` (a copy of Finance's look). Finance could switch to `.tib--outline` later.
+     - **2026-11-04** (Jeffrey: "Finance does it"): the parts page's copy is gone (not committed yet).
+     - Finance's switch is Finance's, after this cleanup is on `main`. The note to paste is below:
+       > Finance: switch your bordered icon buttons to the shared one, after Dashboard core's cleanup (rulebook v1.119–v1.120) is on main (`git merge main` first). Nothing on screen changes.
+       > (1) `DayReport.jsx`: Previous day, Next day and the calendar button take `className="tib--outline"` (Next day keeps its `aria-disabled`: the shared look grays any button with `aria-disabled="true"`, so `is-unavailable` isn't needed).
+       > (2) `HistoryView.jsx`: Previous month and Next month, the same.
+       > (3) `finance.css`: delete the copy (`.fin-ibtn.tib`, `.fin-ibtn .tib-box`, `.fin-ibtn.is-unavailable` and its `.tib-box`, about lines 142–162; in the hover section, `.fin-ibtn:not(.is-unavailable):hover .tib-box` out of the rule it shares with `.fin-hidden-chip:hover`, keeping the chip's; in the touch section, `.fin-ibtn.tib` and `.fin-ibtn .tib-box`). The first button's tooltip rule (`.fin-dayrow > .fin-ibtn:first-child .tib-tip` and its `::after`) becomes `.fin-dayrow > .tib:first-child …`.
+       > Check: the Daily report and History at the four sizes look as before (at rest, with the pointer on ‹ and on the gray ›, and the tooltips). `shared.css`'s `.tib--outline` is then the only copy.
+   - **From Camps:** `shared.css` around lines 1687–1688 still mentions `camps.css`'s `.cp-popover`, which Camps removed. A harmless out-of-date comment. **Fixed 2026-11-04** (Jeffrey: "Yes, fix both"); not committed yet.
+   - **From New students** (passed on by Main, 2026-11-03): the pale green `#eaf3de` is typed out by hand, with no shared color setting in `tokens.css`. On `main` 5f1db41 it appears 7 times in 6 stylesheets: `shared.css`, `finance.css` (twice), `camps.css`, `testing-events.css`, `forms-public.css` and `blackBelt/form/form.css`. On 942cfdd, New students' N14 added one more, in `forms.css`: 8 times in 7 files, one of them in a comment.
+     - **2026-11-04** (Jeffrey: "A, setting + notes"; rulebook v1.121): `tokens.css` has `--color-success-bg` (#EAF3DE) and `--color-success-border` (#CFE3B8) next to `--color-success-text`, and `shared.css`'s green tag uses them. Not committed yet.
+     - Each section switches its own copies once this cleanup is on `main` (`git merge main` first). Nothing on screen changes. The notes to pass on:
+       > **Camps:** `src/styles/camps.css`, `.cp-dc--came` (about line 763): `border-color: #cfe3b8` → `var(--color-success-border)`, `background: #eaf3de` → `var(--color-success-bg)` (rulebook v1.121: use the settings, don't type the colors).
+       > **New students:** `src/styles/forms.css` (Fill in's Sent tick, about line 946) and `src/styles/forms-public.css` (the family page's tick, about line 496): `background: #eaf3de` → `var(--color-success-bg)` (v1.121). Both pages load `tokens.css`.
+       > **Finance:** `src/styles/finance.css` lines 13–17: `--fin-ok-bg: #eaf3de` → `var(--color-success-bg)` and `--fin-ok-border: #cfe3b8` → `var(--color-success-border)` (or use the shared settings directly where `--fin-ok-*` are used); the comment on line 13 can then name the settings (v1.121).
+       > **Black Belt:** `src/blackBelt/form/form.css`, the family form's tick circle (about line 765): `background: #eaf3de` → `var(--color-success-bg)` (v1.121). The form loads `tokens.css`.
+       > **Color Belt** (after its current work in that file): `src/styles/testing-events.css`, `.gr-res-pass.is-chosen` (about line 750): `background: #eaf3de` → `var(--color-success-bg)` (v1.121).
+   - **From Camps' C10 review** (passed on by Main, 2026-11-03): in the shared `CountCards.jsx`, pressing Show all with the keyboard sends focus to the page, when it should go back to the card that was on. Star does the same, so the fix belongs in the shared part.
+     - Checked: Show all sits in the gray line, which disappears as soon as the filter is off. The focused button goes with it, and nothing moves focus first.
+     - It's a miss in this branch's own part (v1.117's Show all), and its reviews didn't catch it.
+     - Likely fix: focus the card that was on, then clear the filter. The look doesn't change.
+     - **Fixed 2026-11-04** (Jeffrey: "Yes, fix it"; rulebook v1.119; checked). Not committed yet.
+   - **From Black Belt** (passed on by Main, 2026-11-04): `src/lib/times.js`, lines 5–6, still says Black Belt picks times every 15 minutes. Since BB13 (live on `main` 2e806e7), it uses the shared time list: every 5 minutes, 6:00 AM–10:00 PM.
+     - Checked: the whole sentence is out of date. On `main`, Star, Camps and Finance use the shared list too; only Color Belt doesn't yet.
+     - A comment-only fix, best done with the next shared-file change. **Fixed 2026-11-04** (Jeffrey: "Yes, fix both"). It now names no section, so it can't go out of date again. Not committed yet.
+12. **The Design Review's rolling check, pass 1** (`docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md`, on `main` since 5087732).
+   - It has 6 "fix now" items (R2-05, R4-07, R1-08, R4-09, R3-12, R3-13), 11 that wait on Jeffrey, and a "smaller" list.
+   - Four of the smaller ones are item 11's: the `.cp-popover` comment, the turned-off icon button, the three bordered copies, and the pale green.
+   - Waits on: Jeffrey pasting its starter here. Then a plan, and pictures for anything that changes how a screen looks.

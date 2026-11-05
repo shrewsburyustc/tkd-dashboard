@@ -3,7 +3,7 @@
 // approved mockup (docs/Prospects/TKD-Forms-Mockups.html, rulebook v0.235 / v0.241 / v0.242) and
 // to change it later. The data layer only returns codes ('stale', 'waiverEmpty' …); this file
 // turns them into plain English.
-import { formatDate } from '../../lib/schedule/versions.js';
+import { formatDate, localDay } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Forms';
@@ -43,7 +43,8 @@ export const SHARE = 'Share';
 export const DUPLICATE = 'Duplicate';
 export const CLOSE_FORM = 'Close form';
 export const OPEN_FORM = 'Open form';
-export const DELETE_FORM = 'Delete';
+// the ⋯ item and the confirm box's action say the same words (design review N3, v1.008)
+export const DELETE_FORM = 'Delete form';
 export const shareLabel = (name) => `Share ${name}`;
 export const moreLabel = (name) => `More actions for ${name}`;
 export const openLabel = (name) => `Open ${name}`;
@@ -55,9 +56,16 @@ export const UNDONE = 'Undone'; // after an Undo worked (v0.618)
 export const UNDO_STALE = "Couldn't undo. Someone else changed this form just now."; // like Schedule's and Star's
 export const deletedToast = (name) => `${name} was deleted.`;
 export const DELETE_TITLE = 'Delete this form?';
+export const KEEP_FORM = 'Keep form'; // the confirm box's "changes nothing" button (N3)
+export const DELETING = 'Deleting…';
+// Delete form failed (the connection): nothing tries again by itself, so the words don't say it
+// will (Star's approved v0.518 wording)
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
 export const deleteText = (name) => `"${name}" and its booking settings will be deleted. This can't be undone.`;
 export const HAS_SIGNUPS = 'Families have signed up with this form, so it can\'t be deleted. Close it instead — every sign-up keeps its form.';
 export const DRAFT_NO_FILL = 'Publish the form first — then it can be filled in.';
+// A Closed form is already published: only an admin can open it again (rulebook v0.629)
+export const CLOSED_NO_FILL = 'This form is closed. An admin can open it again.';
 
 // ----- New form -----
 export const NEW_FORM_TITLE = 'New form';
@@ -86,7 +94,7 @@ export const ADD_FIELD = 'Add field';
 export const SAVED_NOTE = 'Changes save as you go. Families see them after Publish.';
 export function statusLine(form, { dirty, saving, failed }) {
   const parts = [STATUS[form.status]];
-  if (form.publishedAt) parts.push(`last published ${formatDate(form.publishedAt.slice(0, 10), { weekday: false, year: false })}`);
+  if (form.publishedAt) parts.push(`last published ${formatDate(localDay(form.publishedAt), { weekday: false, year: false })}`);
   else parts.push('not published yet');
   if (failed) return { text: parts.join(' · '), extra: 'not saved', warn: true };
   if (saving) return { text: parts.join(' · '), extra: 'saving…', warn: false };
@@ -104,18 +112,23 @@ export const DUPLICATE_SLUG = 'Another form already uses that web address. Pick 
 export const PALETTE_GROUPS = { Contact: 'Contact', Choices: 'Choices', School: 'School', Layout: 'Layout' };
 export const TYPE_LABEL = {
   short_text: 'Short text', long_text: 'Long text', phone: 'Phone', email: 'Email', number: 'Number', date: 'Date',
-  choice: 'One choice', checkboxes: 'Checkboxes', dropdown: 'Dropdown', booking: 'Book a class', waiver: 'Waiver',
+  address: 'Address', choice: 'One choice', checkboxes: 'Checkboxes', dropdown: 'Dropdown', booking: 'Book a class', waiver: 'Waiver',
   heading: 'Heading and text', step: 'New step',
   parent_name: 'Parent name', parent_phone: 'Phone', parent_email: 'Email', children: 'Children',
 };
 export const addType = (type) => `Add ${TYPE_LABEL[type]}`;
-export const ONLY_ONE = { booking: 'This form already has a Book a class block.', waiver: 'This form already has a Waiver block.' };
+export const ONLY_ONE = {
+  booking: 'This form already has a Book a class block.',
+  waiver: 'This form already has a Waiver block.',
+  address: 'This form already has an Address question.', // one per form (v0.634)
+};
 export const TOO_MANY = 'A form can have at most 60 fields.';
 export const stepLabel = (n, label) => `Step ${n} · ${label}`;
 export const REQUIRED_MARK = '· required';
 export const LOCKED = 'Always on the form';
 export const showsIf = (question, value) => `Shows only if "${question}" is ${value}`;
-export const CHILD_HINT = 'First name, age · "+ Add another child"';
+export const CHILD_HINT = 'First name, last name, date of birth · "+ Add another child"'; // v0.634, v0.637
+export const ADDRESS_HINT = 'Street, city, state, ZIP code'; // the Address question in the builder (v0.634)
 export const bookingHint = (classes, times) => (classes === 0 ? 'No classes picked yet' : `${classes === 1 ? '1 class' : `${classes} classes`} · ${times === 1 ? '1 time' : `${times} times`}`);
 export const WAIVER_HINT_EMPTY = 'No wording yet — write it before publishing';
 export const WAIVER_HINT = 'Waiver text · I agree · signature';
@@ -125,6 +138,9 @@ export const SHOW_IF_ORDER = 'A "Show only if" question must stay below the ques
 export const MOVE_UP = 'Move up';
 export const MOVE_DOWN = 'Move down';
 export const DELETE_FIELD = 'Delete field';
+// The toast after deleting a field, with Undo (rulebook v0.630)
+export const UNDO_FIELD_CHANGED = "Couldn't undo — the form has changed since.";
+export const fieldDeleted = (label) => (String(label ?? '').trim() ? `“${String(label).trim()}” deleted` : 'Field deleted');
 export const EDIT_FIELD = 'Edit';
 export const FORM_SETTINGS = 'Form settings';
 export const NO_FIELD_HINT = 'Click a field to change it, or empty space for the form settings.';
@@ -137,7 +153,7 @@ export const STEP_NAME = 'Step name';
 export const HELP = 'Help text (optional)';
 export const REQUIRED = 'Required';
 export const ALWAYS_REQUIRED = 'Always required — we need a way to reach the family.';
-export const CHILDREN_HINT = 'Families add 1 to 6 children: first name and age.';
+export const CHILDREN_HINT = 'Families add 1 to 6 children: first name, last name and date of birth.';
 export const BOOKING_NEVER_REQUIRED = 'Never required — when no times are open, families can still send the form.';
 export const OPTIONS = 'Options';
 export const option = (n) => `Option ${n}`;
@@ -220,6 +236,7 @@ export const KIOSK_PIN_TIP = 'Tip: turn on Guided Access (iPad) or screen pinnin
 export const KIOSK_NOT_SHARED = 'You are signed in with your own account. Kiosk mode is meant for the shared front-desk account: your PIN will be the one that ends it.';
 export const KIOSK_OPEN = 'Open kiosk mode';
 export const KIOSK_OPENING = 'Opening…';
+export const KIOSK_STAY = 'Stay in the dashboard'; // the open ask's "changes nothing" button (N3)
 export const KIOSK_FAILED = "Couldn't open kiosk mode. Check the connection, then try again.";
 export const KIOSK_NOT_LIVE = 'This form is no longer Live, so it can\'t run in kiosk mode.';
 export const KIOSK_END = 'End kiosk mode on all tablets';
@@ -227,6 +244,8 @@ export const KIOSK_END_HINT = 'For a lost or stolen tablet: its kiosk stops at t
 export const KIOSK_END_TITLE = 'End kiosk mode on all tablets?';
 export const KIOSK_END_TEXT = 'Every tablet running this form in kiosk mode stops. A family that is filling it in right now still gets signed up.';
 export const KIOSK_END_CONFIRM = 'End kiosk mode';
+export const KIOSK_ENDING = 'Ending…';
+export const KIOSK_KEEP_ON = 'Keep kiosk mode on'; // the end ask's "changes nothing" button (N3)
 export const kioskEnded = (n) => (n === 0 ? 'No tablet was in kiosk mode for this form' : `Kiosk mode ended on ${n} tablet${n === 1 ? '' : 's'}`);
 export const KIOSK_END_FAILED = "Couldn't end kiosk mode. Check the connection, then try again.";
 export const SHARE_DRAFT = 'A Draft form can\'t be shared until it\'s published.';
@@ -241,8 +260,17 @@ export const stepOf = (n, total, label) => `Step ${n} of ${total} · ${label}`;
 export const ENTERED_BY = 'You are filling this in for a family. It will be marked "Entered by" you.';
 export const CHILD = (n) => `Child ${n}`;
 export const FIRST_NAME = 'First name';
-export const AGE = 'Age';
+export const LAST_NAME = 'Last name'; // v0.637
+export const DOB = 'Date of birth'; // v0.634: the age is worked out from it
+// inside the date of birth's calendar (the same set-up as Star's date of birth)
+export const DOB_CALENDAR_HINT = "Pick the month and year first, then the day. Future dates can't be chosen.";
+export const yearsOld = (n) => (n === 1 ? '1 year old' : `${n} years old`); // under the date of birth once picked
 export const ADD_CHILD = 'Add another child';
+// The Address question's four boxes (v0.634; the question's own label, e.g. "Home address", is above them)
+export const STREET = 'Street address';
+export const CITY = 'City';
+export const STATE = 'State';
+export const ZIP_CODE = 'ZIP code';
 export const removeChild = (n) => `Remove child ${n}`;
 export const pickTimeFor = (name) => (name ? `Free class for ${name}` : 'Free class');
 export const pickTimeProblem = (name) => `Pick a time for ${name}, or "No time yet".`;
@@ -257,6 +285,9 @@ export const TIMES_FAILED = "Couldn't load the open times. Check the connection.
 export const AGREE = 'I have read and agree to the waiver';
 export const SIGN_HERE = 'Signature';
 export const SIGN_HINT = 'Sign with a finger, pen or mouse.';
+// under the signature: today's date, filled in by itself (v0.635); the day saved is the day it's sent
+export const DATE_SIGNED = 'Date signed';
+export const DATE_SIGNED_HINT = "Filled in automatically with today's date.";
 export const CLEAR = 'Clear';
 export const SEND = 'Send';
 export const SUBMITTING = 'Sending…';
@@ -270,11 +301,37 @@ export const FIELD_PROBLEM = {
   date: 'Pick a date.',
   choice: 'Pick one of the options.',
   children: 'Add at least one child (up to 6).',
-  child: 'Each child needs a first name and an age from 2 to 99.',
+  // the children's boxes (v0.634, v0.637): put together into one line by childrenProblemLine below
+  child_dob: "Pick each child's date of birth.",
+  child_name_long: "Keep each child's first and last name to 40 characters or fewer.",
+  child_name_bad: "A child's name has a character that can't be used. Retype it.",
+  child_age: 'Each child needs to be 2 to 99 years old. Check the date of birth.',
+  // the Address question (v0.634): put together by addressProblemLine below
+  address: 'Enter the whole address: street, city, state and ZIP code.',
+  zip: 'Enter a 5-digit ZIP code.',
   signature: 'Please sign in the box.',
   booking_pick: 'Pick a time for each child, or "No time yet".',
   booking_full: 'Two children picked a time with fewer spots left. Pick another time for one of them.',
 };
+// "a", "a and b", "a, b and c"
+const andList = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+const CHILD_BOX_WORDS = { first_name: 'first name', last_name: 'last name', dob: 'date of birth' };
+// The ONE line under the children, about every wrong box at once (design review), from
+// childrenProblemKinds (lib/forms/fields.js): e.g. a blank child → "Enter each child's first name,
+// last name and date of birth."
+export function childrenProblemLine({ missing, long, bad, age }) {
+  const parts = [];
+  if (missing.length === 1 && missing[0] === 'dob') parts.push(FIELD_PROBLEM.child_dob);
+  else if (missing.length > 0) parts.push(`Enter each child's ${andList(missing.map((box) => CHILD_BOX_WORDS[box]))}.`);
+  if (long) parts.push(FIELD_PROBLEM.child_name_long);
+  if (bad) parts.push(FIELD_PROBLEM.child_name_bad);
+  if (age) parts.push(FIELD_PROBLEM.child_age);
+  return parts.join(' ');
+}
+// The ONE line under an address, about every wrong box at once: codes = addressPartProblems' values
+export function addressProblemLine(codes) {
+  return ['address', 'zip', 'text'].filter((code) => codes.includes(code)).map((code) => FIELD_PROBLEM[code]).join(' ');
+}
 export const takenBy = (names) => `Taken by ${names}`;
 export const SENT_TITLE = 'Sent';
 export const sentText = (parent) => `${parent}'s sign-up is saved.`;
@@ -288,4 +345,6 @@ export const SEND_INVALID = 'Some answers were refused. Check them and send agai
 export const timeOption = (t) => `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`;
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const LEAVE_FILL = 'This sign-up isn\'t sent yet. Send it or press Cancel to throw it away.';
-export const DISCARD = 'Throw it away';
+// Phones have no Cancel button, so the phone note points at its own link instead (design review N15)
+export const LEAVE_FILL_PHONE = 'This sign-up isn\'t sent yet. Send it or discard it.';
+export const DISCARD_CHANGES = 'Discard changes';

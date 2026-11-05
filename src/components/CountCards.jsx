@@ -1,5 +1,5 @@
 // CountCards.jsx — the row of count cards above a roster (design review M6, rulebook v1.013 /
-// v1.014 / v1.107 / v1.115 / v1.117; §8 Metric cards).
+// v1.014 / v1.107 / v1.115 / v1.117 / v1.119; §8 Metric cards).
 // Why it exists: Color Belt (twice), Star and Black Belt each drew their own cards; Camps had a
 // summary line. Every roster gets this one row:
 //   - up to four cards in a row, two by two on phones: a small icon and label on top, the number
@@ -11,7 +11,8 @@
 //     link inside that line: on touch it keeps the line's height, right after the dot, with an
 //     invisible tap area of exactly 44px (the way Star's own inline links get theirs); the line
 //     (.cards-showing) gets room for that area, so it never covers the cards above or a control
-//     under the line (v1.117, option a);
+//     under the line (v1.117, option a). Show all disappears as it's pressed, so when it had the
+//     keyboard focus, the focus goes back to the card that was on (v1.119), not to the page;
 //   - the 'all' card (Students, Campers) is a button that shows everyone;
 //   - a money total (Payments recorded) is never a button;
 //   - a section can add one gray line under the row (Black Belt's duplicates note);
@@ -31,6 +32,7 @@
 //   showingText   the section's words for the gray line while a filter is on ("Showing not paid only")
 //   showAllLabel  optional; default "Show all"
 //   note          optional gray line under the row
+import { useRef } from 'react';
 import { SHOW_ALL } from './text.js';
 
 // A card's note as a list of lines: one line (a string) or two (an array; the rulebook allows two,
@@ -38,8 +40,23 @@ import { SHOW_ALL } from './text.js';
 const noteLines = (note) => (Array.isArray(note) ? note : [note]).filter(Boolean);
 
 export default function CountCards({ cards, selected = null, onSelect, showingText, showAllLabel = SHOW_ALL, note = null }) {
+  // The filter cards' buttons, by key, so Show all can put the focus back on the card that was on.
+  const cardButtons = useRef(new Map());
   if (!cards || cards.length === 0) return null;
   const selectedCard = cards.find((card) => card.kind === 'filter' && card.key === selected) ?? null;
+
+  // Show all disappears as it's pressed (its gray line goes with the filter). If it had the focus,
+  // the focus goes back to the card that was on first, so it isn't lost to the page (v1.119). The
+  // browser draws the focus ring only after the keyboard, so after a click or a tap none shows.
+  // A click or a tap must not scroll the page either (Chrome, Edge and Android focus a clicked
+  // button, so a card partly off the screen would be scrolled into view): event.detail counts the
+  // clicks, and a key press makes 0, so only the keyboard brings the card into view.
+  function showAll(event) {
+    if (document.activeElement === event.currentTarget) {
+      cardButtons.current.get(selectedCard.key)?.focus({ preventScroll: event.detail > 0 });
+    }
+    onSelect(null);
+  }
 
   return (
     <>
@@ -74,6 +91,10 @@ export default function CountCards({ cards, selected = null, onSelect, showingTe
           return (
             <button
               key={card.key}
+              ref={(node) => {
+                if (node) cardButtons.current.set(card.key, node);
+                else cardButtons.current.delete(card.key);
+              }}
               type="button"
               className={`ev-card ev-card--button${pressed ? ' is-selected' : ''}`}
               aria-pressed={isFilter ? (pressed ? 'true' : 'false') : undefined}
@@ -88,7 +109,7 @@ export default function CountCards({ cards, selected = null, onSelect, showingTe
       {selectedCard && (
         <p className="ev-filter-line cards-showing">
           {showingText} ·{' '}
-          <button type="button" className="link-button inline-link" onClick={() => onSelect(null)}>
+          <button type="button" className="link-button inline-link" onClick={showAll}>
             {showAllLabel}
           </button>
         </p>

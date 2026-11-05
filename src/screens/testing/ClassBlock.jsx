@@ -15,7 +15,8 @@
 // its open/close button is the row's focus target and the other buttons follow with ← →.
 import { IconChevronDown, IconChevronUp, IconDots, IconEdit, IconPlus } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
-import RankRows, { Grip, Tag } from './RankRows.jsx';
+import Grip from '../../components/Grip.jsx';
+import RankRows, { Tag } from './RankRows.jsx';
 import * as T from './text.js';
 
 // The arrow-key navigation key of a class line (rank rows use the rank id).

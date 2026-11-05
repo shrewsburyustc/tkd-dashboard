@@ -27,7 +27,7 @@ export const CLOSE = 'Close';
 export const LOADING = 'Loading the receipt'; // screen readers only (not in the mockups)
 export const LOAD_FAILED = "Couldn't load the receipt. Check the connection, then try again."; // (not in the mockups)
 export const NOT_FOUND = 'This candidate was deleted, so there is no receipt.'; // (not in the mockups)
-export const HIDDEN = 'Payments are hidden on this device.'; // (not in the mockups; Hide payments switch, v0.215)
+export const HIDDEN = 'Payment details are hidden on this tablet.'; // Hide private details on: the shared receipt's words (v1.105, v0.974)
 // The printed page's name for screen readers in the preview (the picture of the page).
 export const PAGE_LABEL = 'Receipt page as it will print'; // screen readers only (not in the mockups)
 

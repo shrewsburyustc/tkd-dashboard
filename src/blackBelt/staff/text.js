@@ -616,8 +616,8 @@ export const detailSub = (cycleName, dan, code) => `${cycleName} · ${DAN_LABELS
 export const editDetailsSub = (name, cycleName, dan, code) => `${name} · ${detailSub(cycleName, dan, code)}`;
 export const dobLine = (dob, age, firstDay) => (age === null || age === undefined || !firstDay ? monthDayYear(dob) : `${monthDayYear(dob)} (${age} on ${monthDayYear(firstDay)})`);
 export const DELETED_AFTER_KEEPING = 'Deleted after the keeping time';
-export const HIDDEN_ON_DEVICE = 'Hidden on this device'; // Hide payments on (OP-B7)
-export const PAYMENTS_HIDDEN = 'Payments are hidden on this device.'; // (OP-B7)
+export const HIDDEN_ON_DEVICE = 'Hidden on this tablet'; // Hide private details on (OP-B7; "tablet" as every section, v0.507 / v0.974)
+export const PAYMENTS_HIDDEN = 'Payments are hidden on this tablet.'; // (OP-B7; v0.974)
 export const registeredLine = (registeredOn, source, code) =>
   source === 'desk' ? `${shortDate(registeredOn)} · at the desk` : `${shortDate(registeredOn)} · family form (${schoolName(code)} link)`;
 export const VIEW_SIGNATURE = 'View signature';
@@ -1324,3 +1324,70 @@ export const EDIT_CYCLE_HAS_GRADES = 'Some testing days already have grades, so 
 // ----- Q-G1 / OI-2 (v0.948 / v0.956): a cycle's rubric locked by grading -----
 export const lockedByGrading = (date) => `Locked — grading started ${date}. Changes go into the default rubric for next season.`; // new wording, not in the mockups
 export const RUBRIC_LOCKED_GRADING_NOW = "Grading started, so this rubric is locked now. Your changes weren't saved."; // new wording, not in the mockups
+
+// ----- BB8: the History line at the end of a candidate's details (rulebook v0.971, v0.972) -----
+// The words for one change in the candidate's history (candidates/historyWords.js picks which).
+// Lines drawn in the approved pictures (images/bb8-bb13/BB8-history*.png) carry no mark; every
+// other line is marked PROPOSAL (not in the pictures) for Jeffrey's walkthrough.
+// Money is written as on the rest of the page (formatCents: "$870").
+export const HISTORY_STAFF = 'Staff'; // the actor when the log has no name
+// The candidate row
+export const HISTORY_REGISTERED_FORM = 'Registered on the family form';
+export const HISTORY_ADDED_DESK = 'Added at the desk'; // PROPOSAL (Star's words)
+const keptPart = (n, one, many) => (n > 0 ? ` · ${n} ${n === 1 ? one : many} copied` : '');
+// "Added as a make-up from Spring 2027 · 12 kept grades copied · 1 kept extra-points count copied"
+// — the make-up row and the grades / counts Add make-up copied in are ONE line (v0.971). PROPOSAL
+export const historyAddedMakeup = (fromCycleName, keptGrades = 0, keptCounts = 0) =>
+  `Added as a make-up${fromCycleName ? ` from ${fromCycleName}` : ''}${keptPart(keptGrades, 'kept grade', 'kept grades')}${keptPart(keptCounts, 'kept extra-points count', 'kept extra-points counts')}`;
+// "School: Worcester → Shrewsbury" (one save's changes are joined with "; ")
+export const historyField = (label, before, after) => `${label}: ${before} → ${after}`;
+export const HISTORY_EMPTY_VALUE = '—'; // a value that was empty (PROPOSAL)
+export const HISTORY_DAN = 'Dan';
+const clearedPart = (n, one, many) => (n > 0 ? ` · ${n} ${n === 1 ? one : many} cleared` : '');
+// "Dan: 1st → 2nd Dan · 18 grades cleared" — one line for the whole Dan change (v0.971)
+export const historyDan = (oldDan, newDan, cleared = {}) =>
+  `${HISTORY_DAN}: ${(DAN_LABELS[oldDan] ?? String(oldDan ?? '')).replace(/ Dan$/, '')} → ${DAN_LABELS[newDan] ?? String(newDan ?? '')}`
+  + clearedPart(cleared.grades ?? 0, 'grade', 'grades')
+  + clearedPart(cleared.counts ?? 0, 'extra-points count', 'extra-points counts') // PROPOSAL
+  + clearedPart(cleared.subjects ?? 0, 'make-up subject', 'make-up subjects'); // PROPOSAL
+// Date of birth and email only ever say "changed" — the log never keeps their values (v0.907)
+export const HISTORY_DOB_CHANGED = 'Date of birth changed'; // PROPOSAL (the email line is drawn)
+export const HISTORY_EMAIL_CHANGED = 'Email for results changed';
+export const HISTORY_PERSONAL_REMOVED = 'Date of birth and email removed (after the keeping time)'; // PROPOSAL
+export const HISTORY_KUKKIWON_ADDED = 'Kukkiwon certificate added';
+export const HISTORY_KUKKIWON_REMOVED = 'Kukkiwon certificate removed'; // PROPOSAL
+export const HISTORY_WITHDRAWN = 'Withdrawn'; // PROPOSAL (Star's words)
+export const HISTORY_DUPLICATE_COPY = 'Moved to Removed as a duplicate copy'; // PROPOSAL (Star's words)
+export const HISTORY_RESTORED = 'Restored'; // PROPOSAL (Star's words)
+export const HISTORY_KEPT_BOTH = 'Possible duplicate: kept both registrations'; // PROPOSAL (Star's words)
+export const HISTORY_KEPT_THIS = 'Possible duplicate: kept this registration'; // PROPOSAL (Star's words)
+export const HISTORY_DUPLICATE_FOUND = 'Possible duplicate found'; // PROPOSAL (Star's words)
+// The waiver
+export const HISTORY_WAIVER_FORM = 'Waiver signed on the family form';
+export const HISTORY_WAIVER_PAPER = 'Waiver signed on paper'; // PROPOSAL
+export const HISTORY_SIGNATURE_REMOVED = 'Signature removed (after the keeping time)'; // PROPOSAL
+// Money (left out while Hide private details is on)
+export const historyPayment = (cents, method, iso) => `Payment recorded: ${formatCents(cents)} ${methodName(method).toLowerCase()}, paid ${monthDay(iso)}`;
+export const historyPaymentChanged = (cents, method, iso) => `Payment changed: ${formatCents(cents)} ${methodName(method).toLowerCase()}, paid ${monthDay(iso)}`; // PROPOSAL (Edit payment)
+export const historyRefund = (cents, method, iso) => `Refund recorded: ${formatCents(cents)} ${methodName(method).toLowerCase()}, ${monthDay(iso)}`; // PROPOSAL (Star's words)
+export const historyPaymentUndone = (cents) => `Payment undone: ${formatCents(cents)}`; // PROPOSAL (Star's words)
+export const historyRefundUndone = (cents) => `Refund undone: ${formatCents(cents)}`; // PROPOSAL (Star's words)
+export const historyCheckReturned = (cents) => `Check returned: ${formatCents(cents)}`; // PROPOSAL
+export const historyReturnedUndone = (cents) => `Returned check undone: ${formatCents(cents)}`; // PROPOSAL
+// Grades (v0.971 option C: every grade, naming the subject). Without the subject's name (the
+// rubric couldn't be read, or the history is from before migration 0034): the same words without it.
+export const HISTORY_SUBJECT_UNKNOWN = 'a subject'; // a subject the cycle's rubric doesn't have (PROPOSAL)
+export const historyGraded = (what) => `Graded: ${what}`;
+export const historyGradeChanged = (what) => `Grade changed: ${what}`;
+export const historyGradeCleared = (name, was) => (name ? `Grade cleared: ${name} (was ${was})` : `Grade cleared (was ${was})`);
+// Extra points (the same rule, with the item's name)
+export const historyExtra = (what) => `Extra points: ${what}`;
+export const historyExtraCleared = (name, was) => (name ? `Extra points cleared: ${name} (was ${was})` : `Extra points cleared (was ${was})`); // PROPOSAL
+// Make-up subjects (rows are only added and removed)
+export const historyMakeupSubjectAdded = (name) => (name ? `Make-up subject added: ${name}` : 'Make-up subject added');
+export const historyMakeupSubjectRemoved = (name) => (name ? `Make-up subject removed: ${name}` : 'Make-up subject removed');
+export const historyRetestAdded = (name) => (name ? `Retest subject added: ${name}` : 'Retest subject added'); // PROPOSAL (Add make-up writes these; normally folded into its line)
+export const historyRetestRemoved = (name) => (name ? `Retest subject removed: ${name}` : 'Retest subject removed'); // PROPOSAL
+// Results: Mark as sent and its undo
+export const historyResultSent = (status) => `Result email marked sent${status === 'passed' ? ' (Passed)' : status === 'makeup' ? ' (Make-up)' : ''}`;
+export const HISTORY_RESULT_SENT_UNDONE = 'Mark as sent undone'; // PROPOSAL (Star's words)

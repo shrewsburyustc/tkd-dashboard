@@ -12,6 +12,10 @@
 //   - TOUCH devices never see the menu: a tap always opens the choice page (rule 2.5: nothing may be
 //     hover-only — the choice page shows the same choices).
 // This is a recorded exception to rule 2.3: the label bubble grows into a menu.
+// The menu is drawn above the page at the icon's measured place (position: fixed), not inside the
+// rail: a rail that scrolls (a short window, Panel size v1.118) would otherwise cut it off. It
+// closes if a scroll of the rail or a window resize moves its icon, rather than float away from it.
+// With Large or Largest (v1.118) the icon keeps its name under it while the menu shows.
 //
 // The ARIA "menu button" pattern is used: the icon says it has a menu (aria-haspopup, aria-expanded),
 // the names are role="menuitem" and are reached with the arrow keys, not Tab (Tab leaves the menu).
@@ -21,12 +25,13 @@
 //   isCurrent    is this section open?
 //   currentPage  the open page's key (e.g. 'star'), or null (e.g. on the choice page: none is current)
 //   onNavigate(id, { testingPage })   App.jsx's navigate
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '../lib/useMediaQuery.js';
 import '../styles/rail-menu.css';
 
 const OPEN_DELAY_MS = 150; // v0.59 (the same 150ms as the label bubble, rule 2.3)
 const CLOSE_DELAY_MS = 300; // v0.59: "about 300ms after the pointer leaves both icon and menu"
+const MENU_GAP_PX = 20; // the menu starts 20px right of the icon (the approved mockup)
 // A device whose main pointer can hover (a mouse or trackpad). Touch screens answer "no".
 const HOVER_QUERY = '(hover: hover)';
 
@@ -46,6 +51,8 @@ export default function RailMenu({ item, isCurrent, currentPage, onNavigate }) {
   const clickedRef = useRef(false);
   // true when ↓ asked for the first name before the menu was drawn.
   const focusFirstRef = useRef(false);
+  // Where the menu is drawn: { top, left } on the screen, measured from the icon when it opens.
+  const [place, setPlace] = useState(null);
 
   const clearTimer = useCallback(() => {
     window.clearTimeout(timerRef.current);
@@ -187,6 +194,32 @@ export default function RailMenu({ item, isCurrent, currentPage, onNavigate }) {
 
   const menuShown = open && canHover;
 
+  // When the menu opens: measure the icon and put the menu beside it, before the screen is drawn
+  // (useLayoutEffect), so it never shows anywhere else first. While it is open, a scroll of the
+  // rail or a window resize that moves the icon would leave the menu behind, so it closes. (A
+  // scroll that only brought the icon into view as it got the keyboard focus doesn't count: the
+  // icon was measured after it.)
+  useLayoutEffect(() => {
+    if (!menuShown) return undefined;
+    function measure() {
+      const box = iconRef.current?.getBoundingClientRect();
+      return box ? { top: box.top, left: box.right + MENU_GAP_PX } : null;
+    }
+    const first = measure();
+    setPlace(first);
+    function closeIfMoved() {
+      const now = measure();
+      if (!now || !first || Math.abs(now.top - first.top) > 0.5 || Math.abs(now.left - first.left) > 0.5) close();
+    }
+    const rail = wrapRef.current?.closest('.rail');
+    rail?.addEventListener('scroll', closeIfMoved, { passive: true });
+    window.addEventListener('resize', closeIfMoved);
+    return () => {
+      rail?.removeEventListener('scroll', closeIfMoved);
+      window.removeEventListener('resize', closeIfMoved);
+    };
+  }, [menuShown, close]);
+
   return (
     <div
       ref={wrapRef}
@@ -211,14 +244,15 @@ export default function RailMenu({ item, isCurrent, currentPage, onNavigate }) {
         <span className="rail-icon">
           <Icon size={20} aria-hidden="true" />
         </span>
-        {/* Tablet: the label under the icon. PC: the hover bubble — hidden for this icon while the
-            menu exists (has-menu, app.css), because the menu's heading says the same. */}
+        {/* Tablet, and Large / Largest: the label under the icon. PC (Standard): the hover bubble —
+            hidden for this icon while the menu exists (has-menu, rail-menu.css), because the menu's
+            heading says the same. */}
         <span className="rail-label" aria-hidden="true">
           {label}
         </span>
       </button>
       {menuShown && (
-        <div id={menuId} className="rail-menu" role="menu" aria-label={label}>
+        <div id={menuId} className="rail-menu" role="menu" aria-label={label} style={place ?? undefined}>
           <div className="rail-menu-heading" aria-hidden="true">
             {label}
           </div>

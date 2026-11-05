@@ -572,6 +572,6 @@ function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast, o
         return null;
     }
   }
-  if (dlg.detail) return <CandidateDialog actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} />;
+  if (dlg.detail) return <CandidateDialog actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} onNoAccess={onNoAccess} />;
   return null;
 }

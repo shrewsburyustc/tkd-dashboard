@@ -9,6 +9,7 @@
 //   - Registration: Registered · Reference · Waiver (+ View signature for admins) · Removed
 //   - Payments: Plan · Kukkiwon certificate · every payment (Date · For · How · Amount · Note ·
 //     Recorded by; phones: two lines each) with a ⋯ per line for admins · the totals
+//   - History · N changes › (BB8, v0.972: the shared line, CandidateHistory.jsx; not in Edit details)
 //   - Close · Print receipt · Record payment (primary), and ⋯: Edit details · Change plan or
 //     Kukkiwon — (admins) Withdraw · Delete permanently, or on a withdrawn candidate Restore ·
 //     Delete permanently (v1.007 / v0.963: no "Remove candidate" choice box any more)
@@ -19,7 +20,7 @@
 // shows the Dan as text, not a field (Q-G4: a make-up's Dan can't change). Delete permanently is
 // grayed while the candidate has grades (Q-G3, v0.950).
 // Privacy (§5): the date of birth and email appear only here, and with the device's Hide payments
-// switch on they read "Hidden on this device" (OP-B7); so do the payments, Edit details is grayed
+// switch on they read "Hidden on this tablet" (OP-B7, v0.974); so do the payments, Edit details is grayed
 // ("Edit details at the desk.") and View signature isn't offered. The data lives in
 // useCandidateActions only while this dialog is open.
 // Focus: Edit details puts the cursor in First name; back from it, or from a dialog opened here,
@@ -30,12 +31,14 @@ import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
+import { HISTORY } from '../../../components/text.js'; // the History section's name for screen readers
 import { formatCents } from '../../../lib/blackBelt/money.js';
 import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
 import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
 import { detailsProblems } from './checks.js';
+import CandidateHistory from './CandidateHistory.jsx';
 import { ICONS } from './icons.js';
 import { MoneyTag } from './RosterRows.jsx';
 import * as T from '../text.js';
@@ -306,7 +309,7 @@ function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
   );
 }
 
-export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidden, today }) {
+export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidden, today, onNoAccess }) {
   const d = actions.dlg.detail;
   const data = d.data;
   const c = data?.candidate ?? null;
@@ -715,6 +718,14 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
             onLineMore={(line, what, anchor) => actions.setDetailMenu(menu?.kind === 'line' && menu.line.id === line.id ? null : { kind: 'line', line, what, anchor })}
           />
         )}
+      </section>
+
+      {/* BB8 (v0.972): the shared one-line History after the payment totals — also for a
+          withdrawn candidate and a make-up; on phones it scrolls with the page,
+          above the bottom buttons. It reads the history itself when it appears; the key reads it
+          again after a change to the candidate (a payment, an edit: a new version). */}
+      <section className="bb-detail-section bb-detail-history" aria-label={HISTORY}>
+        <CandidateHistory key={`${c.id}-${c.version}`} candidateId={c.id} cycle={cycle} hidden={hidden} onNoAccess={onNoAccess} />
       </section>
 
       {isPhone ? (

@@ -28,7 +28,9 @@ const OFFER_COLUMNS = 'id, form_id, class_id, default_limit, days_ahead, min_hou
 const LIMIT_COLUMNS = 'id, form_id, class_id, weekday, starts_at, spot_limit';
 // classes taught together: one spot number for the combined time (migration 0031, v0.620)
 const GROUP_LIMIT_COLUMNS = 'id, form_id, class_ids, weekday, starts_at, spot_limit';
-const SUBMISSION_COLUMNS = 'id, form_id, location_code, published_version, fields, answers, parent_name, parent_phone, parent_email, children, signed_at, entered_by, source, created_at';
+// Sign-ups (form_submissions): since 0036 the app may read only id, form_id, location_code and
+// created_at straight from the table (security review) — enough to count them. A family's details
+// come one family at a time through prospects_get, a signature through forms_submission_signature.
 
 const failure = (error) => ({ status: 'error', error });
 const unexpected = (what) => failure(new Error(`Unexpected answer from ${what}`));
@@ -57,25 +59,6 @@ function toForm(row) {
 const toOffer = (r) => ({ id: r.id, classId: r.class_id, defaultLimit: r.default_limit, daysAhead: r.days_ahead, minHoursAhead: r.min_hours_ahead });
 const toLimit = (r) => ({ id: r.id, classId: r.class_id, weekday: r.weekday, start: String(r.starts_at).slice(0, 5), spotLimit: r.spot_limit });
 const toGroupLimit = (r) => ({ id: r.id, classIds: Array.isArray(r.class_ids) ? [...r.class_ids].sort() : [], weekday: r.weekday, start: String(r.starts_at).slice(0, 5), spotLimit: r.spot_limit });
-
-function toSubmission(row) {
-  return {
-    id: row.id,
-    formId: row.form_id,
-    locationCode: row.location_code,
-    publishedVersion: row.published_version,
-    fields: Array.isArray(row.fields) ? row.fields : [],
-    answers: row.answers ?? {},
-    parentName: row.parent_name,
-    parentPhone: row.parent_phone,
-    parentEmail: row.parent_email,
-    children: Array.isArray(row.children) ? row.children : [],
-    signedAt: row.signed_at ?? null,
-    enteredBy: row.entered_by ?? null,
-    source: row.source,
-    createdAt: row.created_at,
-  };
-}
 
 async function access() {
   const res = await supabase.rpc('has_data_access');
@@ -129,19 +112,6 @@ export async function loadForm(formId) {
       limits: limitRes.data.map(toLimit),
       groupLimits: groupRes.data.map(toGroupLimit),
     };
-  } catch (error) {
-    return failure(error);
-  }
-}
-
-// A form's sign-ups, newest first (never the signature picture — see loadSignature).
-export async function loadSubmissions(formId) {
-  try {
-    if (!supabase) return failure(new Error('No connection is set up'));
-    const res = await supabase.from('form_submissions').select(SUBMISSION_COLUMNS).eq('form_id', formId).order('created_at', { ascending: false });
-    if (res?.error) return failure(res.error);
-    if (!Array.isArray(res?.data)) return unexpected('form_submissions');
-    return { status: 'ok', submissions: res.data.map(toSubmission) };
   } catch (error) {
     return failure(error);
   }

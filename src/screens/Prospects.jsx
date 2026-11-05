@@ -10,14 +10,20 @@
 //     this device (the List the first time). The Board (Board.jsx) shows one column per stage;
 //     cards drag to another column (useCardDrag.js) — New / Contacted save at once, Booked, Came
 //     and Joined open their dialog first and Cancel leaves the card where it was
-//   - the side panel (ProspectPanel): beside the list on a PC, under it on a tablet, full screen
-//     on a phone
+//   - a child's name is "Ava N." — the child's own last initial (v0.637; the parent's for children
+//     who signed up before last names were asked)
+//   - the profile window (ProspectPanel, v0.639): clicking a child opens it over the list on every
+//     device (about 960px wide on a PC, nearly the whole width on a tablet, the whole page on a
+//     phone). Book / Change time, Joined, Delete and the status menu open ON TOP of it (v1.100), so
+//     Back closes only them. Focus: the window's heading when it opens, the child's row when it
+//     closes. A typed note keeps the window open until it is saved or cancelled. While it is open,
+//     the amber bar (a save refused, someone else's change) shows at the top of the window instead
+//     of on the page behind it — never both.
 //   - "+ Add prospect" (which form → Fill in, shared with Forms), Edit statuses, Book / Change /
 //     Cancel a free class, Joined date, Delete (admins only)
 // Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
-import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
@@ -28,7 +34,8 @@ import { useShortcutN } from '../lib/useShortcutN.js';
 import { addDays } from '../lib/schedule/versions.js';
 import { loadForms } from '../lib/forms/api.js';
 import { useProspects } from '../lib/prospects/useProspects.js';
-import { isDueToday, lastInitial } from '../lib/prospects/followUps.js';
+import { childInitial, isDueToday } from '../lib/prospects/followUps.js';
+import { childFullName } from '../lib/prospects/child.js';
 import { takeOpenProspect } from '../lib/prospects/openRequest.js';
 import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import {
@@ -52,9 +59,21 @@ const savedView = (staffId) => (readStorage(viewKey(staffId)) === 'board' ? 'boa
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 const emptyNote = () => ({ body: '', when: 'tomorrow', picked: null });
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
-// "Follow up today" and the "Ava R." name come from followUps.js, shared with the Calendar (v0.615).
+// "Follow up today" and the "Ava N." name come from followUps.js, shared with the Calendar (v0.615).
 
-export default function Prospects({ location, staffId, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh }) {
+// Focus what `find` returns as soon as it can take focus. The page behind the profile window stays
+// "inert" (unclickable, unfocusable) until the App has seen the window close, so this tries again
+// on the next few screen frames (about a third of a second at most).
+function focusSoon(find, tries = 20) {
+  window.requestAnimationFrame(() => {
+    const el = find();
+    el?.focus();
+    if ((!el || document.activeElement !== el) && tries > 0) focusSoon(find, tries - 1);
+  });
+}
+
+// profileName: the signed-in person's name, for the printed sheet's "Printed … by …" (v0.636)
+export default function Prospects({ location, staffId, isAdmin, profileName = '', screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const isPc = useMediaQuery(PC_QUERY);
@@ -77,8 +96,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     if (privateHidden) setDialog((d) => (d?.type === 'add' ? null : d));
   }, [privateHidden]);
   const [found, setFound] = useState(null); // code -> Set of ids, while searching
-  const [selected, setSelected] = useState(null); // { id, code, opener }
-  const [detail, setDetail] = useState(null); // the panel's prospect
+  const [selected, setSelected] = useState(null); // { id, code, opener } — the child whose profile is open
+  const [detail, setDetail] = useState(null); // the profile window's prospect
   const [note, setNote] = useState(emptyNote);
   const [noteWarning, setNoteWarning] = useState(false); // a typed note would be lost: say so
   const [dialog, setDialog] = useState(null);
@@ -102,8 +121,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       onBadgeRefresh?.();
     },
   });
-  const phonePanel = isPhone && selected !== null;
-  const modalShown = (dialog !== null || fill.isOpen || phonePanel) && !screenLocked;
+  // The profile window is a dialog on every device (v0.639): the App makes the page behind it inert.
+  const modalShown = (dialog !== null || fill.isOpen || selected !== null) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -132,8 +151,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
         barCounts.set(bookedStage.id, (counts.get(bookedStage.id) ?? 0) + extra);
       }
       const due = all.filter((p) => isDueToday(p, statusById.get(p.statusId)?.builtin, today));
-      // "Ava R." - the child's first name and the parent's last initial (as in the mockup)
-      const initials = new Map(all.map((p) => [p.id, lastInitial(p.parentName)]));
+      // "Ava N." - the child's first name and own last initial (v0.637; the parent's for older sign-ups)
+      const initials = new Map(all.map((p) => [p.id, childInitial(p)]));
       return { code, name: T.SCHOOL_NAME[code], statuses, statusById, all, counts, barCounts, bookedStage, noShowIds, due, initials };
     });
   }, [data, codes, today]);
@@ -154,19 +173,44 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     return () => window.clearTimeout(timer);
   }, [search, codes, onNoAccess]);
 
-  // ----- The panel -----
+  // ----- The profile window -----
+  // The id of the child the window shows, kept in a ref that changes at once (the `selected` state
+  // only reaches ref.current after React re-draws, and an answer can come back before that).
+  const selectedIdRef = useRef(null);
+  function select(next) {
+    selectedIdRef.current = next?.id ?? null;
+    setSelected(next);
+  }
+  // The window's heading (PC / tablet) or its back arrow (phone): where focus goes inside it.
+  const windowFocus = () => document.querySelector('.pp-dialog [data-profile-heading]') ?? document.querySelector('.dialog-page.pp-dialog [data-back]');
+  // Loads a child's profile. An answer that comes back after another child was opened (a brother
+  // or sister clicked while it loaded) or after the window closed is ignored: it must not replace
+  // the profile shown, or leave the window on "Loading…". → the answer's status, or 'ignored'
   async function loadDetail(id) {
     const res = await getProspect(id);
+    if (selectedIdRef.current !== id) return 'ignored';
     if (res.status === 'ok') setDetail(res.prospect);
     else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'not_found') {
-      setSelected(null);
+      select(null);
       setDetail(null);
     }
     return res.status;
   }
-  // A note being typed is never silently lost (rulebook section 6): opening someone else or
-  // closing the panel waits until it is saved or cancelled.
+  // After a save re-draws the window, the button that was pressed may be gone (Book became Change
+  // time, a Check-in box closed, the status menu closed) or grayed while it saved; focus then sits
+  // on the page itself, where Esc and Tab do nothing. Watch the next few frames and put it back in
+  // the window (its heading, or the back arrow on phones).
+  function keepFocusInWindow(frames = 10) {
+    window.requestAnimationFrame(() => {
+      if (!selectedIdRef.current) return; // the window closed
+      const active = document.activeElement;
+      if (!active || active === document.body || !active.isConnected) focusSoon(windowFocus);
+      else if (frames > 0) keepFocusInWindow(frames - 1);
+    });
+  }
+  // A note being typed is never silently lost (rulebook section 6): opening someone else (a brother
+  // or sister) or closing the window waits until it is saved or cancelled.
   const noteRef = useRef(note);
   useLayoutEffect(() => {
     noteRef.current = note;
@@ -183,17 +227,19 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     clearToast();
     setNoteWarning(false);
     if (ref.current.selected?.id !== p.id) setNote(emptyNote());
-    setSelected({ id: p.id, code, opener });
+    // the row that opened the window (a brother or sister opened inside it keeps the first one)
+    select({ id: p.id, code, opener: ref.current.selected?.opener ?? opener ?? null });
     setDetail(null);
-    await loadDetail(p.id);
-    // tablet / phone: the panel is below the list or a new page — bring it into view, focus its name
-    window.requestAnimationFrame(() => {
-      const h = document.querySelector('.ppanel [data-panel-heading]');
-      if (h) {
-        if (!isWide) h.scrollIntoView({ block: 'start', behavior: 'smooth' });
-        h.focus({ preventScroll: true });
-      }
-    });
+    const status = await loadDetail(p.id);
+    // the window starts at its top, with focus on its heading (PC / tablet) or its back arrow (phone)
+    // — unless another child was opened meanwhile (that one does this itself)
+    if (status === 'ok') {
+      window.requestAnimationFrame(() => {
+        const box = document.querySelector('.tdialog.pp-dialog') ?? document.querySelector('.dialog-page.pp-dialog .dialog-page-body');
+        if (box) box.scrollTop = 0;
+      });
+      focusSoon(windowFocus);
+    }
     if (!p.openedByMe) {
       await markOpened(p.id);
       pros.reload();
@@ -216,27 +262,33 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   function closePanel() {
     if (noteInTheWay(null)) return;
     const s = ref.current.selected;
-    setSelected(null);
+    select(null);
     setDetail(null);
-    window.requestAnimationFrame(() => usable(document.querySelector(`[data-prospect-row="${s?.id}"]`))?.focus());
+    // back on the child's row (or, when that child isn't in the list shown, the row that opened it)
+    focusSoon(() => usable(document.querySelector(`[data-prospect-row="${s?.id}"]`)) ?? usable(s?.opener));
   }
   async function afterWrite(result, toastText, undo) {
     setBusy(false);
     if (result.status === 'ok') {
-      await Promise.all([pros.reload(), ref.current.selected ? loadDetail(ref.current.selected.id) : null]);
+      await Promise.all([pros.reload(), selectedIdRef.current ? loadDetail(selectedIdRef.current) : null]);
       if (toastText) showToast(toastText, undo ? { icon: false, action: { label: T.UNDO, onAction: undo } } : {});
+      keepFocusInWindow();
       return true;
     }
-    if (result.status === 'no_access') onNoAccess();
-    else if (result.status === 'stale' || result.status === 'not_found') {
+    if (result.status === 'no_access') {
+      onNoAccess();
+      return false;
+    }
+    if (result.status === 'stale' || result.status === 'not_found') {
       setBanner({ text: T.STALE });
       pros.reload();
-      if (ref.current.selected) loadDetail(ref.current.selected.id);
+      if (selectedIdRef.current) loadDetail(selectedIdRef.current);
     } else if (result.status === 'not_allowed') {
       setBanner({ text: T.NOT_ALLOWED });
       onRefreshProfile();
     } else if (result.status === 'invalid') setBanner({ text: T.INVALID });
     else setBanner({ text: T.SAVE_FAILED });
+    keepFocusInWindow();
     return false;
   }
   // The end of every Undo: the same checks as any save, then a short "Undone" when it worked
@@ -257,12 +309,12 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     };
   }
 
-  async function changeStatus(statusId) {
+  async function changeStatus(statusId, opener = null) {
     const d = ref.current.detail;
     if (!d || busy || statusId === d.statusId) return;
     const st = statusOfDetail()?.get(statusId);
     if (st?.builtin === 'joined') {
-      setDialog({ type: 'joined', key: Date.now(), name: d.childFirstName, statusId, date: today, saving: false, note: null });
+      setDialog({ type: 'joined', key: Date.now(), name: d.childFirstName, statusId, date: today, saving: false, note: null, opener });
       return;
     }
     const wasJoined = statusOfDetail()?.get(d.statusId)?.builtin === 'joined'; // before the save (the panel may change school)
@@ -310,11 +362,11 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
 
   // ----- Book / change / cancel a free class -----
-  async function openBook(target = null, dropCode = null) {
+  async function openBook(target = null, dropCode = null, opener = null) {
     const d = target ?? ref.current.detail;
     if (!d) return;
     const change = Boolean(d.booking && d.booking.status === 'booked');
-    setDialog({ type: 'book', key: Date.now(), prospect: d, dropCode, name: d.childFirstName, change, times: null, pick: null, saving: false, note: null });
+    setDialog({ type: 'book', key: Date.now(), prospect: d, dropCode, name: d.childFirstName, change, times: null, pick: null, saving: false, note: null, opener });
     const res = await openTimesFor({ id: d.id, from: today, to: addDays(today, 60) });
     setDialog((g) => (g && g.type === 'book' ? { ...g, times: res.status === 'ok' ? res.times : 'error' } : g));
     if (res.status === 'no_access') onNoAccess();
@@ -413,9 +465,12 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     }
     if (to.builtin === 'came') {
       const d = await fetchProspect(p.id);
-      // a class still ahead can't be checked in yet: the dialog says when, with only Cancel
+      // a class still ahead can't be checked in yet: the dialog says when, with only "Keep in …"
       const ahead = Boolean(d?.booking && d.booking.status === 'booked' && d.booking.classRunning && !d.checkedInAt && d.booking.date > today);
-      if (d) setDialog({ type: 'came', key: Date.now(), prospect: d, statusId, askCame: p.askCame, ahead, dropCode: code, saving: false, note: null });
+      // the Board column the card sits in now, for "Keep in Booked" (N3): a No-show's card sits
+      // in the Booked column (v0.610), every other card in its own status's column
+      const column = from?.builtin === 'no_show' ? school?.bookedStage?.name ?? from.name : from?.name ?? '';
+      if (d) setDialog({ type: 'came', key: Date.now(), prospect: d, statusId, askCame: p.askCame, ahead, column, dropCode: code, saving: false, note: null });
       return;
     }
     if (to.builtin === 'joined') {
@@ -446,7 +501,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       return;
     }
     // no class to check in to: save Came as the status (a class still ahead never gets here —
-    // CameDialog only offers Cancel then)
+    // CameDialog only offers "Keep in …" then)
     setDialog({ ...g, saving: true });
     setBusy(true);
     const wasJoined = schools.find((s) => s.code === g.dropCode)?.statusById?.get(d.statusId)?.builtin === 'joined';
@@ -455,7 +510,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     // Undo like every other Board drop (v1.006)
     if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME), statusUndo(d, wasJoined, r.version))) flashStage(g.dropCode, g.statusId);
   }
-  const drag = useCardDrag({ enabled: view === 'board' && !busy && !dialog && !screenLocked && !fill.isOpen, resetKey: location, onDrop: dropCard });
+  const drag = useCardDrag({ enabled: view === 'board' && !busy && !dialog && !selected && !screenLocked && !fill.isOpen, resetKey: location, onDrop: dropCard });
 
   // ----- Delete (admins) -----
   async function confirmDelete() {
@@ -466,7 +521,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     const r = await deleteProspect({ id: d.id, expectedVersion: d.version });
     setDialog(null);
     if (r.status === 'ok') {
-      setSelected(null);
+      select(null);
       setDetail(null);
       await pros.reload();
       onBadgeRefresh?.();
@@ -496,6 +551,22 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     setMenu(null);
     setDialog({ type: 'statuses', key: Date.now(), code, step: 'list', statusId: null, values: null, initial: null, touched: {}, saving: false, note: null, moveTo: null });
   }
+  // Edit statuses changes steps inside one box (list ↔ Add / Edit status): move focus to the new
+  // step's first field, or the box itself — otherwise Cancel / Discard changes / "← Edit statuses"
+  // would leave focus nowhere and Esc would stop working (copied from Calendar's event types).
+  const statusesStepNow = dialog?.type === 'statuses' ? dialog.step : null;
+  useEffect(() => {
+    if (!statusesStepNow) return;
+    // Two frames: the new step has rendered (and a closing confirmation is gone) by then.
+    window.requestAnimationFrame(() =>
+      window.requestAnimationFrame(() => {
+        const role = statusesStepNow === 'delete' ? 'alertdialog' : 'dialog';
+        const boxes = document.querySelectorAll(`[role="${role}"]`);
+        const box = boxes[boxes.length - 1];
+        (box?.querySelector('[data-autofocus]') ?? box)?.focus();
+      }),
+    );
+  }, [statusesStepNow]);
   function statusesStep(step, s = null) {
     setDialog((g) => {
       if (!g) return g;
@@ -550,40 +621,53 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
 
   // ===== What is on screen =====
   const stagesOf = (school) => school.statuses.filter((s) => s.kind === 'stage');
-  const panelFor = (school) => {
-    if (!selected || selected.code !== school.code) return null;
-    if (!detail) return <div className="ppanel ppanel--loading" aria-busy="true">{T.LOADING_PANEL}</div>;
-    return (
+  // The profile window (v0.639): one child at a time, over the whole page, on every device.
+  const profileSchool = selected ? schools.find((s) => s.code === selected.code) ?? null : null;
+  const shownDetail = detail && selected && detail.id === selected.id ? detail : null;
+  const selectedItem = selected ? profileSchool?.all.find((p) => p.id === selected.id) ?? null : null;
+  let profileElement = null;
+  if (selected && profileSchool && !screenLocked) {
+    profileElement = (
       <ProspectPanel
-        key={detail.id}
-        detail={detail}
-        listItem={school.all.find((p) => p.id === detail.id)}
-        statuses={school.statuses}
-        statusById={school.statusById}
+        // "Ava Nguyen" (from the list while the profile loads)
+        name={childFullName(shownDetail ?? selectedItem ?? {}) || T.LOADING_PANEL}
+        detail={shownDetail}
+        listItem={selectedItem}
+        statuses={profileSchool.statuses}
+        statusById={profileSchool.statusById}
         today={today}
         isPc={isPc}
+        isWide={isWide}
         isPhone={isPhone}
         isAdmin={isAdmin}
         busy={busy}
         note={note}
-        idBase={`prospect-${detail.id}`}
+        idBase={`prospect-${selected.id}`}
+        // every free-class date of the sign-up: the signature picture is kept 90 days after the latest
+        familyBookingDates={shownDetail ? profileSchool.all.filter((p) => p.familyId === shownDetail.familyId).map((p) => p.booking?.date ?? null) : []}
+        printedBy={profileName}
+        // the amber bar shows in the window while it is open (the page's own bar is behind it)
+        banner={banner}
+        onDismissBanner={() => setBanner(null)}
         onNote={(patch) => {
           setNote((n) => ({ ...n, ...patch }));
           if (patch.body === '') setNoteWarning(false);
         }}
         noteWarning={noteWarning}
-        onClose={isPhone ? null : closePanel}
+        onClose={closePanel}
         onSaveNote={saveNote}
         onStatus={changeStatus}
         onFollowUp={changeFollowUp}
         onCheckIn={(came, afterClass) => doCheckIn(came, afterClass)}
-        onBook={() => openBook()}
+        onBook={(e) => openBook(null, null, e?.currentTarget ?? null)}
         onCancelBooking={doCancelBooking}
-        onOpenSibling={(id, opener) => openProspect({ id, openedByMe: true }, school.code, opener)}
-        onDelete={() => setDialog({ type: 'delete', key: Date.now(), name: detail.childFirstName, siblings: detail.siblings.length > 0, saving: false, note: null })}
+        // a brother or sister opens in the same window (marked opened, like a row of the list)
+        onOpenSibling={(id, opener) => openProspect(profileSchool.all.find((p) => p.id === id) ?? { id, openedByMe: true }, profileSchool.code, opener)}
+        onDelete={(e) => setDialog({ type: 'delete', key: Date.now(), name: shownDetail.childFirstName, siblings: shownDetail.siblings.length > 0, saving: false, note: null, opener: e?.currentTarget ?? null })}
+        onNoAccess={onNoAccess}
       />
     );
-  };
+  }
 
   let body;
   if (pros.status === 'loading' && !data) {
@@ -617,7 +701,6 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       }
       const onBoard = (p) => school.statusById.get(p.statusId)?.kind === 'stage' || school.noShowIds.has(p.statusId);
       const emptyText = school.all.length === 0 ? T.NO_PROSPECTS : searching ? T.NO_MATCH : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
-      const panel = !isPhone ? panelFor(school) : null;
       return (
         <section key={school.code} className="psection" data-prospects-school={school.code} aria-label={both ? school.name : undefined}>
           {both && (
@@ -652,7 +735,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
             }}
             onSearch={setSearch}
           />
-          <div className={`pbody${panel && isWide ? ' pbody--side' : ''}`}>
+          <div className="pbody">
             {board ? (
               <Board
                 code={school.code}
@@ -680,13 +763,11 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
                 initials={school.initials}
                 today={today}
                 selectedId={selected?.id}
-                narrow={Boolean(panel) && isWide}
                 isPhone={isPhone}
                 emptyText={emptyText}
                 onOpen={(p, opener) => openProspect(p, school.code, opener)}
               />
             )}
-            {panel}
           </div>
         </section>
       );
@@ -694,11 +775,15 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
 
   let dialogElement = null;
+  // The profile window is itself a dialog (on every device since v0.639): a dialog opened from it
+  // (Book / Change time, Joined, Delete) is drawn ON TOP of it (rulebook v1.100), so Back and Esc
+  // close only that one and focus goes back to the window's button that opened it.
+  const overProfile = Boolean(selected && !screenLocked);
   if (dialog && !screenLocked) {
     if (dialog.type === 'book') {
-      dialogElement = <BookTimeDialog state={dialog} today={today} isPhone={isPhone} onPick={(pick) => setDialog((g) => ({ ...g, pick, note: pick ? null : 'PICK' }))} onSave={saveBook} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <BookTimeDialog state={dialog} today={today} isPhone={isPhone} onTop={overProfile} onPick={(pick) => setDialog((g) => ({ ...g, pick, note: pick ? null : 'PICK' }))} onSave={saveBook} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'joined') {
-      dialogElement = <JoinedDialog state={dialog} today={today} isPhone={isPhone} onChange={(date) => setDialog((g) => ({ ...g, date }))} onSave={saveJoined} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <JoinedDialog state={dialog} today={today} isPhone={isPhone} onTop={overProfile} onChange={(date) => setDialog((g) => ({ ...g, date }))} onSave={saveJoined} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'add') {
       dialogElement = (
         <AddProspectDialog
@@ -714,9 +799,9 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
         />
       );
     } else if (dialog.type === 'came') {
-      dialogElement = <CameDialog state={dialog} isPhone={isPhone} onSave={saveCame} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <CameDialog state={dialog} onSave={saveCame} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'delete') {
-      dialogElement = <DeleteDialog state={dialog} onConfirm={confirmDelete} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <DeleteDialog state={dialog} onTop={overProfile} onConfirm={confirmDelete} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'statuses' && statusSchool) {
       dialogElement = (
         <StatusesDialog
@@ -734,17 +819,20 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           onReorder={reorderStatus}
           onCancel={() => setDialog(null)}
           onRequestClose={() => {
+            // Esc / Back: the list closes; an Add / Edit status step goes back to the list, but with
+            // a change it stays open with "Unsaved changes…" until Save or Cancel (like Calendar's
+            // Event types; rulebook v0.46 / v1.027, design review N15).
             const g = ref.current.dialog;
+            if (g.saving) return;
             if (g.step === 'list') setDialog(null);
             else if (!isStatusFormDirty(g)) statusesStep('list');
-            else setDialog({ ...g, note: null, step: 'list' });
+            else if (!g.note) setDialog({ ...g, note: 'UNSAVED' });
           }}
         />
       );
     }
   }
 
-  const phoneSchool = isPhone && selected ? schools.find((s) => s.code === selected.code) : null;
   const moreItems = codes.map((code) => ({ key: code, label: both ? `${T.EDIT_STATUSES} · ${T.SCHOOL_NAME[code]}` : T.EDIT_STATUSES, Icon: IconEdit, onSelect: () => openStatuses(code) }));
 
   return (
@@ -775,7 +863,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           {T.ADD_AT_DESK}
         </p>
       )}
-      {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
+      {/* the amber bar: here while no profile window is open, else at the top of the window — never both */}
+      {banner && !profileElement && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
       {both && data && (
         // On Both, ONE search for the two schools (each section shows its own matches)
         <label className="psearch psearch--both">
@@ -783,18 +872,22 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
           <span className="visually-hidden">{T.SEARCH_LABEL}</span>
           <input type="search" className="psearch-input" placeholder={T.SEARCH} value={search} maxLength={80} onChange={(e) => setSearch(e.target.value)} />
           {search && (
-            <button type="button" className="psearch-clear" aria-label={T.CLEAR_SEARCH} onClick={() => setSearch('')}>
-              <IconX size={14} aria-hidden="true" />
-            </button>
+            // the shared icon button: 28px, "Clear search" tooltip, 44px on touch (rulebook v0.631);
+            // it disappears when pressed, so focus goes back into the search box
+            <IconButton
+              label={T.CLEAR_SEARCH}
+              Icon={IconX}
+              onClick={(e) => {
+                const input = e.currentTarget.closest('label')?.querySelector('input');
+                setSearch('');
+                input?.focus();
+              }}
+            />
           )}
         </label>
       )}
       {body}
-      {phoneSchool && !screenLocked && (
-        <Dialog title={detail ? `${detail.childFirstName}, ${detail.childAge}` : T.LOADING_PANEL} fullScreen onRequestClose={closePanel}>
-          {panelFor(phoneSchool)}
-        </Dialog>
-      )}
+      {profileElement}
       {menu && !screenLocked && (
         <RowMenu
           anchor={menu.anchor}

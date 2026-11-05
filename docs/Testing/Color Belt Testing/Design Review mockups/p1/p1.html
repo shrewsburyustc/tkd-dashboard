@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Color Belt · Part 2 · P1 · Event roster (CB1, CB2, CB3, CB9)</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2700px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Color Belt · Part 2 · P1 · Event roster (CB1, CB2, CB3, CB9)</h1>
+<p class="sub"><b>Everything here was already decided</b>: Star's v0.518 answers and the shared parts' looks (v1.103–v1.107), landed on Color Belt's event roster. <span style="color:#6B6B6B">(Preview screenshots, fake data. The “after” is drawn on top of the real page with the shared parts' real markup; nothing in the app is built yet.)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:968px">
+    <div class="shot" style="width:968px;height:392px">
+      <img src="pc-today.png" style="left:-48px;top:-184px;width:1024px">
+      <div class="mark" style="left:833.6px;top:232px;width:94.4px;height:30.400000000000002px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Mark paid</b> records the payment at once, by the family's choice (Ava: Cash). If they pay another way, the desk has to fix it afterwards.</figcaption>
+  </figure>
+<figure style="width:567px">
+    <div class="shot" style="width:567px;height:288px">
+      <img src="pc-menu-today.png" style="left:-576px;top:-360px;width:1152px">
+      <div class="mark" style="left:363.2px;top:111.2px;width:186.20000000000002px;height:63.800000000000004px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2.</b> ⋯ → <b>Undo payment</b> acts at once, with no question. There is no Print receipt.</figcaption>
+  </figure>
+<figure style="width:968px">
+    <div class="shot" style="width:968px;height:200px">
+      <img src="pc-filter-today.png" style="left:-48px;top:-184px;width:1024px">
+      <div class="mark" style="left:485.6px;top:4px;width:236.8px;height:65.6px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Count cards</b> (here Not paid is on). Already drawn like the shared cards.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <figure style="width:567px">
+    <div class="shot" style="width:567px;height:216px">
+      <img src="pc-markpaid-after.png" style="left:-576px;top:-450px;width:1152px">
+      <div class="mark" style="left:297.5px;top:47.300000000000004px;width:224px;height:157.4px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>1. CB1 · Mark paid opens the shared box</b> under the button: name · amount (worked out by the database, shown, not typed), <b>Paid by</b> preset to the family's choice with “They chose Cash on the form.” (or “… at the desk.”), then <b>Mark paid $50</b>. Date = today. Picking Check or Card also changes “Paying by” (v0.418). “Payment recorded” + Undo stays.</figcaption>
+  </figure>
+<div class="row"><figure style="width:385.00000000000006px">
+    <div class="shot" style="width:385.00000000000006px;height:143px">
+      <img src="w820-markpaid-after.png" style="left:-52.800000000000004px;top:-154px;width:451.00000000000006px">
+      <div class="mark" style="left:217.65px;top:29px;width:140px;height:105.9px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Tablet 820</figcaption>
+  </figure><figure style="width:273px">
+    <div class="shot" style="width:273px;height:244.99999999999997px">
+      <img src="w390-markpaid-after.png" style="left:0px;top:-133px;width:273px">
+      <div class="mark" style="left:1.5999999999999996px;top:101px;width:176px;height:132.6px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Phone 390</figcaption>
+  </figure><figure style="width:224px">
+    <div class="shot" style="width:224px;height:244.99999999999997px">
+      <img src="w320-markpaid-after.png" style="left:0px;top:-133px;width:224px">
+      <div class="mark" style="left:1.5999999999999996px;top:101px;width:176px;height:132.6px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>320 wide</figcaption>
+  </figure></div>
+<figure style="width:567px">
+    <div class="shot" style="width:567px;height:288px">
+      <img src="pc-menu-after.png" style="left:-576px;top:-360px;width:1152px">
+      <div class="mark" style="left:363.2px;top:138.20000000000002px;width:186.20000000000002px;height:36.8px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>2. CB2 · Print receipt</b> ends the ⋯ money group, for staff and admins, on a row with a payment. Hidden while Hide private details is on. (The receipt itself is mockup P3.)</figcaption>
+  </figure>
+<figure style="width:400px">
+    <div class="shot" style="width:400px;height:230px">
+      <img src="pc-confirm-after.png" style="left:-440px;top:-60px;width:1280px">
+      <div class="mark" style="left:16px;top:16px;width:368px;height:191px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>3. CB3 · Undo payment asks first</b> (Star's words): “Undo Owen Reed's payment?” · Keep payment (focused first) · <b>Undo payment</b> (blue: nothing is lost for good). “Undoing…” while it works. The toast's Undo right after Mark paid stays one tap.</figcaption>
+  </figure>
+<div class="row"><figure style="width:315px">
+    <div class="shot" style="width:315px;height:180px">
+      <img src="w820-confirm-after.png" style="left:-150px;top:-52.5px;width:615px">
+      <div class="mark" style="left:18.5px;top:15.5px;width:278px;height:148.25px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Tablet 820</figcaption>
+  </figure><figure style="width:273px">
+    <div class="shot" style="width:273px;height:168px">
+      <img src="w390-confirm-after.png" style="left:0px;top:-42px;width:273px">
+      <div class="mark" style="left:7.199999999999999px;top:12.799999999999997px;width:258.6px;height:138.9px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Phone 390</figcaption>
+  </figure><figure style="width:224px">
+    <div class="shot" style="width:224px;height:196px">
+      <img src="w320-confirm-after.png" style="left:0px;top:-28px;width:224px">
+      <div class="mark" style="left:7.199999999999999px;top:12.799999999999997px;width:209.6px;height:169.7px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>320 wide: the buttons stack</figcaption>
+  </figure></div>
+<figure style="width:968px">
+    <div class="shot" style="width:968px;height:200px">
+      <img src="pc-filter-today.png" style="left:-48px;top:-184px;width:1024px">
+      <div class="mark" style="left:485.6px;top:4px;width:236.8px;height:65.6px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4. CB9 · Count cards: no visible change.</b> The roster's own cards are swapped for the shared CountCards in the code; they already look like v1.107 (blue edge on the card that's on, 16 px icons, Payments recorded a plain total, not a button).</figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>Nothing to decide here</b> — all copied from Star (v0.518) and the shared parts (v1.103–v1.107). <b>OK as drawn?</b></div>
+</body></html>

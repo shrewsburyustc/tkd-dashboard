@@ -5,7 +5,8 @@
 // switch to it, so it needs samples of its own (plan §4):
 //   - a stand-in for Finance's day row: ‹ the day ›, the calendar button, Today, History (on phones
 //     ‹ the day ›, the calendar button, ⋯). Finance's own styles stay in finance.css, which this page
-//     doesn't load (it carries page-wide print rules), so parts.css copies the row's look;
+//     doesn't load (it carries page-wide print rules), so parts.css copies the row's look; its
+//     bordered buttons are the shared one (shared.css .tib--outline, gray when unavailable, v1.120);
 //   - a text button in a panel with past days gray (min = today): the shape Prospects' follow-up
 //     date may take;
 //   - the field mode, unchanged, for the behaviour checks.
@@ -51,12 +52,12 @@ function DayRowSample({ press = false, disabled = false, closeAfter = null }) {
   return (
     <section className="parts-dp" data-shot data-day={day}>
       <div className="parts-dayrow">
-        <IconButton label="Previous day" Icon={IconChevronLeft} className="parts-ibtn" onClick={() => setDay(addDaysIso(day, -1))} />
+        <IconButton label="Previous day" Icon={IconChevronLeft} className="tib--outline" onClick={() => setDay(addDaysIso(day, -1))} />
         <h2 className="parts-day">{dayTitle(day, wide, isPhone)}</h2>
         <IconButton
           label="Next day"
           Icon={IconChevronRight}
-          className={`parts-ibtn${isToday ? ' is-unavailable' : ''}`}
+          className="tib--outline"
           aria-disabled={isToday ? 'true' : undefined}
           onClick={() => {
             if (!isToday) setDay(addDaysIso(day, 1));
@@ -66,7 +67,7 @@ function DayRowSample({ press = false, disabled = false, closeAfter = null }) {
           ref={calRef}
           label="Pick a date"
           Icon={IconCalendar}
-          className={`parts-ibtn${disabled ? ' is-unavailable' : ''}`}
+          className="tib--outline"
           aria-disabled={disabled ? 'true' : undefined}
           {...datePickerOpener(open, setOpen, { disabled })}
         />
@@ -81,7 +82,7 @@ function DayRowSample({ press = false, disabled = false, closeAfter = null }) {
             History
           </button>
         )}
-        {isPhone && <IconButton label="More actions" Icon={IconDots} className="parts-ibtn parts-more" />}
+        {isPhone && <IconButton label="More actions" Icon={IconDots} className="tib--outline parts-more" />}
       </div>
       <DatePicker
         opener={calRef}

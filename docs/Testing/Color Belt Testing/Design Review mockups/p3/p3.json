@@ -1,0 +1,336 @@
+{
+ "title": "Color Belt · Part 2 · P3 · Summaries and the receipt (CB7, CB2)",
+ "subtitle": "<b>Mostly already decided</b>: the shared History line (v1.010, v1.108; Star’s S6, v0.518) at the end of both summaries, an outline Print receipt where Star and Camps put it (v0.518, v0.734), and the shared receipt (v1.002, v1.105). <b>One question of Color Belt’s own is at the bottom.</b> <span style=\"color:#6B6B6B\">(Preview screenshots, fake data. The History line and the receipt are the real shared parts drawn on top of the real page; the history rows are examples in Color Belt’s words, modelled on Star’s. Nothing in the app is built yet. The receipt’s footer shows each school’s street and phone from Settings → Schools; the preview has none.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "pc-event-sum-today.png",
+     "crop": [
+      420,
+      80,
+      440,
+      450
+     ],
+     "scale": 1,
+     "caption": "<b>Event student summary</b> (tap a roster row). No History, no Print receipt: the receipt doesn’t exist in Color Belt yet.",
+     "marks": [
+      [
+       444,
+       370,
+       392,
+       38
+      ],
+      [
+       444,
+       446,
+       392,
+       16
+      ]
+     ]
+    },
+    {
+     "src": "pc-private-sum-today.png",
+     "crop": [
+      420,
+      80,
+      440,
+      433
+     ],
+     "scale": 1,
+     "caption": "<b>Private testing summary</b> (CB6, Part 1). The same: no History, no Print receipt.",
+     "marks": [
+      [
+       444,
+       372,
+       392,
+       56
+      ],
+      [
+       444,
+       428,
+       392,
+       16
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "pc-event-sum-after.png",
+       "crop": [
+        420,
+        80,
+        440,
+        704
+       ],
+       "scale": 0.9,
+       "caption": "<b>1. CB2 · Print receipt</b> ends the Payment row (Star’s place: the end of the payment part) for staff and admins, on a row with a payment that still stands; never while Hide private details is on. <b>2. CB7 · History</b> is the last line, “History · 6 changes ›”; a tap opens it in place, newest first: what changed, then “Nov 1 · Jeffrey Berg”.",
+       "marks": [
+        [
+         568,
+         410,
+         120,
+         28
+        ],
+        [
+         444,
+         495,
+         392,
+         216
+        ]
+       ]
+      },
+      {
+       "src": "pc-event-sum-after2.png",
+       "crop": [
+        420,
+        80,
+        440,
+        704
+       ],
+       "scale": 0.9,
+       "caption": "Scrolled: one entry per change — registered, a payment and its undo, Edit payment, and Paying by following the new way (v0.418, v0.419).",
+       "marks": [
+        [
+         444,
+         336,
+         392,
+         360
+        ]
+       ]
+      },
+      {
+       "src": "pc-event-hist-failed.png",
+       "crop": [
+        420,
+        80,
+        440,
+        600
+       ],
+       "scale": 0.9,
+       "caption": "If History can’t load: the shared amber bar with Retry under it, until it works or the summary closes.",
+       "marks": [
+        [
+         444,
+         500,
+         392,
+         96
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w820-event-sum-after.png",
+       "shotWidth": 820,
+       "crop": [
+        190,
+        96,
+        440,
+        884
+       ],
+       "scale": 0.62,
+       "caption": "Tablet 820",
+       "marks": [
+        [
+         338,
+         427,
+         120,
+         34
+        ],
+        [
+         214,
+         522,
+         392,
+         365
+        ]
+       ]
+      },
+      {
+       "src": "w390-event-sum-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.65,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         124,
+         338,
+         120,
+         36
+        ],
+        [
+         16,
+         432,
+         358,
+         345
+        ]
+       ]
+      },
+      {
+       "src": "w390-event-sum-after2.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.65,
+       "caption": "Phone 390, scrolled",
+       "marks": [
+        [
+         124,
+         299,
+         120,
+         36
+        ],
+        [
+         16,
+         393,
+         358,
+         365
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-private-sum-after.png",
+       "crop": [
+        420,
+        80,
+        440,
+        702
+       ],
+       "scale": 0.9,
+       "caption": "<b>Private testing summary</b>: the same Print receipt and History. A private testing moved from an event shows <b>only its own rows, starting at the move</b>, and the move names the event (decided v0.418 Q4); the earlier rows stay on the event registration.",
+       "marks": [
+        [
+         568,
+         430,
+         120,
+         28
+        ],
+        [
+         444,
+         479,
+         392,
+         232
+        ]
+       ]
+      },
+      {
+       "src": "w320-private-sum-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        0,
+        320,
+        640
+       ],
+       "scale": 0.85,
+       "caption": "320 wide, scrolled",
+       "marks": [
+        [
+         124,
+         257,
+         120,
+         36
+        ],
+        [
+         16,
+         315,
+         288,
+         245
+        ]
+       ]
+      },
+      {
+       "src": "pc-private-hidden.png",
+       "crop": [
+        420,
+        80,
+        440,
+        540
+       ],
+       "scale": 0.9,
+       "caption": "<b>Hide private details on</b>: no Print receipt; History leaves out the money rows (2 changes, not 3) and says “Payment history is hidden on this tablet.” (Star’s words).",
+       "marks": [
+        [
+         444,
+         370,
+         392,
+         168
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-receipt-owen.png",
+       "crop": [
+        360,
+        80,
+        560,
+        640
+       ],
+       "scale": 0.9,
+       "caption": "<b>3. The receipt</b> (the shared one, on top of the summary): “Color belt testing · payment receipt”; Student · Event · Class · School · Reference; each payment that still stands as “Testing fee” (undone payments and their reversals left out); Total due · Paid to date · Balance; “Printed Nov 3, 2026 by Jeffrey Berg.” Close is focused first; <b>Print or save as PDF</b>. Also from ⋯ → Print receipt (P1, P2).",
+       "marks": [
+        [
+         360,
+         80,
+         560,
+         638
+        ]
+       ]
+      },
+      {
+       "src": "w390-receipt-owen.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.65,
+       "caption": "Phone 390: a full page with ←, Print pinned at the bottom.",
+       "marks": [
+        [
+         16,
+         64,
+         358,
+         484
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<div style=\"margin:26px 0 8px\"><div style=\"display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px\">To decide</div><h2 style=\"font-size:20px;margin:0 0 6px\">Question · A private testing moved from an event: does its receipt name the event?</h2><p style=\"margin:0 0 14px;max-width:1700px\">Ava Chen paid $65 cash on Oct 27 while she was on November Children Testing; on Nov 1 she was moved to a private testing (her payment moved with her) whose price is $85, and on Nov 3 she paid the $20 still owed. <b>Already settled by copying Star and Camps</b> (v0.518, v0.734): one line per payment that still stands, oldest first, each “Testing fee” (a payment doesn’t say what it paid for, so the receipt doesn’t guess), Total due = today’s price. <b>Color Belt’s own question:</b> the private testing is a new record, so its first payment is dated before the private testing existed — should the receipt say where it came from?</p><div style=\"display:flex;gap:24px;align-items:flex-start\"><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6\"><div style=\"font-weight:700;margin-bottom:10px\">A · Add a “Moved from” line <span style=\"background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px\">Recommended</span></div><figure style=\"width:560px\"><div class=\"shot\" style=\"width:560px;height:668px\"><img src=\"pc-receipt-avaA.png\" style=\"left:-360px;top:-80px;width:1280px\"><div class=\"mark\" style=\"left:37px;top:206px;width:308px;height:28px;border-color:#1D4ED8\"></div></div><figcaption>One more fact under “Private testing”: <b>Moved from · November Children Testing</b> (the event’s name, as the row says it; the private testing already stores it). The payment lines are the same as B.</figcaption></figure><p style=\"margin:8px 0 0\"><b>Recommended.</b> Explains the Oct 27 payment, which is older than the private testing; the same words the row and the summary already show (“moved from November Children Testing”). Shows only for a private testing that was moved from an event; one added at the desk has no such line. Nothing new in the database: the private testing already stores the event’s name.</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">B · No mention of the event</div><figure style=\"width:560px\"><div class=\"shot\" style=\"width:560px;height:645px\"><img src=\"pc-receipt-avaB.png\" style=\"left:-360px;top:-80px;width:1280px\"><div class=\"mark\" style=\"left:37px;top:296px;width:486px;height:34px;border-color:#1D4ED8\"></div></div><figcaption>The facts name only the private testing; the Oct 27 line is there with nothing saying why it is older.</figcaption></figure><p style=\"margin:8px 0 0\">One line shorter and the same facts as any private testing. A family (or the school, months later) may ask why a payment is dated before the private testing was set up.</p></div></div></div><p style=\"margin-top:18px\"><b>Everything else is copied</b> from Star v0.518, Camps v0.734 and the shared parts. <b>Answer A or B.</b></p>"
+}

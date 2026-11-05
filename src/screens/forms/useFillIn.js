@@ -11,7 +11,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { createElement } from 'react';
 import { addDays } from '../../lib/schedule/versions.js';
 import { cleanText } from '../../lib/calendar/rules.js';
-import { cleanAnswers, isTimeKey } from '../../lib/forms/fields.js';
+import { bookingsWithoutChild, CHILD_KEY, cleanAnswers, isTimeKey, removedChildIndex } from '../../lib/forms/fields.js';
 import { loadForm, openTimes, staffSubmit } from '../../lib/forms/api.js';
 import FillInDialog, { emptyFillValues } from './FillInDialog.jsx';
 
@@ -56,9 +56,21 @@ export function useFillIn({ isPhone, screenLocked, onNoAccess, onSent, onClosed 
       if (!d || d.saving) return d;
       const problems = { ...d.problems };
       for (const k of Object.keys(p.answers ?? {})) delete problems[k];
-      if (p.children) delete problems.children;
+      let next = p;
+      if (p.children) {
+        delete problems.children;
+        const gone = removedChildIndex(d.values.children, p.children);
+        // A child that was changed loses its marks until the next Continue; the others keep theirs.
+        // A removal moves every child after it up one place, so then all the marks go.
+        for (const k of Object.keys(problems)) {
+          const m = CHILD_KEY.exec(k);
+          if (m && (gone >= 0 || p.children[Number(m[1])] !== d.values.children[Number(m[1])])) delete problems[k];
+        }
+        // the removed child's free-class pick goes; the picks of the children after it move up one (code review)
+        if (gone >= 0) next = { ...p, bookings: bookingsWithoutChild(d.values.bookings, gone) };
+      }
       if (p.signature !== undefined) delete problems.signature;
-      return { ...d, values: { ...d.values, ...p }, problems, note: d.note === 'LEAVE_FILL' ? null : d.note, submissionKey: d.note === 'TIME_TAKEN' ? newKey() : d.submissionKey };
+      return { ...d, values: { ...d.values, ...next }, problems, note: d.note === 'LEAVE_FILL' ? null : d.note, submissionKey: d.note === 'TIME_TAKEN' ? newKey() : d.submissionKey };
     });
   }
 
@@ -67,7 +79,8 @@ export function useFillIn({ isPhone, screenLocked, onNoAccess, onSent, onClosed 
     if (!d || d.saving) return;
     patch({ saving: true, note: null });
     const v = d.values;
-    const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age }));
+    // each child: first name, last name, date of birth (migration 0036 works out the age from it)
+    const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), last_name: cleanText(c.last_name), dob: c.dob }));
     const bookings = Object.entries(v.bookings)
       .filter(([i, key]) => isTimeKey(key) && Number(i) < children.length)
       .map(([i, key]) => {
@@ -101,12 +114,15 @@ export function useFillIn({ isPhone, screenLocked, onNoAccess, onSent, onClosed 
     }
   }
 
+  // Esc, a click outside or Back: with something typed, the note shows and the dialog stays open
+  // until Send or Cancel — a second Esc does nothing (rulebook v0.46 / v1.027, design review N15).
+  // Phones have no Cancel, so their note (this one or an error) holds a "Discard changes" link (v0.56).
   function requestClose() {
     const d = ref.current;
     if (!d || d.saving) return;
     const started = d.mode === 'fill' && !d.sent && JSON.stringify(d.values) !== JSON.stringify(emptyFillValues());
-    if (started && d.note !== 'LEAVE_FILL') patch({ note: 'LEAVE_FILL' });
-    else close();
+    if (!started) close();
+    else if (!d.note) patch({ note: 'LEAVE_FILL' }); // an error note already showing stays
   }
 
   const element = state && !screenLocked

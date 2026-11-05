@@ -1,0 +1,709 @@
+{
+ "title": "Color Belt · Part 2 · P4 · Part swaps (CB5, CB19, CB10, CB12)",
+ "subtitle": "<b>Nothing to decide here</b>: Color Belt’s own boxes give way to the shared parts as they were approved (confirm box v1.008 / v1.103 with D1a–D1c, Compare dialog and duplicate box v1.102, Registration link v1.015 / v1.106 / v1.111, time list v1.019 / v1.109). The words stay Color Belt’s. <span style=\"color:#6B6B6B\">(Preview screenshots, fake data. The “after” is the REAL shared parts drawn on top of the real page; nothing in the app is built yet. Today’s “results aren’t saved” box only appears after a failed save on the testing day, so it is drawn with the app’s own dialog and exactly today’s markup.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "pc-leave-today.png",
+       "crop": [
+        440,
+        60,
+        400,
+        240
+       ],
+       "scale": 0.9,
+       "caption": "<b>1. CB5 · Leaving grading with unsaved results:</b> “Leave anyway” on the left, a blue “Stay on this page” on the right.",
+       "marks": [
+        [
+         543,
+         226,
+         253,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "w320-leave-today.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.8,
+       "caption": "320: the two buttons squeeze into two lines each.",
+       "marks": [
+        [
+         40,
+         242,
+         244,
+         40
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-delrank-today.png",
+       "crop": [
+        440,
+        60,
+        400,
+        200
+       ],
+       "scale": 0.9,
+       "caption": "<b>2. Classes and ranks:</b> “Cancel · Delete”.",
+       "marks": [
+        [
+         621,
+         187,
+         175,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "pc-delclass-today.png",
+       "crop": [
+        440,
+        60,
+        400,
+        240
+       ],
+       "scale": 0.9,
+       "caption": "Delete class: the same “Cancel · Delete”.",
+       "marks": [
+        [
+         621,
+         226,
+         175,
+         32
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-delstudent-today.png",
+       "crop": [
+        440,
+        60,
+        400,
+        230
+       ],
+       "scale": 0.9,
+       "caption": "<b>3. Delete permanently</b> (and delete event, delete / cancel private testing): the words stay. While it works today nothing changes on the button.",
+       "marks": [
+        [
+         508,
+         213,
+         288,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "w320-delstudent-today.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.8,
+       "caption": "320: “Keep student” and “Delete permanently” wrap to two lines; the buttons sit in the pinned bottom row, which can hide a failure note under them.",
+       "marks": [
+        [
+         40,
+         230,
+         240,
+         36
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-compare-today.png",
+       "crop": [
+        240,
+        60,
+        800,
+        505
+       ],
+       "scale": 0.7,
+       "caption": "<b>4. CB19 · Compare dialog:</b> a difference is only amber (screen readers hear “different”, nobody sees it); even the registered times count as different.",
+       "marks": [
+        [
+         396,
+         205,
+         600,
+         36
+        ],
+        [
+         396,
+         351,
+         600,
+         36
+        ]
+       ]
+      },
+      {
+       "src": "w390-compare-today.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         136,
+         136,
+         225,
+         20
+        ],
+        [
+         136,
+         282,
+         225,
+         20
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w390-dupbox-today.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        440,
+        390,
+        190
+       ],
+       "scale": 0.9,
+       "caption": "The duplicate box on a phone: the “·” starts the second line.",
+       "marks": [
+        [
+         16,
+         497,
+         358,
+         78
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-reglink-today.png",
+       "crop": [
+        400,
+        60,
+        480,
+        535
+       ],
+       "scale": 0.75,
+       "caption": "<b>5. CB10 · Registration link:</b> Copy link and Print flyer; no way to save the QR code. A failed copy shows a bar on the page behind the box.",
+       "marks": [
+        [
+         532,
+         445,
+         216,
+         28
+        ]
+       ]
+      },
+      {
+       "src": "w390-reglink-today.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         87,
+         373,
+         216,
+         36
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-eventdlg-today.png",
+       "crop": [
+        380,
+        80,
+        520,
+        560
+       ],
+       "scale": 0.75,
+       "caption": "<b>6. CB12 · Times:</b> Add / Edit event’s class times (and a private testing’s time) are the browser’s own lists: each browser draws its own, phones get their own wheel.",
+       "marks": [
+        [
+         612,
+         284,
+         251,
+         234
+        ]
+       ]
+      },
+      {
+       "src": "w390-eventdlg-today.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         53,
+         334,
+         307,
+         426
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "pc-leave-after.png",
+       "crop": [
+        440,
+        60,
+        400,
+        240
+       ],
+       "scale": 0.9,
+       "caption": "<b>1. CB5 · The two leave boxes swap</b> (event grading and private grading, D1c): <b>“Stay on this page”</b> on the left and focused first, a red <b>“Leave anyway”</b> on the right. The words stay.",
+       "marks": [
+        [
+         543,
+         226,
+         253,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "w320-leave-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.8,
+       "caption": "320: a pair that doesn’t fit stacks, each button the full width.",
+       "marks": [
+        [
+         40,
+         230,
+         240,
+         80
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-delrank-after.png",
+       "crop": [
+        440,
+        60,
+        400,
+        200
+       ],
+       "scale": 0.9,
+       "caption": "<b>2. “Keep rank · Delete rank”</b>, red.",
+       "marks": [
+        [
+         573,
+         187,
+         223,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "pc-delclass-after.png",
+       "crop": [
+        440,
+        60,
+        400,
+        240
+       ],
+       "scale": 0.9,
+       "caption": "<b>“Keep class · Delete class”</b>, red.",
+       "marks": [
+        [
+         570,
+         226,
+         226,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "pc-delclass-busy-after.png",
+       "crop": [
+        440,
+        60,
+        400,
+        240
+       ],
+       "scale": 0.9,
+       "caption": "While it works: <b>“Deleting…”</b>, and “Keep class” grays too.",
+       "marks": [
+        [
+         570,
+         226,
+         226,
+         32
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-delstudent-busy-after.png",
+       "crop": [
+        440,
+        60,
+        400,
+        230
+       ],
+       "scale": 0.9,
+       "caption": "<b>3.</b> Every Color Belt confirm box: the pressed button grays with its busy words (“Deleting…”, “Cancelling…”) and “Keep …” grays too. At rest it looks as today.",
+       "marks": [
+        [
+         508,
+         213,
+         288,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "w320-delstudent-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.8,
+       "caption": "320: stacked full width; never the pinned row.",
+       "marks": [
+        [
+         40,
+         217,
+         240,
+         82
+        ]
+       ]
+      },
+      {
+       "src": "w320-delstudent-busy-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        280
+       ],
+       "scale": 0.8,
+       "caption": "320, while it works.",
+       "marks": [
+        [
+         40,
+         217,
+         240,
+         82
+        ]
+       ]
+      },
+      {
+       "src": "w320-delstudent-failed-after.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        40,
+        320,
+        340
+       ],
+       "scale": 0.8,
+       "caption": "A failure note stays under the buttons, never hidden.",
+       "marks": [
+        [
+         40,
+         305,
+         240,
+         52
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-compare-after.png",
+       "crop": [
+        240,
+        60,
+        800,
+        505
+       ],
+       "scale": 0.6,
+       "caption": "<b>4. CB19 · The shared Compare dialog:</b> every differing value says <b>“⚠ different”</b>; the registered time and the reference are never marked (as Star and Black Belt). Same words, same rule for who may keep one (v0.194), “Hidden on this tablet”.",
+       "marks": [
+        [
+         396,
+         351,
+         600,
+         36
+        ]
+       ]
+      },
+      {
+       "src": "pc-compare-busy-after.png",
+       "crop": [
+        240,
+        60,
+        800,
+        505
+       ],
+       "scale": 0.6,
+       "caption": "While it works: <b>“Keeping…”</b> and every button grays; a failure note sits with the buttons.",
+       "marks": [
+        [
+         404,
+         394,
+         82,
+         28
+        ],
+        [
+         690,
+         489,
+         306,
+         32
+        ]
+       ]
+      },
+      {
+       "src": "w390-compare-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        760
+       ],
+       "scale": 0.5,
+       "caption": "Phone 390",
+       "marks": [
+        [
+         136,
+         282,
+         225,
+         20
+        ],
+        [
+         136,
+         565,
+         225,
+         20
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w390-dupbox-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        440,
+        390,
+        190
+       ],
+       "scale": 0.9,
+       "caption": "The shared duplicate box: on phones the count has its own line and Review sits under its words.",
+       "marks": [
+        [
+         16,
+         497,
+         358,
+         101
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-reglink-after.png",
+       "crop": [
+        400,
+        60,
+        480,
+        535
+       ],
+       "scale": 0.75,
+       "caption": "<b>5. CB10 · The shared Registration link box</b> with Color Belt’s flyer: adds <b>Download QR code</b> (a 1024 px PNG, “November Children Testing - Worcester QR code.png”).",
+       "marks": [
+        [
+         615,
+         445,
+         161,
+         28
+        ]
+       ]
+      },
+      {
+       "src": "pc-reglink-fail-after.png",
+       "crop": [
+        400,
+        60,
+        480,
+        610
+       ],
+       "scale": 0.75,
+       "caption": "A failed copy shows its amber note <b>inside the box</b>, until the box closes or a copy works.",
+       "marks": [
+        [
+         444,
+         538,
+         392,
+         34
+        ]
+       ]
+      },
+      {
+       "src": "w390-reglink-fail-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "caption": "Phone 390, after a failed copy.",
+       "marks": [
+        [
+         170,
+         373,
+         161,
+         36
+        ],
+        [
+         16,
+         478,
+         358,
+         34
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-time-after.png",
+       "crop": [
+        380,
+        80,
+        520,
+        560
+       ],
+       "scale": 0.75,
+       "caption": "<b>6. CB12 · The shared time list</b> in Add / Edit event and the private time: the same list on every device, every 5 minutes 6:00 AM–10:00 PM, it opens at the chosen time, and typing a number jumps to that hour.",
+       "marks": [
+        [
+         612,
+         364,
+         112,
+         280
+        ]
+       ]
+      },
+      {
+       "src": "w390-time-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "caption": "Phone 390: the same list, not the phone’s own wheel.",
+       "marks": [
+        [
+         53,
+         528,
+         140,
+         282
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<p style=\"margin-top:18px\"><b>Nothing to decide:</b> every look here was approved for the shared parts; Color Belt keeps its own words. <b>OK as drawn?</b></p>"
+}

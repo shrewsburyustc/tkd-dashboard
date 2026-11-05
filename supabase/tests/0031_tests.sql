@@ -391,7 +391,13 @@ begin
   -- T7: the class times carry the ages
   -- -------------------------------------------------------------------
   -- the free-class template (an internal helper: read as postgres)
-  v_fields := jsonb_set(public.forms_template('free_class'), '{8,text}', to_jsonb('I agree to the school''s rules.'::text));
+  -- (the waiver found by id, and without 0036's Address question - 0036_tests.sql
+  -- tests it - so the answers below work before and after 0036)
+  select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', to_jsonb('I agree to the school''s rules.'::text)) else e end
+                   order by n)
+    into v_fields
+    from jsonb_array_elements(public.forms_template('free_class')) with ordinality as t(e, n)
+   where e ->> 'type' <> 'address';
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.forms_create('worcester', 'free_class', v_tag || ' free', v_slug);

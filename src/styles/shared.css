@@ -236,6 +236,36 @@
   border: 1px solid var(--color-border-control);
 }
 
+/* Turned off (disabled: Tab skips it) or unavailable (aria-disabled: still a Tab stop): the icon
+   in the "unavailable" gray, the plain pointer, and on the bordered one the light border, as
+   Finance's › on today (rulebook v1.120). It doesn't react to the pointer (the hover section
+   below), but its tooltip still shows its name. */
+.tib:disabled,
+.tib[aria-disabled='true'] {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.tib--outline:disabled .tib-box,
+.tib--outline[aria-disabled='true'] .tib-box {
+  border-color: var(--color-border-strong);
+}
+
+/* Windows High Contrast: the theme's "unavailable" colour, as the browser's own disabled button.
+   !important because a section's own gray (Finance's › on today, Black Belt's Delete day) is a
+   normal colour, which High Contrast would swap for its "works" colour. */
+@media (forced-colors: active) {
+  .tib:disabled,
+  .tib[aria-disabled='true'] {
+    color: GrayText !important;
+  }
+
+  .tib--outline:disabled .tib-box,
+  .tib--outline[aria-disabled='true'] .tib-box {
+    border-color: GrayText !important;
+  }
+}
+
 /* Compact outline button (e.g. "Add rank"): 28px with a mouse */
 .btn-sm {
   height: 28px;
@@ -985,6 +1015,17 @@ html.is-reordering .tib-tip {
     border-color: var(--color-text-secondary);
   }
 
+  /* A turned-off or unavailable one doesn't react: no gray square, the border stays light
+     (v1.120). Its tooltip still shows (the tooltip section above). */
+  .tib:is(:disabled, [aria-disabled='true']):hover .tib-box {
+    background: none;
+    color: inherit;
+  }
+
+  .tib--outline:is(:disabled, [aria-disabled='true']):hover .tib-box {
+    border-color: var(--color-border-strong);
+  }
+
   .grip:hover {
     background: var(--color-border);
     color: var(--color-text);
@@ -1173,10 +1214,10 @@ html.is-reordering .tib-tip {
   border-bottom-color: var(--color-blue);
 }
 
-/* A green tag ("Open until Nov 13", "Paid") — guidelines 7 Success colors */
+/* A green tag ("Open until Nov 13", "Paid") — guidelines 7 Success colors, from tokens.css (v1.121) */
 .ttag--ok {
-  border-color: #cfe3b8;
-  background: #eaf3de;
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
   color: var(--color-success-text);
 }
 
@@ -1711,7 +1752,7 @@ html.is-reordering .tib-tip {
 }
 
 /* ===== M3 — the Mark paid box (MarkPaidBox.jsx, PaidByField; rulebook v1.104) =====
-   Camps' small box under its tag (camps.css .cp-popover / .cp-popover-line), copied under the
+   Drawn from Camps' old small box under its tag (Camps now uses this shared box), under the
    shared part's own names, 240px wide as drawn; placed by MarkPaidBox.jsx under its opener. */
 .mpb {
   position: fixed;

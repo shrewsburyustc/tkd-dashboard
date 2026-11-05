@@ -28,7 +28,7 @@ import { versionInEffect } from '../../lib/calendar/days.js';
 import { toTimeText } from '../../lib/schedule/time.js';
 import { emailOk, fieldsProblem, LOCKED_TYPES, longTextProblem, newField, nextFieldId, PALETTE, slugOk } from '../../lib/forms/fields.js';
 import { publishForm, saveDraft, setBooking, setFormStatus } from '../../lib/forms/api.js';
-import { Grip } from '../testing/RankRows.jsx';
+import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import BookingSettings, { bookingProblem, groupSlotKey, timeSlotKey } from './BookingSettings.jsx';
 import FieldEditor from './FieldEditor.jsx';
 import FieldPalette, { addBlocked, FieldIcon } from './FieldPalette.jsx';
@@ -102,6 +102,20 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   useEffect(() => {
     latestRef.current = { fields, name, slug, settings };
   });
+  // Counts the copies of the form from the database: a new copy (another admin's change) voids an
+  // Undo of a field deleted before it, so it can't put the field back into their version.
+  const copyRef = useRef(0);
+  useEffect(() => {
+    copyRef.current += 1;
+  }, [form]);
+  // false once the builder is closed: a toast's Undo pressed after that changes nothing
+  const openRef = useRef(true);
+  useEffect(() => {
+    openRef.current = true;
+    return () => {
+      openRef.current = false;
+    };
+  }, []);
 
   // A new copy of the form from the database (after a stale save or another admin's change).
   useEffect(() => {
@@ -225,20 +239,45 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     setSelectedId(id);
     if (isPhone) setPhoneEdit(id);
   }
+  // Delete a field at once, with Undo in the toast (rulebook v0.630, "(now)" point 5: like the
+  // Calendar's and the Schedule's Remove, v1.007). Any "Show only if" that pointed at it goes too.
   function deleteField(id) {
-    const gone = fields.find((f) => f.id === id);
+    const at = fields.findIndex((f) => f.id === id);
+    const gone = fields[at];
     if (!gone || LOCKED_TYPES.includes(gone.type)) return;
+    const rules = {}; // the "Show only if" rules that go with it, by field id, for Undo
     edit(
       fields
         .filter((f) => f.id !== id)
         .map((f) => {
           if (f.show_if?.field !== id) return f;
+          rules[f.id] = f.show_if;
           const { show_if: _gone, ...rest } = f;
           return rest;
         }),
     );
     setSelectedId(null);
     setPhoneEdit(null);
+    const copy = copyRef.current;
+    showToast(T.fieldDeleted(gone.label), { icon: false, action: { label: T.UNDO, onAction: () => undoDelete(gone, at, rules, copy) } });
+  }
+  // Undo puts back just that field, where it was, and its "Show only if" rules on the fields that
+  // still have none — so changes made since (another field, a rename) are kept. A rule that would
+  // now point at a field below it (the field was moved meanwhile) stays off.
+  function undoDelete(gone, at, rules, copy) {
+    if (!openRef.current) return;
+    const now = latestRef.current.fields;
+    // A new copy from the database meanwhile, or a new field that took the same id: say so instead
+    // of doing nothing.
+    if (copy !== copyRef.current || now.some((f) => f.id === gone.id)) {
+      showToast(T.UNDO_FIELD_CHANGED, { icon: false });
+      return;
+    }
+    const back = [...now.slice(0, at), gone, ...now.slice(at)];
+    const withRules = back.map((f) => (rules[f.id] && !f.show_if ? { ...f, show_if: rules[f.id] } : f));
+    edit(fieldsProblem(tidy(withRules))?.code === 'showIf' ? back : withRules);
+    setSelectedId(gone.id);
+    showToast(T.UNDONE, { icon: false });
   }
   function moveField(id, toIndex) {
     const from = fields.findIndex((f) => f.id === id);
@@ -478,6 +517,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   let stepNo = 1;
   const fieldHint = (f) => {
     if (f.type === 'children') return T.CHILD_HINT;
+    if (f.type === 'address') return T.ADDRESS_HINT; // its four boxes, like a choice's options (v0.634)
     if (f.type === 'booking') return T.bookingHint(booking.offered.length, booking.offered.reduce((n, c) => n + timesFor(c).filter((t) => (booking.times[timeSlotKey(c, t.weekday, t.start)] ?? { on: true }).on).length, 0));
     if (f.type === 'waiver') return (f.text ?? '').trim() ? T.WAIVER_HINT : T.WAIVER_HINT_EMPTY;
     if (f.options) return f.options.join(' / ');

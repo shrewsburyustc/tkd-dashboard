@@ -238,10 +238,12 @@
   padding-bottom: var(--space-8);
 }
 
+/* The box around one shared time list (TimeList.jsx, CB12) in Add / Edit event: as wide as
+   "10:00 PM" and the chevron at the 16px text touch screens use (112px cut it off). The list's
+   own look and its touch height are the shared ones. */
 .ev-time {
-  width: 112px;
-  padding-right: var(--space-4);
-  font-family: inherit; /* a select doesn't take the page font by itself (it showed Arial) */
+  display: block;
+  width: 124px;
 }
 
 .ev-classes-hint {
@@ -915,8 +917,10 @@
     table-layout: fixed;
   }
 
+  /* The tick column fits "☐ Passed ☐ Not passed ☐ No show" on one line (CB18: "Pass" became
+     "Passed"; about 179pt at 10pt Segoe UI, the column's inside is 38% of 7in minus padding = 183pt). */
   .gs-col-student {
-    width: 24%;
+    width: 22%;
   }
 
   .gs-col-tf {
@@ -924,11 +928,11 @@
   }
 
   .gs-col-result {
-    width: 34%;
+    width: 38%;
   }
 
   .gs-col-note {
-    width: 20%;
+    width: 18%;
   }
 
   .gs-table th {
@@ -1078,11 +1082,6 @@
     min-height: 36px;
   }
 
-  .ev-time {
-    height: var(--control-height-touch);
-    font-size: var(--text-16); /* 16px stops iPads zooming into the field */
-  }
-
   .ev-back,
   .ev-removed-toggle,
   .ev-sort {
@@ -1166,8 +1165,6 @@
     width: auto;
     min-width: 0;
     flex: 1;
-    height: var(--control-height-touch);
-    font-size: var(--text-16);
   }
 
   .ev-closing {
@@ -1294,6 +1291,12 @@
 
 /* Narrow phones (320–360px): the chosen "× Not passed" stays on one line */
 @media (max-width: 360px) {
+  /* Add / Edit event: the two class times start at the left edge, so "10:00 PM" still fits */
+  .ev-crow-times,
+  .ev-crow-off {
+    margin-left: 0;
+  }
+
   .gr-res.is-phone .gr-res-btn {
     gap: 2px;
     padding: 0 2px;
@@ -1326,4 +1329,18 @@
 .ev-roster.is-hidden.no-status .ev-srow:not(.is-phone),
 .ev-roster.is-hidden.is-wide.no-status .ev-srow:not(.is-phone) {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 44px;
+}
+
+/* ===== Part 2, P3: the two summaries' Print receipt and History (design review CB2 / CB7,
+   rulebook v0.421) =====
+   The outline Print receipt ends the Payment row (StudentDialog / PrivateSummaryDialog), on its own
+   line under the payment words, 8px down (Star's .st-print-receipt, Camps' .cp-print-receipt).
+   The History line follows the summary's list, 12px down (as drawn in P3); the line and its list
+   are the shared part's (shared.css .hist-*). */
+.ev-print-receipt {
+  margin-top: var(--space-8);
+}
+
+.ev-sum-history {
+  margin-top: var(--space-12);
 }

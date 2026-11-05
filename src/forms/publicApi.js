@@ -21,7 +21,7 @@
 //   submitForm(slug, body) → { status: 'ok', bookings, kioskEnded } | { status: 'time_taken', times }
 //                 | { status: 'form_changed' } | { status: 'closed' | 'not_found' | 'not_open' | 'rate_limited'
 //                 | 'verify_failed' | 'invalid' | 'bad_request' | 'network' | 'unavailable' }
-//   body = { submission_key, published_version, answers, children: [{ first_name, age }],
+//   body = { submission_key, published_version, answers, children: [{ first_name, last_name, dob }],
 //            bookings: [{ child, class_id, date, starts_at }], signature, website (honeypot),
 //            started_at, sent_at, turnstile_token, kiosk_token (only from the front-desk kiosk) }
 

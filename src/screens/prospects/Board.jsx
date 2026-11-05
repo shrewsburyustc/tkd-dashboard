@@ -2,10 +2,11 @@
 // Why it exists: the List shows one row per child; the Board shows the same children as one
 // column per stage (New, Contacted, Booked, Came, Joined — the stage bar's order, and any stage an
 // admin adds), so you see at a glance how many are where and who is stuck.
-//   - each child is a card: name (blue dot = a new sign-up you haven't opened), parent, and one
-//     line saying where they are or what's next (amber with the warning icon when it needs a call).
-//     The Board cards have no progress dots — the column already says the stage (v0.246 answer 3).
-//   - click / tap a card → the same side panel as the List
+//   - each child is a card: name ("Ava N.", the child's own last initial — v0.637; blue dot = a new
+//     sign-up you haven't opened), parent, and one line saying where they are or what's next (amber
+//     with the warning icon when it needs a call). The Board cards have no progress dots — the
+//     column already says the stage (v0.246 answer 3).
+//   - click / tap a card → the same profile window as the List (v0.639)
 //   - drag a card to another column (useCardDrag.js): mouse on PC, press-and-hold on touch
 //   - PC: all columns side by side (they scroll sideways only when there are too many)
 //   - tablet: the columns scroll sideways

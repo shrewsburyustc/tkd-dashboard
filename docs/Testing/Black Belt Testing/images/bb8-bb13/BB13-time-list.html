@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>BB13 · Testing day: Start and End times every 5 minutes</title><style>
+  body { margin:0; padding:22px 24px 24px; width:1000px; box-sizing:border-box; background:#fff; color:#1F1F1F; font:15px/1.45 "Segoe UI",system-ui,sans-serif; }
+  h1 { font-size:22px; font-weight:600; margin:0 0 6px; } .sub { margin:0 0 16px; color:#3A3A3A; }
+  h2 { font-size:15px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; margin:6px 0 10px; display:inline-block; padding:3px 9px; border-radius:6px; background:#EEF1F6; color:#22324D; }
+  h2.today { background:#FDF0D9; color:#7A4A06; } h2.after { background:#E5F2DF; color:#2E6B1F; } h2.rec { background:#E5F2DF; color:#2E6B1F; }
+  .group { margin-bottom:14px; } .figs { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+  figure { margin:0; } .shot { position:relative; overflow:hidden; border:1px solid #D9D9D4; border-radius:8px; }
+  .shot img { position:absolute; max-width:none; } .mark { position:absolute; border:3px solid; border-radius:8px; box-sizing:border-box; }
+  figcaption { margin-top:6px; font-size:14px; line-height:1.4; } .note { font-size:14px; color:#3A3A3A; margin:4px 0 0; }
+  .foot { margin-top:6px; padding-top:12px; border-top:1px solid #E5E5E2; font-size:14.5px; color:#2A2A2A; }
+  .foot b, figcaption b { font-weight:600; }
+  </style></head><body><h1>BB13 · Testing day: Start and End times every 5 minutes</h1><p class="sub">Edit cycle → a testing day → Start time. The four time fields (Start, End, and the second part’s Start and End) switch to the dashboard’s shared time list — the one Star, Camps and Finance already use. Nothing else in the dialog changes. Migration 0032 (live since today) already lets the database save 5-minute times.</p>
+  <div class="group"><h2 class="">PC: today → after</h2><div class="figs"><figure style="width:451px"><div class="shot" style="width:451px;height:299px">
+    <img src="raw/today-pc.png" style="left:-337.92px;top:-264px;width:1126.4px"><div class="mark" style="left:14.600000000000001px;top:67.4px;width:208.4px;height:220.72px;border-color:#F59E0B"></div></div>
+    <figcaption><b>Today.</b> 15-minute steps; the list opens with 12:30 PM at the bottom.</figcaption></figure><figure style="width:451px"><div class="shot" style="width:451px;height:299px">
+    <img src="raw/t-pc.png" style="left:-337.92px;top:-264px;width:1126.4px"><div class="mark" style="left:14.600000000000001px;top:67.4px;width:208.4px;height:220.72px;border-color:#3B8F2A"></div></div>
+    <figcaption><b>After.</b> Every 5 minutes, 6:00 AM–10:00 PM; 12:30 PM in the middle, tinted blue. Typing 6 jumps to 6:00 AM, 6 again to 6:00 PM.</figcaption></figure></div></div><div class="group"><h2 class="">After: tablet and phones</h2><div class="figs"><figure style="width:322px"><div class="shot" style="width:322px;height:223px">
+    <img src="raw/t-tab.png" style="left:-93px;top:-186px;width:508.4px"><div class="mark" style="left:11.879999999999999px;top:56.519999999999996px;width:148.6px;height:157.28px;border-color:#F59E0B"></div></div>
+    <figcaption><b>Tablet</b> (820 wide)</figcaption></figure><figure style="width:242px"><div class="shot" style="width:242px;height:205px">
+    <img src="raw/t-phone.png" style="left:0px;top:-155px;width:241.8px"><div class="mark" style="left:6.92px;top:40.4px;width:227.96px;height:157.28px;border-color:#F59E0B"></div></div>
+    <figcaption><b>Phone</b> (390)</figcaption></figure><figure style="width:198px"><div class="shot" style="width:198px;height:185px">
+    <img src="raw/t-p320.png" style="left:0px;top:-167.4px;width:198.4px"><div class="mark" style="left:6.92px;top:39.16px;width:184.56px;height:144.26px;border-color:#F59E0B"></div></div>
+    <figcaption><b>Small phone</b> (320)</figcaption></figure></div></div>
+  <div class="foot">Same list on every device (not the phone’s own picker). While the dialog saves it grays; a problem shows the usual amber words under the field. Black Belt’s own “15-minute” rule in the app changes to 5 minutes at the same time.</div></body></html>

@@ -1,0 +1,251 @@
+{
+ "title": "Color Belt · Screen 1 · Private testing tab (CB3, CB4, CB6, CB8, CB15, CB17)",
+ "subtitle": "<b>Everything here was already decided in the design review</b> (rows v1.003, v1.006, v1.009, v1.011, v1.024, v1.028). This shows how it lands on Color Belt's private testing tab. <b>One question at the bottom.</b> <span style=\"color:#6B6B6B\">(Preview screenshots, fake data. The “after” is drawn on top of the real page; nothing in the app is built yet.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "pc-menu-today.png",
+     "crop": [
+      640,
+      226,
+      630,
+      560
+     ],
+     "scale": 0.9,
+     "caption": "<b>1.</b> Not paid card uses a clock. In ⋯, “Change how they’ll pay” sits second and has no icon.",
+     "marks": [
+      [
+       684,
+       244,
+       20,
+       20
+      ],
+      [
+       1050,
+       513,
+       194,
+       34
+      ]
+     ]
+    },
+    {
+     "src": "pc-empty-today.png",
+     "crop": [
+      300,
+      226,
+      730,
+      200
+     ],
+     "scale": 0.8,
+     "caption": "<b>2.</b> Empty list: a box with a second blue “Add private testing” button.",
+     "marks": [
+      [
+       300,
+       276,
+       730,
+       130
+      ]
+     ]
+    },
+    {
+     "src": "pc-tab.png",
+     "crop": [
+      76,
+      382,
+      1180,
+      222
+     ],
+     "scale": 0.47,
+     "caption": "<b>3.</b> Tapping a row opens nothing. After Edit payment the toast says “Payment saved”, no Undo. After Restore or Edit details: no Undo.",
+     "marks": [
+      [
+       77,
+       415,
+       1178,
+       90
+      ]
+     ]
+    }
+   ],
+   "note": "The event roster gets the same icon and toast changes: Not paid card ti-circle-x, “Change how they’ll pay” ti-switch-horizontal, Restore ti-arrow-back-up, the No show result ti-user-x, and Edit payment → “Payment changed” + Undo."
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "pc-menu-after.png",
+     "crop": [
+      640,
+      226,
+      630,
+      560
+     ],
+     "scale": 0.9,
+     "caption": "<b>1.</b> Not paid card: <b>ti-circle-x</b> (CB15). ⋯ order: Edit details · Change day or time · Grade · <b>Change how they’ll pay</b> with <b>ti-switch-horizontal</b> (CB8, CB15). Money items below the line stay as they are.",
+     "marks": [
+      [
+       684,
+       244,
+       20,
+       20
+      ],
+      [
+       1050,
+       578,
+       194,
+       34
+      ]
+     ]
+    },
+    {
+     "src": "pc-empty-after.png",
+     "crop": [
+      300,
+      226,
+      730,
+      140
+     ],
+     "scale": 0.8,
+     "caption": "<b>2.</b> The one line every list uses; the header button is the one way to add (CB17).",
+     "marks": [
+      [
+       466,
+       306,
+       400,
+       26
+      ]
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "pc-summary.png",
+       "crop": [
+        410,
+        72,
+        460,
+        450
+       ],
+       "scale": 0.8,
+       "caption": "<b>3.</b> Tap a row → read-only summary, like the event roster’s: class, testing for, price, when added, paying by, the payment and its date. Close · Edit details (CB6). Mark paid and ⋯ stay on the row.",
+       "marks": [
+        [
+         420,
+         80,
+         440,
+         433
+        ]
+       ]
+      },
+      {
+       "src": "pc-toast-Payment-changed.png",
+       "crop": [
+        1000,
+        722,
+        266,
+        68
+       ],
+       "scale": 1,
+       "caption": "<b>4.</b> Toasts with Undo, 5 seconds: Edit payment → <b>“Payment changed”</b> (CB3); Restore → <b>“Ava Chen restored”</b>; Edit details → <b>“Changes saved”</b> (CB4).",
+       "marks": [
+        [
+         1077,
+         736,
+         179,
+         40
+        ]
+       ]
+      }
+     ]
+    }
+   ],
+   "note": "Hide private details on: the summary’s payment lines say “Payment details are hidden on this tablet.”; payment toasts use the general words and have no Undo (as today). No Undo on “Changes saved” when the edit cleared a result (as the event roster). Undo payment asking first (the other half of CB3) waits for the shared confirm box."
+  },
+  {
+   "label": "After · tablet 820 touch · phone 390 touch · 320 wide",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "w820-tab.png",
+       "crop": [
+        0,
+        0,
+        820,
+        900
+       ],
+       "scale": 0.5,
+       "shotWidth": 820,
+       "caption": "Tablet: Not paid card ti-circle-x.",
+       "marks": []
+      },
+      {
+       "src": "w820-summary.png",
+       "crop": [
+        0,
+        0,
+        820,
+        900
+       ],
+       "scale": 0.5,
+       "shotWidth": 820,
+       "caption": "Tablet: tap a row → the summary.",
+       "marks": []
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "w390-tab.png",
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "shotWidth": 390,
+       "caption": "Phone: the row card; tap it → summary.",
+       "marks": []
+      },
+      {
+       "src": "w390-summary.png",
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.6,
+       "shotWidth": 390,
+       "caption": "Phone summary.",
+       "marks": []
+      },
+      {
+       "src": "w320-summary.png",
+       "crop": [
+        0,
+        0,
+        320,
+        640
+       ],
+       "scale": 0.6,
+       "shotWidth": 320,
+       "caption": "320 wide: lines wrap, buttons fit.",
+       "marks": []
+      }
+     ]
+    }
+   ],
+   "note": "Same summary at every size; nothing is cut off at 320 wide."
+  }
+ ],
+ "footer": "<b>One question — Change day or time.</b> Today it closes with <b>no message at all</b>. CB4 adds “Changes saved” + Undo after Restore and Edit details only.<br><b>A · Recommended: give it “Changes saved” + Undo too.</b> <i>+</i> every change on this tab confirms itself the same way, and a wrong day is one tap to put back. <i>−</i> one more small build (the Undo moves the day and time back, refusing if the old slot is no longer allowed).<br><b>B · Keep it silent.</b> <i>+</i> no work. <i>−</i> the only change on the tab with no message; a mistake must be fixed by opening Change day or time again."
+}

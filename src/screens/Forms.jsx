@@ -4,7 +4,7 @@
 // section, like Calendar.jsx. It:
 //   - loads the forms (useForms) and shows the list (FormsList), filtered by the school switcher
 //   - admins: "New form" (NewFormDialog) → the builder (Builder.jsx); ⋯ → Fill in, Duplicate,
-//     Close form / Open form, Delete (only without sign-ups)
+//     Close form / Open form, Delete form (only without sign-ups; asks in the shared ConfirmBox)
 //   - staff: no building; a row opens a read-only Preview; "Fill in" and Share on each row
 //   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
@@ -13,7 +13,7 @@
 // who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCopy, IconCurrencyDollarOff, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
-import Dialog from '../components/Dialog.jsx';
+import ConfirmBox from '../components/ConfirmBox.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
@@ -229,7 +229,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     } else if (res.status === 'stale' || res.status === 'not_found') {
       patchDialog({ saving: false, note: T.STALE_BUILDER, blocked: true });
       list.reload();
-    } else patchDialog({ saving: false, note: T.SAVE_FAILED_BAR });
+    } else patchDialog({ saving: false, note: T.DELETE_FAILED });
   }
 
   // "Fill in for a family" in a form's ⋯ (admins; staff on phones). While private details are
@@ -238,7 +238,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     const live = m.form.status === 'live';
     return {
       key: 'fill',
-      // a draft or closed form keeps its own (status) reason, so the desk words show only on a live one
+      // a draft or closed form's item just grays (its status tag says why), so the desk words show only on a live one
       label: privateHidden && live ? (
         <span className="ev-menu-two">
           <span>{T.FILL_IN_ITEM}</span>
@@ -349,9 +349,13 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
           onSave={createNew}
           onCancel={closeDialog}
           onRequestClose={() => {
+            // With something typed the dialog stays open until Create or Cancel: the first Esc /
+            // Back shows "Unsaved changes…" (or keeps the note already there), the next does
+            // nothing (rulebook v0.46 / v1.027, design review N15). Phones: "Discard changes".
             const d = dialogRef.current;
-            if (d && JSON.stringify(d.values) !== JSON.stringify(d.initial) && d.note !== T.UNSAVED) patchDialog({ note: T.UNSAVED });
-            else closeDialog();
+            if (!d || d.saving) return;
+            if (JSON.stringify(d.values) === JSON.stringify(d.initial)) closeDialog();
+            else if (!d.note) patchDialog({ note: T.UNSAVED });
           }}
         />
       );
@@ -361,22 +365,25 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
       );
     } else if (dialog.type === 'delete') {
       dialogElement = (
-        <Dialog title={T.DELETE_TITLE} variant="confirm" describedBy={`forms-del-${dialog.key}`} onRequestClose={closeDialog}>
-          <p id={`forms-del-${dialog.key}`} className="tdialog-sub tdialog-body">
-            {dialog.note ?? T.deleteText(dialog.form.name)}
-          </p>
-          <div className="dialog-actions">
-            <button type="button" className="btn" data-autofocus onClick={closeDialog}>
-              {dialog.blocked ? T.CLOSE : T.CANCEL}
-            </button>
-            {!dialog.blocked && (
-              <button type="button" className={`btn btn-delete${dialog.saving ? ' is-unavailable' : ''}`} onClick={confirmDelete}>
-                <IconTrash size={16} aria-hidden="true" />
-                {dialog.saving ? T.SAVING : T.DELETE_FORM}
-              </button>
-            )}
-          </div>
-        </Dialog>
+        // The shared "are you sure?" box (design review N3): "Keep form" · "Delete form" (red, first
+        // focus on Keep). The sentence always stays; a refusal (the form has sign-ups, or it changed)
+        // or a failure shows as the amber note under the buttons. After a refusal "Delete form"
+        // grays (actionUnavailable, rulebook v0.633): the note already says why.
+        <ConfirmBox
+          title={T.DELETE_TITLE}
+          keepLabel={T.KEEP_FORM}
+          actionLabel={T.DELETE_FORM}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={Boolean(dialog.saving)}
+          actionUnavailable={Boolean(dialog.blocked)}
+          failed={dialog.note ?? null}
+          onKeep={closeDialog}
+          onConfirm={confirmDelete}
+        >
+          {T.deleteText(dialog.form.name)}
+        </ConfirmBox>
       );
     }
   }
