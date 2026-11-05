@@ -4,7 +4,8 @@
 // "did they come?", booking from the panel with the shared limit, each school's statuses, deleting
 // and the 2-year clean-up — and like 0036: each child's last name and date of birth (the list
 // carries the last name only). Also the profile's small rules (child.js, followUps.js): "Ava N.",
-// the age from the date of birth, the address line, how long the signature picture is kept.
+// the age from the date of birth, the address line, how long the signature picture is kept; and
+// how a long visitor sheet fits its paper (sheetPlan.js, v0.641).
 // Runs in Node without a browser:
 //   node src/lib/prospects/checks.mjs
 // Prints "ALL PROSPECTS LIB CHECKS PASSED", or stops at the first failed check.
@@ -12,8 +13,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { template } from '../forms/fields.js';
 import { createFormsBackend } from '../mockForms.js';
-import { addressFieldOf, addressLine, ageOn, answerFieldsOf, childAge, childFullName, signatureKeptUntil, waiverFieldOf } from './child.js';
+import { addressFieldOf, addressLine, ageOn, answerFieldsOf, childAge, childFullName, isWideAnswer, questionLead, signatureKeptUntil, waiverFieldOf } from './child.js';
 import { childInitial } from './followUps.js';
+import { LIMIT_PX, answersThatFit, planSheet } from './sheetPlan.js';
 
 let groups = 0;
 function group(name, fn) {
@@ -269,6 +271,52 @@ group('the profile\'s small rules: "Ava N.", the age, the address line, how long
   assert.deepEqual(signatureKeptUntil(['2027-01-13', '2027-02-01'], '2027-01-10T15:00:00Z'), { until: '2027-05-02', afterClass: true });
   assert.deepEqual(signatureKeptUntil([], '2027-01-11T01:30:00Z'), { until: '2027-04-10', afterClass: false }); // signed Jan 10, 8:30 pm in Massachusetts
   assert.equal(signatureKeptUntil([], null), null);
+});
+
+group('a long visitor sheet keeps the signature on its first page: one-line answers, then up to 10% smaller, then a next page (v0.641)', () => {
+  // (limit 967 px: the paper inside its margins, 979, less 12 for rounding). The signature row,
+  // the 15 boxes and the footer take 335 px below the part that may print smaller ("top").
+  assert.equal(LIMIT_PX, 967);
+  const base = { grid: 0, bottoms: [], waiverText: 94, more: 20 };
+  const sheet = (normal, compact) => ({ ...base, normal, compact, top: compact - 335 });
+  // fits as it is → as today
+  assert.deepEqual(planSheet(sheet(900, 860)), { kind: 'whole', compact: false, zoom: 1 });
+  // fits with the answers one line each
+  assert.deepEqual(planSheet(sheet(1111, 960)), { kind: 'whole', compact: true, zoom: 1 });
+  // Shrewsbury's Visitor Information form (12 answers, 981 px one line each): the part above the
+  // signature at 97.8% — (967 − 335) / 646 — and the signature and the boxes at their own size
+  assert.deepEqual(planSheet(sheet(1111, 981)), { kind: 'whole', compact: true, zoom: 0.978 });
+  // never more than 10% smaller: a 702 px top fits at 0.9, a 703 px top doesn't
+  assert.deepEqual(planSheet(sheet(1300, 335 + 702)), { kind: 'whole', compact: true, zoom: 0.9 });
+  assert.equal(planSheet(sheet(1300, 335 + 703)).kind, 'split');
+  // a much longer form (24 answers, 12 rows): the first page keeps the rows that fit beside one
+  // "More answers on the next page." line, at full size
+  const bottoms = Array.from({ length: 24 }, (_, i) => 21 + Math.floor(i / 2) * 24);
+  const long = { ...sheet(1500, 800 + 285), grid: 285, bottoms };
+  assert.deepEqual(planSheet(long), { kind: 'split', compact: true, zoom: 1, cut: 12, waiverBack: false });
+  // beside a very long waiver not even one answer fits: its wording goes on too, and then all 24 fit
+  assert.deepEqual(planSheet({ ...sheet(1500, 1000 + 285), grid: 285, bottoms, waiverText: 400 }), { kind: 'split', compact: true, zoom: 1, cut: 24, waiverBack: true });
+  // no other questions and a very long waiver: the first page keeps the signature, the next page the wording
+  assert.deepEqual(planSheet({ ...sheet(1400, 1300), waiverText: 500 }), { kind: 'split', compact: true, zoom: 1, cut: 0, waiverBack: true });
+  // a very long FIRST answer beside a short waiver: moving the wording wouldn't let it fit, so it stays
+  // (the answers go on; the first page keeps the waiver whole)
+  assert.deepEqual(planSheet({ ...sheet(1500, 700 + 400), grid: 400, bottoms: [400], waiverText: 94 }), { kind: 'split', compact: true, zoom: 1, cut: 0, waiverBack: false });
+  // the answers that fit, from the first (a row's two answers share its bottom)
+  assert.equal(answersThatFit([10, 10, 30, 30], 29), 2);
+  assert.equal(answersThatFit([10, 10, 30, 30], 9), 0);
+  assert.equal(answersThatFit([10, 10, 30, 30], 100), 4);
+  // "School Attending:" — a question that ends in ? or : keeps its own mark
+  assert.equal(questionLead('School Attending'), 'School Attending:');
+  assert.equal(questionLead('How did you hear about us?'), 'How did you hear about us?');
+  assert.equal(questionLead('Address:'), 'Address:');
+  assert.equal(questionLead('  Occupation '), 'Occupation:');
+  assert.equal(questionLead(''), '');
+  // on one line a question and its answer share half the paper: together over 52 characters, the whole row
+  const exp = { type: 'dropdown', label: 'Any Previous Martial Art experience?' };
+  assert.equal(isWideAnswer(exp, 'No', true), false);
+  assert.equal(isWideAnswer(exp, 'Yes, two years of karate', true), true);
+  assert.equal(isWideAnswer(exp, 'Yes, two years of karate'), false); // question above answer: room for both
+  assert.equal(isWideAnswer({ type: 'checkboxes', label: 'Benefits' }, 'Fun'), true); // a list is always the whole row
 });
 
 console.log(`ALL PROSPECTS LIB CHECKS PASSED (${groups} groups)`);

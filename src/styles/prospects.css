@@ -1587,11 +1587,13 @@ body.is-card-dragging * {
 }
 
 /* =============================================================================================
-   The printed visitor sheet (PrintSheet.jsx; rulebook v0.636, mockup rev 3 screen 4)
-   One US Letter page per child, black on white, weight 500 at most, the mockup's sizes (its paper
-   is drawn at 96px per inch, so px here are the same size on paper). The sheet's own rules are
-   outside the print rules on purpose: PrintSheet measures the pages on screen (invisibly) with
-   exactly the look they print with.
+   The printed visitor sheet (PrintSheet.jsx; rulebook v0.636, v0.641, mockup rev 3 screen 4)
+   One US Letter sheet per child (one page, except for a very long form), black on white, weight
+   500 at most, the mockup's sizes (its paper is drawn at 96px per inch, so px here are the same
+   size on paper). The sheet's own rules are outside the print rules on purpose: PrintSheet
+   measures the pages on screen (invisibly) with exactly the look they print with. A sheet too long
+   for one page (v0.641) prints its answers one line each (.is-compact), then the part above the
+   signature (.pps-top) up to 10% smaller (--pps-zoom, print rules below).
    ============================================================================================= */
 
 /* Never on screen — except while its pages are measured: laid out at the paper's width (7.5in
@@ -1745,6 +1747,44 @@ body.is-card-dragging * {
   white-space: pre-wrap;
 }
 
+/* A sheet too long for one page (v0.641): every answer on one line, like the old card —
+   "School Attending: Spring Street School" — two to a row, a long one across the row. A blank
+   answer keeps its line to write on, level with the question. */
+.pps-page.is-compact .pps-qa {
+  gap: 3px 18px;
+}
+
+.pps-page.is-compact .pps-qa > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pps-page.is-compact .pps-q {
+  flex: none;
+  max-width: 62%;
+}
+
+.pps-page.is-compact .pps-a {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  font-size: 13px;
+}
+
+/* a blank answer gets an invisible space, so its line sits level with a filled answer's */
+.pps-page.is-compact .pps-a:empty::after {
+  content: '\00a0';
+}
+
+/* "More answers on the next page." / "The answers are on the next page." / "The waiver's wording is
+   on the next page." (written .pps-page .pps-more so it wins over .pps-page p's margin: 0) */
+.pps-page .pps-more {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
 /* The waiver, "I have read and agree", the signature and the date signed */
 .pps-waiver {
   margin-top: 6px;
@@ -1872,7 +1912,9 @@ body.is-card-dragging * {
 }
 
 /* The paper: a named page, so these margins apply to the visitor sheet only (the mockup's 38px and
-   48px). */
+   48px). In Edge and Chrome an unnamed @page inside another section's print rules (finance.css,
+   testing-events.css) beats this one, so PrintSheet.jsx also draws the same paper as an unnamed
+   @page rule while the sheet prints (PAGE_RULE; rulebook v0.641). */
 @page pp-visitor {
   size: letter portrait;
   margin: 0.4in 0.5in;
@@ -1910,13 +1952,21 @@ body.is-card-dragging * {
     min-height: 10in;
   }
 
+  /* A long sheet (v0.641): the part above the signature prints up to 10% smaller — PrintSheet sets
+     --pps-zoom (0.9–1) on the page; "zoom" draws that part smaller and makes it take less room. The
+     signature row, the 15 boxes and the footer keep their size. */
+  .pp-print .pps-top {
+    zoom: var(--pps-zoom, 1);
+  }
+
   .pp-print .pps-page + .pps-page {
     break-before: page;
   }
 
   .pp-print .pps-staff-part,
   .pp-print .pps-sign,
-  .pp-print .pps-foot {
+  .pp-print .pps-foot,
+  .pp-print .pps-qa > div {
     break-inside: avoid;
   }
 }

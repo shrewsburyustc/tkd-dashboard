@@ -12,6 +12,8 @@
 //     free-class booking, the waiver, the parent's three fields and the address (those have rows of
 //     their own in the profile and on the sheet).
 //   - the home address: the form's Address answer { street, city, state, zip } as one line.
+//   - on the printed sheet: which answers take a whole row, and the question in front of its
+//     answer when a long sheet prints its answers one line each (v0.641).
 //   - how long the signature picture is kept: 90 days after the family's latest free class, or 90
 //     days after signing when no class was booked (the same rule as the database's
 //     forms_purge_old_signatures, migration 0009; v0.242).
@@ -56,9 +58,22 @@ export const addressFieldOf = (fields) => (Array.isArray(fields) ? fields : []).
 export const waiverFieldOf = (fields) => (Array.isArray(fields) ? fields : []).find((f) => f?.type === 'waiver') ?? null;
 
 // Does a question take the whole row in the answers' two columns (profile and printed sheet)?
-// A long answer type, or a question or answer too long to sit beside another one.
+// A long answer type, or a question or answer too long to sit beside another one. On a sheet
+// that prints its answers one line each (`compact`, v0.641) the question and its answer share the
+// line, so their length together counts too (52 characters fill half the paper's width).
 const WIDE_TYPES = ['long_text', 'checkboxes'];
-export const isWideAnswer = (field, words) => WIDE_TYPES.includes(field?.type) || String(field?.label ?? '').length > 48 || String(words ?? '').length > 48;
+export const isWideAnswer = (field, words, compact = false) => {
+  const label = String(field?.label ?? '');
+  const answer = String(words ?? '');
+  return WIDE_TYPES.includes(field?.type) || label.length > 48 || answer.length > 48 || (compact && label.length + answer.length > 52);
+};
+
+// The question in front of its answer on one line (v0.641, like the old card): "School Attending:";
+// a question that already ends in "?" or ":" keeps its own mark ("How did you hear about us?").
+export function questionLead(label) {
+  const text = String(label ?? '').trim();
+  return text === '' || /[?:]$/.test(text) ? text : `${text}:`;
+}
 
 // The Address answer as one line: { street, city, state, zip } → "12 Elm Street, Worcester, MA 01602".
 // A plain text (what an old page still open on a kiosk sends) is shown as it is; nothing → ''.
