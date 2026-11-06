@@ -676,6 +676,8 @@ export const RECEIPT_KIND = 'Color belt testing · payment receipt';
 export const RECEIPT_STUDENT = 'Student';
 export const RECEIPT_EVENT = 'Event';
 export const RECEIPT_PRIVATE = 'Private testing';
+// v0.429: a cancelled private testing's line ends "· cancelled Nov 6" (it owes nothing more)
+export const receiptCancelledOn = (stamp) => `cancelled ${stampDay(stamp)}`;
 export const RECEIPT_MOVED_FROM = 'Moved from'; // v0.421 Q A
 export const RECEIPT_CLASS = 'Class';
 export const RECEIPT_SCHOOL = 'School';

@@ -90,7 +90,9 @@ export default function PrivateSummaryDialog({
             {line}
           </span>
         ))}
+        {/* A cancelled one owes nothing more (v0.429), as its row already shows */}
         {record.owesMore &&
+          record.status !== 'cancelled' &&
           (oneLine ? ` · ${T.moreToCollect(record.amountDueCents)}` : <span className="ev-sum-line">{T.moreToCollect(record.amountDueCents)}</span>)}
         {canPrintReceipt && !hidden && onPrintReceipt && <PrintReceiptButton onPrint={onPrintReceipt} />}
       </>

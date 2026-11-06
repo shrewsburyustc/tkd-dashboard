@@ -3396,6 +3396,36 @@ check('receipt: a private testing (P3 "Ava", v0.421 Q A) — Moved from, a top-u
   assert.deepEqual(desk.facts.map((f) => f[0]), ['Student', 'Private testing', 'Class', 'School', 'Reference']);
 });
 
+check('receipt: a cancelled private testing owes nothing more (v0.429, pass 2 M-03 follow-up)', () => {
+  const base = {
+    firstName: 'Ava', lastName: 'Chen', rankName: 'Yellow', testingForName: 'Orange', className: 'Group A',
+    locationCode: 'worcester', reference: null, payments: [rPay('m1', 6500, '2026-10-30', '2026-10-30T15:00:00Z')],
+    totalDueCents: 8500, schools: [], printedOn: '2026-11-06', printedByName: null,
+  };
+  const pt = { privateOn: '2026-12-01', privateTime: '16:00', movedFromEventName: 'November Children Testing' };
+  // Paid $65 of $85, then cancelled: Total due = what was paid (Balance $0), and the line says so
+  const cancelled = buildColorBeltReceipt({ ...base, privateTesting: { ...pt, cancelledAt: '2026-11-06T15:00:00Z' } });
+  assert.equal(cancelled.totalDueCents, 6500);
+  assert.equal(cancelled.paidCents, 6500);
+  assert.deepEqual(cancelled.facts[1], ['Private testing', 'Tue, Dec 1, 4:00 PM · cancelled Nov 6']);
+  // Active (no cancelledAt, or null): the price, as before — $20 still to pay
+  const active = buildColorBeltReceipt({ ...base, privateTesting: { ...pt, cancelledAt: null } });
+  assert.equal(active.totalDueCents, 8500);
+  assert.deepEqual(active.facts[1], ['Private testing', 'Tue, Dec 1, 4:00 PM']);
+  assert.equal(buildColorBeltReceipt({ ...base, privateTesting: pt }).totalDueCents, 8500);
+  // An event registration never has a cancelled line
+  const ev = buildColorBeltReceipt({ ...base, event: { name: 'Fall', testingDate: '2026-11-20' }, classStart: '16:00', classEnd: '17:00' });
+  assert.equal(ev.totalDueCents, 8500);
+  // The school's day: cancelled at 10:30 PM on Nov 6 at the school (03:30 the next day in UTC)
+  const late = buildColorBeltReceipt({ ...base, privateTesting: { ...pt, cancelledAt: '2026-11-07T03:30:00Z' } });
+  assert.deepEqual(late.facts[1], ['Private testing', 'Tue, Dec 1, 4:00 PM · cancelled Nov 6']);
+  // Paid above its price (a move, or a price lowered later): Total due stays the price, so the
+  // overpayment still shows, as before
+  const over = buildColorBeltReceipt({ ...base, totalDueCents: 6000, privateTesting: { ...pt, cancelledAt: '2026-11-06T15:00:00Z' } });
+  assert.equal(over.totalDueCents, 6000);
+  assert.equal(over.paidCents, 6500);
+});
+
 check('receipt: Total due for an event registration (the price the database charges)', () => {
   const rank = { earlyCents: 5000, dayCents: 6000 };
   // Not paid: today's price — early before the testing day, the testing-day price on and after it.

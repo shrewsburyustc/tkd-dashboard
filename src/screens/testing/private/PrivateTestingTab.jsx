@@ -943,7 +943,8 @@ export default function PrivateTestingTab({
   // called when it opens; a failed call just leaves the name out, as Star's v0.518 Q7 A). Built by
   // lib/testing/receipt.js, as the event roster's: Private testing (day and time), "Moved from ·
   // [event]" only for one moved from an event (v0.421 Q A), Class, School; each payment that still
-  // stands is its own "Testing fee" line; Total due = the private price.
+  // stands is its own "Testing fee" line; Total due = the private price (a cancelled one, v0.429:
+  // what was paid, never more than the price, and its line ends "· cancelled Nov 6").
   // From the summary's Print receipt (P3) it opens on top of the summary (onTop, Star's v0.518);
   // from ⋯ on its own.
   function openReceipt(row, opener, onTop = false) {
@@ -967,7 +968,13 @@ export default function PrivateTestingTab({
         lastName: row.lastName,
         rankName: row.rankName,
         testingForName: row.testingFor?.kind === 'rank' ? row.testingFor.name : null,
-        privateTesting: { privateOn: row.privateDate, privateTime: row.privateTime, movedFromEventName: row.movedFromEventName },
+        privateTesting: {
+          privateOn: row.privateDate,
+          privateTime: row.privateTime,
+          movedFromEventName: row.movedFromEventName,
+          // v0.429: a cancelled one owes nothing more (the receipt says so)
+          cancelledAt: row.status === 'cancelled' ? row.cancelledAt : null,
+        },
         className: row.className,
         locationCode: row.locationCode,
         reference: null, // a private testing has no reference number
