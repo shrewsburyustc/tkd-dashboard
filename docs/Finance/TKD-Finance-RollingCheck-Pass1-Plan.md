@@ -58,7 +58,7 @@
 
 ## Smaller, done along the way
 
-- **F6's one-line ask:** should Finance's own Retry / Dismiss / Back / Close / Cancel (`finance/text.js:214–218`) come from the shared `src/components/text.js`? The words are identical; only the source changes. **Recommendation: yes.** Then Finance can't drift if the shared words change. It's a 5-line change, built with Step 1. (Jeffrey's answer goes in the status file.)
+- **F6's one-line ask:** should Finance's own Retry / Dismiss / Back / Close / Cancel (`finance/text.js:214–218`) come from the shared `src/components/text.js`? The words are identical; only the source changes. **Decided:** Jeffrey, 2026-11-05: "Yes, shared words"; built. Then Finance can't drift if the shared words change. It's a 5-line change, built with Step 1. (Jeffrey's answer goes in the status file.)
 - **S-2:** already done. Nothing to build.
 - **U-1 (found by Camps, sent by Main 2026-11-05):** after Edit payment and then Undo, the Daily report row still shows "Edited" with "Was · edited by …" and nothing after "Was". Cause: `PaymentsList.jsx` `rowText` builds `was` only from the fields that differ, but the `edited` state still adds the tag and `editedLine` still prints "Was ". Any section with Edit payment is affected (Camps; Black Belt is probably affected too, not tested). **Recommendation:** when nothing differs, show the row as a plain payment (no tag, no second line); the payment detail still lists the edit and its Undo. **Decided:** Jeffrey, 2026-11-05: "A: plain payment" (rulebook v0.824); built. Gap: a school-only edit also looks plain; Jeffrey: "Commit A, fix in R1-01".
 

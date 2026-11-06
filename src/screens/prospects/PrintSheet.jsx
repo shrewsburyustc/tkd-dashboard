@@ -1,14 +1,19 @@
 // PrintSheet.jsx — the printed visitor sheet: one US Letter sheet per child, one page except for a
-// very long form (rulebook v0.636 and v0.641; approved mockup
+// very long form (rulebook v0.636, v0.641 and v0.643; approved mockup
 // docs/Prospects/TKD-Prospect-Profile-Mockups.html rev 3, screen 4, and picture
 // docs/Prospects/ProspectProfile-Q7-print-A.png; Jeffrey's old paper card
 // docs/Prospects/Old-visitor-information-card.png was the reference).
 // Why it exists: the front desk still works on paper while a family tries classes. Print in a
-// child's profile (ProspectPanel.jsx) gives one sheet per child, black on white, weight 500 at most:
-//   - the school and its town, "Visitor information", "Printed [date] by [name]"
-//   - the form they filled out and when it was sent (or who entered it at the desk)
-//   - Student: full name, date of birth ("Not asked" for older sign-ups), age, free class
-//   - Parent or guardian: name, phone, email, home address (on one line; "Not asked" without the question)
+// child's profile (ProspectPanel.jsx) gives one sheet per child, black on white:
+//   - the school and its town, "Visitor information", "Printed [date] by [name]" (small)
+//   - the form they filled out and when it was sent (or who entered it at the desk), on one line
+//   - two boxes side by side (v0.643, picture docs/Prospects/PrintTop-B-whole-page.png), each value
+//     under a small label and without a writing line (the family already gave it; a detail left
+//     blank keeps a line to write on):
+//       Student: full name (the biggest words in the boxes), date of birth ("Not asked" for older sign-ups),
+//       age, free class
+//       Parent or guardian: name, phone, email, home address (on one line; "Not asked" without
+//       the question)
 //   - every other answer of that form (the form asks its own questions once per family, so brothers'
 //     and sisters' sheets repeat them, and the family's details and the waiver)
 //   - the waiver text, "I have read and agree to the waiver.", the signature picture — or "Signed
@@ -102,12 +107,13 @@ function measureSheets(box, count) {
   });
 }
 
-// One filled-in line with its small label under it (the old card's "Name: ______" look)
-function Line({ span, value, label }) {
+// One detail in the Student or Parent box: its small label, then the value (v0.643). `span` = how
+// many of the box's 6 columns it takes; `big` = the child's name, the biggest words in the boxes.
+function Line({ span, value, label, big = false }) {
   return (
-    <div className={`pps-f pps-f--${span}`}>
-      <div className="pps-v">{value}</div>
+    <div className={`pps-f pps-f--${span}${big ? ' pps-f--big' : ''}`}>
       <div className="pps-k">{label}</div>
+      <div className="pps-v">{value}</div>
     </div>
   );
 }
@@ -200,23 +206,27 @@ function Page({ child, index, part, plan, today, printedBy, measure }) {
         </div>
 
         {part !== 'second' && (
-          <>
-            <h2 className="pps-sec">{T.SHEET_STUDENT}</h2>
-            <div className="pps-grid">
-              <Line span={3} value={name} label={T.SHEET_NAME} />
-              <Line span={2} value={p.childDob ? T.longDate(p.childDob, false) : T.SHEET_NOT_ASKED} label={T.DATE_OF_BIRTH} />
-              <Line span={1} value={age ?? ''} label={T.SHEET_AGE} />
-              <Line span={6} value={freeClass} label={T.FREE_CLASS} />
-            </div>
-
-            <h2 className="pps-sec">{T.PARENT}</h2>
-            <div className="pps-grid">
-              <Line span={3} value={p.parentName} label={T.SHEET_NAME} />
-              <Line span={3} value={p.parentPhone} label={T.PHONE} />
-              <Line span={3} value={p.parentEmail} label={T.SHEET_EMAIL} />
-              <Line span={3} value={addressField ? addressLine(p.answers?.[addressField.id]) : T.SHEET_NOT_ASKED} label={T.HOME_ADDRESS} />
-            </div>
-          </>
+          // Student and Parent or guardian side by side, each in its own box (v0.643)
+          <div className="pps-people">
+            <section className="pps-person">
+              <h2 className="pps-sec">{T.SHEET_STUDENT}</h2>
+              <div className="pps-grid">
+                <Line span={6} value={name} label={T.SHEET_NAME} big />
+                <Line span={4} value={p.childDob ? T.longDate(p.childDob, false) : T.SHEET_NOT_ASKED} label={T.DATE_OF_BIRTH} />
+                <Line span={2} value={age ?? ''} label={T.SHEET_AGE} />
+                <Line span={6} value={freeClass} label={T.FREE_CLASS} />
+              </div>
+            </section>
+            <section className="pps-person">
+              <h2 className="pps-sec">{T.PARENT}</h2>
+              <div className="pps-grid">
+                <Line span={3} value={p.parentName} label={T.SHEET_NAME} />
+                <Line span={3} value={p.parentPhone} label={T.PHONE} />
+                <Line span={6} value={p.parentEmail} label={T.SHEET_EMAIL} />
+                <Line span={6} value={addressField ? addressLine(p.answers?.[addressField.id]) : T.SHEET_NOT_ASKED} label={T.HOME_ADDRESS} />
+              </div>
+            </section>
+          </div>
         )}
 
         {answersHere && (
