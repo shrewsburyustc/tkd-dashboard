@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 Panel size works: reviewer L found all 16 main screens fine at Large and Largest at 1280 and 820 touch, the panel buttons and account menu rows big enough, the failed-save bar on every page, and short windows scrolling as v1.118 says. The problems below come at window sizes between the review's four, and in shared rules.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. Several have a matching item in a section's own fix file ("after Dashboard core's [id]"): say in your report when each is merged, so the Main session can tell them.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`). L-05 is in question 3. Don't build it until his answer comes through the Main session. (Question 1 is answered: L-02 is now a Fix now item, v1.053.)
+- **Waits on Jeffrey:** nothing now. Questions 1–3 of the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`) are answered (v1.053, v1.052, v1.055), so their items are under Fix now.
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (L-03, L-06 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -95,6 +95,15 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
   - R4-09 (pass 1): `-2px 0`, not `-1px 0`.
 - **Check (preview mode):** 820×1180 touch, a roster's Add student button (nothing right above or below it). In the console: `const b = document.querySelector('.btn'), r = b.getBoundingClientRect(); [document.elementFromPoint(r.left + 20, r.top - 3.5) === b, document.elementFromPoint(r.left + 20, r.bottom + 3.5) === b]` → `[true, true]` (today `[false, false]`). Calendar at 820 touch: a tap 3 px above Month still switches. Buttons look the same at 1280, 820, 390 and 320.
 
+### L-05 — Panel size's failed-save bar says "Check the internet" · Low · Jeffrey approved question 3 (i), v1.055
+
+- **What's wrong** (approved this way: v1.118 quotes these words):
+  - The bar says "Couldn't save your panel size, so your other devices keep the old one. Check the internet, then Retry." (`src/lib/panelSize.js:49–50`).
+  - It is the only failure message in the app that says "Check the internet". Every other one says "Check the connection", and v1.051 (2)'s line ends "Check the connection, then retry." (lower-case retry).
+- **Rule:** v1.045 / v1.051 (one set of failure words). v1.118 quoted today's words; Jeffrey approved the change (v1.055), and the design review wrote the "(See v1.055 …)" note on v1.118.
+- **Change (Jeffrey approved A, v1.055):** "Couldn't save your panel size, so your other devices keep the old one. Check the connection, then retry."
+- **Check (preview mode):** `__tkdPreview.failNextPanelSave()` → Account menu → Panel size → Large: the bar shows the new words, with Retry and ×.
+
 ### L-06 — Drag handles look ready while dragging is switched off · Low
 
 - **What's wrong** (unclear for the look: no row covers a turned-off grip, and v1.120 covers only icon buttons; drift for the unused `disabled`):
@@ -117,19 +126,6 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
 
 ---
 
-## Waits on Jeffrey (don't build yet)
-
-### L-05 — Panel size's failed-save bar says "Check the internet" · Low · question 3 (i)
-
-- **What's wrong** (approved this way: v1.118 quotes these words):
-  - The bar says "Couldn't save your panel size, so your other devices keep the old one. Check the internet, then Retry." (`src/lib/panelSize.js:49–50`).
-  - It is the only failure message in the app that says "Check the internet". Every other one says "Check the connection", and v1.051 (2)'s line ends "Check the connection, then retry." (lower-case retry).
-- **Rule:** v1.045 / v1.051 (one set of failure words). v1.118 quotes today's words, so changing them needs Jeffrey's OK.
-- **If A (recommended):** "Couldn't save your panel size, so your other devices keep the old one. Check the connection, then retry."
-- **Check (preview mode):** `__tkdPreview.failNextPanelSave()` → Account menu → Panel size → Large: the bar shows the new words, with Retry and ×.
-
----
-
 ## Smaller (fix while you're in the file)
 
 - **P-04 — The shared receipt prints with another section's page margins** (missing — not planned; harmless today, still one page):
@@ -138,8 +134,8 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
   - Change: give the receipt the unnamed page rule inside its print portal, as the visitor sheet (`src/screens/prospects/PrintSheet.jsx:55–60, 367`) and Black Belt's results sheet (`src/blackBelt/staff/results/ResultsSheet.jsx:45, 169`) do (Color Belt's results sheet did too; it goes with Color Belt's M-06, v1.052) — ideally one small shared `PrintPageRule` part, which those two can switch to later (name them in your report).
   - Check: open Finance, then Testing, then Camps → Thanksgiving Camp → ⋯ for Chloe Nguyen → Print receipt → Print: the print preview (Margins: Default) shows 0.6 in top and bottom and 0.7 in at the sides. Low.
 - **L-10 (your part) — Page tabs and sort headers are under 44 px wide on touch** (drift; older work): on touch `.ttab` gets 44 px height but no minimum width (`shared.css:1086–1088`; "Camps" and "Events" are 38–40 px wide), and so does `.ev-sort` (`testing-events.css:1085–1089`; "Event", "Camp" and "Status" are 29–32 px wide). Not a WCAG AA failure (2.5.8's 24 px passes); §2.5's 44 × 44 misses. Give them a 44 px tap width on touch (an invisible box, as L-03's rule, if the look must stay). Calendar's Month / Week is in L-03. Check at 820 touch. Low.
-- **C-04 is question 3 (f)** of the pass 2 report (a line between Restore and the red Delete permanently on a removed person's ⋯). If the line wins, the design review's row adds it to §8's ⋯ menu rule (v1.011), and Color Belt and Black Belt build it. Nothing for you to build.
-- **C-06 and your R2-07:** your R2-07 has no list of places: it puts the three sentences in `src/components/text.js`, and each section switches. The sections' own R2-07 items gain one more place, the failed Undo of Close / Open registration (Color Belt's and Star's items). Question 3 (j) asks whether the failed Mark paid line and the Undo payment box's failure note join the set too: if Jeffrey says yes, they join your shared words.
+- **C-04 is decided** (question 3 (f), v1.055): Jeffrey approved a line between Restore and the red Delete permanently on a removed person's ⋯. §8's ⋯ menu rule now says it (the design review wrote the "(See v1.055 …)" note on v1.011), and Color Belt and Black Belt build it. Nothing for you to build.
+- **C-06 and your R2-07:** your R2-07 has no list of places: it puts the three sentences in `src/components/text.js`, and each section switches. The sections' own R2-07 items gain one more place, the failed Undo of Close / Open registration (Color Belt's and Star's items). Jeffrey approved question 3 (j) (v1.055): the Undo payment box's failure note becomes the failed-Undo sentence, already one of your three; the failed Mark paid line stays Color Belt's own (Camps re-exports it), and only its ending changes. Nothing new for you to build.
 - **Shared words New students may ask for:** a "Couldn't copy …" line for a phone number (U-05), "Couldn't delete. Check the connection, then try again." (U-08), and one date-of-birth hint and one ZIP line (L-09). If Jeffrey says they go in `src/components/text.js`, you add them.
 
 ---

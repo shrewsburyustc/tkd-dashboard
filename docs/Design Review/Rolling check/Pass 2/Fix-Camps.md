@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 Reviewer L found v0.738 built as picture 19, option A, at 1280, 820 touch, 390 and 320: the words in the day boxes, the legend, and the count line before and during the camp. The one Medium below comes from the shared side panel, not from your work. Jeffrey has decided it (v1.053), and it waits for Dashboard core's part. Your pass 1 items go on as planned.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Question 1 is answered: L-02 is now a Fix now item, v1.053.)
+- **Waits on Jeffrey:** nothing now. Questions 1–3 of the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`) are answered (v1.053, v1.052, v1.055), so their items are under Fix now.
 - **Smaller:** fix them while you're in the file, or check them.
 - Each item keeps its finding id (L-02, M-03 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -66,33 +66,26 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
   - Mockup first: the cards with a mouse, with their ⋯.
 - **Check (preview mode):** Account menu → Panel size → Largest, then Standard. April Vacation Camp at 768 and 744 wide touch, 700 touch and 683 with a mouse: no sideways scroll, and every day is whole; where the cards show with a mouse, each has its ⋯. At 1280, 820 touch, 390 and 320 the roster looks as today.
 
----
-
-## Waits on Jeffrey (don't build yet)
-
-Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer.
-
-### M-03 (your part) — No Print receipt for a removed camper who paid · Low · question 3 (b)
+### M-03 (your part) — No Print receipt for a removed camper who paid · Low · Jeffrey approved question 3 (b), v1.055
 
 - **What's wrong** (approved this way: v0.734, "absent … for a removed camper"):
   - `canPrintReceipt` (`campReceipt.js:28–30`) needs an active camper, so a camper removed after paying gets no receipt. A removed camper's ⋯ holds only Restore and Delete permanently (`CamperRowMenu.jsx:57–61`).
   - Yet your Payments recorded card counts their money (v0.737, v1.038).
   - Color Belt and Star do the same; Black Belt offers it on every row.
-- **If A (recommended):** Print receipt also on a removed camper with money that still stands; never with nothing paid; never while Hide private details is on. v0.734 gets a "(See …)" note. Where it sits on a removed row, and for whom, is drawn in your mockup.
+- **Change (Jeffrey approved A, v1.055):** Print receipt also on a removed camper with money that still stands; never with nothing paid; never while Hide private details is on. Where it sits on a removed row, and for whom, is drawn in your mockup. v1.055 records it, and the design review wrote the "(See v1.055 …)" note on your v0.734, so you need no row of your own unless Jeffrey decides something new in your mockup.
+- **Check (preview mode):** remove a camper who paid → their ⋯ (Camper detail's More on touch) has Print receipt where your mockup puts it, and it prints that payment; a removed camper with nothing paid has none; with Hide private details on, none.
 
-### Also in question 3
+### C-05 (b) — Your card filter's empty line says what is true · Low · Jeffrey approved question 3 (g), v1.055
 
-- **(a) M-02:** your History is the model (one save, one entry, v0.736). Nothing changes for you.
-- **(f) C-04:** you already draw a line between Restore and Delete permanently (`CamperRowMenu.jsx:59–60`). Nothing changes unless Jeffrey picks B (no line).
-- **(g) C-05:** your card filter's empty line, "No campers match." (`camps/text.js:511`), may change to say what is true, in Color Belt's pattern (for example "Every camper has paid." for To collect): drawn in your mockup if he picks it. "No past camps yet." (`:133`) stays.
-- **(j) C-06:**
-  - (a) your failed Mark paid says Color Belt's "[Name] wasn't marked paid. Check the connection and try again." (re-exported, `camps/text.js:58`; shown at `CampPage.jsx:428`). If Jeffrey picks A, its new ending ("… Check the connection, then retry.") reaches your screen through the re-export: check it.
-  - (b) your Undo payment box's note, "Couldn't undo. Check the connection, then try again." (`UNDO_PAYMENT_FAILED`, `camps/text.js:611`), is already in your pass 1 R2-07 switch to "Undo didn't save. Check the connection, then retry.". If Jeffrey picks B for (j) (b), leave it out of R2-07.
+- **What's wrong** (approved this way; four sections word it four ways): when a count card's filter leaves nobody, you say "No campers match." (`camps/text.js:511`). Color Belt says what is true ("No paid students in this class." / "Everyone in this class has paid.", v0.420, v0.424 (4)); Star says "No candidates match."; Black Belt "No candidates in this group."
+- **Change (Jeffrey approved A, v1.055):** say what is true for each card, in Color Belt's pattern, for example "Every camper has paid." for To collect, and a line for your Coming card. Your lines are drawn in your mockup. "No past camps yet." (`:133`) stays.
+- **Check (preview mode):** pick each count card on a camp where it leaves nobody: its own line shows. At 1280 and 390.
 
 ---
 
 ## Smaller (fix while you're in the file)
 
+- **Question 3 answers that need nothing new from you** (Jeffrey approved every A, v1.055): (a) M-02: your History is the model (one save, one entry, v0.736). (f) C-04: you already draw the line between Restore and Delete permanently (`CamperRowMenu.jsx:59–60`), which §8 now asks for. (j) C-06 (b): your Undo payment box's note (`UNDO_PAYMENT_FAILED`, `camps/text.js:611`) stays in your pass 1 R2-07 switch to "Undo didn't save. Check the connection, then retry." (the design review wrote the "(See v1.055 …)" note on your v0.730). **Check, after Color Belt's C-06 (a):** your failed Mark paid line is Color Belt's, re-exported (`camps/text.js:58`, shown at `CampPage.jsx:428`), so its new ending ("… Check the connection, then retry.") reaches your screen; check it there. Nothing to build. Low.
 - **L-07 — The blue "Early" / "Late" words** (approved this way: v0.738). You draw them in school blue (`camps.css:765–776`; the legend's word at `:784–788`), as v0.738 approved ("in small blue text"; picture 19 drew blue in both options). §1.2 now names these words as an exception to its limit of five blue things on a screen (v1.054). Nothing to change unless Jeffrey asks to recolor them. Low.
 - **L-03, after Dashboard core's:** the touch tap box is 42 px, not 44, because `inset: -4px 0` counts from inside a 1 px border. Your day boxes copy it: `camps.css:821–825` (`.cp-dc`, a 1 px transparent border) and `:979–983` (`.cp-daychip`). Dashboard core fixes the number (`-5px 0`) and names your file in its report; if it leaves them to you, use the same number. Then check at 820 touch: a tap 3 px above or below a day box still opens it. Low.
 - **C-07 (a):** your History's "Paying by: Cash → Check" (`camps/text.js:808, 820`) and Color Belt's "Paying by changed: Cash → Check" are both approved. Dashboard core's R1-07 mockup now draws this line too (its pass 2 correction); it follows that set with your pass 1 R1-07 item. Nothing to do now.

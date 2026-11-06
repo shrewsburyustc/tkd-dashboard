@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 The reviewers found every Part 1 and Part 2 item built as its row and mockup say, and Hide private details holds on every Color Belt screen. The problems below are four Mediums (three about the same person record, and the roster's layout between tablet and phone sizes, which Jeffrey has now decided, v1.053) and smaller things.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Questions 1 and 2 are answered: L-02 and M-06 are now Fix now items.)
+- **Waits on Jeffrey:** nothing now. Questions 1–3 of the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`) are answered (v1.053, v1.052, v1.055), so their items are under Fix now.
 - **Smaller:** fix them while you're in the file, or record them.
 - Each item keeps its finding id (M-01, C-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move. Your branch (`color-belt` 46e745b) has the same code where it matters (M-01: checker 1 read both).
@@ -145,6 +145,35 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-colorbelt-print-re
   - Print grading sheet prints as today (its own paper, with Color Belt's 0.75-inch margins), and so do the flyers.
   - At 1280, 820 touch, 390 and 320. `npm run build` and `npm run build:preview-mode` pass, and so does `src/lib/testing/checks.mjs`.
 
+### M-02 = C-07 (b) — One Mark paid by another way shows as two History entries · Low · Jeffrey approved question 3 (a), v1.055
+
+- **What's wrong** (approved this way: P3 drew it):
+  - One save that records, undoes or edits a payment and changes Paying by shows as two entries, and "History · N changes" counts both.
+  - Checker 1: private Ava Chen (Paying by Card) → Mark paid → Cash → $20. Her summary reads "History · 4 changes"; the top two are "Paying by changed: Card → Cash" and "Payment recorded: $20 cash, paid Nov 5", same moment, same person. Undo payment adds two more.
+  - `src/lib/testing/history.js:105–149` joins only Edit payment pairs and moves; Paying by is its own part at `:347`.
+  - Your approved P3 drew it this way: "Payment changed: check → cash" and "Paying by changed: Check → Cash", one second apart (`docs/Testing/Color Belt Testing/Design Review mockups/p3/data-p3.js:11–12`; `history-words.html:70` lists "Paying by changed").
+  - Camps makes one entry per save (v0.736: "One save that changes several things is one entry"; `src/screens/camps/camperHistoryWords.js:20–21, 218`).
+- **Change (Jeffrey approved A, v1.055):** one save is one entry. Join the registration's Paying by update with the payment row of the same save, money first, with "; ", as you join Edit payment rows today: "Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash" (the exact payment and Paying by words follow R1-07's one set, which Dashboard core's mockup draws). Both rows carry `action` 'mark_paid' and the same time (`supabase/migrations/0030_color_belt_review.sql:307–324`); the reader returns no `batch_id` (`0030_color_belt_review.sql:1290–1292`). Star follows with its R1-02.
+  - v1.055 records it, and the design review wrote the "(See v1.055 …)" notes on your v0.421 (P3) and v0.425 (History words), so you need no row of your own unless Jeffrey decides something new in your mockup. Mockup first: the History after a Mark paid by another way, and after its Undo payment.
+- **Check (preview mode):** private Ava Chen → ⋯ Change how they'll pay → Card → Save; then Mark paid → Cash → $20: her History shows one new entry, "Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash" (in R1-07's words once they land), and "History · N changes" counts it once. Undo payment adds one entry, not two.
+
+### M-03 (your part) — No Print receipt for a removed student or a cancelled private testing that has money · Low · Jeffrey approved question 3 (b), v1.055
+
+- **What's wrong** (approved this way: v0.424 (6)):
+  - A removed student or a cancelled private testing with money gets no Print receipt: the event roster offers it only on an active, paid row (`event/EventPage.jsx:1558, 1574–1577`); the Private testing tab only on a paid one (`src/lib/testing/privateRules.js:176`), and a cancelled one's ⋯ holds only Restore and Delete permanently (`private/PrivateTestingTab.jsx:1090–1091, 1109`).
+  - Yet v1.038 still counts their money ("includes $65 from removed students").
+  - Star and Camps do the same; Black Belt offers it on every row.
+- **Change (Jeffrey approved A, v1.055):** Print receipt also on a removed student or cancelled private testing with a payment that still stands; never with nothing paid; never while Hide private details is on. Today staff see no ⋯ on those rows, so who gets it there is drawn in your mockup. v1.055 records it, and the design review wrote the "(See v1.055 …)" note on your v0.424 (6), so you need no row of your own unless Jeffrey decides something new in your mockup.
+- **Check (preview mode):** November Children Testing → Owen Reed (paid) → ⋯ Withdraw first. Owen, and Emma Ross's cancelled private testing ($85 paid): Print receipt is where your mockup puts it and prints that payment; Leo Hart (withdrawn, nothing paid) has none; with Hide private details on, none.
+
+### C-04 (your part) — No line between Restore and the red Delete permanently · Low · Jeffrey approved question 3 (f), v1.055
+
+- **What's wrong** (unclear: v1.011 doesn't place Restore):
+  - On a removed student, the ⋯ reads "Restore · Delete permanently" with no line between them (`event/EventPage.jsx:1584–1586`); a cancelled private testing the same (`private/PrivateTestingTab.jsx:1091, 1109`, both in the last group).
+  - So the red Delete permanently sits right under the harmless Restore. Star (`src/lib/star/candidateMenu.js:34–35`) and Camps (`src/screens/camps/CamperRowMenu.jsx:59–60`) draw a line there; Black Belt doesn't either.
+- **Change (Jeffrey approved A, v1.055):** Delete permanently starts its own group on a removed or cancelled row (`separatorBefore`, as Star's). §8's ⋯ menu rule now says it: "On a removed person's ⋯, Restore sits above the line and the red Delete permanently below it." (the design review wrote the "(See v1.055 …)" note on v1.011).
+- **Check (preview mode):** a removed student's ⋯ and a cancelled private testing's ⋯: Restore, a line, then the red Delete permanently. At 1280 and 390.
+
 ### C-05 (a) — An event with nobody on it shows four zero cards · Low
 
 - **What's wrong** (drift from your own Private testing tab):
@@ -154,6 +183,18 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-colorbelt-print-re
 - **Rule:** v1.028 (§8 Empty states): an empty list shows one line. Consistency with your own Private testing tab, Star and Camps.
 - **Change:** draw the cards only once the event has a registration, active or removed (as Camps' `hasCampers`, `src/screens/camps/CampRoster.jsx:617`). With nobody, the empty line shows alone.
 - **Check (preview mode):** Add event → open it before anyone registers: no cards, only the empty line. Add a student → the four cards show. At 1280 and 390.
+
+### C-05 (b, c) — The empty lines for a card filter and the Past side · Low · Jeffrey approved question 3 (g), v1.055
+
+- **(b)** (approved this way: v0.420, v0.424 (4)): when a card filter leaves nobody, you say "No paid students in this class." / "Everyone in this class has paid." (`testing/text.js:607–608`). Star says "No candidates match.", Camps "No campers match.", Black Belt "No candidates in this group." Jeffrey approved your pattern (g1, A): Star, Camps and Black Belt change their lines to say what is true. Nothing changes for you.
+- **(c)** (unclear): "No past events." / "No past private testings." (`testing/text.js:397, 1059`), where Star says "No past events yet.", Camps "No past camps yet." and Black Belt "No past cycles yet." **Change (g2, A):** "No past events yet." and "No past private testings yet."
+- **Check (preview mode):** Shrewsbury → Private testing → Past (empty in the fake data): "No past private testings yet." Wherever an Events list's Past side is empty: "No past events yet." The Paid card's lines stay as today.
+
+### C-06 (a, b, your part) — The failed Mark paid line and the Undo payment box's note · Low · Jeffrey approved question 3 (j), v1.055
+
+- **(a)** (unclear): a failed Mark paid says "[Name] wasn't marked paid. Check the connection and try again." (`testing/text.js:650`, in the bar with Retry: `event/EventPage.jsx:1268`, `private/PrivateTestingTab.jsx:865`). Star says "That didn't save. Check the connection, then retry." **Change (j1, A):** "[Name] wasn't marked paid. Check the connection, then retry." Camps re-exports this line (`src/screens/camps/text.js:58`, shown at `src/screens/camps/CampPage.jsx:428`): list it in your report.
+- **(b)** (approved this way: Star's v0.518 Q2 B, Camps' v0.730): the Undo payment box's failure note says "Couldn't undo. Check the connection, then try again." (`testing/text.js:667`). **Change (j2, A):** v1.045 (4)'s "Undo didn't save. Check the connection, then retry.", and `:667` joins your R2-07 point (Star's and Camps' pass 1 R2-07 items already switch theirs).
+- **Check (preview mode):** `__tkdPreview.failNextSave()` → Mark paid → Save: "[Name] wasn't marked paid. Check the connection, then retry." in the bar, with Retry. Then `__tkdPreview.failNextSave()` → ⋯ Undo payment → Undo payment: the box stays open with "Undo didn't save. Check the connection, then retry."
 
 ### C-06 (c, your part) — A failed Undo of Close / Open registration doesn't say "Undo didn't save" · Low · after Dashboard core's R2-07
 
@@ -173,47 +214,6 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-colorbelt-print-re
 - **Rule:** the shared Grip's own header (`disabled`: "true: shown, but can't drag (e.g. while saving)", `components/Grip.jsx:16`); v1.116 / v1.120 (a turned-off control looks turned off).
 - **Change:** after Dashboard core's L-06 (the shared Grip grays itself while dragging is off; Jeffrey sees a small picture first), check your grips. If Dashboard core asks screens to pass the state, pass it. CB14 moves Classes and ranks into Settings (v0.427): check them there.
 - **Check (preview mode):** `__tkdPreview.setTestingDelay(4000)`; Classes and ranks → ⋯ on White → Move down: for the 4-second save every grip is gray and `aria-disabled`. Afterwards `__tkdPreview.setTestingDelay(200)`.
-
----
-
-## Waits on Jeffrey (don't build yet)
-
-Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer. (L-02 was question 1 and M-06 question 2; Jeffrey has answered both, so they are under Fix now.)
-
-### M-02 = C-07 (b) — One Mark paid by another way shows as two History entries · Low · question 3 (a)
-
-- **What's wrong** (approved this way: P3 drew it):
-  - One save that records, undoes or edits a payment and changes Paying by shows as two entries, and "History · N changes" counts both.
-  - Checker 1: private Ava Chen (Paying by Card) → Mark paid → Cash → $20. Her summary reads "History · 4 changes"; the top two are "Paying by changed: Card → Cash" and "Payment recorded: $20 cash, paid Nov 5", same moment, same person. Undo payment adds two more.
-  - `src/lib/testing/history.js:105–149` joins only Edit payment pairs and moves; Paying by is its own part at `:347`.
-  - Your approved P3 drew it this way: "Payment changed: check → cash" and "Paying by changed: Check → Cash", one second apart (`docs/Testing/Color Belt Testing/Design Review mockups/p3/data-p3.js:11–12`; `history-words.html:70` lists "Paying by changed").
-  - Camps makes one entry per save (v0.736: "One save that changes several things is one entry"; `src/screens/camps/camperHistoryWords.js:20–21, 218`).
-- **If Jeffrey picks A (one entry, recommended):** join the registration's Paying by update with the payment row of the same save, money first, with "; ", as you join Edit payment rows today. Both rows carry `action` 'mark_paid' and the same time (`supabase/migrations/0030_color_belt_review.sql:307–324`); the reader returns no `batch_id` (`0030_color_belt_review.sql:1290–1292`). Star follows with its R1-02.
-
-### M-03 (your part) — No Print receipt for a removed student or a cancelled private testing that has money · Low · question 3 (b)
-
-- **What's wrong** (approved this way: v0.424 (6)):
-  - A removed student or a cancelled private testing with money gets no Print receipt: the event roster offers it only on an active, paid row (`event/EventPage.jsx:1558, 1574–1577`); the Private testing tab only on a paid one (`src/lib/testing/privateRules.js:176`), and a cancelled one's ⋯ holds only Restore and Delete permanently (`private/PrivateTestingTab.jsx:1090–1091, 1109`).
-  - Yet v1.038 still counts their money ("includes $65 from removed students").
-  - Star and Camps do the same; Black Belt offers it on every row.
-- **If A (recommended):** Print receipt also on a removed student or cancelled private testing with a payment that still stands; never with nothing paid; never while Hide private details is on. Today staff see no ⋯ on those rows, so who gets it there is drawn in your mockup.
-
-### C-04 (your part) — No line between Restore and the red Delete permanently · Low · question 3 (f)
-
-- **What's wrong** (unclear: v1.011 doesn't place Restore):
-  - On a removed student, the ⋯ reads "Restore · Delete permanently" with no line between them (`event/EventPage.jsx:1584–1586`); a cancelled private testing the same (`private/PrivateTestingTab.jsx:1091, 1109`, both in the last group).
-  - So the red Delete permanently sits right under the harmless Restore. Star (`src/lib/star/candidateMenu.js:34–35`) and Camps (`src/screens/camps/CamperRowMenu.jsx:59–60`) draw a line there; Black Belt doesn't either.
-- **If A (recommended):** Delete permanently starts its own group on a removed or cancelled row (`separatorBefore`, as Star's).
-
-### C-05 (b, c) — The empty lines for a card filter and the Past side · Low · question 3 (g)
-
-- **(b)** (approved this way: v0.420, v0.424 (4)): when a card filter leaves nobody, you say "No paid students in this class." / "Everyone in this class has paid." (`testing/text.js:607–608`). Star says "No candidates match.", Camps "No campers match.", Black Belt "No candidates in this group." If Jeffrey picks your pattern, nothing changes for you.
-- **(c)** (unclear): "No past events." / "No past private testings." (`testing/text.js:397, 1059`), where Star says "No past events yet.", Camps "No past camps yet." and Black Belt "No past cycles yet." If A: "No past events yet." and "No past private testings yet."
-
-### C-06 (a, b, your part) — The failed Mark paid line and the Undo payment box's note · Low · question 3 (j)
-
-- **(a)** (unclear): a failed Mark paid says "[Name] wasn't marked paid. Check the connection and try again." (`testing/text.js:650`, in the bar with Retry: `event/EventPage.jsx:1268`, `private/PrivateTestingTab.jsx:865`). Star says "That didn't save. Check the connection, then retry." If A: "[Name] wasn't marked paid. Check the connection, then retry." Camps re-exports this line (`src/screens/camps/text.js:58`, shown at `src/screens/camps/CampPage.jsx:428`): list it in your report.
-- **(b)** (approved this way: Star's v0.518 Q2 B, Camps' v0.730): the Undo payment box's failure note says "Couldn't undo. Check the connection, then try again." (`testing/text.js:667`). If A: v1.045 (4)'s "Undo didn't save. Check the connection, then retry.", and `:667` joins your R2-07 point (Star's and Camps' pass 1 R2-07 items already switch theirs).
 
 ---
 

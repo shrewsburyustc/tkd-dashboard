@@ -30,7 +30,7 @@
 - **The reviewers found the merged work built as its rows and mockups say**, apart from the findings below. Hide private details holds on every new screen (Color Belt's Part 1 and Part 2, New students' profile and printed sheet), and Panel size works at Large and Largest on all 16 main screens at 1280 and 820.
 - **36 findings became 35** after the merges: **no High, 7 Medium, 26 Low** (one of the Lows, C-07 (a), adds to pass 1's R1-07), **1 added to pass 1's R2-04** (U-06), and **1 rejected** (L-04). Plus X-1, a Low a checker saw while checking.
 - **Most are straight fixes.** They go to the sections now, in the fix files below.
-- **Ten need Jeffrey to pick a rule first:** the results sheet put up at the school (M-06) is question 2, and nine small ones are the batch, question 3. **L-02 changes §1.3:** it is question 1. **Questions 1 and 2 are answered** (2026-11-05): rosters follow the room beside the panel (v1.053), and Color Belt's sheet goes (v1.052); see each question below.
+- **Ten need Jeffrey to pick a rule first:** the results sheet put up at the school (M-06) is question 2, and nine small ones are the batch, question 3. **L-02 changes §1.3:** it is question 1. **All three are answered** (2026-11-05): rosters follow the room beside the panel (v1.053), Color Belt's sheet goes (v1.052), and every recommendation of the batch is approved (v1.055); see each question below.
 
 ### The seven Mediums
 
@@ -54,12 +54,12 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Color Belt | `Fix-ColorBelt.md` | 5 + 3 after another session's fix (4 Medium; L-02 and M-06 since questions 1 and 2) | 5 | 1 |
-| New students | `Fix-NewStudents.md` | 13 + 1 after another session's fix (3 Medium) | 2 | 4 |
-| Dashboard core | `Fix-DashboardCore.md` | 3 (1 Medium: L-02, since question 1) | 1 | 5 |
-| Black Belt | `Fix-BlackBelt.md` | 1 + 1 after another session's fix | 3 | 1 |
-| Star | `Fix-Star.md` | 3 after another session's fix (1 Medium: L-02, since question 1) | 2 | 0 |
-| Camps | `Fix-Camps.md` | 1 after another session's fix (1 Medium: L-02, since question 1) | 1 | 3 |
+| Color Belt | `Fix-ColorBelt.md` | 10 + 3 after another session's fix (4 Medium) | 0 | 1 |
+| New students | `Fix-NewStudents.md` | 15 + 1 after another session's fix (3 Medium) | 0 | 4 |
+| Dashboard core | `Fix-DashboardCore.md` | 4 (1 Medium: L-02) | 0 | 5 |
+| Black Belt | `Fix-BlackBelt.md` | 5 + 1 after another session's fix | 0 | 1 |
+| Star | `Fix-Star.md` | 3 + 3 after another session's fix (1 Medium: L-02) | 0 | 1 |
+| Camps | `Fix-Camps.md` | 2 + 1 after another session's fix (1 Medium: L-02) | 0 | 4 |
 | Main | `Notes-Main.md` | L-08 to hand out | — | — |
 
 Color Belt's, New students', Dashboard core's and Star's files also end with "Corrections to pass 1".
@@ -81,7 +81,7 @@ Each of the four pass 1 files below now has one line under its title that points
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.055). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.056). The sections it changes hear it through the Main session.
 
 ### Question 1 — How should a roster choose its columns when the side panel takes room? (L-02, Medium) — answered, v1.053
 
@@ -130,7 +130,9 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-results-sheet.png`
   - Pros: nothing changes.
   - Cons: the paper on the wall reads differently by section.
 
-### Question 3 — The small ones, as one batch
+### Question 3 — The small ones, as one batch — answered, v1.055
+
+**Answered (Jeffrey, 2026-11-05, in the design review session; rulebook v1.055):** "Approve all": every recommendation (A) below, from (a) to (j). (h) is recorded in v1.055 itself, not in a New students row as its A said. Each fix file now has its items under Fix now (or, where a section already works that way, a "nothing new" line under Smaller). Below is the question as it was asked.
 
 Jeffrey approves the recommendations together, or pulls any out to see one by one. The letters stay as they were; (e) became question 2.
 
@@ -241,8 +243,8 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
 
 ## Next
 
-- **Jeffrey:** the batch (question 3); questions 1 and 2 are answered (v1.053, v1.052). The pictures for batch items (a), (b), (f) and (h) are drawn, with amber outlines (`pictures/Q3a-one-history-entry.png`, `Q3b-receipt-when-money.png`, `Q3f-line-above-delete.png`, `Q3h-birth-date.png`).
-- **A separate reviewer checked these files** before they were handed out, as for pass 1: 9 must-fix points, all applied; its re-check found 1 more, applied. They are committed on `design-review` (no push), and the Main session merges `design-review` when Jeffrey says so.
+- **Jeffrey:** nothing left from pass 2. Questions 1–3 are answered (v1.053, v1.052, v1.055).
+- **A separate reviewer checked these files** before they were handed out, as for pass 1: 9 must-fix points, all applied; its re-check found 1 more, applied. They are committed on `design-review` (no push). v1.052–v1.054 were each checked by a separate review when committed; v1.055 and these files' updates get their own; once it passes, `design-review` is ready for the Main session to merge when Jeffrey says so.
 - **The Main session** then gives each session its pass 2 file (the starter is at the top of each) and handles `Notes-Main.md`: v0.638's "Date signed" (L-08) goes to Color Belt, Star, Black Belt and Camps; and it reserves a migration number for Color Belt's M-01 when asked.
 - **Rulebook housekeeping, done with question 1's edit (v1.054):** §1.2's exception list now names Camps' Early / Late words in school blue (L-07, approved in v0.738), as it names Star's grading grid (v0.512). Camps changes nothing unless Jeffrey asks to recolor them.
 - **The status file's "Noted for pass 2" list:** the profile stuck on "Loading…" is now P-02, and Calendar's "… and try again." is part of U-08. The two Camps lines (the count line counts both rows of a possible duplicate; the day boxes show no gray while a save runs) were seen still open by reviewer L but not checked by a checker, so they stay on the list for the next pass.

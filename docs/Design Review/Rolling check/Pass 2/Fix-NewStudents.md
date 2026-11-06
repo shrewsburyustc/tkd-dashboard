@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 The reviewers found the profile, the printed sheet, the new form fields and the N3 boxes built as their mockups say, and Hide private details holds on all of them. The problems below are three Mediums (a box that closes too soon, a sheet that misses a cancelled class, a window stuck on "Loading…") and smaller things.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`, question 3). Don't build them until his answer comes through the Main session.
+- **Waits on Jeffrey:** nothing now. Jeffrey approved question 3 of the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`; v1.055), so its two items for you, M-05 and P-05, are under Fix now.
 - **Smaller:** fix them while you're in the file, or check them.
 - Each item keeps its finding id (U-01, P-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -201,6 +201,23 @@ Most severe first.
 - **Change:** clear the bar when another child's window opens (or keep each bar with the child it belongs to). Build it with R2-01: built as written, R2-01's Retry inside Leo's window would re-run Ruby's save (see "Corrections to pass 1").
 - **Check (preview mode):** Ruby M. → status tag → Booked with `__tkdPreview.failNextFormsSave()` armed: the bar shows in her window → Esc → open Leo N.: no bar in his window.
 
+### M-05 — The desk-only lines don't name the date of birth · Low · Jeffrey approved question 3 (d), v1.055
+
+- **What's wrong** (approved this way in v0.616, now out of date):
+  - With Hide private details on, the two desk-only lines read "Add prospects at the desk. Email and form answers are hidden on this tablet." (`prospects/text.js:16`, shown at `Prospects.jsx:863`) and "Fill in forms at the desk. Email and form answers are hidden on this tablet." (`forms/text.js:41`, shown at `Forms.jsx:245, 411`).
+  - Since your 0036 work every child on these forms has a date of birth, and the switch hides it (v0.634 (1), v0.639). The home address is an answer to the form's Address question, so "form answers" already covers it; the date of birth is the one thing missing.
+  - Star's line names it: "Add new candidates at the desk. Date of birth, email and payments are hidden on this tablet." (`src/screens/testing/star/candidates/text.js:120`).
+- **Change (Jeffrey approved A, v1.055):** "Add prospects at the desk. Dates of birth, email and form answers are hidden on this tablet." and "Fill in forms at the desk. Dates of birth, email and form answers are hidden on this tablet." v1.055 records it, and the design review wrote the "(See v1.055 …)" note on your v0.616, so you need no row of your own.
+- **Check (preview mode):** Hide private details on → Prospects and Forms: the two lines read as above.
+
+### P-05 — A date of birth carries a weekday on the form and in the profile · Low · Jeffrey approved question 3 (h), v1.055
+
+- **What's wrong** (approved this way: rev 3, v0.639, draws "Mon, Mar 4, 2019" on the form and in the profile and "Mar 4, 2019" on the printout):
+  - The same date of birth reads "Wed, Apr 19, 2017" on the form (the family page, the kiosk and Fill in: the forms' date picker has no `formatValue`, `forms/FormFields.jsx:249–262`) and in the profile (`T.longDate(p.childDob)`, `prospects/ProspectPanel.jsx:233`; `prospects/text.js:235`).
+  - The printed sheet reads "Apr 19, 2017" (`prospects/PrintSheet.jsx:207`), and so do Star and Black Belt (Star's family form uses `formatValue={monthDayYear}`, `src/star-register/DobField.jsx:12, 42`). Your build plan said "as Star's date of birth".
+- **Change (Jeffrey approved A, v1.055):** "Apr 19, 2017" everywhere: the forms' date-of-birth field gets Star's `formatValue`, and the profile calls `T.longDate(p.childDob, false)`, as the sheet does. v1.055 records it (it changes the rev 3 mockups), and the design review wrote the "(See v1.055 …)" note on your v0.639, so you need no row of your own unless Jeffrey decides something new in your mockup.
+- **Check (preview mode):** a child's date of birth on the family page, the kiosk and Fill in, and in the child's profile, reads month, day and year with no weekday (like "Apr 19, 2017"), as the printed sheet does.
+
 ### L-06 (your grips) — Drag handles look ready while dragging is off · Low · after Dashboard core's L-06
 
 - **What's wrong** (drift for the unused `disabled`; unclear for the look, since no row covers a turned-off grip):
@@ -212,27 +229,6 @@ Most severe first.
 - **Rule:** the shared Grip's own header (`disabled`: "true: shown, but can't drag (e.g. while saving)", `components/Grip.jsx:16`); v1.116 / v1.120 (a turned-off control looks turned off).
 - **Change:** after Dashboard core's L-06 (the shared Grip grays itself while dragging is off; Jeffrey sees a small picture first), check your three screens. If Dashboard core asks screens to pass the state, pass it.
 - **Check (preview mode):** `__tkdPreview.setTestingDelay(2500)`; the builder → Publish: the field grips are gray while it publishes. Edit statuses → open a row's ⋯: the grips are gray until it closes. Afterwards `__tkdPreview.setTestingDelay(200)`.
-
----
-
-## Waits on Jeffrey (don't build yet)
-
-Each is a question in the pass 2 report (question 3, the small ones). The Main session passes on his answer.
-
-### P-05 — A date of birth carries a weekday on the form and in the profile · Low · question 3 (h)
-
-- **What's wrong** (approved this way: rev 3, v0.639, draws "Mon, Mar 4, 2019" on the form and in the profile and "Mar 4, 2019" on the printout):
-  - The same date of birth reads "Wed, Apr 19, 2017" on the form (the family page, the kiosk and Fill in: the forms' date picker has no `formatValue`, `forms/FormFields.jsx:249–262`) and in the profile (`T.longDate(p.childDob)`, `prospects/ProspectPanel.jsx:233`; `prospects/text.js:235`).
-  - The printed sheet reads "Apr 19, 2017" (`prospects/PrintSheet.jsx:207`), and so do Star and Black Belt (Star's family form uses `formatValue={monthDayYear}`, `src/star-register/DobField.jsx:12, 42`). Your build plan said "as Star's date of birth".
-- **If A (recommended):** "Apr 19, 2017" everywhere: the forms' date-of-birth field gets Star's `formatValue`, and the profile calls `T.longDate(p.childDob, false)`, as the sheet does. A row from your block records it (it changes the rev 3 mockups).
-
-### M-05 — The desk-only lines don't name the date of birth · Low · question 3 (d)
-
-- **What's wrong** (approved this way in v0.616, now out of date):
-  - With Hide private details on, the two desk-only lines read "Add prospects at the desk. Email and form answers are hidden on this tablet." (`prospects/text.js:16`, shown at `Prospects.jsx:863`) and "Fill in forms at the desk. Email and form answers are hidden on this tablet." (`forms/text.js:41`, shown at `Forms.jsx:245, 411`).
-  - Since your 0036 work every child on these forms has a date of birth, and the switch hides it (v0.634 (1), v0.639). The home address is an answer to the form's Address question, so "form answers" already covers it; the date of birth is the one thing missing.
-  - Star's line names it: "Add new candidates at the desk. Date of birth, email and payments are hidden on this tablet." (`src/screens/testing/star/candidates/text.js:120`).
-- **If A (recommended):** "Add prospects at the desk. Dates of birth, email and form answers are hidden on this tablet." and "Fill in forms at the desk. Dates of birth, email and form answers are hidden on this tablet." v0.616 gets a "(See v0.6xx …)" note.
 
 ---
 

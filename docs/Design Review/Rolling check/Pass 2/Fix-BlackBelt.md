@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 The reviewers found BB13's time list built as its picture (the same list as Star's and Camps', opening at the chosen time), BB8's History showing the shared Retry bar when it can't load, and your "on this tablet" words matching the screen. The problems below are small. Your pass 1 items are still open on main (planned on `black-belt`); nothing here changes them, except two lines that pass 2 adds to.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Question 2, the results sheet (M-06), is answered: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is. Nothing to build.)
+- **Waits on Jeffrey:** nothing now. Questions 1–3 of the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`) are answered (v1.053, v1.052, v1.055), so their items are under Fix now. Question 2 (the results sheet, M-06) has nothing for you to build: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is.
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (L-01, M-04 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -61,6 +61,40 @@ The reviewers found BB13's time list built as its picture (the same list as Star
 - **Change:** delete the rule (`blackBelt.css:3057–3061`). The shared look (v1.120) already draws the gray, and the tooltip and ring stay at full strength.
 - **Check (preview mode):** `__tkdPreview.loadBlackBeltGradingSample()`, `__tkdPreview.setToday('2027-06-09')`, reload → Testing → Black Belt testing → Past → Spring 2027 → ⋯ → Edit cycle → point at "Physical"'s trash, then Tab onto it: the tooltip is the dark shared one, the ring is school blue, and the icon is v1.120's gray.
 
+### M-04 — View signature hides while private details are hidden · Low · Jeffrey approved question 3 (c), v1.055
+
+- **What's wrong** (unclear: built in B2 and walked through at CP2, v0.915, but no row says it):
+  - Your candidate detail shows View signature only for `isAdmin && !hidden` (`CandidateDialog.jsx:690`), and its header says so (`:22–24`). So with the switch on, the waiver reads "… · on file" and can't be opened.
+  - On the same tablet Star keeps "Ticked and signed · View signature" (`src/screens/testing/star/candidates/CandidateDialog.jsx:126–135`), and New students keep Show signature.
+  - v0.508 (3) ends "View signature stays"; v1.000 (2) says "the questions and Show signature stay, as Star's View signature"; and v1.037's header says it "applies … v0.508 (3) to Black Belt" (its text names Add candidate, Edit details and the Dan). v1.000 (3), the list of what the switch hides, has no signature.
+  - It is stricter than the rule, not a leak.
+- **Change (Jeffrey approved A, v1.055):** View signature shows to admins while hidden too, as Star's: drop `!hidden` at `:690`, and update the header. No new words, and no row changes: v0.508 (3), v1.000 (2) and v1.037 already say it.
+- **Check (preview mode):** `__tkdPreview.bbSample()`, `__tkdPreview.setToday('2027-02-15')`, reload → as admin, Hide private details on → a candidate who signed: the waiver line shows View signature, and it opens.
+
+### M-03 (your part) — Print receipt with nothing paid, and on a withdrawn row with money · Low · Jeffrey approved question 3 (b), v1.055
+
+- **What's wrong:**
+  - Pass 1 already gives you the first half: Print receipt is offered with nothing paid (`docs/Design Review/Rolling check/Pass 1/Fix-BlackBelt.md:298`; `CandidatesTab.jsx:246, 313`, "do it with BB2").
+  - Pass 2 found the other half. In Color Belt, Star and Camps a removed person with money gets no receipt (each section approved that: v0.424 (6), v0.518, v0.734), while yours does (`CandidatesTab.jsx:246`). v1.038 still counts that money.
+- **Change (Jeffrey approved A, v1.055), with BB2 (pass 1's line):** Print receipt on any row with a payment or refund that still stands, active or withdrawn; never with nothing paid; never while hidden. So keep it on a withdrawn row that has money, and drop it on rows with nothing paid.
+  - v1.055 records it, and the design review wrote the "(See v1.055 …)" note on your v0.220 ("at any time"), so you need no row of your own unless Jeffrey decides something new in your mockup.
+  - Don't copy Star's rule (`src/lib/star/candidateMenu.js:25–27`) as it is: it drops the receipt on withdrawn rows that have money (Star changes that with its own M-03).
+- **Check (preview mode):** `__tkdPreview.bbSample()`, `__tkdPreview.setToday('2027-02-15')`, reload → a candidate with nothing paid has no Print receipt; withdraw a candidate who paid: Print receipt stays and prints that payment; with Hide private details on, none.
+
+### C-04 (your part) — No line between Restore and the red Delete permanently · Low · Jeffrey approved question 3 (f), v1.055
+
+- **What's wrong** (unclear: v1.011 doesn't place Restore):
+  - On a withdrawn row, Restore and Delete permanently sit in one group (`CandidatesTab.jsx:247–253`), so the red item sits right under Restore.
+  - Star (`src/lib/star/candidateMenu.js:34–35`) and Camps (`src/screens/camps/CamperRowMenu.jsx:59–60`) draw a line there; Color Belt doesn't either.
+- **Change (Jeffrey approved A, v1.055):** Delete permanently gets its own line on a withdrawn row, as Star's. §8's ⋯ menu rule now says it: "On a removed person's ⋯, Restore sits above the line and the red Delete permanently below it." (the design review wrote the "(See v1.055 …)" note on v1.011).
+- **Check (preview mode):** `__tkdPreview.bbSample()`, `__tkdPreview.setToday('2027-02-15')`, reload → withdraw a candidate → its ⋯: Restore, a line, then the red Delete permanently.
+
+### C-05 (b) — Your card filter's empty line says what is true · Low · Jeffrey approved question 3 (g), v1.055
+
+- **What's wrong** (approved this way; four sections word it four ways): when a count card's filter leaves nobody, you say "No candidates in this group." (`src/blackBelt/staff/text.js:537`). Color Belt says what is true ("No paid students in this class." / "Everyone in this class has paid.", v0.420, v0.424 (4)); Star says "No candidates match."; Camps "No campers match."
+- **Change (Jeffrey approved A, v1.055):** say what is true for each of your four cards, in Color Belt's pattern. Draw your four cards' lines in your BB15 mockup. "No past cycles yet." stays.
+- **Check (preview mode):** `__tkdPreview.bbSample()`, `__tkdPreview.setToday('2027-02-15')`, reload → pick each count card where it leaves nobody: its own line shows. At 1280 and 390.
+
 ### L-06 (your grips) — Your drag handles look ready while a save runs · Low · after Dashboard core's L-06
 
 - **What's wrong** (unclear for the look: no row covers a turned-off grip):
@@ -69,43 +103,6 @@ The reviewers found BB13's time list built as its picture (the same list as Star
 - **Rule:** the shared Grip's own header (`disabled`: "true: shown, but can't drag (e.g. while saving)", `components/Grip.jsx:16`); v1.116 / v1.120 (a turned-off control looks turned off).
 - **Change:** after Dashboard core's L-06 gives the shared `Grip` its gray, switch to the shared one (its header already plans it: `components/Grip.jsx:9–10`), and your `parts/Grip.jsx` goes.
 - **Check (preview mode):** `__tkdPreview.bbSample()`, `__tkdPreview.setToday('2027-02-15')`, reload, then `__tkdPreview.setTestingDelay(4000)`; a cycle's Rubric tab → ⋯ on a subject → Move down → Save the Dan: while it says "Saving…", every grip is gray. Afterwards `__tkdPreview.setTestingDelay(200)`.
-
----
-
-## Waits on Jeffrey (don't build yet)
-
-Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer.
-
-### M-04 — View signature hides while private details are hidden · Low · question 3 (c)
-
-- **What's wrong** (unclear: built in B2 and walked through at CP2, v0.915, but no row says it):
-  - Your candidate detail shows View signature only for `isAdmin && !hidden` (`CandidateDialog.jsx:690`), and its header says so (`:22–24`). So with the switch on, the waiver reads "… · on file" and can't be opened.
-  - On the same tablet Star keeps "Ticked and signed · View signature" (`src/screens/testing/star/candidates/CandidateDialog.jsx:126–135`), and New students keep Show signature.
-  - v0.508 (3) ends "View signature stays"; v1.000 (2) says "the questions and Show signature stay, as Star's View signature"; and v1.037's header says it "applies … v0.508 (3) to Black Belt" (its text names Add candidate, Edit details and the Dan). v1.000 (3), the list of what the switch hides, has no signature.
-  - It is stricter than the rule, not a leak.
-- **If A (recommended):** View signature shows to admins while hidden too, as Star's: drop `!hidden` at `:690`, and update the header. No new words.
-- **If B:** record your rule (the signature stays at the desk) in a row from your block.
-
-### M-03 (your part) — Print receipt with nothing paid, and on a withdrawn row with money · Low · question 3 (b)
-
-- **What's wrong:**
-  - Pass 1 already gives you the first half: Print receipt is offered with nothing paid (`docs/Design Review/Rolling check/Pass 1/Fix-BlackBelt.md:298`; `CandidatesTab.jsx:246, 313`, "do it with BB2").
-  - Pass 2 found the other half. In Color Belt, Star and Camps a removed person with money gets no receipt (each section approved that: v0.424 (6), v0.518, v0.734), while yours does (`CandidatesTab.jsx:246`). v1.038 still counts that money.
-- **Before BB2 builds pass 1's line, wait for Jeffrey's answer:**
-  - If A (recommended): Print receipt on any row with a payment or refund that still stands, active or withdrawn; never with nothing paid; never while hidden. So keep it on a withdrawn row that has money, and drop it on rows with nothing paid. Your v0.220 ("at any time") gets a "(See …)" note.
-  - If B: also drop it on withdrawn rows.
-  - Don't copy Star's rule (`src/lib/star/candidateMenu.js:25–27`) exactly before he answers: it also drops the receipt on withdrawn rows that have money.
-
-### C-04 (your part) — No line between Restore and the red Delete permanently · Low · question 3 (f)
-
-- **What's wrong** (unclear: v1.011 doesn't place Restore):
-  - On a withdrawn row, Restore and Delete permanently sit in one group (`CandidatesTab.jsx:247–253`), so the red item sits right under Restore.
-  - Star (`src/lib/star/candidateMenu.js:34–35`) and Camps (`src/screens/camps/CamperRowMenu.jsx:59–60`) draw a line there; Color Belt doesn't either.
-- **If A (recommended):** Delete permanently gets its own line on a withdrawn row, as Star's.
-
-### Also in question 3
-
-- **(g) C-05 (b):** your card filter's empty line, "No candidates in this group." (`src/blackBelt/staff/text.js:537`), may change to say what is true for each card, in Color Belt's pattern. If Jeffrey picks that, draw your four cards' lines in your BB15 mockup.
 
 ---
 

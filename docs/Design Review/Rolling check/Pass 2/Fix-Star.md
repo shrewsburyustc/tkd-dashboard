@@ -14,10 +14,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 2 covered what merged into `main` after pass 1's cut (e7fd75b), up to 6b27cdd (2026-11-05), in preview mode at the four sizes. Five reviewers looked (M money, records and privacy · U undo, safety nets, confirms and dialogs · L lists, pickers, forms and layout · P New students' visitor profile and printed sheet · C Color Belt, Star's twin). Two separate checkers then verified every finding.
 
-Star merged nothing after pass 1's cut, so this file holds what pass 2 found in other sections' work that reaches your screens: a layout problem the shared panel causes, a place your pass 1 R2-07 item missed, the grips, a correction to your pass 1 R1-02, and questions for Jeffrey that may change your screens. Your pass 1 items (and their migration, 0038) go on as planned.
+Star merged nothing after pass 1's cut, so this file holds what pass 2 found in other sections' work that reaches your screens: a layout problem the shared panel causes, a place your pass 1 R2-07 item missed, the grips, a correction to your pass 1 R1-02, and Jeffrey's answers to the pass 2 questions that change your screens. Your pass 1 items (and their migration, 0038) go on as planned.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Question 1 is answered: L-02 is now a Fix now item, v1.053. Question 2, the results sheet (M-06), is answered too: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is, so it has nothing to build.)
+- **Waits on Jeffrey:** nothing now. Questions 1–3 of the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`) are answered (v1.053, v1.052, v1.055), so their items are under Fix now. Question 2 (the results sheet, M-06) has nothing for you to build: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is.
 - Each item keeps its finding id (C-06, L-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
 - **Paths:** `star/…` is under `src/screens/testing/star/`; `lib/star/…` is `src/lib/star/…`; `components/…` is `src/components/…`. Other sections' files are written in full.
@@ -62,6 +62,28 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png`. 
 - **Change (Jeffrey chose A: "A: room beside panel", v1.053):** after Dashboard core's part, your tablet rules (`star/star.css:886` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show); with enough room, nothing changes. Your roster's `isPhone` (`star/candidates/CandidatesTab.jsx:111`, read by `star/candidates/CandidateRows.jsx:167, 285`) then comes from Dashboard core's hook for the roster only; dialogs and ⋯ menus keep the window's. Mockup first: the roster at 683 and 700 wide, with Standard and Largest.
 - **Check (preview mode):** Account menu → Panel size → Largest, then Standard. Fall Star Testing at 700 wide touch and 667 × 375 touch: no text over text, no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
 
+### M-03 (your part) — No Print receipt for a withdrawn candidate with money · Low · Jeffrey approved question 3 (b), v1.055
+
+- **What's wrong** (approved this way: v0.518, S2 and Q8):
+  - `canPrintReceipt` (`lib/star/candidateMenu.js:25–27`) offers Print receipt only on a candidate who isn't withdrawn. A withdrawn candidate's ⋯ is Restore · Delete permanently, for admins only (`:32–36`).
+  - Yet your Payments recorded card will count their money (v1.038, your pass 1 R5-05).
+  - Color Belt and Camps do the same; Black Belt offers it on every row.
+- **Change (Jeffrey approved A, v1.055):** Print receipt also on a withdrawn candidate with a payment or refund that still stands; never with nothing paid; never while Hide private details is on. Who sees it there (today only admins have a ⋯ on a withdrawn row) is drawn in your mockup. v1.055 records it, and the design review wrote the "(See v1.055 …)" note on your v0.518, so you need no row of your own unless Jeffrey decides something new in your mockup.
+- **Check (preview mode):** withdraw a candidate who paid → their ⋯ has Print receipt (where your mockup puts it), and it prints that payment; a withdrawn candidate with nothing paid has none; with Hide private details on, none.
+
+### M-02 — With your R1-02: one save, one History entry · Low · Jeffrey approved question 3 (a), v1.055
+
+- **What's wrong** (approved this way in Color Belt: its P3 drew two entries):
+  - Your R1-02 makes a Mark paid by another way change Paying by: one save, two change-log rows.
+  - Your History words each row on its own (`star/candidates/CandidateHistory.jsx:55–119`), so it would show two entries for one tap, as Color Belt's does today.
+- **Change (Jeffrey approved A, v1.055):** the rows of one save make one entry, money first, joined with "; " (the exact words follow R1-07's one set, which Dashboard core's mockup draws), as Camps does (v0.736), and as your own v0.518 P5 A already does for an edit of several fields. Build it with your R1-02 and R1-03 (R1-03 moves `linesFor` into a plain `.js` file anyway). Color Belt builds the same with its M-02, so the two read alike.
+
+### C-05 (b) — Your card filter's empty line says what is true · Low · Jeffrey approved question 3 (g), v1.055
+
+- **What's wrong** (approved this way; four sections word it four ways): when a count card's filter leaves nobody, you say "No candidates match." (`star/candidates/text.js:112`). Color Belt says what is true ("No paid students in this class." / "Everyone in this class has paid.", v0.420, v0.424 (4)); Camps says "No campers match."; Black Belt "No candidates in this group."
+- **Change (Jeffrey approved A, v1.055):** say what is true for each card, in Color Belt's pattern, for example "No paid candidates." / "Every candidate has paid.". Your lines are drawn in your mockup. "No past events yet." stays.
+- **Check (preview mode):** pick each count card on an event where it leaves nobody: its own line shows. At 1280 and 390.
+
 ### C-06 (c, your part) — A failed Undo of Close / Open registration doesn't say "Undo didn't save" · Low · after Dashboard core's R2-07
 
 - **What's wrong** (planned — not built yet: v1.045 (4), R2-07; this place is missing from your pass 1 list):
@@ -82,36 +104,9 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png`. 
 
 ---
 
-## Waits on Jeffrey (don't build yet)
-
-Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer.
-
-### M-03 (your part) — No Print receipt for a withdrawn candidate with money · Low · question 3 (b)
-
-- **What's wrong** (approved this way: v0.518, S2 and Q8):
-  - `canPrintReceipt` (`lib/star/candidateMenu.js:25–27`) offers Print receipt only on a candidate who isn't withdrawn. A withdrawn candidate's ⋯ is Restore · Delete permanently, for admins only (`:32–36`).
-  - Yet your Payments recorded card will count their money (v1.038, your pass 1 R5-05).
-  - Color Belt and Camps do the same; Black Belt offers it on every row.
-- **If A (recommended):** Print receipt also on a withdrawn candidate with a payment or refund that still stands; never with nothing paid; never while Hide private details is on. Who sees it there (today only admins have a ⋯ on a withdrawn row) is drawn in your mockup.
-
-### M-02 — With your R1-02: one save, one History entry · Low · question 3 (a)
-
-- **What's wrong** (approved this way in Color Belt: its P3 drew two entries):
-  - Your R1-02 makes a Mark paid by another way change Paying by: one save, two change-log rows.
-  - Your History words each row on its own (`star/candidates/CandidateHistory.jsx:55–119`), so it would show two entries for one tap, as Color Belt's does today.
-- **If A (recommended):** the rows of one save make one entry, money first, joined with "; ", as Camps does (v0.736), and as your own v0.518 P5 A already does for an edit of several fields. Build it with your R1-02 and R1-03 (R1-03 moves `linesFor` into a plain `.js` file anyway).
-
-### Also in question 3
-
-- **(f) C-04:** you already draw a line between Restore and Delete permanently (`lib/star/candidateMenu.js:34–35`). Nothing changes unless Jeffrey picks B (no line).
-- **(g) C-05 (b):** your card filter's empty line, "No candidates match." (`star/candidates/text.js:112`), may change to say what is true, in Color Belt's pattern (for example "No paid candidates." / "Every candidate has paid."): drawn in your mockup if he picks it. (c) "No past events yet." stays.
-- **(j) C-06 (b):** your pass 1 R2-07 item already switches the Undo payment and Undo refund boxes' note, "Couldn't undo. Check the connection, then try again." (`star/candidates/text.js:151`), to "Undo didn't save. Check the connection, then retry.". If Jeffrey picks B for (j) (b), leave that line out of R2-07.
-
----
-
 ## Smaller (fix while you're in the file)
 
-Nothing new.
+- **Question 3 answers that need nothing new from you** (Jeffrey approved every A, v1.055): (f) C-04: you already draw the line between Restore and Delete permanently (`lib/star/candidateMenu.js:34–35`), which §8 now asks for. (j) C-06 (a): your failed Mark paid line already ends "Check the connection, then retry.". (j) C-06 (b): your pass 1 R2-07 item already switches the Undo payment and Undo refund boxes' note, "Couldn't undo. Check the connection, then try again." (`star/candidates/text.js:151`), to "Undo didn't save. Check the connection, then retry."; keep it there (the design review wrote the "(See v1.055 …)" note on your v0.518). Record them in your status file.
 
 ---
 
