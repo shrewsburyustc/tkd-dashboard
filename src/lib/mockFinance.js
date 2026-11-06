@@ -23,21 +23,30 @@
 //     "Changed after closing", "Added after closing" and whether a day needs closing (History,
 //     Home). Card refunds come off the expected card figure (v0.814). Sample rows for the preview:
 //     __tkdPreview.bbFinanceSample() (mockClient.js) records them through Black Belt's own functions.
-//   - Star payments: Star testing has no preview database in this branch, so this file keeps a
-//     few sample Star candidates and payments of its own (shown in the list below), including a
+//   - Star payments (R1-09): READ from the Star preview store ('tkd.preview.star', the store
+//     mockStarCandidates.js keeps) — the rows its Candidates tab writes (payments, refunds, edits,
+//     undos). Read like migration 0026 reads star_payments: what = 'star', the event's name, the
+//     event date = the candidate's private day if set (is_private) or else the testing day, and the
+//     school = the shown row's own `school` when it has one (Star's planned R1-01), otherwise the
+//     candidate's CURRENT school (what live 0026 does today).
+//     Only when that store is missing, can't be read or has NO payments yet does this file fall
+//     back to a few sample Star candidates and payments of its own (the list below), including a
 //     cash refund, a check refund, a refund-only day, an edit, a moved edit, an undone payment
 //     and a 10-second mis-click undo (hidden).
 // Its own store, 'tkd.preview.finance', keeps the closings (+ their counted-items snapshots),
 // the reminder settings (times start Off, Q3), the export log, the Star sample and the pretend
-// clock time. A few earlier Shrewsbury days start closed so History shows every tag.
+// clock time. When the Star sample is in use, a few earlier Shrewsbury days start closed so History
+// shows every tag (those sample closings were counted from the sample, so they are left out when
+// the real Star store is read — they would all show "Changed after closing").
 //
 // Like mockTestingEvents.js it is a "pure core": it never touches the browser by itself.
-//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, now, today, newId });
+//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, readStar, now, today, newId });
 //     loadStore()     → the saved finance store (missing / damaged → the default sample)
 //     saveStore(s)    → saves it
 //     readColorBelt() → the Testing preview store (events, registrations, payments)
 //     readCamps()     → the Camps preview store (camps, camp_days, camp_campers, camp_payments); optional
 //     readBlackBelt() → the Black Belt preview store (bb_payments, bb_candidates, bb_cycle_plans); optional
+//     readStar()      → the Star preview store (events, candidates, payments); optional
 //     now()           → milliseconds (timestamps, the 10-second windows)
 //     today()         → 'YYYY-MM-DD' in school time (setToday can pretend another date)
 //   finance.rpc(name, args, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName, userId }
@@ -297,8 +306,9 @@ function defaultStar(t, nowMs) {
   return { events: [event], candidates, payments };
 }
 
-// The whole default finance store, counting back from t.
-function defaultStore(t, nowIso) {
+// The whole default finance store, counting back from t. sampleClosings = false leaves out the
+// sample closings (they only make sense next to the Star sample they were counted from).
+function defaultStore(t, nowIso, { sampleClosings = true } = {}) {
   const store = {
     format: STORE_FORMAT,
     star: defaultStar(t, Date.parse(nowIso)),
@@ -314,6 +324,7 @@ function defaultStore(t, nowIso) {
   };
   // The sample closings, each with the snapshot of what was counted AT THAT TIME (only Star
   // rows recorded before the close, so the later moved edit makes T−3 "Changed after closing").
+  if (!sampleClosings) return store;
   SAMPLE_CLOSINGS.forEach(([dayIn, at, counted, note], i) => {
     const day = addDays(t, dayIn);
     const closedAt = schoolClockToIso(day, at);
@@ -364,7 +375,7 @@ function storeIsUsable(s) {
 
 // ----- The backend -----
 
-export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, now = () => Date.now(), today, newId }) {
+export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, readStar, now = () => Date.now(), today, newId }) {
   let failNext = false; // set by failNextSave()
   const stamp = () => new Date(now()).toISOString();
   // The day the sample counts back from: the pretend date, but never later than the real date
@@ -382,8 +393,10 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     } catch {
       store = null; // damaged → the default sample
     }
-    return storeIsUsable(store) ? clone(store) : defaultStore(dataToday(), stamp());
+    return storeIsUsable(store) ? clone(store) : freshStore();
   }
+  // A new default finance store (sample closings only when the Star sample is what's shown).
+  const freshStore = () => defaultStore(dataToday(), stamp(), { sampleClosings: !starStore() });
   const write = (db) => saveStore?.(db);
 
   // The school clock: today's (maybe pretend) date, and the pretend time from setNow if set.
@@ -418,6 +431,24 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     const ok = bb && ['bb_payments', 'bb_candidates', 'bb_cycle_plans'].every((k) => Array.isArray(bb[k]));
     return ok ? bb : null;
   }
+
+  // The Star preview store (R1-09), or null when there is none, it can't be read, or it has no
+  // payments yet — then the Star sample in Finance's own store is used instead (starSource).
+  function starStore() {
+    let sr = null;
+    try {
+      sr = readStar?.() ?? null;
+    } catch {
+      sr = null;
+    }
+    const ok = sr && ['events', 'candidates', 'payments'].every((k) => Array.isArray(sr[k])) && sr.payments.length > 0;
+    if (!ok) return null;
+    // Drop anything in the lists that isn't a record, so one damaged row can't stop the Daily report.
+    const records = (list) => list.filter((x) => x && typeof x === 'object');
+    return { ...sr, events: records(sr.events), candidates: records(sr.candidates), payments: records(sr.payments) };
+  }
+  // Where the Star rows come from: Star's own store, or the sample (both have events, candidates, payments).
+  const starSource = (db) => starStore() ?? db.star;
 
   // Black Belt items (contract 0026 §2.1, §6). Rows are read whole (an undo is dated the day it's
   // made), then the chain rules run — a returned row starts a chain of its own.
@@ -509,16 +540,21 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         });
       }
     }
-    const cands = new Map(db.star.candidates.map((c) => [c.id, c]));
-    const starEvents = new Map(db.star.events.map((e) => [e.id, e]));
-    for (const it of chainItems(db.star.payments.map((p) => ({ ...p, source: 'star' })))) {
+    // Star (0026's star rows): Star's own preview store, or the sample when it has no payments.
+    const sr = starSource(db);
+    const cands = new Map(sr.candidates.map((c) => [c.id, c]));
+    const starEvents = new Map(sr.events.map((e) => [e.id, e]));
+    const starRowsById = new Map(sr.payments.map((p) => [p.id, p]));
+    for (const it of chainItems(sr.payments.map((p) => ({ ...p, source: 'star' })))) {
       const cand = cands.get(it.owner_id);
       const event = cand ? starEvents.get(cand.event_id) : null;
       if (!event) continue;
+      // School: the shown row's own school once Star stores one (R1-01), else the candidate's
+      // current school (live 0026: c.location_code).
       out.push({
-        ...it, school: cand.location_code, first_name: cand.first_name, last_name: cand.last_name,
+        ...it, school: starRowsById.get(it.row_id)?.school ?? cand.location_code, first_name: cand.first_name, last_name: cand.last_name,
         // A private Star testing shows its private date ("Star testing · private <date>").
-        what: 'star', event_date: cand.private_on ?? event.testing_date, is_private: cand.private_on !== null, event_name: event.name, event_id: event.id,
+        what: 'star', event_date: cand.private_on ?? event.testing_date, is_private: (cand.private_on ?? null) !== null, event_name: event.name, event_id: event.id,
       });
     }
     out.push(...blackBeltItems()); // the fourth source (0026)
@@ -528,7 +564,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
   // The raw rows of one chain (for the payment detail's history).
   function chainRows(db, source) {
     let rows = [];
-    if (source === 'star') rows = db.star.payments;
+    if (source === 'star') rows = starSource(db).payments;
     else if (source === 'camp') rows = campsStore()?.camp_payments ?? [];
     else if (source === 'black_belt') rows = (blackBeltStore()?.bb_payments ?? []).map((p) => ({ ...p, owner_id: p.candidate_id }));
     else {
@@ -1016,7 +1052,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
 
   // Back to the default sample: no closings but the sample ones, reminder times Off, no exports.
   function reset() {
-    write(defaultStore(dataToday(), stamp()));
+    write(freshStore());
   }
 
   return { rpc, failNextSave, setNow, reset, snapshot: read };

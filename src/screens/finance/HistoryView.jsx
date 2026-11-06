@@ -23,13 +23,12 @@ import { financeHistory } from '../../lib/finance/financeApi.js';
 import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { addMonths, dayShort, money, monthShortYear, monthStart, monthYear } from './format.js';
+import { SHOW_UNCLOSED } from './flags.js';
 import * as T from './text.js';
 
-// The "weren't closed" warnings: the amber "N days this month weren't closed: …" line above the
-// list (v0.821) and each day's "Not closed" tag (v0.822). Off for now: the school still closes
-// the drawer on paper, so every day would be flagged. A day that wasn't closed then shows no
-// tag. To bring both back when the school starts closing days in the dashboard, set this to true.
-const SHOW_UNCLOSED = false;
+// The "weren't closed" warnings (the amber line above the list, v0.821, and each day's "Not closed"
+// tag, v0.822) follow SHOW_UNCLOSED in flags.js, shared with Home's earlier-days line (v1.041).
+// While it is off, a day that wasn't closed shows no tag.
 
 // The tag of a day row: { text, kind: 'warn' | 'ok' | 'neutral' }, or null for no tag.
 function dayTag(row) {
@@ -176,7 +175,6 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
               <th className="fin-r">{T.COL_TOTAL}</th>
               {wide && <th>{T.COL_CLOSED_BY}</th>}
               <th>{T.COL_STATUS}</th>
-              <th className="fin-col-chev" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -193,9 +191,6 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
                   {wide && <td className="fin-sub">{row.closed_by_name ? T.closedByShort(row.closed_by_name, row.closed_at) : '—'}</td>}
                   <td>
                     <Tag tag={dayTag(row)} />
-                  </td>
-                  <td className="fin-r fin-sub fin-col-chev">
-                    <IconChevronRight size={16} aria-hidden="true" />
                   </td>
                 </tr>
               );

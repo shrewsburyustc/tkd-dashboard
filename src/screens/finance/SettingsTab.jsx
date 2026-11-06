@@ -31,16 +31,17 @@ import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { shortTime } from './format.js';
 import * as T from './text.js';
 
-// Column order as drawn in D9.
-const SCHOOL_CODES = ['shrewsbury', 'worcester'];
+// Worcester first, as in the location switcher and Finance's Both page (v1.047; D9 drew
+// Shrewsbury first).
+const SCHOOL_CODES = ['worcester', 'shrewsbury'];
 
 export default function SettingsTab({ isPhone, location, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast }) {
   const id = useId();
   const live = useLiveLoad({ key: 'settings', enabled: !screenLocked, load: () => financeSettingsGet() });
   const [banner, setBanner] = useState(null); // { text, retry? }
   const [busy, setBusy] = useState(false);
-  // Phones: the school shown (the top bar's school, or Shrewsbury on Both).
-  const [phoneSchool, setPhoneSchool] = useState(location === 'Both' ? 'shrewsbury' : LOCATION_CODE[location]);
+  // Phones: the school shown (the top bar's school, or Worcester on Both: Worcester first, v1.047).
+  const [phoneSchool, setPhoneSchool] = useState(location === 'Both' ? 'worcester' : LOCATION_CODE[location]);
 
   useEffect(() => {
     if (live.status === 'noAccess') onNoAccess();
@@ -78,6 +79,7 @@ export default function SettingsTab({ isPhone, location, screenLocked, onNoAcces
     const answer = await undo(version);
     setBusy(false);
     if (answer.status === 'ok') {
+      showToast(T.UNDONE, { icon: false }); // "Undone", as after every Undo (v1.051)
       live.reload();
       return;
     }
