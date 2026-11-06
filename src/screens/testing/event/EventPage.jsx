@@ -1583,7 +1583,9 @@ export default function EventPage({
         // ti-arrow-back-up = bring back (v1.024)
         items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
       }
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
+      // On a removed row, the red Delete permanently starts its own group under Restore (pass 2
+      // C-04, v1.055 (f), as Star's); on an active row it stays with Withdraw.
+      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: row.status !== 'active', disabled: busy, onSelect: () => startDelete(row, anchor) });
     }
     const rank = rankById.get(row.eventRankId);
     const subtitle = rank ? `${rank.name} → ${rank.testingFor?.name ?? T.NO_NEW_RANK}` : '';

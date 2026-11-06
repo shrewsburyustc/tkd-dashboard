@@ -1086,7 +1086,7 @@ export default function PrivateTestingTab({
     const anchor = menu.anchor;
     const can = privateMenu(row, { today, isAdmin, hidden }); // hidden: no payment items (v0.506)
     const name = T.studentLabel(row);
-    const groups = [[], [], []];
+    const groups = [[], [], [], []];
     if (row.status === 'cancelled') {
       if (can.restore) groups[2].push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doRestore(row) });
     } else {
@@ -1106,7 +1106,10 @@ export default function PrivateTestingTab({
       // ti-calendar-x = cancel the private testing (blue, not red: nothing is deleted)
       if (can.cancel) groups[2].push({ key: 'cancel', label: T.CANCEL_PRIVATE, Icon: IconCalendarX, onSelect: () => openCancel(row, anchor) });
     }
-    if (can.delete) groups[2].push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => openDelete(row, anchor) });
+    // On a cancelled row the red Delete permanently gets its own group under Restore (pass 2 C-04,
+    // v1.055 (f), as Star's); on an active row it stays in the last group with Cancel.
+    const deleteGroup = row.status === 'cancelled' ? 3 : 2;
+    if (can.delete) groups[deleteGroup].push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => openDelete(row, anchor) });
     // Dividers between the groups, never at the start (R8).
     const items = [];
     for (const group of groups) {
