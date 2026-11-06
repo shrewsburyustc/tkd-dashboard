@@ -28,7 +28,7 @@ import { IconAlertTriangle, IconChevronRight } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import { financePaymentDetail } from '../../lib/finance/financeApi.js';
 import { dayAndTime, dayShort, dayShortYear, money, timeOfDay } from './format.js';
-import { forTextOf, whatText } from './PaymentsList.jsx';
+import { editChangedNothing, forTextOf, whatText } from './PaymentsList.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
 import * as T from './text.js';
 
@@ -66,7 +66,8 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
   let what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : state.data?.event_name || whatText(shown);
   // "Black Belt · Spring 2027 · Payment 2" — the cycle name the row stored (the answer's event_name is the same).
   if (isBlackBelt) what = forTextOf({ ...shown, event_name: shown.event_name ?? state.data?.event_name ?? item.event_name ?? '' });
-  const edited = shown.state === 'edited' || shown.state === 'moved_in';
+  // No Edited tag when the edit was changed back (v0.824); History below still lists both changes.
+  const edited = (shown.state === 'edited' && !editChangedNothing(shown)) || shown.state === 'moved_in';
   // Oldest first (whatever order the answer used), so each edit can be compared with the line before it.
   const history = [...(state.data?.history ?? [])].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   // "Recorded": when the row was written — for a returned check, when it was marked returned (B4).
