@@ -548,8 +548,16 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   // ----- Statuses -----
   const statusSchool = dialog?.type === 'statuses' ? schools.find((s) => s.code === dialog.code) : null;
   function openStatuses(code) {
+    const opener = menu?.anchor ?? null; // the page's ⋯, where focus goes back when it closes
     setMenu(null);
-    setDialog({ type: 'statuses', key: Date.now(), code, step: 'list', statusId: null, values: null, initial: null, touched: {}, saving: false, note: null, moveTo: null });
+    setDialog({ type: 'statuses', key: Date.now(), code, opener, step: 'list', statusId: null, values: null, initial: null, touched: {}, saving: false, note: null, moveTo: null });
+  }
+  // Closing Edit statuses puts focus back on the ⋯ that opened it (as the Calendar's Event types
+  // does), instead of leaving it on the page (WCAG 2.4.3; found while checking pass 1 step 1b).
+  function closeStatuses() {
+    const opener = ref.current.dialog?.opener;
+    setDialog(null);
+    focusSoon(() => usable(opener));
   }
   // Edit statuses changes steps inside one box (list ↔ Add / Edit status): move focus to the new
   // step's first field, or the box itself — otherwise Cancel / Discard changes / "← Edit statuses"
@@ -571,7 +579,10 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     setDialog((g) => {
       if (!g) return g;
       const values = step === 'add' ? { name: '', kind: 'stage', color: 'gray' } : s ? { name: s.name, kind: s.kind, color: s.color } : null;
-      return { ...g, step, statusId: s?.id ?? null, values, initial: values, touched: {}, note: null, moveTo: null };
+      // back on the list, focus goes to the row it came from (or "+ Add status" after Add), not the
+      // first row (pass 1 step 1b; as Star's signature link, G5): `from` is read by the list step
+      const from = step === 'list' ? (g.step === 'add' ? 'add' : g.statusId) : g.from;
+      return { ...g, step, statusId: s?.id ?? null, from, values, initial: values, touched: {}, note: null, moveTo: null };
     });
   }
   async function saveStatusForm() {
@@ -586,7 +597,8 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       : await updateStatus({ id: g.statusId, expectedVersion: st.version, ...check.payload });
     if (r.status === 'ok') {
       await pros.reload();
-      setDialog((x) => (x ? { ...x, saving: false, step: 'list' } : x));
+      // back on the list with focus on the status just saved (a new one by its new id)
+      setDialog((x) => (x ? { ...x, saving: false, step: 'list', from: g.step === 'add' ? r.id ?? 'add' : g.statusId } : x));
     } else {
       setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'duplicate_name' ? 'DUPLICATE' : r.status === 'stale' ? 'STALE' : r.status === 'not_allowed' ? 'NOT_ALLOWED' : 'SAVE_FAILED' } : x));
       if (r.status === 'stale') pros.reload();
@@ -613,7 +625,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     setDialog({ ...g, saving: true, note: null });
     const r = await deleteStatus({ id: st.id, expectedVersion: st.version, expectedCount: school.counts.get(st.id) ?? 0, moveToId: g.moveTo });
     await pros.reload();
-    if (r.status === 'ok') setDialog((x) => (x ? { ...x, saving: false, step: 'list', statusId: null } : x));
+    if (r.status === 'ok') setDialog((x) => (x ? { ...x, saving: false, step: 'list', statusId: null, from: null } : x));
     else setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'not_allowed' ? 'NOT_ALLOWED' : r.status === 'stale' ? 'STALE' : 'SAVE_FAILED' } : x));
   }
 
@@ -817,14 +829,14 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
           onSave={saveStatusForm}
           onDelete={confirmDeleteStatus}
           onReorder={reorderStatus}
-          onCancel={() => setDialog(null)}
+          onCancel={closeStatuses}
           onRequestClose={() => {
             // Esc / Back: the list closes; an Add / Edit status step goes back to the list, but with
             // a change it stays open with "Unsaved changes…" until Save or Cancel (like Calendar's
             // Event types; rulebook v0.46 / v1.027, design review N15).
             const g = ref.current.dialog;
             if (g.saving) return;
-            if (g.step === 'list') setDialog(null);
+            if (g.step === 'list') closeStatuses();
             else if (!isStatusFormDirty(g)) statusesStep('list');
             else if (!g.note) setDialog({ ...g, note: 'UNSAVED' });
           }}

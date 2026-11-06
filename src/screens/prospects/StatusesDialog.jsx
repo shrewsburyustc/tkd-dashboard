@@ -45,6 +45,10 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
   );
 
   if (state.step === 'list') {
+    // Where focus lands (Prospects' step effect focuses [data-autofocus]): the row the person came
+    // back from (state.from, a status id), "+ Add status" after Add, else the first row.
+    const backTo = statuses.some((s) => s.id === state.from) ? state.from : null;
+    const toAdd = !backTo && state.from === 'add' && statuses.length < 30;
     return (
       <Dialog title={T.STATUSES_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onRequestClose}>
         <p className="tdialog-sub">{T.statusesSub(schoolName)}</p>
@@ -55,7 +59,7 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
               drag.state && drag.state.gap === i && <li key="gap" className="ctypes-gap" aria-hidden="true" />,
               <li key={s.id} className={`ctypes-item${drag.state?.id === s.id ? ' is-lifted' : ''}`} data-drag-group="statuses" data-drag-id={s.id}>
                 <Grip label={T.dragStatus(s.name)} gripProps={drag.gripProps('statuses', s.id)} />
-                <button type="button" className="ctypes-row" data-autofocus={i === 0 ? true : undefined} onClick={() => onStep('edit', s)}>
+                <button type="button" className="ctypes-row" data-autofocus={(backTo ? s.id === backTo : !toAdd && i === 0) ? true : undefined} onClick={() => onStep('edit', s)}>
                   <i className="cpanel-swatch" style={{ background: c.fill, borderColor: c.edge }} aria-hidden="true" />
                   <span className="ctypes-name">{s.name}</span>
                   <span className="pkind">{s.kind === 'stage' ? T.KIND_STAGE : T.KIND_EXIT}{s.builtin ? ` · ${T.BUILTIN_TAG}` : ''}</span>
@@ -74,7 +78,7 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
           {drag.state && drag.state.gap === statuses.length && <li className="ctypes-gap" aria-hidden="true" />}
         </ul>
         {statuses.length < 30 && (
-          <button type="button" className="btn ctypes-add" onClick={() => onStep('add')}>
+          <button type="button" className="btn ctypes-add" data-autofocus={toAdd ? true : undefined} onClick={() => onStep('add')}>
             <IconPlus size={16} aria-hidden="true" />
             {T.ADD_STATUS}
           </button>
