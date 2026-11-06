@@ -23,17 +23,34 @@ import * as T from './text.js';
 
 export const timeKey = (t) => `${t.formId}|${t.classId}|${t.date}|${t.start}`;
 
-const NOTES = { TIME_TAKEN: T.TIME_TAKEN, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.NOT_ALLOWED, PICK: T.PICK_A_TIME };
+// DELETE_FAILED / BOX_SAVE_FAILED: a save that failed on the connection; the box stays open with
+// this note and pressing its button again tries again (pass 2 U-01, rulebook v1.103)
+const NOTES = { TIME_TAKEN: T.TIME_TAKEN, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.NOT_ALLOWED, PICK: T.PICK_A_TIME, DELETE_FAILED: T.DELETE_FAILED, BOX_SAVE_FAILED: T.BOX_SAVE_FAILED };
 
-function Footer({ isPhone, onCancel, children }) {
+// The button row, with the dialog's amber note (if any) in its place (rulebook v0.81; Jeffrey
+// 2026-11-06, "A: under the buttons", pass 2 U-01): on PC and tablet the note sits UNDER Cancel /
+// Save, inside .dialog-footer, so the buttons don't move down when it appears and a second click
+// lands on the button again; on phones it sits above the button pinned at the bottom.
+function Footer({ isPhone, onCancel, note = null, children }) {
+  const noteBlock = note && (
+    <div className="tdialog-note">
+      <Notice>{note}</Notice>
+    </div>
+  );
   return isPhone ? (
-    <div className="dialog-page-submit">{children}</div>
+    <>
+      {noteBlock}
+      <div className="dialog-page-submit">{children}</div>
+    </>
   ) : (
-    <div className="dialog-actions">
-      <button type="button" className="btn" onClick={onCancel}>
-        {T.CANCEL}
-      </button>
-      {children}
+    <div className="dialog-footer">
+      <div className="dialog-actions">
+        <button type="button" className="btn" onClick={onCancel}>
+          {T.CANCEL}
+        </button>
+        {children}
+      </div>
+      {noteBlock}
     </div>
   );
 }
@@ -79,12 +96,7 @@ export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel
           ))}
         </fieldset>
       )}
-      {state.note && (
-        <div className="tdialog-note">
-          <Notice>{NOTES[state.note] ?? state.note}</Notice>
-        </div>
-      )}
-      <Footer isPhone={isPhone} onCancel={onCancel}>
+      <Footer isPhone={isPhone} onCancel={onCancel} note={state.note ? NOTES[state.note] ?? state.note : null}>
         <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${canSave ? '' : ' is-unavailable'}`} aria-disabled={canSave ? undefined : 'true'} onClick={() => (canSave ? onSave() : onPick(state.pick))}>
           <IconCheck size={16} aria-hidden="true" />
           {state.saving ? T.SAVING : T.BOOK_IT}
@@ -120,8 +132,7 @@ export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel
         />
         <p className="field-hint">{T.JOINED_HINT}</p>
       </div>
-      {state.note && <Notice>{NOTES[state.note] ?? state.note}</Notice>}
-      <Footer isPhone={isPhone} onCancel={onCancel}>
+      <Footer isPhone={isPhone} onCancel={onCancel} note={state.note ? NOTES[state.note] ?? state.note : null}>
         <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${ok ? '' : ' is-unavailable'}`} aria-disabled={ok ? undefined : 'true'} onClick={() => ok && onSave()}>
           <IconCheck size={16} aria-hidden="true" />
           {state.saving ? T.SAVING : T.SAVE}

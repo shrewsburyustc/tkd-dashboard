@@ -59,6 +59,12 @@ const savedView = (staffId) => (readStorage(viewKey(staffId)) === 'board' ? 'boa
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 const emptyNote = () => ({ body: '', when: 'tomorrow', picked: null });
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
+// A save that failed on the connection (lib/prospects/api.js answers 'error' for no connection or
+// an answer it can't read), not a refusal: the box that asked for it (Delete prospect, Came,
+// Joined, Book a free class) stays open with its amber note, and pressing its button again tries
+// again (pass 2 U-01, rulebook v1.103). Every other answer is handled as before: a refusal
+// (someone else changed it, it's gone, not allowed) closes the box and uses the page's bar.
+const connectionFailed = (status) => status === 'error';
 // "Follow up today" and the "Ava N." name come from followUps.js, shared with the Calendar (v0.615).
 
 // Focus what `find` returns as soon as it can take focus. The page behind the profile window stays
@@ -98,6 +104,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   const [found, setFound] = useState(null); // code -> Set of ids, while searching
   const [selected, setSelected] = useState(null); // { id, code, opener } — the child whose profile is open
   const [detail, setDetail] = useState(null); // the profile window's prospect
+  const [detailFailed, setDetailFailed] = useState(null); // the child whose profile couldn't be read (P-02)
   const [note, setNote] = useState(emptyNote);
   const [noteWarning, setNoteWarning] = useState(false); // a typed note would be lost: say so
   const [dialog, setDialog] = useState(null);
@@ -189,13 +196,38 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   async function loadDetail(id) {
     const res = await getProspect(id);
     if (selectedIdRef.current !== id) return 'ignored';
-    if (res.status === 'ok') setDetail(res.prospect);
-    else if (res.status === 'no_access') onNoAccess();
-    else if (res.status === 'not_found') {
+    if (res.status === 'ok') {
+      setDetail(res.prospect);
+      setDetailFailed(null);
+    } else if (res.status === 'no_access') {
+      onNoAccess();
+      // after the screen is unlocked the window offers Retry instead of "Loading…" for good
+      if (ref.current.detail?.id !== id) setDetailFailed(id);
+    } else if (res.status === 'not_found') {
       select(null);
       setDetail(null);
+    } else if (ref.current.detail?.id !== id) {
+      // the first read failed (a dropped connection): the window shows the amber bar with Retry
+      // instead of "Loading…" for good (pass 2 P-02). A failed re-read after a save keeps the
+      // profile already shown.
+      setDetailFailed(id);
     }
     return res.status;
+  }
+  // Retry in the window's bar: read again (it shows "Loading…" meanwhile). The Retry button goes
+  // away while it reads, so focus moves at once to the window's heading (or its back arrow on
+  // phones), where Esc and Tab keep working; it stays there whatever the answer.
+  async function retryDetail() {
+    const id = selectedIdRef.current;
+    if (!id) return;
+    setDetailFailed(null);
+    focusSoon(windowFocus);
+    await loadDetail(id);
+  }
+  // A box whose save failed on the connection stays open with its note (U-01) — only if it is
+  // still the same box (its key) when the answer comes back
+  function keepOpenWithNote(g, note) {
+    setDialog((x) => (x && x.key === g.key ? { ...x, saving: false, note } : x));
   }
   // After a save re-draws the window, the button that was pressed may be gone (Book became Change
   // time, a Check-in box closed, the status menu closed) or grayed while it saved; focus then sits
@@ -228,18 +260,26 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     setNoteWarning(false);
     if (ref.current.selected?.id !== p.id) setNote(emptyNote());
     // the row that opened the window (a brother or sister opened inside it keeps the first one)
+    const inWindow = Boolean(ref.current.selected); // a brother or sister opened inside the open window
     select({ id: p.id, code, opener: ref.current.selected?.opener ?? opener ?? null });
     setDetail(null);
+    setDetailFailed(null);
+    // Inside the window the link that was pressed goes away with the profile ("Loading…" takes its
+    // place), so focus moves to the window's heading (or its back arrow on phones) at once —
+    // never left on the page, where Esc and Tab do nothing (pass 2 P-02 review). A window that is
+    // just opening puts it there itself.
+    if (inWindow) focusSoon(windowFocus);
     const status = await loadDetail(p.id);
     // the window starts at its top, with focus on its heading (PC / tablet) or its back arrow (phone)
-    // — unless another child was opened meanwhile (that one does this itself)
+    // — unless another child was opened meanwhile (that one does this itself). When the read failed
+    // the window shows the bar with Retry, and focus stays in the window too.
     if (status === 'ok') {
       window.requestAnimationFrame(() => {
         const box = document.querySelector('.tdialog.pp-dialog') ?? document.querySelector('.dialog-page.pp-dialog .dialog-page-body');
         if (box) box.scrollTop = 0;
       });
       focusSoon(windowFocus);
-    }
+    } else if (status !== 'ignored' && selectedIdRef.current === p.id) focusSoon(windowFocus);
     if (!p.openedByMe) {
       await markOpened(p.id);
       pros.reload();
@@ -326,8 +366,13 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const g = ref.current.dialog;
     const d = g?.prospect ?? ref.current.detail;
     if (!d || !g) return;
-    setDialog({ ...g, saving: true });
+    setDialog({ ...g, saving: true, note: null });
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: g.date });
+    if (connectionFailed(r.status)) {
+      // stays open with the picked date and the note; Save again tries again (U-01)
+      keepOpenWithNote(g, 'BOX_SAVE_FAILED');
+      return;
+    }
     setDialog(null);
     // the status it had before: from the dropped card's school on the Board, else the open panel's
     const before = g.dropCode ? schools.find((s) => s.code === g.dropCode)?.statusById : statusOfDetail();
@@ -350,11 +395,17 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       setNoteWarning(false);
     }
   }
-  async function doCheckIn(came, afterClass, target = null) {
-    const d = target ?? ref.current.detail;
+  // Check in (or No-show) from the open window. (A Board card dropped on Came checks in inside its
+  // own box instead: saveCame.)
+  async function doCheckIn(came, afterClass) {
+    const d = ref.current.detail;
     if (!d || busy) return;
     setBusy(true);
     const r = await checkIn({ id: d.id, expectedVersion: d.version, came, afterClass });
+    return checkInDone(r, came, d);
+  }
+  // The end of a check-in (or No-show): the usual checks, the toast and its Undo
+  function checkInDone(r, came, d) {
     return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), async () => {
       const u = await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn });
       afterUndo(u);
@@ -383,8 +434,12 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       setDialog((x) => (x ? { ...x, saving: false, note: 'TIME_TAKEN', pick: null, times: res.status === 'ok' ? res.times : x.times } : x));
       return;
     }
+    if (connectionFailed(r.status)) {
+      // stays open with the picked time and the note; Book again tries again (U-01)
+      keepOpenWithNote(g, 'BOX_SAVE_FAILED');
+      return;
+    }
     if (r.status !== 'ok') {
-      setDialog((x) => (x ? { ...x, saving: false } : x));
       setDialog(null);
       afterWrite(r);
       return;
@@ -496,16 +551,32 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const b = d.booking;
     const canCheckIn = Boolean(b && b.status === 'booked' && b.classRunning && !d.checkedInAt) && (g.askCame || b.date === today);
     if (canCheckIn) {
+      // the check-in runs inside the box, like the status below: "Saving…" shows, and a dropped
+      // connection keeps the box open with its note (pass 2 U-01)
+      setDialog({ ...g, saving: true, note: null });
+      setBusy(true);
+      const c = await checkIn({ id: d.id, expectedVersion: d.version, came: true, afterClass: Boolean(g.askCame) });
+      if (connectionFailed(c.status)) {
+        setBusy(false);
+        keepOpenWithNote(g, 'BOX_SAVE_FAILED');
+        return;
+      }
       setDialog(null);
-      if (await doCheckIn(true, Boolean(g.askCame), d)) flashStage(g.dropCode, g.statusId);
+      if (await checkInDone(c, true, d)) flashStage(g.dropCode, g.statusId);
       return;
     }
     // no class to check in to: save Came as the status (a class still ahead never gets here —
     // CameDialog only offers "Keep in …" then)
-    setDialog({ ...g, saving: true });
+    setDialog({ ...g, saving: true, note: null });
     setBusy(true);
     const wasJoined = schools.find((s) => s.code === g.dropCode)?.statusById?.get(d.statusId)?.builtin === 'joined';
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: null });
+    if (connectionFailed(r.status)) {
+      // stays open with the note; Came again tries again (U-01)
+      setBusy(false);
+      keepOpenWithNote(g, 'BOX_SAVE_FAILED');
+      return;
+    }
     setDialog(null);
     // Undo like every other Board drop (v1.006)
     if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME), statusUndo(d, wasJoined, r.version))) flashStage(g.dropCode, g.statusId);
@@ -517,8 +588,13 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const d = ref.current.detail;
     const g = ref.current.dialog;
     if (!d || !g) return;
-    setDialog({ ...g, saving: true });
+    setDialog({ ...g, saving: true, note: null });
     const r = await deleteProspect({ id: d.id, expectedVersion: d.version });
+    if (connectionFailed(r.status)) {
+      // stays open with "Couldn't delete …" under its buttons; Delete again tries again (U-01, U-08)
+      keepOpenWithNote(g, 'DELETE_FAILED');
+      return;
+    }
     setDialog(null);
     if (r.status === 'ok') {
       select(null);
@@ -626,7 +702,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const r = await deleteStatus({ id: st.id, expectedVersion: st.version, expectedCount: school.counts.get(st.id) ?? 0, moveToId: g.moveTo });
     await pros.reload();
     if (r.status === 'ok') setDialog((x) => (x ? { ...x, saving: false, step: 'list', statusId: null, from: null } : x));
-    else setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'not_allowed' ? 'NOT_ALLOWED' : r.status === 'stale' ? 'STALE' : 'SAVE_FAILED' } : x));
+    else if (r.status === 'no_access') {
+      setDialog((x) => (x ? { ...x, saving: false } : x));
+      onNoAccess();
+    } else {
+      // only a connection failure says "Couldn't delete … connection …" (pass 2 U-08); someone
+      // else's change (or a status already gone) and a refused value keep their own notes
+      const note = connectionFailed(r.status) ? 'DELETE_FAILED' : r.status === 'not_allowed' ? 'NOT_ALLOWED' : r.status === 'invalid' ? 'INVALID' : 'STALE';
+      setDialog((x) => (x ? { ...x, saving: false, note } : x));
+    }
   }
 
   useShortcutN({ enabled: !privateHidden && !dialog && !selected && !screenLocked && pros.status === 'ready' && !fill.isOpen, onPress: () => openAdd(document.querySelector('[data-prospects-add]')) });
@@ -644,6 +728,9 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         // "Ava Nguyen" (from the list while the profile loads)
         name={childFullName(shownDetail ?? selectedItem ?? {}) || T.LOADING_PANEL}
         detail={shownDetail}
+        // the first read failed: the bar's words, and its Retry (P-02)
+        loadFailed={!shownDetail && detailFailed === selected.id ? T.loadDetailFailed(selectedItem?.childFirstName ?? '') : null}
+        onRetryLoad={retryDetail}
         listItem={selectedItem}
         statuses={profileSchool.statuses}
         statusById={profileSchool.statusById}

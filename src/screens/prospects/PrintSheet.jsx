@@ -53,7 +53,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconSquareCheck } from '@tabler/icons-react';
 import Logo from '../../components/Logo.jsx';
-import { addressFieldOf, addressLine, answerFieldsOf, childAge, childFullName, isWideAnswer, questionLead, waiverFieldOf } from '../../lib/prospects/child.js';
+import { addressFieldOf, addressLine, answerFieldsOf, childAge, childFullName, freeClassState, isWideAnswer, questionLead, waiverFieldOf } from '../../lib/prospects/child.js';
 import { LIMIT_PX, planSheet } from '../../lib/prospects/sheetPlan.js';
 import * as T from './text.js';
 
@@ -175,7 +175,15 @@ function Page({ child, index, part, plan, today, printedBy, measure }) {
   const answersGoOn = part === 'first' && cut < all.length;
   const answersHere = part === 'second' ? answers.length > 0 : all.length > 0;
   const wordingMovesOn = part !== 'whole' && plan.waiverBack;
-  const freeClass = b && b.status === 'booked' ? T.classLineYear(b) : b?.status === 'cancelled' ? T.BOOKING_CANCELLED : T.SHEET_NO_TIME;
+  // the same state as the profile and the List (freeClassState): a class a closure cancelled says
+  // so on paper too (pass 2 P-01)
+  const classState = freeClassState(b);
+  // (the warning words in bold, as drawn: "Class cancelled — call the family (Mon, Nov 9, 2026 · …)")
+  const freeClass = classState === 'booked' ? T.classLineYear(b) : classState === 'class_gone' ? (
+    <>
+      <b className="pps-warn">{T.CLASS_GONE}</b> ({T.classLineYear(b)})
+    </>
+  ) : classState === 'booking_cancelled' ? T.BOOKING_CANCELLED : T.SHEET_NO_TIME;
   const signedDay = p.signedAt ? T.dayOf(p.signedAt) : '';
 
   return (

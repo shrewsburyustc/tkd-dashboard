@@ -31,7 +31,7 @@ export function checkStatusForm(state, statuses) {
   };
 }
 
-const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
+const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, DELETE_FAILED: T.DELETE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
 
 export default function StatusesDialog({ state, statuses, counts, schoolName, isAdmin, isPhone, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
   const idBase = `statuses-${state.key}`;

@@ -47,7 +47,8 @@
 //   idBase, familyBookingDates (every free-class date of the sign-up, for "Kept until"),
 //   printedBy (the signed-in person's name, for "Printed … by …"), banner ({ text } — the
 //   section's amber bar, shown at the top of the window while it is open) and onDismissBanner,
-//   and the actions: onNote,
+//   loadFailed (the words when the first read failed: the bar with Retry instead of "Loading…",
+//   pass 2 P-02) and onRetryLoad, and the actions: onNote,
 //   onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete,
 //   onClose (Esc, ×, the back arrow, a click outside), onNoAccess.
 import { useEffect, useRef, useState } from 'react';
@@ -66,7 +67,7 @@ import { addDays } from '../../lib/schedule/versions.js';
 import { longTextProblem } from '../../lib/forms/fields.js';
 import { loadSignature } from '../../lib/forms/api.js';
 import { getProspect } from '../../lib/prospects/api.js';
-import { addressFieldOf, addressLine, answerFieldsOf, childAge, childFullName, isWideAnswer, signatureKeptUntil, waiverFieldOf } from '../../lib/prospects/child.js';
+import { addressFieldOf, addressLine, answerFieldsOf, childAge, childFullName, freeClassState, isWideAnswer, signatureKeptUntil, waiverFieldOf } from '../../lib/prospects/child.js';
 import { HIDDEN_ON_THIS_TABLET, usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import { StatusTag } from './ProspectList.jsx';
 import { BigTrack } from './Progress.jsx';
@@ -145,7 +146,7 @@ function Profile({
   const booked = Boolean(b && b.status === 'booked');
   const canCheckIn = booked && b.classRunning && b.date === today && !p.checkedInAt && !['joined', 'not_interested', 'came', 'no_show'].includes(builtin ?? '');
   const askCame = Boolean(listItem?.askCame && !p.checkedInAt);
-  const classGone = booked && !b.classRunning;
+  const classGone = freeClassState(b) === 'class_gone'; // the same state as the List and the printed sheet (P-01)
   const stages = statuses.filter((s) => s.kind === 'stage');
   const exits = statuses.filter((s) => s.kind === 'exit');
   const age = childAge(p, today);
@@ -739,7 +740,9 @@ function Profile({
 }
 
 export default function ProspectPanel(props) {
-  const { name, detail, isPhone, onClose, banner = null, onDismissBanner } = props;
+  // loadFailed: the words when the first read failed (pass 2 P-02) — the shared amber bar with
+  // Retry (onRetryLoad) shows in place of "Loading…", as in Black Belt's candidate window
+  const { name, detail, isPhone, onClose, banner = null, onDismissBanner, loadFailed = null, onRetryLoad } = props;
   // A problem while the window is open (a save refused, someone else's change — v1.004's amber bar)
   // shows at the top of the window's body: the page's own bar would be hidden behind the window.
   // When it appears, it is scrolled into view (under the heading row that stays on top); like the
@@ -769,6 +772,10 @@ export default function ProspectPanel(props) {
         )}
         {detail ? (
           <Profile key={detail.id} {...props} />
+        ) : loadFailed ? (
+          <div className="pp-window-bar">
+            <ErrorBanner text={loadFailed} onRetry={onRetryLoad} />
+          </div>
         ) : (
           <p className="pp-loading" aria-busy="true">
             {T.LOADING_PANEL}

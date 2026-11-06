@@ -1788,6 +1788,15 @@ body.is-card-dragging * {
   border-bottom: 1px solid #999;
 }
 
+/* a free class whose class was cancelled: "Class cancelled — call the family" prints in bold, as
+   the approved P-01 picture draws it (pass 2, 2026-11-06); the class after it in brackets stays as
+   the other details. 700, the one bold phrase on the sheet: paper has no amber box to warn with
+   (on screen the profile's amber box does that), and in the sheet's font (Segoe UI on Windows) 600
+   prints the same as the details' 500, so it wouldn't stand out. */
+.pps-person .pps-v .pps-warn {
+  font-weight: 700;
+}
+
 /* the child's name: the biggest words in the boxes */
 .pps-person .pps-f--big .pps-v {
   font-size: 19px;

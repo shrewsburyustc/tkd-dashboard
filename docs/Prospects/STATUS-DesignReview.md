@@ -69,3 +69,41 @@ Fix list `docs/Design Review/Rolling check/Pass 1/Fix-NewStudents.md`, received 
 | later | R2-05, R2-07 words, R3-06, S-2, Fill in's Send (R1-08) | Wait for Dashboard core's matching items on main |
 | later | N16's Show menu, N11 | Wait for the shared menu's tick boxes / Color Belt's CB14 + M15 |
 | check | R2-06, Draft Fill in gray, "Delete form", R5-01, R4-02, Delete field | Already done; checked when the steps are tried
+
+## Rolling check, pass 2
+
+Fix list `docs/Design Review/Rolling check/Pass 2/Fix-NewStudents.md`, relayed by Main 2026-11-05. Main 1751e82 merged in (fast-forward). **Plan:** `TKD-RollingCheck-Pass2-Plan.md`. Order: Jeffrey 2026-11-06, "Focus fix first" (done, 8f4a04b), then "Yes, Mediums next".
+
+| Step | Items | Status |
+|---|---|---|
+| A | U-01 (+ U-08 words) boxes stay open on a failed save; P-02 window "Couldn't load … Retry"; P-01 printed sheet says the class was cancelled | **Pictures sent 2026-11-06:** `RollingCheck-P2-U01-boxes.png`, `RollingCheck-P2-P02-load.png`, `RollingCheck-P2-P01-sheet.png` (real preview screens, only the amber parts added). **Jeffrey 2026-11-06: "OK, build it". Built 2026-11-06:**
+<br>- **U-01:** `Prospects.jsx`: a connection failure keeps Delete prospect, Came (both paths; its check-in now runs inside the box), Joined and Book open with their note, and the button tries again. Refusals still close the box and use the bar.
+<br>- **U-08:** Delete status and the Calendar's Delete type say "Couldn't delete. Check the connection, then try again." (`prospects/text.js`, `calendar/text.js`, `StatusesDialog.jsx`).
+<br>- **P-02:** the window's bar with Retry (`ProspectPanel.jsx`, `Prospects.jsx` `retryDetail`).
+<br>- **P-01:** `freeClassState` in `src/lib/prospects/child.js`, used by `PrintSheet.jsx`, `ProspectPanel.jsx` and `progress.js`; a new check group.
+<br>- **Tried in the preview** (`failNextFormsSave` / `failNextCalendarSave`): each box keeps its note, its date or time, and saves on the second press. Came was tried by a real Board drag in headless Edge. Leo's sheet prints the cancelled line; Maya's prints as before.
+<br>- **Checks:** both builds, the 6 check scripts and 174 function tests pass.
+<br>- **Code review: no must-fix.** Applied:
+<br>&nbsp;&nbsp;- a connection failure is exactly the data layer's `'error'`, and a late answer only patches the box that asked (its key);
+<br>&nbsp;&nbsp;- Retry moves focus to the window's heading at once;
+<br>&nbsp;&nbsp;- a `no_access` first read also offers Retry after unlocking;
+<br>&nbsp;&nbsp;- Delete status's other refusals keep their own notes (`not_found` → STALE, `invalid` → INVALID, `no_access` locks);
+<br>&nbsp;&nbsp;- "Follow up today" (`followUps.js`) uses `freeClassState` too;
+<br>&nbsp;&nbsp;- Joined's note uses Book's wrapper;
+<br>&nbsp;&nbsp;- comments fixed.
+<br>&nbsp;&nbsp;Re-tried in the preview.
+<br>- **Design review** (real failures at the four sizes):
+<br>&nbsp;&nbsp;- **Must-fix, fixed:** when a brother or sister's read failed inside the window, focus fell to the page and Esc stopped working. Opening one inside the window now moves focus to the heading at once, and keeps it there after a failure. Re-tried.
+<br>&nbsp;&nbsp;- **Should-fix, fixed:** the sheet's "Class cancelled — call the family" now prints in bold, as drawn (`.pps-warn`, `prospects.css`). First 600, but the re-check found that Segoe UI prints 600 the same as the details' 500. It is now 700, as in the approved picture: the one bold phrase on the sheet, since paper has no amber box (§7's 400 / 500 rule is for screens; the sheet already uses 600, v0.643). Checked in a print-mode screenshot.
+<br>&nbsp;&nbsp;- **Should-fix, asked Jeffrey 2026-11-06:** in Joined and Book the approved picture put the note above the buttons, so they move down 46–64 px and a second click lands on the note. v0.81 puts it under them. Picture `RollingCheck-P2-U01-note-place.png`: A, under (recommended); B, keep as drawn. **Jeffrey: "A: under the buttons"** (carries out v0.81; no new rulebook row, as N14 and the Event types fix). **Built:** the shared `Footer` in `prospects/Dialogs.jsx` puts the note inside `.dialog-footer` under Cancel / Save on PC and tablet, and above the pinned button on phones. Book's "time taken" note moved with it.
+<br>&nbsp;&nbsp;**Measured, before and after a real failure:**
+<br>&nbsp;&nbsp;- Joined at 1280 and 820, and Book at 820: the button stays put.
+<br>&nbsp;&nbsp;- Book at 1280: its pinned row moves up 42 px, as drawn.
+<br>&nbsp;&nbsp;- Phones: the note sits above the button. Joined's Save moves down 46 / 64 px at 390 / 320, as v0.81 places it; the picture showed phones the same either way.
+<br>&nbsp;&nbsp;- Focus stays on the pressed button; nothing overflows.
+<br>&nbsp;&nbsp;- **Found on the way (older; for step B):** "Saving…" is wider than Save / Book, so Cancel slides left while saving. After a successful Delete prospect or Came, focus falls to the page.
+<br>- **Design re-check** (option A and the two fixes): no must-fix.
+<br>- Both builds, the 6 check scripts and 174 function tests pass. **Waits on Jeffrey's OK to commit.** |
+| B | M-05, P-05 (approved v1.055), P-03, U-02 + U-07, U-03, U-05, L-09 | Planned: pictures and words first |
+| with pass 1 | X-1 and U-04 go with step 2 (R2-01); L-10 goes with step 5 | Planned |
+| later | L-06, U-06, L-03 | Wait for Dashboard core's items on main |
