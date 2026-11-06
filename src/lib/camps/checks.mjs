@@ -6,6 +6,9 @@
 // ALL CAMPS LIB CHECKS PASSED (contract 0013 §5.5).
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+// Fill in (v0.741): the cut that keeps register.css's page rules out of the dashboard.
+import { scopedRegisterCss, onlyFamilyFormRules } from '../../screens/camps/familyFormCss.js';
 import {
   CAMP_ACK_VERSION, DEFAULT_AGES, AGE_LIMITS, MAX_DAYS, MAX_EXTRAS, MAX_CHILDREN, MAX_CAMPER_CENTS, SIGNATURE_KEEP_YEARS,
   CAMP_TRIES_PER_HOUR, UNDO_WINDOW_MS, PAYING_BY, DEFAULT_EARLY_DAYS_BEFORE, DEFAULT_CLOSES_DAYS_BEFORE,
@@ -22,6 +25,8 @@ import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
 import { qrFileName } from '../qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
+// Fill in's mapping (migration 0043): what campsApi.js sends and checks.
+import { staffSignupArgs, staffFormShapeOk, staffSignupShapeOk, signupSourceOf } from './campsArgs.js';
 // Print receipt's plain receipt (rulebook v0.734, design review C3).
 import { buildCampReceipt, canPrintReceipt, receiptPayments } from './campReceipt.js';
 // The History words (migration 0033, rulebook v0.736; the Mark paid box's hint is campRules' payingByChoiceWhere).
@@ -2048,6 +2053,186 @@ check('Add camp: Blank camp starts with Early drop-off and Late pick-up, prices 
   // Edit camp / Edit template keep exactly the saved extras (none → none).
   assert.deepEqual(form.valuesFromCamp({ name: 'X', locationCode: 'worcester', startTime: '09:00:00', endTime: '15:00:00', minAge: 5, maxAge: 12 }, [{ day: '2026-11-25' }], [], []).extras, []);
   assert.deepEqual(form.valuesFromTemplate({ name: 'T', locationCode: 'worcester', dayCount: 1, startTime: '09:00:00', endTime: '15:00:00', opensDaysBefore: 30, closesDaysBefore: 1, earlyDaysBefore: 7, minAge: 5, maxAge: 12, extras: [] }).extras, []);
+});
+
+// ======================= Fill in: a desk sign-up (migration 0043, CONTRACT-0043, rulebook v0.740 / v0.741) =======================
+check('Fill in: camp_staff_form and camp_staff_signup (open / admin_only / finished, desk marks, duplicates, history words)', () => {
+  const { backend: b, env, store } = makeBackend({ today: '2027-05-20', clock: Date.parse('2027-05-20T14:00:00Z') });
+  const added = rpcOk(b, 'camp_add_camp', addCampArgs('2027-06-07')); // opens May 8, closes Jun 6, early until May 31
+  const campId = added.id;
+  // The form: the family page's answer + the Fill in fields. Read only; no_access first.
+  const form = rpcOk(b, 'camp_staff_form', { p_camp_id: campId }, STAFF);
+  assert.equal(form.status, 'ok');
+  assert.equal(form.fill_in, 'open');
+  assert.equal(form.signup_state, 'open');
+  assert.equal(form.closes_on, '2027-06-06');
+  assert.equal(form.closed_by_hand, false);
+  assert.deepEqual(Object.keys(b.publicCamp(added.public_code)).every((k) => k in form), true); // the same shape + more
+  assert.equal(form.camp.name, 'Spring Camp');
+  assert.equal(rpcOk(b, 'camp_staff_form', { p_camp_id: randomUUID() }).status, 'not_found');
+  assert.equal(rpcOk(b, 'camp_staff_form', { p_camp_id: campId }, LOCKED).status, 'no_access');
+  const [d1, d2] = form.camp.days.map((d) => d.day_id);
+  const liam = { first_name: 'Liam', last_name: 'Carter', age: 8, member: false, day_ids: [d1, d2], extras: [] };
+  const desk = (children, extra = {}) => ({
+    p_camp_id: campId, p_submission_id: randomUUID(), p_children: children, p_parent_name: 'Sarah Carter', p_parent_phone: '5085550142',
+    p_parent_relation: 'Mother', p_emergency_name: 'Tom Carter', p_emergency_phone: '5085550187', p_emergency_relation: 'Uncle',
+    p_paying_by: 'cash', p_acknowledged: true, p_signature: 'data:image/png;base64,iVBORw0KGgo=', p_ack_version: CAMP_ACK_VERSION,
+    p_waiver_version: form.waiver_version, p_expected_total_cents: 17000, ...extra,
+  });
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([liam]), LOCKED).status, 'no_access');
+  // The family form's rules: price_changed, camp_changed, invalid.
+  const priced = rpcOk(b, 'camp_staff_signup', desk([liam], { p_expected_total_cents: 0 }), STAFF);
+  assert.equal(priced.status, 'price_changed');
+  assert.equal(priced.new_total_cents, 17000);
+  assert.equal(priced.camp.status, 'ok');
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([{ ...liam, age: 4 }]), STAFF).status, 'camp_changed');
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([liam], { p_parent_phone: '123' }), STAFF).status, 'invalid');
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([liam, liam, liam, liam]), STAFF).status, 'invalid'); // up to 3 children
+  // Staff while open: ok, marked as the desk's, by the staff member; no rate-limit row.
+  const attempts = store().camp_public_attempts.length;
+  const okArgs = desk([liam]);
+  const ok = rpcOk(b, 'camp_staff_signup', okArgs, STAFF);
+  assert.equal(ok.status, 'ok');
+  assert.match(ok.reference, /^CP-\d+$/);
+  assert.equal(ok.family_total_cents, 17000);
+  assert.deepEqual(rpcOk(b, 'camp_staff_signup', okArgs, STAFF), ok); // the same Send again: the first answer, no second sign-up
+  assert.equal(store().camp_public_attempts.length, attempts);
+  const signup = store().camp_signups.find((s) => s.reference === ok.reference);
+  assert.equal(signup.source, 'desk');
+  assert.equal(signup.entered_by, 'Staff');
+  assert.equal(signup.created_by_name, 'Staff');
+  assert.equal(store().camp_signups.filter((s) => s.camp_id === campId).length, 1);
+  assert.equal(b.select('camp_signups', 'entered_by', [], [], ADMIN).error.code, '42501'); // not readable from the table
+  const log = store().camp_change_log.filter((r) => r.table_name === 'camp_signups' && r.record_id === signup.id);
+  assert.equal(log.length, 1);
+  assert.equal(log[0].action, 'camp_staff_signup');
+  assert.equal(log[0].actor_name, 'Staff');
+  assert.equal(log[0].after.source, 'desk');
+  assert.equal(log[0].after.entered_by, 'Staff');
+  // Camper detail and History say where it came from.
+  const camper = store().camp_campers.find((c) => c.signup_id === signup.id);
+  const detail = toCamel(rpcOk(b, 'camp_camper_detail', { p_camper_id: camper.id }, STAFF));
+  assert.equal(detail.source, 'desk');
+  assert.equal(detail.enteredBy, 'Staff');
+  assert.equal(CampText.signupLine(detail.camper, detail),
+    `Signed up at the desk by Staff, ${CampText.monthDayYear('2027-05-20')} · waiver signed on the screen · reference ${ok.reference}`);
+  assert.equal(CampText.signupLine(detail.camper), `Signed up on the family form, ${CampText.monthDayYear('2027-05-20')} · waiver signed on the form · reference ${ok.reference}`);
+  const hist = toCamel(rpcOk(b, 'camp_camper_history', { p_camper_id: camper.id }, STAFF)).rows;
+  const said = groupCamperHistory(hist, { dayIds: [d1, d2], extras: [] }).map((batch) => describeCamperBatch(batch, {})).filter(Boolean);
+  assert.deepEqual(said.map((w) => `${w.text} | ${w.who}`), [`Signed up (entered by Staff) · ${ok.reference} | Staff`]);
+  // The family form still writes 'form', by "Family form".
+  const pub = b.publicSignup(signupArgs(b, added.public_code, [{ ...liam, first_name: 'Emma' }], { expected_total_cents: 17000 }));
+  assert.equal(pub.status, 'ok');
+  const famSignup = store().camp_signups.find((s) => s.reference === pub.reference);
+  assert.equal(famSignup.source, 'form');
+  assert.equal(famSignup.entered_by, null);
+  const famCamper = store().camp_campers.find((c) => c.signup_id === famSignup.id);
+  const famDetail = toCamel(rpcOk(b, 'camp_camper_detail', { p_camper_id: famCamper.id }));
+  assert.equal(famDetail.source, 'form');
+  assert.equal(famDetail.enteredBy, null);
+  assert.match(CampText.signupLine(famDetail.camper, famDetail), /^Signed up on the family form, /);
+  assert.equal(CampText.historySignedUp('CP-4409'), 'Signed up on the family form · CP-4409');
+  // A second desk sign-up of the same child is flagged as a possible duplicate (silently, as the family form).
+  const twin = rpcOk(b, 'camp_staff_signup', desk([{ ...liam, first_name: ' LIAM ' }]), STAFF);
+  assert.equal(twin.status, 'ok');
+  const twinCamper = store().camp_campers.find((c) => c.signup_id === store().camp_signups.find((s) => s.reference === twin.reference).id);
+  assert.equal(twinCamper.duplicate_state, 'possible');
+  // Closed by hand: staff get admin_only (with the state and the closing date), admins may sign up.
+  const version = rows(b, 'camps', 'version', [{ col: 'id', value: campId }])[0].version;
+  assert.equal(rpcOk(b, 'camp_set_signup', { p_camp_id: campId, p_expected_version: version, p_open: false }).status, 'ok');
+  const closedForm = rpcOk(b, 'camp_staff_form', { p_camp_id: campId }, STAFF);
+  assert.equal(closedForm.fill_in, 'admin_only');
+  assert.equal(closedForm.signup_state, 'closed');
+  assert.equal(closedForm.closed_by_hand, true);
+  const mia = { ...liam, first_name: 'Mia', last_name: 'Lopez' };
+  assert.deepEqual(rpcOk(b, 'camp_staff_signup', desk([mia]), STAFF), { status: 'admin_only', signup_state: 'closed', closes_on: '2027-06-06' });
+  assert.equal(b.publicSignup(signupArgs(b, added.public_code, [mia], { expected_total_cents: 17000 })).status, 'closed'); // the family form stays closed
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([mia]), ADMIN).status, 'ok');
+  // Past the closing date, and not open yet: admins only too. After the last day: nobody.
+  env.today = '2027-06-07';
+  assert.equal(rpcOk(b, 'camp_staff_form', { p_camp_id: campId }, ADMIN).fill_in, 'admin_only');
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([{ ...mia, first_name: 'Noah' }], { p_expected_total_cents: 18000 }), STAFF).status, 'admin_only');
+  env.today = '2027-06-10';
+  assert.equal(rpcOk(b, 'camp_staff_form', { p_camp_id: campId }, ADMIN).fill_in, 'finished');
+  assert.equal(rpcOk(b, 'camp_staff_signup', desk([{ ...mia, first_name: 'Ava' }]), ADMIN).status, 'finished');
+  const early = makeBackend({ today: '2027-05-01' }).backend;
+  const later = rpcOk(early, 'camp_add_camp', addCampArgs('2027-06-07'));
+  assert.equal(rpcOk(early, 'camp_staff_form', { p_camp_id: later.id }, STAFF).signup_state, 'not_open_yet');
+  assert.equal(rpcOk(early, 'camp_staff_form', { p_camp_id: later.id }, STAFF).fill_in, 'admin_only');
+  // The staff tip's words (v0.741).
+  assert.equal(CampText.FILL_IN_CLOSED_STAFF, 'Family sign-up is closed. Ask an admin to fill in for a family.');
+  assert.equal(CampText.FILL_IN_PAST_CLOSING_STAFF, 'The closing date has passed. Ask an admin to fill in for a family.');
+  assert.equal(CampText.FILL_IN_FINISHED, 'This camp is over.');
+  assert.equal(CampText.fillInTotal('$180', 'Cash', 'Wed, Nov 25'), 'Total to pay $180 · Cash, at the front desk, before Wed, Nov 25');
+});
+
+check('Fill in: only the "reg-" part of register.css reaches the dashboard (familyFormCss.js)', () => {
+  const read = (name) => readFileSync(new URL(`../../styles/${name}`, import.meta.url), 'utf8');
+  const register = read('register.css');
+  const scoped = scopedRegisterCss(register);
+  assert.ok(scoped.length > 1000);
+  assert.ok(scoped.startsWith('.reg-'));
+  assert.equal(onlyFamilyFormRules(scoped), true);
+  assert.equal(onlyFamilyFormRules(read('camp.css')), true);
+  assert.equal(onlyFamilyFormRules(register), false); // the whole file has the page rules (html, body …)
+  // A minified copy is cut the same way.
+  assert.equal(scopedRegisterCss('html,body{margin:0}*{box-sizing:border-box}.reg-preview{color:red}.reg-a{x:1}'), '.reg-preview{color:red}.reg-a{x:1}');
+  assert.equal(scopedRegisterCss('body{margin:0}'), '');
+  // Every selector must START with a family-form class (an element name tied to it is fine).
+  assert.equal(onlyFamilyFormRules('section.reg-card .reg-review{margin:0}'), true);
+  assert.equal(onlyFamilyFormRules('@media (max-width:599px){.reg-main{padding:0}.camp-add{gap:0}}'), true);
+  for (const bad of [':not(.reg-x){color:red}', 'body .reg-x{color:red}', 'div, .reg-x{color:red}', '.reg-a{x:1}@media print{main .reg-a{x:1}}', 'a.foo .reg-x{x:1}']) {
+    assert.equal(onlyFamilyFormRules(bad), false, bad);
+  }
+});
+
+check('Fill in: campsApi\'s mapping (campsArgs staffSignupArgs / staffFormShapeOk / staffSignupShapeOk / signupSourceOf)', () => {
+  const { backend: b } = makeBackend({ today: '2027-05-20', clock: Date.parse('2027-05-20T14:00:00Z') });
+  const added = rpcOk(b, 'camp_add_camp', addCampArgs('2027-06-07'));
+  // loadStaffForm: the database's flat answer, camelCase, passes the shape check; a damaged one doesn't.
+  const form = toCamel(rpcOk(b, 'camp_staff_form', { p_camp_id: added.id }, STAFF));
+  assert.equal(staffFormShapeOk(form), true);
+  assert.equal(form.camp.days.length, 3);
+  assert.equal(staffFormShapeOk({ ...form, fillIn: 'maybe' }), false);
+  assert.equal(staffFormShapeOk({ ...form, camp: { camp: form.camp } }), false); // nested: not what 0043 sends
+  // staffSignup: the family page's POST body → exactly the function's arguments (the preview
+  // database refuses any unknown or missing argument, like PostgREST).
+  const [d1] = form.camp.days.map((d) => d.dayId);
+  const body = {
+    submission_id: randomUUID(), children: [{ first_name: 'Liam', last_name: 'Carter', age: 8, member: false, day_ids: [d1], extras: [] }],
+    parent: { name: 'Sarah Carter', phone: '5085550142', relation: 'Mother' }, emergency: { name: 'Tom Carter', phone: '5085550187', relation: 'Uncle' },
+    paying_by: 'card', acknowledged: true, signature: 'data:image/png;base64,iVBORw0KGgo=', ack_version: CAMP_ACK_VERSION,
+    waiver_version: form.waiverVersion, expected_total_cents: 8500, website: '', started_at: 0, sent_at: 0, turnstile_token: '',
+  };
+  const args = staffSignupArgs(added.id, body);
+  assert.deepEqual(Object.keys(args).sort(), ['p_ack_version', 'p_acknowledged', 'p_camp_id', 'p_children', 'p_emergency_name', 'p_emergency_phone',
+    'p_emergency_relation', 'p_expected_total_cents', 'p_parent_name', 'p_parent_phone', 'p_parent_relation', 'p_paying_by', 'p_signature',
+    'p_submission_id', 'p_waiver_version']);
+  assert.equal(args.p_parent_relation, 'Mother');
+  assert.equal(args.p_emergency_phone, '5085550187');
+  const saved = toCamel(rpcOk(b, 'camp_staff_signup', args, STAFF));
+  assert.equal(saved.status, 'ok');
+  assert.equal(staffSignupShapeOk(saved), true);
+  assert.equal(saved.payingBy, 'card');
+  assert.equal(staffSignupShapeOk({ ...saved, familyTotalCents: '8500' }), false);
+  // The same submission id after a save whose answer was lost — even with changed answers — gets the
+  // FIRST save back and saves nothing new (why Fill in keeps the id through every answer, also "invalid").
+  const again = toCamel(rpcOk(b, 'camp_staff_signup', staffSignupArgs(added.id, { ...body, parent: { ...body.parent, name: 'Someone Else' }, expected_total_cents: 0 }), STAFF));
+  assert.deepEqual(again, saved);
+  assert.equal(rows(b, 'camp_roster', 'id', [{ col: 'camp_id', value: added.id }]).length, 1);
+  // An "invalid" answer saves nothing, so the next Send with the SAME id saves normally.
+  const id2 = randomUUID();
+  const refused = rpcOk(b, 'camp_staff_signup', staffSignupArgs(added.id, { ...body, submission_id: id2, parent: { ...body.parent, phone: '12' } }), STAFF);
+  assert.equal(refused.status, 'invalid');
+  assert.equal(rpcOk(b, 'camp_staff_signup', staffSignupArgs(added.id, { ...body, submission_id: id2, children: [{ ...body.children[0], first_name: 'Ava' }] }), STAFF).status, 'ok');
+  // loadCamperDetail: source / enteredBy from the answer's top level; an older database (neither) → 'form'.
+  const camperId = rows(b, 'camp_roster', 'id, first_name', [{ col: 'camp_id', value: added.id }]).find((r) => r.first_name === 'Liam').id;
+  const detail = toCamel(rpcOk(b, 'camp_camper_detail', { p_camper_id: camperId }));
+  assert.deepEqual(signupSourceOf(detail), { source: 'desk', enteredBy: 'Staff' });
+  assert.deepEqual(signupSourceOf({ status: 'ok', camper: {} }), { source: 'form', enteredBy: null });
+  assert.deepEqual(signupSourceOf({ source: 'form', enteredBy: 'Staff' }), { source: 'form', enteredBy: null });
+  assert.deepEqual(signupSourceOf({ source: 'desk', enteredBy: '  ' }), { source: 'desk', enteredBy: null });
+  assert.equal(CampText.signupLine({ signedUpOn: '2027-05-20', reference: 'CP-1' }, { source: 'desk', enteredBy: null }).startsWith('Signed up on the family form'), true);
 });
 
 console.log(`${count} groups of checks ran.`);

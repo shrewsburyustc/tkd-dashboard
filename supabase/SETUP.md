@@ -3191,3 +3191,73 @@ Tested in PGlite on every run (`run.mjs` step0042: the pre-apply check; only 000
 - **A new function, not an argument on `forms_duplicate`:** Duplicate's call stays exactly as the live app uses it (an argument with a default would make the web API's choice between two versions ambiguous).
 
 ---
+
+## Migration 0043: Camps Fill in
+
+**Status: not applied yet.** Built on `camps` (rulebook v0.740 = when Fill in works, v0.741 = the screens and words; plan `docs/Camps/TKD-Camps-FillIn-Plan.md`; contract `docs/Camps/CONTRACT-0043.md`). Apply it **before** the app version with Fill in is deployed. The live app keeps working after it: it never calls the core, and the family form's function keeps its inputs and answers.
+
+**Production order:** … 0033 → 0034 → 0036 → 0041 (all live) → **0043**. It needs 0013, 0022, 0027 and 0033 (Camps) — it stops with "0043 needs migration 00NN … first" if one is missing.
+
+**What it does** (`supabase/migrations/0043_camps_fill_in.sql`):
+- **Two new columns on `camp_signups`:** `source` (`'form'` or `'desk'`, never empty, default `'form'`) and `entered_by` (the staff member's name for a desk sign-up, empty for the family form), with the rules `camp_signups_source_check` and `camp_signups_entered_by_check` (a desk sign-up always has a name, a form sign-up never has one). Every existing sign-up becomes `'form'` with no name — adding a column with a default writes no history row and moves no version. **No read right** is added: the app gets them through Camper detail and History. 0013's sign-up history trigger copies the whole row, so the history holds both columns without any change to it.
+- **`camp_public_signup_core`** (0022's, internal — nobody may run it) gets two more inputs, last: `p_source text default 'form'`, `p_entered_by text default null`. Postgres can't add inputs to an existing function, so the old 16-input version is **removed** and the new one made in the same transaction. For `'desk'`: no client key and no 30-an-hour client limit, no `camp_public_attempts` row; sign-up open → anyone with access, not open yet / closed by hand / past the closing date → **admins only** (others: `{"status":"admin_only","signup_state","closes_on"}`), after the last day → `finished` (v0.740 "C"); written as the signed-in staff member, tagged `camp_staff_signup`, with `source 'desk'` and `entered_by` = their name. Every other rule is the family form's (children's shape, the same submission id answers the first answer again, waiver version, ages, extras rules, `camp_changed`, `price_changed`, the duplicate check, up to 3 children).
+- **`camp_public_signup`** (0013, the family form) — same inputs and rights (camps_registrar only); it now calls the core with `'form', null`. The family form behaves exactly as before.
+- **New `camp_staff_form(p_camp_id uuid)`** (staff and admins; read only): exactly `camp_public_camp`'s answer for that camp (the same internal helper builds it) plus `fill_in` (`open` / `admin_only` / `finished`), `signup_state`, `closes_on` and `closed_by_hand`. `no_access` / `not_found`.
+- **New `camp_staff_signup(p_camp_id, p_submission_id, p_children, p_parent_name, p_parent_phone, p_parent_relation, p_emergency_name, p_emergency_phone, p_emergency_relation, p_paying_by, p_acknowledged, p_signature, p_ack_version, p_waiver_version, p_expected_total_cents)`** (staff and admins): Fill in's Send — the family form's inputs, the camp by id, no client key; runs the core with `'desk'` and `change_log_actor_name()` (copied from Forms' `forms_staff_submit`, 0009). Answers: the family form's `ok` (reference, paying_by, family_total_cents, children, camp), `price_changed`, `camp_changed`, `invalid`, `not_found`, `finished`, `admin_only`, `no_access`.
+- **`camp_camper_detail`** (0022's) — same input and rights; the answer gains `source` and `entered_by` (of the camper's sign-up), next to `camper` and `family`.
+- **`camp_camper_history`** (0033) is **not** changed: a desk sign-up's history row already names the staff member (`actor_name`) and its `after` holds `source` and `entered_by` (tested).
+- Every new or replaced app function: security definer, `search_path = ''`, `has_data_access()` first, revoked from public, anon, authenticated and service_role, granted to `authenticated` only. Nothing for anon or camps_registrar. No Finance change (Fill in takes no payment).
+
+**Each step needs Jeffrey's OK.**
+
+### 0043a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0043_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `old_core 1`, `new_core 0`, `replaced_found 3`, `replaced_as_tested 3`, `applied_as_tested 0`, `new_functions 0`, `new_columns 0`; `signups` = how many sign-ups become `'form'` (information only). **`replaced_as_tested` below 3 → stop**: one of the three functions changed since 0043 was built, and pasting would undo that change — 0043 must be rebuilt on the newer code first. `0 / 1 / 3 / 0 / 3 / 2 / 2 / …` = already applied.
+2. Claude runs `0013_fingerprints.sql`, `0022_fingerprints.sql` and `0043_fingerprints.sql` and keeps the results (the "before" record for 0043c).
+
+### 0043b. Apply 0043 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0043_camps_fill_in.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about destructive operations. **One** line is real on the first run: `drop function if exists public.camp_public_signup_core(…16 inputs…)` — the old core, made again with 18 inputs right after it in the same transaction (nobody can call the core, so nothing outside the file notices). The `delete` word is inside the family form's function (its 2-day attempt clean-up, unchanged from 0013). No data is removed. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested: no fingerprint, row or history change). **Re-running 0013 or 0022 after this** would bring the old 16-input core back next to the new one (a 16-input call becomes "ambiguous"), and the old family-form function and Camper detail — re-run 0043 straight after either.
+
+### 0043c. Fingerprints (Claude, read-only through the connection)
+
+1. **Pre-apply check again:** `0 / 1 / 3 / 0 / 3 / 2 / 2 / …`.
+2. `supabase/tests/0043_fingerprints.sql` must match what `run.mjs` printed ("0043 fingerprints"), 9 rows:
+   - `column  camp_signups.entered_by  text notnull=false default= rights=`
+   - `column  camp_signups.source  text notnull=true default='form'::text rights=`
+   - `constraint  camp_signups.camp_signups_entered_by_check  c CHECK (((source = 'desk'::text) = (entered_by IS NOT NULL)))`
+   - `constraint  camp_signups.camp_signups_source_check  c CHECK ((source = ANY (ARRAY['form'::text, 'desk'::text])))`
+   - `function  camp_camper_detail(p_camper_id uuid)  a2ea4d4c610a541ee1b26812a3c7254c lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  camp_public_signup(…16 inputs…)  dbfec7466753e9184f6c25c31b1a829f lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=camps_registrar:EXECUTE,postgres:EXECUTE`
+   - `function  camp_public_signup_core(…, p_expected_total_cents integer, p_source text, p_entered_by text)  1f96cf44d5b09d3a5f98b3bd57510d07 lang=plpgsql volatility=v returns=jsonb definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`
+   - `function  camp_staff_form(p_camp_id uuid)  7bf26bdad5cc4a8cf43a9c963cf0901b lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  camp_staff_signup(p_camp_id uuid, …, p_expected_total_cents integer)  2c71c988778d667b8efeb94ffe22652a lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+
+   The file contains neither of the words the connection refuses.
+3. `0013_fingerprints.sql` and `0022_fingerprints.sql` differ from 0043a's record **only** in: the `camp_public_signup_core(…)` line (the item now ends `…, p_source text, p_entered_by text)`, and the body md5 changed; definer, settings, owner and rights the same) and the `camp_public_signup(…)` and `camp_camper_detail(…)` lines (body md5 only). Every other migration's fingerprints: unchanged (`run.mjs` step0043 checks exactly that).
+
+### 0043d. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection): **nothing new** apart from the two new staff functions under the usual "signed-in can run a security definer function" warning. Every replaced function keeps `search_path = ''` and its rights; the new columns are readable by nobody directly.
+
+### 0043e. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0043_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0043 TESTS PASSED**. It makes its own `zz test …` camps (open, not open yet, past the closing date, closed by hand, over) and checks `no_access` (no session, a non-staff login, a PIN-locked desk session), `camp_staff_form`'s answer (= the family page's plus the four keys), the desk on an open camp (source, entered_by, history as the staff member, no attempt row), the same submission id, the duplicate check, bad input, `admin_only` for the desk and `ok` for an admin on the three not-open camps, `finished` for both after the last day, the family form unchanged (incl. the client-key limit), Camper detail, History, and the rights and rules (a signed-in staff member calling the core directly with a made-up name is refused; exactly one `camp_staff_signup`). Everything is rolled back.
+2. Then `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql`, `0027_tests.sql` and `0033_tests.sql` again — all must still pass (`0013_tests.sql` T16a knows 0043's two new functions).
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+**No undo file:** 0043 only adds two columns and two functions and changes three functions. To go back, ask Claude (it would put back 0022's 16-input core and Camper detail and 0013's family-form function, remove the two new functions, and — only if no desk sign-up exists — the two columns).
+
+Tested in PGlite on every run (`run.mjs` step0043: a family sign-up from before 0043 kept unchanged; exactly the planned fingerprint lines move; the camps tests pass before and after; the new functions run as role `authenticated` by argument name, anon and camps_registrar refused; re-run safety).
+
+**Why:**
+- **The same core, not a copy:** Fill in must follow every family-form rule (prices, ages, extras, duplicates, waiver); one function means the rules can't drift.
+- **Defaults on the two new core inputs:** a 16-input call (0013's tests, the catalog) still means the family form; the family form's own function passes `'form', null` explicitly anyway.
+- **No client key for the desk:** as Forms' staff Fill in (0009) — the desk is signed in, so the per-client limit (spam protection for the public form) doesn't apply, and no attempt row is written.
+- **`admin_only` decided in the database too:** v0.740 "C" — the app greys the button for staff, and the database refuses a staff call anyway.
+- **No read right on the new columns:** Camper detail and History are the only places the app needs them; staff can't pull them for every family straight from the table.
+
+---

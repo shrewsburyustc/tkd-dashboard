@@ -318,7 +318,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
         </dl>
 
         <h3 className="cp-detail-head">{T.HEAD_SIGNUP}</h3>
-        <p className="cp-signup-line">{T.signupLine(camper)}</p>
+        {/* A desk sign-up (Fill in, v0.741) says who filled it in; a family one keeps its words. */}
+        <p className="cp-signup-line">{T.signupLine(camper, { source: detail.source, enteredBy: detail.enteredBy })}</p>
 
         {/* The shared one-line History ends the summary (C7, v0.736): after Sign-up, and on touch
             just above More (More stays last). It reads the history itself when it appears. */}

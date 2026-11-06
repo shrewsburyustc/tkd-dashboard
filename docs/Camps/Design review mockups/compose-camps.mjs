@@ -7,7 +7,7 @@
 // Usage: node compose.mjs <spec.json>   → writes <spec>.html next to the spec and <spec>.png
 // Spec: { title, subtitle, columns: [{ label, tone: 'today'|'after', items: [{ src, crop: [x,y,w,h],
 //         scale, caption, marks: [[x,y,w,h], …], shotWidth (default 1280) } or { row: [item, …] }],
-//         note }], footer, width }  (crops and boxes in screenshot pixels)
+//         note, flex }], footer, width }  — or sections: [{ heading, columns }] for several bands of columns (picture 23)  (crops and boxes in screenshot pixels)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
@@ -60,17 +60,19 @@ const html = `<!doctype html>
   .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
   .today .note { background: #FDF6EA; }
   .after .note { background: #F1F8EE; }
+  h2.sec { font-size: 18px; font-weight: 600; margin: 10px 0 12px; padding-top: 14px; border-top: 1px solid #E5E5E2; }
   .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
 </style></head><body>
 <h1>${esc(spec.title)}</h1>
 <p class="sub">${spec.subtitle ?? ''}</p>
+${(spec.sections ?? [{ columns: spec.columns }]).map((sec) => `${sec.heading ? `<h2 class="sec">${sec.heading}</h2>` : ''}
 <div class="cols">
-${spec.columns.map((col) => `<div class="col ${col.tone}">
+${sec.columns.map((col) => `<div class="col ${col.tone}"${col.flex ? ` style="flex:${col.flex}"` : ''}>
   <div class="label">${esc(col.label)}</div>
   ${col.items.map((it) => item(it, col.tone)).join('\n')}
   ${col.note ? `<div class="note">${col.note}</div>` : ''}
 </div>`).join('\n')}
-</div>
+</div>`).join('\n')}
 ${spec.footer ? `<div class="foot">${spec.footer}</div>` : ''}
 </body></html>`;
 

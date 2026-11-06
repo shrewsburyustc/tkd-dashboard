@@ -54,6 +54,16 @@
 //     first, at most 500 rows, without login ids. Every write here logs the way the database's
 //     triggers do: the rows a save inserted, changed (only the changed columns) or deleted, with
 //     one batch id per save (see snapshotLogged / writeLog).
+//
+// Migration 0043 in the preview (Fill in, docs/Camps/CONTRACT-0043.md; rulebook v0.740 / v0.741):
+//   - camp_staff_form(p_camp_id): the family page's camp answer + fill_in / signup_state /
+//     closes_on / closed_by_hand, read only.
+//   - camp_staff_signup(...): staff sign up a walk-in family at the desk through the family form's
+//     own core (signupCore with `desk`): no client key and no hourly limit; while family sign-up
+//     isn't open only admins (staff get admin_only); after the last day nobody (finished).
+//   - camp_signups.source ('form' | 'desk') and entered_by (the staff member's name, desk only);
+//     camp_camper_detail returns both, and the history's sign-up row carries them. Not readable
+//     from the table itself. A sign-up saved before 0043 has neither and counts as 'form'.
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { signatureIsValid } from './testing/eventRules.js';
 import {
@@ -702,7 +712,8 @@ const HIDDEN = {
   camp_roster: [],
   camp_campers: ['withdrawn_by', 'created_by', 'updated_by'],
   camp_signups: ['submission_id', 'parent_name', 'parent_phone', 'parent_relation', 'emergency_name', 'emergency_phone', 'emergency_relation',
-    'signature', 'waiver_text_signed', 'ack_version', 'created_at', 'created_by', 'created_by_name', 'updated_at', 'updated_by', 'updated_by_name'],
+    'signature', 'waiver_text_signed', 'ack_version', 'created_at', 'created_by', 'created_by_name', 'updated_at', 'updated_by', 'updated_by_name',
+    'source', 'entered_by'], // 0043: read through camp_camper_detail / camp_camper_history, no table grant
   camp_camper_days: ['checked_in_by'],
   camp_camper_extras: [],
   camp_payments: ['recorded_by', 'paying_by_before'], // paying_by_before (0033) is not granted to the app
@@ -742,6 +753,13 @@ const RPC_ARGS = {
   camp_undo_check_in: [ID('p_camper_id'), ID('p_day_id')],
   camp_camper_detail: [ID('p_camper_id')],
   camp_camper_history: [ID('p_camper_id')], // 0033 (C7)
+  // Fill in (0043): the dialog's camp, and the desk sign-up (camp_public_signup's arguments, the
+  // camp by id, no client key)
+  camp_staff_form: [ID('p_camp_id')],
+  camp_staff_signup: [ID('p_camp_id'), ID('p_submission_id'), ['p_children', 'jsonb'], ['p_parent_name', 'text'], ['p_parent_phone', 'text'],
+    ['p_parent_relation', 'text'], ['p_emergency_name', 'text'], ['p_emergency_phone', 'text'], ['p_emergency_relation', 'text'],
+    ['p_paying_by', 'text'], ['p_acknowledged', 'bool'], ['p_signature', 'text'], ['p_ack_version', 'text'], ['p_waiver_version', 'text'],
+    ['p_expected_total_cents', 'int']],
 };
 // A = admins only (the others are S = staff and admins, some with a rule inside — see each one).
 const ADMIN_ONLY = new Set([
@@ -751,7 +769,7 @@ const ADMIN_ONLY = new Set([
 // The staff functions + camp_camper_detail and camp_camper_history (the app may call these).
 export const CAMP_RPC_NAMES = Object.keys(RPC_ARGS);
 // Functions that only reads (failNextSave doesn't fail them).
-export const CAMP_READ_RPC_NAMES = ['camp_camper_detail', 'camp_camper_history'];
+export const CAMP_READ_RPC_NAMES = ['camp_camper_detail', 'camp_camper_history', 'camp_staff_form'];
 // Functions that exist but a signed-in staff member may NOT call (only camps_registrar, or
 // nobody): the app gets "permission denied", exactly like EVENT_RESTRICTED_RPC_NAMES.
 export const CAMP_RESTRICTED_RPC_NAMES = ['camp_public_camp', 'camp_public_signup', 'camp_public_signup_core', 'camp_purge_old_signatures'];
@@ -1692,6 +1710,10 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       return {
         status: 'ok',
         camper: row,
+        // 0043: where the sign-up came from — 'form' (the family form) or 'desk' (Fill in), and for
+        // a desk sign-up the staff member who filled it in. A sign-up from before 0043 is 'form'.
+        source: signup.source ?? 'form',
+        entered_by: signup.entered_by ?? null,
         family: {
           parent_name: signup.parent_name, parent_phone: signup.parent_phone, parent_relation: signup.parent_relation,
           emergency_name: signup.emergency_name, emergency_phone: signup.emergency_phone, emergency_relation: signup.emergency_relation,
@@ -1731,6 +1753,40 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
           before: stripLoginIds(r.before), after: stripLoginIds(r.after),
         }));
       return { status: 'ok', rows };
+    },
+
+    // ----- Fill in (migration 0043, CONTRACT-0043; rulebook v0.740 / v0.741) -----
+    // camp_staff_form(p_camp_id) (stable, read only, not logged): what the Fill in dialog needs to
+    // draw the camp's family form — the same answer camp_public_camp gives the family page, plus
+    //   fill_in       'open' (staff and admins) · 'admin_only' (sign-up not open yet / closed by
+    //                 hand / past the closing date: only admins) · 'finished' (after the last day)
+    //   signup_state  the raw state ('open' | 'not_open_yet' | 'closed' | 'finished'),
+    //   closes_on, closed_by_hand   so a staff tip can say which words.
+    camp_staff_form(db, a) {
+      const camp = a.p_camp_id === null ? null : findCamp(db, a.p_camp_id);
+      if (!camp) return st('not_found');
+      const state = stateOf(db, camp);
+      return {
+        ...publicCampAnswer(db, camp),
+        fill_in: state === 'open' ? 'open' : state === 'finished' ? 'finished' : 'admin_only',
+        signup_state: state,
+        closes_on: camp.signup_closes_on,
+        closed_by_hand: camp.closed_by_hand,
+      };
+    },
+
+    // camp_staff_signup(...): the family form's arguments, the camp by id, no client key. It runs the
+    // family form's own core (signupCore with `desk`), so the rules can't drift: same answers, plus
+    // admin_only. Logged as action 'camp_staff_signup' by the staff member (rpc's writeLog).
+    camp_staff_signup(db, a, ctx) {
+      const { answer } = signupCore(db, {
+        camp_id: a.p_camp_id, submission_id: a.p_submission_id, children: a.p_children,
+        parent_name: a.p_parent_name, parent_phone: a.p_parent_phone, parent_relation: a.p_parent_relation,
+        emergency_name: a.p_emergency_name, emergency_phone: a.p_emergency_phone, emergency_relation: a.p_emergency_relation,
+        paying_by: a.p_paying_by, acknowledged: a.p_acknowledged, signature: a.p_signature, ack_version: a.p_ack_version,
+        waiver_version: a.p_waiver_version, expected_total_cents: a.p_expected_total_cents,
+      }, {}, { actorName: ctx.actorName, userId: ctx.userId, isAdmin: ctx.isAdmin });
+      return answer;
     },
   };
   // Login ids never leave the history (0033 §1f): the uuid "who" columns go; their *_by_name stay.
@@ -1843,8 +1899,16 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
 
   // The core of camp_public_signup, steps 1–12 of §1.16. Works on `db` (a private copy: the
   // wrapper keeps it only when the answer is ok). Returns { answer, campId }.
-  function signupCore(db, args, flags) {
-    const camp = campByCode(db, args.code);
+  //
+  // Fill in (migration 0043, CONTRACT-0043, rulebook v0.740 / v0.741): the staff path runs this SAME
+  // core with desk = { actorName, isAdmin } (camp_staff_signup). Then the camp is found by
+  // args.camp_id (not by code), there is no client key and no 30-per-hour limit, and the
+  // open / closed rule is v0.740 C: open → anyone; not open yet / closed / past the closing date →
+  // admins only (staff get admin_only); after the last day → finished. The sign-up is written with
+  // source 'desk' and entered_by = the staff member's name, by that staff member. desk = null is
+  // the family form, exactly as before (source 'form', entered_by null, actor "Family form").
+  function signupCore(db, args, flags, desk = null) {
+    const camp = desk ? findCamp(db, uuidText(args.camp_id) ? args.camp_id.toLowerCase() : '') : campByCode(db, args.code);
     if (!camp) return { answer: st('not_found'), campId: null }; // 1
     const campId = camp.id;
     const out = (answer) => ({ answer, campId });
@@ -1855,11 +1919,18 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (earlier) return out(earlier.camp_id === campId ? signedUpAnswer(db, earlier) : st('invalid'));
     }
     const state = stateOf(db, camp); // 4–5
-    if (state === 'not_open_yet') return out({ status: 'not_open', opens_on: camp.signup_opens_on });
-    if (state === 'closed') return out({ status: 'closed', closed_on: camp.closed_by_hand ? null : camp.signup_closes_on });
-    if (state === 'finished') return out(st('finished'));
+    if (desk) {
+      // v0.740 C: the desk may sign up while the family form is closed, but only an admin.
+      if (state === 'finished') return out(st('finished'));
+      if (state !== 'open' && !desk.isAdmin) return out({ status: 'admin_only', signup_state: state, closes_on: camp.signup_closes_on });
+    } else {
+      if (state === 'not_open_yet') return out({ status: 'not_open', opens_on: camp.signup_opens_on });
+      if (state === 'closed') return out({ status: 'closed', closed_on: camp.closed_by_hand ? null : camp.signup_closes_on });
+      if (state === 'finished') return out(st('finished'));
+    }
     const key = typeof args.client_key === 'string' ? args.client_key : '';
-    const argsOk = key.length >= 1 && key.length <= 200 && submissionId !== null // 6
+    const keyOk = desk ? true : key.length >= 1 && key.length <= 200; // the desk has no client key
+    const argsOk = keyOk && submissionId !== null // 6
       && nameIsValid(args.parent_name) && nameIsValid(args.emergency_name)
       && phoneIsValid(args.parent_phone) && phoneIsValid(args.emergency_phone)
       && lineIsValid(args.parent_relation, RELATION_MAX) && lineIsValid(args.emergency_relation, RELATION_MAX)
@@ -1869,8 +1940,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       && args.children.every((c) => nameIsValid(c.first_name) && nameIsValid(c.last_name));
     if (!argsOk) return out(st('invalid'));
     const nowMs = now();
-    const recent = db.camp_public_attempts.filter((r) => r.client_key === key && nowMs - Date.parse(r.at) < HOUR_MS).length;
-    if (flags.forceRateLimited || recent >= CAMP_TRIES_PER_HOUR) return out(st('rate_limited')); // 7
+    const recent = desk ? 0 : db.camp_public_attempts.filter((r) => r.client_key === key && nowMs - Date.parse(r.at) < HOUR_MS).length;
+    if (!desk && (flags.forceRateLimited || recent >= CAMP_TRIES_PER_HOUR)) return out(st('rate_limited')); // 7 (not for the desk)
     const days = daysView(db, campId);
     const prices = pricesView(db, campId);
     const extras = extrasView(db, campId);
@@ -1899,11 +1970,12 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     if (total !== args.expected_total_cents) {
       return out({ status: 'price_changed', new_total_cents: total, old_total_cents: args.expected_total_cents, camp: publicCampAnswer(db, camp) });
     }
-    // 11 write (actor "Family form")
-    const ctx = { actorName: FAMILY_FORM, userId: null };
+    // 11 write (actor "Family form"; a desk sign-up: the staff member)
+    const ctx = desk ? { actorName: desk.actorName, userId: desk.userId ?? null } : { actorName: FAMILY_FORM, userId: null };
     const at = stamp();
     const signup = insertRow(db.camp_signups, {
       id: newId(), camp_id: campId, reference: `CP-${db.next_reference++}`, submission_id: submissionId,
+      source: desk ? 'desk' : 'form', entered_by: desk ? desk.actorName : null, // 0043
       parent_name: normalizeName(args.parent_name), parent_phone: args.parent_phone, parent_relation: normalizeName(args.parent_relation),
       emergency_name: normalizeName(args.emergency_name), emergency_phone: args.emergency_phone, emergency_relation: normalizeName(args.emergency_relation),
       price_kind: kind, signed_up_on: today(), signature: args.signature, signed_at: at, signature_deleted_at: null,

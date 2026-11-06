@@ -22,6 +22,7 @@ import { toCamel, toSnake, campCounts, isIsoDate, todayInSchoolTime } from './ca
 import {
   CAMP_COLUMNS, DAY_COLUMNS, PRICE_COLUMNS, EXTRA_COLUMNS, TEMPLATE_COLUMNS, ROSTER_COLUMNS,
   toCamp, toDay, byDay, toPriceRow, toExtra, toTemplate, toRosterRow, campArgs, templateArgs,
+  staffSignupArgs, staffFormShapeOk, staffSignupShapeOk, signupSourceOf,
 } from './campsArgs.js';
 
 export { toCamel, toSnake };
@@ -30,7 +31,7 @@ export { toCamel, toSnake };
 export const CAMP_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty', 'finished',
   'already_paid', 'withdrawn', 'checked_in', 'future_day', 'rate_limited', 'not_open', 'closed', 'price_changed',
-  'camp_changed', 'error',
+  'camp_changed', 'admin_only', 'error',
 ];
 const SERVER_STATUSES = new Set(CAMP_STATUSES.filter((s) => s !== 'error'));
 const LOCATIONS = new Set(['worcester', 'shrewsbury', 'both']);
@@ -190,9 +191,41 @@ export async function loadCamp(campId) {
 //     payments: [{ id, kind, amountCents, method, paidOn, recordedAt, recordedByName,
 //     reversesPaymentId }], checkins: [{ day, checkedInAt, checkedInByName }] }
 //   or 'no_access' / 'not_found' / 'error'.
+//   Fill in (migration 0043): also { source: 'form' | 'desk', enteredBy } — where the camper's
+//   sign-up came from and, for a desk sign-up, who filled it in. A database from before 0043 sends
+//   neither: then it is 'form' (every sign-up was the family form's). campsArgs.signupSourceOf reads
+//   them from the answer's top level (where 0043 puts them).
 export async function loadCamperDetail(camperId) {
-  return callRpc('camp_camper_detail', { p_camper_id: camperId }, (d) =>
+  const answer = await callRpc('camp_camper_detail', { p_camper_id: camperId }, (d) =>
     d.camper && d.family && d.breakdown && Array.isArray(d.payments) && Array.isArray(d.checkins));
+  if (answer.status !== 'ok') return answer;
+  return { ...answer, ...signupSourceOf(answer) };
+}
+
+// ----- Fill in: staff sign up a walk-in family at the desk (migration 0043, CONTRACT-0043,
+// rulebook v0.740 / v0.741) -----
+
+// The camp's family form for the Fill in dialog (camp_staff_form; staff and admins, read only).
+// → { status:'ok', state, opensOn, closedOn, priceKindToday, ackVersion, waiverVersion,
+//     camp: { name, days:[{ dayId, day }], startTime, endTime, prices, extras, minAge, maxAge,
+//             waiverText, earlyUntil, signupClosesOn, … } (the family page's camp, camelCase),
+//     fillIn: 'open' | 'admin_only' | 'finished', signupState, closesOn, closedByHand }
+//   or 'not_found' / 'no_access' / 'error'. The answer is the family page's GET answer, flat, plus
+//   the four Fill in fields (0043's camp_staff_form = camp_public_camp_answer || those fields).
+export async function loadStaffForm(campId) {
+  return callRpc('camp_staff_form', { p_camp_id: campId }, staffFormShapeOk);
+}
+
+// Sends a desk sign-up (camp_staff_signup). `body` is the family page's own POST body
+// (src/camp/form.js buildBody); campsArgs.staffSignupArgs turns it into the function's arguments
+// (the camp by id; no honeypot / timing / Turnstile fields). Keep the same submission_id for every
+// Send of this sign-up: the database then gives the first answer again instead of saving twice.
+// → the family form's answers, camelCase: { status:'ok', reference, payingBy, familyTotalCents,
+//   children, camp } · 'price_changed' + { newTotalCents, oldTotalCents, camp (the whole GET-shaped
+//   answer) } · 'camp_changed' + { camp } · 'admin_only' + { signupState, closesOn } · 'finished' ·
+//   'invalid' · 'not_found' · 'no_access' · 'error' (no connection).
+export async function staffSignup(campId, body) {
+  return callRpc('camp_staff_signup', staffSignupArgs(campId, body), staffSignupShapeOk);
 }
 
 // The signed-in person's name, for the receipt's "Printed … by [name]" (design review C3, rulebook
