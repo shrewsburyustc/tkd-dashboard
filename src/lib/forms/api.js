@@ -159,6 +159,14 @@ export async function duplicateForm(id) {
   return callRpc('forms_duplicate', { p_form_id: id }, (d) => (isText(d.id) && isText(d.slug) ? { id: d.id, version: d.version, slug: d.slug } : null));
 }
 
+// "Copy to Worcester / Shrewsbury" (rulebook v0.642): a Draft copy of the form at the OTHER school —
+// the same questions, waiver and settings; no booking times (they are that school's classes) and no
+// sign-ups. The answer's name is the copy's ("Copy of …" when that school already has the name).
+export async function copyFormToSchool(id, locationCode) {
+  return callRpc('forms_copy_to_school', { p_form_id: id, p_location_code: locationCode },
+    (d) => (isText(d.id) && isInt(d.version) && isText(d.slug) && isText(d.name) ? { id: d.id, version: d.version, slug: d.slug, name: d.name } : null));
+}
+
 // Refused with { status:'not_allowed', reason:'has_signups' } once a family has signed up.
 export async function deleteForm({ id, expectedVersion }) {
   return callRpc('forms_delete', { p_form_id: id, p_expected_version: expectedVersion }, () => ({}));

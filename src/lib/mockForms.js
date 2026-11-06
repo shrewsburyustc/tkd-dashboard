@@ -1,6 +1,6 @@
 // mockForms.js — the PREVIEW (fake) database for Forms (migration 0009).
 // Why it exists: preview mode runs without Supabase. This file pretends to be the Forms tables and
-// the thirteen staff forms_* functions, with the SAME rules and answers as the real database (same
+// the fourteen staff forms_* functions, with the SAME rules and answers as the real database (same
 // check order, same statuses, the shared spot limit, the 90-day signature clean-up). mockClient.js
 // plugs it in; forms/checks.mjs tests it in Node with a plain in-memory store.
 //
@@ -68,6 +68,7 @@ const RPC_ARGS = {
   forms_publish: [['p_form_id', 'uuid'], ['p_expected_version', 'int']],
   forms_set_status: [['p_form_id', 'uuid'], ['p_expected_version', 'int'], ['p_status', 'text']],
   forms_duplicate: [['p_form_id', 'uuid']],
+  forms_copy_to_school: [['p_form_id', 'uuid'], ['p_location_code', 'text']], // rulebook v0.642
   forms_delete: [['p_form_id', 'uuid'], ['p_expected_version', 'int']],
   forms_set_booking: [['p_form_id', 'uuid'], ['p_expected_version', 'int'], ['p_offers', 'jsonb'], ['p_limits', 'jsonb'], ['p_groups', 'jsonb']],
   forms_staff_submit: [['p_form_id', 'uuid'], ['p_submission_key', 'uuid'], ['p_published_version', 'int'], ['p_answers', 'jsonb'], ['p_children', 'jsonb'], ['p_bookings', 'jsonb'], ['p_signature', 'text']],
@@ -650,6 +651,46 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       for (const l of db.limits.filter((x) => x.form_id === row.id)) insertRow(db.limits, { ...clone(l), id: newId(), form_id: copy.id }, ctx);
       for (const g of db.groupLimits.filter((x) => x.form_id === row.id)) insertRow(db.groupLimits, { ...clone(g), id: newId(), form_id: copy.id }, ctx);
       return { status: 'ok', id: copy.id, version: copy.version, slug };
+    },
+
+    // "Copy to Worcester / Shrewsbury" (rulebook v0.642, v0.644), as the real forms_copy_to_school: a
+    // Draft at the OTHER school with the same kind, questions, waiver and settings, but no alert
+    // email (it's the first school's address); the same name, or "Copy of …" when that school
+    // already has a form with that name (any capitals); the link with the other school's name in
+    // place of the form's own at its end (else added), cut at a dash to fit 40 characters, a number
+    // added when taken; no booking times (the other school's classes) and no sign-ups. The same
+    // school, or one that doesn't exist, is 'invalid'.
+    forms_copy_to_school(db, a, ctx) {
+      if (a.p_form_id === null || !LOCATION_CODES.includes(a.p_location_code)) return st('invalid');
+      const row = findForm(db, a.p_form_id);
+      if (!row) return st('not_found');
+      if (row.location_code === a.p_location_code) return st('invalid');
+      const taken = db.forms.some((f) => f.location_code === a.p_location_code && f.name.toLowerCase() === row.name.toLowerCase());
+      const name = taken ? cleanText(`Copy of ${row.name}`.slice(0, 80)) : row.name;
+      // the form's own school's name at the end of its link makes way for the other school's (v0.644)
+      const own = `-${row.location_code}`;
+      const base = row.slug.length > own.length && row.slug.endsWith(own) ? row.slug.slice(0, -own.length) : row.slug;
+      let slug = null;
+      for (let i = 1; i <= 50 && !slug; i += 1) {
+        const end = `-${a.p_location_code}${i === 1 ? '' : `-${i}`}`;
+        const room = 40 - end.length;
+        let cut = base;
+        if (base.length > room) {
+          // too long: cut at a dash, never in a word (a first word too long for the room is cut)
+          cut = base.slice(0, room);
+          if (base[room] !== '-' && cut.includes('-')) cut = cut.replace(/-[^-]*$/, '');
+        }
+        const s = `${cut.replace(/-+$/, '')}${end}`;
+        if (!db.forms.some((f) => f.slug === s)) slug = s;
+      }
+      if (!slug) return st('duplicate_slug');
+      const copy = insertRow(db.forms, {
+        id: newId(), location_code: a.p_location_code, name, slug, kind: row.kind, status: 'draft',
+        draft: clone(row.draft), published: null, published_version: 0, published_at: null,
+        settings: { ...clone(row.settings), alert_email: null }, // the alert address is the first school's (v0.644)
+        booking_key: '',
+      }, ctx);
+      return { status: 'ok', id: copy.id, version: copy.version, slug, name };
     },
 
     forms_delete(db, a) {
