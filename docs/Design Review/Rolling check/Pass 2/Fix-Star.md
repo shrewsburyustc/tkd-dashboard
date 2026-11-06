@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 Star merged nothing after pass 1's cut, so this file holds what pass 2 found in other sections' work that reaches your screens: a layout problem the shared panel causes, a place your pass 1 R2-07 item missed, the grips, a correction to your pass 1 R1-02, and questions for Jeffrey that may change your screens. Your pass 1 items (and their migration, 0038) go on as planned.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, the results sheet is question 2, and the rest are in question 3. Don't build them until his answer comes through the Main session.
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, and the rest are in question 3. Don't build them until his answer comes through the Main session. (Question 2, the results sheet (M-06), is answered: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is. Nothing to build.)
 - Each item keeps its finding id (C-06, L-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
 - **Paths:** `star/…` is under `src/screens/testing/star/`; `lib/star/…` is `src/lib/star/…`; `components/…` is `src/components/…`. Other sections' files are written in full.
@@ -72,7 +72,7 @@ Most severe first.
 
 ## Waits on Jeffrey (don't build yet)
 
-Each is a question in the pass 2 report: L-02 is question 1, M-06 is question 2, and the rest are in question 3, the small ones. The Main session passes on his answer.
+Each is a question in the pass 2 report: L-02 is question 1, and the rest are in question 3, the small ones. The Main session passes on his answer.
 
 ### L-02 (your part) — Between 640 and 768 px wide, the roster's text overlaps · Medium · question 1, then after Dashboard core's L-02
 
@@ -86,17 +86,6 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png`. 
 - **If Jeffrey picks A (recommended):** after Dashboard core's part, your tablet rules (`star/star.css:886` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show); with enough room, nothing changes. Mockup first if anything else shows differently at the four sizes.
 - **If B:** your tablet rule starts at the new, wider window. **If C:** nothing changes.
 - **Check (preview mode):** Account menu → Panel size → Largest, then Standard. Fall Star Testing at 700 wide touch and 667 × 375 touch: no text over text, no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
-
-### M-06 — Your wall sheet lists make-ups and unfinished candidates · Low · question 2
-
-- **What's wrong** (approved this way: v0.142–v0.145, v0.514):
-  - Your printed results sheet (`star/results/StarResultsSheet.jsx:14–20`) lists MAKE-UP rows (score and "Needs: …") and NOT FINISHED rows as well as PASSED ones. Every row, PASSED included, keeps its score: each draws the score cell (`star/results/StarResultsSheet.jsx:207`; "268.5 of 315 · PASS" at `:17`). Black Belt's copies yours (R05, v0.947).
-  - Color Belt's lists only who passed, because "the sheet is put up at the school" (v0.416).
-  - v1.029 ("one results pattern") described your sheet only as "who passed to which belt", so it didn't see this difference coming.
-- Question 2 recommends B, your way, because Jeffrey has chosen full results twice while warned about privacy: your v0.142 (he was told once that posting minors' scores and make-ups shows them to every family, chose full results and rejected a passes-only sheet) and v0.145 (Make-up highlighted too), and Black Belt's v0.947.
-- **If B (recommended):** nothing changes for you; Color Belt's sheet lists everyone too.
-- **If A:** your sheet keeps only "PASSED — CONGRATULATIONS!" (whether a passed row keeps its score is drawn in your mockup); make-ups and unfinished candidates hear it from their result email or at the desk. v0.142, v0.143, v0.145 and v0.514 get "(See …)" notes.
-- **If C:** nothing changes for you.
 
 ### M-03 (your part) — No Print receipt for a withdrawn candidate with money · Low · question 3 (b)
 

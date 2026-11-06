@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 The reviewers found every Part 1 and Part 2 item built as its row and mockup say, and Hide private details holds on every Color Belt screen. The problems below are four Mediums (three about the same person record, and the roster's layout between tablet and phone sizes, which waits on Jeffrey's question 1) and smaller things.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, the results sheet is question 2, and the rest are in question 3. Don't build them until his answer comes through the Main session.
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, and the rest are in question 3. Don't build them until his answer comes through the Main session. (Question 2, the results sheet, is answered: M-06 is now a Fix now item.)
 - **Smaller:** fix them while you're in the file, or record them.
 - Each item keeps its finding id (M-01, C-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move. Your branch (`color-belt` 46e745b) has the same code where it matters (M-01: checker 1 read both).
@@ -109,6 +109,29 @@ This was pass 1's R1-02, which said "nothing to change here". That was wrong: se
 - **Change:** one line per payment that still stands, oldest first: "$65 cash · paid Oct 29", then "$20 card · paid Nov 5" (then "$X more to collect" when something is still owed). A private testing paid once keeps today's one line, so nothing else changes. Mockup first, at the four sizes.
 - **Check (preview mode):** `__tkdPreview.resetTesting()`; Private testing → Ava Chen (owes $20) → Mark paid → Card → Mark paid $20 → open her summary: two payment lines, each with its own way and day. A private testing paid once reads as today. At 1280 and 390.
 
+### M-06 — Print results and its sheet go · Low · Jeffrey's answer to question 2 (v1.052)
+
+Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-colorbelt-print-results.png` (your Grading tab today, and the same page without Print results).
+
+- **What Jeffrey decided** (2026-11-05, rulebook v1.052): "Childrens testing doesnt need to be printed." and "Childrens testing is color belt testing", then "Yes, remove it". Color Belt testing has no printed results sheet, so Print results and the sheet it prints go. Star's and Black Belt's full-results sheets stay; nothing changes for them.
+  - The design review wrote v1.052 and the "(See v1.052 …)" notes on v0.189, v1.029, v0.416, v0.417 and v0.426. You need no row of your own unless Jeffrey decides something new in your mockup.
+- **What goes:**
+  - in `event/GradingTab.jsx`: the Print results button (`:246–254`), its print effect (`:167–185`), the sheet's portal (`:356–363`), the helpers `savedResult` and `passedByClass` with their comment (`:368–386`; only the sheet uses them), the `ResultsSheet` import (`:45`), and `loadedResult` in `shownRows` with its comment (`:152–154`; only `savedResult` reads it, and `shownRows` itself stays);
+  - `event/ResultsSheet.jsx`;
+  - the paper part of `event/resultsSheet.css` (from `:82`, "The printed results sheet", to the end: `.rs-print`, `@page cb-results` and its print rules);
+  - its words in `testing/text.js:941–959` (`PRINT_RESULTS`, `resultsSheetTitle`, `resultsSheetSub`, `RESULTS_SHEET_CONTINUED`, `RESULTS_PASSED_HEADING`, `RESULTS_NEW_BELT`, `RESULTS_PASSED_BOX`, `RESULTS_NONE_PASSED`, `resultsSheetFoot`, `resultsSheetPage`). Camps re-exports none of them;
+  - imports left unused: in `GradingTab.jsx`, `useEffect`, `useState` (`:36`) and `LOCATION_NAME` (`:39`) are used only by the sheet. `IconPrinter` stays for Print grading sheet (`:207`).
+- **Careful: the bar's own layout is in the same CSS file.** `event/resultsSheet.css:14–80` (`.gr-bar`, `.gr-bar .ev-class-switch`, `.gr-bar-buttons`, `.gr-download-csv[aria-disabled]` and the phone rules) also places the class switch and Download CSV, and today only `ResultsSheet.jsx` imports that file (`:40`). Keep those rules and have the Grading tab load them (move them, or rename the file; your call). Otherwise the switch and Download CSV lose their layout.
+- **What stays:** Download CSV (admins only; not drawn while Hide private details is on) at the right of the class switch, on phones on its own line under it as one full-width button; Print grading sheet; the Passed / Not passed / No show buttons.
+- **Where nothing is left** (staff who aren't admins, or while Hide private details is on), draw no `.gr-bar-buttons` at all: no empty space at the right, and no empty line or extra gap under the switch on phones.
+- Update the comments that name Print results or "the buttons" (`event/GradingTab.jsx:27–35, 217`; `event/resultsSheet.css:1–12, 14, 36, 50, 75`) to say what is left.
+- **Mockup first,** at the four sizes, as admin and as staff: the Grading tab's class switch line without Print results.
+- **Check (preview mode):**
+  - November Children Testing → Grading as admin (`__tkdPreview.setRole('admin')`, then reload): only Download CSV at the right of the class switch, and it downloads as today.
+  - As staff (`__tkdPreview.setRole('staff')`, then reload), and as admin with Hide private details on: nothing at the right of the class switch; at 390 and 320, no empty line or gap under it.
+  - Print grading sheet prints as today (its own paper, with Color Belt's 0.75-inch margins), and so do the flyers.
+  - At 1280, 820 touch, 390 and 320. `npm run build` and `npm run build:preview-mode` pass, and so does `src/lib/testing/checks.mjs`.
+
 ### C-05 (a) — An event with nobody on it shows four zero cards · Low
 
 - **What's wrong** (drift from your own Private testing tab):
@@ -142,7 +165,7 @@ This was pass 1's R1-02, which said "nothing to change here". That was wrong: se
 
 ## Waits on Jeffrey (don't build yet)
 
-Each is a question in the pass 2 report: L-02 is question 1, M-06 is question 2, and the rest are in question 3, the small ones. The Main session passes on his answer.
+Each is a question in the pass 2 report: L-02 is question 1, and the rest are in question 3, the small ones. The Main session passes on his answer. (M-06 was question 2; Jeffrey has answered it, so it is under Fix now.)
 
 ### L-02 (your part) — Between 640 and 768 px wide, the roster's text overlaps · Medium · question 1, then after Dashboard core's L-02
 
@@ -157,13 +180,6 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
 - **If Jeffrey picks A (recommended):** after Dashboard core's part, your tablet rules (`testing-events.css:1108` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show; picture 4); with enough room, nothing changes (pictures 9 and 10). Mockup first if anything else shows differently at the four sizes.
 - **If B:** your tablet rule starts at the new, wider window. **If C:** nothing changes.
 - **Check (preview mode):** Account menu → Panel size → Largest, then Standard. November Children Testing at 683 × 768 with a mouse, 700 wide touch and 667 × 375 touch: no text over text, and no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
-
-### M-06 — The results sheet put up at the school · Low · question 2
-
-- **What's wrong** (approved this way: v0.416): your sheet lists only who passed (`event/ResultsSheet.jsx:20–25`). Star's and Black Belt's list everyone, with make-ups and scores, and their PASSED rows keep their scores too.
-- Question 2 recommends B, their way, because Jeffrey has chosen full results twice while warned about privacy (Star's v0.142 and v0.145, Black Belt's v0.947).
-- **If B (recommended):** your sheet lists everyone too: your Not passed and No show students join it (you have no scores; how they show is drawn in your mockup). v0.416 gets a "(See …)" note.
-- **If A or C:** nothing changes for you.
 
 ### M-02 = C-07 (b) — One Mark paid by another way shows as two History entries · Low · question 3 (a)
 

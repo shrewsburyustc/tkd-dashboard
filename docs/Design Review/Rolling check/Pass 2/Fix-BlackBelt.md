@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 The reviewers found BB13's time list built as its picture (the same list as Star's and Camps', opening at the chosen time), BB8's History showing the shared Retry bar when it can't load, and your "on this tablet" words matching the screen. The problems below are small. Your pass 1 items are still open on main (planned on `black-belt`); nothing here changes them, except two lines that pass 2 adds to.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): the results sheet is question 2, the rest are in question 3. Don't build them until his answer comes through the Main session.
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Question 2, the results sheet (M-06), is answered: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is. Nothing to build.)
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (L-01, M-04 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -74,7 +74,7 @@ The reviewers found BB13's time list built as its picture (the same list as Star
 
 ## Waits on Jeffrey (don't build yet)
 
-Each is a question in the pass 2 report: M-06 is question 2, and the rest are in question 3, the small ones. The Main session passes on his answer.
+Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer.
 
 ### M-04 — View signature hides while private details are hidden · Low · question 3 (c)
 
@@ -102,16 +102,6 @@ Each is a question in the pass 2 report: M-06 is question 2, and the rest are in
   - On a withdrawn row, Restore and Delete permanently sit in one group (`CandidatesTab.jsx:247–253`), so the red item sits right under Restore.
   - Star (`src/lib/star/candidateMenu.js:34–35`) and Camps (`src/screens/camps/CamperRowMenu.jsx:59–60`) draw a line there; Color Belt doesn't either.
 - **If A (recommended):** Delete permanently gets its own line on a withdrawn row, as Star's.
-
-### M-06 — Your wall sheet lists make-ups and unfinished candidates · Low · question 2
-
-- **What's wrong** (approved this way: R05 in v0.947, where the sheet "shows full results, as Star (rule 5 flagged once)"):
-  - Your printed results sheet lists MAKE-UP rows ("Needs: …") and NOT FINISHED rows as well as PASSED ones (`results/ResultsSheet.jsx:11–17` describes it), as Star's does. Every row, PASSED included, keeps its score: each draws the score cell (`results/ResultsSheet.jsx:208`; "305.75 / pass 275 · PASS" at `:15`).
-  - Color Belt's sheet lists only who passed, because "the sheet is put up at the school" (v0.416).
-- Question 2 recommends B, your way, because Jeffrey has chosen full results twice while warned about privacy (Star's v0.142 and v0.145, and your v0.947).
-- **If B (recommended):** nothing changes for you; Color Belt's sheet lists everyone too.
-- **If A:** your sheet keeps only "PASSED — CONGRATULATIONS!" (whether a passed row keeps its score is drawn in your mockup); make-ups and unfinished candidates hear it from their result email or at the desk. v0.947's R05 gets a "(See …)" note; v0.975's school line stays.
-- **If C:** nothing changes for you.
 
 ### Also in question 3
 

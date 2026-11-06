@@ -30,7 +30,7 @@
 - **The reviewers found the merged work built as its rows and mockups say**, apart from the findings below. Hide private details holds on every new screen (Color Belt's Part 1 and Part 2, New students' profile and printed sheet), and Panel size works at Large and Largest on all 16 main screens at 1280 and 820.
 - **36 findings became 35** after the merges: **no High, 7 Medium, 26 Low** (one of the Lows, C-07 (a), adds to pass 1's R1-07), **1 added to pass 1's R2-04** (U-06), and **1 rejected** (L-04). Plus X-1, a Low a checker saw while checking.
 - **Most are straight fixes.** They go to the sections now, in the fix files below.
-- **Ten need Jeffrey to pick a rule first:** the results sheet put up at the school (M-06) is question 2, and nine small ones are the batch, question 3. **L-02 changes §1.3:** it is question 1.
+- **Ten need Jeffrey to pick a rule first:** the results sheet put up at the school (M-06) is question 2, and nine small ones are the batch, question 3. **L-02 changes §1.3:** it is question 1. **Question 2 is answered** (2026-11-05, rulebook v1.052): Color Belt's sheet goes; see question 2 below.
 
 ### The seven Mediums
 
@@ -54,11 +54,11 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Color Belt | `Fix-ColorBelt.md` | 4 + 2 after another session's fix (3 Medium) | 7 (1 Medium: L-02) | 1 |
+| Color Belt | `Fix-ColorBelt.md` | 5 + 2 after another session's fix (3 Medium; M-06 since question 2) | 6 (1 Medium: L-02) | 1 |
 | New students | `Fix-NewStudents.md` | 13 + 1 after another session's fix (3 Medium) | 2 | 4 |
 | Dashboard core | `Fix-DashboardCore.md` | 2 | 2 (1 Medium: L-02, question 1) | 5 |
-| Black Belt | `Fix-BlackBelt.md` | 1 + 1 after another session's fix | 4 | 1 |
-| Star | `Fix-Star.md` | 2 after another session's fix | 4 (1 Medium: L-02) | 0 |
+| Black Belt | `Fix-BlackBelt.md` | 1 + 1 after another session's fix | 3 | 1 |
+| Star | `Fix-Star.md` | 2 after another session's fix | 3 (1 Medium: L-02) | 0 |
 | Camps | `Fix-Camps.md` | 0 | 2 (1 Medium: L-02) | 3 |
 | Main | `Notes-Main.md` | L-08 to hand out | — | — |
 
@@ -81,7 +81,7 @@ Each of the four pass 1 files below now has one line under its title that points
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.052). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.053). The sections it changes hear it through the Main session.
 
 ### Question 1 — How should a roster choose its columns when the side panel takes room? (L-02, Medium)
 
@@ -107,9 +107,11 @@ The four sizes the review always checks are fine (pictures 9–12), and Black Be
   - Pros: nothing to build.
   - Cons: §1.3's "no horizontal scrolling" stays broken; rows stay unreadable or cut off at real sizes (a half-screen laptop; the iPad mini; an iPad with Largest); the person most likely to pick Largest, the Grandmaster, is the one who meets it.
 
-### Question 2 — What the results sheet on the school wall lists (M-06, Low; Star and Black Belt, or Color Belt)
+### Question 2 — What the results sheet on the school wall lists (M-06, Low; Star and Black Belt, or Color Belt) — answered, v1.052
 
 Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-results-sheet.png` (today's three sheets, A, B; drawn on the real printed sheets).
+
+**Answered (Jeffrey, 2026-11-05, in the design review session; rulebook v1.052):** "Childrens testing doesnt need to be printed." and "Childrens testing is color belt testing", then "Yes, remove it" (picture `pictures/Q2-colorbelt-print-results.png`). None of A, B or C: Color Belt testing has no printed results sheet, so its Print results and the sheet go; Download CSV (admins only) and Print grading sheet stay. Star's and Black Belt's full-results sheets stay as they are, and the two left already match. Color Belt's fix file has it under Fix now (M-06); Star's and Black Belt's say nothing changes. Below is the question as it was asked.
 
 - **Today:** Color Belt's sheet lists only who passed ("the sheet is put up at the school", v0.416). Star's and Black Belt's sheets also list MAKE-UP rows (with "Needs: Breaking") and NOT FINISHED rows, and their PASSED rows keep their scores too: every row draws the score cell (Star: `src/screens/testing/star/results/StarResultsSheet.jsx:207`, "268.5 of 315 · PASS" in its header at `:17`; Black Belt: `src/blackBelt/staff/results/ResultsSheet.jsx:208`, "305.75 / pass 275 · PASS" at `:15`). The one-results-pattern row (v1.029) described Star's sheet only as "who passed to which belt", so it didn't see this difference.
 - **Jeffrey has already chosen full results twice, while warned about privacy:** for Star, v0.142 (told once that posting minors' scores and make-ups shows them to every family, he chose full results and rejected a passes-only sheet), then v0.145 (Make-up highlighted too); for Black Belt, v0.947 (the sheet "shows full results, as Star (rule 5 flagged once)"). Color Belt's passes-only sheet is the newest of these rows (v0.416, 2026-10-28): it came with its approved screen 4 mockup ("A: per class") and wasn't asked on its own. The question now is only whether the three sheets should match.
@@ -237,9 +239,9 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
 
 ## Next
 
-- **Jeffrey:** question 1 first, then question 2, then the batch (question 3). Question 1's picture is drawn: `pictures/Q1-roster-room.png` (today, A, B and what stays the same). The pictures for question 2 and for batch items (a), (b), (f) and (h) are drawn too, with amber outlines (`pictures/Q2-results-sheet.png`, `Q3a-one-history-entry.png`, `Q3b-receipt-when-money.png`, `Q3f-line-above-delete.png`, `Q3h-birth-date.png`).
+- **Jeffrey:** question 1, then the batch (question 3); question 2 is answered (v1.052). Question 1's picture is drawn: `pictures/Q1-roster-room.png` (today, A, B and what stays the same). The pictures for question 2 and for batch items (a), (b), (f) and (h) are drawn too, with amber outlines (`pictures/Q2-results-sheet.png`, `Q3a-one-history-entry.png`, `Q3b-receipt-when-money.png`, `Q3f-line-above-delete.png`, `Q3h-birth-date.png`).
 - **A separate reviewer checked these files** before they were handed out, as for pass 1: 9 must-fix points, all applied; its re-check found 1 more, applied. They are committed on `design-review` (no push), and the Main session merges `design-review` when Jeffrey says so.
 - **The Main session** then gives each session its pass 2 file (the starter is at the top of each) and handles `Notes-Main.md`: v0.638's "Date signed" (L-08) goes to Color Belt, Star, Black Belt and Camps; and it reserves a migration number for Color Belt's M-01 when asked.
-- **Rulebook housekeeping for the design review's next rulebook edit:** §1.2's exception list names Camps' Early / Late words in school blue (L-07, approved in v0.738), as it names Star's grading grid (v0.512). Camps changes nothing unless Jeffrey asks to recolor them.
+- **Rulebook housekeeping with question 1's rulebook edit** (it changes §1 too; v1.052 kept to its one decision): §1.2's exception list names Camps' Early / Late words in school blue (L-07, approved in v0.738), as it names Star's grading grid (v0.512). Camps changes nothing unless Jeffrey asks to recolor them.
 - **The status file's "Noted for pass 2" list:** the profile stuck on "Loading…" is now P-02, and Calendar's "… and try again." is part of U-08. The two Camps lines (the count line counts both rows of a possible duplicate; the day boxes show no gray while a save runs) were seen still open by reviewer L but not checked by a checker, so they stay on the list for the next pass.
 - **Pass 3:** what merges into `main` after 6b27cdd.
