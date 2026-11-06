@@ -22,7 +22,7 @@ The design review's rolling check found 24 items in Star's merged work: `docs/De
 
 ## Rolling check, pass 2 (started 2026-11-06)
 
-Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into main at 1751e82; after Color Belt, New students and Dashboard core in Jeffrey's order). Added to the same plan file (`TKD-StarTesting-Pass1-Plan.md`, section "Pass 2"): M-03 and C-05 (b) go in Step B; M-02 in Step C with R1-02; L-02, C-06 (c) and L-06 in Step D (after Dashboard core's L-02, R2-07, L-06). **L-02 on hold** (Main, 2026-11-06) until Jeffrey picks how Dashboard core builds the shared part (A: container where safe / B: shared hook + class). No migration of its own.
+Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into main at 1751e82; after Color Belt, New students and Dashboard core in Jeffrey's order). Added to the same plan file (`TKD-StarTesting-Pass1-Plan.md`, section "Pass 2"): M-03 and C-05 (b) go in Step B; M-02 in Step C with R1-02; L-02, C-06 (c) and L-06 in Step D (after Dashboard core's L-02, R2-07, L-06). **L-02 settled** (Jeffrey chose B, "B: shared code", v1.130 on dashboard-core): the roster uses the shared hook `usePageRoomBelow(px)` and a class, no container query; built after Dashboard core's part is on main. No migration of its own.
 
 - **Already done, nothing to build (v1.055):** C-04 (the line between Restore and Delete permanently, `candidateMenu.js`), C-06 (a) (failed Mark paid already ends "then retry."), C-06 (b) (already in pass 1's R2-07).
 - **Correction to pass 1's R1-02:** Color Belt has the same fix to make (its M-01); Star still copies Camps' 0033. A candidate with no form choice reads "at the desk"; 0038's fill-in leaves rows with no change-log insert row empty.
