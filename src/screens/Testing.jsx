@@ -54,6 +54,9 @@
 //   privateId          phase 4: the open private testing's id (its grading page), or null.
 //                      Always a Color Belt page: with the switch on, testingPage is 'colorBelt'.
 //   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
+//   deviceLocation     'Worcester' | 'Shrewsbury' — This device's home school (account menu). Passed
+//                      on untouched (in tabProps) to the event page and the Private testing tab:
+//                      Mark paid stores it on the payment (migration 0044, R1-01, rulebook v1.035).
 //
 // Black Belt testing (contract CONTRACT-0016-B1 §3; C2, rulebook v0.937): a Testing page of its own,
 // testingPage 'blackBelt', with its own addresses (#testing/black-belt…, lib/pageAddress.js) — with

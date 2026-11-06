@@ -94,14 +94,11 @@ export function showMarkPaid(row) {
   return row?.status === 'active' && row.amountDueCents > 0;
 }
 
-// Where the family chose "Paying by", for the Mark paid box's hint (CB1): 'form' ("They chose
-// Cash on the form.") only when the private testing was moved from an event registration the
-// family made on the event's form (movedFromSource 'form'); otherwise 'desk' ("… at the desk.") —
-// added here at the desk, moved from a student staff added at the desk ('staff'), or the old
-// registration couldn't be read (null; privateApi.loadPrivateTestings).
-export function markPaidChoiceWhere(row) {
-  return row?.movedFromSource === 'form' ? 'form' : 'desk';
-}
+// Where the family chose "Paying by", for the Mark paid box's hint: the same rule as the event
+// roster (eventRules.markPaidChoiceWhere, M-01 / migration 0044) — 'form' only while Paying by
+// still equals the choice the family made on the event's form (kept when a form registration was
+// moved here); otherwise, and for one added at the desk, 'desk'.
+export { markPaidChoiceWhere } from './eventRules.js';
 
 // May the desk change how they'll pay? Active, and not paid yet or still owing.
 export function canChangePayingBy(row) {

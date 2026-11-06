@@ -91,7 +91,7 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { ROSTER_ROOM, canPrintReceipt, classTimeLabel, feeFor, inCardFilter, rosterCounts, rosterLayoutFor } from '../../../lib/testing/eventRules.js';
+import { ROSTER_ROOM, canPrintReceipt, classTimeLabel, feeFor, inCardFilter, markPaidChoiceWhere, rosterCounts, rosterLayoutFor } from '../../../lib/testing/eventRules.js';
 import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
@@ -184,6 +184,7 @@ export default function EventPage({
   school,
   isAdmin,
   onBack,
+  deviceLocation, // 'Worcester' | 'Shrewsbury' — This device's school: where Mark paid's money counts (R1-01)
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -1269,7 +1270,8 @@ export default function EventPage({
   // The row's Mark paid opens the box under it (a second press closes it): the name and the amount
   // (the price the database charges today — the early price before the testing day, the
   // testing-day price on it — shown, never typed), Paid by preset to the row's Paying by with
-  // "They chose … on the form." / "… at the desk.", then "Mark paid $X" (first focus). The box
+  // "They chose … on the form." (only while Paying by is still the family form's own choice,
+  // M-01) / "… at the desk.", then "Mark paid $X" (first focus). The box
   // closes when pressed; the database records today's date. A different way also changes Paying
   // by (the database does it; the reload shows it). Staff and admins see the same box.
   function openMarkPaid(row, anchor) {
@@ -1282,7 +1284,9 @@ export default function EventPage({
   }
   async function saveMarkPaid(rowId, snap, method, amountCents, anchor) {
     if (!beginWrite()) return;
-    const result = await markPaidBy({ registrationId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents });
+    // school: This device's school — the payment counts at the desk that took it (R1-01, v1.035);
+    // null (no school) lets the database use the event's.
+    const result = await markPaidBy({ registrationId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents, school: LOCATION_CODE[deviceLocation] ?? null });
     const row = roster.find((r) => r.id === rowId) ?? snap;
     const name = T.studentLabel(row);
     if (result.status === 'price_changed' && !hiddenNowRef.current) {
@@ -1971,7 +1975,7 @@ export default function EventPage({
         name={T.studentLabel(markPaidBoxRow)}
         amountCents={amountCents}
         familyChoice={markPaidBoxRow.payingBy}
-        choiceWhere={markPaidBoxRow.source === 'form' ? 'form' : 'desk'}
+        choiceWhere={markPaidChoiceWhere(markPaidBoxRow)}
         onMarkPaid={(method) => saveMarkPaid(rowId, snap, method, amountCents, anchor)}
         onClose={(restoreFocus) => {
           setMarkPaidBox(null);

@@ -1088,6 +1088,8 @@ export default function App() {
                 deviceLocation={deviceLocation}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
+                // This device's home school: a Color Belt payment counts at the desk that took it (v1.035).
+                deviceLocation={deviceLocation}
                 testingPage={testingPage}
                 onOpenTestingPage={openTestingPage}
                 eventId={eventId}

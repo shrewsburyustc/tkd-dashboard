@@ -1516,12 +1516,15 @@ check('events mock: who may call each function (A / S splits)', () => {
     testing_registration_history: { p_registration_id: anyId },
     testing_private_history: { p_private_id: anyId },
     testing_results_csv: { p_event_id: anyId }, // A
+    // 0044 (A): Edit event's Undo in one call.
+    testing_undo_event_edit: { p_event_id: anyId, p_expected_version: 1, p_name: 'X', p_testing_date: '2026-12-01', p_classes: [], p_auto_close_on: null, p_note: null, p_open: null },
   };
   assert.deepEqual(Object.keys(sample).sort(), [...EVENT_RPC_NAMES].sort());
   // testing_restore_student checks who inside (staff: their own "keep one" for 10 seconds).
   const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address', 'settings_update_school_contact',
     'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete', // phase 4
-    'testing_results_csv']; // 0030
+    'testing_results_csv', // 0030
+    'testing_undo_event_edit']; // 0044
   assert.deepEqual([...EVENT_ADMIN_ONLY_RPCS].sort(), [...adminOnly].sort());
   const before = JSON.stringify(evDb());
   for (const name of EVENT_RPC_NAMES) {
@@ -3611,12 +3614,14 @@ let cbFromFail = null;
 globalThis.__cbChecksFrom = (table) => ({
   select(columns) {
     const filters = [];
+    const orders = [];
     const query = {
       eq(col, value) { filters.push({ col, value, op: 'eq' }); return query; },
       in(col, value) { filters.push({ col, value, op: 'in' }); return query; },
+      order(col, { ascending = true } = {}) { orders.push({ col, ascending }); return query; }, // eventsApi.loadEvent sorts
       then(resolve, reject) {
         try {
-          resolve(cbFromFail === table ? { data: null, error: { message: 'Failed to fetch' } } : ev.select(table, columns, filters, [], cbRpcCtx));
+          resolve(cbFromFail === table ? { data: null, error: { message: 'Failed to fetch' } } : ev.select(table, columns, filters, orders, cbRpcCtx));
         } catch (error) {
           reject(error);
         }
@@ -3644,17 +3649,23 @@ await (async () => {
     cbRaw = null;
     const zoe = () => regBy('CB-3112');
     const args = (over = {}) => ({ registrationId: zoe().id, expectedVersion: zoe().version, method: 'card', expectedCents: 6500, ...over });
-    // It calls testing_mark_paid_by with exactly 0030's argument names.
+    // It calls testing_mark_paid_by with exactly 0030's argument names, plus 0044's p_school
+    // (null when no school is given: the database then uses the event's).
     const changed = await eventsApi.markPaidBy(args({ expectedCents: 7500 }));
     assert.equal(cbLastCall.name, 'testing_mark_paid_by');
-    assert.deepEqual(cbLastCall.args, { p_registration_id: zoe().id, p_expected_version: zoe().version, p_method: 'card', p_expected_cents: 7500 });
+    assert.deepEqual(cbLastCall.args, { p_registration_id: zoe().id, p_expected_version: zoe().version, p_method: 'card', p_expected_cents: 7500, p_school: null });
     // price_changed from the preview database: the database's amount, as amountCents.
     assert.deepEqual(changed, { status: 'price_changed', amountCents: 6500 });
-    // ok: camelCase, with the day and the new "Paying by".
+    // An unknown school is refused (nothing saved).
+    assert.equal((await eventsApi.markPaidBy(args({ school: 'boston' }))).status, 'invalid');
+    // ok: camelCase, with the day and the new "Paying by". This device's school is stored on the
+    // payment (R1-01) — here the OTHER school's desk took the money for a Worcester event.
     const v0 = zoe().version;
-    const paid = await eventsApi.markPaidBy(args());
+    const paid = await eventsApi.markPaidBy(args({ school: 'shrewsbury' }));
+    assert.equal(cbLastCall.args.p_school, 'shrewsbury');
     assert.equal(typeof paid.paymentId, 'string');
     assert.deepEqual({ ...paid, paymentId: 'x' }, { status: 'ok', paymentId: 'x', amountCents: 6500, method: 'card', paidOn: '2026-10-17', payingBy: 'card', version: v0 + 1 });
+    assert.equal(evDb().payments.find((p) => p.id === paid.paymentId).school, 'shrewsbury');
     // Refusals from the preview database come through as just { status }.
     assert.deepEqual(await eventsApi.markPaidBy(args({ expectedVersion: v0 })), { status: 'stale' });
     assert.deepEqual(await eventsApi.markPaidBy(args()), { status: 'already_paid' });
@@ -4027,14 +4038,18 @@ await (async () => {
     cbRpcCtx = E_DESK;
     const id = pAdd().id;
     const args = (over = {}) => ({ privateId: id, expectedVersion: privRow(id).version, method: 'check', expectedCents: 8500, ...over });
-    // It calls testing_private_mark_paid_by with exactly 0030's argument names.
+    // It calls testing_private_mark_paid_by with exactly 0030's argument names, plus 0044's
+    // p_school (null when none is given).
     const changed = await privateApi.markPrivatePaidBy(args({ expectedCents: 2000 }));
     assert.equal(cbLastCall.name, 'testing_private_mark_paid_by');
-    assert.deepEqual(cbLastCall.args, { p_private_id: id, p_expected_version: privRow(id).version, p_method: 'check', p_expected_cents: 2000 });
+    assert.deepEqual(cbLastCall.args, { p_private_id: id, p_expected_version: privRow(id).version, p_method: 'check', p_expected_cents: 2000, p_school: null });
     assert.deepEqual(changed, { status: 'price_changed', amountCents: 8500 });
+    assert.equal((await privateApi.markPrivatePaidBy(args({ school: 'nowhere' }))).status, 'invalid');
     const v0 = privRow(id).version;
-    const paid = await privateApi.markPrivatePaidBy(args());
+    const paid = await privateApi.markPrivatePaidBy(args({ school: 'shrewsbury' }));
     assert.deepEqual({ ...paid, paymentId: 'x' }, { status: 'ok', paymentId: 'x', amountCents: 8500, method: 'check', paidOn: PT, payingBy: 'check', version: v0 + 1 });
+    // R1-01: the desk's school is stored (and readable on testing_private_payments).
+    assert.equal(evDb().private_payments.find((p) => p.id === paid.paymentId).school, 'shrewsbury');
     assert.deepEqual(await privateApi.markPrivatePaidBy(args({ expectedVersion: v0 })), { status: 'stale' });
     assert.deepEqual(await privateApi.markPrivatePaidBy(args()), { status: 'already_paid' });
     cbRpcCtx = E_LOCKED;
@@ -4074,49 +4089,212 @@ await (async () => {
   }
 })();
 
-// The Mark paid box's "They chose … on the form / at the desk." for a private testing (CB1):
-// loadPrivateTestings reads each moved one's OLD event registration (testing_registrations.source,
-// still there — moving only withdraws it) and privateRules.markPaidChoiceWhere says 'form' only
-// for a registration the family made on the form. A failed read still loads the list ('desk').
+// The Mark paid box's "They chose … on the form / at the desk." (M-01 = C-01, migration 0044):
+// the database keeps the family form's own choice (paying_by_on_form, set once, never changed;
+// none for a desk add; carried by Move to private testing) and markPaidChoiceWhere says 'form'
+// only while Paying by still equals it — on the event roster and the Private testing tab alike.
 await (async () => {
-  const label = 'privateApi: loadPrivateTestings → movedFromSource; the Mark paid hint says "on the form" only for a form registration';
+  const label = 'M-01: paying_by_on_form through the API; the Mark paid hint says "on the form" only while Paying by is the form\'s choice';
   try {
     pStart();
     cbRaw = null;
     cbFromFail = null;
     cbRpcCtx = E_DESK;
-    // A family-form registration, moved.
-    assert.equal(regBy('CB-3107').source, 'form');
-    const formMove = pMove('CB-3107', '2026-12-01', '16:00');
-    assert.equal(formMove.status, 'ok');
-    // A student added at the desk (source 'staff'), then moved.
+    const ER = await import('./eventRules.js');
+    // Pure: 'form' only when payingByOnForm is set and equals payingBy. A missing choice is 'desk'
+    // (NOT Camps' default: here it means "added at the desk"). privateRules re-exports the same one.
+    assert.equal(PR.markPaidChoiceWhere, ER.markPaidChoiceWhere);
+    assert.equal(ER.markPaidChoiceWhere({ payingBy: 'check', payingByOnForm: 'check' }), 'form');
+    assert.equal(ER.markPaidChoiceWhere({ payingBy: 'cash', payingByOnForm: 'check' }), 'desk');
+    for (const onForm of [null, undefined, '']) assert.equal(ER.markPaidChoiceWhere({ payingBy: 'cash', payingByOnForm: onForm }), 'desk');
+    assert.equal(ER.markPaidChoiceWhere({ payingBy: 'cash' }), 'desk');
+    assert.equal(ER.markPaidChoiceWhere(null), 'desk');
+
+    const roster = async () => {
+      const res = await eventsApi.loadEvent(DEFAULT_EVENT_ID);
+      assert.equal(res.status, 'ok', String(res.error?.message ?? res.error));
+      return (ref) => res.roster.find((r) => r.reference === ref);
+    };
+    // Event roster: Noah Kim (family form, Check) → "on the form".
+    let rowOf = await roster();
+    assert.deepEqual([rowOf('CB-3102').payingByOnForm, ER.markPaidChoiceWhere(rowOf('CB-3102'))], ['check', 'form']);
+    // A student added at the desk (Ryan Patel, seeded) → "at the desk".
+    assert.deepEqual([rowOf('CB-3115').payingByOnForm, ER.markPaidChoiceWhere(rowOf('CB-3115'))], [null, 'desk']);
+    // Change how they'll pay → Cash: "at the desk"; back to Check: "on the form" again.
+    const noah = () => regBy('CB-3102');
+    const change = (to) => evCall('testing_change_paying_by', { p_registration_id: noah().id, p_expected_version: noah().version, p_paying_by: to }, E_DESK);
+    assert.equal(change('cash').status, 'ok');
+    rowOf = await roster();
+    assert.deepEqual([rowOf('CB-3102').payingBy, rowOf('CB-3102').payingByOnForm, ER.markPaidChoiceWhere(rowOf('CB-3102'))], ['cash', 'check', 'desk']);
+    assert.equal(change('check').status, 'ok');
+    rowOf = await roster();
+    assert.equal(ER.markPaidChoiceWhere(rowOf('CB-3102')), 'form');
+    // Mark paid by Card (Paying by becomes Card: "at the desk"), then Undo payment (admin): back to
+    // Check, "on the form".
+    const markNoah = (cents) => evCall('testing_mark_paid_by', { p_registration_id: noah().id, p_expected_version: noah().version, p_method: 'card', p_expected_cents: cents }, E_DESK);
+    const asked = markNoah(0); // price_changed tells today's amount, nothing saved
+    assert.equal(asked.status, 'price_changed');
+    const paid = markNoah(asked.amount_cents);
+    assert.equal(paid.status, 'ok', JSON.stringify(paid));
+    rowOf = await roster();
+    assert.deepEqual([rowOf('CB-3102').payingBy, ER.markPaidChoiceWhere(rowOf('CB-3102'))], ['card', 'desk']);
+    assert.equal(evCall('testing_undo_payment', { p_payment_id: paid.payment_id }, E_ADMIN).status, 'ok');
+    rowOf = await roster();
+    assert.deepEqual([rowOf('CB-3102').payingBy, rowOf('CB-3102').payingByOnForm, ER.markPaidChoiceWhere(rowOf('CB-3102'))], ['check', 'check', 'form']);
+    // A desk add has none, whatever the caller sends.
     const added = evCall('testing_add_student', { p_event_id: DEFAULT_EVENT_ID, p_first: 'Dana', p_last: 'Desk', p_event_rank_id: eventRankByName('Group A', 'Yellow').id, p_stripes: true, p_paying_by: 'check' }, E_DESK);
     assert.equal(added.status, 'ok');
-    assert.equal(regBy(added.reference).source, 'staff');
-    const deskMove = pMove(added.reference, '2026-12-01', '17:00');
-    assert.equal(deskMove.status, 'ok');
-    // One added here at the desk (never moved).
-    const here = pAdd({ p_first: 'Hana' }).id;
+    assert.equal(regBy(added.reference).paying_by_on_form, null);
+
+    // Private testing tab.
     const load = async () => {
       const res = await privateApi.loadPrivateTestings('worcester');
       assert.equal(res.status, 'ok');
       return (id) => res.rows.find((r) => r.id === id);
     };
-    let rowOf = await load();
-    assert.deepEqual([rowOf(formMove.private_id).movedFromSource, PR.markPaidChoiceWhere(rowOf(formMove.private_id))], ['form', 'form']);
-    assert.deepEqual([rowOf(deskMove.private_id).movedFromSource, PR.markPaidChoiceWhere(rowOf(deskMove.private_id))], ['staff', 'desk']);
-    assert.deepEqual([rowOf(here).movedFromSource, PR.markPaidChoiceWhere(rowOf(here))], [null, 'desk']);
-    // The old way (moved → "on the form") was wrong for the desk student: both are moved.
-    assert.ok(rowOf(formMove.private_id).movedFromEventId && rowOf(deskMove.private_id).movedFromEventId);
-    // The registrations read failing doesn't stop the list: no source → "… at the desk."
-    cbFromFail = 'testing_registrations';
-    rowOf = await load();
-    assert.deepEqual([rowOf(formMove.private_id).movedFromSource, PR.markPaidChoiceWhere(rowOf(formMove.private_id))], [null, 'desk']);
-    cbFromFail = null;
-    // Pure: anything but 'form' (or no row) → 'desk'.
-    assert.equal(PR.markPaidChoiceWhere({ movedFromSource: 'form' }), 'form');
-    for (const source of ['staff', null, undefined, 'FORM']) assert.equal(PR.markPaidChoiceWhere({ movedFromSource: source }), 'desk');
-    assert.equal(PR.markPaidChoiceWhere(null), 'desk');
+    // Move a form registration (Zoe Park, Check): the private testing carries the choice.
+    const formMove = pMove('CB-3112', '2026-12-01', '16:00');
+    assert.equal(formMove.status, 'ok');
+    // Undo move (the mover, within 10 seconds): back on the roster, still "on the form".
+    assert.equal(pCall('testing_private_undo_move', pArgs(formMove.private_id)).status, 'ok');
+    rowOf = await roster();
+    assert.deepEqual([rowOf('CB-3112').status, rowOf('CB-3112').payingByOnForm, ER.markPaidChoiceWhere(rowOf('CB-3112'))], ['active', 'check', 'form']);
+    // Move again: "on the form" on the Private testing tab too.
+    const again = pMove('CB-3112', '2026-12-01', '16:00');
+    assert.equal(again.status, 'ok');
+    let pRowOf = await load();
+    assert.deepEqual([pRowOf(again.private_id).payingByOnForm, PR.markPaidChoiceWhere(pRowOf(again.private_id))], ['check', 'form']);
+    // Change how they'll pay → Card: "at the desk".
+    assert.equal(pCall('testing_private_change_paying_by', pArgs(again.private_id, { p_paying_by: 'card' })).status, 'ok');
+    pRowOf = await load();
+    assert.deepEqual([pRowOf(again.private_id).payingByOnForm, PR.markPaidChoiceWhere(pRowOf(again.private_id))], ['check', 'desk']);
+    // A desk student moved, and one added here: none → "at the desk".
+    const deskMove = pMove(added.reference, '2026-12-01', '17:00');
+    assert.equal(deskMove.status, 'ok');
+    const here = pAdd({ p_first: 'Hana' }).id;
+    pRowOf = await load();
+    assert.deepEqual([pRowOf(deskMove.private_id).payingByOnForm, PR.markPaidChoiceWhere(pRowOf(deskMove.private_id))], [null, 'desk']);
+    assert.deepEqual([pRowOf(here).payingByOnForm, PR.markPaidChoiceWhere(pRowOf(here))], [null, 'desk']);
+    // The seeded Ava Chen (moved from a form registration, Cash) → "on the form" (the default
+    // preview data, which pStart empties, so it is read from a fresh reset here).
+    evReset();
+    ev.reset();
+    pRowOf = await load();
+    const ava = evDb().private.find((p) => p.first_name === 'Ava' && p.last_name === 'Chen');
+    assert.deepEqual([pRowOf(ava.id).payingByOnForm, PR.markPaidChoiceWhere(pRowOf(ava.id))], ['cash', 'form']);
+    // Every seeded payment has its school (R1-01): the event's / private testing's, Worcester.
+    for (const p of [...evDb().payments, ...evDb().private_payments]) assert.equal(p.school, 'worcester');
+    evReset();
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+// 0044 in the preview database: R1-01 (the school travels with Undo, Edit, Move and Undo move;
+// the old 4-input call still works), M-01's fill of a store saved before 0044, and R2-02's
+// testing_undo_event_edit (one call, all or nothing) through eventsApi.undoEventEdit.
+await (async () => {
+  const label = '0044 mock: payment school copies, the pre-0044 store fill, and Edit event\'s one-call Undo';
+  try {
+    // --- R1-01 on the event side ---
+    pStart();
+    cbRaw = null;
+    cbRpcCtx = E_DESK;
+    const schoolOf = (id) => [...evDb().payments, ...evDb().private_payments].find((p) => p.id === id).school;
+    const sam = () => regBy('CB-3110');
+    const markSam = (cents, extra = {}) => evCall('testing_mark_paid_by', { p_registration_id: sam().id, p_expected_version: sam().version, p_method: 'cash', p_expected_cents: cents, ...extra }, E_DESK);
+    const cents = markSam(0).amount_cents;
+    // Blank = the event's school; the old 4-input call (no p_school) is still accepted.
+    const first = markSam(cents, { p_school: '  ' });
+    assert.equal(first.status, 'ok');
+    assert.equal(schoolOf(first.payment_id), 'worcester');
+    assert.equal(evCall('testing_undo_payment', { p_payment_id: first.payment_id }, E_ADMIN).status, 'ok');
+    const second = markSam(cents);
+    assert.equal(second.status, 'ok');
+    assert.equal(schoolOf(second.payment_id), 'worcester');
+    assert.equal(evCall('testing_undo_payment', { p_payment_id: second.payment_id }, E_ADMIN).status, 'ok');
+    // Shrewsbury's desk takes Worcester event money: the undo reversal keeps Shrewsbury.
+    const away = markSam(cents, { p_school: 'shrewsbury' });
+    assert.equal(schoolOf(away.payment_id), 'shrewsbury');
+    // Edit payment: the reversal AND the new payment copy the edited payment's school.
+    const edited = evCall('testing_edit_payment', { p_payment_id: away.payment_id, p_method: 'check', p_amount_cents: cents, p_paid_on: evToday }, E_ADMIN);
+    assert.equal(edited.status, 'ok');
+    assert.equal(schoolOf(edited.payment_id), 'shrewsbury');
+    assert.equal(evDb().payments.find((p) => p.reverses_payment_id === away.payment_id).school, 'shrewsbury');
+    // Move to private: the event reversal and the private payment copy it; Undo move brings it back.
+    const moved = pMove('CB-3110', '2026-12-01', '16:00');
+    assert.equal(moved.status, 'ok');
+    assert.equal(evDb().payments.find((p) => p.reverses_payment_id === edited.payment_id).school, 'shrewsbury');
+    assert.equal(evDb().private_payments.find((p) => p.moved_from_payment_id === edited.payment_id).school, 'shrewsbury');
+    assert.equal(pCall('testing_private_undo_move', pArgs(moved.private_id)).status, 'ok');
+    const back = evDb().payments.filter((p) => p.registration_id === sam().id && p.kind === 'payment').at(-1);
+    assert.equal(back.school, 'shrewsbury');
+    // The school is NOT readable on testing_payments (0005 lists its columns), but is on private.
+    assert.equal(ev.select('testing_payments', 'school', [], [], E_ADMIN).error.code, '42501');
+    assert.equal(ev.select('testing_private_payments', 'school', [], [], E_ADMIN).error, null);
+
+    // --- The fill of a store saved before 0044 ---
+    evReset();
+    ev.reset();
+    const old = evDb();
+    const noahReg = old.registrations.find((r) => r.reference === 'CB-3102');
+    for (const r of old.registrations) delete r.paying_by_on_form;
+    for (const p of old.private) delete p.paying_by_on_form;
+    for (const p of [...old.payments, ...old.private_payments]) delete p.school;
+    old.change_log.push({ table_name: 'testing_registrations', op: 'insert', record_id: noahReg.id, after: { paying_by: 'check' }, seq: 1 });
+    evMemory = old;
+    const filled = evDb();
+    // A form registration with its insert row → the form's choice; without one → EMPTY (never
+    // today's Paying by); a desk one → empty. Ava's private testing follows her (empty) registration.
+    assert.equal(filled.registrations.find((r) => r.reference === 'CB-3102').paying_by_on_form, 'check');
+    assert.equal(filled.registrations.find((r) => r.reference === 'CB-3101').paying_by_on_form, null);
+    assert.equal(filled.registrations.find((r) => r.reference === 'CB-3115').paying_by_on_form, null);
+    assert.equal(filled.private.find((p) => p.first_name === 'Ava').paying_by_on_form, null);
+    for (const p of [...filled.payments, ...filled.private_payments]) assert.equal(p.school, 'worcester');
+
+    // --- R2-02: Edit event's Undo in one call (admins) ---
+    evReset();
+    cbRpcCtx = E_ADMIN;
+    const loaded = await eventsApi.loadEvent(DEFAULT_EVENT_ID);
+    assert.equal(loaded.status, 'ok');
+    const ev0 = loaded.event;
+    const old0 = { name: ev0.name, testingDate: ev0.testingDate, classes: loaded.classes, autoCloseOn: ev0.autoCloseOn, note: ev0.note };
+    // The "edit": a new name and registration closed.
+    const renamed = await eventsApi.updateEvent({ eventId: ev0.id, expectedVersion: ev0.version, ...old0, name: 'November Kids' });
+    assert.equal(renamed.status, 'ok');
+    const closed = await eventsApi.setRegistration({ eventId: ev0.id, expectedVersion: renamed.version, open: false });
+    assert.equal(closed.status, 'ok');
+    // A dropped connection: nothing changed, and Retry (the same call) works.
+    ev.failNextSave();
+    assert.equal((await eventsApi.undoEventEdit({ eventId: ev0.id, expectedVersion: closed.version, ...old0, open: true })).status, 'error');
+    assert.deepEqual([eventRow().name, eventRow().registration_open, eventRow().version], ['November Kids', false, closed.version]);
+    const undone = await eventsApi.undoEventEdit({ eventId: ev0.id, expectedVersion: closed.version, ...old0, open: true });
+    assert.equal(undone.status, 'ok', JSON.stringify(undone));
+    assert.equal(cbLastCall.name, 'testing_undo_event_edit');
+    assert.deepEqual(Object.keys(cbLastCall.args).sort(), ['p_auto_close_on', 'p_classes', 'p_event_id', 'p_expected_version', 'p_name', 'p_note', 'p_open', 'p_testing_date']);
+    assert.deepEqual([eventRow().name, eventRow().registration_open, eventRow().version], [ev0.name, true, undone.version]);
+    assert.equal(typeof undone.state, 'string');
+    // open: null leaves the switch alone (an edit that didn't change it).
+    const r2 = await eventsApi.updateEvent({ eventId: ev0.id, expectedVersion: undone.version, ...old0, name: 'November Kids' });
+    const leave = await eventsApi.undoEventEdit({ eventId: ev0.id, expectedVersion: r2.version, ...old0, open: null });
+    assert.equal(leave.status, 'ok');
+    assert.equal(cbLastCall.args.p_open, null);
+    assert.deepEqual([eventRow().name, eventRow().registration_open], [ev0.name, true]);
+    // All or nothing: the details pass but the switch is refused (the event is finished) → the
+    // refusal comes back as it came, and the details are NOT changed either.
+    const r3 = await eventsApi.updateEvent({ eventId: ev0.id, expectedVersion: leave.version, ...old0, name: 'November Kids' });
+    evToday = '2026-11-21';
+    const half = await eventsApi.undoEventEdit({ eventId: ev0.id, expectedVersion: r3.version, ...old0, open: false });
+    assert.equal(half.status, 'finished');
+    assert.deepEqual([eventRow().name, eventRow().version], ['November Kids', r3.version]);
+    evToday = '2026-10-17';
+    // An old version → stale, nothing changed; staff → not_allowed.
+    assert.equal((await eventsApi.undoEventEdit({ eventId: ev0.id, expectedVersion: 1, ...old0, open: null })).status, 'stale');
+    cbRpcCtx = E_DESK;
+    assert.equal((await eventsApi.undoEventEdit({ eventId: ev0.id, expectedVersion: r3.version, ...old0, open: null })).status, 'not_allowed');
+    assert.equal(eventRow().name, 'November Kids');
     evReset();
     count += 1;
   } catch (error) {
