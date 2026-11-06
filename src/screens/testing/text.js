@@ -940,26 +940,6 @@ export const SHEET_COL_NOTE = 'Note';
 export const SHEET_ADDED_ON_DAY = 'Added on the day:';
 export const SHEET_FOOTER = 'Type the results into the Grading tab the same day.';
 
-// CB18 (v1.029, v0.416): Print results — the printed results sheet (event/ResultsSheet.jsx),
-// a page per class, only the students who passed.
-export const PRINT_RESULTS = 'Print results';
-export const resultsSheetTitle = (eventName) => `${eventName} — Results`;
-// "Friday, November 20, 2026 · Worcester school"
-export const resultsSheetSub = (dateIso, school) => `${longDate(dateIso)} · ${schoolName(school)}`;
-export const RESULTS_SHEET_CONTINUED = '(continued)';
-export const RESULTS_PASSED_HEADING = 'PASSED — CONGRATULATIONS!';
-export const RESULTS_NEW_BELT = 'New belt';
-export const RESULTS_PASSED_BOX = 'PASSED';
-// Printed only when no student in the whole event has passed yet (each class with nobody passed
-// is left off the sheet).
-export const RESULTS_NONE_PASSED = 'No passed results recorded yet.';
-// "November Children Testing — Results · printed Fri, Nov 20, 2026, 8:15 PM"
-export const resultsSheetFoot = (eventName, printedAt) =>
-  `${resultsSheetTitle(eventName)} · printed ${printedAt.toLocaleString('en-US', {
-    timeZone: SCHOOL_TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  })}`;
-export const resultsSheetPage = (page, pages) => `Page ${page} of ${pages}`;
-
 // CB18 (v0.416, v0.418 Q3): Download CSV — admins only, hidden while Hide private details is on,
 // the whole event (lib/testing/resultsCsv.js builds the rows). Star's words where they fit
 // (star/resultsText.js).
