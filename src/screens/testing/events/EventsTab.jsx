@@ -506,6 +506,8 @@ export default function EventsTab({
                 return setRegistration({ eventId: d.eventId, expectedVersion: back.version, open: record.registrationOpen });
               },
               { find: () => rowEl(d.eventId) },
+              // R2-07 (v1.051): the Undo opens registration again when the edit had closed it.
+              switchChanged && record.registrationOpen ? T.TOAST_UNDONE_REOPENED : T.TOAST_UNDONE,
             ),
         },
       });
@@ -514,14 +516,15 @@ export default function EventsTab({
   }
 
   // ===== Undo =====
-  async function runUndo(call, focus = null) {
+  // undoneText: the toast after it worked ("Undone", or "Undone. Registration is open again.").
+  async function runUndo(call, focus = null, undoneText = T.TOAST_UNDONE) {
     if (!beginWrite()) return;
     const result = await call();
     endWrite(result.status);
     const status = result.status;
     if (status === 'ok') {
       setBanner((current) => (current?.kind === 'undo' ? null : current));
-      showToast(T.TOAST_UNDONE, { icon: false });
+      showToast(undoneText, { icon: false });
       const reloaded = reloadQuiet();
       if (focus) focusLater(focus.find, focus.fallback ?? addEventEl, reloaded);
     } else if (status === 'no_access') {
@@ -533,7 +536,7 @@ export default function EventsTab({
       setBanner({ text: T.UNDO_STALE });
       reloadQuiet();
     } else {
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus) });
+      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus, undoneText) });
     }
   }
 
@@ -548,7 +551,8 @@ export default function EventsTab({
       setBanner((current) => (current?.kind === 'switch' ? null : current));
       reloadQuiet();
       if (isUndo) {
-        showToast(T.TOAST_UNDONE, { icon: false });
+        // R2-07 (v1.051): an Undo that opens registration again says so; one that closes it says "Undone".
+        showToast(open ? T.TOAST_UNDONE_REOPENED : T.TOAST_UNDONE, { icon: false });
         return;
       }
       // Opening after the closing date has passed removes the date (admins only, Star v0.85).
@@ -573,10 +577,13 @@ export default function EventsTab({
       reloadQuiet();
     } else {
       // Didn't reach the database (E14): the row shows "Not saved" and the banner offers Retry.
+      // A failed Undo says v1.045 (4)'s sentence (pass 2, C-06 (c)).
       setNotSavedId(event.id);
+      let failedText = open ? T.registrationNotOpened(event.name) : T.registrationNotClosed(event.name);
+      if (isUndo) failedText = T.UNDO_FAILED;
       setBanner({
         kind: 'switch',
-        text: open ? T.registrationNotOpened(event.name) : T.registrationNotClosed(event.name),
+        text: failedText,
         retry: () => switchRegistration(event, open, isUndo, expectedVersion),
       });
     }

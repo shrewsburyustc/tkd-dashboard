@@ -2,7 +2,7 @@
 
 What: every item the design review's rolling check gave Color Belt, grouped into build steps, with files, mockups and the database.
 Why: pass 1 (`docs/Design Review/Rolling check/Pass 1/Notes-ColorBelt.md`), pass 2 (`docs/Design Review/Rolling check/Pass 2/Fix-ColorBelt.md`) and rulebook v0.638 (Date signed, pass 2's L-08) all ask for a plan first. Nothing is built before Jeffrey OKs it.
-Status: **proposal, 2026-11-06.** Order: **CB14 first** (its own plan, `TKD-ColorBelt-CB14-BuildPlan.md`), then the steps below.
+Status: **2026-11-06, Jeffrey: "Pass 2 fixes first".** These steps come before CB14, whose plan (`TKD-ColorBelt-CB14-BuildPlan.md`) waits at its step 1. Order: B (words) and A (migration, once Main gives the number) start now; C one mockup at a time; D after Dashboard core.
 
 ## Step A — one migration (needs a number from Main, a security review, and Jeffrey's paste)
 

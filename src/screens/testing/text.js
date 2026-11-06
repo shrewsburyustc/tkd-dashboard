@@ -299,6 +299,7 @@ export const TOAST_CLASS_ADDED = 'Class added';
 export const TOAST_RANK_ORDER = 'Rank order saved';
 export const TOAST_CLASS_ORDER = 'Class order saved';
 export const TOAST_UNDONE = 'Undone';
+export const TOAST_UNDONE_REOPENED = 'Undone. Registration is open again.'; // R2-07 (v1.051): an Undo that opens registration again (Star's words)
 export const deletedToast = (name) => `${name} deleted`;
 
 // =====================================================================================
@@ -394,7 +395,7 @@ export const ACTIONS_COL = 'Actions';
 export const NO_EVENTS_ADMIN = 'No color belt testing events yet.';
 export const NO_EVENTS_STAFF = 'No color belt testing events yet. An admin adds them.';
 export const NO_UPCOMING = 'No upcoming events.';
-export const NO_PAST = 'No past events.';
+export const NO_PAST = 'No past events yet.'; // pass 2 C-05 (c), v1.055 (g2)
 export const LOADING_EVENTS = 'Loading events';
 export const STAFF_EVENTS_LINE =
   'Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.';
@@ -430,7 +431,7 @@ export const CLOSE_REGISTRATION = 'Close registration';
 export const OPEN_REGISTRATION = 'Open registration';
 export const EDIT_EVENT = 'Edit event';
 export const DELETE_EVENT = 'Delete event';
-export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to reopen.';
+export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to open it.'; // R4-13 (v1.045 (5))
 export const eventMenuSub = (event) => shortDate(event.testingDate);
 
 export const TOAST_REGISTRATION_CLOSED = 'Registration closed';
@@ -443,7 +444,7 @@ export const COPY_FAILED = "Couldn't copy the link. Open Registration link on th
 export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection and try again.`;
 export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection and try again.`;
 export const REGISTRATION_FINISHED = 'This testing has finished, so registration can no longer change.';
-export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to reopen. Registration wasn't opened.";
+export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to open it. Registration wasn't opened."; // R4-13
 export const EVENTS_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const LOAD_EVENTS_FAILED = "Couldn't load events. Check the connection, then retry.";
 
@@ -600,7 +601,8 @@ export const TAG_REMOVED = 'Removed';
 export const TAG_DUPLICATE_COPY = 'Duplicate copy';
 export const NO_NEW_RANK = 'No new rank';
 export const MARK_PAID = 'Mark paid';
-export const markPaidLabel = (name) => `Mark ${name} paid`;
+// The visible words first, so the name contains "Mark paid" (WCAG 2.5.3; pass 2 C-02, Star's words).
+export const markPaidLabel = (name) => `Mark paid for ${name}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const paidOnPhone = (method, stamp) => `${payingByText(method)} · paid ${monthDay(stamp)}`;
 export const EMPTY_CLASS_ROSTER = 'No students in this class yet.';
@@ -647,7 +649,7 @@ export const ROSTER_STALE = "Someone else changed this just now. Your change was
 export const ROSTER_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const alreadyPaid = (name) => `${name} is already marked paid.`;
 export const isWithdrawn = (name) => `${name} was withdrawn. An admin can restore them first.`;
-export const markPaidFailed = (name) => `${name} wasn't marked paid. Check the connection and try again.`;
+export const markPaidFailed = (name) => `${name} wasn't marked paid. Check the connection, then retry.`; // pass 2 C-06 (a), v1.055 (j1); Camps re-exports it
 export const UNDO_PAYMENT_TOO_LATE = 'Too late to undo here. Ask an admin to undo the payment.';
 // Staff Undo of "keep this one" after the database's 10-second window (R7)
 export const UNDO_DUPLICATE_TOO_LATE = 'Too late to undo here. Ask an admin to restore the copy from Removed.';
@@ -664,7 +666,7 @@ export const undoPaymentBody = (cents, method, iso) =>
   `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to Not paid. Both stay in the history.`;
 export const KEEP_PAYMENT = 'Keep payment';
 export const UNDOING = 'Undoing…';
-export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // Star's Q2 B
+export const UNDO_BOX_FAILED = "Undo didn't save. Check the connection, then retry."; // pass 2 C-06 (b), v1.045 (4) / v1.055 (j2)
 // CB2, Print receipt (the receipt's own lines: src/lib/testing/receipt.js)
 export const PRINT_RECEIPT = 'Print receipt';
 export const THIS_STUDENT = 'This student'; // the receipt's not-found line when the row is gone too
@@ -1056,7 +1058,7 @@ export const movedFromLine = (eventName) => `Moved from ${eventName}`;
 export const cancelledTag = (stamp) => `Cancelled ${stampDay(stamp)}`;
 export const NO_PRIVATE_TESTINGS = 'No private testings yet. Add one when a family asks to test privately.';
 export const NO_UPCOMING_PRIVATE = 'No upcoming private testings.'; // CP1
-export const NO_PAST_PRIVATE = 'No past private testings.'; // CP1
+export const NO_PAST_PRIVATE = 'No past private testings yet.'; // CP1; pass 2 C-05 (c)
 export const LOADING_PRIVATE = 'Loading private testings'; // screen readers only, while the list loads
 export const PRIVATE_SWITCH_LABEL = 'Upcoming or past private testings'; // screen readers only: the Upcoming / Past switch
 export const LOAD_PRIVATE_FAILED = 'Couldn’t load private testings. Check the connection, then retry.'; // CP1
