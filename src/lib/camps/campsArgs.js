@@ -120,3 +120,47 @@ export function templateArgs(input = {}) {
     p_waiver_text: input.waiverText,
   };
 }
+
+// ----- Fill in (migration 0043, CONTRACT-0043, rulebook v0.740 / v0.741) -----
+
+// camp_staff_signup's arguments from the family page's own POST body (src/camp/form.js buildBody):
+// the camp by id; the honeypot, timing and Turnstile fields are not sent (the staff path has none).
+export function staffSignupArgs(campId, body = {}) {
+  const parent = body.parent ?? {};
+  const emergency = body.emergency ?? {};
+  return {
+    p_camp_id: campId,
+    p_submission_id: body.submission_id,
+    p_children: body.children,
+    p_parent_name: parent.name,
+    p_parent_phone: parent.phone,
+    p_parent_relation: parent.relation,
+    p_emergency_name: emergency.name,
+    p_emergency_phone: emergency.phone,
+    p_emergency_relation: emergency.relation,
+    p_paying_by: body.paying_by,
+    p_acknowledged: body.acknowledged,
+    p_signature: body.signature,
+    p_ack_version: body.ack_version,
+    p_waiver_version: body.waiver_version,
+    p_expected_total_cents: body.expected_total_cents,
+  };
+}
+
+// Is a camelCase camp_staff_form ok answer usable? (0043: the family page's GET answer, flat, plus
+// fillIn / signupState / closesOn / closedByHand.)
+export const staffFormShapeOk = (d) => Boolean(d?.camp && Array.isArray(d.camp.days)
+  && ['open', 'admin_only', 'finished'].includes(d.fillIn) && typeof d.waiverVersion === 'string');
+
+// Is a camelCase camp_staff_signup ok answer usable? (the family form's ok answer)
+export const staffSignupShapeOk = (d) => typeof d?.reference === 'string' && d.reference !== ''
+  && Number.isInteger(d.familyTotalCents) && Array.isArray(d.children);
+
+// Where a camper's sign-up came from, from a camelCase camp_camper_detail ok answer (0043 adds
+// source and entered_by at the answer's top level): { source: 'form' | 'desk', enteredBy }. A
+// database from before 0043 sends neither → 'form' (every sign-up was the family form's then).
+export function signupSourceOf(detail) {
+  const source = detail?.source === 'desk' ? 'desk' : 'form';
+  const name = detail?.enteredBy;
+  return { source, enteredBy: source === 'desk' && typeof name === 'string' && name.trim() !== '' ? name : null };
+}

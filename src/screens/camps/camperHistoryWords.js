@@ -16,7 +16,9 @@
 //   2. describeCamperBatch(batch, { hidden, campDays, campExtras, familySize }) — the shared
 //      line's `describe`: { text, at, who }, { hiddenPayment: true } or null (nothing to say).
 //      - The sign-up save is one line, "Signed up on the family form · CP-4409" (its days and
-//        extras are part of signing up, not changes).
+//        extras are part of signing up, not changes). A desk sign-up (Fill in, migration 0043,
+//        rulebook v0.741) says "Signed up (entered by Jeffrey Berg) · CP-4821" and its "who" is
+//        that staff member (the log's actor).
 //      - The parts of one save are joined with "; ", in this order: payments, Paying by, name /
 //        age / member, days, extras, withdrawn / restored / duplicates, the family part.
 //      - The family part (the sign-up, shared by brothers and sisters) ends "(whole family)" when
@@ -118,7 +120,9 @@ function partsOf(batch, { campDays = [], campExtras = [] }) {
   if (isInsert('camp_campers') || isInsert('camp_signups')) {
     const signup = rows.find((r) => r.tableName === 'camp_signups' && r.op === 'insert');
     const camper = rows.find((r) => r.tableName === 'camp_campers' && r.op === 'insert');
-    const parts = [{ text: T.historySignedUp(signup?.after?.reference ?? null) }];
+    // A desk sign-up (Fill in, migration 0043): its sign-up row says source 'desk' and who entered it.
+    const enteredBy = signup?.after?.source === 'desk' && typeof signup.after.enteredBy === 'string' && signup.after.enteredBy !== '' ? signup.after.enteredBy : null;
+    const parts = [{ text: T.historySignedUp(signup?.after?.reference ?? null, enteredBy) }];
     if (camper?.after?.duplicateState === 'possible') parts.push({ text: T.HISTORY_DUPLICATE_FOUND });
     return parts;
   }

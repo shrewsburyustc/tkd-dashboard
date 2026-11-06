@@ -2624,6 +2624,11 @@ begin
     v_staff_fns  := v_staff_fns || array['camp_camper_history'];
     v_helper_fns := v_helper_fns || array['camp_history_strip', 'camp_campers_keep_form_choice'];
   end if;
+  --       (changed by 0043, rulebook v0.740 / v0.741: after 0043 Fill in's
+  --       two functions are staff functions)
+  if to_regprocedure('public.camp_staff_form(uuid)') is not null then
+    v_staff_fns  := v_staff_fns || array['camp_staff_form', 'camp_staff_signup'];
+  end if;
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and (p.proname like 'camp\_%' or p.proname like 'camps\_%')

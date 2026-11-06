@@ -1,0 +1,20 @@
+{
+  "title": "Camps — Fill in: can staff use it after family sign-up has closed?",
+  "subtitle": "The camp page of a camp whose family sign-up is <b>Closed</b> (Veterans Day Camp), PC 1280. Fill in sits next to Registration link (on phones it is in the header ⋯). By default a camp's family sign-up closes the <b>day before the first day</b>, so a family that walks in on the first camp morning is after the closing date. Families online are not affected by this choice: their form stays closed either way. Amber = the part this choice decides.",
+  "width": 1900,
+  "columns": [
+    { "label": "A · only while sign-up is open", "tone": "after", "items": [
+      { "src": "shots/x4-fillin-closed-a.png", "crop": [480, 100, 790, 130], "scale": 0.75, "marks": [[998, 130, 64, 32], [762, 170, 300, 52]],
+        "caption": "<b>A.</b> Fill in works only while family sign-up is open. Closed: Fill in is gray; its tip says to open sign-up first. <b>Problem:</b> opening sign-up opens it for every family online too, and after the closing date only an admin can open it." }
+    ] },
+    { "label": "B · until the camp's last day (recommended)", "tone": "after", "items": [
+      { "src": "shots/x4-fillin-closed-b.png", "crop": [480, 100, 790, 130], "scale": 0.75, "marks": [[998, 130, 64, 32]],
+        "caption": "<b>B.</b> Staff and admins can Fill in any time until the camp's last day is over, even when family sign-up is closed (closed by hand or past the closing date). The online form stays closed. After the last day, Fill in is gray: “This camp is over.” <b>Pros:</b> a walk-in on a camp morning is signed up in a minute, by whoever is at the desk. <b>Con:</b> staff can add campers after you closed sign-up on purpose (e.g. the camp is full)." }
+    ] },
+    { "label": "C · after closing, admins only", "tone": "after", "items": [
+      { "src": "shots/x4-fillin-closed-c.png", "crop": [480, 100, 790, 130], "scale": 0.75, "marks": [[998, 130, 64, 32], [762, 170, 300, 52]],
+        "caption": "<b>C.</b> Like B, but once family sign-up is closed, only admins can Fill in. Staff see Fill in gray: “The closing date has passed. Ask an admin to fill in for a family.” (the same idea as staff not reopening sign-up after the closing date, v0.725). <b>Pro:</b> you keep control of late adds. <b>Con:</b> a walk-in waits until an admin is there." }
+    ] }
+  ],
+  "footer": "Everything else about Fill in is the same in A, B and C (same form, same prices for today's date, same waiver and signature, duplicate check, “Entered by” you). The screens of Fill in itself come in the next picture. <br><br><b>Recommendation: B</b> — the closing date exists for families online; the desk sees the child in front of them and can decide. If you sometimes close sign-up because a camp is full, pick C. <br><br><b>Your choice:</b> A, B or C?"
+}
