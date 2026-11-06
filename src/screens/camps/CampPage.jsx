@@ -24,7 +24,14 @@
 // permanent ones ask first (rule 1.4), and so does Undo payment (rulebook v0.730). Staff and admins see different ⋯ items
 // (CamperRowMenu.jsx); the database enforces the same rules.
 //
-// There is no Add camper button: campers only come in through the family form (C4).
+// Campers come in through the family form, and — for a family that walks in — through Fill in
+// (rulebook v0.740 / v0.741, picture 23; it replaced v0.232's "no Add camper"): a plain "Fill in"
+// button before Registration link on PC / tablet, "Fill in for a family" first in the header ⋯ on
+// phones. It opens the camp's own family form in New students' Fill in frame (FillInDialog.jsx).
+// Gray (aria-disabled, still focusable, pressing does nothing) with a tip saying why: for staff
+// while family sign-up isn't open ("Family sign-up is closed. Ask an admin …" / "The closing date
+// has passed. Ask an admin …"), for everyone after the camp's last day ("This camp is over.") and
+// while Hide private details is on (desk-only, Forms' v0.616 words).
 //
 // "Hide private details" (the top-bar switch, src/lib/privateDetails.js; rulebook v0.722, design
 // review C1) — copied from Color Belt's built event page (v0.412). While it is on, Camps hides
@@ -47,7 +54,7 @@
 // parts (components/ConfirmBox.jsx, components/CompareDialog.jsx; rulebook v0.729, design review
 // C6 / C20). This page keeps their state, words and rows (duplicates.js) and does the writes.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowBackUp, IconArrowLeft, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
+import { IconArrowBackUp, IconArrowLeft, IconCurrencyDollarOff, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
 import CompareDialog from '../../components/CompareDialog.jsx';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
 import RegistrationLinkBox from '../../components/RegistrationLinkBox.jsx';
@@ -85,6 +92,7 @@ import { camperMenuItems } from './CamperRowMenu.jsx';
 import { useCampActions } from './CampRowMenu.jsx';
 import { compareRows, findPairs } from './duplicates.js';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
+import { closedWords, useCampFillIn } from './FillInDialog.jsx';
 import { focusSoon } from './focusSoon.js';
 import { useRevealRetryBar } from './revealRetryBar.js';
 import * as T from './text.js';
@@ -231,6 +239,21 @@ export default function CampPage({
     onDeleted: () => onBack({ replace: true }),
   });
 
+  // Fill in (v0.740 / v0.741): the dialog and its typed answers live in this hook, so a screen lock
+  // loses nothing. A Send that saved reloads the roster at once (and again on Close).
+  const fill = useCampFillIn({
+    campId,
+    campName: camp?.name ?? '',
+    isAdmin,
+    isPhone,
+    screenLocked,
+    today,
+    onNoAccess,
+    onRefreshProfile,
+    onSent: () => reloadQuiet(),
+  });
+  const [fillTipOpen, setFillTipOpen] = useState(false); // a gray Fill in's tip after a tap (touch screens have no hover)
+
   // A failed read's amber bar (Undo payment, Edit payment, Delete permanently, Delete camp; S-2)
   // is drawn right under the page's head, maybe far above where the person is scrolled: bring it
   // into view and focus its Retry. barRef = the Camps-owned wrapper around the page's bar.
@@ -241,7 +264,7 @@ export default function CampPage({
   useEffect(() => {
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
-  const modalShown = (dialog !== null || receipt !== null || actions.dialogOpen) && !screenLocked;
+  const modalShown = (dialog !== null || receipt !== null || actions.dialogOpen || fill.isOpen) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -330,6 +353,25 @@ export default function CampPage({
   const weeks = campWeeks(days);
   const weekIndex = chosenWeek !== null && chosenWeek < weeks.length ? chosenWeek : defaultWeekIndex(weeks, today);
   const state = camp ? signupState(camp, days, today) : null;
+  // Why Fill in is gray right now (null = it can be used; v0.740 C, v0.741): after the last day for
+  // everyone; while Hide private details is on, desk-only (as Forms, v0.616); for staff while
+  // family sign-up isn't open. Admins may fill in while it's closed. (The database checks again.)
+  const fillInBlocked = !camp ? T.FILL_IN_LOADING
+    : state === 'finished' ? T.FILL_IN_FINISHED
+      : detailsHidden ? T.FILL_IN_AT_DESK
+        : state !== 'open' && !isAdmin ? closedWords(state, camp.signupClosesOn, today)
+          : null;
+  const fillInDeskOnly = fillInBlocked === T.FILL_IN_AT_DESK; // gray because private details are hidden
+  function openFillIn(opener) {
+    if (fillInBlocked) {
+      setFillTipOpen(true); // touch screens: a tap shows the tip (a mouse shows it on hover)
+      return;
+    }
+    clearToast();
+    setMenu(null);
+    setFillTipOpen(false);
+    fill.open(opener);
+  }
 
   // ===== Dialogs =====
   function openDialog(next) {
@@ -852,6 +894,8 @@ export default function CampPage({
           onEdit: (c, anchor) => openDialog({ type: 'editCamp', opener: anchor }),
           anchor: menu.anchor,
           onPrint: () => actions.printLoaded(data),
+          // Phones: "Fill in for a family" first (v0.741); PC / tablet have the header button instead.
+          fillIn: isPhone ? { reason: fillInBlocked, onSelect: () => openFillIn(menu.anchor) } : null,
         }),
       };
     }
@@ -1208,6 +1252,28 @@ export default function CampPage({
           <p className="ev-summary">{T.campSummaryLine(camp, days.map((d) => d.day), active.length)}</p>
         </div>
         <div className="ev-head-buttons">
+          {/* Fill in (v0.741): a plain button before Registration link. Gray with a tip when it can't
+              be used (aria-disabled, still a Tab stop; pressing does nothing but show the tip). */}
+          {/* Desk-only (Hide private details on): no tip — the gray line under the title says why,
+              as Forms (v0.616), and the button points at it. */}
+          <span className={`cp-fill${fillTipOpen && fillInBlocked && !fillInDeskOnly ? ' is-tip-open' : ''}`}>
+            <button
+              type="button"
+              className={`btn${fillInBlocked ? ' is-unavailable' : ''}`}
+              data-camp-fill-in
+              aria-disabled={fillInBlocked ? 'true' : undefined}
+              aria-describedby={fillInDeskOnly ? 'cp-fill-at-desk' : fillInBlocked ? 'cp-fill-tip' : undefined}
+              onClick={(event) => openFillIn(event.currentTarget)}
+              onBlur={() => setFillTipOpen(false)}
+            >
+              {T.FILL_IN}
+            </button>
+            {fillInBlocked && !fillInDeskOnly && (
+              <span className="cp-fill-tip" id="cp-fill-tip" role="tooltip">
+                {fillInBlocked}
+              </span>
+            )}
+          </span>
           <button type="button" className="btn btn-primary" data-camp-link onClick={(event) => openDialog({ type: 'link', opener: event.currentTarget })}>
             {/* ti-qrcode = registration link / QR code */}
             <IconQrcode size={16} aria-hidden="true" />
@@ -1222,6 +1288,15 @@ export default function CampPage({
           />
         </div>
       </div>
+      )}
+      {/* Hide private details on (PC / tablet): Forms' gray desk-only line under the title (v0.616,
+          v0.741). Phones say it as the reason line of "Fill in for a family" in the header ⋯. */}
+      {!isPhone && fillInDeskOnly && (
+        <p className="phidden-line pdesk-line" id="cp-fill-at-desk">
+          {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
+          <IconCurrencyDollarOff size={16} aria-hidden="true" />
+          {T.FILL_IN_AT_DESK}
+        </p>
       )}
 
       {/* The wrapper only lets useRevealRetryBar find this page's bar. display: contents
@@ -1283,6 +1358,7 @@ export default function CampPage({
       {dialogElement}
       {receiptElement}
       {actions.elements}
+      {fill.element}
     </>
   );
 }

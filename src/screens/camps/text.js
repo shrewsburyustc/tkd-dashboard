@@ -724,7 +724,16 @@ export const overpaidAmber = (cents) => `Paid ${formatMoney(cents)} more than th
 export const OVERPAID_ADMIN = 'An admin can change the payment from the roster’s ⋯ → Edit payment if money is handed back.';
 export const owesLine = (total, paid, owes) => `Total now ${formatMoney(total)} · paid ${formatMoney(paid)} · owes ${formatMoney(owes)}`; // (not in the mockups)
 export const contactLine = (name, relation, phone) => `${name} · ${relation} · ${phone}`;
-export function signupLine(row) {
+// Camper detail's Sign-up line. `from` = { source, enteredBy } from camp_camper_detail (migration
+// 0043): a desk sign-up (Fill in, v0.741) says "Signed up at the desk by Jeffrey Berg, Nov 5, 2026 ·
+// waiver signed on the screen · reference CP-4821"; a family one keeps its words. Left out (or a
+// desk sign-up without a name) → the family words.
+export function signupLine(row, from = null) {
+  const desk = from?.source === 'desk' && from.enteredBy;
+  if (desk) {
+    const signed = row.signatureDeletedAt ? 'signature deleted after 3 years' : 'waiver signed on the screen';
+    return `Signed up at the desk by ${from.enteredBy}, ${monthDayYear(row.signedUpOn)} · ${signed} · reference ${row.reference}`;
+  }
   const signed = row.signatureDeletedAt ? 'signature deleted after 3 years' : 'waiver signed on the form';
   return `Signed up on the family form, ${monthDayYear(row.signedUpOn)} · ${signed} · reference ${row.reference}`;
 }
@@ -810,7 +819,10 @@ export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../lib/private
 // (screens/camps/camperHistoryWords.js puts them together).
 export const HISTORY_STAFF = 'Staff'; // the "who" when the log has no name (Star's word)
 export const HISTORY_JOIN = '; ';
-export const historySignedUp = (reference) => `Signed up on the family form${reference ? ` · ${reference}` : ''}`;
+// The sign-up save. A desk sign-up (Fill in, migration 0043, v0.741) names who filled it in:
+// "Signed up (entered by Jeffrey Berg) · CP-4821"; a family one keeps "Signed up on the family form · CP-4409".
+export const historySignedUp = (reference, enteredBy = null) =>
+  `${enteredBy ? `Signed up (entered by ${enteredBy})` : 'Signed up on the family form'}${reference ? ` · ${reference}` : ''}`;
 export const historyChange = (label, before, after) => `${label}: ${before} → ${after}`;
 export const HISTORY_EMPTY_VALUE = '—'; // a value that was blank (not in v0.736)
 export const HISTORY_DAYS = 'Days';
@@ -842,3 +854,47 @@ export const HISTORY_EMERGENCY_PHONE = 'Emergency contact phone';
 export const HISTORY_EMERGENCY_RELATION = 'Emergency contact relationship'; // (not in v0.736)
 export const HISTORY_SIGNATURE_DELETED = 'Signature deleted (3 years after the camp)';
 export const HISTORY_WHOLE_FAMILY = ' (whole family)';
+
+// ----- Fill in: staff sign up a walk-in family at the desk (rulebook v0.740 / v0.741, picture 23) -----
+// The frame and its words are New students' Fill in (src/screens/forms/text.js, v0.235 / v0.243 (5));
+// inside it is the camp's own family form (src/camp/), with the family page's own words.
+export const FILL_IN = 'Fill in'; // the PC / tablet header button
+export const FILL_IN_ITEM = 'Fill in for a family'; // the phone header ⋯ item (first)
+export const fillInTitle = (campName) => `Fill in · ${campName}`;
+export const FILL_IN_ENTERED_BY = 'You are filling this in for a family. It will be marked "Entered by" you.';
+export const fillInStep = (n, label) => `Step ${n} of 2 · ${label}`;
+export const FILL_IN_STEP_DETAILS = 'Details';
+export const FILL_IN_STEP_CHECK = 'Check and sign';
+// Why Fill in is gray (the button's tip, the ⋯ item's reason line, and the dialog's note when a Send is refused)
+export const FILL_IN_CLOSED_STAFF = 'Family sign-up is closed. Ask an admin to fill in for a family.';
+export const FILL_IN_PAST_CLOSING_STAFF = 'The closing date has passed. Ask an admin to fill in for a family.';
+export const FILL_IN_FINISHED = 'This camp is over.';
+// While Hide private details is on (desk-only, as Forms' v0.616 — the same words)
+export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answers are hidden on this tablet.';
+// At the desk the parent signs on the screen in front of staff: New students' hint, not the family's
+// "Can't sign here? Please sign at the front desk."
+export const FILL_IN_SIGNATURE_HINT = 'Sign with a finger, pen or mouse.';
+export const FILL_IN_CANCEL = 'Cancel';
+export const FILL_IN_BACK = 'Back';
+export const FILL_IN_CONTINUE = 'Continue';
+export const FILL_IN_SEND = 'Send';
+export const FILL_IN_SENDING = 'Sending…';
+export const FILL_IN_CLOSE = 'Close';
+export const FILL_IN_LOADING = 'Loading…';
+// The Sent screen (New students' Sent with the family page's own reference and total words)
+export const FILL_IN_SENT_TITLE = 'Sent';
+export const fillInSentText = (parent) => `${parent}'s sign-up is saved.`;
+export const fillInReference = (reference) => `Reference ${reference}`;
+// "Total to pay $180 · Cash, at the front desk, before Wed, Nov 25"
+export const fillInTotal = (amount, way, firstDay) => `Total to pay ${amount} · ${way}, at the front desk, before ${firstDay}`;
+export const FILL_IN_ANOTHER = 'Fill in another';
+// The unsaved-changes guard (v0.627, New students' words); phones have no Cancel, so their note
+// points at its own "Discard changes" link
+export const FILL_IN_LEAVE = 'This sign-up isn\'t sent yet. Send it or press Cancel to throw it away.';
+export const FILL_IN_LEAVE_PHONE = 'This sign-up isn\'t sent yet. Send it or discard it.';
+export const FILL_IN_DISCARD = 'Discard changes';
+// When a Send or the first read fails (not in the mockups; New students' words where they exist)
+export const FILL_IN_SEND_FAILED = "It wasn't sent. Check the connection and press Send again (it won't be saved twice).";
+export const FILL_IN_SEND_INVALID = 'Some answers were refused. Check them and send again.';
+export const FILL_IN_LOAD_FAILED = "Couldn't load this camp's form. Check the connection, then retry."; // (not in the mockups)
+export const FILL_IN_CAMP_GONE = 'This camp was deleted, so nothing was saved.'; // (not in the mockups)

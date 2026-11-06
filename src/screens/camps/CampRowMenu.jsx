@@ -5,7 +5,8 @@
 // means the two can never drift apart.
 //
 // The items, in the approved order (one order for every event list's ⋯: Close / Open, then
-// Edit, then the rest — design review S-8, rulebook v1.047; it was Edit first, C1 / Star v0.92):
+// Edit, then the rest — design review S-8, rulebook v1.047; it was Edit first, C1 / Star v0.92).
+// On the camp page's header ⋯ on phones, "Fill in for a family" comes before all of them (v0.741).
 //   Close sign-up / Open sign-up     (no icon; Close is hidden while Not open yet; nothing once
 //                                     the camp is over; staff can't Open after the closing
 //                                     date — grayed, with "The closing date has passed. Ask an
@@ -235,9 +236,27 @@ export function useCampActions({
 
   // ----- The menu items -----
   // includeEdit: true on phones (rows have no pencil there) and in the camp page's header.
-  function items(camp, days, { includeEdit = false, onEdit = null, anchor = null, onPrint = null } = {}) {
+  // fillIn: only the camp page's header on phones (v0.741) — { reason, onSelect }; "Fill in for a
+  // family" comes first, gray with its reason line when reason is set (as Open sign-up's below).
+  function items(camp, days, { includeEdit = false, onEdit = null, anchor = null, onPrint = null, fillIn = null } = {}) {
     const state = signupState(camp, days, today);
     const list = [];
+    if (fillIn) {
+      list.push({
+        key: 'fillIn',
+        label: fillIn.reason ? (
+          <span className="ev-menu-two">
+            <span>{T.FILL_IN_ITEM}</span>
+            <span className="ev-menu-reason">{fillIn.reason}</span>
+          </span>
+        ) : (
+          T.FILL_IN_ITEM
+        ),
+        Icon: NoIcon,
+        disabled: Boolean(fillIn.reason),
+        onSelect: fillIn.onSelect,
+      });
+    }
     if (state === 'open') {
       list.push({ key: 'close', label: T.CLOSE_SIGNUP, Icon: NoIcon, disabled: busy, onSelect: () => switchSignup(camp, days, false) });
     } else if (state === 'closed') {
