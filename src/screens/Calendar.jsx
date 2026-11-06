@@ -464,7 +464,9 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
     const d = dialogRef.current;
     if (!d || d.saving) return;
     if (stepName === 'list') {
-      patchDialog({ step: 'list', typeId: null, note: null, blocked: false, touched: {} });
+      // back on the list, focus goes to the row it came from (or "+ Add type" after Add), not the
+      // first row (pass 1 step 1b; as Star's signature link, G5): `from` is read by the list step
+      patchDialog({ step: 'list', typeId: null, from: d.step === 'add' ? 'add' : d.typeId, note: null, blocked: false, touched: {} });
       return;
     }
     if (stepName === 'add') {
@@ -514,7 +516,8 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
       return;
     }
     await reloadQuiet();
-    patchDialog({ saving: false, step: 'list', typeId: null, touched: {} });
+    // back on the list with focus on the type just saved (a new one by its new id)
+    patchDialog({ saving: false, step: 'list', typeId: null, from: d.step === 'add' ? result.id ?? 'add' : d.typeId, touched: {} });
     showToast(d.step === 'add' ? T.TOAST_TYPE_ADDED : T.TOAST_TYPE_SAVED, { icon: false });
   }
 
@@ -544,14 +547,14 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
     endWrite(result.status);
     if (result.status === 'ok') {
       await reloadQuiet();
-      patchDialog({ saving: false, step: 'list', typeId: null, moveTo: null });
+      patchDialog({ saving: false, step: 'list', typeId: null, from: null, moveTo: null });
       showToast(T.toastTypeDeleted(d.snapshot.name), { icon: false }); // no Undo: permanent
     } else if (result.status === 'no_access') {
       patchDialog({ saving: false });
       onNoAccess();
     } else if (['stale', 'not_found', 'not_allowed', 'invalid'].includes(result.status)) {
       await reloadQuiet();
-      patchDialog({ saving: false, step: 'list', typeId: null, note: 'STALE_DIALOG' });
+      patchDialog({ saving: false, step: 'list', typeId: null, from: null, note: 'STALE_DIALOG' });
     } else {
       patchDialog({ saving: false, note: 'DELETE_FAILED' });
     }

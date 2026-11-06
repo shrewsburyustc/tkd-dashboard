@@ -10,6 +10,7 @@
 //     Children who signed up before last names were asked keep the parent's last initial
 //     ("Ava R.", v0.245). Never the parent's full name, phone, age or date of birth.
 // Dates are 'YYYY-MM-DD' text (Massachusetts dates).
+import { freeClassState } from './child.js';
 
 const FINISHED = ['joined', 'not_interested'];
 
@@ -41,7 +42,7 @@ export function isDueToday(p, builtin, today) {
   if (isFinished(builtin)) return false;
   const followUp = openFollowUpOn(p, builtin);
   return Boolean(followUp && followUp <= today) || builtin === 'new' || p.askCame
-    || Boolean(p.booking && p.booking.status === 'booked' && !p.booking.classRunning);
+    || freeClassState(p.booking) === 'class_gone'; // a class a closure cancelled: call the family (P-01's one rule)
 }
 
 // For the Calendar: one school's prospect list → only the open follow-ups, with only what the

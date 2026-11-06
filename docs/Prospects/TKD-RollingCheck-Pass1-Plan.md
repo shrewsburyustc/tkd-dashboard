@@ -14,6 +14,20 @@ No database change in steps 1–6. Step 7 is the 0036 clean-up migration, **0040
 - **Picture:** the trash icons before / after.
 - **Files:** `src/styles/forms-public.css`, a new `src/styles/icon-button-public.css`, `src/forms/main.jsx`, `src/screens/kiosk/KioskApp.jsx`.
 
+### Step 1b — Focus when a dialog changes step (found by Camps' review, relayed by Main 2026-11-05)
+- **Found:**
+  - After Send in Fill in, focus falls to the page instead of the Sent screen's Close. Esc then does nothing, and the first Tab lands on "Fill in another" (WCAG 2.4.3). Prospects' "+ Add prospect" uses the same dialog.
+  - ~~Prospects' Edit statuses and the Calendar's Event types have the same problem.~~ **Corrected 2026-11-06:** they already move focus when the step changes (the 2026-11-05 test ran in a hidden pane, where animation frames don't run). Their real gap: back on the list, focus goes to the first row, not the one you came from.
+  - Jeffrey 2026-11-06: "Focus fix first" (before the Calendar plan).
+- **Why:** each is one dialog whose steps are drawn in the same place, so React keeps the dialog open instead of opening it fresh. The dialog moves focus only when it opens, and the button that had focus is gone.
+- **Change:** each step's dialog gets its own key, so it opens fresh and focus goes where the step marks it (`data-autofocus`):
+  - Fill in's Sent screen → Close;
+  - a status's or type's step → its Name box;
+  - back to the list → the row you came from, as Star's signature link does (G5).
+  - Black Belt does this already (`blackBelt/staff/cycle/CyclePage.jsx`), and Camps is fixing its copy of Fill in the same way.
+- **No picture:** nothing changes on screen. Checks: the keyboard at the four sizes in the preview, then a code review.
+- **Files:** `forms/FillInDialog.jsx`, `prospects/StatusesDialog.jsx`, `Prospects.jsx`, `calendar/EventTypesDialog.jsx`, `Calendar.jsx`.
+
 ### Step 2 — Retry when a save or an Undo fails (R2-01, High)
 - **Today:** in Forms, a failed Close / Open form, its Undo, or Duplicate shows "Your last change wasn't saved … it will try again with your next change." Nothing ever tries again (the form can stay Closed). In Prospects, a failed save shows a bar with no Retry, and a failed Undo can't be retried at all.
 - **Change:** each bar gets **Retry**, which repeats the same call (as Calendar, Schedule, Camps, Star and Black Belt do). This covers the Forms list, the builder, the Prospects page and the profile window's own bar.
