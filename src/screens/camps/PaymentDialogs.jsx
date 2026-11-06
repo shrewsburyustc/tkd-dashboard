@@ -5,11 +5,18 @@
 //                     admins). Mark paid then records that method.
 //   EditPaymentDialog "Edit payment" (admins) — fix a recorded payment's method, amount or date.
 //                     The database keeps the old one (a reversal + a new payment, §1.14).
-// The differences from Color Belt: a camper can cost up to $10,000 (not $1,000; weekly pricing v0.717, was $2,000), and the values
-// live in the dialog itself (the camp page passes what it needs and gets the answer back).
+// The differences from Color Belt: a camper can cost up to $10,000 (not $1,000; weekly pricing
+// v0.717, was $2,000), and the camp page passes what each dialog needs and gets the answer back.
+// What was typed (the form: values, touched fields, the note, "saving") lives in the CAMP PAGE's
+// dialog state and changes through `onForm`, not inside the dialog: locking the screen stops drawing
+// a dialog until the PIN, and its own state would start over (Star's CandidatesTab keeps its
+// dialogs' values the same way). payingByForm() / editPaymentForm() make each one's start.
 // Small centered dialogs; full screen on phones. Date paid uses the dashboard's own calendar
 // (Star's shared DatePicker, rulebook v0.727 / design review C13), not the browser's date box.
-import { useId, useState } from 'react';
+// Record refund (RefundDialog.jsx, rulebook v0.743) ends with the same Footer and notes, so Footer,
+// noteFor and isBlockingNote are shared from here. While a refund stands the database refuses Edit
+// payment ('refund_stands'): its note says "Undo the refund first.".
+import { useId } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
@@ -26,19 +33,25 @@ const NOTES = {
   SAVE_FAILED: T.SAVE_FAILED,
   ALREADY_PAID: T.ALREADY_PAID_DIALOG,
   SCHOOL: T.SCHOOL_REFUSED,
+  REFUND_STANDS: T.UNDO_REFUND_FIRST, // Edit payment while a refund stands (someone recorded one meanwhile)
+  NOTHING_OVERPAID: T.NOTHING_OVERPAID, // Record refund when nothing is overpaid any more (Star's words)
 };
-const BLOCKING = ['STALE_DIALOG', 'NOT_ALLOWED', 'ALREADY_PAID'];
-const PHONE_DISCARD = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED'];
+// Notes that saving again can't fix: Save grays until the dialog is closed.
+const BLOCKING = ['STALE_DIALOG', 'NOT_ALLOWED', 'ALREADY_PAID', 'REFUND_STANDS', 'NOTHING_OVERPAID'];
+const PHONE_DISCARD = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED', 'REFUND_STANDS', 'NOTHING_OVERPAID'];
 
 // The database status of a failed save → which note shows.
 export function noteFor(status) {
   if (status === 'not_allowed') return 'NOT_ALLOWED';
   if (status === 'stale' || status === 'not_found' || status === 'withdrawn') return 'STALE_DIALOG';
   if (status === 'already_paid') return 'ALREADY_PAID';
+  if (status === 'refund_stands') return 'REFUND_STANDS'; // migration 0039
   if (status === 'invalid_school') return 'SCHOOL'; // { status:'invalid', field:'school' } (review L4)
   if (status === 'invalid') return 'INVALID_DIALOG';
   return 'SAVE_FAILED';
 }
+// Is this note one that saving again can't fix? (Record refund's dialog asks too.)
+export const isBlockingNote = (note) => BLOCKING.includes(note);
 
 // Reads a payment amount: whole dollars, $1 to $10,000 (Color Belt's money rule, camp limit).
 function parseAmount(text) {
@@ -55,7 +68,9 @@ function parseAmount(text) {
   return { cents: dollars * 100 };
 }
 
-function Footer({ saving, note, isPhone, canSave, onCancel }) {
+// The bottom of these dialogs: Cancel and Save, with the amber note under them (phones: the note,
+// then a full-width Save; a "Discard changes" link inside the note is the way out there).
+export function Footer({ saving, note, isPhone, canSave, onCancel }) {
   const saveButton = (
     <button type="submit" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${canSave ? '' : ' is-unavailable'}`} aria-disabled={canSave ? undefined : 'true'}>
       <IconCheck size={16} aria-hidden="true" />
@@ -96,12 +111,13 @@ function Footer({ saving, note, isPhone, canSave, onCancel }) {
 }
 
 // ----- Change how they'll pay -----
+// The form's start (the camp page keeps it): the camper's Paying by now.
+export const payingByForm = (initial) => ({ payingBy: initial, saving: false, note: null });
+// form / onForm: the camp page's copy of what was picked (see the top of this file).
 // onSave(payingBy) → Promise<status>; the page shows the toast and reloads on 'ok'.
-export function PayingByDialog({ name, initial, isPhone, onSave, onClose }) {
+export function PayingByDialog({ name, initial, isPhone, form, onForm, onSave, onClose }) {
   const idBase = useId();
-  const [payingBy, setPayingBy] = useState(initial);
-  const [saving, setSaving] = useState(false);
-  const [note, setNote] = useState(null);
+  const { payingBy, saving, note } = form;
   const blocked = BLOCKING.includes(note);
   const canSave = !saving && !blocked;
 
@@ -112,16 +128,15 @@ export function PayingByDialog({ name, initial, isPhone, onSave, onClose }) {
       onClose();
       return;
     }
-    setSaving(true);
-    setNote(null);
+    onForm({ saving: true, note: null });
     const status = await onSave(payingBy);
-    setSaving(false);
-    if (status !== 'ok' && status !== 'no_access') setNote(noteFor(status));
+    // (After 'ok' the page has closed the dialog: onForm then changes nothing.)
+    onForm(status !== 'ok' && status !== 'no_access' ? { saving: false, note: noteFor(status) } : { saving: false });
   }
   function requestClose() {
     if (saving) return;
     if (payingBy === initial || blocked) onClose();
-    else setNote('UNSAVED');
+    else onForm({ note: 'UNSAVED' });
   }
 
   return (
@@ -139,10 +154,7 @@ export function PayingByDialog({ name, initial, isPhone, onSave, onClose }) {
               value={payingBy}
               readOnly={saving}
               options={PAYING_BY.map((key) => ({ key, label: T.payingByText(key) }))}
-              onChange={(next) => {
-                setPayingBy(next);
-                if (note && !BLOCKING.includes(note)) setNote(null);
-              }}
+              onChange={(next) => onForm((f) => ({ payingBy: next, note: f.note && !BLOCKING.includes(f.note) ? null : f.note }))}
             />
           </div>
         </div>
@@ -153,17 +165,20 @@ export function PayingByDialog({ name, initial, isPhone, onSave, onClose }) {
 }
 
 // ----- Edit payment (admins) -----
+// The form's start (the camp page keeps it): the payment as recorded.
+//   values / start  { method, amount (as typed), paidOn, school }   touched, tried (Save was pressed)
+//   saving, note    the note under the buttons (a code of NOTES above)
+export function editPaymentForm(payment) {
+  const start = { method: payment.method, amount: String(payment.amountCents / 100), paidOn: payment.paidOn, school: payment.school ?? null };
+  return { start, values: start, touched: {}, tried: false, saving: false, note: null };
+}
 // payment: { id, method, amountCents, paidOn, school } · today: the newest allowed date
+// form / onForm: the camp page's copy of what was typed (see the top of this file)
 // onSave({ method, amountCents, paidOn, school }) → Promise<status>
 // "Paid at" (v0.707): the school whose Daily report has the payment — it can be corrected here.
-export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClose }) {
+export function EditPaymentDialog({ name, payment, today, isPhone, form, onForm, onSave, onClose }) {
   const idBase = useId();
-  const start = { method: payment.method, amount: String(payment.amountCents / 100), paidOn: payment.paidOn, school: payment.school ?? null };
-  const [values, setValues] = useState(start);
-  const [touched, setTouched] = useState({});
-  const [tried, setTried] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [note, setNote] = useState(null);
+  const { start, values, touched, tried, saving, note } = form;
   const blocked = BLOCKING.includes(note);
   const dirty = values.method !== start.method || values.amount !== start.amount || values.paidOn !== start.paidOn || values.school !== start.school;
 
@@ -179,28 +194,29 @@ export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClo
   const canSave = valid && !saving && !blocked;
 
   function change(patch, field) {
-    setValues((current) => ({ ...current, ...patch }));
-    if (field) setTouched((current) => ({ ...current, [field]: true }));
-    if (note && !BLOCKING.includes(note)) setNote(null);
+    onForm((f) => ({
+      values: { ...f.values, ...patch },
+      touched: field ? { ...f.touched, [field]: true } : f.touched,
+      note: f.note && !BLOCKING.includes(f.note) ? null : f.note,
+    }));
   }
   async function handleSubmit(event) {
     event.preventDefault();
-    setTried(true);
+    onForm({ tried: true });
     if (!canSave) return;
     if (!dirty) {
       onClose();
       return;
     }
-    setSaving(true);
-    setNote(null);
+    onForm({ saving: true, note: null });
     const status = await onSave({ method: values.method, amountCents: parsed.cents, paidOn: values.paidOn, school: values.school });
-    setSaving(false);
-    if (status !== 'ok' && status !== 'no_access') setNote(noteFor(status));
+    // (After 'ok' the page has closed the dialog: onForm then changes nothing.)
+    onForm(status !== 'ok' && status !== 'no_access' ? { saving: false, note: noteFor(status) } : { saving: false });
   }
   function requestClose() {
     if (saving) return;
     if (!dirty || blocked) onClose();
-    else setNote('UNSAVED');
+    else onForm({ note: 'UNSAVED' });
   }
 
   return (

@@ -24,13 +24,15 @@
 //      - The family part (the sign-up, shared by brothers and sisters) ends "(whole family)" when
 //        the form has more than one child (familySize = the campers on this sign-up, from the roster).
 //      - Check-ins never come (the database leaves them out; Camper detail's Check-in part shows them).
-//      - While Hide private details is on, money parts (payments, undo, edit, Paying by) are left
-//        out; a save that was only money gives { hiddenPayment: true } (left out of the count and
+//      - A refund (Record refund, migration 0039, rulebook v0.743) is "Refund recorded: $23 cash,
+//        Apr 21"; its Undo "Refund undone: $23" (Star's words).
+//      - While Hide private details is on, money parts (payments, refunds, undo, edit, Paying by) are
+//        left out; a save that was only money gives { hiddenPayment: true } (left out of the count and
 //        the list). The shared history line shows its gray "Payment history is hidden on this
 //        tablet." in EVERY history while hidden, money changes or not, so seeing it doesn't tell
 //        paid from unpaid (Dashboard core's v1.122, design review R4-07).
 // The rows' keys are camelCase (campsApi turns every key, also inside before / after, to camelCase).
-import { formatPhone } from '../../lib/camps/campRules.js';
+import { formatPhone, reversesRefund } from '../../lib/camps/campRules.js';
 import * as T from './text.js';
 
 const time = (iso) => {
@@ -138,7 +140,16 @@ function partsOf(batch, { campDays = [], campExtras = [] }) {
   // Payments: an undo and a new payment in one save = Edit payment.
   const inserted = rows.filter((r) => r.tableName === 'camp_payments' && r.op === 'insert').map((r) => r.after ?? {});
   const newPayments = inserted.filter((p) => p.kind === 'payment');
-  for (const reversal of inserted.filter((p) => p.kind === 'reversal')) {
+  // Record refund (migration 0039, rulebook v0.743): "Refund recorded: $23 cash, Apr 21" — a refund
+  // row is a minus amount, dated the day the money went back. Its Undo is a reversal with a PLUS
+  // amount (campRules.reversesRefund): "Refund undone: $23".
+  for (const refund of inserted.filter((p) => p.kind === 'refund')) {
+    money.push({ text: T.historyRefund(Math.abs(refund.amountCents ?? 0), refund.method, refund.paidOn), money: true });
+  }
+  for (const reversal of inserted.filter((p) => reversesRefund(p))) {
+    money.push({ text: T.historyRefundUndone(reversal.amountCents), money: true });
+  }
+  for (const reversal of inserted.filter((p) => p.kind === 'reversal' && !reversesRefund(p))) {
     const cents = Math.abs(reversal.amountCents ?? 0);
     const replacement = newPayments.shift();
     money.push({

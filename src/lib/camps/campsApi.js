@@ -6,6 +6,7 @@
 //   'ok' (plus the result fields) · 'no_access' · 'not_allowed' · 'not_found' · 'stale' ·
 //   'duplicate_name' · 'invalid' (+ field) · 'not_empty' (+ kind, day / extraName …) · 'finished' ·
 //   'already_paid' · 'withdrawn' · 'checked_in' (+ day) · 'future_day' (kept, no longer sent) ·
+//   'refund_too_large' (+ overpaidCents) · 'refund_stands' (Record refund, migration 0039) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -22,16 +23,17 @@ import { toCamel, toSnake, campCounts, isIsoDate, todayInSchoolTime } from './ca
 import {
   CAMP_COLUMNS, DAY_COLUMNS, PRICE_COLUMNS, EXTRA_COLUMNS, TEMPLATE_COLUMNS, ROSTER_COLUMNS,
   toCamp, toDay, byDay, toPriceRow, toExtra, toTemplate, toRosterRow, campArgs, templateArgs,
-  staffSignupArgs, staffFormShapeOk, staffSignupShapeOk, signupSourceOf,
+  staffSignupArgs, staffFormShapeOk, staffSignupShapeOk, signupSourceOf, recordRefundArgs,
 } from './campsArgs.js';
 
 export { toCamel, toSnake };
 
-// Every status a call here can return.
+// Every status a call here can return. (A status the database sends that isn't on this list is
+// treated as an unexpected answer, 'error'.)
 export const CAMP_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty', 'finished',
   'already_paid', 'withdrawn', 'checked_in', 'future_day', 'rate_limited', 'not_open', 'closed', 'price_changed',
-  'camp_changed', 'admin_only', 'error',
+  'camp_changed', 'admin_only', 'refund_too_large', 'refund_stands', 'error',
 ];
 const SERVER_STATUSES = new Set(CAMP_STATUSES.filter((s) => s !== 'error'));
 const LOCATIONS = new Set(['worcester', 'shrewsbury', 'both']);
@@ -188,8 +190,9 @@ export async function loadCamp(campId) {
 //     emergencyName, emergencyPhone, emergencyRelation }, breakdown: { dayCount, priceKind, member,
 //     weeks?:[{ monday, dayCount, cents }] (weekly pricing, migration 0022 — may be missing),
 //     baseCents, extras:[{ name, per, days:[date], cents }], totalCents, paidCents, owesCents },
-//     payments: [{ id, kind, amountCents, method, paidOn, recordedAt, recordedByName,
-//     reversesPaymentId }], checkins: [{ day, checkedInAt, checkedInByName }] }
+//     payments: [{ id, kind ('payment' | 'refund' (0039, a minus amount) | 'reversal'), amountCents,
+//     method, paidOn, school, recordedAt, recordedByName, reversesPaymentId }] (every row, oldest
+//     first), checkins: [{ day, checkedInAt, checkedInByName }] }
 //   or 'no_access' / 'not_found' / 'error'.
 //   Fill in (migration 0043): also { source: 'form' | 'desk', enteredBy } — where the camper's
 //   sign-up came from and, for a desk sign-up, who filled it in. A database from before 0043 sends
@@ -383,17 +386,42 @@ export async function loadCamperHistory(camperId) {
 }
 
 // Undo payment: admins any time (⋯ → Undo payment); staff only their own Mark paid, within 10
-// seconds (the toast's Undo). → { status:'ok', version } · 'not_allowed' · 'stale' (already undone)
+// seconds (the toast's Undo). → { status:'ok', version } · 'not_allowed' · 'stale' (already undone) ·
+// 'refund_stands' (0039: a refund of this camper stands — Undo the refund first)
 export async function undoPayment(paymentId) {
   return callRpc('camp_undo_payment', { p_payment_id: paymentId }, hasVersion);
 }
 
 // Edit payment (admin): the old payment is reversed and a new one recorded. school = the school
 // the payment belongs to (it can be corrected here, v0.707); given as the last argument or inside
-// the object. → { status:'ok', paymentId (the new one), version } · { status:'invalid', field:'school' }
+// the object. → { status:'ok', paymentId (the new one), version } · { status:'invalid', field:'school' } ·
+// 'refund_stands' (0039: a refund of this camper stands — Undo the refund first)
 export async function editPayment(paymentId, { method, amountCents, paidOn, school: schoolInside } = {}, school = schoolInside) {
   return callRpc('camp_edit_payment', { p_payment_id: paymentId, p_method: method, p_amount_cents: amountCents, p_paid_on: paidOn, p_school: school },
     (d) => isText(d.paymentId) && hasVersion(d));
+}
+
+// Record refund (admins; migration 0039, CONTRACT-0039, rulebook v0.743 / v1.039 / v1.040): money
+// handed back to a family that paid more than the total, saved as its own refund row (a minus
+// amount; the payment itself is never edited for this).
+//   input = { camperId, expectedVersion (Camper detail's fresh version), method ('cash' | 'check'),
+//             amountCents (what was handed back: 1 … the amount overpaid), refundedOn 'YYYY-MM-DD'
+//             (not before the sign-up day, not after today), school (THIS DEVICE's school — the
+//             desk that hands the money back, v1.040; campRules.paymentSchoolFor, as Mark paid) }
+// → { status:'ok', paymentId (the refund row), version } · 'refund_too_large' + { overpaidCents }
+//   (nothing is overpaid now, or the amount is more than what is) · 'not_allowed' (staff) ·
+//   'stale' · 'not_found' · 'withdrawn' · 'invalid' (+ field 'school' or 'date')
+export async function recordRefund(input = {}) {
+  return callRpc('camp_record_refund', recordRefundArgs(input), (d) => isText(d.paymentId) && hasVersion(d));
+}
+
+// Undo refund (admins): reverses one refund — a reversal row at the refund's own school (v1.040),
+// dated today; both rows stay in the history. paymentId = the refund row's id (Camper detail's
+// payments; the toast's Undo has it from recordRefund's answer).
+// → { status:'ok', version } · 'stale' (already undone) · 'not_found' · 'withdrawn' ·
+//   'invalid' (not a refund) · 'not_allowed' (staff)
+export async function undoRefund({ paymentId } = {}) {
+  return callRpc('camp_undo_refund', { p_payment_id: paymentId }, hasVersion);
 }
 
 // Possible duplicate: keepBoth true → "Not the same person — keep both"; false → the other one

@@ -53,6 +53,15 @@
 // The delete box (Delete permanently), the Undo payment box (v0.730) and the possible-duplicate compare are the dashboard's shared
 // parts (components/ConfirmBox.jsx, components/CompareDialog.jsx; rulebook v0.729, design review
 // C6 / C20). This page keeps their state, words and rows (duplicates.js) and does the writes.
+// Record refund (rulebook v0.743, picture 22; v1.039 / v1.040, migration 0039; Star's build is the
+// model): an admin hands money back to a family that paid more than the total — ⋯ (on touch,
+// Camper detail's More) → Record refund, after Undo payment. Camper detail is read first (as for
+// Edit payment), then RefundDialog.jsx opens; the refund is saved at THIS DEVICE's school (the desk
+// that hands the money back, as Mark paid's money goes in) and the toast "Refund recorded" has Undo.
+// While a refund stands, Edit payment and Undo payment are gray ("Undo the refund first.") and Undo
+// refund takes Record refund's place: it reads Camper detail, asks first (the shared ConfirmBox, as
+// Undo payment) and reverses the newest refund that stands. A database refusal 'refund_stands' (a
+// refund recorded meanwhile) says "Undo the refund first." too.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowBackUp, IconArrowLeft, IconCurrencyDollarOff, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
 import CompareDialog from '../../components/CompareDialog.jsx';
@@ -73,14 +82,19 @@ import {
   loadCamperDetail,
   loadMyName,
   markPaid,
+  recordRefund,
   resolveDuplicate,
   restoreCamper,
   undoCheckIn,
   undoPayment,
+  undoRefund,
   withdrawCamper,
   campToday,
 } from '../../lib/camps/campsApi.js';
-import { campLink, campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
+import {
+  campLink, campTag, campWeeks, defaultWeekIndex, lastDay, newestStandingRefund, overpaidCents, paymentSchoolFor, refundStands, signupState,
+  standingPayments,
+} from '../../lib/camps/campRules.js';
 import { buildCampReceipt } from '../../lib/camps/campReceipt.js';
 import { loadSchools } from '../../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
@@ -91,7 +105,8 @@ import CamperDialog from './CamperDialog.jsx';
 import { camperMenuItems } from './CamperRowMenu.jsx';
 import { useCampActions } from './CampRowMenu.jsx';
 import { compareRows, findPairs } from './duplicates.js';
-import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
+import { EditPaymentDialog, PayingByDialog, editPaymentForm, payingByForm } from './PaymentDialogs.jsx';
+import RefundDialog, { refundForm } from './RefundDialog.jsx';
 import { closedWords, useCampFillIn } from './FillInDialog.jsx';
 import { focusSoon } from './focusSoon.js';
 import { useRevealRetryBar } from './revealRetryBar.js';
@@ -100,8 +115,8 @@ import * as T from './text.js';
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
 const OLD_TABS = ['checkin', 'payments', 'attendance'];
 // The dialogs that show or change money: they close when Hide private details is switched on
-// (the Undo payment box names the payment's amount, v0.730).
-const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment'];
+// (the Undo payment box names the payment's amount, v0.730; Record refund and its Undo box, v0.743).
+const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment', 'refund', 'undoRefund'];
 // The chosen week and the Removed group open / closed, per camp, while the page is open.
 const weekByCamp = new Map();
 const removedOpenByCamp = new Map();
@@ -379,6 +394,18 @@ export default function CampPage({
     setMenu(null);
     setDialog({ key: Date.now(), ...next });
   }
+  // The payment dialogs' forms (Change how they'll pay, Edit payment, Record refund) live HERE, in
+  // the dialog state, not inside the dialogs: a screen lock stops drawing the dialog until the PIN,
+  // and a dialog's own state would start over, losing what was typed (Star's CandidatesTab keeps its
+  // dialogs' values the same way). patch = an object, or a function of the current form → an
+  // object. Only the dialog it was made for (d.key) changes; one closed meanwhile is left alone.
+  function patchForm(d, patch) {
+    setDialog((current) => {
+      if (!current || current.key !== d.key || !current.form) return current;
+      const next = typeof patch === 'function' ? patch(current.form) : patch;
+      return { ...current, form: { ...current.form, ...next } };
+    });
+  }
   function closeDialog() {
     const opener = dialog?.opener ?? null;
     setDialog(null);
@@ -405,15 +432,26 @@ export default function CampPage({
       showToast(T.TOAST_UNDONE, { icon: false });
       reloadQuiet();
     } else if (status === 'no_access') onNoAccess();
+    // Every bar below is brought into view (reveal: useRevealRetryBar): the toast's Undo may be
+    // pressed far down the roster, and the bar sits at the top of the page — without this, nothing
+    // seemed to happen (Record refund's design review). The toast's button is gone, so focus goes
+    // to the bar's Retry, or else its Dismiss (×).
     else if (status === 'not_allowed') {
-      setBanner({ text: options.notAllowedText ?? T.ROSTER_NOT_ALLOWED });
+      setBanner({ text: options.notAllowedText ?? T.ROSTER_NOT_ALLOWED, reveal: true });
       onRefreshProfile();
     } else if (status === 'error') {
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, options) });
+      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, options), reveal: true });
     } else {
-      setBanner({ text: result.undoText ?? T.UNDO_STALE });
+      // refund_stands (migration 0039): the Undo of a payment (the Mark paid toast's, or Edit
+      // payment's), refused because a refund was recorded meanwhile — say what to do instead.
+      setBanner({ text: result.undoText ?? (status === 'refund_stands' ? refundStandsText() : T.UNDO_STALE), reveal: true });
       reloadQuiet();
     }
+  }
+  // What to say when a refund stands in the way (refund_stands): admins can undo it themselves
+  // ("Undo the refund first."); staff can't undo refunds, so they're sent to an admin.
+  function refundStandsText() {
+    return isAdmin ? T.UNDO_REFUND_FIRST : T.UNDO_REFUND_STANDS_STAFF;
   }
   // money: Mark paid / Undo payment — while hidden on arrival, the general words, no Retry.
   function rowProblem(status, row, retry, money = false) {
@@ -429,6 +467,11 @@ export default function CampPage({
       reloadQuiet();
     } else if (status === 'withdrawn') {
       setBanner({ text: T.isWithdrawn(name) });
+      reloadQuiet();
+    } else if (status === 'refund_stands') {
+      // Undo payment refused: a refund of this camper stands (recorded meanwhile; migration 0039).
+      // The roster reloads, so ⋯ shows Edit / Undo payment gray and Undo refund.
+      setBanner({ text: refundStandsText() });
       reloadQuiet();
     } else if (status === 'error') {
       // Didn't reach the database: the row shows "Not saved" and the banner offers Retry.
@@ -536,6 +579,7 @@ export default function CampPage({
     if (detailGone(from)) return;
     // Hide private details was switched on while this loaded: the box (it names money) doesn't open.
     if (hiddenNowRef.current) return;
+    if (refundStoodMeanwhile(result, from, opener)) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
       leaveDetail(from);
@@ -554,11 +598,52 @@ export default function CampPage({
       opener,
     });
   }
+  // Edit payment and Undo payment are gray while a refund stands (v0.743 (4)). If the fresh read
+  // shows one that the roster didn't have yet (recorded on another device), their box doesn't open:
+  // the amber bar says "Undo the refund first." and the roster reloads (then ⋯ shows them gray).
+  // The bar is brought into view and focus goes back to `opener` (the ⋯, or — from Camper detail's
+  // More, which closes — the name that opened the detail): useRevealRetryBar below.
+  // true = it stopped here.
+  function refundStoodMeanwhile(result, from, opener) {
+    if (result.status !== 'ok' || !refundStands(result.camper)) return false;
+    leaveDetail(from);
+    setBanner({ text: refundStandsText(), reveal: true, opener });
+    reloadQuiet();
+    return true;
+  }
+
+  // ===== Undo refund from ⋯ (admins, while a refund stands): asks first (rulebook v0.743 (4)) =====
+  // The roster row only says THAT a refund stands (refundedCents), so Camper detail is read first, as
+  // for Undo payment; the box names the newest refund that stands in that fresh read, and that is the
+  // one reversed (at the refund's own school, v1.040). From Camper detail (`from`) the box takes the
+  // detail's place in one update. Confirming runs confirmUndoPayment below (one box, two kinds).
+  async function startUndoRefund(row, opener, from = null) {
+    if (!isAdmin || !begin()) return;
+    const result = await loadCamperDetail(row.id);
+    end(result.status === 'ok' ? 'ok' : result.status);
+    if (result.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (detailGone(from)) return;
+    if (hiddenNowRef.current) return; // switched on while this loaded: the box (it names money) doesn't open
+    const refund = result.status === 'ok' ? newestStandingRefund(result.payments) : null;
+    if (!refund) {
+      // Couldn't read (Retry), or no refund stands any more (someone undid it): today's handling.
+      leaveDetail(from);
+      camperReadProblem(result.status, () => startUndoRefund(row, opener), opener);
+      return;
+    }
+    openDialog({ type: 'undoRefund', row, name: T.camperLabel(result.camper), refund, saving: false, failed: false, opener });
+  }
+
+  // The Undo payment box's and the Undo refund box's "Undo …" button (they work the same way).
   async function confirmUndoPayment() {
     const d = dialog;
     if (!d || d.saving || !begin()) return;
+    const isRefund = d.type === 'undoRefund';
     setDialog({ ...d, saving: true, failed: false });
-    const result = await undoPayment(d.payment.id);
+    const result = isRefund ? await undoRefund({ paymentId: d.refund.id }) : await undoPayment(d.payment.id);
     end(result.status);
     // Closed meanwhile (Hide private details switched on mid-save): the page says how it went.
     const open = stillOpen(d);
@@ -580,8 +665,9 @@ export default function CampPage({
     }
     rowDone();
     reloadQuiet();
-    // Today's toast, no Undo. Hidden now: the general words ("Payment undone" would say they had paid).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(d.name), { icon: false });
+    // Today's toast, no Undo ("Refund undone" for a refund, Star's words). Hidden now: the general
+    // words ("Payment undone" would say they had paid).
+    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : isRefund ? T.TOAST_REFUND_UNDONE : T.paymentUndoneToast(d.name), { icon: false });
   }
 
   // ===== Check in / Undo check-in (any day, v0.706): a day cell of the roster =====
@@ -652,6 +738,8 @@ export default function CampPage({
   // after a failed read: it would fail too and put its own bar over this one's Retry.)
   // Anything else (the camper or the payment is gone, someone changed it): ROSTER_STALE ("Someone
   // else changed this just now …") and the roster reloads — reading again wouldn't help, so no Retry.
+  // Either way the bar is brought into view (it sits at the top of the page; the person may be far
+  // down the roster): with Retry, focus goes to Retry; without, back to the ⋯ / name that started it.
   function camperReadProblem(status, again, opener) {
     if (status === 'error') {
       setBanner({
@@ -664,7 +752,7 @@ export default function CampPage({
         },
       });
     } else {
-      setBanner({ text: T.ROSTER_STALE });
+      setBanner({ text: T.ROSTER_STALE, reveal: true, opener }); // scrolled into view, focus back on the opener
       reloadQuiet();
     }
   }
@@ -679,6 +767,7 @@ export default function CampPage({
     if (detailGone(from)) return;
     // Hide private details was switched on while this loaded: the money dialog doesn't open.
     if (hiddenNowRef.current) return;
+    if (refundStoodMeanwhile(result, from, opener)) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
       leaveDetail(from);
@@ -687,7 +776,79 @@ export default function CampPage({
     }
     // The name comes from this fresh read (as Undo payment's box does), not from `row`: after a
     // Retry, `row` is the roster row from the first, failed try, and the name may have changed since.
-    openDialog({ type: 'payment', row, name: T.camperLabel(result.camper), payment, opener });
+    // `form`: what is typed, kept here so a screen lock never loses it (patchForm).
+    openDialog({ type: 'payment', row, name: T.camperLabel(result.camper), payment, opener, form: editPaymentForm(payment) });
+  }
+
+  // ===== Record refund (admins, an overpaid camper; rulebook v0.743, v1.039, v1.040) =====
+  // Camper detail is read first, as for Edit payment: the box shows what was paid and how much is
+  // overpaid NOW, and the save sends this read's version (anyone changing the camper since → stale).
+  // Nothing overpaid any more, a refund already standing (someone else recorded it), or the camper
+  // gone: "Someone else changed this just now …" and the roster reloads. A failed read: the bar with
+  // Retry. From Camper detail (`from`) the box takes the detail's place in one update.
+  async function startRecordRefund(row, opener, from = null) {
+    if (!isAdmin || !begin()) return;
+    const result = await loadCamperDetail(row.id);
+    end(result.status === 'ok' ? 'ok' : result.status);
+    if (result.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (detailGone(from)) return;
+    if (hiddenNowRef.current) return; // switched on while this loaded: the money dialog doesn't open
+    const camper = result.status === 'ok' ? result.camper : null;
+    const over = camper ? overpaidCents(camper) : 0;
+    if (!camper || camper.status !== 'active' || over <= 0 || refundStands(camper)) {
+      leaveDetail(from);
+      camperReadProblem(result.status, () => startRecordRefund(row, opener), opener);
+      return;
+    }
+    // The payments that stay in the history (the box's note: "The $315 payment …" / "The 2 payments ($315) …").
+    const standing = standingPayments(result.payments);
+    openDialog({
+      type: 'refund',
+      row,
+      camper,
+      name: T.camperLabel(camper),
+      paymentCount: standing.length,
+      paymentsCents: standing.reduce((total, p) => total + (Number.isInteger(p.amountCents) ? p.amountCents : 0), 0),
+      opener,
+      form: refundForm(over, today), // what is typed, kept here so a screen lock never loses it (patchForm)
+    });
+  }
+  // The box's Save: the refund at THIS DEVICE's school (the desk that hands the money back, v1.040 —
+  // the same school Mark paid's money goes to). → the answer, for the box (refund_too_large, notes).
+  async function saveRefund(d, values) {
+    const result = await recordRefund({
+      camperId: d.camper.id,
+      expectedVersion: d.camper.version,
+      method: values.method,
+      amountCents: values.amountCents,
+      refundedOn: values.refundedOn,
+      school: paymentSchoolFor(deviceLocation),
+    });
+    if (result.status === 'ok') {
+      if (stillOpen(d)) closeDialog();
+      rowDone();
+      reloadQuiet();
+      // Hidden now (switched on while this saved): the general words, no Undo — as Edit payment.
+      if (hiddenNowRef.current) {
+        showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+        return result;
+      }
+      // "Refund recorded" · Undo (5 seconds, v0.743 (3)): the Undo reverses this refund (by its id).
+      const refundId = result.paymentId;
+      showToast(T.TOAST_REFUND_RECORDED, {
+        icon: false,
+        action: { label: T.UNDO, onAction: () => runUndo(() => undoRefund({ paymentId: refundId }), { money: true }) },
+      });
+      return result;
+    }
+    if (!stillOpen(d)) closedPaymentProblem(result.status); // closed meanwhile (Hide private details)
+    else if (result.status === 'no_access') onNoAccess();
+    else if (result.status === 'not_allowed') onRefreshProfile();
+    else if (result.status === 'refund_too_large' || result.status === 'stale') reloadQuiet(); // the box says it; the roster catches up
+    return result;
   }
   async function startDeleteCamper(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
@@ -848,13 +1009,15 @@ export default function CampPage({
     if (current && (reason === 'escape' || reason === 'tab')) current.anchor?.focus();
   }
   const camperHandlers = {
-    onPayingBy: (row, anchor) => openDialog({ type: 'paying', row, opener: anchor }),
+    onPayingBy: (row, anchor) => openDialog({ type: 'paying', row, opener: anchor, form: payingByForm(row.payingBy) }),
     onEdit: (row, anchor) => openCamper(row, anchor, true),
     onReview: (row, anchor) => openCompareFor(row, anchor),
     onWithdraw: (row) => doWithdraw(row),
     onRestore: (row) => doWithdraw(row, true),
     onEditPayment: (row, anchor) => startEditPayment(row, anchor),
     onUndoPayment: (row, anchor) => startUndoPayment(row, anchor),
+    onRecordRefund: (row, anchor) => startRecordRefund(row, anchor),
+    onUndoRefund: (row, anchor) => startUndoRefund(row, anchor),
     onPrintReceipt: (row, anchor) => openReceipt(row.id, anchor, false),
     onDelete: (row, anchor) => startDeleteCamper(row, anchor),
   };
@@ -876,6 +1039,8 @@ export default function CampPage({
       onRestore: closeThen((row) => doWithdraw(row, true)),
       onUndoPayment: (row) => startUndoPayment(row, opener, from),
       onEditPayment: (row) => startEditPayment(row, opener, from),
+      onRecordRefund: (row) => startRecordRefund(row, opener, from),
+      onUndoRefund: (row) => startUndoRefund(row, opener, from),
       // Print receipt opens ON TOP of the detail (v1.100), which stays open; focus goes back to the
       // pressed "More" button when the receipt closes.
       onPrintReceipt: (row, button) => openReceipt(row.id, button ?? null, true),
@@ -970,6 +1135,8 @@ export default function CampPage({
             return signupId ? roster.filter((r) => r.signupId === signupId).length : 1;
           })()}
           isPhone={isPhone}
+          // Touch screens: the ⋯ items are under the detail's More, so its overpaid hint says "More".
+          isTouch={isTouch}
           hidden={hidden}
           detailsHidden={detailsHidden}
           startInEdit={dialog.startInEdit}
@@ -1047,6 +1214,8 @@ export default function CampPage({
           name={T.camperLabel(row)}
           initial={row.payingBy}
           isPhone={isPhone}
+          form={dialog.form}
+          onForm={(patch) => patchForm(d, patch)}
           onClose={closeDialog}
           onSave={async (payingBy) => {
             const result = await changePayingBy(row.id, row.version, payingBy);
@@ -1080,6 +1249,8 @@ export default function CampPage({
           payment={dialog.payment}
           today={today}
           isPhone={isPhone}
+          form={dialog.form}
+          onForm={(patch) => patchForm(d, patch)}
           onClose={closeDialog}
           onSave={async (values) => {
             const result = await editPayment(d.payment.id, values);
@@ -1107,9 +1278,53 @@ export default function CampPage({
             } else if (!stillOpen(d)) closedPaymentProblem(result.status);
             else if (result.status === 'no_access') onNoAccess();
             else if (result.status === 'not_allowed') onRefreshProfile();
+            // A refund was recorded meanwhile (0039): the box says "Undo the refund first.", and the
+            // roster reloads so ⋯ shows Edit payment gray.
+            else if (result.status === 'refund_stands') reloadQuiet();
             return result.status;
           }}
         />
+      );
+    } else if (!hidden && !detailsHidden && dialog.type === 'refund') {
+      // Record refund (v0.743): Star's box with Camps' words (RefundDialog.jsx). Never while private
+      // details are hidden: switching them on closes it.
+      const d = dialog;
+      dialogElement = (
+        <RefundDialog
+          key={dialog.key}
+          name={dialog.name}
+          paidCents={dialog.camper.paidCents ?? 0}
+          paymentsCents={dialog.paymentsCents}
+          paymentCount={dialog.paymentCount}
+          signedUpOn={dialog.camper.signedUpOn ?? null}
+          today={today}
+          isPhone={isPhone}
+          form={dialog.form}
+          onForm={(patch) => patchForm(d, patch)}
+          onClose={closeDialog}
+          onSave={(values) => saveRefund(d, values)}
+        />
+      );
+    } else if (!hidden && !detailsHidden && dialog.type === 'undoRefund') {
+      dialogElement = (
+        // Undo refund asks first (v0.743 (4), Star's words): the shared "are you sure?" box, as Undo
+        // payment's — blue action (both lines stay in the history), first focus on "Keep refund",
+        // "Undoing…" while it works; a failure keeps the box open with its amber note.
+        <ConfirmBox
+          key={dialog.key}
+          title={T.undoRefundTitle(dialog.name)}
+          keepLabel={T.KEEP_REFUND}
+          actionLabel={T.UNDO_REFUND}
+          actionIcon={IconArrowBackUp} // ti-arrow-back-up, the menu item's icon
+          busyLabel={T.UNDOING}
+          loses="something"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.UNDO_PAYMENT_FAILED : null}
+          onConfirm={confirmUndoPayment}
+          onKeep={closeDialog} // ConfirmBox ignores it while the Undo works
+        >
+          {T.undoRefundBody(dialog.refund)}
+        </ConfirmBox>
       );
     } else if (!hidden && dialog.type === 'compare') {
       const first = roster.find((r) => r.id === dialog.pair.first.id) ?? dialog.pair.first;
