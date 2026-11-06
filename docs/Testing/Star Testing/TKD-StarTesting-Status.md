@@ -20,6 +20,15 @@ The design review's rolling check found 24 items in Star's merged work: `docs/De
 - **S-1 decided (v0.519, 2026-11-05):** Worcester first within each star level is set in the database (0038 replaces `star_event_results` and `star_results_csv`).
 - Nothing built yet.
 
+## Rolling check, pass 2 (started 2026-11-06)
+
+Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into main at 1751e82; after Color Belt, New students and Dashboard core in Jeffrey's order). Added to the same plan file (`TKD-StarTesting-Pass1-Plan.md`, section "Pass 2"): M-03 and C-05 (b) go in Step B; M-02 in Step C with R1-02; L-02, C-06 (c) and L-06 in Step D (after Dashboard core's L-02, R2-07, L-06). No migration of its own.
+
+- **Already done, nothing to build (v1.055):** C-04 (the line between Restore and Delete permanently, `candidateMenu.js`), C-06 (a) (failed Mark paid already ends "then retry."), C-06 (b) (already in pass 1's R2-07).
+- **Correction to pass 1's R1-02:** Color Belt has the same fix to make (its M-01); Star still copies Camps' 0033. A candidate with no form choice reads "at the desk"; 0038's fill-in leaves rows with no change-log insert row empty.
+- **Date signed (v0.638, L-08):** Star's form already saves the day it was sent (`star_candidate_signatures.signed_at = now()` in `star_public_register`), so **no migration**. Planned: the "Date signed" box under the signature on the family form's Check step (New students' `.fsigned` look) and the date on the candidate detail's "Ticked and signed" line. Waiting: Jeffrey's plan OK, then a mockup at the four sizes; who moves the shared words to `src/components/text.js`.
+- Nothing built yet.
+
 ---
 
 ## 1. Where things stand (one paragraph)
