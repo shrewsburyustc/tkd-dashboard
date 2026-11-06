@@ -11,7 +11,8 @@
 //     ("Fri, Nov 20, 2026 · Worcester school · 14 students · registration open until Nov 13")
 //   - header buttons: Add student (blue, N on the PC) and Registration link (outline)
 //   - the one tab, Students
-//   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115);
+//   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115), drawn
+//     only once someone is registered, active or removed (pass 2 C-05 (a));
 //     Paid / Not paid filter the roster, Students clears the filter
 //   - the amber "possible duplicate" box with Review (Star v0.114), when there is one
 //   - the class switch (classes in this event, with counts) and the class line (time + gear);
@@ -434,6 +435,16 @@ export default function EventPage({
   const classById = new Map(classes.map((c) => [c.id, c]));
   const active = roster.filter((r) => r.status === 'active');
   const removed = roster.filter((r) => r.status !== 'active');
+  // Anyone registered at all, active or removed? Until then the count cards would only read 0, so
+  // they aren't drawn (pass 2 C-05 (a), v1.028; as the Private testing tab, Star and Camps' hasCampers).
+  const hasRegistrations = roster.length > 0;
+  // The last registration went (deleted permanently): a Paid / Not paid filter left on would come
+  // back by itself with the cards when a family registers again, hiding the new student, so it is
+  // turned off here (Add student already turns it off).
+  const noOneRegistered = data != null && !hasRegistrations;
+  useEffect(() => {
+    if (noOneRegistered) setFilter(null);
+  }, [noOneRegistered]);
   const paidCount = active.filter((r) => r.paid).length;
   // Payments recorded = every recorded payment of this event, net of reversals (incl. withdrawn
   // students, whose payment stays on record; a deleted student's payment is gone).
@@ -458,8 +469,9 @@ export default function EventPage({
   const groupOrder = (a, b) => (classPos.get(a.eventClassId) ?? 0) - (classPos.get(b.eventClassId) ?? 0) || order(a, b);
   let rows = active.filter(inGroup).sort(groupOrder);
   // (No Paid / Not paid filter while private details are hidden, even for the one drawing before
-  // the switch-on effect above clears it.)
-  const shownFilter = hidden ? null : filter;
+  // the switch-on effect above clears it; nor while nobody is registered, when there are no cards
+  // to turn it off with.)
+  const shownFilter = hidden || !hasRegistrations ? null : filter;
   if (shownFilter === 'paid') rows = rows.filter((r) => r.paid);
   if (shownFilter === 'notPaid') rows = rows.filter((r) => !r.paid);
   // Removed students of the whole group, in one Removed group after the classes.
@@ -1996,14 +2008,17 @@ export default function EventPage({
         <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
           {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
               Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
-              recorded is a plain total. Hide private details: the Students card alone. */}
-          <CountCards
-            cards={cards}
-            selected={shownFilter}
-            onSelect={setFilter}
-            showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
-            showAllLabel={T.SHOW_ALL}
-          />
+              recorded is a plain total. Hide private details: the Students card alone. Nobody
+              registered yet (active or removed): no cards, only the empty line (C-05 (a)). */}
+          {hasRegistrations && (
+            <CountCards
+              cards={cards}
+              selected={shownFilter}
+              onSelect={setFilter}
+              showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
+              showAllLabel={T.SHOW_ALL}
+            />
+          )}
 
           {/* Possible duplicates (Star v0.114) in the shared duplicate box (v1.102, v0.422): the
               count on the first line only (its own line on phones), then one line per pair, each
