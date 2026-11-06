@@ -12,8 +12,8 @@
 //   - Add private testing (all staff, the header button), Mark paid (its box, then a 5-second
 //     Undo), and the ⋯ menu: Edit details · Change day or time · Grade · Change how they'll pay
 //     (v1.011) | Edit payment · Undo payment (admins) · Print receipt (CB2) | Cancel private
-//     testing · Delete permanently (admins); a cancelled row: Restore · Delete permanently
-//     (admins only)
+//     testing · Delete permanently (admins); a cancelled row: Print receipt while a payment still
+//     stands (staff and admins, pass 2 M-03, v0.428) | Restore | Delete permanently (admins)
 //   - tapping a row opens its read-only summary (PrivateSummaryDialog.jsx, v1.009), with
 //     Close · Edit details
 //   - Undo for 5 seconds (v1.006, v0.413, v1.003) after Edit details ("Changes saved", not when the
@@ -1088,6 +1088,9 @@ export default function PrivateTestingTab({
     const name = T.studentLabel(row);
     const groups = [[], [], [], []];
     if (row.status === 'cancelled') {
+      // pass 2 M-03 (v1.055 (b), v0.428): money first — Print receipt while a payment still stands,
+      // for staff and admins (staff's ⋯ holds only this item); then Restore, then Delete permanently.
+      if (can.printReceipt) groups[1].push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor) });
       if (can.restore) groups[2].push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doRestore(row) });
     } else {
       // Order (v1.011): Edit details · Change day or time · Grade · Change how they'll pay

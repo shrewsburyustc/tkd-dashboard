@@ -27,7 +27,7 @@ import {
   todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
-  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
@@ -2515,8 +2515,14 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   assert.equal(menu(row({ status: 'cancelled', privateDate: PT }), true), 'restore delete');
   assert.equal(menu(row({ status: 'cancelled', privateDate: '2026-10-16' }), true), 'delete');
   assert.equal(menu(null, true), '');
-  // A cancelled row keeps its payments, but has no money group (admins: Restore / Delete only).
-  assert.equal(menu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), true), 'restore delete');
+  // A cancelled row keeps its payments: while one still stands, Print receipt for staff and admins
+  // (pass 2 M-03, v1.055 (b), v0.428) — staff's ⋯ holds only it; admins also Restore / Delete.
+  assert.equal(menu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), true), 'printReceipt restore delete');
+  assert.equal(menu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), false), 'printReceipt');
+  assert.equal(PR.canPrintPrivateReceipt(row({ status: 'cancelled', paid: true })), true);
+  assert.equal(PR.canPrintPrivateReceipt(row({ status: 'cancelled', paid: true }), true), false); // hidden
+  assert.equal(PR.canPrintPrivateReceipt(row({ status: 'cancelled' })), false); // nothing paid
+  assert.equal(PR.canPrintPrivateReceipt(null), false);
   // Hide private details (v0.506): no payment items (Print receipt included); everything else unchanged.
   const hiddenMenu = (r, isAdmin) => {
     const m = PR.privateMenu(r, { today: PT, isAdmin, hidden: true });
@@ -2526,6 +2532,20 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   assert.equal(hiddenMenu(row({ paid: true, amountDueCents: 0 }), true), 'editDetails changeDay grade cancel delete');
   assert.equal(hiddenMenu(row({ paid: true, amountDueCents: 2000 }), true), 'editDetails changeDay grade cancel delete');
   assert.equal(hiddenMenu(row({ status: 'cancelled' }), true), 'restore delete');
+  assert.equal(hiddenMenu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), true), 'restore delete'); // no Print receipt while hidden
+  assert.equal(hiddenMenu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), false), ''); // staff: no ⋯ at all
+});
+
+check('eventRules: canPrintReceipt — a payment that still stands, active or removed, never hidden (CB2; pass 2 M-03)', () => {
+  const row = (over = {}) => ({ status: 'active', paid: true, movedTo: null, ...over });
+  assert.equal(canPrintReceipt(row()), true);
+  assert.equal(canPrintReceipt(row({ status: 'withdrawn' })), true); // removed with money (v0.428: staff too)
+  assert.equal(canPrintReceipt(row({ status: 'withdrawn', withdrawnReason: 'duplicate_copy' })), true);
+  assert.equal(canPrintReceipt(row({ paid: false })), false); // nothing paid
+  assert.equal(canPrintReceipt(row({ status: 'withdrawn', paid: false })), false);
+  assert.equal(canPrintReceipt(row({ status: 'withdrawn', movedTo: { privateId: 'p1' } })), false); // the money moved with them
+  assert.equal(canPrintReceipt(row(), true), false); // Hide private details
+  assert.equal(canPrintReceipt(null), false);
 });
 
 check('privateRules: Upcoming / Past order and the cards (P1, E11)', () => {

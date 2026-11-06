@@ -11,7 +11,9 @@
 //                            by ("Cash · paid Nov 2"), then the tag and Mark paid, ⋯ on the right
 // Under the name: the amber "Paid $65 · $20 more to collect" line while a paid student owes more
 // (P1), and a gray "→ Moved from November Children Testing" line for one moved from an event.
-// A cancelled row is grayed entirely; staff see no ⋯ on it (admins: Restore / Delete).
+// A cancelled row is grayed entirely; its ⋯ holds Print receipt while a payment still stands (staff
+// and admins, pass 2 M-03, v0.428), then Restore / Delete for admins; staff see no ⋯ on one with
+// nothing paid.
 // Follows "Hide private details" (v0.506), as Star's CandidateRows: while ctx.hidden is on there is
 // no price, Paying by, Payment or Paid on column, no Paid / Not paid tag, no amber owed line and no
 // Mark paid (PC: Day · time · Student · Testing for · ⋯). The gray "Moved from …" line stays.
@@ -21,7 +23,7 @@
 import { IconAlertTriangle, IconArrowRight, IconCheck, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import { formatMoney } from '../../../lib/money.js';
-import { showMarkPaid } from '../../../lib/testing/privateRules.js';
+import { canPrintPrivateReceipt, showMarkPaid } from '../../../lib/testing/privateRules.js';
 import { ResultTag } from '../event/ResultButtons.jsx';
 import { TestingForCell } from '../event/StudentDialog.jsx';
 import * as T from '../text.js';
@@ -54,7 +56,9 @@ function PrivateRow({ row, ctx }) {
   const open = ctx.menuFor === row.id;
   // Highlighted while its ⋯ menu or one of its dialogs (the summary, say) is open
   const selected = open || ctx.selectedId === row.id;
-  const showMenu = !cancelled || ctx.isAdmin;
+  // A cancelled row's ⋯: admins always; staff only when it holds Print receipt (a payment that still
+  // stands, pass 2 M-03, v0.428). With nothing paid, staff see no ⋯ there, as before.
+  const showMenu = !cancelled || ctx.isAdmin || canPrintPrivateReceipt(row, hidden);
 
   // On Past (and on a cancelled row): the result tag, or the gray "Cancelled Nov 28" tag.
   let sideTag = null;

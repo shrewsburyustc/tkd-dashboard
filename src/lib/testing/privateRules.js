@@ -161,7 +161,8 @@ export function privateCards(rows) {
 //              changePayingBy the same AND canChangePayingBy · admins: editPayment / undoPayment
 //              when paid, delete · printReceipt (staff and admins) when paid — a payment that
 //              still stands (design review CB2, rulebook v0.420: it ends the money group)
-//   cancelled: admins only — restore while its day is today or later, delete
+//   cancelled: printReceipt (staff and admins) when a payment still stands (pass 2 M-03, v0.428) ·
+//              admins only — restore while its day is today or later, delete
 //   hidden:    "Hide private details" is on (v0.506) → no payment items: changePayingBy,
 //              editPayment, undoPayment and printReceipt are false (as Star's ⋯ menus, v0.508 G4;
 //              Print receipt: v0.518 Q8 B)
@@ -172,7 +173,7 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     undoPayment: false, printReceipt: false, cancel: false, restore: false, delete: false,
   };
   if (row?.status === 'cancelled') {
-    return { ...none, restore: admin && row.privateDate >= today, delete: admin };
+    return { ...none, printReceipt: canPrintPrivateReceipt(row, hidden), restore: admin && row.privateDate >= today, delete: admin };
   }
   if (row?.status !== 'active') return none;
   const result = row.result ?? null;
@@ -186,10 +187,18 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     grade: true,
     editPayment: money && admin && row.paid === true,
     undoPayment: money && admin && row.paid === true,
-    printReceipt: money && row.paid === true, // CB2: staff and admins
+    printReceipt: canPrintPrivateReceipt(row, hidden), // CB2: staff and admins
     cancel: open,
     delete: admin,
   };
+}
+
+// Print receipt's one rule for a private testing, shared by the row's ⋯ button, its ⋯ menu and the
+// summary (CB2, v0.420; pass 2 M-03, v1.055 (b) and v0.428): a payment that still stands (paid), on
+// an active OR a cancelled private testing, for staff and admins — staff's ⋯ on a cancelled one then
+// holds only this item; never while Hide private details is on.
+export function canPrintPrivateReceipt(row, hidden = false) {
+  return hidden !== true && row?.paid === true && (row.status === 'active' || row.status === 'cancelled');
 }
 
 // ----- Move to private testing (event page, P5) -----

@@ -35,6 +35,8 @@
 // testing, Tue, Dec 1") and their payment moves with them to the Private testing tab. A moved
 // Removed row has no ⋯ for staff; admins get Open private testing and a grayed Restore (with the
 // reason) — no Delete permanently. Everything else on this page is phase 3 exactly.
+// (Pass 2 M-03, v0.428: any other removed row whose payment still stands gets Print receipt first in
+// its ⋯, for staff and admins — staff's ⋯ there holds only it; eventRules.canPrintReceipt.)
 //
 // The design review's part 2 (rulebook v0.420 / v0.421, mockups P1 and P3; Star's v0.518 copied):
 //   - CB1: Mark paid opens the shared Mark paid box (amount worked out by the database, Paid by
@@ -89,7 +91,7 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { classTimeLabel, feeFor } from '../../../lib/testing/eventRules.js';
+import { canPrintReceipt, classTimeLabel, feeFor } from '../../../lib/testing/eventRules.js';
 import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
@@ -1583,10 +1585,15 @@ export default function EventPage({
       // CB2 (v0.420): Print receipt ends the money group, for staff and admins, on a row with a
       // payment that still stands; hidden while Hide private details is on (v0.518 Q8 B). Staff's
       // money group holds only this item.
-      if (moneyShown && row.paid) {
+      if (canPrintReceipt(row, hidden)) {
         const startsGroup = !isAdmin; // admins: it follows Undo payment in the same group
         items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, separatorBefore: startsGroup && groupStart(), onSelect: () => openReceipt(row, anchor) });
       }
+    } else if (canPrintReceipt(row, hidden)) {
+      // pass 2 M-03 (v1.055 (b), v0.428): a removed student whose payment still stands — Print
+      // receipt first, for staff and admins (staff's ⋯ holds only this item); Restore and Delete
+      // permanently follow in their own groups (admins).
+      items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor) });
     }
     if (isAdmin) {
       if (row.status === 'active') {
@@ -1599,6 +1606,9 @@ export default function EventPage({
       // C-04, v1.055 (f), as Star's); on an active row it stays with Withdraw.
       items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: row.status !== 'active', disabled: busy, onSelect: () => startDelete(row, anchor) });
     }
+    // Nothing left to offer (say staff's ⋯ on a removed row, after Hide private details was switched
+    // on or the payment was undone on another device): no menu, as the Private testing tab.
+    if (items.length === 0) return null;
     const rank = rankById.get(row.eventRankId);
     const subtitle = rank ? `${rank.name} → ${rank.testingFor?.name ?? T.NO_NEW_RANK}` : '';
     return { title: name, subtitle, label: T.moreForStudent(name), items };
@@ -1739,9 +1749,10 @@ export default function EventPage({
           today={today}
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
-          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — an active student
-          // with a payment that still stands, money shown; staff and admins.
-          canPrintReceipt={record?.status === 'active' && record?.paid === true && !hidden}
+          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — a student (active, or
+          // removed since pass 2 M-03, v0.428) with a payment that still stands, money shown; staff
+          // and admins.
+          canPrintReceipt={canPrintReceipt(record, hidden)}
           onPrintReceipt={(opener) => record && openReceipt(record, opener, true)}
           onNoAccess={onNoAccess}
           graded={dialog.graded ?? null}

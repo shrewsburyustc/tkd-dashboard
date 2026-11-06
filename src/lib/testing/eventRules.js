@@ -239,6 +239,15 @@ export function isPaid(paidCents) {
   return typeof paidCents === 'number' && paidCents > 0;
 }
 
+// Print receipt's one rule for an event registration, shared by the row's ⋯ button, its ⋯ menu and
+// the summary's Payment row (CB2, rulebook v0.420; pass 2 M-03, v1.055 (b) and v0.428): a payment
+// that still stands (paid), on an active OR a removed row (withdrawn, or a duplicate copy), for staff
+// and admins — staff's ⋯ on a removed row then holds only this item; never while Hide private
+// details is on. A student moved to private testing has no payment left here (it moved with them).
+export function canPrintReceipt(row, hidden = false) {
+  return hidden !== true && row?.paid === true && !row?.movedTo;
+}
+
 // ----- Class times (§1.4, E4–E6) -----
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;

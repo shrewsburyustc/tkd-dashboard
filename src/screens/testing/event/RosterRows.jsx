@@ -23,6 +23,7 @@
 import { Fragment } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
+import { canPrintReceipt } from '../../../lib/testing/eventRules.js';
 import { TestingForCell } from './StudentDialog.jsx';
 import * as T from '../text.js';
 
@@ -77,7 +78,9 @@ function StudentRow({ row, ctx }) {
   const name = T.studentLabel(row);
   const removed = row.status === 'withdrawn';
   const showMarkPaid = !hidden && !removed && !row.paid && row.duplicateState !== 'possible';
-  const showMenu = !removed || ctx.isAdmin;
+  // A removed row's ⋯: admins always; staff only when it holds Print receipt (a payment that still
+  // stands, pass 2 M-03, v0.428). With nothing paid, staff see no ⋯ there, as before.
+  const showMenu = !removed || ctx.isAdmin || canPrintReceipt(row, hidden);
   const open = ctx.menuFor === row.id;
   const selected = open || ctx.selectedId === row.id;
   const moved = removed && row.movedTo ? row.movedTo : null;
