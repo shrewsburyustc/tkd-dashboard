@@ -1,0 +1,72 @@
+{
+  "title": "Camps — the area above the roster (pass 1 step 2: R3-10, R3-02, R5-04, R3-09)",
+  "subtitle": "April Vacation Camp, real preview screens (fake data). The changes are drawn on top for this picture only; nothing is built yet. <b>Amber = what changes.</b> To show the “removed campers” note, Sofia Nguyen (paid $140 cash) was really withdrawn in the preview first, so every screen here (Today and After) has 18 campers and Payments recorded $3,795 still includes her $140. The rows already approved: the duplicate box goes first (R3-10); a “Possible duplicate” row leaves To collect until it's reviewed (R3-02: Ava Thompson's second sign-up, $315, so To collect 6 · $1,355 → <b>5 · $1,040</b>; Campers and Coming don't change); Payments recorded says how much came from removed campers (R5-04); Find a camper gets the shared ✕ and a “No campers match” line (R3-09). <b>One decision</b> is in section 3.",
+  "width": 1900,
+  "sections": [
+    { "heading": "1 · Today → After (PC 1280×800, option A)", "columns": [
+      { "label": "Today", "tone": "today", "items": [
+        { "src": "shots/x6-pc-today.png", "crop": [52, 74, 1228, 726], "scale": 0.7, "marks": [[76, 387, 1180, 46], [672, 206, 286, 94], [970, 206, 286, 94]],
+          "caption": "<b>Today.</b> Cards and their gray line first, then Find a camper, then the duplicate box. To collect counts the possible duplicate: <b>6 · $1,355</b>. Payments recorded $3,795 doesn't say $140 of it is from a removed camper." },
+        { "src": "shots/x6-pc-ava-today.png", "crop": [66, 333, 380, 52], "scale": 1, "marks": [[400, 345, 28, 28]],
+          "caption": "<b>Today, with text:</b> only Chrome's own blue ✕ (no tooltip, only while the box has focus; other browsers differ)." }
+      ] },
+      { "label": "After", "tone": "after", "items": [
+        { "src": "shots/x6-pc-after-A.png", "crop": [52, 74, 1228, 726], "scale": 0.7, "marks": [[76, 184, 1180, 46], [672, 264, 286, 116], [983, 327, 199, 18]],
+          "caption": "<b>After.</b> ① The duplicate box first, above “Updated …” and the cards. ② To collect <b>5 · $1,040</b> (the duplicate's $315 left out) with “1 possible duplicate not counted” (option A). ③ “includes $140 from removed campers” under Payments recorded. Then the gray count line, Find a camper, the roster." },
+        { "src": "shots/x6-pc-ava-after.png", "crop": [66, 413, 380, 52], "scale": 1, "marks": [[404, 425, 28, 28]],
+          "caption": "<b>After, with text:</b> the shared ✕ inside the box (as Prospects' search), “Clear search” tooltip on PC; 44px tap area on touch." }
+      ] }
+    ] },
+    { "heading": "2 · After at every size (option A)", "columns": [
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x6-tab-after-A.png", "shotWidth": 820, "crop": [72, 90, 748, 660], "scale": 0.75, "marks": [[96, 219, 700, 54], [450, 307, 169, 134], [640, 370, 143, 36]],
+            "caption": "<b>Tablet 820×1180, touch.</b> Same order. “1 possible duplicate not counted” and the removed-campers note wrap to two lines inside their cards." },
+          { "src": "shots/x6-ph-tall-after-A.png", "shotWidth": 390, "crop": [0, 90, 390, 900], "scale": 0.72, "marks": [[16, 283, 358, 101], [16, 498, 175, 134], [212, 561, 149, 36]],
+            "caption": "<b>Phone 390 touch</b> (drawn 1150 tall to reach the first rows). Box first, cards two by two." },
+          { "src": "shots/x6-320-tall-after-A.png", "shotWidth": 320, "crop": [0, 90, 320, 940], "scale": 0.72, "marks": [[16, 283, 288, 101], [16, 516, 140, 134], [177, 597, 114, 36]],
+            "caption": "<b>320 wide, touch</b> (drawn 1150 tall). Everything fits; the notes wrap to two lines." }
+        ] }
+      ] }
+    ] },
+    { "heading": "3 · The decision: where does “1 possible duplicate” go?", "columns": [
+      { "label": "A · on the To collect card (recommended)", "tone": "after", "items": [
+        { "src": "shots/x6-ph-tall-after-A.png", "shotWidth": 390, "crop": [0, 277, 390, 443], "scale": 0.8, "marks": [[29, 583, 149, 36]],
+          "caption": "<b>Phone 390.</b>" },
+        { "src": "shots/x6-pc-after-A.png", "crop": [66, 236, 900, 236], "scale": 0.65, "marks": [[685, 349, 173, 18]],
+          "caption": "<b>PC 1280.</b> <b>A.</b> To collect's note becomes two small lines: the money and “1 possible duplicate not counted”. <b>Pros:</b> the line sits on the only card it is about; no shared part changes (cards already take two note lines, rulebook v1.115); with Hide private details on, To collect is hidden and the line goes with it — right, since Campers and Coming still count the row. <b>Con:</b> the card is a bit taller (all four cards grow with it); the line wraps on tablet and phone." }
+      ] },
+      { "label": "B · a second gray line under the cards", "tone": "after", "items": [
+        { "src": "shots/x6-ph-tall-after-B.png", "shotWidth": 390, "crop": [0, 277, 390, 443], "scale": 0.8, "marks": [[16, 653, 358, 20]],
+          "caption": "<b>Phone 390.</b>" },
+        { "src": "shots/x6-pc-after-B.png", "crop": [66, 236, 900, 236], "scale": 0.65, "marks": [[76, 401, 880, 20]],
+          "caption": "<b>PC 1280.</b> <b>B.</b> Under the count line, a second line: “To collect leaves out 1 possible duplicate until it's reviewed.” <b>Pros:</b> a whole sentence, easy to read; cards keep their height. <b>Cons:</b> the shared count cards must learn to take two lines under the row (a shared change: Dashboard core's, or with your OK); the line is far from the card it explains; the code must hide it with To collect under Hide private details." }
+      ] },
+      { "label": "C · one joined line", "tone": "after", "items": [
+        { "src": "shots/x6-ph-tall-after-C.png", "shotWidth": 390, "crop": [0, 277, 390, 443], "scale": 0.8, "marks": [[16, 622, 358, 39]],
+          "caption": "<b>Phone 390.</b>" },
+        { "src": "shots/x6-pc-after-C.png", "crop": [66, 236, 900, 236], "scale": 0.65, "marks": [[76, 370, 880, 20]],
+          "caption": "<b>PC 1280.</b> <b>C.</b> Added to the end of the count line: “… · Late pick-up: 6 · To collect leaves out 1 possible duplicate”. <b>Pro:</b> no shared change. <b>Cons:</b> long; wraps on phones; mixes two topics (the day's extras and money) in one line; must drop the end under Hide private details." }
+      ] }
+    ] },
+    { "heading": "4 · Find a camper (R3-09) and the Showing line", "columns": [
+      { "label": "Today", "tone": "today", "flex": 1, "items": [
+        { "src": "shots/x6-pc-zz-today.png", "crop": [66, 333, 820, 200], "scale": 0.72, "marks": [[400, 345, 28, 28], [76, 446, 1180, 76]],
+          "caption": "<b>PC, “zz” typed.</b> Chrome's own ✕; the duplicate box and an empty table with “No camper with that name.”" },
+        { "src": "shots/x6-ph-zz-today.png", "shotWidth": 390, "crop": [0, 510, 390, 250], "scale": 0.8, "marks": [[336, 526, 32, 32], [0, 690, 390, 70]],
+          "caption": "<b>Phone 390.</b> The same." }
+      ] },
+      { "label": "After", "tone": "after", "flex": 2, "items": [
+        { "src": "shots/x6-pc-zz-after.png", "crop": [66, 380, 820, 140], "scale": 0.9, "marks": [[404, 425, 28, 28], [76, 463, 220, 20]],
+          "caption": "<b>PC, “zz” typed.</b> The shared ✕ with its “Clear search” tooltip (shown as if the mouse were on it). In the roster's place, one gray line: <b>No campers match “zz”. · Clear search</b>, drawn like the cards' “Showing … only · Show all” line. Search words win over a card's words when a card is also pressed. (The legend line under it stays as today.)" },
+        { "row": [
+          { "src": "shots/x6-ph-zz-after.png", "shotWidth": 390, "crop": [0, 640, 390, 120], "scale": 0.9, "marks": [[326, 671, 44, 44], [16, 723, 240, 20]],
+            "caption": "<b>Phone 390, “zz”.</b> ✕ with a 44px tap area; no tooltip on touch." },
+          { "src": "shots/x6-ph-coming-after.png", "shotWidth": 390, "crop": [0, 410, 390, 360], "scale": 0.9, "marks": [[16, 675, 260, 20]],
+            "caption": "<b>Phone 390, Coming pressed.</b> “Showing coming Mon, Apr 19 only · Show all” (today's shared line, unchanged) sits under the count line, before Find a camper." }
+        ] }
+      ] }
+    ] }
+  ],
+  "footer": "<b>How it was drawn:</b> <code>mock-x6-roster-top.js</code> moves the real duplicate box, changes the real cards' number and note spans, adds the shared icon button and the shared Showing-line markup. Real numbers from the preview: To collect today 6 · $1,355 (Ethan $245, Grace $395, Leo $15, Mia $166, Noah $219, Ava's second sign-up $315); after 5 · $1,040. Removed: Sofia Nguyen $140 (withdrawn in the preview for this picture) and Owen Walsh $0. <br><br><b>Recommendation: A</b> — the line sits on the only card it is about, disappears with To collect under Hide private details, and needs no shared change. <br><b>Your choice: A, B or C?</b>"
+}

@@ -509,12 +509,16 @@ export const CARD_CAME = 'Came';
 export const cardOfDays = (n) => `of ${n} ${n === 1 ? 'day' : 'days'}`;
 export const CARD_TO_COLLECT = 'To collect';
 export const ALL_PAID = 'All paid'; // under To collect when nobody owes
+// To collect's second line while it leaves out rows marked Possible duplicate (v0.742, picture 21 A)
+export const duplicatesNotCounted = (n) => `${n} possible ${n === 1 ? 'duplicate' : 'duplicates'} not counted`;
 export const CARD_PAYMENTS = 'Payments recorded';
+// Under Payments recorded while part of it was paid by removed campers (v0.742 / v1.038)
+export const includesFromRemoved = (cents) => `includes ${formatMoney(cents)} from removed campers`;
 // The gray line while a card filters the roster (the shared part adds " · Show all").
 export const SHOWING_COMING_TODAY = 'Showing coming today only';
 export const showingComingOn = (day) => `Showing coming ${dayLong(day)} only`;
 export const SHOWING_TO_COLLECT = 'Showing to collect only';
-export const NO_MATCH_FILTER = 'No campers match.'; // (not in the mockups) a card filter (with or without Find a camper) leaves nobody, as Star's "No candidates match."
+export const NO_MATCH_FILTER = 'No campers match.'; // (not in the mockups) a card filter leaves nobody (no search text), as Star's "No candidates match."
 export const ROSTER_LABEL = 'Campers'; // (not in the mockups) screen readers: the roster table
 export const COL_PAID = 'Paid';
 export const dueTag = (cents) => `${formatMoney(cents)} due`;
@@ -532,7 +536,6 @@ export const undoCheckInDayLabel = (name, day, stamp, shortNames) => `${name} ch
 export const missedDayLabel = (name, day, shortNames) => `${name} didn’t come ${dayLong(day)}${extrasTail(shortNames)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
 export const notSignedUpLabel = (day) => `Not signed up ${dayLong(day)}`; // screen readers
 export const payTagLabel = (name, text) => `${name}: ${text}. Mark paid`; // screen readers on the $ due / Owes tag
-export const NO_MATCH_ROSTER = 'No camper with that name.'; // (not in the mockups)
 export const WEEK_SWITCH_LABEL = 'Week'; // (not in the mockups) screen readers
 // "Week 1 · Jul 6–10" (phones: "Week 1")
 export function weekLabel(index, week, short) {
@@ -554,6 +557,12 @@ export const rosterLegendParts = (touch) => ({
   rest: ' · — not signed up that day',
 });
 export const FIND_CAMPER = 'Find a camper';
+// Find a camper's ✕ (the shared icon button: label and tooltip) and the no-match line's link
+// (v0.742 / v1.050, picture 21 A — the same words as Prospects' box)
+export const CLEAR_SEARCH = 'Clear search';
+// Nothing found for the search text (search words win over a pressed card's; the screen adds
+// " · Clear search")
+export const noCampersMatch = (text) => `No campers match “${text}”.`;
 export const CHECK_IN = 'Check in';
 export const checkedInToast = (name, stamp) => `${name} checked in · ${clockTime(stamp)}`;
 export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (not in the mockups)

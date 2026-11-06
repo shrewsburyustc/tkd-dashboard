@@ -341,7 +341,8 @@ check('pay tag priority and the to-collect amount', () => {
     row({ owesCents: 21900 }), row({ owesCents: 1500, paidCents: 33500 }), row({ owesCents: -7500, paidCents: 39000 }),
     row({ owesCents: 31500, duplicateState: 'possible' }), row({ status: 'withdrawn', owesCents: 14000 }),
   ];
-  assert.equal(toCollectCents(rows), 21900 + 1500 + 31500); // overpaid never lowers it; withdrawn don't count
+  // overpaid never lowers it; withdrawn don't count; a possible duplicate stays out until reviewed (v0.742)
+  assert.equal(toCollectCents(rows), 21900 + 1500);
 });
 
 // ======================= check-in and attendance =======================
@@ -1913,9 +1914,13 @@ check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payme
   assert.equal(before.mode, 'next');
   assert.equal(before.campers, 6);
   assert.equal(before.coming, 3); // a, b, d on Monday
-  assert.equal(before.toCollect, 3); // b (owes), c (due), d (a possible duplicate that owes) — not f (paid)
-  assert.equal(before.toCollectCents, 1500 + 21900 + 10000);
-  assert.equal(before.recordedCents, 20000 + 5000 + 12000 + 18600 + 7500 + 3000); // every payment, removed campers' too
+  // v0.742 (R3-02): b (owes), c (due) — not d (a possible duplicate that owes: left out until
+  // reviewed) and not f (a paid possible duplicate: nothing to collect anyway).
+  assert.equal(before.toCollect, 2);
+  assert.equal(before.toCollectCents, 1500 + 21900);
+  assert.equal(before.duplicatesNotCounted, 1); // only d: f would not have counted anyway
+  assert.equal(before.recordedCents, 20000 + 5000 + 12000 + 18600 + 7500 + 3000); // every payment, removed campers' and duplicates' too
+  assert.equal(before.removedPaidCents, 7500 + 3000); // R5-04: the part from removed campers (x, y)
   const monday = campCardCounts(roster, cardDays, '2027-04-19');
   assert.equal(monday.mode, 'today');
   assert.deepEqual([monday.coming, monday.here], [3, 1]);
@@ -1929,14 +1934,44 @@ check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payme
   assert.equal(CampText.ALL_PAID, 'All paid');
   // Nobody at all.
   const none = campCardCounts([], cardDays, '2027-04-01');
-  assert.deepEqual([none.campers, none.coming, none.toCollect, none.recordedCents], [0, 0, 0, 0]);
-  // The filters: Coming keeps that day's campers, To collect the ones not paid, null everyone.
+  assert.deepEqual([none.campers, none.coming, none.toCollect, none.recordedCents, none.removedPaidCents, none.duplicatesNotCounted], [0, 0, 0, 0, 0, 0]);
+  // The filters: Coming keeps that day's campers (a possible duplicate too), To collect exactly the
+  // rows its card counts (no possible duplicate), null everyone.
   const monDay = cardDays[0];
   assert.deepEqual(roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'coming', monDay)).map((r) => r.id), ['a', 'b', 'd']);
-  assert.deepEqual(roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'collect', monDay)).map((r) => r.id), ['b', 'c', 'd']);
+  const collectList = roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'collect', monDay));
+  assert.deepEqual(collectList.map((r) => r.id), ['b', 'c']);
+  assert.equal(collectList.length, before.toCollect);
+  assert.equal(collectList.reduce((n, r) => n + r.owesCents, 0), before.toCollectCents);
   assert.equal(roster.every((r) => matchesCardFilter(r, null, monDay)), true);
   assert.equal(comesOnDay(roster[2], 'mon'), false);
   assert.equal(comesOnDay(roster[2], 'tue'), true);
+});
+
+check('count cards v0.742: a possible duplicate leaves To collect; removed campers\' money is named', () => {
+  const cardDays = [{ dayId: 'mon', day: '2027-04-19' }];
+  const row = (id, status, paidCents, owesCents, duplicateState = null) => ({
+    id, status, days: [{ dayId: 'mon', checkedInAt: null }], paidCents, owesCents, duplicateState,
+  });
+  // Ava Thompson's pair: the kept row paid, the second sign-up ($315) is marked Possible duplicate.
+  const pair = [row('ava1', 'active', 31500, 0), row('ava2', 'active', 0, 31500, 'possible'), row('ben', 'active', 0, 24500)];
+  const flagged = campCardCounts(pair, cardDays, '2027-04-01');
+  assert.deepEqual([flagged.campers, flagged.coming], [3, 3]); // people counts don't change
+  assert.deepEqual([flagged.toCollect, flagged.toCollectCents, flagged.duplicatesNotCounted], [1, 24500, 1]);
+  assert.equal(flagged.recordedCents, 31500);
+  assert.equal(flagged.removedPaidCents, 0); // nobody removed: no note on Payments recorded
+  // Reviewed → Keep both: the row is whole again (To collect counts it, the duplicate line goes).
+  const kept = campCardCounts(pair.map((r) => (r.id === 'ava2' ? { ...r, duplicateState: 'kept_both' } : r)), cardDays, '2027-04-01');
+  assert.deepEqual([kept.toCollect, kept.toCollectCents, kept.duplicatesNotCounted], [2, 56000, 0]);
+  // A paid camper is withdrawn: Payments recorded keeps the money, and says how much came from removed campers.
+  const withdrawn = campCardCounts([...pair, row('sofia', 'withdrawn', 14000, 0)], cardDays, '2027-04-01');
+  assert.deepEqual([withdrawn.campers, withdrawn.recordedCents, withdrawn.removedPaidCents], [3, 45500, 14000]);
+  // The words (curly quotes as the rest of the app).
+  assert.equal(CampText.duplicatesNotCounted(1), '1 possible duplicate not counted');
+  assert.equal(CampText.duplicatesNotCounted(2), '2 possible duplicates not counted');
+  assert.equal(CampText.includesFromRemoved(14000), 'includes $140 from removed campers');
+  assert.equal(CampText.noCampersMatch('zz'), 'No campers match “zz”.');
+  assert.equal(CampText.CLEAR_SEARCH, 'Clear search');
 });
 
 // ======================= Early drop-off / Late pick-up on the roster (picture 19, option A) =======================
