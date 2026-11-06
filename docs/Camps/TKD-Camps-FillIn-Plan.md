@@ -14,10 +14,10 @@
 
 ## Decisions to ask Jeffrey (one at a time, each with a picture)
 
-1. **When Fill in works**: only while family sign-up is open, or also after the closing date / when closed by hand (a walk-in on the first camp morning is after the closing date — the default closing is the day before the first day). And whether staff or only admins may do it after closing.
+1. ~~When Fill in works~~ **Decided 2026-11-05 (v0.740), picture 22x: "C"** — while family sign-up is open, staff and admins; while it isn't open (not open yet, closed by hand, past the closing date) admins only, staff see it gray with a tip to ask an admin; after the camp's last day nobody. The online form stays closed. The database enforces the same rule.
 2. Whatever the pictures show that is new (the words of the Sent screen and the "Signed up at the desk" line).
 
-## Database — one migration (number reserved through Main)
+## Database — migration 0043 (reserved by Main 2026-11-05)
 
 - New column `camp_signups.entered_by text null` (+ `source text not null default 'form'`, check `in ('form','desk')`), so a desk sign-up is told apart (no backfill needed: every existing row is 'form').
 - New function `camp_staff_signup(...)` — copies `forms_staff_submit` (0009): `security definer`, `set search_path = ''`, checks `has_data_access()` first, granted to `authenticated` only (nothing to anon), returns `{status: …}`. It calls the same core as the family form (`camp_public_signup_core`, 0022) so the rules can't drift; the core gains `p_source` / `p_entered_by` (no client key and no per-client rate limit for staff, the way the staff Forms path skips them; the open/closed check follows decision 1). Logged in `change_log` as the staff member ("entered by").
