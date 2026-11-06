@@ -1,4 +1,5 @@
 # New students — fixes from the design review's rolling check (pass 1)
+> **Pass 2 (2026-11-05) corrects or adds to items here:** see `../Pass 2/Fix-NewStudents.md`, "Corrections to pass 1".
 
 **Paste into:** the new students session.
 

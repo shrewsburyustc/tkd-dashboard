@@ -1,4 +1,5 @@
 # Dashboard core — fixes from the design review's rolling check (pass 1)
+> **Pass 2 (2026-11-05) corrects or adds to items here:** see `../Pass 2/Fix-DashboardCore.md`, "Corrections to pass 1".
 
 **Paste into:** the Dashboard core session.
 
