@@ -98,3 +98,7 @@ export const historyWhen = (date, who) => [date, who].filter((part) => typeof pa
 
 // ----- M8: the time list (TimeList.jsx; its times' words are in src/lib/times.js) -----
 export const CHOOSE_A_TIME = 'Choose a time'; // nothing chosen yet (gray)
+
+// ----- M12: the one offline bar (OfflineBar.jsx; rulebook v1.005, v1.123) -----
+// Adapted from Star's approved offline line (v0.513), as drawn in picture 05b.
+export const OFFLINE_BAR = 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.';
