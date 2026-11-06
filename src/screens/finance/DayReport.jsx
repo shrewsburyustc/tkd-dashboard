@@ -377,6 +377,7 @@ export default function DayReport({
       const closingId = answer.closing_id;
       showToast(isToday ? T.DRAWER_CLOSED : T.drawerClosedOn(day), {
         action: { label: T.UNDO, onAction: () => undoClose(closingId, forKey) },
+        icon: false, // no ✓: only the account toasts show one (v1.046)
       });
       live.reload();
       return;
@@ -686,7 +687,7 @@ export default function DayReport({
           onDone={() => {
             setExporting(false);
             focusOpener();
-            showToast(T.EXPORT_DONE, { icon: true });
+            showToast(T.EXPORT_DONE, { icon: false }); // no ✓ (v1.046)
           }}
         />
       )}

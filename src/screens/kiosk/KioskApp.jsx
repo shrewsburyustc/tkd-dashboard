@@ -27,6 +27,7 @@ import LockScreen from '../LockScreen.jsx';
 import { kioskState, markKioskLoaded, readKiosk } from '../../lib/kiosk.js';
 import '../../styles/forms.css';
 import '../../styles/forms-public.css';
+import '../../styles/icon-button-public.css'; // the "Remove child" icon button's look, as on the family page (R5-03)
 import '../../styles/kiosk.css';
 
 // From now on the family page's stylesheet is on this page: a sign-out reloads (App.jsx, src/lib/kiosk.js).

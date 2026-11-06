@@ -866,7 +866,37 @@ Source: `docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md`. Started 
 - a commit on `dashboard-core` after each reviewed step, never a push, then a report to Main naming the sections that must adopt it;
 - no migration is needed.
 
-**Steps, in the proposed order:**
+**New order, 2026-11-05.** Main sent the starter on Jeffrey's "Yes, send them", and the fix file now includes his answers v1.041–v1.051. Each shared item is merged to `main` as soon as it's reviewed and OK'd, in small steps, so the sections waiting on it can start.
+
+0. **M12, the one offline bar** (step 2, plan §17), finishing first: Camps' C19 waits on it.
+1. ~~R4-07~~: done (v1.122), live since `main` 7511656.
+2. **R2-05: the queued Undo** (the first plan's step 3, below). It unblocks the most sections: Star, Camps, Black Belt, New students and Color Belt.
+3. **The shared words, in one step.** Nothing on screen changes, except S-2's own lines:
+   - R1-06: the Undo payment box's title and "Paid on [date]" (Black Belt's words);
+   - R1-07, first part: the toast words after Mark paid and Undo payment;
+   - R2-07: "Someone else changed [Name] just now, so nothing was done. Their change is shown.", "Couldn't undo: [reason]." and "Undo didn't save. Check the connection, then retry.";
+   - S-2: "Couldn't load. Check the connection, then retry.", plus a form that names what didn't load. Dashboard core's own four lines end that way, and the sign-in screen's load line gains a Retry (one small picture first: it's a new button);
+   - R3-13: the two gray-day hints (the first plan's step 2);
+   - R2-09: Staff accounts' "Password reset for [name]" drops its full stop;
+   - `text.js`'s header: it now also holds sentences every section repeats.
+4. **R2-04: the toast gets its own room** (v1.042). It is built once, in the shared toast and styles. A mockup at the four sizes comes first. A full-screen detail with its own bottom buttons is drawn both ways for Jeffrey: room, or the toast lifted above the buttons.
+5. **R1-08: the unavailable gray for plain buttons and tags** (the first plan's step 5). Jeffrey's call: page-wide or per section.
+6. **R3-12: the dropdown's unavailable state** (the first plan's step 4).
+7. **R4-09: the tags' 24 px click box** (the first plan's step 2; check-only).
+8. **R3-06: one shared back link** (v1.048): a new shared part in `.tc-back`'s look. One small picture first, and Testing's focus helper learns its class.
+9. **R1-07, second part: one set of payment-line and history words.** A mockup of the four sections' versions comes first, including Black Belt's installment toast; Jeffrey OKs one set.
+10. **Smaller:** the Mark paid box on phones (the first plan's step 2), and the refactors (step 6).
+
+**Notes from New students' two design reviews** (2026-11-05, passed on by Main; nothing needs Jeffrey yet), filed with the items above:
+- **With R2-05 (step 2):** Forms' new "Copy to the other school" Undo drops silently during another save too. New students added it to its own R2-05 list, to switch to the shared helper.
+- **With R2-04 (step 4):**
+  - confirmed on a long Forms list (Both, 1280): the last row's Share and ⋯ sat under the toast while focused (§4 check 3);
+  - the toast's padding: at 320 wide, a toast with Undo and three lines of words (288×59) has its text touching its top and bottom edges. `.toast--action` (`app.css`) has no top or bottom padding. This goes into R2-04's mockup.
+- **A new small item, the shared ⋯ menu's focus after a choice.** Picking a `RowMenu` item with the keyboard (e.g. Forms → Copy to …, Duplicate, Close form) drops focus to the page. `RowMenu.jsx` runs the item's `onSelect` without giving focus back to the ⋯, so the toast's Undo is then about the 18th Tab stop while its 5 seconds run. The fix: give focus back to the ⋯ after a choice, as v1.119 did for Show all (Black Belt's own menus already do).
+- **A new small item, the shared tooltip.** It can't be hovered or dismissed with Esc (WCAG 1.4.13, content on hover or focus). This is a 2.1 AA rule, though not one of v1.033's six, and it affects every IconButton. The fix: the tooltip stays while the pointer moves onto it, and Esc hides it.
+- **For Jeffrey, later, one small picture:** §7's Delete row says trash icons turn red on hover, but none does. The shared button darkens to near-black, as in the approved pictures, so the row's words need settling.
+
+**The first plan's steps** (2026-11-04). Their details still hold, in the new order above:
 
 1. **R4-07: the gray "Payment history is hidden" line tells paid from unpaid (privacy).**
    - **Today:** `src/components/HistoryLine.jsx:106` shows the line only for people with money changes, so seeing it tells you who paid.
@@ -929,15 +959,79 @@ Source: `docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md`. Started 
 
 **Not here:** Staff accounts while private details are hidden (step 2's M17).
 
-**Waits on Jeffrey** (the Design Review asks him through Main; nothing is built here until his answers arrive):
-- R2-04: the toast staying off the buttons under it;
-- R1-07: one set of toast words after Mark paid and Undo payment;
-- R2-07: the words for "someone else changed it", Undo refused and Undo failed;
-- R2-09: the ✓ and full stop on toasts;
-- R3-06: one shared back link;
-- R3-09: in-list search;
-- R4-02: an open desk-only form when Hide private details turns on;
-- R4-06: weight 600 to 500;
-- the payment line and history words;
-- the school order;
-- the browser's own dropdowns.
+**Decided since** (Jeffrey, 2026-11-04, v1.041–v1.051). Every item the first plan listed as waiting on him is answered:
+- R2-04, R1-06, R1-07, R2-07, S-2, R3-06 and R2-09 (the full stop) are now in the new order above;
+- R2-09's ✓, R3-09, R4-02, R4-03, R4-06, S-1 (the school order) and S-10 (the browser's dropdowns) need nothing from Dashboard core.
+
+## 17. Step 2, M12: one offline bar on every page
+
+Jeffrey, 2026-11-05: "Yes, M12 first". Step 2's brief (`docs/Design Review/End review/Prompts/2-DashboardCore-step2-main-screens.md`) starts with M12. It goes ahead of the fix list's step 2 because Camps' last design-review item, C19, waits on it.
+
+**What it does** (rulebook v1.005 and §3.5, v1.032, v1.033; picture `Walkthrough/05b-wifi-drops.png`, option B):
+- One amber bar under the top bar, on every signed-in page, while the device is offline **or** after two failed refreshes in a row. It goes away by itself when the connection is back.
+- Its words, as approved in 05b: "You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself." The same words cover both causes.
+- No Retry, no × and no time: the 15-second reloads keep trying, and the next good one clears it.
+
+**Where it sits:** on the frame (`Shell.jsx`), in the slot Panel size's "not saved" bar already uses (v1.118):
+- between the top bar and the page, outside the page's scrolling part, so it never covers the page or the control the keyboard is on (v1.033: WCAG 2.2, focus not obscured);
+- it stays while the person changes page;
+- it lines up with the page's edges (24px; 16px on phones) and clears the page's own scrollbar;
+- when both bars show, the offline bar comes first.
+
+It is the shared amber bar (`ErrorBanner`) without its buttons, so it looks like every other problem bar (v1.004). 05b drew it edge to edge; this copies the bar built since.
+
+**What turns it on:**
+- the browser saying it's offline (`navigator.onLine` and its `online` / `offline` events);
+- any screen's live reload failing twice in a row. The shared `useLiveLoad` already knows this (`refreshFailing`). M12 adds one small shared store that every `useLiveLoad` reports to, one entry per screen; a screen that closes takes its entry with it.
+
+Screens without live reloads (Home, for one) only use the browser's signal.
+
+**After the reviews (2026-11-05):**
+- Only a live reload with its own refresh time reports, so its next good refresh can always take the report back. Finance's Daily report, History and Settings, and Camps' Templates have none.
+- Every live reload reloads on the browser's "online" event, so the bar goes at once when the Wi-Fi is back.
+- Failed refreshes count across a school switch, once the page has had an answer. A page that has never loaded (e.g. a missing database function) never claims "offline".
+- **Accepted limit:** for the failed-refresh cause only (the Wi-Fi up but no internet), a page change drops the bar; the new page shows its own "Couldn't load…" note. When the browser says offline, the bar stays on every page.
+- The shared amber bar keeps an edge in Windows high contrast (`outline: 1px solid transparent` in `shared.css`).
+- **The page stays still** (Jeffrey, 2026-11-05: "B, keep it still"; rulebook v1.124; picture `Questions/M12-page-jump.html`). When a bar comes or goes, `Shell.jsx` moves the page's own scroll by the same height, using a ResizeObserver on the page's box, before painting. It covers both bars (offline and Panel size's) and text that wraps differently after a resize. Behind the lock screen nothing is measured.
+  - Its cost: at the very top of a page, the first line sits just out of view while the bar shows (on a phone, the title too), and a page at or near its top when a bar goes still moves. Jeffrey accepted both, 2026-11-05 ("Yes, accept both").
+  - **Exception:** the control the keyboard is on never goes out of sight (v1.033). If keeping the page still pushed it above the page's top edge, the page comes back down just enough.
+  - **After two more review rounds (2026-11-05):**
+    - the scroll moves from where it is now, keeping the browser's own scroll anchoring and a wheel step. Only at the page's end, where the browser already pulled it back, does it count from where the person had it before;
+    - the page's place is read from the layout (`offsetTop`), so a scroll of the whole frame can't throw it off, and there's no 1px creep;
+    - the focus exception is only for a control showing its focus ring that was in view before the bar came, and it keeps 8px for the ring;
+    - a live reload reports only while it's asking (a key, and turned on), so a closed tab can't hold the bar.
+
+**Follow-ups, not in M12:**
+- Very short windows (400% zoom, 320×256): with both bars the page has no height left. This is the frame's slot, so Panel size's bar has the same problem.
+- Pre-existing: `.visually-hidden` (`position: absolute` with no positioned parent in the page) lets the whole frame scroll on some phone pages (Color Belt event at 390 and 320 wide, Prospects at 320).
+- A drop while a dialog is open isn't announced to screen readers (the frame is inert behind it), the same as Panel size's bar.
+
+**What stays** (v1.005): Star grading's grade-by-grade banner (and Black Belt grading's, which reuses it), every save's own amber bar (§3.5), and Panel size's bar.
+
+**Decided** (Jeffrey, 2026-11-05: "A, fold it in"; rulebook v1.123): Black Belt Results' own offline bar ("You’re offline. These results may be out of date. Email result, Mark as sent, Print results and Download CSV need a connection.") folds into the shared bar. The answer also approves the rest of the mockup (`Mockups/M12-offline-bar.html`).
+
+**What goes, in other sessions, once M12 is on `main`:**
+- Camps' "Couldn’t refresh the roster" bar (C19, Camps);
+- Black Belt Results' own bar (Black Belt, v1.123). Its grayed Email result, Mark as sent, Print results and Download CSV then say why with a gray line next to them (v1.004).
+
+When M12 is merged, Main is told so it can pass the word on.
+
+**Files:**
+- new `src/components/OfflineBar.jsx`: the bar;
+- new `src/lib/connection.js`: the shared store and the hook the bar reads (working names);
+- `src/lib/useLiveLoad.js`: each live reload reports its `refreshFailing`;
+- `src/components/Shell.jsx` and `src/styles/app.css`: the slot, shared by both bars;
+- `src/components/text.js` (shared): the words;
+- `src/lib/mockClient.js` (shared): a preview helper, `__tkdPreview.cutConnection(true)` / `(false)`. While it's on, every fake-database call fails like a dropped connection, and the bar's offline signal reads "offline", so the preview can show both causes;
+- the rulebook: one row from block 1.100–1.199.
+
+**Checks:** a new `docs/Dashboard Core/tools/check-offline.mjs` drives the preview with the browser's real offline switch and the new helper. It checks that the bar:
+- shows on every page and stays across page changes;
+- shows after two failed reloads, and not after one;
+- goes when the connection is back;
+- is hidden behind the lock screen;
+- never covers the focused control.
+
+Then check-parts, check-panel, the 19 check files and both builds.
+
+**Reviews:** a design review at the four sizes, and a code review. There is no database change and nothing private is shown, so no security review.

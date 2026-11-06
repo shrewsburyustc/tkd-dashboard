@@ -6,7 +6,9 @@
 // On Both, one line per school ("Shrewsbury's drawer isn't closed yet."). Admins also see how
 // many earlier days (last 30) weren't closed, linking to History: with one school chosen, that
 // school's days only ("…at Shrewsbury…"); on Both, one line for both schools. The link opens
-// History for the same school choice, at the month of the first unclosed day.
+// History for the same school choice, at the month of the first unclosed day. The earlier-days
+// line follows History's switch (SHOW_UNCLOSED in flags.js, v1.041): while History marks no day
+// "Not closed", Home hides that line too, doesn't read History for it and doesn't wait for it.
 // While "Hide private details" is on for this device (v0.215, v0.506) the lines still show, but without a link.
 // The earlier-days line has an OK button (v0.811): OK remembers on this device which unclosed
 // (school, day) pairs were seen (lib/finance/reminderAck.js). The line then stays away while only
@@ -34,6 +36,7 @@ import {
 } from '../../lib/finance/reminderAck.js';
 // eventsApi's schoolToday also follows the preview's __tkdPreview.setToday (like Finance.jsx).
 import { schoolToday } from '../../lib/testing/eventsApi.js';
+import { SHOW_UNCLOSED } from './flags.js';
 import * as T from './text.js';
 import * as R from './reminderText.js';
 
@@ -76,7 +79,8 @@ export function useHomeReminders({ location, screenLocked }) {
   const code = location === 'Both' ? null : LOCATION_CODE[location];
   const earlier = answer?.earlier ?? null;
   const scoped = !earlier ? null : code === null ? earlier : earlier.by_school?.[code] ?? null;
-  const scopedCount = scoped?.count ?? 0;
+  // While the "weren't closed" warnings are off (flags.js), the earlier-days line counts as 0.
+  const scopedCount = SHOW_UNCLOSED ? scoped?.count ?? 0 : 0;
   const today = schoolToday();
   // A "signature": changes when the summary, the school choice or the date changes. Only then is
   // History read again (not every minute).

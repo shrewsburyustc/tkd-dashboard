@@ -1,0 +1,111 @@
+/*
+  icon-button-public.css — the icon-only button's look (IconButton.jsx; "Remove child") for the
+  public pages families use, which don't load the dashboard's shared.css.
+  Why it exists: a child is removed with the same trash icon button everywhere (rulebook v0.626 (2),
+  design review N13), on every family page (v1.048 (22)). Its look was a copy inside
+  forms-public.css; it is its own small file now so the other family pages can load it too
+  (design review R5-03).
+  Loaded today by the public forms page (forms.html, /f/<name>: src/forms/main.jsx) and by the
+  front-desk kiosk (src/screens/kiosk/KioskApp.jsx), right after forms-public.css. Camps' family
+  page is to load it next (Camps' R5-03). The kiosk runs inside the dashboard, which loads
+  shared.css; there this file changes nothing (see the weights below).
+  The look: a 28px square with a 16px gray icon. On a PC its name shows in a dark tooltip on hover
+  and keyboard focus, and under the mouse the icon darkens on a light gray square. On touch
+  screens the tap area is 44px.
+  Weights: every rule is wrapped in :where(), which gives it zero weight (the two ::after rules
+  weigh one tag, as a pseudo-element can't go inside :where()), except the gray, which weighs two
+  tags. So the dashboard's own .tib rules (a class) always win inside the kiosk.
+  Not here: shared.css's turned-off / unavailable look (v1.120) and the bordered .tib--outline.
+  Remove child needs neither: it is drawn only while the form can be changed.
+  Colors and sizes come from tokens.css.
+*/
+
+:where(.tib) {
+  display: inline-flex;
+  position: relative; /* anchor for the tooltip */
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+}
+
+/* The gray (R5-02). A family page's own reset, `button { color: inherit }` (forms-public.css; Color
+   Belt's register.css and Black Belt's form.css have the same), weighs one tag and once beat the
+   gray. This rule weighs two tags (html, button), so it wins whatever order the stylesheets load
+   in, and inside the kiosk the dashboard's .tib (a class) still wins, with the same gray. */
+html button:where(.tib) {
+  color: var(--color-text-secondary);
+}
+
+:where(.tib-box) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+}
+
+:where(.tib-tip) {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-8));
+  z-index: 30;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-tooltip-bg);
+  color: var(--color-on-blue);
+  font-size: var(--text-13);
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none; /* the bubble never blocks clicks */
+}
+
+:where(.tib-tip)::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 9px;
+  border: 5px solid transparent;
+  border-top-color: var(--color-tooltip-bg);
+}
+
+/* No room above: the bubble goes below, its triangle pointing up */
+:where([data-tip='below'] > .tib-tip) {
+  top: calc(100% + var(--space-8));
+  bottom: auto;
+}
+
+:where([data-tip='below'] > .tib-tip)::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--color-tooltip-bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.tib:hover .tib-tip, .tib:focus-visible .tib-tip) {
+    display: block;
+  }
+}
+
+@media (hover: hover) {
+  :where(.tib:hover .tib-box) {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+}
+
+@media (pointer: coarse) {
+  :where(.tib) {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+}

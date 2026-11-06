@@ -192,10 +192,11 @@ export function changedAfterLine({ count, added, addedAt, corrected, correctedOn
 }
 
 // ----- Toasts and messages for closing (D3) -----
-export const DRAWER_CLOSED = 'Today’s drawer is closed.';
-export const drawerClosedOn = (day) => `The drawer for ${dayShort(day)} is closed.`; // NOT IN MOCKUPS — for CP1 (admin closing an earlier day)
+export const DRAWER_CLOSED = 'Today’s drawer is closed'; // one sentence: no full stop (v1.051)
+export const drawerClosedOn = (day) => `The drawer for ${dayShort(day)} is closed`; // NOT IN MOCKUPS — for CP1 (admin closing an earlier day)
 export const UNDO = 'Undo';
-export const CLOSE_UNDONE = 'Close undone. The day is open again.'; // NOT IN MOCKUPS — for CP1
+export const UNDONE = 'Undone'; // the toast after an Undo that worked (v1.051)
+export const CLOSE_UNDONE = 'Undone. The day is open again.'; // two sentences: keeps its full stops (v1.051)
 export const TOO_LATE_UNDO = 'Too late to undo here. Ask an admin to reopen the day.'; // D3 proposal text
 export const UNDO_FAILED = 'Couldn’t undo. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
 export const DAY_REOPENED = 'Day reopened. It can be counted again.'; // NOT IN MOCKUPS — for CP1
@@ -211,11 +212,10 @@ export const NOT_ALLOWED = 'Only an admin can do that.'; // NOT IN MOCKUPS — f
 export const LOAD_FAILED = 'Couldn’t load the daily report. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_HISTORY_FAILED = 'Couldn’t load History. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_SETTINGS_FAILED = 'Couldn’t load the settings. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
-export const RETRY = 'Retry';
-export const DISMISS = 'Dismiss';
-export const BACK = 'Back';
-export const CLOSE = 'Close';
-export const CANCEL = 'Cancel';
+// Retry, Dismiss, Back, Close and Cancel are the shared parts' words (src/components/text.js), typed
+// once there so Finance's can't drift from every other section's (design review F6; Jeffrey,
+// 2026-11-05: "Yes, shared words").
+export { RETRY, DISMISS, BACK, CLOSE, CANCEL } from '../../components/text.js';
 
 // ----- Payments list (D1, D4, #q12) -----
 export const COL_TIME = 'Time';
