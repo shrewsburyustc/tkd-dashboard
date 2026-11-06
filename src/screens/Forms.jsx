@@ -4,7 +4,8 @@
 // section, like Calendar.jsx. It:
 //   - loads the forms (useForms) and shows the list (FormsList), filtered by the school switcher
 //   - admins: "New form" (NewFormDialog) → the builder (Builder.jsx); ⋯ → Fill in, Duplicate,
-//     Close form / Open form, Delete form (only without sign-ups; asks in the shared ConfirmBox)
+//     Copy to Worcester / Shrewsbury (a Draft copy at the other school, v0.642), Close form /
+//     Open form, Delete form (only without sign-ups; asks in the shared ConfirmBox)
 //   - staff: no building; a row opens a read-only Preview; "Fill in" and Share on each row
 //   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
@@ -12,11 +13,11 @@
 // address (rulebook v0.242). Admin vs staff only changes what is SHOWN — the database enforces
 // who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconCopy, IconCurrencyDollarOff, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconCopy, IconCurrencyDollarOff, IconEdit, IconMapPin, IconPlus, IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../components/ConfirmBox.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
-import { LOCATION_CODE } from '../lib/device.js';
+import { LOCATION_CODE, LOCATION_NAME } from '../lib/device.js';
 import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
@@ -24,7 +25,7 @@ import { loadSchedule } from '../lib/schedule/api.js';
 import { cleanText } from '../lib/calendar/rules.js';
 import { slugify } from '../lib/forms/fields.js';
 import { useForms } from '../lib/forms/useForms.js';
-import { createForm, deleteForm, duplicateForm, loadForm, setFormStatus } from '../lib/forms/api.js';
+import { copyFormToSchool, createForm, deleteForm, duplicateForm, loadForm, setFormStatus } from '../lib/forms/api.js';
 import FormsList from './forms/FormsList.jsx';
 import NewFormDialog, { checkNewForm } from './forms/NewFormDialog.jsx';
 import Builder from './forms/Builder.jsx';
@@ -39,6 +40,10 @@ function NoIcon() {
 }
 
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
+// The other school's code ('worcester' ↔ 'shrewsbury'), for "Copy to …" (v0.642)
+const otherSchool = (code) => Object.values(LOCATION_CODE).find((c) => c !== code);
+// Does the form book a free class? Its copy then needs the other school's class times (v0.642).
+const hasBookingStep = (form) => (Array.isArray(form.draft) ? form.draft : []).some((f) => f?.type === 'booking');
 
 export default function Forms({ location, profile, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
@@ -183,6 +188,55 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     } else if (res.status === 'no_access') onNoAccess();
     else setBanner({ text: res.status === 'not_allowed' ? T.NOT_ALLOWED : T.SAVE_FAILED_BAR });
   }
+  // "Copy to Worcester / Shrewsbury" (rulebook v0.642): a Draft copy at the other school. You stay
+  // in the list (option A, as with Duplicate); the toast says where the copy went, with Undo for 5
+  // seconds, which deletes the copy. A failure shows the bar with Retry, which copies again.
+  // A bar stays until what it reports is fixed or × is pressed (v1.004). Each of these bars says
+  // what it belongs to (`kind` + the form or the copy, as Camps' bars do), so a copy or an Undo
+  // that worked takes away only its OWN bar, never another one that came up meanwhile. A copy of
+  // the same form made again from ⋯ fixes its bar too, so that bar's Retry can't make a second copy.
+  async function copyToOtherSchool(form) {
+    if (busyRef.current) return;
+    const target = otherSchool(form.locationCode);
+    setBusy(true);
+    const res = await copyFormToSchool(form.id, target);
+    setBusy(false);
+    if (res.status === 'ok') {
+      setBanner((b) => (b?.kind === 'copy' && b.formId === form.id ? null : b));
+      await list.reload();
+      const undo = async () => {
+        if (busyRef.current) return;
+        setBusy(true);
+        const u = await deleteForm({ id: res.id, expectedVersion: res.version });
+        setBusy(false);
+        if (u.status === 'ok' || u.status === 'not_found') {
+          // not_found: the copy is already gone, which is what Undo wanted
+          setBanner((b) => (b?.kind === 'undoCopy' && b.copyId === res.id ? null : b));
+          list.reload();
+          showToast(T.UNDONE, { icon: false }); // v0.618
+        } else if (u.status === 'no_access') onNoAccess();
+        else if (u.status === 'stale' || (u.status === 'not_allowed' && u.reason === 'has_signups')) {
+          // someone changed the copy (or a family signed up on it) in the meantime: it stays
+          list.reload();
+          setBanner({ text: T.UNDO_STALE });
+        } else if (u.status === 'not_allowed') {
+          setBanner({ text: T.NOT_ALLOWED });
+          onRefreshProfile();
+        } else setBanner({ kind: 'undoCopy', copyId: res.id, text: T.UNDO_FAILED, retry: undo });
+      };
+      showToast(T.copiedTo(LOCATION_NAME[target], hasBookingStep(form)), { icon: false, action: { label: T.UNDO, onAction: () => undo() } });
+    } else if (res.status === 'no_access') onNoAccess();
+    else if (res.status === 'not_allowed') {
+      setBanner({ text: T.NOT_ALLOWED });
+      onRefreshProfile();
+    } else if (res.status === 'not_found') {
+      list.reload();
+      setBanner({ text: T.STALE_BUILDER });
+    } else if (res.status === 'invalid') setBanner({ text: T.COPY_REFUSED }); // trying again can't help: no Retry
+    else if (res.status === 'duplicate_slug') setBanner({ text: T.copyTooMany(LOCATION_NAME[target]) }); // nor here
+    // the connection, or two copies at the same moment (stale): trying again works
+    else setBanner({ kind: 'copy', formId: form.id, text: T.SAVE_FAILED, retry: () => copyToOtherSchool(form) });
+  }
   async function toggleClosed(form) {
     if (busy) return;
     setBusy(true);
@@ -262,6 +316,8 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
           { key: 'edit', label: T.EDIT_FIELD, Icon: IconEdit, onSelect: () => openBuilder(menu.form.id) },
           fillItem(menu),
           { key: 'dup', label: T.DUPLICATE, Icon: IconCopy, disabled: busy, onSelect: () => duplicate(menu.form) },
+          // ti-map-pin = a school (the icon map's Location); right after Duplicate (v0.642)
+          { key: 'copyTo', label: T.copyTo(LOCATION_NAME[otherSchool(menu.form.locationCode)]), Icon: IconMapPin, disabled: busy, onSelect: () => copyToOtherSchool(menu.form) },
           menu.form.status !== 'draft' && {
             key: 'close',
             label: menu.form.status === 'live' ? T.CLOSE_FORM : T.OPEN_FORM,
@@ -414,7 +470,8 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
           {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
         </>
       )}
-      {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
+      {/* a bar with `retry` gets Retry, which does the same again (v1.004) */}
+      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
       {body}
       {menu && !screenLocked && (
         <RowMenu
@@ -422,7 +479,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
           isSheet={isPhone}
           title={menu.form.name}
           subtitle={T.STATUS[menu.form.status]}
-          label={T.moreLabel(menu.form.name)}
+          label={T.moreLabel(both ? T.withSchool(menu.form.name, LOCATION_NAME[menu.form.locationCode]) : menu.form.name)}
           items={menuItems}
           onClose={(reason) => {
             const el = menu.anchor;

@@ -486,6 +486,18 @@
 //       0041f (manual/0041u: refused while an end time is saved, then
 //       back to the earlier functions, no column) - see step0041 below.
 //       Run only this step with   node run.mjs --only-step0041
+//   step0042. 0042 (New students: "Copy to Worcester / Shrewsbury" -
+//       forms_copy_to_school, a Draft copy at the other school; v0.642,
+//       v0.644) on its own database in the production order
+//       (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030, 0032,
+//       0033, 0034, 0036, 0041)
+//       with a form with booking times made before it: the pre-apply
+//       check, only 0009's file gains the new function's two lines, 0042
+//       writes nothing, 0042's tests and the Forms / Prospects tests
+//       before and after, a copy made and kept, re-run safety, and the
+//       Undo of SETUP.md 0042e (manual/0042u: the kept copy stays, every
+//       fingerprint back to before 0042) - see step0042 below. Run only
+//       this step with   node run.mjs --only-step0042
 //   step0043. 0043 (Camps Fill in: staff sign up a walk-in family at the
 //       desk, v0.740 / v0.741) on its own database in the production
 //       order (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030,
@@ -547,6 +559,7 @@ const onlyStep0033 = process.argv.includes('--only-step0033');
 const onlyStep0034 = process.argv.includes('--only-step0034');
 const onlyStep0036 = process.argv.includes('--only-step0036');
 const onlyStep0041 = process.argv.includes('--only-step0041');
+const onlyStep0042 = process.argv.includes('--only-step0042');
 const onlyStep0043 = process.argv.includes('--only-step0043');
 
 // Fixed ids for the two pretend logins (any uuid works).
@@ -801,6 +814,15 @@ async function main() {
     if (prints41) {
       console.log('\n0041 fingerprints (kind  item  detail):');
       for (const line of prints41) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0042: just New students' "Copy to the other school" step (0042)
+  if (onlyStep0042) {
+    const prints42 = await step0042();
+    if (prints42) {
+      console.log('\n0042 fingerprints (kind  item  detail):');
+      for (const line of prints42) console.log('  ' + line);
     }
     return finish();
   }
@@ -1091,6 +1113,10 @@ async function main() {
   // step0041: Star event end time (its own database, production order)
   console.log('\nMigration 0041 (Star event end time):');
   const after41 = after5 ? await step0041() : null;
+
+  // step0042: New students - Copy a form to the other school (its own database, production order)
+  console.log('\nMigration 0042 (New students: Copy a form to the other school):');
+  const after42 = after5 ? await step0042() : null;
   // step0043: Camps Fill in (its own database, production order)
   console.log('\nMigration 0043 (Camps Fill in):');
   const after43 = after5 ? await step0043() : null;
@@ -1212,6 +1238,10 @@ async function main() {
   if (after41) {
     console.log('\n0041 fingerprints (kind  item  detail):');
     for (const line of after41) console.log('  ' + line);
+  }
+  if (after42) {
+    console.log('\n0042 fingerprints (kind  item  detail):');
+    for (const line of after42) console.log('  ' + line);
   }
   if (after43) {
     console.log('\n0043 fingerprints (kind  item  detail):');
@@ -8618,6 +8648,198 @@ async function step0041() {
   }
   await db.close().catch(() => {});
   return prints41;
+}
+
+// =====================================================================
+const MD5_0031_DUPLICATE = '0643ad3576c681daed5e3175f41284bb';   // forms_duplicate, 0031 section 11 (the pre-apply check names it)
+const MD5_0042_COPY = '72c5c12845b75462313c8364237a403b';        // forms_copy_to_school, 0042
+
+async function step0042() {
+  const L = '[0042] ';
+  const preSql = read('tests', '0042_preapply_check.sql');
+  const migration = read('migrations', '0042_forms_copy_to_school.sql');
+  const unsafe = [['migrations', '0042_forms_copy_to_school.sql'], ['tests', '0042_fingerprints.sql'], ['tests', '0042_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0042's migration, fingerprints and pre-apply check contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the pre-apply check names the md5s run.mjs checks (0031's forms_duplicate, 0042's forms_copy_to_school)`,
+    preSql.includes(`'${MD5_0031_DUPLICATE}'`) && preSql.includes(`'${MD5_0042_COPY}'`));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students: last name, date of birth, Address)', '0036_new_students_profile.sql'],
+    // live since 2026-11-05, before 0042: production's order (it touches only Star)
+    ['0041 (Star event end time)', '0041_star_end_time.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // One call as the signed-in admin (the session adminSession made); the login token is
+  // set only for that call, so the test files never inherit it
+  const asAdmin42 = async (sql, params = []) => {
+    await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+    try {
+      return await asAdmin(db, sql, params);
+    } finally {
+      await db.query(`select set_config('request.jwt.claims', '', false)`);
+    }
+  };
+
+  // a. a Worcester Free class form made BEFORE 0042, with booking times, the app's way
+  await adminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  const classes = (await db.query(`select c.id from public.testing_classes c
+      where c.location_code = 'worcester' and c.name in ('Little Tiger', 'White') order by c.name collate "C"`)).rows.map((r) => r.id);
+  let made = null;
+  let booked = null;
+  try {
+    made = await asAdmin42(`select public.forms_create('worcester', 'free_class', 'zz before 0042', 'zz-before-0042') as r`);
+    booked = await asAdmin42(`select public.forms_set_booking($1::uuid, $2::integer, $3::jsonb, $4::jsonb, $5::jsonb) as r`, [
+      made?.id, made?.version,
+      JSON.stringify(classes.map((id) => ({ class_id: id, default_limit: 3, days_ahead: 14, min_hours_ahead: 3 }))),
+      JSON.stringify([{ class_id: classes[1], weekday: 1, starts_at: '16:00', spot_limit: 2 }]),
+      JSON.stringify([{ class_ids: classes, weekday: 3, starts_at: '17:00', spot_limit: 5 }])]);
+  } catch (error) {
+    booked = { error: error.message };
+  }
+  record(`${L}a form made before 0042 (Worcester, Free class) with booking times: Little Tiger and White offered, a time limit, the two taught together`,
+    classes.length === 2 && made?.status === 'ok' && booked?.status === 'ok', JSON.stringify({ made, booked }));
+  if (booked?.status !== 'ok') return null;
+  const srcId = made.id;
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0042: 0 / false / true / 2 (no copy function yet, forms_duplicate is 0031's, both schools)`,
+    ready.copy_versions === 0 && ready.copy_is_0042 === false && ready.duplicate_is_0031 === true && ready.schools === 2,
+    JSON.stringify(ready));
+
+  // b. the baseline tests
+  const baseline = [['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'],
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0031_tests.sql', 'ALL 0031 TESTS PASSED'], ['0036_tests.sql', 'ALL 0036 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0042', baseline);
+
+  // c. apply 0042: only 0009's file gains the new function's two lines
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0042']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0042');
+  const before = await printsOf(db, others);
+  // everything 0042 could write, as one md5
+  const snapSql = `select md5(
+       coalesce((select string_agg(to_jsonb(f)::text, ',' order by f.id) from public.forms f), '')
+    || coalesce((select string_agg(to_jsonb(o)::text, ',' order by o.id) from public.form_booking_offers o), '')
+    || coalesce((select string_agg(to_jsonb(l)::text, ',' order by l.id) from public.form_booking_limits l), '')
+    || coalesce((select string_agg(to_jsonb(g)::text, ',' order by g.id) from public.form_booking_group_limits g), '')
+    || coalesce((select string_agg(to_jsonb(s)::text, ',' order by s.id) from public.form_submissions s), '')
+    || (select count(*) from public.change_log)::text)`;
+  const dataBefore = await one(db, snapSql);
+  if (!(await run(db, `${L}apply 0042_forms_copy_to_school.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const parts = (line) => line.split('  ');
+  const ITEM = 'forms_copy_to_school(p_form_id uuid, p_location_code text)';
+  const TAIL = ' definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE';
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (gone.length) wrong.push(`${n}: moved or gone ${JSON.stringify(gone)}`);
+    if (n === '0009') {
+      const fnLine = added.find((a) => parts(a)[0] === 'function' && parts(a)[1] === ITEM);
+      const kindLine = added.find((a) => parts(a)[0] === 'function-kind' && parts(a)[1] === ITEM);
+      if (added.length !== 2 || !fnLine || !kindLine || parts(fnLine)[2] !== MD5_0042_COPY + TAIL
+          || parts(kindLine)[2] !== 'volatility=v returns=jsonb') {
+        wrong.push(`0009: added ${JSON.stringify(added)}`);
+      }
+    } else if (added.length) {
+      wrong.push(`${n}: added ${JSON.stringify(added)}`);
+    }
+  }
+  record(`${L}fingerprints: nothing moved; the only new lines are 0009's two for forms_copy_to_school (function: ${MD5_0042_COPY.slice(0, 8)}, definer, search_path="", postgres, authenticated + postgres; function-kind: volatile, jsonb); every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints42 = after['0042_fingerprints.sql'];
+  record(`${L}0042 fingerprints: forms_copy_to_school plpgsql, volatile, security definer, search_path="", authenticated + postgres only`,
+    prints42.length === 1 && prints42[0] === `function  ${ITEM}  ${MD5_0042_COPY} lang=plpgsql volatility=v returns=jsonb${TAIL}`,
+    prints42.join(' | '));
+  record(`${L}0042 wrote nothing (forms, booking rows, sign-ups, history unchanged)`, dataBefore === (await one(db, snapSql)));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0042: 1 / true / true / 2`,
+    applied.copy_versions === 1 && applied.copy_is_0042 === true && applied.duplicate_is_0031 === true && applied.schools === 2,
+    JSON.stringify(applied));
+
+  // d. the tests; then a copy of the form from a., made as the admin and KEPT (for the undo in f.)
+  await tests('after 0042', [['0042_tests.sql', 'ALL 0042 TESTS PASSED'], ...baseline]);
+  let kept = null;
+  let keptRow = null;
+  try {
+    kept = await asAdmin42(`select public.forms_copy_to_school($1::uuid, 'shrewsbury') as r`, [srcId]);
+    keptRow = (await db.query(`select k.location_code, k.status, k.name, k.slug, k.booking_key, k.kind,
+        (select count(*)::int from public.form_booking_offers o where o.form_id = k.id) as offers,
+        (select count(*)::int from public.form_booking_limits l where l.form_id = k.id) as limits,
+        (select count(*)::int from public.form_booking_group_limits g where g.form_id = k.id) as groups,
+        (select count(*)::int from public.form_booking_offers o where o.form_id = $2::uuid) as src_offers,
+        (select count(*)::int from public.form_booking_limits l where l.form_id = $2::uuid) as src_limits,
+        (select count(*)::int from public.form_booking_group_limits g where g.form_id = $2::uuid) as src_groups
+      from public.forms k where k.id = $1::uuid`, [kept?.id ?? null, srcId])).rows[0] ?? null;
+  } catch (error) {
+    kept = { error: error.message };
+  }
+  record(`${L}a copy of the form from before 0042, made as the admin and kept: a Draft Free class at Shrewsbury, the same name, "zz-before-0042-shrewsbury", no booking rows (the original keeps its 2 / 1 / 1)`,
+    kept?.status === 'ok' && kept?.name === 'zz before 0042' && kept?.slug === 'zz-before-0042-shrewsbury'
+      && keptRow?.location_code === 'shrewsbury' && keptRow?.status === 'draft' && keptRow?.kind === 'free_class'
+      && keptRow?.name === kept?.name && keptRow?.slug === kept?.slug && keptRow?.booking_key === ''
+      && keptRow?.offers === 0 && keptRow?.limits === 0 && keptRow?.groups === 0
+      && keptRow?.src_offers === 2 && keptRow?.src_limits === 1 && keptRow?.src_groups === 1,
+    JSON.stringify({ kept, keptRow }));
+
+  // e. re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0042 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0042 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+
+  // f. Undo 0042, as SETUP.md 0042e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0042e\. Undo 0042/m);
+  const undoFile = 'manual/0042u_undo.sql';
+  const undoSql = read('manual', '0042u_undo.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0042] SETUP.md has "### 0042e. Undo 0042" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0042] paste ${undoFile}`, undoSql)) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0042] every fingerprint file equals the one before 0042 (0009's two lines gone again)`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    const gone42 = await fingerprints(db, '0042_fingerprints.sql');
+    record(`${L}[undo 0042] 0042_fingerprints.sql answers no row`, gone42.length === 0, gone42.join(' | '));
+    const undonePre = await pre();
+    record(`${L}[undo 0042] the pre-apply check answers as before 0042`, JSON.stringify(undonePre) === JSON.stringify(ready),
+      JSON.stringify(undonePre));
+    record(`${L}[undo 0042] no row or history changed: the copy made with 0042 is still there, an ordinary Draft`,
+      dataAfter === (await one(db, snapSql))
+        && (await one(db, `select count(*)::int from public.forms f where f.slug = 'zz-before-0042-shrewsbury' and f.status = 'draft'`)) === 1);
+    await tests('after the undo', baseline);
+    await run(db, `${L}[undo 0042] paste ${undoFile} a SECOND time`, undoSql);
+    const undoneAgain = await printsOf(db, others);
+    record(`${L}[undo 0042] a second undo changes nothing`,
+      others.every((n) => JSON.stringify(undone[`${n}_fingerprints.sql`]) === JSON.stringify(undoneAgain[`${n}_fingerprints.sql`])));
+    if (await run(db, `${L}[undo 0042] apply 0042 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0042_fingerprints.sql');
+      record(`${L}[undo 0042] after the redo the 0042 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints42));
+      await tests('after the redo', [['0042_tests.sql', 'ALL 0042 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints42;
 }
 
 // =====================================================================

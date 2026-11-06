@@ -116,3 +116,5 @@ Jeffrey, after printing a real sign-up: "The printable form is good but hard to 
   - comments, and the prospects checks' Shrewsbury comment.
   **Re-check clear** after one more comment fix (PrintSheet.jsx: "the biggest words in the boxes").
 - **Reprinted after the fixes:** all cases pass (one page each as before; 15 boxes 121.5 pt drawn). The rulebook row v0.643 is corrected (this branch's own row, not on main yet).
+- **Committed 410b06b** (2026-11-05, Jeffrey: "Yes, commit both"). Only v0.643's rulebook lines are in it; v0.642's stay with the Copy to the other school work. Main told it's merge-ready (app only). Still to see on paper: whether the gray labels print grainy on the front-desk laser.
+- **Live 2026-11-05:** main 1cad458, pushed (Jeffrey in Main: "Merge and push all"). Checked: the live dashboard's CSS has the two-box rules. This branch fast-forwarded to 1cad458, and v0.642's two uncommitted rulebook lines were put back after it.

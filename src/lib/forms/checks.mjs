@@ -1,8 +1,9 @@
 // checks.mjs — plain checks for the Forms field rules and the Forms preview database.
 // Why it exists: the field rules (fields.js) and the fake database (mockForms.js) must agree with
 // migration 0009 — the same refusals, the shared spot limit, closures hiding times, the 90-day
-// signature clean-up — and with 0036 (each child's last name and date of birth, the Address
-// question). These checks run in Node without a browser:
+// signature clean-up — with 0036 (each child's last name and date of birth, the Address
+// question), and with forms_copy_to_school ("Copy to the other school", rulebook v0.642). These
+// checks run in Node without a browser:
 //   node src/lib/forms/checks.mjs
 // Prints "ALL FORMS LIB CHECKS PASSED", or stops at the first failed check.
 import assert from 'node:assert/strict';
@@ -291,6 +292,89 @@ group('backend: who may do what, check order', () => {
   const dup = t.call('forms_duplicate', { p_form_id: a.id });
   assert.equal(dup.slug, 'xyz-copy');
   assert.equal(t.call('forms_delete', { p_form_id: dup.id, p_expected_version: dup.version }).status, 'ok');
+});
+
+group('backend: Copy to the other school (v0.642)', () => {
+  const t = makeBackend();
+  const f = liveFreeClass(t, 'visitor-information');
+  const copyTo = (args, ctx) => t.call('forms_copy_to_school', args, ctx);
+  // staff may not; the form's own school, a school that doesn't exist, or no form is refused
+  assert.equal(copyTo({ p_form_id: f.id, p_location_code: 'shrewsbury' }, t.staff).status, 'not_allowed');
+  assert.equal(copyTo({ p_form_id: f.id, p_location_code: 'worcester' }).status, 'invalid');
+  assert.equal(copyTo({ p_form_id: f.id, p_location_code: 'boston' }).status, 'invalid');
+  assert.equal(copyTo({ p_form_id: null, p_location_code: 'shrewsbury' }).status, 'invalid');
+  assert.equal(copyTo({ p_form_id: randomUUID(), p_location_code: 'shrewsbury' }).status, 'not_found');
+  // a Draft at the other school: the same name, kind, questions, waiver and settings, the link
+  // ending in the school, and no booking times (they are the other school's classes)
+  const c = copyTo({ p_form_id: f.id, p_location_code: 'shrewsbury' });
+  assert.equal(c.status, 'ok');
+  assert.equal(c.name, 'Free class');
+  assert.equal(c.slug, 'visitor-information-shrewsbury');
+  let s = t.store();
+  const src = s.forms.find((x) => x.id === f.id);
+  const copy = s.forms.find((x) => x.id === c.id);
+  assert.equal(copy.location_code, 'shrewsbury');
+  assert.equal(copy.status, 'draft');
+  assert.equal(copy.published, null);
+  assert.equal(copy.published_version, 0);
+  assert.equal(copy.kind, src.kind);
+  assert.deepEqual(copy.draft, src.draft);
+  assert.deepEqual(copy.settings, src.settings);
+  assert.equal(s.offers.filter((o) => o.form_id === c.id).length, 0);
+  assert.equal(s.offers.filter((o) => o.form_id === f.id).length, 1); // the original keeps its times
+  assert.equal(src.status, 'live'); // and nothing else about it changes
+  // a second copy: that school now has the name → "Copy of …", and the link gets a number
+  const c2 = copyTo({ p_form_id: f.id, p_location_code: 'shrewsbury' });
+  assert.equal(c2.name, 'Copy of Free class');
+  assert.equal(c2.slug, 'visitor-information-shrewsbury-2');
+  // a long link is cut to fit 40 characters and never ends in a dash before the school
+  const long = t.call('forms_create', { p_location_code: 'worcester', p_kind: 'walk_in', p_name: 'Long', p_slug: `${'a'.repeat(28)}-${'b'.repeat(11)}` });
+  const cl = copyTo({ p_form_id: long.id, p_location_code: 'shrewsbury' });
+  assert.equal(cl.slug, `${'a'.repeat(28)}-shrewsbury`);
+  assert.ok(slugOk(cl.slug) && cl.slug.length <= 40);
+  // a link too long for the room is cut at a dash, never in a word (v0.644)
+  const full = t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'blank', p_name: 'Al-Hamra', p_slug: 'al-hamra-special-4-week-introductory-tae' });
+  const cf = copyTo({ p_form_id: full.id, p_location_code: 'worcester' });
+  assert.equal(cf.slug, 'al-hamra-special-4-week-worcester');
+  assert.ok(slugOk(cf.slug));
+  // the form's own school's name at the end of its link makes way for the other school's (v0.644)
+  const ws = t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'walk_in', p_name: 'Walk-in', p_slug: 'walk-in-shrewsbury' });
+  assert.equal(copyTo({ p_form_id: ws.id, p_location_code: 'worcester' }).slug, 'walk-in-worcester');
+  // a link that names the OTHER school isn't swapped (only the form's own school's name is)
+  const odd = t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'blank', p_name: 'Odd', p_slug: 'odd-worcester' });
+  assert.equal(copyTo({ p_form_id: odd.id, p_location_code: 'worcester' }).slug, 'odd-worcester-worcester');
+  // the alert email isn't copied: it's the first school's address (v0.644); the rest of the settings is
+  const al = t.call('forms_create', { p_location_code: 'worcester', p_kind: 'blank', p_name: 'Alerts', p_slug: 'alerts' });
+  const alSettings = { thank_you: 'Thanks!', alert_email: 'desk@example.com', confirm_email: false, add_to_calendar: false };
+  const alSaved = t.call('forms_save_draft', { p_form_id: al.id, p_expected_version: al.version, p_name: 'Alerts', p_slug: 'alerts', p_draft: template('blank'), p_settings: alSettings });
+  assert.equal(alSaved.status, 'ok');
+  const alc = copyTo({ p_form_id: al.id, p_location_code: 'shrewsbury' });
+  assert.deepEqual(t.store().forms.find((x) => x.id === alc.id).settings, { ...alSettings, alert_email: null });
+  assert.equal(t.store().forms.find((x) => x.id === al.id).settings.alert_email, 'desk@example.com'); // the original keeps it
+  // Undo deletes the copy (it has no sign-ups)
+  assert.equal(t.call('forms_delete', { p_form_id: c.id, p_expected_version: c.version }).status, 'ok');
+  s = t.store();
+  assert.equal(s.forms.some((x) => x.id === c.id), false);
+  // no school at all is refused before the form is looked at
+  assert.equal(copyTo({ p_form_id: randomUUID(), p_location_code: null }).status, 'invalid');
+  // the name rule ignores capitals: Shrewsbury's "visitor info" makes the copy "Copy of Visitor Info"
+  t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'blank', p_name: 'visitor info', p_slug: 'visitor-info-lower' });
+  const vi = t.call('forms_create', { p_location_code: 'worcester', p_kind: 'walk_in', p_name: 'Visitor Info', p_slug: 'visitor-info' });
+  assert.equal(copyTo({ p_form_id: vi.id, p_location_code: 'shrewsbury' }).name, 'Copy of Visitor Info');
+  // an 80-character name: "Copy of …" is cut back to 80 characters, without a space at the end
+  const name80 = `${'N'.repeat(71)} ${'M'.repeat(8)}`;
+  t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'blank', p_name: name80, p_slug: 'long-name-there' });
+  const ln = t.call('forms_create', { p_location_code: 'worcester', p_kind: 'blank', p_name: name80, p_slug: 'long-name' });
+  const lnc = copyTo({ p_form_id: ln.id, p_location_code: 'shrewsbury' });
+  assert.equal(lnc.name, `Copy of ${'N'.repeat(71)}`); // 79 characters: the cut left "Copy of NNN… " and the space goes
+  // 50 links taken at the other school → duplicate_slug, and nothing is made
+  const busy = t.call('forms_create', { p_location_code: 'worcester', p_kind: 'blank', p_name: 'Busy', p_slug: 'busy' });
+  for (let i = 1; i <= 50; i += 1) {
+    t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'blank', p_name: `Busy ${i}`, p_slug: i === 1 ? 'busy-shrewsbury' : `busy-shrewsbury-${i}` });
+  }
+  const before = t.store().forms.length;
+  assert.equal(copyTo({ p_form_id: busy.id, p_location_code: 'shrewsbury' }).status, 'duplicate_slug');
+  assert.equal(t.store().forms.length, before);
 });
 
 group('backend: free-class times, shared limit, booking', () => {
