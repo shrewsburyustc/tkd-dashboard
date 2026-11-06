@@ -49,6 +49,10 @@ Includes: the fake twin in `src/lib/mockTestingEvents.js`, a SETUP section, `ste
 - R2-05 (queued Undo), R2-07 (shared words, plus C-06 (c): a failed Undo of Close / Open registration)
 - R3-06 (back links), R1-08 (Mark paid grays while saving), L-06 (grips gray while saving: checked in Settings after CB14)
 - **L-02:** below the tablet width, the roster uses the phone layout once the room beside the panel is too narrow (v1.053). The mockup shows 683 and 700 wide, with Standard and Largest.
+  **On hold (Dashboard core, via Main, 2026-11-06)** until Jeffrey chooses how the shared part is built:
+  - A: a container only where it's safe;
+  - B: no container; a shared hook measures the room and the rosters set a class (Dashboard core's pick).
+  The reason: on Chrome/Edge before 129 and Safari before 18.4, a page-area container makes in-page pop-ups open 72 px right and 48 px down of their cell. Main says when it's settled.
 
 ## Checks only (record in the status file)
 
