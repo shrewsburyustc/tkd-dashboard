@@ -14,6 +14,7 @@
 //   upcoming   active and its day is today or later; past = its day is before today, or cancelled
 //   row        a private testing as privateApi.js returns it (camelCase)
 import { isIsoDate } from './eventRules.js';
+import { standingPayments } from './receipt.js';
 
 // ----- Day and time (contract 0014 §1.2) -----
 
@@ -73,6 +74,18 @@ export function amountDue({ privateCents, paidCents }) {
 // Paid, but still owes more (the amber "Paid $65 · $20 more to collect" line).
 export function owesMore(row) {
   return row?.paid === true && row.amountDueCents > 0;
+}
+
+// The summary's Payment lines (pass 2 C-03, rule v1.009 "the payment with its date"): one part per
+// payment that still stands, oldest first, each { cents, method, paidOn }. It is the receipt's own
+// list (receipt.standingPayments), so the summary and the receipt always agree. With no payment rows
+// to go on (they load together with the list, so this is only a safety net), the row's own summary
+// is the one part, as before.
+export function summaryPaymentParts(row, payments) {
+  const mine = (payments ?? []).filter((p) => p.privateId === row.id);
+  const standing = standingPayments(mine);
+  if (standing.length > 0) return standing.map((p) => ({ cents: p.amountCents, method: p.method, paidOn: p.paidOn }));
+  return [{ cents: row.paidCents, method: row.paidMethod, paidOn: row.paidOn }];
 }
 
 // Does the row show Mark paid? Active and something to collect (also next to a Paid tag while a

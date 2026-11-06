@@ -1287,6 +1287,7 @@ export default function PrivateTestingTab({
         <PrivateSummaryDialog
           key={dialog.key}
           record={record}
+          payments={payments}
           isPhone={isPhone}
           canEdit={Boolean(can.editDetails)}
           hidden={hidden}

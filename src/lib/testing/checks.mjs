@@ -2463,6 +2463,33 @@ check('privateRules: owesMore, showMarkPaid, canChangePayingBy, canMoveToPrivate
   assert.equal(PR.canMoveToPrivate({ status: 'withdrawn', result: null }), false);
 });
 
+check('privateRules: summaryPaymentParts = the payments that still stand, oldest first (pass 2 C-03)', () => {
+  const pay = (id, privateId, cents, paidOn, recordedAt, method = 'cash') =>
+    ({ id, privateId, kind: 'payment', amountCents: cents, method, paidOn, recordedAt, reversesPaymentId: null });
+  const rev = (id, privateId, of, cents, paidOn, recordedAt) =>
+    ({ id, privateId, kind: 'reversal', amountCents: -cents, method: 'cash', paidOn, recordedAt, reversesPaymentId: of });
+  // Ava: $65 cash moved with her from the event, a $10 check that was undone, then a $20 card top-up
+  const row = { id: 'a', paid: true, paidCents: 8500, paidMethod: 'card', paidOn: '2026-11-06' };
+  const payments = [
+    pay('p2', 'a', 2000, '2026-11-06', '2026-11-06T15:00:00Z', 'card'),
+    pay('p1', 'a', 6500, '2026-10-30', '2026-10-30T15:00:00Z', 'cash'),
+    pay('x', 'a', 1000, '2026-11-01', '2026-11-01T15:00:00Z', 'check'),
+    rev('rx', 'a', 'x', 1000, '2026-11-02', '2026-11-02T15:00:00Z'),
+    pay('other', 'b', 9900, '2026-10-01', '2026-10-01T15:00:00Z'), // another private testing's
+  ];
+  assert.deepEqual(PR.summaryPaymentParts(row, payments), [
+    { cents: 6500, method: 'cash', paidOn: '2026-10-30' },
+    { cents: 2000, method: 'card', paidOn: '2026-11-06' },
+  ]);
+  // Paid once: one part, so the summary keeps today's one line
+  assert.equal(PR.summaryPaymentParts(row, payments.slice(1, 2)).length, 1);
+  // No payment rows to go on (safety net): the row's own summary, as before
+  const own = [{ cents: 8500, method: 'card', paidOn: '2026-11-06' }];
+  assert.deepEqual(PR.summaryPaymentParts(row, []), own);
+  assert.deepEqual(PR.summaryPaymentParts(row, undefined), own);
+  assert.deepEqual(PR.summaryPaymentParts(row, payments.slice(4)), own); // only another testing's
+});
+
 check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   const keys = ['editDetails', 'changePayingBy', 'changeDay', 'grade', 'editPayment', 'undoPayment', 'printReceipt', 'cancel', 'restore', 'delete'];
   const menu = (row, isAdmin, today = PT) => {
