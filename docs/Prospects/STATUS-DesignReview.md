@@ -53,7 +53,7 @@ Fix list `docs/Design Review/Rolling check/Pass 1/Fix-NewStudents.md`, received 
 <br>&nbsp;&nbsp;- a `button{color:inherit}` loaded last still leaves it gray;
 <br>&nbsp;&nbsp;- hover, Fill in and the kiosk as before.
 <br>- **Picture as built:** `RollingCheck-Step1-built.png`.
-<br>- Waits for Jeffrey's OK to commit. |
+<br>- **Committed c7e8268** (2026-11-05, Jeffrey: "Yes, commit both"). **Live 2026-11-05:** main 1cad458, pushed (Jeffrey in Main: "Merge and push all"). Checked: the live family page's CSS has the gray rule. Main told Camps the file is on main. |
 | 2 | R2-01 Retry when a save or Undo fails (High) | Planned: mockup first |
 | 3 | R2-09 (✓ and full stops), R2-07 "Undone. The form is open again.", R2-08 Duplicate's Undo, "More actions for …", Forms' empty line | Planned: picture first; questions 1–2 |
 | 4 | R3-03 "Showing … only · Show all", R3-09 "Find a prospect" | Planned: mockup first |

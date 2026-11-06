@@ -143,3 +143,65 @@ After the `db.js` fix went live (in `main`), Jeffrey's test sign-ups on `/f/test
 
 **2026-10-21 (Jeffrey):** the remaining tests (the two-connection race test, the kiosk on the real tablet) are done as the system is used; no separate test session. Building for this branch is finished.
 
+
+## Copy to the other school (Jeffrey, 2026-11-05)
+
+Jeffrey asked for a Worcester copy of Shrewsbury's live "Visitor Information" form, "copy it exactly". The app can't copy a form to the other school: Duplicate (`forms_duplicate`, 0031) stays in the form's own school, and New form starts from a template.
+- He picked **B: a "Copy to the other school" item in the form's ⋯ menu**. The rejected options were A (I build the copy in the browser pane after he signs in) and C (he rebuilds it by hand).
+- **Mockup (two pictures, 2026-11-05):**
+  - `CopyToSchool-1-menu.png`: "Copy to Worcester" (or "Copy to Shrewsbury") right after Duplicate, with the location pin, admins only. Drawn on the four sizes.
+  - `CopyToSchool-2-after.png`: one question for Jeffrey. A (recommended): stay in the list with the 5-second toast "Copied to Worcester as a Draft" and Undo. B: open the copy in the builder.
+- **Defaults told to him with it:**
+  - The copy is a Draft at the other school, made from the form's draft.
+  - It has the same questions, waiver and settings, and the same name ("Copy of …" only if that school already has a form with that name).
+  - Its link is `<link>-worcester`, which can be changed.
+  - Booking times aren't copied (they are the other school's classes). A booking form's toast says "… Pick its class times before you publish."
+  - Undo deletes the copy for 5 seconds.
+- **Needs a migration:** a new function `forms_copy_to_school(form, school)`. New name, so the live Duplicate keeps working. The number comes from Main once the design is OK'd. Then a security review, and Jeffrey pastes it.
+- **Found on the way (read-only, live):**
+  - Shrewsbury's Visitor Information asks "Address" as a Short text, so the profile says "Not asked on this form" and families get one box.
+  - The fix is his, in the builder: swap it for an Address question and publish, ideally before copying.
+- Pass 1's step 1 (trash icon) is built and reviewed but waits for his OK to commit. Steps 2–7 wait until this is done.
+- **Jeffrey: "A: stay in the list"** (2026-11-05). Rulebook **v0.642** written (10b row, changelog line and header; CRLF kept). One flag, told to him once: the copy keeps the alert email too. No form has one set today (checked read-only); if one is set later, change it on the copy.
+- **App built** (uncommitted):
+  - `src/screens/Forms.jsx`: the ⋯ item after Duplicate (`IconMapPin`) and `copyToOtherSchool`. The toast's Undo deletes the copy. A failed copy or Undo shows the bar with Retry; the bar can now take a `retry`.
+  - `src/screens/forms/text.js`: `copyTo`, `copiedTo`, `SAVE_FAILED`, `UNDO_FAILED`.
+  - `src/lib/forms/api.js`: `copyFormToSchool`.
+  - `src/lib/mockForms.js`: the preview's `forms_copy_to_school`, with the same rules.
+  - `src/lib/forms/checks.mjs`: a new group, now 13 groups, passing.
+- **Tried in the preview:** the toast for the booking form, the copy in the other list, Undo then "Undone", a failed copy and a failed Undo each with Retry, and "Copy of …" on a second copy. Both builds and every check pass.
+- **Database: migration 0042** (Main reserved it 2026-11-05, main 2aaa385, merged in here).
+  - The package is being built from the draft SQL: `0042_forms_copy_to_school.sql`, its pre-apply check, fingerprints, tests and undo file.
+  - Also SETUP "Migration 0042" and run.mjs `step0042`.
+  - **Built** (helper agent, from the draft SQL): the migration, `0042_preapply_check.sql`, `0042_fingerprints.sql`, `0042_tests.sql`, `supabase/manual/0042u_undo.sql`, SETUP "Migration 0042" (0042a–e) and run.mjs `step0042`.
+  - **Test runs:** `--only-step0042` 92 passed. The full `run.mjs` gave 2235 passed and 4 failed; all four are Black Belt timing checks run while other sessions loaded the PC, not 0042's, and are to re-run when the PC is idle.
+  - **Mutation test:** the function was broken 10 ways and the tests caught every one.
+  - **Fingerprint:** `forms_copy_to_school … 72c5c12845b75462313c8364237a403b … definer=true settings=search_path="" … rights=authenticated:EXECUTE,postgres:EXECUTE`. `0009_fingerprints.sql` gains its two lines.
+- **Security review:** clear, no must-fix. Its should-fix (the wording about 0040, which is this branch's) is fixed. Its notes:
+  - the copied alert email (a question for Jeffrey);
+  - the waiver and thank-you words may name the original school (told to him);
+  - the security advisor note added to SETUP 0042c;
+  - SETUP's "can't be mixed up" was too strong and is reworded.
+- **Code review:** no must-fix. Its should-fix items are fixed: each bar says what it belongs to (`kind` plus the form or copy, Camps' pattern); no Retry for `invalid` / `duplicate_slug` (new words `COPY_REFUSED` / `copyTooMany`); comments. The checks gained edge cases. Re-checked in the preview; **re-review clear**. Its last note: the two new bar messages need Jeffrey's OK and a rulebook entry before the commit, so they were added to the "three small changes" question.
+- **Also fixed:** SETUP's 0036 section now says "applied 2026-11-04".
+- **Design review (app, four sizes):** no must-fix. The menu, the copy, both toasts, both failure bars with Retry, and the staff view match v0.642 and the mockups. Its findings:
+  - **Undo pressed during another save is dropped silently:** added to R2-05, which waits on Dashboard core, like Close / Open's.
+  - **The link can name the wrong school** (`walk-in-shrewsbury` → `walk-in-shrewsbury-worcester`), and long links get cut mid-word: a question for Jeffrey, because it changes v0.642's link rule.
+  - **Copy and its Undo cleared a bar already showing:** fixed, because a bar stays until its Retry works or × is pressed (v1.004). Re-checked in the preview.
+  - **For screen readers on Both, two same-named rows sound the same** ("More actions for Walk-in"): the next small question.
+  - **Shared, passed to Main for Dashboard core:** focus after a menu choice; focus under the toast (R2-04); the toast's padding at 320.
+- **Jeffrey: "OK, all five"** (2026-11-05). Rulebook **v0.644** written, with a "(See v0.644 …)" note on v0.642. The five:
+  - the link swaps a trailing own-school name for the other school's and is cut at a dash, never in a word;
+  - the copy has no alert email;
+  - on Both, the row buttons name the school ("More actions for Walk-in, Worcester");
+  - and the two refusal messages without Retry, as built.
+- **Built:**
+  - the SQL (`v_base` / `v_cut`; `jsonb_set` for `alert_email`) and the preview stand-in;
+  - `FormsList.jsx` `rowName` and the RowMenu label; `T.withSchool`;
+  - checks: the al-hamra case, the swap, an "odd" link, the alert email; `0042_tests.sql`: K2, K2b, L7, L8.
+- **Checksum:** `72c5c12845b75462313c8364237a403b`, in `run.mjs`, the pre-apply check and SETUP 0042c. SETUP's 0042 text is updated.
+- **Checks:** `--only-step0042` 93 passed; Forms checks 13 groups; both builds; 174 function tests.
+- **In the preview:** the Both names carry the school; `walk-in-shrewsbury` → `walk-in-worcester`; the copy's alert email is null; Undo works.
+- **Security re-check: clear.** It also fixed a wording slip: SETUP and the run.mjs header now say 0038 / 0040 join step0042's list when their files exist, and the order includes 0041.
+- **Code re-check: clear** after one fix: on PC / tablet the row's open button on Both is named "Open Walk-in, Worcester" too (it had only its visible name).
+- **Next:** Jeffrey's OK to commit; tell Main that 0042's contents changed (the CLAUDE.md row); then the 0042 steps (SETUP 0042a–d), and Main merges and pushes after 0042 is live.

@@ -3009,7 +3009,7 @@ Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as name
 
 ## Migration 0036: each child's last name and date of birth, the Address question
 
-**Status: not applied yet.** Built on `claude/prospect-form-system-cd893d` (rulebook v0.634–v0.639; plan `docs/Prospects/TKD-ProspectProfile-Build-Plan.md` §2). Apply it **before** the app version that asks for last names, dates of birth and addresses is deployed (that app reads the new columns and keys). The live app keeps working after it: it still sends each child as first name + age, and that is still accepted.
+**Status: applied 2026-11-04** (Jeffrey, SQL Editor: "success no rows"; 0036a pre-check as expected; 0036c fingerprints equal the PGlite ones, security advisor unchanged; the app went live the same day at main a5d0e1d; the 0036d tests file waits for his UIDs). Built on `claude/prospect-form-system-cd893d` (rulebook v0.634–v0.639; plan `docs/Prospects/TKD-ProspectProfile-Build-Plan.md` §2). Apply it **before** the app version that asks for last names, dates of birth and addresses is deployed (that app reads the new columns and keys). The live app keeps working after it: it still sends each child as first name + age, and that is still accepted.
 
 **Production order:** … 0031 → 0030 → 0032 → 0033 → 0034 (all live) → **0036**. It needs 0009 (Forms), 0012 (Prospects) and 0031 (class ages) — it stops with "0036 needs migration 0009 / 0012 / 0031 … first" if one is missing.
 
@@ -3137,5 +3137,57 @@ Tested in PGlite on every run (`run.mjs` step0041: an event from before 0041 kep
 - **The same time rule as start times:** one rule (`star_start_time_is_valid`) for every Star time, so the app's time list fits both.
 - **A table rule as well as the function checks:** defence in depth — no row can hold an end time at or before its start, whatever writes it.
 - **The undo refuses instead of losing data:** removing the column would throw away end times families may already have seen.
+## Migration 0042: Copy a form to the other school (forms_copy_to_school)
+
+**Status: not applied yet.** Built on `claude/prospect-form-system-cd893d` (rulebook v0.642 and v0.644: "Copy to Worcester / Shrewsbury" in a form's ⋯ menu on the Forms list).
+
+**Production order:** … 0034 → 0036 → Star's 0038 and 0041 (all live) → **0042**. 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (it may go before or after any of them): 0037–0039 and 0041 are other sections' (0038 and 0041, Star's, are live; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is — like 0040's once written — it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
+
+**What it does** (`supabase/migrations/0042_forms_copy_to_school.sql`): adds **one** function, `public.forms_copy_to_school(p_form_id uuid, p_location_code text)`, admins only, and changes nothing else (no table, rule, other function, right or data). It makes a **Draft copy of a form at the other school**:
+- the same kind, draft (questions + waiver) and settings (thank-you words, the family's confirmation email, add to calendar), **but no alert email** (v0.644: the new-sign-up alert address is the first school's; the copy starts without one);
+- the same name, or "Copy of …" when that school already has a form with that name (compared without capitals; cut to 80 characters);
+- the link with the other school's name (v0.644): a link ending in the form's own school's name gets the other school's instead (`walk-in-shrewsbury` → `walk-in-worcester`), any other link gets it added (`visitor-information` → `visitor-information-worcester`); a link longer than 40 characters is cut at a dash, never in the middle of a word (`al-hamra-special-4-week-introductory-tae` → `al-hamra-special-4-week-worcester`); `-2`, `-3` … when it is taken;
+- **no booking times** (the offered classes, time limits and classes taught together are the form's own school's classes): `booking_key` is `''`, and an admin picks the other school's times in Booking settings before publishing. No sign-ups, no kiosk tokens, never published.
+
+It answers `{status:'ok', id, version, slug, name}` or `no_access` / `not_allowed` (not an admin) / `invalid` (no form or school, a school that doesn't exist, the form's own school) / `not_found` / `duplicate_slug` (50 links taken) / `stale`. Logged like Duplicate (`forms_duplicate`): one `change_log` insert row for the new form, action `forms_copy_to_school`, its own batch id. Security definer, `search_path = ''`, `has_data_access()` first, then `is_admin()`; EXECUTE for `authenticated` only, nothing for anon or `forms_registrar`. The file has no destructive words, so Supabase should not warn.
+
+**Each step needs Jeffrey's OK.**
+
+### 0042a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0042_preapply_check.sql` must answer `copy_versions = 0`, `copy_is_0042 = false`, `duplicate_is_0031 = true`, `schools = 2`. `duplicate_is_0031 = false` → someone changed `forms_duplicate` since 0031 (0042 copies its pattern) — stop and tell Claude.
+2. Claude runs `supabase/tests/0009_fingerprints.sql` (it lists every `forms_*` function) and keeps the result (the "before" record for 0042c and the undo).
+
+### 0042b. Apply 0042 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0042_forms_copy_to_school.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0042c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0042_fingerprints.sql` — the one line must match what `run.mjs` printed ("0042 fingerprints"): `forms_copy_to_school(p_form_id uuid, p_location_code text)` with `72c5c12845b75462313c8364237a403b lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0009_fingerprints.sql`: 0042a's record **plus exactly two lines** for `forms_copy_to_school(p_form_id uuid, p_location_code text)` — `function` (the same md5, `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`) and `function-kind` (`volatility=v returns=jsonb`). Nothing else in it changes, and every other fingerprint file is unchanged (`run.mjs` step0042 checks exactly that).
+3. `0042_preapply_check.sql` again: `1 / true / true / 2`.
+4. **Security advisor:** nothing new. (If it lists "security definer function executable by authenticated" for `forms_copy_to_school`, that is expected: the app calls it, like the other `forms_*` functions.)
+
+### 0042d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0042_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0042 TESTS PASSED**. It makes its own `zz test …` classes and forms (a Live Worcester form with booking times, a family and a kiosk token; a 40-character link; an 80-character name) and checks who may copy, the refusals, the copy itself (a Draft at the other school; no booking times, sign-ups or tokens; the original unchanged), the names and links, the history, the Undo (`forms_delete` of the copy, as the app's Undo does) and the function's rights. It rolls everything back. Supabase may warn about destructive operations (the Undo check removes a test copy inside the rolled-back transaction) — confirm.
+2. Then `0009_tests.sql`, `0031_tests.sql` and `0036_tests.sql` again — all must still pass. Put the placeholders back afterwards.
+
+### 0042e. Undo 0042 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version without "Copy to Worcester / Shrewsbury".
+2. Paste **the whole file** `supabase/manual/0042u_undo.sql` → **Run**. It removes the one function; Supabase warns about a destructive operation — that is the function, no data. Confirm. Forms already copied stay as ordinary forms.
+3. Claude checks `0009_fingerprints.sql` (must equal 0042a's record), `0042_fingerprints.sql` (no row) and `0042_preapply_check.sql` (`0 / false / true / 2`). Then run `0009_tests.sql` and `0031_tests.sql`. To redo: paste 0042 again. Running the undo twice is safe.
+
+Tested in PGlite on every run (`run.mjs` step0042: the pre-apply check; only 0009's file gains the new function's two lines; 0042 writes nothing; 0042's tests and the Forms / Prospects tests (0007, 0009, 0012, 0015, 0019, 0021, 0031, 0036) before and after; re-run safety; the undo file exactly as named here — a copy made before the undo stays, every fingerprint file goes back to the one before 0042 — then the redo).
+
+**Why:**
+- **No booking times on the copy:** a form's booking rows must name classes of the form's own school (the database refuses another school's class there), so they can't be copied; the copy starts with none and the app's message says to pick the other school's times before publishing.
+- **The link gets the school's name:** links are unique across both schools, so the copy can't keep the original's; the other school's name says where it belongs. A link that already ends with its own school's name gets the other school's in its place, so it never names both (v0.644); cutting at a dash (never the school, never inside a word) keeps it within 40 characters.
+- **The same name unless taken:** a straight copy reads exactly like the original at the other school; "Copy of" only when that school already has a form called that, so the copy doesn't take the name of a form that school already has (a third copy gets a second "Copy of …", as Duplicate does).
+- **No alert email on the copy (v0.644):** the alert address belongs to the first school's front desk; copied, the other school's sign-up alerts (a family's name, phone and email) would go to it once emails are on. The rest of the settings is copied.
+- **A new function, not an argument on `forms_duplicate`:** Duplicate's call stays exactly as the live app uses it (an argument with a default would make the web API's choice between two versions ambiguous).
 
 ---
