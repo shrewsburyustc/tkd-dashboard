@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 Star merged nothing after pass 1's cut, so this file holds what pass 2 found in other sections' work that reaches your screens: a layout problem the shared panel causes, a place your pass 1 R2-07 item missed, the grips, a correction to your pass 1 R1-02, and questions for Jeffrey that may change your screens. Your pass 1 items (and their migration, 0038) go on as planned.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, and the rest are in question 3. Don't build them until his answer comes through the Main session. (Question 2, the results sheet (M-06), is answered: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is. Nothing to build.)
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Question 1 is answered: L-02 is now a Fix now item, v1.053. Question 2, the results sheet (M-06), is answered too: Jeffrey's v1.052 removes Color Belt's sheet and keeps yours as it is, so it has nothing to build.)
 - Each item keeps its finding id (C-06, L-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
 - **Paths:** `star/…` is under `src/screens/testing/star/`; `lib/star/…` is `src/lib/star/…`; `components/…` is `src/components/…`. Other sections' files are written in full.
@@ -50,6 +50,18 @@ Star merged nothing after pass 1's cut, so this file holds what pass 2 found in 
 
 Most severe first.
 
+### L-02 (your part) — Between 640 and 768 px wide, the roster's text overlaps · Medium · Jeffrey's answer to question 1 (v1.053), after Dashboard core's L-02
+
+Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png`. Your roster isn't drawn in it; it would switch the same way as Color Belt's (pictures 1 and 4).
+
+- **What's wrong** (drift; new in pass 2):
+  - Your roster picks its tablet columns from the window's width (`star/star.css:886`, `@media (min-width: 640px) and (max-width: 1023.98px)`).
+  - But the side panel takes 72 px (Standard) or 96 px (Largest, v1.118) of that window, so near 640 px the columns get less room than they were drawn for.
+  - Checker 1, Fall Star Testing at 700 px wide touch with Largest: "Registered Oct 30" runs into "0 stars → 1 star", and the "Candidate" / "Testing for" headers overlap. Reviewer L counted 6 overlapping pairs there and 11 at 667 × 375 touch (a phone turned sideways) with Largest; at 700 with Standard there are none.
+- **Rule:** §1.3: tablets are 640–1023 px, "Two columns max; tables drop low-priority columns", and "No horizontal scrolling on any screen size".
+- **Change (Jeffrey chose A: "A: room beside panel", v1.053):** after Dashboard core's part, your tablet rules (`star/star.css:886` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show); with enough room, nothing changes. Your roster's `isPhone` (`star/candidates/CandidatesTab.jsx:111`, read by `star/candidates/CandidateRows.jsx:167, 285`) then comes from Dashboard core's hook for the roster only; dialogs and ⋯ menus keep the window's. Mockup first: the roster at 683 and 700 wide, with Standard and Largest.
+- **Check (preview mode):** Account menu → Panel size → Largest, then Standard. Fall Star Testing at 700 wide touch and 667 × 375 touch: no text over text, no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
+
 ### C-06 (c, your part) — A failed Undo of Close / Open registration doesn't say "Undo didn't save" · Low · after Dashboard core's R2-07
 
 - **What's wrong** (planned — not built yet: v1.045 (4), R2-07; this place is missing from your pass 1 list):
@@ -72,20 +84,7 @@ Most severe first.
 
 ## Waits on Jeffrey (don't build yet)
 
-Each is a question in the pass 2 report: L-02 is question 1, and the rest are in question 3, the small ones. The Main session passes on his answer.
-
-### L-02 (your part) — Between 640 and 768 px wide, the roster's text overlaps · Medium · question 1, then after Dashboard core's L-02
-
-Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png`. Your roster isn't drawn in it; it would switch the same way as Color Belt's (pictures 1 and 4).
-
-- **What's wrong** (drift; new in pass 2):
-  - Your roster picks its tablet columns from the window's width (`star/star.css:886`, `@media (min-width: 640px) and (max-width: 1023.98px)`).
-  - But the side panel takes 72 px (Standard) or 96 px (Largest, v1.118) of that window, so near 640 px the columns get less room than they were drawn for.
-  - Checker 1, Fall Star Testing at 700 px wide touch with Largest: "Registered Oct 30" runs into "0 stars → 1 star", and the "Candidate" / "Testing for" headers overlap. Reviewer L counted 6 overlapping pairs there and 11 at 667 × 375 touch (a phone turned sideways) with Largest; at 700 with Standard there are none.
-- **Rule:** §1.3: tablets are 640–1023 px, "Two columns max; tables drop low-priority columns", and "No horizontal scrolling on any screen size".
-- **If Jeffrey picks A (recommended):** after Dashboard core's part, your tablet rules (`star/star.css:886` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show); with enough room, nothing changes. Mockup first if anything else shows differently at the four sizes.
-- **If B:** your tablet rule starts at the new, wider window. **If C:** nothing changes.
-- **Check (preview mode):** Account menu → Panel size → Largest, then Standard. Fall Star Testing at 700 wide touch and 667 × 375 touch: no text over text, no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
+Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer.
 
 ### M-03 (your part) — No Print receipt for a withdrawn candidate with money · Low · question 3 (b)
 

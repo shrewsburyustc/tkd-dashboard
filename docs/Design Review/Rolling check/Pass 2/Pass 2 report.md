@@ -30,14 +30,14 @@
 - **The reviewers found the merged work built as its rows and mockups say**, apart from the findings below. Hide private details holds on every new screen (Color Belt's Part 1 and Part 2, New students' profile and printed sheet), and Panel size works at Large and Largest on all 16 main screens at 1280 and 820.
 - **36 findings became 35** after the merges: **no High, 7 Medium, 26 Low** (one of the Lows, C-07 (a), adds to pass 1's R1-07), **1 added to pass 1's R2-04** (U-06), and **1 rejected** (L-04). Plus X-1, a Low a checker saw while checking.
 - **Most are straight fixes.** They go to the sections now, in the fix files below.
-- **Ten need Jeffrey to pick a rule first:** the results sheet put up at the school (M-06) is question 2, and nine small ones are the batch, question 3. **L-02 changes §1.3:** it is question 1. **Question 2 is answered** (2026-11-05, rulebook v1.052): Color Belt's sheet goes; see question 2 below.
+- **Ten need Jeffrey to pick a rule first:** the results sheet put up at the school (M-06) is question 2, and nine small ones are the batch, question 3. **L-02 changes §1.3:** it is question 1. **Questions 1 and 2 are answered** (2026-11-05): rosters follow the room beside the panel (v1.053), and Color Belt's sheet goes (v1.052); see each question below.
 
 ### The seven Mediums
 
 1. **M-01 = C-01 (Color Belt):** the Mark paid box says "They chose … on the form." after the desk changed Paying by, even "Card", which the family form doesn't offer. Pass 1's note said Color Belt was right; it isn't. The fix needs a migration.
 2. **C-02 (Color Belt):** Mark paid's hidden name "Mark Ava Chen paid" splits the visible words "Mark paid", so voice control can miss it (WCAG 2.5.3, "label in name").
 3. **C-03 (Color Belt):** a private testing paid in two parts shows one made-up payment in its summary: "$85 card · paid Nov 5" for $65 cash on Oct 29 plus $20 by card on Nov 5.
-4. **L-02 (Dashboard core, then Color Belt, Star and Camps):** between 640 and 768 px wide, three rosters overlap or scroll sideways, worse with Panel size Largest. Question 1.
+4. **L-02 (Dashboard core, then Color Belt, Star and Camps):** between 640 and 768 px wide, three rosters overlap or scroll sideways, worse with Panel size Largest. Question 1 (answered, v1.053).
 5. **U-01 (New students):** Delete prospect, Came, Joined and Book a free class close before the save answers, so a dropped connection loses the box (and the picked date or time) and shows a bar with no Retry.
 6. **P-01 (New students):** the printed visitor sheet shows a cancelled free class as if it will still happen.
 7. **P-02 (New students):** a child's profile window stays on "Loading…" for good when its read fails.
@@ -54,12 +54,12 @@ Each file starts with a short starter to paste into that session. The file reach
 
 | Session | File | Fix now | Waits on Jeffrey | Smaller |
 |---|---|---|---|---|
-| Color Belt | `Fix-ColorBelt.md` | 5 + 2 after another session's fix (3 Medium; M-06 since question 2) | 6 (1 Medium: L-02) | 1 |
+| Color Belt | `Fix-ColorBelt.md` | 5 + 3 after another session's fix (4 Medium; L-02 and M-06 since questions 1 and 2) | 5 | 1 |
 | New students | `Fix-NewStudents.md` | 13 + 1 after another session's fix (3 Medium) | 2 | 4 |
-| Dashboard core | `Fix-DashboardCore.md` | 2 | 2 (1 Medium: L-02, question 1) | 5 |
+| Dashboard core | `Fix-DashboardCore.md` | 3 (1 Medium: L-02, since question 1) | 1 | 5 |
 | Black Belt | `Fix-BlackBelt.md` | 1 + 1 after another session's fix | 3 | 1 |
-| Star | `Fix-Star.md` | 2 after another session's fix | 3 (1 Medium: L-02) | 0 |
-| Camps | `Fix-Camps.md` | 0 | 2 (1 Medium: L-02) | 3 |
+| Star | `Fix-Star.md` | 3 after another session's fix (1 Medium: L-02, since question 1) | 2 | 0 |
+| Camps | `Fix-Camps.md` | 1 after another session's fix (1 Medium: L-02, since question 1) | 1 | 3 |
 | Main | `Notes-Main.md` | L-08 to hand out | — | — |
 
 Color Belt's, New students', Dashboard core's and Star's files also end with "Corrections to pass 1".
@@ -81,11 +81,13 @@ Each of the four pass 1 files below now has one line under its title that points
 
 ## Questions for Jeffrey, in order (one at a time)
 
-Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.053). The sections it changes hear it through the Main session.
+Each answer becomes a 10b row and a changelog line from the design review's block (next: 1.055). The sections it changes hear it through the Main session.
 
-### Question 1 — How should a roster choose its columns when the side panel takes room? (L-02, Medium)
+### Question 1 — How should a roster choose its columns when the side panel takes room? (L-02, Medium) — answered, v1.053
 
 Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png`.
+
+**Answered (Jeffrey, 2026-11-05, through the Main session; rulebook v1.053):** "A: room beside panel". Each roster picks its layout from the room it has beside the left panel; when that room is too narrow for its tablet columns, it uses the phone layout, and with enough room nothing changes. Dashboard core builds the shared part first, then Color Belt, Star and Camps switch their rosters, and Camps' cards get a ⋯ button with a mouse. The four fix files have it under Fix now. Below is the question as it was asked.
 
 **What happens today:** Color Belt's, Star's and Camps' rosters choose their tablet layout from the window's width (640–1023 px). The side panel takes 72 px of that window, or 96 px with Panel size Largest. Near the narrow end, the columns get less room than they were drawn for, so text runs into other text or the table scrolls sideways:
 - a laptop window snapped to half the screen (683 px): Color Belt's "LT White →" sits over "Cash", even with Standard (picture 1); in the same window Camps' roster ends at Thursday, so staff must slide it sideways to reach Friday (picture 2);
@@ -239,9 +241,9 @@ Jeffrey approves the recommendations together, or pulls any out to see one by on
 
 ## Next
 
-- **Jeffrey:** question 1, then the batch (question 3); question 2 is answered (v1.052). Question 1's picture is drawn: `pictures/Q1-roster-room.png` (today, A, B and what stays the same). The pictures for question 2 and for batch items (a), (b), (f) and (h) are drawn too, with amber outlines (`pictures/Q2-results-sheet.png`, `Q3a-one-history-entry.png`, `Q3b-receipt-when-money.png`, `Q3f-line-above-delete.png`, `Q3h-birth-date.png`).
+- **Jeffrey:** the batch (question 3); questions 1 and 2 are answered (v1.053, v1.052). The pictures for batch items (a), (b), (f) and (h) are drawn, with amber outlines (`pictures/Q3a-one-history-entry.png`, `Q3b-receipt-when-money.png`, `Q3f-line-above-delete.png`, `Q3h-birth-date.png`).
 - **A separate reviewer checked these files** before they were handed out, as for pass 1: 9 must-fix points, all applied; its re-check found 1 more, applied. They are committed on `design-review` (no push), and the Main session merges `design-review` when Jeffrey says so.
 - **The Main session** then gives each session its pass 2 file (the starter is at the top of each) and handles `Notes-Main.md`: v0.638's "Date signed" (L-08) goes to Color Belt, Star, Black Belt and Camps; and it reserves a migration number for Color Belt's M-01 when asked.
-- **Rulebook housekeeping with question 1's rulebook edit** (it changes §1 too; v1.052 kept to its one decision): §1.2's exception list names Camps' Early / Late words in school blue (L-07, approved in v0.738), as it names Star's grading grid (v0.512). Camps changes nothing unless Jeffrey asks to recolor them.
+- **Rulebook housekeeping, done with question 1's edit (v1.054):** §1.2's exception list now names Camps' Early / Late words in school blue (L-07, approved in v0.738), as it names Star's grading grid (v0.512). Camps changes nothing unless Jeffrey asks to recolor them.
 - **The status file's "Noted for pass 2" list:** the profile stuck on "Loading…" is now P-02, and Calendar's "… and try again." is part of U-08. The two Camps lines (the count line counts both rows of a possible duplicate; the day boxes show no gray while a save runs) were seen still open by reviewer L but not checked by a checker, so they stay on the list for the next pass.
 - **Pass 3:** what merges into `main` after 6b27cdd.

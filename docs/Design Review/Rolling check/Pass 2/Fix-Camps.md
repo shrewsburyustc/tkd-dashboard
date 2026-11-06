@@ -14,10 +14,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 2 covered what merged into `main` after pass 1's cut (e7fd75b), up to 6b27cdd (2026-11-05), in preview mode at the four sizes. Five reviewers looked (M money, records and privacy · U undo, safety nets, confirms and dialogs · L lists, pickers, forms and layout · P New students' visitor profile and printed sheet · C Color Belt). Two separate checkers then verified every finding. This file is what they confirmed in your merged work after the cut (v0.738, Early drop-off and Late pick-up on the roster, 3a8dc70), and in shared problems that reach your screens.
 
-Reviewer L found v0.738 built as picture 19, option A, at 1280, 820 touch, 390 and 320: the words in the day boxes, the legend, and the count line before and during the camp. The one Medium below comes from the shared side panel, not from your work, and it waits on Jeffrey. Your pass 1 items go on as planned.
+Reviewer L found v0.738 built as picture 19, option A, at 1280, 820 touch, 390 and 320: the words in the day boxes, the legend, and the count line before and during the camp. The one Medium below comes from the shared side panel, not from your work. Jeffrey has decided it (v1.053), and it waits for Dashboard core's part. Your pass 1 items go on as planned.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, and the rest are in question 3. Don't build them until his answer comes through the Main session.
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Question 1 is answered: L-02 is now a Fix now item, v1.053.)
 - **Smaller:** fix them while you're in the file, or check them.
 - Each item keeps its finding id (L-02, M-03 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -49,15 +49,7 @@ Reviewer L found v0.738 built as picture 19, option A, at 1280, 820 touch, 390 a
 
 ## Fix now
 
-Nothing now. Your one Medium, L-02, waits on Jeffrey's question 1 (below).
-
----
-
-## Waits on Jeffrey (don't build yet)
-
-Each is a question in the pass 2 report: L-02 is question 1, and the rest are in question 3, the small ones. The Main session passes on his answer.
-
-### L-02 (your part) — Between 640 and 768 px wide, the roster table scrolls sideways · Medium · question 1, then after Dashboard core's L-02
+### L-02 (your part) — Between 640 and 768 px wide, the roster table scrolls sideways · Medium · Jeffrey's answer to question 1 (v1.053), after Dashboard core's L-02
 
 Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (your roster is pictures 2, 3, 5, 6, 8, 11 and 12).
 
@@ -67,12 +59,18 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
   - Checker 1: April Vacation Camp at 768×1024 touch (an iPad held upright) with Largest. The table is 633 px wide in a 622 px box, and Friday's Check in and "Late" are cut off (picture 3).
   - Reviewer L: at 744 touch (an iPad mini upright) it scrolls sideways even with Standard; at 683 wide with a mouse (a laptop window snapped to half the screen) the whole page scrolls sideways (764 px in 683; picture 2).
 - **Rule:** §1.3 ("No horizontal scrolling on any screen size"; tablets drop low-priority columns); v0.716 (your week switcher was chosen over sideways scrolling).
-- **If Jeffrey picks A (recommended):** after Dashboard core's part:
+- **Change (Jeffrey chose A: "A: room beside panel", v1.053):** after Dashboard core's part:
   - Your tablet rules (`camps.css:991` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the grid, the roster uses the phone layout: one card per camper, with all five days and no sliding (pictures 5 and 6). With enough room, nothing changes (pictures 11 and 12).
-  - Your cards have no ⋯ today, because phones show those choices in Camper detail (v1.048 (11)). With a mouse, the cards also get a ⋯ button.
+  - Your cards have no ⋯ today, because phones show those choices in Camper detail (v1.048 (11)). With a mouse, the cards also get a ⋯ button (v1.053).
+  - Your roster's `isPhone` (`src/screens/camps/CampPage.jsx:142`, read by `src/screens/camps/CampRoster.jsx:469`) then comes from Dashboard core's hook for the roster only; dialogs and ⋯ menus keep the window's.
   - Mockup first: the cards with a mouse, with their ⋯.
-- **If B:** your tablet rule starts at the new, wider window, and your cards get the same ⋯ button for mouse users as under A (picture 8). **If C:** nothing changes.
 - **Check (preview mode):** Account menu → Panel size → Largest, then Standard. April Vacation Camp at 768 and 744 wide touch, 700 touch and 683 with a mouse: no sideways scroll, and every day is whole; where the cards show with a mouse, each has its ⋯. At 1280, 820 touch, 390 and 320 the roster looks as today.
+
+---
+
+## Waits on Jeffrey (don't build yet)
+
+Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer.
 
 ### M-03 (your part) — No Print receipt for a removed camper who paid · Low · question 3 (b)
 
@@ -95,7 +93,7 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (
 
 ## Smaller (fix while you're in the file)
 
-- **L-07 — The blue "Early" / "Late" words** (approved this way: v0.738). You draw them in school blue (`camps.css:765–776`; the legend's word at `:784–788`), as v0.738 approved ("in small blue text"; picture 19 drew blue in both options). §1.2's limit of five blue things on a screen names only Star's grading grid as an exception, so the design review adds a §1.2 note for these words at its next rulebook edit. Nothing to change unless Jeffrey asks to recolor them. Low.
+- **L-07 — The blue "Early" / "Late" words** (approved this way: v0.738). You draw them in school blue (`camps.css:765–776`; the legend's word at `:784–788`), as v0.738 approved ("in small blue text"; picture 19 drew blue in both options). §1.2 now names these words as an exception to its limit of five blue things on a screen (v1.054). Nothing to change unless Jeffrey asks to recolor them. Low.
 - **L-03, after Dashboard core's:** the touch tap box is 42 px, not 44, because `inset: -4px 0` counts from inside a 1 px border. Your day boxes copy it: `camps.css:821–825` (`.cp-dc`, a 1 px transparent border) and `:979–983` (`.cp-daychip`). Dashboard core fixes the number (`-5px 0`) and names your file in its report; if it leaves them to you, use the same number. Then check at 820 touch: a tap 3 px above or below a day box still opens it. Low.
 - **C-07 (a):** your History's "Paying by: Cash → Check" (`camps/text.js:808, 820`) and Color Belt's "Paying by changed: Cash → Check" are both approved. Dashboard core's R1-07 mockup now draws this line too (its pass 2 correction); it follows that set with your pass 1 R1-07 item. Nothing to do now.
 

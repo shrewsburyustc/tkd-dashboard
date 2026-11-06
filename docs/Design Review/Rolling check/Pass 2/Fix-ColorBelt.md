@@ -14,10 +14,10 @@ This file reaches your worktree when `design-review` is merged into main; until 
 
 The design review's rolling check (phase 1d) looks at each section's design-review work after it merges: against the rulebook, the approved mockups, and the other sections that do the same job. Pass 2 covered what merged into `main` after pass 1's cut (e7fd75b), up to 6b27cdd (2026-11-05), in preview mode at the four sizes. Five reviewers looked (M money, records and privacy · U undo, safety nets, confirms and dialogs · L lists, pickers, forms and layout · P New students' visitor profile and printed sheet · C your Part 1 and Part 2, item by item). Two separate checkers then verified every finding. This file is what they confirmed in your merged Part 1 and Part 2 (84a6e7d: CB1–CB13, CB15–CB19, rows v0.413–v0.426, migration 0030), and in shared problems that reach your screens.
 
-The reviewers found every Part 1 and Part 2 item built as its row and mockup say, and Hide private details holds on every Color Belt screen. The problems below are four Mediums (three about the same person record, and the roster's layout between tablet and phone sizes, which waits on Jeffrey's question 1) and smaller things.
+The reviewers found every Part 1 and Part 2 item built as its row and mockup say, and Hide private details holds on every Color Belt screen. The problems below are four Mediums (three about the same person record, and the roster's layout between tablet and phone sizes, which Jeffrey has now decided, v1.053) and smaller things.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. An item marked "after [owner]'s [id]" waits until that fix is on main: plan it now, build it after.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): L-02 is question 1, and the rest are in question 3. Don't build them until his answer comes through the Main session. (Question 2, the results sheet, is answered: M-06 is now a Fix now item.)
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`): they are in question 3. Don't build them until his answer comes through the Main session. (Questions 1 and 2 are answered: L-02 and M-06 are now Fix now items.)
 - **Smaller:** fix them while you're in the file, or record them.
 - Each item keeps its finding id (M-01, C-02 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move. Your branch (`color-belt` 46e745b) has the same code where it matters (M-01: checker 1 read both).
@@ -109,6 +109,19 @@ This was pass 1's R1-02, which said "nothing to change here". That was wrong: se
 - **Change:** one line per payment that still stands, oldest first: "$65 cash · paid Oct 29", then "$20 card · paid Nov 5" (then "$X more to collect" when something is still owed). A private testing paid once keeps today's one line, so nothing else changes. Mockup first, at the four sizes.
 - **Check (preview mode):** `__tkdPreview.resetTesting()`; Private testing → Ava Chen (owes $20) → Mark paid → Card → Mark paid $20 → open her summary: two payment lines, each with its own way and day. A private testing paid once reads as today. At 1280 and 390.
 
+### L-02 (your part) — Between 640 and 768 px wide, the roster's text overlaps · Medium · Jeffrey's answer to question 1 (v1.053), after Dashboard core's L-02
+
+Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (your roster is pictures 1, 4, 7, 9 and 10).
+
+- **What's wrong** (drift):
+  - The event roster picks its tablet columns from the window's width (`src/styles/testing-events.css:1108`, `@media (min-width: 640px) and (max-width: 1023.98px)`).
+  - But the side panel takes 72 px (Standard) or 96 px (Largest, v1.118) of that window, so near 640 px the columns get less room than they were drawn for.
+  - Checker 1 saw "LT White →" over "Cash" at 683 px wide with a mouse, Standard (a 1366 laptop window snapped to half the screen; picture 1). Reviewer L counted 9 overlapping pairs there, 12 with Largest, and 3 at 700 px touch with Largest.
+  - Dashboard core's plan already lists it as yours ("Known, Color Belt's to fix", `docs/Dashboard Core/TKD-DashboardCore-Plan.md:826`, `:854`). Your status file doesn't have it.
+- **Rule:** §1.3: tablets are 640–1023 px, "Two columns max; tables drop low-priority columns", and "No horizontal scrolling on any screen size".
+- **Change (Jeffrey chose A: "A: room beside panel", v1.053):** after Dashboard core's part, your tablet rules (`testing-events.css:1108` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show; picture 4); with enough room, nothing changes (pictures 9 and 10). Your roster's `isPhone` (`event/EventPage.jsx:210`, read by `event/RosterRows.jsx:145, 222`) then comes from Dashboard core's hook for the roster only; dialogs and ⋯ menus keep the window's. Mockup first: the roster at 683 and 700 wide, with Standard and Largest.
+- **Check (preview mode):** Account menu → Panel size → Largest, then Standard. November Children Testing at 683 × 768 with a mouse, 700 wide touch and 667 × 375 touch: no text over text, and no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
+
 ### M-06 — Print results and its sheet go · Low · Jeffrey's answer to question 2 (v1.052)
 
 Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-colorbelt-print-results.png` (your Grading tab today, and the same page without Print results).
@@ -165,21 +178,7 @@ Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q2-colorbelt-print-re
 
 ## Waits on Jeffrey (don't build yet)
 
-Each is a question in the pass 2 report: L-02 is question 1, and the rest are in question 3, the small ones. The Main session passes on his answer. (M-06 was question 2; Jeffrey has answered it, so it is under Fix now.)
-
-### L-02 (your part) — Between 640 and 768 px wide, the roster's text overlaps · Medium · question 1, then after Dashboard core's L-02
-
-Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (your roster is pictures 1, 4, 7, 9 and 10).
-
-- **What's wrong** (drift):
-  - The event roster picks its tablet columns from the window's width (`src/styles/testing-events.css:1108`, `@media (min-width: 640px) and (max-width: 1023.98px)`).
-  - But the side panel takes 72 px (Standard) or 96 px (Largest, v1.118) of that window, so near 640 px the columns get less room than they were drawn for.
-  - Checker 1 saw "LT White →" over "Cash" at 683 px wide with a mouse, Standard (a 1366 laptop window snapped to half the screen; picture 1). Reviewer L counted 9 overlapping pairs there, 12 with Largest, and 3 at 700 px touch with Largest.
-  - Dashboard core's plan already lists it as yours ("Known, Color Belt's to fix", `docs/Dashboard Core/TKD-DashboardCore-Plan.md:826`, `:854`). Your status file doesn't have it.
-- **Rule:** §1.3: tablets are 640–1023 px, "Two columns max; tables drop low-priority columns", and "No horizontal scrolling on any screen size".
-- **If Jeffrey picks A (recommended):** after Dashboard core's part, your tablet rules (`testing-events.css:1108` and the rules that go with it) become `@container page (…)`. When the room beside the panel is too narrow for the tablet columns, the roster uses the phone layout (the stacked rows phones already show; picture 4); with enough room, nothing changes (pictures 9 and 10). Mockup first if anything else shows differently at the four sizes.
-- **If B:** your tablet rule starts at the new, wider window. **If C:** nothing changes.
-- **Check (preview mode):** Account menu → Panel size → Largest, then Standard. November Children Testing at 683 × 768 with a mouse, 700 wide touch and 667 × 375 touch: no text over text, and no sideways scroll. At 1280, 820 touch, 390 and 320 the roster looks as today.
+Each is in question 3 of the pass 2 report, the small ones. The Main session passes on his answer. (L-02 was question 1 and M-06 question 2; Jeffrey has answered both, so they are under Fix now.)
 
 ### M-02 = C-07 (b) — One Mark paid by another way shows as two History entries · Low · question 3 (a)
 

@@ -43,6 +43,6 @@ Port 9351: the processes left by a screenshot run were gone by 2026-11-05. Nothi
 
 ## When `design-review` is merged
 
-- Give each session its pass 2 file (the starter is at the top of each): Color Belt and New students first (three straight Medium fixes each), then Dashboard core (L-02 waits on Jeffrey's question 1), Star, Camps and Black Belt.
+- Give each session its pass 2 file (the starter is at the top of each): Color Belt and New students first (three straight Medium fixes each), then Dashboard core (its L-02 first: Color Belt's, Star's and Camps' L-02 wait for it, v1.053), Star, Camps and Black Belt.
 - Tell Color Belt, Star, New students and Dashboard core that pass 2 corrects their pass 1 files: a line under each pass 1 title points to the "Corrections to pass 1" part of their pass 2 file. Color Belt's is the important one: its pass 1 note said "nothing to change" about the Paying by hint, and it is now a Medium fix with a migration.
 - Jeffrey's questions come first through the Design Review session (the pass 2 report). Pass on each answer, quoting his words.

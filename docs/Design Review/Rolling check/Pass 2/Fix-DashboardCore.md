@@ -17,7 +17,7 @@ The design review's rolling check (phase 1d) looks at each section's design-revi
 Panel size works: reviewer L found all 16 main screens fine at Large and Largest at 1280 and 820 touch, the panel buttons and account menu rows big enough, the failed-save bar on every page, and short windows scrolling as v1.118 says. The problems below come at window sizes between the review's four, and in shared rules.
 
 - **Fix now:** straight fixes. Plan them, show Jeffrey, then build. Several have a matching item in a section's own fix file ("after Dashboard core's [id]"): say in your report when each is merged, so the Main session can tell them.
-- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`). L-02 is question 1, on its own; L-05 is in question 3. Don't build them until his answer comes through the Main session.
+- **Waits on Jeffrey:** questions in the pass 2 report (`docs/Design Review/Rolling check/Pass 2/Pass 2 report.md`). L-05 is in question 3. Don't build it until his answer comes through the Main session. (Question 1 is answered: L-02 is now a Fix now item, v1.053.)
 - **Smaller:** fix them while you're in the file.
 - Each item keeps its finding id (L-03, L-06 …) so Jeffrey can trace it. Use the id in your plan, status file and commits.
 - **Line numbers** are main 6b27cdd's (checked 2026-11-05); they may move.
@@ -55,6 +55,29 @@ The answers to the pass 2 report's questions are written as rows from the design
 ## Fix now
 
 Most severe first.
+
+### L-02 — Between 640 and 768 px wide, three rosters overlap or scroll sideways, worse with Largest · Medium · Jeffrey's answer to question 1 (v1.053)
+
+Jeffrey chose A on 2026-11-05 ("A: room beside panel"), and rulebook v1.053 changes §1.3: a roster chooses its layout from the room it has beside the left panel, not from the window's width. Build your part first: Color Belt's, Star's and Camps' own L-02 items wait for it.
+
+Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (today 1–3, A 4–6, B 7–8, what stays the same 9–12).
+
+- **What's wrong** (drift):
+  - Color Belt's (`testing-events.css:1108`), Star's (`src/screens/testing/star/star.css:886`) and Camps' (`camps.css:991`) rosters choose their tablet columns from the window's width.
+  - But the side panel takes 72 px (Standard) or 96 px (Largest) of that window, so at the narrow end of the tablet band the columns get less room than they were drawn for.
+  - Checker 1 reproduced three of reviewer L's cells:
+    - Camps, April Vacation Camp at 768×1024 touch with Largest: the table is 633 px in a 622 px box, and Friday's Check in and "Late" are cut.
+    - Star, Fall Star Testing at 700 wide touch with Largest: "Registered Oct 30" runs into "0 stars → 1 star", and the "Candidate" / "Testing for" headers overlap.
+    - Color Belt, the event roster at 683 wide with a mouse, Standard: "LT White →" sits over "Cash".
+  - Black Belt's roster drops columns and fits at every size tested. Color Belt's part is in your plan (`docs/Dashboard Core/TKD-DashboardCore-Plan.md:826`, `:854`); Star's and Camps' are new.
+- **Rule:** §1.3: tablets are 640–1023 px, "Two columns max; tables drop low-priority columns", and "No horizontal scrolling on any screen size"; v1.118 (Panel size); v0.716 (Camps chose its week switch over sideways scrolling).
+- **Change (A, v1.053):**
+  - The page area becomes a size container: `.shell-content { container-type: inline-size; container-name: page; }` (`app.css:502–506`). A roster can then choose its layout from the room it really has beside the panel, whatever the panel size or window: when that room is too narrow for its tablet columns, it uses the phone layout (stacked rows, or Camps' cards; pictures 4–6); with enough room, nothing changes (pictures 9–12).
+  - Color Belt, Star and Camps switch their tablet rules to `@container page (…)` (their own L-02 items). Camps' cards have no ⋯ (phones use Camper detail), so with a mouse they also need a ⋯ button (Camps' own item).
+  - **CSS alone can't switch the rosters.** Their phone rows and cards are drawn by React when `useMediaQuery(PHONE_QUERY)` matches, and that reads the window (`src/screens/testing/event/EventPage.jsx:210`, `src/screens/testing/star/candidates/CandidatesTab.jsx:111`, `src/screens/camps/CampPage.jsx:142`). So also build one shared hook that reports the page area's width (a ResizeObserver on `.shell-content`: the browser tells the code when that box changes size), so a roster's code and its `@container` rules use the same limit. Rosters use it only for their own layout: the same `isPhone` also makes dialogs full-screen and ⋯ menus into sheets, and those keep following the window.
+  - Check that menus, popups and the toast inside the page area still open in the right place.
+  - Before it goes live: container queries need Chrome or Edge 105, Safari 16 or Firefox 110 or newer (on an iPad, iPadOS 16 or newer). Ask Jeffrey to check the school's tablets, and say in your plan what a browser without them shows.
+- **Check (preview mode):** Account menu → Panel size → Largest, then Standard. Camps → April Vacation Camp at 768 and 744 touch; Star → Fall Star Testing at 700 touch; Color Belt → November Children Testing at 683 with a mouse and 667×375 touch: no text over text, no sideways scroll; where the room is too narrow, the roster shows the phone layout (pictures 4–6). Where a roster switched in a wider window, its dialogs and ⋯ menus look as today for that window. The four review sizes look as today (pictures 9–12).
 
 ### L-03 — Touch buttons' tap area is 42 px tall, not 44 · Low
 
@@ -95,29 +118,6 @@ Most severe first.
 ---
 
 ## Waits on Jeffrey (don't build yet)
-
-### L-02 — Between 640 and 768 px wide, three rosters overlap or scroll sideways, worse with Largest · Medium · question 1 of the pass 2 report
-
-It changes §1.3 ("Layout is based on screen width"), so it needs a rulebook row first. The design review asks Jeffrey (question 1, on its own) and writes the row from his answer.
-
-Picture: `docs/Design Review/Rolling check/Pass 2/pictures/Q1-roster-room.png` (today 1–3, A 4–6, B 7–8, what stays the same 9–12).
-
-- **What's wrong** (drift):
-  - Color Belt's (`testing-events.css:1108`), Star's (`src/screens/testing/star/star.css:886`) and Camps' (`camps.css:991`) rosters choose their tablet columns from the window's width.
-  - But the side panel takes 72 px (Standard) or 96 px (Largest) of that window, so at the narrow end of the tablet band the columns get less room than they were drawn for.
-  - Checker 1 reproduced three of reviewer L's cells:
-    - Camps, April Vacation Camp at 768×1024 touch with Largest: the table is 633 px in a 622 px box, and Friday's Check in and "Late" are cut.
-    - Star, Fall Star Testing at 700 wide touch with Largest: "Registered Oct 30" runs into "0 stars → 1 star", and the "Candidate" / "Testing for" headers overlap.
-    - Color Belt, the event roster at 683 wide with a mouse, Standard: "LT White →" sits over "Cash".
-  - Black Belt's roster drops columns and fits at every size tested. Color Belt's part is in your plan (`docs/Dashboard Core/TKD-DashboardCore-Plan.md:826`, `:854`); Star's and Camps' are new.
-- **Rule:** §1.3: tablets are 640–1023 px, "Two columns max; tables drop low-priority columns", and "No horizontal scrolling on any screen size"; v1.118 (Panel size); v0.716 (Camps chose its week switch over sideways scrolling).
-- **Change, if Jeffrey picks A (recommended):**
-  - The page area becomes a size container: `.shell-content { container-type: inline-size; container-name: page; }` (`app.css:502–506`). A roster can then choose its layout from the room it really has beside the panel, whatever the panel size or window: when that room is too narrow for its tablet columns, it uses the phone layout (stacked rows, or Camps' cards; pictures 4–6); with enough room, nothing changes (pictures 9–12).
-  - Color Belt, Star and Camps switch their tablet rules to `@container page (…)` (their own L-02 items). Camps' cards have no ⋯ (phones use Camper detail), so with a mouse they also need a ⋯ button (Camps' own item).
-  - Check that menus, popups and the toast inside the page area still open in the right place.
-  - Jeffrey sees the picture above with question 1.
-  - If he picks B, each roster's tablet rule starts at a wider window: that is the sections' own change, and you have nothing to build. If C, nothing.
-- **Check (preview mode, after A):** Account menu → Panel size → Largest, then Standard. Camps → April Vacation Camp at 768 and 744 touch; Star → Fall Star Testing at 700 touch; Color Belt → November Children Testing at 683 with a mouse and 667×375 touch: no text over text, no sideways scroll; where the room is too narrow, the roster shows the phone layout (pictures 4–6). The four review sizes look as today (pictures 9–12).
 
 ### L-05 — Panel size's failed-save bar says "Check the internet" · Low · question 3 (i)
 
