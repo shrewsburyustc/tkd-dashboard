@@ -27,7 +27,7 @@ import {
   todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
-  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
@@ -2534,6 +2534,23 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   assert.equal(hiddenMenu(row({ status: 'cancelled' }), true), 'restore delete');
   assert.equal(hiddenMenu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), true), 'restore delete'); // no Print receipt while hidden
   assert.equal(hiddenMenu(row({ status: 'cancelled', paid: true, amountDueCents: 0 }), false), ''); // staff: no ⋯ at all
+});
+
+check('eventRules: rosterCounts / inCardFilter — possible duplicates out of Paid and Not paid (pass 1 R3-02)', () => {
+  const r = (id, paid, duplicateState = 'none') => ({ id, paid, duplicateState });
+  const active = [r('a', true), r('b', false), r('c', false, 'possible'), r('d', true, 'possible'), r('e', false)];
+  assert.deepEqual(rosterCounts(active), { students: 5, paid: 1, notPaid: 2, flagged: 2 });
+  assert.deepEqual(rosterCounts([]), { students: 0, paid: 0, notPaid: 0, flagged: 0 });
+  assert.deepEqual(rosterCounts(undefined), { students: 0, paid: 0, notPaid: 0, flagged: 0 });
+  const shown = (filter) => active.filter((row) => inCardFilter(row, filter)).map((row) => row.id).join('');
+  assert.equal(shown(null), 'abcde'); // no card pressed: everyone, possible duplicates included
+  assert.equal(shown('paid'), 'a');
+  assert.equal(shown('notPaid'), 'be');
+});
+
+check('words: the gray line while possible duplicates are left out of Paid / Not paid (pass 1 R3-02)', () => {
+  assert.equal(CBT.duplicatesLeftOut(1), "1 possible duplicate isn't counted in Paid or Not paid until it's resolved.");
+  assert.equal(CBT.duplicatesLeftOut(2), "2 possible duplicates aren't counted in Paid or Not paid until they're resolved.");
 });
 
 check('eventRules: canPrintReceipt — a payment that still stands, active or removed, never hidden (CB2; pass 2 M-03)', () => {

@@ -619,6 +619,12 @@ export function duplicateBoxLine(count) {
   return count === 1 ? '1 possible duplicate' : `${count} possible duplicates`;
 }
 export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
+// The gray line under the count cards while possible duplicates are left out of Paid / Not paid
+// (pass 1 R3-02, v1.046 (8); Black Belt's sentence, naming the two cards; approved 2026-11-06)
+export const duplicatesLeftOut = (count) =>
+  count === 1
+    ? "1 possible duplicate isn't counted in Paid or Not paid until it's resolved."
+    : `${count} possible duplicates aren't counted in Paid or Not paid until they're resolved.`;
 
 // ⋯ menu on a student (R8, plan answers 6 and 8)
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';

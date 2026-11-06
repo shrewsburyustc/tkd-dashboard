@@ -248,6 +248,25 @@ export function canPrintReceipt(row, hidden = false) {
   return hidden !== true && row?.paid === true && !row?.movedTo;
 }
 
+// The event roster's count cards (CB9) and their filters. A row marked "Possible duplicate" stays out
+// of Paid and Not paid until the pair is resolved (pass 1 R3-02, rulebook v1.046 (8), as Black Belt's
+// rosterFilter); Students counts every active row. active: the event's active rows.
+// → { students, paid, notPaid, flagged } (flagged = the possible-duplicate rows left out)
+export function rosterCounts(active) {
+  const list = active ?? [];
+  const countable = list.filter((r) => r.duplicateState !== 'possible');
+  const paid = countable.filter((r) => r.paid === true).length;
+  return { students: list.length, paid, notPaid: countable.length - paid, flagged: list.length - countable.length };
+}
+
+// Does a row show while a Paid / Not paid card is pressed? (filter null = no card pressed: everyone.)
+// A possible duplicate is in neither until it's resolved (R3-02).
+export function inCardFilter(row, filter) {
+  if (filter === null || filter === undefined) return true;
+  if (row?.duplicateState === 'possible') return false;
+  return filter === 'paid' ? row?.paid === true : row?.paid !== true;
+}
+
 // ----- Class times (§1.4, E4–E6) -----
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;

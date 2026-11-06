@@ -91,7 +91,7 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { canPrintReceipt, classTimeLabel, feeFor } from '../../../lib/testing/eventRules.js';
+import { canPrintReceipt, classTimeLabel, feeFor, inCardFilter, rosterCounts } from '../../../lib/testing/eventRules.js';
 import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
@@ -447,7 +447,13 @@ export default function EventPage({
   useEffect(() => {
     if (noOneRegistered) setFilter(null);
   }, [noOneRegistered]);
-  const paidCount = active.filter((r) => r.paid).length;
+  // A row marked "Possible duplicate" stays out of Paid and Not paid (the cards and their filters)
+  // until the pair is resolved (pass 1 R3-02, v1.046 (8); eventRules.rosterCounts / inCardFilter);
+  // Students still counts it, and Payments recorded keeps any money it paid. One gray line under the
+  // cards says so.
+  const counts = rosterCounts(active);
+  const paidCount = counts.paid;
+  const notPaidCount = counts.notPaid;
   // Payments recorded = every recorded payment of this event, net of reversals (incl. withdrawn
   // students, whose payment stays on record; a deleted student's payment is gone).
   const paymentsTotal = data?.paymentTotalCents ?? payments.reduce((sum, p) => sum + p.amountCents, 0);
@@ -474,8 +480,8 @@ export default function EventPage({
   // the switch-on effect above clears it; nor while nobody is registered, when there are no cards
   // to turn it off with.)
   const shownFilter = hidden || !hasRegistrations ? null : filter;
-  if (shownFilter === 'paid') rows = rows.filter((r) => r.paid);
-  if (shownFilter === 'notPaid') rows = rows.filter((r) => !r.paid);
+  // (A possible duplicate is in neither filter until it's resolved, R3-02.)
+  rows = rows.filter((r) => inCardFilter(r, shownFilter));
   // Removed students of the whole group, in one Removed group after the classes.
   const removedRows = group && shownFilter === null ? removed.filter(inGroup).sort(groupOrder) : [];
   // v0.195: a small heading per class when classes test together ("Group B · 3 students");
@@ -1317,6 +1323,14 @@ export default function EventPage({
     const name = T.studentLabel(row);
     const newVersion = result.version;
     const undoCall = restore ? withdrawStudent : restoreStudent;
+    // Restoring a "Duplicate copy": no Undo (pass 1 R2-03, v1.043, Star's G3) — an Undo would put the
+    // row back as a plain Removed with a history that says Withdrawn; to change it back an admin
+    // uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
+    if (restore && row.withdrawnReason === 'duplicate_copy') {
+      showToast(T.restoredToast(name), { icon: false });
+      focusLater(() => rowEl(row.id), addStudentEl, reloaded);
+      return;
+    }
     showToast(restore ? T.restoredToast(name) : T.withdrawnToast(name), {
       icon: false,
       action: {
@@ -1692,7 +1706,7 @@ export default function EventPage({
   const allCards = [
     { key: 'all', label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length, kind: 'all' },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount, kind: 'filter' },
-    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: active.length - paidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
+    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: notPaidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
     {
       key: 'money',
       label: T.CARD_PAYMENTS,
@@ -2017,20 +2031,8 @@ export default function EventPage({
         />
       ) : (
         <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
-          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
-              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
-              recorded is a plain total. Hide private details: the Students card alone. Nobody
-              registered yet (active or removed): no cards, only the empty line (C-05 (a)). */}
-          {hasRegistrations && (
-            <CountCards
-              cards={cards}
-              selected={shownFilter}
-              onSelect={setFilter}
-              showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
-              showAllLabel={T.SHOW_ALL}
-            />
-          )}
-
+          {/* One order above every roster (pass 1 R3-10, v1.047 (15)): the duplicate box first, then
+              the count cards and their lines, then the class switch. */}
           {/* Possible duplicates (Star v0.114) in the shared duplicate box (v1.102, v0.422): the
               count on the first line only (its own line on phones), then one line per pair, each
               with Review; Review passes itself, so focus returns to it when the compare closes. */}
@@ -2042,6 +2044,23 @@ export default function EventPage({
               onReview: (opener) => openCompare(pair, opener),
             }))}
           />
+
+          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
+              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
+              recorded is a plain total. Hide private details: the Students card alone. Nobody
+              registered yet (active or removed): no cards, only the empty line (C-05 (a)). A
+              possible duplicate is out of Paid / Not paid, and the gray line under the cards says
+              so (R3-02; not while hidden, when only Students shows). */}
+          {hasRegistrations && (
+            <CountCards
+              cards={cards}
+              selected={shownFilter}
+              onSelect={setFilter}
+              showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
+              showAllLabel={T.SHOW_ALL}
+              note={!hidden && counts.flagged > 0 ? T.duplicatesLeftOut(counts.flagged) : null}
+            />
+          )}
 
           {classes.length === 0 ? (
             <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>
