@@ -1761,7 +1761,10 @@ begin
     'testing_payments.reverses_payment_id']
     -- 0019 (school phone, new-students branch) adds exactly one read right on locations
     || case when to_regprocedure('public.settings_update_school_contact(text, integer, text, text, text, text, text)') is not null
-            then array['locations.phone'] else array[]::text[] end;
+            then array['locations.phone'] else array[]::text[] end
+    -- 0044 (Color Belt rolling check, M-01) adds exactly one read right on registrations
+    || case when to_regprocedure('public.testing_undo_event_edit(uuid, integer, text, date, jsonb, date, text, boolean)') is not null
+            then array['testing_registrations.paying_by_on_form'] else array[]::text[] end;
   for v_tbl, v_col in
     select c.relname::text, a.attname::text
       from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
@@ -1796,8 +1799,10 @@ begin
   --     run it, and which ones run as their owner (security definer)
   -- After 0035 the old one-click testing_mark_paid is gone on purpose (the
   -- app uses 0030's testing_mark_paid_by), so it is not expected then.
+  -- (0030's testing_mark_paid_by has 4 inputs; 0044 gives it a 5th)
   if to_regprocedure('public.testing_mark_paid(uuid, integer)') is null
-     and to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is not null then
+     and (to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is not null
+          or to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)') is not null) then
     v_staff_fns := array_remove(v_staff_fns, 'testing_mark_paid');
   end if;
   v_n := 0;

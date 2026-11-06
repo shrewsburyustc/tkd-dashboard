@@ -342,7 +342,9 @@ begin
   if v_role is distinct from 'staff' then
     raise exception 'TEST SETUP: no ACTIVE role-staff row with id %. Paste the front-desk UID into v_desk.', v_desk;
   end if;
-  if to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null
+  -- (0044 gives testing_mark_paid_by a 5th input, p_school, with a default)
+  if (to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null
+      and to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)') is null)
      or to_regclass('public.testing_downloads') is null then
     raise exception 'TEST SETUP: 0030 is not applied';
   end if;
@@ -383,9 +385,15 @@ begin
   -- ===================================================================
   -- W1. Who may call what
   -- ===================================================================
+  -- the two Mark paid functions by whichever version is there (0030's 4
+  -- inputs, or 0044's 5)
   for v_fn in
-    select * from (values ('testing_mark_paid_by(uuid, integer, text, integer)'),
-                          ('testing_private_mark_paid_by(uuid, integer, text, integer)'),
+    select * from (values (regexp_replace(coalesce(to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)'),
+                                                   to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)'))::text,
+                                          '^public\.', '')),
+                          (regexp_replace(coalesce(to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer, text)'),
+                                                   to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)'))::text,
+                                          '^public\.', '')),
                           ('testing_registration_history(uuid)'), ('testing_private_history(uuid)'),
                           ('testing_results_csv(uuid)'), ('testing_undo_payment(uuid)'),
                           ('testing_private_undo_payment(uuid)'),

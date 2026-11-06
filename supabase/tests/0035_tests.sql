@@ -146,7 +146,9 @@ begin
   if v_role is distinct from 'staff' then
     raise exception 'TEST SETUP: no ACTIVE role-staff row with id %. Paste the front-desk UID into v_desk.', v_desk;
   end if;
-  if to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null then
+  -- (0044 gives the *_by functions a 5th input, p_school, with a default)
+  if to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null
+     and to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)') is null then
     raise exception 'TEST SETUP: 0030 is not applied';
   end if;
 
@@ -287,9 +289,11 @@ begin
       'public.testing_private_set_result_note(uuid, text)',
       'public.testing_move_to_private(uuid, integer, date, time)',
       'public.testing_private_undo_move(uuid, integer)',
-      -- 0030
-      'public.testing_mark_paid_by(uuid, integer, text, integer)',
-      'public.testing_private_mark_paid_by(uuid, integer, text, integer)',
+      -- 0030 (the two *_by with 0030's 4 inputs, or 0044's 5)
+      coalesce(to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)')::text,
+               'public.testing_mark_paid_by(uuid, integer, text, integer)'),
+      coalesce(to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer, text)')::text,
+               'public.testing_private_mark_paid_by(uuid, integer, text, integer)'),
       'public.testing_registration_history(uuid)',
       'public.testing_private_history(uuid)',
       'public.testing_results_csv(uuid)']) as x(sig)
@@ -305,7 +309,9 @@ begin
     (select string_agg(p.proname || ':' || p.pronargs, ',' order by p.proname collate "C") from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.proname in ('testing_mark_paid_by', 'testing_private_mark_paid_by')),
-    'testing_mark_paid_by:4,testing_private_mark_paid_by:4');
+    case when to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)') is not null
+         then 'testing_mark_paid_by:5,testing_private_mark_paid_by:5'   -- 0044
+         else 'testing_mark_paid_by:4,testing_private_mark_paid_by:4' end);
 end;
 $$;
 

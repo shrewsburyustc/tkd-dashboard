@@ -419,8 +419,10 @@ begin
   -- After 0035 the old one-click testing_private_mark_paid is gone on
   -- purpose (the app uses 0030's testing_private_mark_paid_by), so it is
   -- not expected then.
+  -- (0030's testing_private_mark_paid_by has 4 inputs; 0044 gives it a 5th)
   if to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is null
-     and to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)') is not null then
+     and (to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)') is not null
+          or to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer, text)') is not null) then
     v_staff_fns := array_remove(v_staff_fns, 'testing_private_mark_paid');
   end if;
   v_n := 0;
@@ -501,7 +503,11 @@ begin
   select count(*) into v_n from pg_trigger t
    where t.tgrelid in ('public.testing_private'::regclass, 'public.testing_private_payments'::regclass,
                        'public.testing_private_results'::regclass) and not t.tgisinternal;
-  if v_n <> 9 then raise exception 'TEST FAILED: V1 expected exactly 9 triggers on the three tables, found %', v_n; end if;
+  -- 0044 (Color Belt rolling check) adds exactly two: testing_private_before_form_choice
+  -- and testing_private_payments_school (0044_tests.sql K1 checks them)
+  if v_n <> (9 + (case when to_regprocedure('public.testing_private_keep_form_choice()') is not null then 2 else 0 end)) then
+    raise exception 'TEST FAILED: V1 expected exactly 9 triggers on the three tables (11 after 0044), found %', v_n;
+  end if;
   -- the rules
   select string_agg(x.con, ', ') into v_txt
     from (values ('testing_private', 'testing_private_pkey', 'p'), ('testing_private', 'testing_private_location_fk', 'f'),

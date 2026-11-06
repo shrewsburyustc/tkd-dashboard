@@ -45,6 +45,9 @@
 --     - re-run 0030 and then 0035 straight after it.
 --   * Re-running 0030 after this file is fine: its guard accepts either
 --     the old functions or its own *_by ones.
+--   * 0044 (which gives the *_by functions a 5th input, p_school) may be
+--     pasted before or after this file: section 1 accepts either version
+--     (tested in PGlite, run.mjs step0044).
 --
 -- TESTS AFTER IT
 --   0035_tests.sql, then 0005_, 0010_, 0011_, 0014_, 0018_, 0026_ and
@@ -69,8 +72,12 @@ do $$
 declare
   v_users text;
 begin
-  if to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null
-     or to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)') is null then
+  -- 0030's *_by functions with their 4 inputs, or with 0044's 5th (p_school):
+  -- 0035 and 0044 may be pasted in either order
+  if (to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null
+      and to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)') is null)
+     or (to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)') is null
+         and to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer, text)') is null) then
     raise exception '0035 needs migration 0030 (Color Belt: Mark paid with a way to pay) first';
   end if;
 
