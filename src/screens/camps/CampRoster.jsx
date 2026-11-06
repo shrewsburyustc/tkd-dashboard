@@ -34,10 +34,17 @@
 //   is on (as Star hides its removed candidates). Tapping Coming in a camp of more than one week
 //   moves the week switch to that day's week. The page (CampPage.jsx) keeps the filter, beside
 //   Find a camper's text.
+// Since v0.742 (picture 21 A, pass 1 R3-10 / R3-02 / R5-04 / R3-09):
+//   - the possible-duplicate box (the shared components/DuplicateBox.jsx since rulebook v0.729)
+//     comes FIRST, above "Updated …" and the cards;
+//   - a row marked Possible duplicate stays out of To collect (count, money, filter) until the
+//     pair is reviewed, and the card's second line says so: "1 possible duplicate not counted";
+//   - Payments recorded says "includes $140 from removed campers" when part of it is theirs;
+//   - Find a camper has the shared ✕ ("Clear search") while it has text, and search text that
+//     finds nobody shows 'No campers match “zz”. · Clear search' in the roster's place.
 // Then Find a camper, and — only when the camp's days cross more than one calendar week —
 // the week switch ("Week 1 · Jul 6–10 | Week 2 · Jul 13–17"; each week shows only its own days,
-// Paid and the cards stay whole-camp). Below it: the possible-duplicate box (the shared
-// components/DuplicateBox.jsx since rulebook v0.729), then "Removed".
+// Paid and the cards stay whole-camp), the roster, then "Removed".
 // Phones: one card per child — name + Paid on top, the week's day buttons underneath (today
 // outlined), 44px targets. The page (CampPage.jsx) does every write; this file only draws.
 // Live-test fixes (2026-10-21): the grid always spans the full width, even for a 1-day camp (the
@@ -53,9 +60,9 @@
 // Check-in, "here", Find a camper, the extra counts and "Updated …" stay.
 // Money ("$1,355", the tags) is written by the shared formatMoney (src/lib/money.js;
 // rulebook v0.732, design review C17), as every section does.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconCalendarEvent, IconChevronDown, IconChevronUp, IconCircleX, IconDots, IconSearch, IconSum, IconUserCheck, IconUsers, IconUserX,
+  IconAlertTriangle, IconCalendarEvent, IconChevronDown, IconChevronUp, IconCircleX, IconDots, IconSearch, IconSum, IconUserCheck, IconUsers, IconUserX, IconX,
 } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
 // The shared row of count cards (design review M6 / C10, rulebook v1.013 and v0.737)
@@ -326,11 +333,22 @@ export default function CampRoster({
             Icon: IconCircleX, // ti-circle-x = not paid (as Star's Not paid)
             label: T.CARD_TO_COLLECT,
             value: String(counts.toCollect),
-            // The money on every screen size (picture 18); nobody owes → "All paid".
-            note: counts.toCollect === 0 ? T.ALL_PAID : formatMoney(counts.toCollectCents),
+            // The money on every screen size (picture 18); nobody owes → "All paid". While rows
+            // marked Possible duplicate are left out (v0.742, picture 21 A), a second line under
+            // it says how many: "1 possible duplicate not counted" (the shared card draws an
+            // array as two lines, v1.115).
+            note: [counts.toCollect === 0 ? T.ALL_PAID : formatMoney(counts.toCollectCents), counts.duplicatesNotCounted > 0 ? T.duplicatesNotCounted(counts.duplicatesNotCounted) : null],
             kind: 'filter',
           },
-          { key: 'recorded', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(counts.recordedCents), kind: 'total' }, // ti-sum = a money total
+          {
+            key: 'recorded',
+            Icon: IconSum, // ti-sum = a money total
+            label: T.CARD_PAYMENTS,
+            value: formatMoney(counts.recordedCents),
+            // Part of the total came from removed campers: say so (v0.742 / v1.038, R5-04).
+            note: counts.removedPaidCents > 0 ? T.includesFromRemoved(counts.removedPaidCents) : null,
+            kind: 'total',
+          },
         ]),
   ];
   // The gray line under the cards, for the Coming card's day (picture 19): every extra offered every
@@ -357,9 +375,25 @@ export default function CampRoster({
   const rows = active.filter((row) => match(row) && matchesCardFilter(row, shownFilter, cardDay)).sort(byFirstName);
   // While a card filters, "Removed" is hidden (they aren't in the counts; as Star's roster does).
   const removedRows = shownFilter ? [] : removed.filter(match).sort(byFirstName);
-  // Find a camper and / or a card left nobody: one gray row says so (a card's words win, since
-  // "No camper with that name." would be wrong when the name exists but is filtered out).
-  const noMatchText = active.length > 0 && rows.length === 0 && (q || shownFilter) ? (shownFilter ? T.NO_MATCH_FILTER : T.NO_MATCH_ROSTER) : null;
+  // Nobody left on the roster (v0.742 / v1.050, picture 21 A):
+  //   - search text found nobody → ONE gray line in the roster's place, 'No campers match “zz”. ·
+  //     Clear search' (searchMissText; drawn below). The search words win, even while a card is
+  //     pressed: the text is what the person just typed.
+  //   - search text found nobody on the roster but someone in Removed → no line and no roster, only
+  //     the Removed group below (the line would say "No campers match" right above the camper it
+  //     found; design and code review, 2026-11-06).
+  //   - no search text, but a pressed card left nobody → today's gray row "No campers match."
+  //     inside the roster (noMatchText; pass 2 changes this one).
+  const searchFoundNoActive = active.length > 0 && Boolean(q) && rows.length === 0;
+  const searchMissText = searchFoundNoActive && removedRows.length === 0 ? T.noCampersMatch(query.trim()) : null;
+  const noMatchText = active.length > 0 && rows.length === 0 && !q && shownFilter ? T.NO_MATCH_FILTER : null;
+  // Empties Find a camper and puts the focus back in the box (the ✕ and the Clear search link both
+  // disappear as they're pressed, so the focus must not fall to the page).
+  const searchInput = useRef(null);
+  function clearSearch() {
+    onQuery('');
+    searchInput.current?.focus();
+  }
 
   const popoverRow = popover ? active.find((r) => r.id === popover.rowId) : null;
   // The camper was paid meanwhile (another device), or Hide private details was switched on: the
@@ -617,30 +651,11 @@ export default function CampRoster({
   const hasCampers = active.length > 0 || removed.length > 0;
   const updated = updatedAt ? <span className="cp-updated">{T.updatedAtLine(updatedAt)}</span> : null;
 
+  // The order above the roster (v0.742 / v1.047, picture 21 A): the possible-duplicate box, then
+  // "Updated …" with the count cards and their gray count line (and, while a card is pressed, the
+  // cards' own "Showing … only · Show all"), then Find a camper, the week switch and the roster.
   return (
     <div className="cp-roster-area">
-      {/* "Updated …" on its own line, on the right, above the cards (picture 18). */}
-      {updated && <p className={`cp-updated-line${hasCampers ? '' : ' is-alone'}`}>{updated}</p>}
-      {/* No campers at all: the cards would only read 0, so there are none (only "Updated …"). */}
-      {hasCampers && (
-        <CountCards cards={cards} selected={shownFilter} onSelect={selectCard} showingText={showingText} note={extrasNote} />
-      )}
-      {/* Find a camper only when there is someone to find. */}
-      {hasCampers && (
-      <div className="cp-search">
-        {/* ti-search = find */}
-        <IconSearch size={16} aria-hidden="true" className="cp-search-icon" />
-        <input
-          className="input cp-search-input"
-          type="search"
-          placeholder={T.FIND_CAMPER}
-          aria-label={T.FIND_CAMPER}
-          autoComplete="off"
-          value={query}
-          onChange={(event) => onQuery(event.target.value)}
-        />
-      </div>
-      )}
       {/* The shared possible-duplicate box (rulebook v0.729 / v1.102): Camps' count line and one
           "<name> is signed up twice" line per pair, each with Review (opens the compare). */}
       <DuplicateBox
@@ -651,10 +666,49 @@ export default function CampRoster({
           onReview: (opener) => handlers.onReviewPair(pair, opener),
         }))}
       />
+      {/* "Updated …" on its own line, on the right, above the cards (picture 18). */}
+      {updated && <p className={`cp-updated-line${hasCampers ? '' : ' is-alone'}`}>{updated}</p>}
+      {/* No campers at all: the cards would only read 0, so there are none (only "Updated …"). */}
+      {hasCampers && (
+        <CountCards cards={cards} selected={shownFilter} onSelect={selectCard} showingText={showingText} note={extrasNote} />
+      )}
+      {/* Find a camper only when there is someone to find. While it has text, the shared ✕ icon
+          button sits inside it ("Clear search" tooltip on PC, 44px tap area on touch; as
+          Prospects' box, v0.631) in place of the browser's own ✕ (hidden in camps.css). */}
+      {hasCampers && (
+      <div className={`cp-search${query ? ' has-text' : ''}`}>
+        {/* ti-search = find */}
+        <IconSearch size={16} aria-hidden="true" className="cp-search-icon" />
+        <input
+          ref={searchInput}
+          className="input cp-search-input"
+          type="search"
+          placeholder={T.FIND_CAMPER}
+          aria-label={T.FIND_CAMPER}
+          autoComplete="off"
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+        />
+        {query && <IconButton label={T.CLEAR_SEARCH} Icon={IconX} className="cp-search-clear" onClick={clearSearch} />}
+      </div>
+      )}
       {weekSwitch}
-      {list}
+      {/* Search text found nobody: one gray line in the roster's place, drawn like the cards'
+          "Showing … only · Show all" line (the shared .ev-filter-line.cards-showing, whose touch
+          rules give the link its 44px tap area). */}
+      {searchMissText ? (
+        <p className="ev-filter-line cards-showing cp-nomatch">
+          {searchMissText} ·{' '}
+          <button type="button" className="link-button inline-link" onClick={clearSearch}>
+            {T.CLEAR_SEARCH}
+          </button>
+        </p>
+      ) : (
+        !searchFoundNoActive && list
+      )}
       {removedGroup}
-      {!isPhone && active.length > 0 && <RosterLegend touch={isTouch} extras={extras} />}
+      {/* The legend explains the roster's boxes, so it goes when the search left no roster. */}
+      {!isPhone && active.length > 0 && !searchFoundNoActive && <RosterLegend touch={isTouch} extras={extras} />}
       {popover && popoverRow && !detailsHidden && (
         // The shared box (v0.735): the amount owed now, shown and never typed; Paid by preset to
         // Paying by; the hint says where that choice was made — "on the form", or "at the desk"

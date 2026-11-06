@@ -499,10 +499,19 @@ export function payTag(row) {
   return 'not_paid';
 }
 
-// The Payments line's amount: what ACTIVE campers still owe, counting only positive amounts (an
-// overpaid camper never lowers it). Possible duplicates count — they are campers until resolved.
+// The To collect card's amount: what ACTIVE campers still owe, counting only positive amounts (an
+// overpaid camper never lowers it). A row marked "Possible duplicate" is left out until the pair
+// is reviewed (rulebook v0.742 / v1.046): its tag replaces "$X due" on the roster, so its money
+// would not add up with what the roster shows. (It still counts as a camper and as coming.)
 export function toCollectCents(rows) {
-  return (rows ?? []).filter((r) => r.status === 'active').reduce((sum, r) => sum + Math.max(0, r.owesCents ?? 0), 0);
+  return (rows ?? []).filter((r) => r.status === 'active' && countsToCollect(r)).reduce((sum, r) => sum + Math.max(0, r.owesCents ?? 0), 0);
+}
+
+// Is this row part of To collect? Only a camper who still owes and isn't marked Possible
+// duplicate (v0.742). The card's count, its amount and its filter all use this one test, so the
+// list a pressed To collect card shows is exactly what the card counts.
+export function countsToCollect(row) {
+  return row?.duplicateState !== 'possible' && stillOwes(row);
 }
 
 // ----- The camp page's count cards (design review C10, rulebook v0.737) -----
@@ -542,13 +551,17 @@ export function comesOnDay(row, dayId) {
 //   coming         active campers signed up on the card's day (0 after the camp)
 //   here           of those, checked in on that day (only shown when the day is today)
 //   came / cameOf  after the camp: days attended / days signed up, over the active campers
-//   toCollect      active campers who still owe money (owesCents above 0): "Owes", "$X due", and a
-//                  possible duplicate only while it owes (a paid one has nothing to collect; v0.737
-//                  says "campers who still owe")
+//   toCollect      active campers who still owe money (owesCents above 0): "Owes", "$X due" — NOT a
+//                  row marked Possible duplicate (v0.742: it stays out until the pair is reviewed)
 //   toCollectCents what those campers still owe (toCollectCents above)
+//   duplicatesNotCounted  how many possible duplicates To collect left out: only the ones that
+//                  still owe (a paid one would not have been counted anyway, so the card's
+//                  "N possible duplicates not counted" never names a row that changes nothing)
 //   recordedCents  every payment recorded for this camp, reversals taken off — the sum of every
 //                  roster row's paidCents, REMOVED campers included: money taken is money taken,
-//                  and Finance's Daily report counts a removed camper's payment too
+//                  and Finance's Daily report counts a removed camper's payment too (v1.038)
+//   removedPaidCents  the part of recordedCents that removed campers paid (Payments recorded says
+//                  "includes $X from removed campers" while it is above $0; v0.742, R5-04)
 export function campCardCounts(roster, days, today) {
   const rows = roster ?? [];
   const active = rows.filter((r) => r.status === 'active');
@@ -563,17 +576,23 @@ export function campCardCounts(roster, days, today) {
     here,
     came: active.reduce((n, r) => n + (r.days ?? []).filter((d) => d.checkedInAt).length, 0),
     cameOf: active.reduce((n, r) => n + (r.days ?? []).length, 0),
-    toCollect: active.filter(stillOwes).length,
+    toCollect: active.filter(countsToCollect).length,
     toCollectCents: toCollectCents(active),
-    recordedCents: rows.reduce((n, r) => n + (Number.isInteger(r.paidCents) ? r.paidCents : 0), 0),
+    duplicatesNotCounted: active.filter((r) => r.duplicateState === 'possible' && stillOwes(r)).length,
+    recordedCents: rows.reduce((n, r) => n + paidOf(r), 0),
+    removedPaidCents: rows.filter((r) => r.status !== 'active').reduce((n, r) => n + paidOf(r), 0),
   };
 }
 
+// A row's recorded money in cents (0 when the roster has none for it).
+const paidOf = (row) => (Number.isInteger(row?.paidCents) ? row.paidCents : 0);
+
 // Does a roster row stay on screen under a card's filter? filter = null | 'coming' | 'collect';
 // day = the Coming card's day (comingCardDay). 'coming' with no day (after the camp) keeps everyone.
+// 'collect' lists exactly the rows the To collect card counts (countsToCollect).
 export function matchesCardFilter(row, filter, day) {
   if (filter === 'coming') return !day || comesOnDay(row, day.dayId);
-  if (filter === 'collect') return stillOwes(row);
+  if (filter === 'collect') return countsToCollect(row);
   return true;
 }
 

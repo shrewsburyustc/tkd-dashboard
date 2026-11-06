@@ -443,6 +443,44 @@
   padding-left: 36px;
 }
 
+/* Find a camper's own ✕ (v0.742, picture 21 A): the browser's ✕ (Chrome's blue one) is hidden —
+   the shared icon button replaces it while the box has text, as in Prospects' box
+   (prospects.css .psearch-input). */
+.cp-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Room on the right for the ✕, so the words never run under it. */
+.cp-search.has-text .cp-search-input {
+  padding-right: 36px;
+}
+
+/* The shared icon button (.tib: 28px, 44px on touch), placed inside the box on the right,
+   centred on its height. position: absolute replaces .tib's own "relative" (its tooltip is still
+   placed from the button). */
+.cp-search .tib.cp-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+}
+
+@media (pointer: coarse) {
+  .cp-search.has-text .cp-search-input {
+    padding-right: 48px;
+  }
+
+  .cp-search .tib.cp-search-clear {
+    right: 0;
+  }
+}
+
+/* The "No campers match “zz”. · Clear search" line in the roster's place: the shared
+   .ev-filter-line pulls itself up toward the cards; here it sits under the search box instead. */
+.cp-nomatch.ev-filter-line {
+  margin-top: 0;
+}
+
 /* ===== C6 Camper detail / Edit details ===== */
 .cp-detail-head {
   margin: var(--space-16) 0 var(--space-4);
