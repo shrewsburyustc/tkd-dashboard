@@ -1,0 +1,84 @@
+{
+  "title": "Camps — Fill in: sign up a walk-in family at the desk",
+  "subtitle": "What Fill in looks like (rulebook v0.740, option C). Real preview screens; the new parts are drawn on top for this picture only, nothing is built yet. The dialog is New students' Fill in frame (same title style, same “Entered by” line, same buttons); inside it is the camp's own family form, unchanged except where marked. Amber = new or changed. Example: Thanksgiving Camp, a walk-in parent Sarah Carter with Liam (8).",
+  "width": 1900,
+  "sections": [
+    { "heading": "1 · Where Fill in is", "columns": [
+      { "label": "Today", "tone": "today", "items": [
+        { "row": [
+          { "src": "shots/x5-pc-head-today.png", "crop": [840, 100, 440, 116], "scale": 0.95, "caption": "<b>PC, admin,</b> sign-up open: Registration link and ⋯ only." },
+          { "src": "shots/x5-pc-staff-today.png", "crop": [800, 100, 480, 130], "scale": 0.9, "caption": "<b>PC, staff,</b> a camp whose sign-up is closed." }
+        ] },
+        { "row": [
+          { "src": "shots/x5-ph-menu-today.png", "crop": [0, 420, 390, 424], "scale": 0.8, "shotWidth": 390, "caption": "<b>Phone 390,</b> admin: the header ⋯." },
+          { "src": "shots/x5-ph-staffmenu-today.png", "crop": [0, 560, 390, 284], "scale": 0.8, "shotWidth": 390, "caption": "<b>Phone,</b> staff, sign-up closed." }
+        ] }
+      ] },
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x5-pc-head-after.png", "crop": [840, 100, 440, 116], "scale": 0.95, "marks": [[998, 130, 64, 32]],
+            "caption": "<b>1a · PC / tablet:</b> a plain <b>Fill in</b> button before Registration link (as New students' list rows)." },
+          { "src": "shots/x5-pc-staff-after.png", "crop": [800, 100, 480, 130], "scale": 0.9, "marks": [[998, 130, 64, 32], [820, 170, 250, 47]],
+            "caption": "<b>1b · Staff while sign-up isn't open:</b> gray (still reachable with Tab, pressing does nothing), tip “Family sign-up is closed. Ask an admin to fill in for a family.” Past the closing date: “The closing date has passed. Ask an admin to fill in for a family.” After the last day, gray for everyone: “This camp is over.”" }
+        ] },
+        { "row": [
+          { "src": "shots/x5-ph-menu-after.png", "crop": [0, 420, 390, 424], "scale": 0.8, "shotWidth": 390, "marks": [[0, 502, 390, 44]],
+            "caption": "<b>1c · Phone:</b> “Fill in for a family” first in the header ⋯." },
+          { "src": "shots/x5-ph-staffmenu-after.png", "crop": [0, 560, 390, 284], "scale": 0.8, "shotWidth": 390, "marks": [[0, 641, 390, 46]],
+            "caption": "<b>1d · Phone, staff:</b> gray, the same words as its reason line." }
+        ] }
+      ] }
+    ] },
+    { "heading": "2 · The Fill in dialog (the family form inside New students' frame)", "columns": [
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x5-pc-step1.png", "crop": [370, 70, 540, 724], "scale": 0.7, "marks": [[404, 104, 472, 48], [404, 728, 472, 32]],
+            "caption": "<b>2a · PC 1280×800.</b> “Fill in · Thanksgiving Camp”, the “Entered by” line, two progress bars, Cancel / Continue pinned at the bottom; the form scrolls." },
+          { "src": "shots/x5-pc-step1-tall.png", "crop": [370, 86, 540, 1830], "scale": 0.55, "marks": [[404, 1849, 472, 32]],
+            "caption": "<b>2b · Step 1, all of it</b> (drawn tall): children, days, extras, the running price, parent, emergency contact, Paying by. Same rules as the family form." },
+          { "src": "shots/x5-pc-step2-tall.png", "crop": [370, 86, 540, 1235], "scale": 0.55, "marks": [[421, 1130, 438, 18], [697, 1254, 179, 32]],
+            "caption": "<b>2c · Step 2, Check and sign:</b> the total, the waiver tick, the parent signs on the screen. <b>Back / Send</b> replace the form's “← Back to edit” / “Sign up”. The hint is New students' “Sign with a finger, pen or mouse.” (the family's “Can't sign here? Please sign at the front desk.” makes no sense at the desk)." },
+          { "src": "shots/x5-ph-step1.png", "crop": [0, 0, 390, 844], "scale": 0.6, "shotWidth": 390, "marks": [[16, 8, 358, 32], [16, 64, 358, 39]],
+            "caption": "<b>2d · Phone 390:</b> full screen with ← (as New students)." },
+          { "src": "shots/x5-ph-step2-tall.png", "crop": [0, 0, 390, 1260], "scale": 0.6, "shotWidth": 390, "marks": [[33, 1133, 324, 18], [195, 1200, 179, 36]],
+            "caption": "<b>2e · Phone, step 2</b> (drawn tall). No Cancel on phones: ← asks first if something is typed (v0.627)." }
+        ] },
+        { "row": [
+          { "src": "shots/x5-tab-head-after.png", "crop": [80, 100, 740, 120], "scale": 0.7, "shotWidth": 820, "marks": [[522, 146, 64, 36]],
+            "caption": "<b>2f · Tablet 820 touch:</b> the button fits beside Registration link." },
+          { "src": "shots/x5-tab-step1.png", "crop": [140, 86, 540, 1088], "scale": 0.5, "shotWidth": 820, "marks": [[174, 120, 472, 48], [174, 1104, 472, 36]],
+            "caption": "<b>2g · Tablet:</b> the same box as PC." },
+          { "src": "shots/x5-320-menu.png", "crop": [0, 280, 320, 420], "scale": 0.75, "shotWidth": 320, "marks": [[0, 358, 320, 44]],
+            "caption": "<b>2h · 320 wide:</b> the ⋯ item fits." },
+          { "src": "shots/x5-320-step1.png", "crop": [0, 0, 320, 700], "scale": 0.75, "shotWidth": 320, "marks": [[16, 8, 288, 32], [16, 64, 288, 39]],
+            "caption": "<b>2i · 320:</b> step 1 fits; first and last name stay side by side (as the family page)." }
+        ] }
+      ] }
+    ] },
+    { "heading": "3 · After Send (copied from New students' Sent)", "columns": [
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x5-pc-sent.png", "crop": [410, 70, 460, 313], "scale": 0.75, "marks": [[444, 132, 392, 156], [420, 304, 440, 69]],
+            "caption": "<b>3a · PC.</b> “Sent”, the tick, “Sarah Carter's sign-up is saved.”, the reference and the total (the family page's own words), <b>Fill in another</b> / <b>Close</b>. Close shows the roster with Liam at once." },
+          { "src": "shots/x5-ph-sent.png", "crop": [0, 0, 390, 370], "scale": 0.75, "shotWidth": 390, "marks": [[16, 64, 358, 176], [0, 256, 390, 101]],
+            "caption": "<b>3b · Phone.</b> Full-width buttons, as New students." }
+        ] }
+      ] }
+    ] },
+    { "heading": "4 · Camper detail: where the sign-up came from", "columns": [
+      { "label": "Today", "tone": "today", "items": [
+        { "row": [
+          { "src": "shots/x5-pc-detail-today.png", "crop": [420, 530, 440, 180], "scale": 0.9, "marks": [[444, 562, 392, 39], [444, 654, 392, 38]],
+            "caption": "<b>4a · PC, Camper detail.</b> Every camper says “Signed up on the family form”." }
+        ] }
+      ] },
+      { "label": "After (a desk sign-up)", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x5-pc-detail-after.png", "crop": [420, 530, 440, 180], "scale": 0.9, "marks": [[444, 562, 392, 39], [444, 654, 392, 38]],
+            "caption": "<b>4b · PC.</b> “Signed up at the desk by Jeffrey Berg, Nov 5, 2026 · waiver signed on the screen · reference CP-4821”; History: “Signed up (entered by Jeffrey Berg) · CP-4821”, by Jeffrey Berg. Family sign-ups don't change. Phones show the same words (History opens on its own page there)." }
+        ] }
+      ] }
+    ] }
+  ],
+  "footer": "<b>Not shown:</b> the camp card at the top of the family page (name, dates, ages, early-price date, description) is left out of the dialog: the title names the camp and the price box shows early / regular. A possible duplicate gets today's amber box; errors and “Unsaved changes” work as New students' Fill in (v0.627). While Hide private details is on, Fill in is gray: “Fill in forms at the desk. Email and form answers are hidden on this tablet.” (v0.616). Mark paid stays on the roster; Fill in takes no payment. <br><b>How it was drawn:</b> <code>mock-x5-fill-in.js</code> puts the real family page in New students' real dialog frame on the camp page; the signature is drawn by the script. <br><br><b>Your choice:</b> OK picture 23, or change a point (say which number)."
+}
