@@ -510,6 +510,18 @@
 //       authenticated by name (anon and camps_registrar refused), and
 //       re-run safety - see step0043 below. Run only this step with
 //       node run.mjs --only-step0043
+//   stepFinanceCampRefunds. Finance's R1-05 (design review pass 1): the
+//       live Finance functions (0026) already handle a camp refund (Camps'
+//       0039, kind 'refund'). On its own database in the production order
+//       (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030, 0032,
+//       0033, 0034, 0036, 0041, 0042, 0043, and Finance's 0037 - each only
+//       if its file is on this branch), then 0039, then
+//       finance_camp_refunds_tests.sql.
+//       0039 is read from supabase/migrations/ when it is on this branch,
+//       else from the file named by the environment variable
+//       TKD_MIGRATION_0039 (a copy taken from the camps branch with
+//       git show); with neither, the step is skipped (a line says so).
+//       Run only this step with   node run.mjs --only-stepFinanceCampRefunds
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -561,6 +573,7 @@ const onlyStep0036 = process.argv.includes('--only-step0036');
 const onlyStep0041 = process.argv.includes('--only-step0041');
 const onlyStep0042 = process.argv.includes('--only-step0042');
 const onlyStep0043 = process.argv.includes('--only-step0043');
+const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -833,6 +846,11 @@ async function main() {
       console.log('\n0043 fingerprints (kind  item  detail):');
       for (const line of prints43) console.log('  ' + line);
     }
+    return finish();
+  }
+  // --only-stepFinanceCampRefunds: just Finance's camp refund check (R1-05)
+  if (onlyStepFinanceCampRefunds) {
+    await stepFinanceCampRefunds();
     return finish();
   }
   console.log('Starting PGlite...');
@@ -1120,6 +1138,9 @@ async function main() {
   // step0043: Camps Fill in (its own database, production order)
   console.log('\nMigration 0043 (Camps Fill in):');
   const after43 = after5 ? await step0043() : null;
+  // stepFinanceCampRefunds: Finance R1-05, camp refunds (Camps' 0039) in the live Finance functions
+  console.log('\nFinance R1-05 (camp refunds in the Daily report, after Camps\' 0039):');
+  if (after5) await stepFinanceCampRefunds();
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -9121,6 +9142,63 @@ function finish() {
     for (const f of failed) console.log(`  - ${f.name}: ${f.detail}`);
   }
   process.exitCode = failed.length ? 1 : 0;
+}
+
+// =====================================================================
+// stepFinanceCampRefunds: Finance's R1-05 (design review, rolling check
+// pass 1) - camp refunds in the live Finance functions
+// ---------------------------------------------------------------------
+// Camps' migration 0039 adds kind 'refund' to camp_payments. Finance's
+// functions (0026's versions) already read camp_payments by kind, so this
+// step proves they need no change: on its OWN fresh database built in the
+// production order with every live migration (liveOrderTo0025, then 0027,
+// 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041, 0042, 0043
+// and Finance's 0037 - each only if its file is on this branch; 0037 so
+// the Export check runs on the newest finance_export), 0039 is applied and
+// finance_camp_refunds_tests.sql runs (Daily report, Close the day,
+// History, Export, payment detail, an Undo after the close, the real
+// 0039 writer, privacy keys).
+// Where 0039 comes from: supabase/migrations/0039_camps_record_refund.sql
+// when this branch has it (after Camps merges into main); before that, the
+// file named by the environment variable TKD_MIGRATION_0039, e.g. a copy
+// made with   git show 19e727b:supabase/migrations/0039_camps_record_refund.sql
+// With neither, the step is skipped and says so (not a failure); a
+// TKD_MIGRATION_0039 that names no file IS a failure.
+// Run only this step with   node run.mjs --only-stepFinanceCampRefunds
+// =====================================================================
+async function stepFinanceCampRefunds() {
+  const L = '[Finance R1-05] ';
+  const inRepo = path.join(supabaseDir, 'migrations', '0039_camps_record_refund.sql');
+  const fromEnv = process.env.TKD_MIGRATION_0039 || '';
+  const source = existsSync(inRepo) ? inRepo : (fromEnv && existsSync(fromEnv) ? fromEnv : null);
+  if (!source) {
+    // a name given but no file there is a mistake, not a skip
+    if (fromEnv) record(`${L}TKD_MIGRATION_0039 names a file that exists`, false, fromEnv);
+    else console.log(`${L}skipped: 0039 is not on this branch and TKD_MIGRATION_0039 is not set`);
+    return;
+  }
+  console.log(`${L}0039 read from ${source === inRepo ? 'this branch' : source}`);
+  const db = await buildBase(L);
+  if (!db) return;
+  if (!(await liveOrderTo0025(db, L))) return;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students profile)', '0036_new_students_profile.sql'], ['0041 (Star end time)', '0041_star_end_time.sql'],
+    ['0042 (copy a form to the other school)', '0042_forms_copy_to_school.sql'], ['0043 (Camps Fill in)', '0043_camps_fill_in.sql'],
+    ['0037 (Finance: Export keeps "private")', '0037_finance_export_private.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  if (!(await run(db, `${L}apply 0039 (Camps Record refund)`, readFileSync(source, 'utf8')))) return;
+  await runTestFile(db, `${L}finance_camp_refunds_tests.sql`, 'finance_camp_refunds_tests.sql', 'ALL FINANCE CAMP REFUND TESTS PASSED');
+  // the Finance and camps tests that were there before still pass with 0039
+  for (const [file, ok] of [[CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+    ['0026_tests.sql', 'ALL 0026 TESTS PASSED']]) {
+    await runTestFile(db, `${L}${file} (after 0039)`, file, ok);
+  }
 }
 
 main().catch((error) => {
