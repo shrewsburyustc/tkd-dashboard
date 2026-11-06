@@ -28,3 +28,38 @@ Branch `claude/prospect-form-system-cd893d`. Source: the Design Review change li
 | D10b | Calendar / Schedule red Remove stay red | — | No change |
 
 (now) point 1 — **Done 2026-11-04 (rulebook v0.628):** with the switch OFF, a Draft / Closed form's staff Fill in was disabled but drawn in the normal look; Jeffrey: "A: gray it" (picture `DesignReview-Now1-draft-fill-in.png`) — the gray unavailable look, focusable, tooltip kept; reviews passed. A **Closed** form's tooltip said "Publish the form first" (wrong: it is published) — **fixed 2026-11-04 (rulebook v0.629)**, Jeffrey: "yes recommended": "This form is closed. An admin can open it again." "(now)" points found on the way (not decided; ask Jeffrey where a fix changes the screen): dates taken in UTC (**point 2 done 2026-11-04**: Prospects' note / history dates, the waiver's "signed" date and the builder's "last published" now use the Massachusetts day — `localDay`, moved to `lib/schedule/versions.js`; checks added; code review passed; no rulebook row, a bug fix); Forms' spots and waiver boxes on the live site (**point 3 done 2026-11-04**: `.input.fslot-spots` 64 px and `.ctextarea.fwaiver-edit` 160 px now win in any CSS order — checked in the built copy; Prospects' note box `.ctextarea.pnote` got the same fix; review passed; no rulebook row, a bug fix); the kiosk's `forms-public.css` (**point 4 done 2026-11-04**: measured every PIN-pad element with the stylesheet on and off — only a wrong PIN's note differed (13 px vs the dashboard's 12 px), fixed in `kiosk.css` (`.fk-pin .notice`); and a sign-out from the kiosk (password needed, "Not you?", the 7-day rule, another tab) now reloads the page like the right PIN does, so the stylesheet can't stay for the sign-in screen and the next session — the sign-in message is carried over the reload (`src/lib/kiosk.js`, `App.jsx`); another tab's sign-out also forgets the kiosk; code and security reviews passed; no rulebook row, a bug fix); builder "Delete field" without Undo (**point 5 done 2026-11-04, rulebook v0.630**: Jeffrey "A: delete, then Undo", picture `DesignReview-Now5-delete-field.png`; the toast "“…” deleted" with Undo puts the field back where it was with its "Show only if" rules, keeps other changes; a reload from the database or a reused id makes Undo say "Couldn't undo — the form has changed since."; design and code reviews passed); Prospects' search clear ✕ (**point 6 done 2026-11-04, rulebook v0.631**: Jeffrey "A: shared icon button", picture `DesignReview-Now6-search-clear.png`; both search boxes use IconButton — 28 px, "Clear search" tooltip, 44 px on touch; focus goes back into the search box after clearing; review passed. Noted: on a tablet the 200 px box leaves about 100 px for typing while the X shows); Edit statuses' grayed "Delete status" (**point 7 done 2026-11-04, rulebook v0.632**: Jeffrey "A: hide for staff", picture `DesignReview-Now7-delete-status.png`; staff no longer see it; on a built-in status admins see it grayed with "Built-in statuses can't be deleted."; review passed). **All seven "(now)" points are done.**
+
+## Rolling check, pass 1
+
+Fix list `docs/Design Review/Rolling check/Pass 1/Fix-NewStudents.md`, received 2026-11-05 through Main (Jeffrey: "Yes, send them"). Main 6b27cdd merged in (fast-forward). **Plan:** `TKD-RollingCheck-Pass1-Plan.md`, sent to Jeffrey 2026-11-05; order OK'd ("Yes, this order", 2026-11-05).
+
+| Step | Items | Status |
+|---|---|---|
+| 1 | R5-02 family page trash icon gray, R5-03 its own small stylesheet (unblocks Camps' R5-03) | **Picture sent 2026-11-05** (`RollingCheck-Step1-trash-icon.png`: the real preview page with only the fix's rule added; #1F1F1F → #6B6B6B at all four sizes; hover still darkens and shows the name). **Jeffrey: "OK, build it". Built 2026-11-05:**
+<br>- **R5-03:** the icon-button block moved as it was from `forms-public.css` into the new `src/styles/icon-button-public.css`, imported right after forms-public.css in `src/forms/main.jsx` and `src/screens/kiosk/KioskApp.jsx`.
+<br>- **R5-02:** its gray is now `html button:where(.tib)`, which weighs two tags, so it beats a page's bare reset `button { color: inherit }` in any load order (forms-public.css; Color Belt's register.css and Black Belt's form.css have the same reset). Inside the kiosk the dashboard's `.tib` still wins. The first version, `button:where(.tib)`, relied on loading after the reset; the code review suggested making it order-free, so Camps' page works however its CSS is bundled.
+<br>- **Checked in the preview-mode build served as plain files:**
+<br>&nbsp;&nbsp;- the reset comes before the gray rule in `FormsApp-*.css`;
+<br>&nbsp;&nbsp;- family page: rgb(107,107,107) at all four sizes, 28 px with a mouse, 44 px on touch;
+<br>&nbsp;&nbsp;- PC: hover darkens on the light square and shows "Remove child 1", and so does keyboard focus;
+<br>&nbsp;&nbsp;- Fill in (1280) and the kiosk (820 touch) are unchanged.
+<br>- **Checks:** both builds, the 6 check scripts and 174 function tests pass.
+<br>- **Design review:** no must-fix or should-fix.
+<br>&nbsp;&nbsp;- Checked: the four sizes, hover, keyboard focus, Fill in and the kiosk unchanged, and §4's six WCAG checks (contrast 5.33:1).
+<br>&nbsp;&nbsp;- Notes, older than this step and passed to Main: §7's Delete row says trash icons turn red on hover, but none does; the shared tooltip can't be hovered or dismissed with Esc (WCAG 1.4.13, not one of the six).
+<br>- **Code review:** no must-fix. Its should-fix (the header said Camps already loads the file) and its notes are applied: clearer header, the ::after weights, what the file doesn't cover, and the order-free gray. Re-check: clear.
+<br>- **Final build re-checked:**
+<br>&nbsp;&nbsp;- gray at all four sizes;
+<br>&nbsp;&nbsp;- a `button{color:inherit}` loaded last still leaves it gray;
+<br>&nbsp;&nbsp;- hover, Fill in and the kiosk as before.
+<br>- **Picture as built:** `RollingCheck-Step1-built.png`.
+<br>- **Committed c7e8268** (2026-11-05, Jeffrey: "Yes, commit both"). **Live 2026-11-05:** main 1cad458, pushed (Jeffrey in Main: "Merge and push all"). Checked: the live family page's CSS has the gray rule. Main told Camps the file is on main. |
+| 2 | R2-01 Retry when a save or Undo fails (High) | Planned: mockup first |
+| 3 | R2-09 (✓ and full stops), R2-07 "Undone. The form is open again.", R2-08 Duplicate's Undo, "More actions for …", Forms' empty line | Planned: picture first; questions 1–2 |
+| 4 | R3-03 "Showing … only · Show all", R3-09 "Find a prospect" | Planned: mockup first |
+| 5 | R3-11 ⋯ last, R4-06 weights + 12 px letters, family page Send gray, Sent page gap, Edit statuses wrap, S-10's dropdowns | Planned: pictures first; question 3 |
+| 6 | N7 shared time list (+ S-10 in the two dialogs) | Picture to redraw |
+| 7 | 0036 clean-up migration | **0040** reserved by Main 2026-11-05 (main 2187dbe, merged in here); `0040_<what>.sql`, SETUP "## Migration 0040: …", `step0040` |
+| later | R2-05, R2-07 words, R3-06, S-2, Fill in's Send (R1-08) | Wait for Dashboard core's matching items on main |
+| later | N16's Show menu, N11 | Wait for the shared menu's tick boxes / Color Belt's CB14 + M15 |
+| check | R2-06, Draft Fill in gray, "Delete form", R5-01, R4-02, Delete field | Already done; checked when the steps are tried

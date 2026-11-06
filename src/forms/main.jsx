@@ -6,13 +6,16 @@
 // a Date question, design review N6) and the styles. It never loads the staff dashboard, supabase-js or any key.
 //
 // Styles: tokens.css (colors, sizes), forms.css (the staff Forms look — its Fill in part draws the
-// same fields here: progress bar, children, time cards, waiver, signature) and forms-public.css
-// (this page's frame plus the few dashboard basics the fields use, like .field and .btn).
+// same fields here: progress bar, children, time cards, waiver, signature), forms-public.css
+// (this page's frame plus the few dashboard basics the fields use, like .field and .btn) and
+// icon-button-public.css (the "Remove child" icon button's look, in its own file so the other
+// family pages can load it too; design review R5-03).
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../styles/tokens.css';
 import '../styles/forms.css';
 import '../styles/forms-public.css';
+import '../styles/icon-button-public.css';
 import FormsApp from './FormsApp.jsx';
 
 createRoot(document.getElementById('root')).render(

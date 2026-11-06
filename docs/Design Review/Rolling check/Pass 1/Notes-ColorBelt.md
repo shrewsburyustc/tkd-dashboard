@@ -1,4 +1,5 @@
 # Color Belt — fixes from the design review's rolling check (pass 1), now on your merged work
+> **Pass 2 (2026-11-05) corrects or adds to items here:** see `../Pass 2/Fix-ColorBelt.md`, "Corrections to pass 1".
 
 **Paste into:** the Color Belt session.
 

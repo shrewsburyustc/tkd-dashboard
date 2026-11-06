@@ -45,15 +45,35 @@ export const CLOSE_FORM = 'Close form';
 export const OPEN_FORM = 'Open form';
 // the ⋯ item and the confirm box's action say the same words (design review N3, v1.008)
 export const DELETE_FORM = 'Delete form';
+// On Both a copy has the same name as its form at the other school (v0.642), so each row's buttons
+// also name the school: "More actions for Walk-in, Worcester" (v0.644)
+export const withSchool = (name, school) => (school ? `${name}, ${school}` : name);
 export const shareLabel = (name) => `Share ${name}`;
 export const moreLabel = (name) => `More actions for ${name}`;
 export const openLabel = (name) => `Open ${name}`;
 export const duplicated = (name) => `Copied as "${name}" (a Draft).`;
 export const closedToast = (name) => `${name} is closed — the link now says so.`;
 export const reopenedToast = (name) => `${name} is taking sign-ups again.`;
-export const UNDO = 'Undo'; // on the Close / Open toasts (v1.006, N2)
+// "Copy to Worcester / Shrewsbury" (rulebook v0.642): the ⋯ item names the other school, and the
+// toast says where the Draft copy went. A form with a booking step adds what still has to be done:
+// the other school's class times are picked in the copy's Booking settings.
+export const copyTo = (school) => `Copy to ${school}`;
+export const copiedTo = (school, hasBooking) => (hasBooking
+  ? `Copied to ${school} as a Draft. Pick its class times before you publish.` // two sentences keep their full stops (v1.051 (5))
+  : `Copied to ${school} as a Draft`); // one sentence: no full stop (v1.051 (5)), no ✓ (v1.046 (7))
+// Two refusals of a copy that trying again can't fix, so their bar has no Retry (v1.004: Retry
+// "where it applies"); both are rare: the form's saved questions no longer pass today's checks,
+// or the other school already has 50 copies of its link.
+export const COPY_REFUSED = "This form couldn't be copied. Open it and check its questions, then try again.";
+export const copyTooMany = (school) => `This form has been copied to ${school} too many times. Delete an old copy, then try again.`;
+export const UNDO = 'Undo'; // on the Close / Open and Copy toasts (v1.006, N2; v0.642)
 export const UNDONE = 'Undone'; // after an Undo worked (v0.618)
 export const UNDO_STALE = "Couldn't undo. Someone else changed this form just now."; // like Schedule's and Star's
+// A save or an Undo that failed on the connection: the bar has Retry, which does the same again
+// (v1.004; Black Belt's and the Schedule's words). Used by Copy to the other school (v0.642);
+// design review R2-01 moves the list's other actions to them.
+export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry.";
 export const deletedToast = (name) => `${name} was deleted.`;
 export const DELETE_TITLE = 'Delete this form?';
 export const KEEP_FORM = 'Keep form'; // the confirm box's "changes nothing" button (N3)
