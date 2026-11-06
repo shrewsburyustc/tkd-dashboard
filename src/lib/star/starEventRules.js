@@ -90,6 +90,32 @@ export function startTimeLabel(text) {
   return minutes === null ? '' : minutesLabel(minutes);
 }
 
+// ----- v0.520: the testing day's END time (migration 0041) -----
+// An event may have an end time (older events have none yet). The database's rule
+// (star_events_end_time_check, star_add_event / star_update_event in 0041): the same 6:00 AM–
+// 10:00 PM / 5-minute rule as a start time, AND later than the start. The dialog requires one
+// (v0.520: Save stays gray until it is chosen); the database allows none, so the old app keeps
+// working until the new one is live. (Save also shows "Choose an end time." when tapped while it
+// is empty, as Start time does.)
+export function endTimeIsValid(start, end) {
+  const s = startTimeMinutes(start);
+  const e = startTimeMinutes(end);
+  return startTimeIsValid(end) && s !== null && e !== null && e > s;
+}
+
+// The no-break space: "6:00 PM" never breaks into "6:00" / "PM" on a phone (v0.520 mockups).
+const NBSP = ' ';
+
+// The testing day's time as families and staff read it (v0.520): '18:00' + '20:00' →
+// "6:00 PM – 8:00 PM". No end time (or one that isn't after the start) → just "6:00 PM", as before.
+// Each time keeps its AM / PM on the same line; a line may still break at the dash. Bad start → ''.
+export function testingTimeLabel(start, end) {
+  const from = startTimeLabel(start);
+  if (!from) return '';
+  const whole = (label) => label.replace(' ', NBSP);
+  return endTimeIsValid(start, end) ? `${whole(from)} – ${whole(startTimeLabel(end))}` : whole(from);
+}
+
 // ----- v0.504: an Edit event save never reopens registration by itself -----
 // Registration is open when the switch is Open AND the dates allow it (eventRules.eventState). With
 // the switch left Open, two edits could make a closed event open again without anyone choosing to:

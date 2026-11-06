@@ -4,7 +4,9 @@
 // then its payments in time order. Corrections stay on the payment's ORIGINAL day: an undone
 // payment is struck through with an Undone tag, an edited one shows its new amount with an
 // Edited tag and "Was $70.00", a moved one says "Moved to <date>", and a payment recorded after
-// the day was closed says "Added after closing".
+// the day was closed says "Added after closing". A payment edited and then changed back (e.g. an
+// Edit payment followed by its Undo) shows as a plain payment: no tag, no second line (v0.824);
+// its detail still lists both changes.
 //
 // Refunds (v0.209) follow this device's layout:
 //   'own' — a Refunds group at the end (method on each row);
@@ -59,6 +61,16 @@ export function forTextOf(item) {
   return item.what === 'camp' ? `${T.WHAT_CAMP} · ${campName ?? monthDay(item.event_date)}` : `${whatText(item)} · ${monthDay(item.event_date)}`;
 }
 
+// True when an edited payment ended up exactly as first recorded: the same amount and the same way
+// to pay (a changed date is "moved", a different state). Edit payment followed by the toast's Undo
+// does this. Such a payment shows as a plain one, on screen, on paper and in its detail (v0.824).
+export function editChangedNothing(item) {
+  if (item.state !== 'edited') return false;
+  const sameAmount = item.was_amount_cents === null || item.was_amount_cents === undefined || item.was_amount_cents === item.amount_cents;
+  const sameMethod = !item.was_method || item.was_method === item.method;
+  return sameAmount && sameMethod;
+}
+
 // Everything a row shows, as text. Shared with the printed page (PrintPage.jsx), so paper and
 // screen always say the same thing (D8: "corrections print as on screen").
 //   tagWarn: the tag is warning-style (amber, with the warning icon) — the Returned check tag (B1)
@@ -85,7 +97,7 @@ export function rowText(item, layout) {
   } else if (item.state === 'moved_out') {
     tag = T.TAG_MOVED;
     note = T.movedToLine(item.moved_to);
-  } else if (item.state === 'edited') {
+  } else if (item.state === 'edited' && !editChangedNothing(item)) {
     tag = T.TAG_EDITED;
     note = T.editedLine(was, item.changed_by_name ?? '', item.changed_on);
   } else if (item.state === 'moved_in') {

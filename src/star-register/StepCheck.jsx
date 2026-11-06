@@ -13,7 +13,7 @@ import { IconAlertTriangle, IconArrowLeft } from '@tabler/icons-react';
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from '../register/parts.jsx';
 import { formatDollars, methodWord, shortDate } from '../register/format.js';
-import { startTimeLabel } from '../lib/star/starEventRules.js';
+import { testingTimeLabel } from '../lib/star/starEventRules.js';
 import { ageOn } from '../lib/star/resultRules.js';
 import { monthDayYear } from './parts.jsx';
 import * as T from './text.js';
@@ -42,7 +42,7 @@ export default function StepCheck({
   const closed = banner === 'closed'; // screen 13: only the summary stays; nothing more can be sent
   const top = TOP_BANNERS[banner] ?? null;
   const showIntro = !top || banner === 'rate';
-  const time = startTimeLabel(event.start_time);
+  const time = testingTimeLabel(event.start_time, event.end_time); // v0.520
 
   let fee;
   if (onTestingDay) fee = T.feeSummaryToday(formatDollars(dan.same_day_cents), method);

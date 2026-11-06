@@ -46,7 +46,7 @@
 // (the states and tags follow "today"; the stored data doesn't move).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { eventState, registrationSwitch, isIsoDate, addDays, noteIsValid, normalizeNote } from './testing/eventRules.js';
-import { startTimeIsValid, WHERE_CODES, STAR_CODE_ALPHABET, STAR_CODE_PATTERN } from './star/starEventRules.js';
+import { startTimeIsValid, endTimeIsValid, WHERE_CODES, STAR_CODE_ALPHABET, STAR_CODE_PATTERN } from './star/starEventRules.js';
 
 // Raised whenever the stored shape of the events part changes (older data → the seed).
 export const STAR_EVENTS_SCHEMA = 1;
@@ -74,8 +74,8 @@ const ROSTER_COLUMNS = [
 ];
 const GRANTED = /*#__PURE__*/ (() => ({
   star_events: [
-    'id', 'name', 'testing_date', 'start_time', 'where_code', 'registration_open', 'auto_close_on', 'first_opened_at',
-    'public_code_worcester', 'public_code_shrewsbury', 'note', ...HOUSE,
+    'id', 'name', 'testing_date', 'start_time', 'end_time', 'where_code', 'registration_open', 'auto_close_on', 'first_opened_at',
+    'public_code_worcester', 'public_code_shrewsbury', 'note', ...HOUSE, // end_time: v0.520 (0041)
   ],
   star_event_dans: ['id', 'event_id', 'dan', 'label', 'pass_mark', 'star_limit', 'standard_cents', 'same_day_cents', 'private_cents'],
   star_event_categories: ['id', 'event_id', 'dan', 'template_category_id', 'name', 'credits', 'position', 'from_class_count'],
@@ -95,18 +95,19 @@ const HIDDEN = {
 export const STAR_EVENT_TABLES = /*#__PURE__*/ Object.keys(GRANTED);
 
 // "Content" columns of an event: changing one raises the version (house trigger, §1.8).
-const EVENT_CONTENT = ['name', 'testing_date', 'start_time', 'where_code', 'registration_open', 'auto_close_on', 'first_opened_at', 'note'];
+const EVENT_CONTENT = ['name', 'testing_date', 'start_time', 'end_time', 'where_code', 'registration_open', 'auto_close_on', 'first_opened_at', 'note'];
 
 // ----- The four functions' argument lists (name, type) — the same names as migration 0006 -----
 // The real API finds a function by its argument NAMES: a missing or extra one = "no such function".
+// 'optional' = the argument has a default in the database (0041's p_end_time): it may be left out.
 const RPC_ARGS = {
   star_add_event: [
     ['p_name', 'text'], ['p_testing_date', 'date'], ['p_start_time', 'time'], ['p_where_code', 'text'],
-    ['p_registration_open', 'bool'], ['p_auto_close_on', 'date'], ['p_note', 'text'],
+    ['p_registration_open', 'bool'], ['p_auto_close_on', 'date'], ['p_note', 'text'], ['p_end_time', 'time', 'optional'], // p_end_time: 0041 (has a default)
   ],
   star_update_event: [
     ['p_event_id', 'uuid'], ['p_expected_version', 'int'], ['p_name', 'text'], ['p_testing_date', 'date'],
-    ['p_start_time', 'time'], ['p_where_code', 'text'], ['p_auto_close_on', 'date'], ['p_note', 'text'],
+    ['p_start_time', 'time'], ['p_where_code', 'text'], ['p_auto_close_on', 'date'], ['p_note', 'text'], ['p_end_time', 'time', 'optional'], // 0041 (has a default)
   ],
   star_set_registration: [['p_event_id', 'uuid'], ['p_expected_version', 'int'], ['p_open', 'bool']],
   star_delete_event: [
@@ -170,10 +171,10 @@ function readArgs(name, args) {
   const spec = RPC_ARGS[name];
   const sent = Object.keys(args ?? {}).filter((key) => args[key] !== undefined); // JSON drops undefined
   const known = new Set(spec.map(([key]) => key));
-  if (spec.some(([key]) => !sent.includes(key)) || sent.some((key) => !known.has(key))) {
+  if (spec.some(([key, , optional]) => !optional && !sent.includes(key)) || sent.some((key) => !known.has(key))) {
     throw new DbError('PGRST202', `Could not find the function public.${name}(${[...sent].sort().join(', ')}) in the schema cache`, 404);
   }
-  return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key], type)]));
+  return Object.fromEntries(spec.map(([key, type, optional]) => [key, optional && args[key] === undefined ? null : toDbType(args[key], type)]));
 }
 
 // ----- Small helpers -----
@@ -229,6 +230,8 @@ function templateIsComplete(db) {
 // ----- The seed (made-up events and candidates) -----
 // [key, name, days from today, start, where, open, closing date (days before testing) or null,
 //  first opened (days ago) or null, [Worcester code, Shrewsbury code], note, added (days ago)]
+// A seed event ends two hours after it starts (v0.520): '10:00:00' -> '12:00:00'.
+export const seedEndTime = (start) => `${String(Number(start.slice(0, 2)) + 2).padStart(2, '0')}${start.slice(2)}`;
 const SEED_EVENTS = [
   ['fall', 'Fall Star Testing', 26, '10:00:00', 'shrewsbury', true, 7, 5, ['fa2kxm7p', 'r9ectw3h'],
     'Please arrive 30 minutes early in a clean uniform.', 12],
@@ -265,7 +268,7 @@ export function defaultStarEventsData(base, { today, now }) {
     const testingDate = addDays(today, days);
     const id = SEED_EVENT_IDS[key];
     work.events.push({
-      id, name, testing_date: testingDate, start_time: start, where_code: where, registration_open: open,
+      id, name, testing_date: testingDate, start_time: start, end_time: seedEndTime(start), where_code: where, registration_open: open,
       auto_close_on: closeBefore === null ? null : addDays(testingDate, -closeBefore),
       first_opened_at: openedAgo === null ? null : at(openedAgo),
       public_code_worcester: codeW, public_code_shrewsbury: codeS, note, ...house(addedAgo),
@@ -336,7 +339,7 @@ export function createStarEventsBackend({
   // Like the house trigger (§1.8): a change to a content column raises the version and sets the
   // "last changed" stamp; the same values write nothing.
   function updateEvent(row, changes, ctx) {
-    const changed = EVENT_CONTENT.some((col) => col in changes && changes[col] !== row[col]);
+    const changed = EVENT_CONTENT.some((col) => col in changes && (changes[col] ?? null) !== (row[col] ?? null));
     if (!changed) return false;
     Object.assign(row, changes);
     row.version += 1;
@@ -371,6 +374,7 @@ export function createStarEventsBackend({
       if (!nameIsValid(a.p_name)
         || a.p_testing_date === null || a.p_testing_date < t
         || !startTimeIsValid(a.p_start_time)
+        || (a.p_end_time != null && !endTimeIsValid(a.p_start_time, a.p_end_time)) // 0041
         || a.p_where_code === null || !WHERE_CODES.includes(a.p_where_code)
         || a.p_registration_open === null
         || (a.p_auto_close_on !== null && (a.p_auto_close_on < t || a.p_auto_close_on > a.p_testing_date))
@@ -383,7 +387,7 @@ export function createStarEventsBackend({
       const at = stamp();
       const id = newId();
       db.events.push({
-        id, name, testing_date: a.p_testing_date, start_time: a.p_start_time, where_code: a.p_where_code,
+        id, name, testing_date: a.p_testing_date, start_time: a.p_start_time, end_time: a.p_end_time ?? null, where_code: a.p_where_code,
         registration_open: a.p_registration_open, auto_close_on: a.p_auto_close_on,
         first_opened_at: a.p_registration_open ? at : null, // new events start Closed unless opened here
         public_code_worcester: codeW, public_code_shrewsbury: codeS, note,
@@ -400,6 +404,7 @@ export function createStarEventsBackend({
       if (a.p_event_id === null || a.p_expected_version === null || !nameIsValid(a.p_name)
         || a.p_testing_date === null
         || !startTimeIsValid(a.p_start_time)
+        || (a.p_end_time != null && !endTimeIsValid(a.p_start_time, a.p_end_time)) // 0041
         || a.p_where_code === null || !WHERE_CODES.includes(a.p_where_code)
         || (note !== null && !noteIsValid(note))) return st('invalid');
       const event = findEvent(db, a.p_event_id);
@@ -419,7 +424,7 @@ export function createStarEventsBackend({
         && eventState({ ...event, testing_date: a.p_testing_date, auto_close_on: a.p_auto_close_on }, t) === 'open';
       // The event's copy is never touched. The Registration switch is not an argument (§11 item 7).
       updateEvent(event, {
-        name, testing_date: a.p_testing_date, start_time: a.p_start_time, where_code: a.p_where_code,
+        name, testing_date: a.p_testing_date, start_time: a.p_start_time, end_time: a.p_end_time ?? null, where_code: a.p_where_code,
         auto_close_on: a.p_auto_close_on, note, ...(keepClosed ? { registration_open: false } : {}),
       }, ctx);
       return { status: 'ok', version: event.version };

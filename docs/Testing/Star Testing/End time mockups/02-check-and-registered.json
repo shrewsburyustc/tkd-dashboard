@@ -1,0 +1,372 @@
+{
+ "title": "Star End time · 2 of 4 — family form: Check step and “You’re registered”",
+ "subtitle": "Step 2 (“Check and send”, row Event) and the page after sending (“What happens next”, row Testing) show the same range. Left of each pair: Check step; right: registered page. Amber = the row that changes; green = the new row.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/02c-today-pc.png",
+       "crop": [
+        376,
+        120,
+        528,
+        390
+       ],
+       "scale": 0.8,
+       "caption": "<b>PC 1280×800 · Check.</b> “Fall Star Testing · Tue, Dec 1 · 6:00 PM”",
+       "marks": [
+        [
+         512,
+         204,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/02r-today-pc.png",
+       "crop": [
+        376,
+        125,
+        528,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>PC · Registered.</b> “Tuesday, December 1 · 6:00 PM”",
+       "marks": [
+        [
+         512,
+         355,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 1280
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/02c-today-tab.png",
+       "crop": [
+        146,
+        120,
+        528,
+        390
+       ],
+       "scale": 0.8,
+       "caption": "<b>Tablet 820×1180, touch · Check.</b>",
+       "marks": [
+        [
+         282,
+         204,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/02r-today-tab.png",
+       "crop": [
+        146,
+        125,
+        528,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>Tablet · Registered.</b>",
+       "marks": [
+        [
+         282,
+         355,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 820
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/02c-today-ph.png",
+       "crop": [
+        0,
+        130,
+        390,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>Phone 390×844, touch · Check.</b>",
+       "marks": [
+        [
+         138,
+         214,
+         222,
+         48
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/02r-today-ph.png",
+       "crop": [
+        0,
+        130,
+        390,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>Phone · Registered.</b>",
+       "marks": [
+        [
+         138,
+         365,
+         222,
+         27
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/02c-today-p320.png",
+       "crop": [
+        0,
+        130,
+        320,
+        440
+       ],
+       "scale": 0.9,
+       "caption": "<b>320 wide, touch · Check.</b>",
+       "marks": [
+        [
+         138,
+         219,
+         152,
+         48
+        ]
+       ],
+       "shotWidth": 320
+      },
+      {
+       "src": "shots/02r-today-p320.png",
+       "crop": [
+        0,
+        130,
+        320,
+        440
+       ],
+       "scale": 0.9,
+       "caption": "<b>320 · Registered.</b>",
+       "marks": [
+        [
+         138,
+         433,
+         152,
+         48
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/02c-after-pc.png",
+       "crop": [
+        376,
+        120,
+        528,
+        390
+       ],
+       "scale": 0.8,
+       "caption": "<b>PC · Check.</b> “Fall Star Testing · Tue, Dec 1 · 6:00 PM – 8:00 PM”",
+       "marks": [
+        [
+         512,
+         204,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/02r-after-pc.png",
+       "crop": [
+        376,
+        125,
+        528,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>PC · Registered.</b> “Tuesday, December 1 · 6:00 PM – 8:00 PM”",
+       "marks": [
+        [
+         512,
+         355,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 1280
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/02c-after-tab.png",
+       "crop": [
+        146,
+        120,
+        528,
+        390
+       ],
+       "scale": 0.8,
+       "caption": "<b>Tablet · Check.</b>",
+       "marks": [
+        [
+         282,
+         204,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/02r-after-tab.png",
+       "crop": [
+        146,
+        125,
+        528,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>Tablet · Registered.</b>",
+       "marks": [
+        [
+         282,
+         355,
+         378,
+         27
+        ]
+       ],
+       "shotWidth": 820
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/02c-after-ph.png",
+       "crop": [
+        0,
+        130,
+        390,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>Phone · Check.</b> Wraps to 2 lines; each time stays whole.",
+       "marks": [
+        [
+         138,
+         214,
+         222,
+         48
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/02r-after-ph.png",
+       "crop": [
+        0,
+        130,
+        390,
+        420
+       ],
+       "scale": 0.8,
+       "caption": "<b>Phone · Registered.</b> The range moves to its own line.",
+       "marks": [
+        [
+         138,
+         365,
+         222,
+         48
+        ]
+       ],
+       "shotWidth": 390
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/02c-after-p320.png",
+       "crop": [
+        0,
+        130,
+        320,
+        440
+       ],
+       "scale": 0.9,
+       "caption": "<b>320 · Check.</b> 3 lines (was 2).",
+       "marks": [
+        [
+         138,
+         219,
+         152,
+         69
+        ]
+       ],
+       "shotWidth": 320
+      },
+      {
+       "src": "shots/02r-after-p320.png",
+       "crop": [
+        0,
+        130,
+        320,
+        440
+       ],
+       "scale": 0.9,
+       "caption": "<b>320 · Registered.</b>",
+       "marks": [
+        [
+         138,
+         433,
+         152,
+         48
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "On narrow phones the line wraps. The build should keep each time in one piece (no-break spaces: “6:00&nbsp;PM”, “8:00&nbsp;PM”) so it never splits as “6:00 / PM” — these pictures already do that. Today’s phone Check row already splits “6:00 / PM” (left column); with a plain space the range would also split “8:00 / PM” at 320."
+  }
+ ],
+ "footer": "Rulebook decision “A” (approved): Star testing events get an End time as well as a Start time, so parents know when to pick up. Preview screenshots (fake database; the fake Fall Star Testing’s start was set to 6:00 PM in preview for these pictures, its date stays Tue, Dec 1, 2026). The “After” column is drawn over the real page — nothing in the app was changed. An event with no end time saved yet keeps showing only the start time, exactly as “Today”. Private testing times (one time) don’t change."
+}

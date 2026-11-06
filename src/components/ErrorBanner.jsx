@@ -2,6 +2,8 @@
 // Why it exists: guidelines 3.5 — a failed save is never silent. The banner says what happened
 // and what to do, offers Retry where trying again makes sense, and NEVER closes by itself:
 // it stays until Retry works or the person dismisses it (the X button).
+// (One exception: the one offline bar, OfflineBar.jsx, uses it with no buttons, and it goes away by
+// itself when the connection is back — rulebook v1.123.)
 // Amber with the warning triangle and words — never red, never color alone (guidelines 7).
 //
 // Props:

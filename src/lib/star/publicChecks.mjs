@@ -67,7 +67,7 @@ check('publicEvent: bad / unknown code → not_found; a code sets the school; no
   assert.deepEqual(w.school, { code: 'worcester', name: 'Worcester' });
   assert.equal(r.cands.publicEvent(e.public_code_shrewsbury).school.code, 'shrewsbury');
   assert.deepEqual(Object.keys(w).sort(), ['closed_on', 'dans', 'event', 'school', 'state', 'status']);
-  assert.deepEqual(Object.keys(w.event).sort(), ['auto_close_on', 'name', 'note', 'start_time', 'testing_date', 'where']);
+  assert.deepEqual(Object.keys(w.event).sort(), ['auto_close_on', 'end_time', 'name', 'note', 'start_time', 'testing_date', 'where']);
   assert.equal(w.event.start_time, '10:00');
   assert.deepEqual(w.event.where, { name: 'Shrewsbury', address: { street: '1 Main St', city: 'Shrewsbury', state: 'MA', zip: '01545' } });
   const d1 = w.dans.find((d) => d.dan === 1);

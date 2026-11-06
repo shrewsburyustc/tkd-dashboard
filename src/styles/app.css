@@ -505,9 +505,10 @@ img {
   overflow-y: auto;
 }
 
-/* Panel size couldn't be saved (v1.118, Shell.jsx): the shared amber bar sits on the frame, under
-   the top bar, so it stays on every page. It lines up with the page's own edges (24px; 16px on
-   phones), and on the right also clears the page's own scrollbar (--page-scrollbar, Shell.jsx). */
+/* Panel size couldn't be saved (v1.118), and the one offline bar (v1.123, M12), Shell.jsx: the
+   shared amber bar sits on the frame, under the top bar, so it stays on every page; with both, the
+   offline bar comes first. It lines up with the page's own edges (24px; 16px on phones), and on
+   the right also clears the page's own scrollbar (--page-scrollbar, Shell.jsx). */
 .shell-errbar {
   flex: none;
   padding: var(--space-12) calc(var(--space-24) + var(--page-scrollbar, 0px)) 0 var(--space-24);

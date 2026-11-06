@@ -28,6 +28,16 @@
 //   __tkdPreview.refreshSignIn()          pretend Supabase's hourly sign-in refresh happened now
 //   __tkdPreview.refocusTab()             pretend the tab was shown again: Supabase re-sends this
 //                                         browser's SAVED copy of the sign-in (it can be older)
+// The one offline bar (design review M12, v1.123; src/lib/connection.js):
+//   __tkdPreview.cutConnection(true)      the device "goes offline": every database call fails like a
+//                                         dropped connection and the page hears "offline" (the bar
+//                                         shows at once)
+//   __tkdPreview.cutConnection('internet') the Wi-Fi is up but the internet isn't: every call fails,
+//                                         but the browser still says "online" (the bar shows after two
+//                                         failed refreshes, about 30 seconds, on pages that refresh)
+//   __tkdPreview.cutConnection(false)     the connection is back
+//                                         (while it's cut, the lock screen can't check the PIN and
+//                                         asks you to check the connection; reloading the page ends it)
 // Testing helpers:
 //   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
 //   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
@@ -118,6 +128,8 @@
 // localStorage 'tkd.preview.camps'; setRole, failNextSave, failSavesUntilRetry, reconnect,
 // setTestingDelay, setToday and simulateOtherAdminEdit cover Camps too):
 //   __tkdPreview.resetCamps()             back to the default camps, campers and templates
+//   __tkdPreview.failNextCampRead()       the next Camps read fails like a dropped connection (to see its Retry);
+//                                         failNextCampRead('camp_camper_detail') = only that read
 //   __tkdPreview.campWeek()               today = Wed, Apr 21, 2027 (April Vacation Camp week),
 //                                         camps reset + reload — to see Check in
 //   __tkdPreview.setCampsRegistration(false) the camp form's kill switch
@@ -128,7 +140,8 @@
 // Finance helpers (contract 0011 §3, mockFinance.js; setToday, setRole and failNextSave cover Finance too —
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
-//   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
+//   __tkdPreview.resetFinance()           back to the start: reminder times Off, no exports (Star money comes from
+//                                         Star's own preview store; the sample Star payments only when it has none)
 //   __tkdPreview.bbFinanceSample()        Black Belt money for the Daily report (migration 0026, mockups B1–B9):
 //                                         bbSampleEdge + setToday('2027-04-26'), then — through Black Belt's own
 //                                         functions — today's payments (Payment 2 by check, Payment 1 + Kukkiwon in
@@ -202,7 +215,7 @@ const CAMPS_KEY = 'tkd.preview.camps'; // fake Camps tables (mockCamps.js)
 const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
 const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
 const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
-const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample (mockFinance.js)
+const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample used only when Star's store has no payments (mockFinance.js)
 const ACCOUNT_SETTINGS_KEY = 'tkd.preview.userMetadata'; // fake per-person settings (Supabase's user_metadata): Panel size
 const FIRST_UPDATED_AT = '2026-10-01T12:00:00.000Z'; // the fake account's updated_at before anything is saved
 
@@ -757,6 +770,11 @@ export function createMockClient() {
   let starGradingOffline = false;
   // failStarHome(true): every star_home_today ask fails like a dropped connection (phase 7).
   let starHomeOffline = false;
+  // cutConnection(): every call fails like a dropped connection (the one offline bar, M12):
+  // false = working · true = offline (the browser hears "offline") · 'internet' = the Wi-Fi is up
+  // but the internet isn't (the browser still says "online").
+  let connectionCut = false;
+  const droppedConnection = () => ({ data: null, error: { message: 'Failed to fetch (preview: cutConnection)' }, status: 0 });
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -807,6 +825,7 @@ export function createMockClient() {
       then(resolve, reject) {
         const run = async () => {
           await wait(testingDelay());
+          if (connectionCut) return droppedConnection();
           if (query.write) {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
@@ -840,6 +859,7 @@ export function createMockClient() {
     readColorBelt: () => events.snapshot(),
     readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     readBlackBelt: () => blackBelt.snapshot(), // Black Belt payments are the fourth (migration 0026)
+    readStar: () => starCandidates.snapshot(), // Star payments from Star's own store, 'tkd.preview.star' (R1-09)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
@@ -867,6 +887,10 @@ export function createMockClient() {
   // options: the real client's third argument; { get: true } sends a read-only GET request, which
   // the Star candidates fake refuses for functions that write (contract §7).
   async function rpc(name, args = {}, options = {}) {
+    if (connectionCut) {
+      await wait(testingDelay());
+      return droppedConnection();
+    }
     if (STAR_CANDIDATE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
       if (starGradingOffline && STAR_GRADING_RPC_NAMES.includes(name)) {
@@ -1074,6 +1098,14 @@ export function createMockClient() {
       staffAccounts.failNext();
       return 'The next Testing or Camps save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
     },
+    // failNextCampRead()                     → the next Camps read (any table or read function) fails.
+    // failNextCampRead('camp_camper_detail') → only the next read of that table / function fails.
+    failNextCampRead(target) {
+      if (target !== undefined && !CAMP_TABLES.includes(target) && !CAMP_READ_RPC_NAMES.includes(target)) return `Unknown Camps read. Use one of: ${[...CAMP_TABLES, ...CAMP_READ_RPC_NAMES].join(', ')}.`;
+      camps.failNextCampRead(target);
+      if (target !== undefined) return `The next read of ${target} will fail like a dropped connection. Press Retry to read it again.${target === 'camp_camper_detail' ? ' On touch screens, arm it AFTER Camper detail is open (opening it reads camp_camper_detail too).' : ''}`;
+      return 'The next Camps read will fail like a dropped connection (e.g. Edit camp). The camp page and camp list refresh every 15 seconds, which can use it up: arm it right before pressing, or name a read, e.g. failNextCampRead(\'camp_camper_detail\') for ⋯ Undo payment (on touch screens, arm that one AFTER Camper detail is open: opening it reads camp_camper_detail too).';
+    },
     resetStaffAccounts() {
       staffAccounts.reset();
       return 'Staff accounts are back to the defaults (the desk is signed in on 3 devices). Reload the page to see them.';
@@ -1171,6 +1203,18 @@ export function createMockClient() {
         ? 'Star grading is now "offline": every grade, count and grid read fails. Run __tkdPreview.setStarOffline(false) to come back.'
         : 'Star grading is back online. The page refreshes, then Not saved grades save by themselves.';
     },
+    // ----- The one offline bar (design review M12, v1.123) -----
+    cutConnection(mode = true) {
+      const before = connectionCut;
+      connectionCut = mode === 'internet' ? 'internet' : Boolean(mode);
+      // A real Wi-Fi drop makes the browser fire "offline" (and "online" when it's back); the Wi-Fi
+      // being up without internet fires nothing.
+      if (connectionCut === true && before !== true) window.dispatchEvent(new Event('offline'));
+      if (connectionCut !== true && before === true) window.dispatchEvent(new Event('online'));
+      if (connectionCut === true) return 'Offline: every call fails and the page hears "offline", so the offline bar shows at once. __tkdPreview.cutConnection(false) brings the connection back.';
+      if (connectionCut === 'internet') return 'The internet is cut but the browser still says "online": every call fails, and the offline bar shows after two failed refreshes (about 30 seconds) on pages that refresh by themselves. __tkdPreview.cutConnection(false) brings it back.';
+      return 'The connection is back. The offline bar goes by itself (after the next good refresh, if failed refreshes showed it).';
+    },
     simulateStarDanChange(firstName = 'Noah', dan = 2) {
       return starCandidates.simulateDanChange(firstName, dan);
     },
@@ -1201,7 +1245,7 @@ export function createMockClient() {
     },
     resetFinance() {
       finance.reset();
-      return 'Finance is back to the sample: a few closed Shrewsbury days, the sample Star payments and refunds, reminder times Off, no exports. Reload to see it.';
+      return 'Finance is back to the start: reminder times Off, no exports. Star money comes from Star’s own preview store (the sample Star payments, refunds and closed Shrewsbury days only when Star has no payments). Reload to see it.';
     },
     // Black Belt money in the Daily report (migration 0026). Everything goes through Black Belt's
     // own preview functions (the same rules as its Candidates screens), so Finance reads exactly

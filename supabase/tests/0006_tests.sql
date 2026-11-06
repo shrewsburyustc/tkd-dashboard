@@ -182,6 +182,12 @@ declare
     'star_candidate_signatures', 'star_makeup_subjects', 'star_payments', 'star_grades', 'star_result_emails',
     'star_downloads'];
   v_read_tables text[];
+  -- 0041 (Star event end time, v0.520) adds star_events.end_time and an
+  -- "end_time" key to the family form's answers (T5a, T5b)
+  v_end_key text := case when exists (select 1 from pg_attribute a
+                                       where a.attrelid = to_regclass('public.star_events') and a.attname = 'end_time'
+                                         and not a.attisdropped)
+                         then 'end_time' else '' end;
 begin
   v_read_tables := array(select t from unnest(v_tables) as t where t not in ('star_candidate_signatures', 'star_downloads'));
 
@@ -1400,8 +1406,9 @@ begin
     raise exception 'TEST FAILED: T5a public_event (Worcester link) answer %', v_r;
   end if;
   if (select array_agg(k order by k) from jsonb_object_keys(v_r) as k) <> array['closed_on', 'dans', 'event', 'school', 'state', 'status']
-     or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'event') as k)
+     or (select array_agg(k order by k) from jsonb_object_keys((v_r -> 'event') - v_end_key) as k)
         <> array['auto_close_on', 'name', 'note', 'start_time', 'testing_date', 'where']
+     or (v_end_key <> '' and not ((v_r -> 'event') ? v_end_key))
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'dans' -> 0) as k)
         <> array['categories', 'dan', 'label', 'max_score', 'pass_mark', 'same_day_cents', 'standard_cents', 'star_limit']
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'dans' -> 0 -> 'categories' -> 0) as k) <> array['credits', 'name']
@@ -1432,9 +1439,10 @@ begin
      or v_r ->> 'school_name' <> 'Worcester' or (v_r ->> 'dan')::int <> 2 or v_r ->> 'dan_label' <> '2nd Dan'
      or (v_r ->> 'stars_to')::int <> 1 or (v_r ->> 'standard_cents')::int <> 15000 or (v_r ->> 'same_day_cents')::int <> 16000
      or v_r ->> 'paying_by' <> 'cash' or v_r ->> 'start_time' <> '10:00' or v_r -> 'where' ->> 'name' <> 'Shrewsbury'
-     or (select array_agg(k order by k) from jsonb_object_keys(v_r) as k)
+     or (select array_agg(k order by k) from jsonb_object_keys(v_r - v_end_key) as k)
         <> array['dan', 'dan_label', 'event_name', 'first_name', 'last_name', 'paying_by', 'reference', 'same_day_cents',
-                 'school_name', 'standard_cents', 'stars_from', 'stars_to', 'start_time', 'status', 'testing_date', 'where'] then
+                 'school_name', 'standard_cents', 'stars_from', 'stars_to', 'start_time', 'status', 'testing_date', 'where']
+     or (v_end_key <> '' and not (v_r ? v_end_key)) then
     raise exception 'TEST FAILED: T5b public_register answer %', v_r;
   end if;
   if coalesce(current_setting('request.jwt.claims', true), '') <> ''
@@ -3209,6 +3217,12 @@ begin
         ('star_grades', 'id,candidate_id,event_category_id,grade,kept,kept_from_event_id,kept_from_event_name,version,created_at,updated_at,created_by_name,updated_by_name'),
         ('star_result_emails', 'id,candidate_id,marked_at,marked_by_name,result_status,result_total,result_needs,result_key,sent_via,undone_at,undone_by_name')
       ) as g(t, cols), unnest(string_to_array(g.cols, ',')) as c);
+  -- 0041 (Star event end time, v0.520) adds star_events.end_time, readable
+  -- by signed-in staff like the other event columns: expected once it exists
+  if exists (select 1 from pg_attribute a
+              where a.attrelid = 'public.star_events'::regclass and a.attname = 'end_time' and not a.attisdropped) then
+    v_list := v_list || 'star_events.end_time'::text;
+  end if;
   for v_tbl, v_col in
     select c.relname::text, a.attname::text
       from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
@@ -3249,7 +3263,8 @@ begin
   --     run it, the exact signatures
   v_n := 0;
   for v_fn in
-    select p.oid, p.proname::text as name, p.prosecdef, p.proconfig, p.pronargdefaults, p.proacl, p.proowner
+    select p.oid, p.proname::text as name, p.prosecdef, p.proconfig, p.pronargdefaults, p.proacl, p.proowner,
+           p.pronargs, p.proargnames
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.proname = any (v_staff_fns || v_public_fns || v_helper_fns)
   loop
@@ -3257,7 +3272,11 @@ begin
     if not coalesce('search_path=""' = any (v_fn.proconfig), false) then
       raise exception 'TEST FAILED: C4 % has no search_path = ''''', v_fn.oid::regprocedure;
     end if;
-    if v_fn.pronargdefaults <> 0 then raise exception 'TEST FAILED: C4 % has argument defaults', v_fn.oid::regprocedure; end if;
+    -- the one allowed default: 0041's last input p_end_time (default empty) on star_add_event / star_update_event
+    if v_fn.pronargdefaults <> (case when v_fn.name in ('star_add_event', 'star_update_event')
+                                          and v_fn.proargnames[v_fn.pronargs] = 'p_end_time' then 1 else 0 end) then
+      raise exception 'TEST FAILED: C4 % has argument defaults', v_fn.oid::regprocedure;
+    end if;
     if has_function_privilege('anon', v_fn.oid, 'EXECUTE') or has_function_privilege('service_role', v_fn.oid, 'EXECUTE')
        or has_function_privilege('testing_registrar', v_fn.oid, 'EXECUTE') then
       raise exception 'TEST FAILED: C4 anon, service_role or testing_registrar can execute %', v_fn.oid::regprocedure;
@@ -3289,8 +3308,13 @@ begin
       'public.star_delete_category(uuid, integer)',
       'public.star_update_grade_values(integer[], numeric[])',
       'public.star_update_assistant_table(integer, integer, integer[], integer[])',
-      'public.star_add_event(text, date, time, text, boolean, date, text)',
-      'public.star_update_event(uuid, integer, text, date, time, text, date, text)',
+      -- before 0041 (v0.520) 7 / 8 inputs; 0041 adds p_end_time as the last one
+      case when to_regprocedure('public.star_add_event(text, date, time, text, boolean, date, text, time)') is not null
+           then 'public.star_add_event(text, date, time, text, boolean, date, text, time)'
+           else 'public.star_add_event(text, date, time, text, boolean, date, text)' end,
+      case when to_regprocedure('public.star_update_event(uuid, integer, text, date, time, text, date, text, time)') is not null
+           then 'public.star_update_event(uuid, integer, text, date, time, text, date, text, time)'
+           else 'public.star_update_event(uuid, integer, text, date, time, text, date, text)' end,
       'public.star_set_registration(uuid, integer, boolean)',
       'public.star_delete_event(uuid, integer, integer, integer)',
       'public.star_add_candidate(uuid, text, text, date, text, text, integer, integer, text)',

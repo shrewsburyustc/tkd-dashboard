@@ -50,6 +50,7 @@ function toEvent(row) {
     id: row.id,
     name: row.name,
     startTime: shortStartTime(row.start_time), // '10:00'
+    endTime: isTime(row.end_time) ? shortStartTime(row.end_time) : null, // v0.520 (0041); null = none saved
     whereCode: row.where_code,
     whereName: typeof row.where_name === 'string' ? row.where_name : null,
     counts: { worcester: counts.worcester, shrewsbury: counts.shrewsbury },
@@ -128,6 +129,7 @@ export function homeItems(answer, schoolCode = null) {
     eventId: e.id,
     name: e.name,
     time: e.startTime,
+    endTime: e.endTime ?? null, // v0.520
     whereCode: e.whereCode,
     count: schoolCode ? e.counts[schoolCode] ?? 0 : e.counts.worcester + e.counts.shrewsbury,
     schoolCode,

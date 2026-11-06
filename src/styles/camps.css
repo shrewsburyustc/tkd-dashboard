@@ -1113,6 +1113,14 @@ button.cp-dc:focus-visible {
   }
 }
 
+/* ===== The camp page's amber-bar slot (CampPage.jsx) =====
+   A wrapper only so the page can find its own bar (to scroll it into view and focus Retry, design
+   review S-2). display: contents = it draws no box of its own: the bar inside is laid out exactly
+   as if the wrapper weren't there. */
+.cp-bar-slot {
+  display: contents;
+}
+
 /* ===== Print roster: only on paper ===== */
 .camp-print {
   display: none;

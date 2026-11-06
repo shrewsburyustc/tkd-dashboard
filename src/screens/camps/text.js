@@ -128,7 +128,7 @@ export const schoolColumn = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolN
 // The camp's school wherever one line is shown (the Registration link box's card heading, the camp page)
 export const campSchoolLine = (camp) => (camp.bothSchools ? heldAtLine(camp.locationCode) : schoolName(camp.locationCode));
 export const NO_CAMPS_ADMIN = 'No camps yet. Add one with Add camp.'; // (not in the mockups)
-export const NO_CAMPS_STAFF = 'No camps yet.'; // (not in the mockups)
+export const NO_CAMPS_STAFF = 'No camps yet. An admin adds them.'; // (not in the mockups; §8 Empty states, v0.53)
 export const NO_UPCOMING = 'No upcoming camps.'; // (not in the mockups)
 export const NO_PAST = 'No past camps yet.'; // (not in the mockups)
 export const LOADING_CAMPS = 'Loading camps…'; // (not in the mockups) screen readers only
@@ -251,6 +251,9 @@ export const KEEP_CAMP = 'Keep camp'; // (not in the mockups) — like Color Bel
 export const DELETING = 'Deleting…';
 export const TOAST_SIGNUP_CLOSED = 'Sign-up closed'; // (not in the mockups)
 export const TOAST_SIGNUP_OPEN = 'Sign-up open'; // (v0.725)
+// The Undo of Close sign-up opens it again, so it says so (design review R2-07, rulebook v1.051 (1);
+// the Undo of Open sign-up stays "Undone").
+export const TOAST_UNDONE_SIGNUP_OPEN = 'Undone. Sign-up is open again.';
 export const signupOpenUntil = (iso) => `Sign-up open until ${monthDay(iso)}`; // (v0.725) admin, after the closing date
 export const signupNotClosed = (name) => `Sign-up for ${name} wasn't closed. Check the connection, then retry.`; // (not in the mockups)
 export const signupNotOpened = (name) => `Sign-up for ${name} wasn't opened. Check the connection, then retry.`; // (v0.725)
@@ -325,7 +328,7 @@ export const EDIT_TEMPLATE_TITLE = 'Edit template';
 export const ADD_CAMP_SUB = 'Everything can be changed later with Edit camp.';
 export const START_FROM = 'Start from';
 export const BLANK_CAMP = 'Blank camp';
-export const START_FROM_HINT = 'Fills in everything except the name and days. Choose Blank camp to start empty.';
+export const START_FROM_HINT = 'Fills in everything except the name and days. Choose Blank camp to start with only Early drop-off and Late pick-up.'; // v0.739
 export const SECTION_CAMP = 'Camp';
 export const SECTION_TEMPLATE = 'Template'; // (not in the mockups) section 1 of Edit template
 export const SECTION_TIMES = 'Times';
@@ -425,6 +428,9 @@ export function shortDayLabels(isoDays) {
 }
 export const removeExtraLabel = (name) => `Remove ${name || 'this extra'}`; // (not in the mockups)
 export const NO_EXTRAS = 'No extras'; // (not in the mockups)
+// The two extras a Blank camp starts with (v0.739, picture 21x option A): every camp has them, so
+// the admin only types their prices (or removes one with ✕). Names only — no price is kept here.
+export const DEFAULT_EXTRA_NAMES = ['Early drop-off', 'Late pick-up'];
 export const MAX_EXTRAS_NOTE = 'A camp can have up to 10 extras.'; // (not in the mockups)
 export const extrasNoPrice = (n) => (n === 1 ? '1 extra has no price' : `${n} extras have no price`);
 export const extrasNoName = (n) => (n === 1 ? '1 extra has no name' : `${n} extras have no name`); // (not in the mockups)
@@ -599,7 +605,7 @@ export const KEEP_CAMPER = 'Keep camper';
 // ----- Undo payment asks first (rulebook v0.730, v1.003; design review C4, picture 11) -----
 // Star's words (v0.508), with its middle "the row goes back to Not paid" replaced by what is owed
 // AFTER the Undo, because a camper can still owe part (Owes $15 → $350 owed after the Undo).
-export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
+export const undoPaymentTitle = (name) => `Undo ${name}'s payment?`; // straight ' as the box's other lines
 export function undoPaymentBody(p, owedAfterCents) {
   const paid = `The ${formatMoney(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)} is reversed`;
   // (not in the mockups) Nothing owed even after the Undo (paid twice, say): no "$0 is owed again".

@@ -1,0 +1,20 @@
+{
+  "title": "Camps — Add camp: Early drop-off and Late pick-up already there",
+  "subtitle": "Add camp → Start from <b>Blank camp</b> → 4. Extras, PC 1280. Today a blank camp starts with no extras. After, it starts with the two lines filled in: Per day, still removable with ✕ for a camp that doesn't offer them. Edit camp and existing camps don't change. A camp started from a template keeps the template's own extras. Amber = what changes.",
+  "width": 1900,
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/x3-extras-today.png", "crop": [260, 400, 760, 140], "scale": 0.75, "marks": [[285, 411, 711, 116]],
+        "caption": "<b>Blank camp:</b> “No extras”. You press + Add extra twice and type both lines every time." }
+    ] },
+    { "label": "Option A · names only", "tone": "after", "items": [
+      { "src": "shots/x3-extras-a.png", "crop": [260, 285, 760, 430], "scale": 0.75, "marks": [[297, 361, 397, 32], [297, 564, 397, 32], [822, 361, 125, 32], [822, 564, 125, 32], [400, 294, 160, 24]],
+        "caption": "<b>A.</b> Both lines start with the name and Per day. <b>You type the price</b> for each camp; until you do, the section says “2 extras have no price” and Save is blocked, so a camp can't go out with a wrong or missing price." }
+    ] },
+    { "label": "Option B · names and prices", "tone": "after", "items": [
+      { "src": "shots/x3-extras-b.png", "crop": [260, 205, 760, 450], "scale": 0.75, "marks": [[297, 288, 397, 32], [297, 457, 397, 32], [702, 288, 112, 32], [702, 457, 112, 32], [822, 288, 124, 32], [822, 457, 124, 32]],
+        "caption": "<b>B.</b> Both lines start fully filled in, prices too ($15 and $8 here are only the preview's examples — you'd give me the real ones). Nothing to type, but if a price changes later it's in the code, so changing it needs a small update from me." }
+    ] }
+  ],
+  "footer": "<b>Recommendation: B</b> if the two prices are the same for every camp; <b>A</b> if they change from camp to camp. Either way it's an app-only change (no database change), and the fake preview's camps don't change. <br><br><b>Your choice:</b> A or B? For B, tell me each one's price per day (and, if you want them in the name, the times, e.g. “Early drop-off, 7:30–9:00 AM”)."
+}

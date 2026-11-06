@@ -108,6 +108,10 @@ declare
   v_cb     uuid;
   v_p3     uuid := gen_random_uuid();
   v_sent2  uuid := gen_random_uuid();
+  -- star_update_event: 0041 (Star event end time, v0.520) added a 9th input,
+  -- p_end_time (default empty); before 0041 it has 8. Whichever exists.
+  v_upd    regprocedure := coalesce(to_regprocedure('public.star_update_event(uuid, integer, text, date, time, text, date, text, time)'),
+                                    to_regprocedure('public.star_update_event(uuid, integer, text, date, time, text, date, text)'));
 begin
   -- -------------------------------------------------------------------
   -- Setup (as the "postgres" role the SQL Editor uses)
@@ -124,8 +128,7 @@ begin
      or to_regprocedure('public.star_set_result_text(text, integer, text)') is null then
     raise exception 'TEST SETUP: public.star_result_texts / star_set_result_text are missing (is 0023 applied?)';
   end if;
-  if pg_get_functiondef('public.star_update_event(uuid, integer, text, date, time, text, date, text)'::regprocedure)
-     not like '%v_keep_closed%' then
+  if v_upd is null or pg_get_functiondef(v_upd) not like '%v_keep_closed%' then
     raise exception 'TEST SETUP: star_update_event is still 0006''s version (is 0023 applied, after any 0006 re-run?)';
   end if;
 
@@ -814,7 +817,9 @@ begin
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.proname in ('star_set_result_text', 'star_result_text_problem', 'star_update_event', 'star_results_csv')
   loop
-    if not coalesce('search_path=""' = any (v_case.proconfig), false) or v_case.pronargdefaults <> 0
+    -- the one allowed default: 0041's last input p_end_time on star_update_event
+    if not coalesce('search_path=""' = any (v_case.proconfig), false)
+       or v_case.pronargdefaults <> (case when v_case.sig like '%star_update_event(%,time without time zone)' then 1 else 0 end)
        or v_case.proowner <> (select c.relowner from pg_class c where c.oid = 'public.star_events'::regclass) then
       raise exception 'TEST FAILED: R7 % search_path / defaults / owner wrong', v_case.sig;
     end if;
@@ -830,10 +835,10 @@ begin
   select count(*) into v_n from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname in ('star_set_result_text', 'star_result_text_problem', 'star_update_event', 'star_results_csv');
   if v_n <> 4 then raise exception 'TEST FAILED: R7 expected exactly one version of each 0023 function, found %', v_n; end if;
-  if not has_function_privilege('authenticated', 'public.star_update_event(uuid, integer, text, date, time, text, date, text)', 'EXECUTE')
-     or has_function_privilege('anon', 'public.star_update_event(uuid, integer, text, date, time, text, date, text)', 'EXECUTE')
-     or has_function_privilege('service_role', 'public.star_update_event(uuid, integer, text, date, time, text, date, text)', 'EXECUTE')
-     or has_function_privilege('star_registrar', 'public.star_update_event(uuid, integer, text, date, time, text, date, text)', 'EXECUTE') then
+  if not has_function_privilege('authenticated', v_upd, 'EXECUTE')
+     or has_function_privilege('anon', v_upd, 'EXECUTE')
+     or has_function_privilege('service_role', v_upd, 'EXECUTE')
+     or has_function_privilege('star_registrar', v_upd, 'EXECUTE') then
     raise exception 'TEST FAILED: R7 star_update_event rights changed';
   end if;
 
