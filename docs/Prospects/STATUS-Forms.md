@@ -205,3 +205,16 @@ Jeffrey asked for a Worcester copy of Shrewsbury's live "Visitor Information" fo
 - **Security re-check: clear.** It also fixed a wording slip: SETUP and the run.mjs header now say 0038 / 0040 join step0042's list when their files exist, and the order includes 0041.
 - **Code re-check: clear** after one fix: on PC / tablet the row's open button on Both is named "Open Walk-in, Worcester" too (it had only its visible name).
 - **Next:** Jeffrey's OK to commit; tell Main that 0042's contents changed (the CLAUDE.md row); then the 0042 steps (SETUP 0042a–d), and Main merges and pushes after 0042 is live.
+- **Committed 7ddf439** (2026-11-05, Jeffrey: "Yes, commit"; on main bcd8ab9). Main has been told 0042's contents changed (for its CLAUDE.md row), and that the app is NOT merge-ready until 0042 is live (SETUP 0042a–d).
+- **0042a done 2026-11-05** (Jeffrey: "Yes, start 0042"; read-only through the connector):
+  - the pre-apply check answers 0 / false / true / 2 (ready);
+  - 0009's fingerprints before: 196 lines, md5 `b049ef4eb998e77c5dbe7f0c438e69dc`, no forms_copy_to_school line;
+  - the security advisor before: 3 kinds, 255 findings (rls_enabled_no_policy 29 INFO, authenticated_security_definer_function_executable 225 WARN, auth_leaked_password_protection 1 WARN), none naming forms_copy_to_school.
+- **0042b done 2026-11-05:** Jeffrey pasted the migration in the SQL Editor ("pass").
+- **0042c done 2026-11-05** (read-only through the connector) — **0042 is live**:
+  - the pre-apply check answers 1 / true / true / 2;
+  - `0042_fingerprints.sql`: the one line equals the PGlite line (`72c5c128…`, definer, search_path "", owner postgres, EXECUTE for authenticated and postgres only);
+  - 0009's fingerprints: 198 lines = the 196 from before (md5 `b049ef4e…` unchanged) plus exactly the two new `forms_copy_to_school` lines;
+  - the security advisor: 256 findings = the 255 from before plus one `authenticated_security_definer_function_executable` for `forms_copy_to_school` (expected: the app calls it, like the other `forms_*` functions); nothing went away.
+- **SETUP 0042 fixed:** its order text said Star's 0038 is live. It isn't (read-only check 2026-11-05: no `star_undo_event_edit`, no new Star payment columns); only 0041 is. run.mjs's order was already right.
+- **Next:** 0042d (Jeffrey at a computer: `0042_tests.sql` with his UIDs, then the 0009, 0031 and 0036 tests); Main may merge this branch and push once Jeffrey OKs that push.

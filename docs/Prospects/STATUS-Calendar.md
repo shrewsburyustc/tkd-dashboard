@@ -111,3 +111,28 @@ This branch is on `main` and live (the push included `0ccf776`; live `main` = `c
 - Next: Jeffrey tries it in preview -> commit on this branch -> Main merges -> Jeffrey OKs deploy. Later: a Testing line in the menu once Testing events load into the Calendar.
 - **Deployed 2026-10-21** (main 09f0b95, live 09:53 UTC). Left for Jeffrey: on the live site, check the Calendar's follow-ups match Prospects' "Follow up today".
 - **Live check passed 2026-10-21 (Jeffrey):** the Calendar's follow-ups match Prospects' "Follow up today", and tapping one opens the child. Done.
+
+## Every section's events on the Calendar (Jeffrey, 2026-11-05) — queued behind migration 0042
+
+His words, relayed by Main: "Everything lol. Any EVENT that gets added even in the future, new prospects, etc. We need to see everything that is going on". He made events and saw an empty Calendar.
+
+**Main's findings:**
+- `src/lib/calendar/api.js:129` `loadTestingEvents()` is still the stub that returns `[]`. v0.239 (1) ("Testing events show on the Calendar automatically … once those sections are built") was approved but never built.
+- Live data (read-only): calendar_events 0, star_events 1, testing_events 1, camps 2, bb_cycles 0.
+
+**To confirm in the plan:**
+- read-only, no second copy (v0.239 (1)); clicking an item opens it in its own section;
+- the sources:
+  - Color Belt testing events and private testings;
+  - Star testing events (with 0041's end time) and private stars;
+  - each camp's days;
+  - Black Belt cycles and testing dates;
+  - Prospects follow-ups and free-class bookings already show; does "new prospects" mean more (new sign-ups / visits on their day)?
+- a standing 10b rule: anything dated that any section adds shows on the Calendar;
+- the Show menu (v0.613) gains a kind per section.
+
+**How:**
+- probably one calendar reader, or one per section: a migration, with the number through Main;
+- each section's private data stays out (no DOB, address, medical or billing);
+- plan, then mockups at the four sizes, then Jeffrey's OK, then reviews (security for the migration);
+- tell Main which sections' tables it reads.
