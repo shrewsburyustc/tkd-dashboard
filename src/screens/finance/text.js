@@ -192,10 +192,11 @@ export function changedAfterLine({ count, added, addedAt, corrected, correctedOn
 }
 
 // ----- Toasts and messages for closing (D3) -----
-export const DRAWER_CLOSED = 'Today’s drawer is closed.';
-export const drawerClosedOn = (day) => `The drawer for ${dayShort(day)} is closed.`; // NOT IN MOCKUPS — for CP1 (admin closing an earlier day)
+export const DRAWER_CLOSED = 'Today’s drawer is closed'; // one sentence: no full stop (v1.051)
+export const drawerClosedOn = (day) => `The drawer for ${dayShort(day)} is closed`; // NOT IN MOCKUPS — for CP1 (admin closing an earlier day)
 export const UNDO = 'Undo';
-export const CLOSE_UNDONE = 'Close undone. The day is open again.'; // NOT IN MOCKUPS — for CP1
+export const UNDONE = 'Undone'; // the toast after an Undo that worked (v1.051)
+export const CLOSE_UNDONE = 'Undone. The day is open again.'; // two sentences: keeps its full stops (v1.051)
 export const TOO_LATE_UNDO = 'Too late to undo here. Ask an admin to reopen the day.'; // D3 proposal text
 export const UNDO_FAILED = 'Couldn’t undo. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
 export const DAY_REOPENED = 'Day reopened. It can be counted again.'; // NOT IN MOCKUPS — for CP1

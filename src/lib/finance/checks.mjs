@@ -1277,6 +1277,64 @@ check('private testing: words; preview move = one counted private line, credited
   assert.deepEqual(det.history.map((h) => FT.historyLine(h, null)), ['Jeffrey Berg moved it to private testing', 'Staff recorded $65.00 by card']);
 });
 
+// R1-09: Star payments come from Star's own preview store ('tkd.preview.star') when it has any;
+// the made-up Star sample is used only when that store is missing, damaged or has no payments.
+check('mock: Star store payments reach the Daily report; stored school wins; sample only as a fallback', () => {
+  const E = '00000000-0000-4000-8000-0000000005e1';
+  const pay = (id, cand, fields = {}) => ({
+    id, candidate_id: cand, kind: 'payment', amount_cents: 14000, method: 'card', paid_on: T, recorded_at: at(T, '10:00'),
+    recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, ...fields,
+  });
+  const starStore = {
+    events: [{ id: E, name: 'Winter Star Testing', testing_date: '2026-12-05' }],
+    candidates: [
+      { id: 'sc1', event_id: E, first_name: 'Rita', last_name: 'Vance', location_code: 'worcester', private_on: null },
+      // Moved to Shrewsbury after paying at the Worcester desk: the row's own school (R1-01) wins.
+      { id: 'sc2', event_id: E, first_name: 'Omar', last_name: 'Silva', location_code: 'shrewsbury', private_on: '2026-12-10' },
+    ],
+    payments: [
+      pay('00000000-0000-4000-8000-0000000005a1', 'sc1'),
+      pay('00000000-0000-4000-8000-0000000005a2', 'sc2', { method: 'cash', school: 'worcester', recorded_at: at(T, '11:00') }),
+    ],
+  };
+  const make = (readStar) => {
+    let store = null;
+    return createFinanceBackend({
+      loadStore: () => store, saveStore: (x) => { store = JSON.parse(JSON.stringify(x)); },
+      readColorBelt: () => JSON.parse(JSON.stringify(cbStore)), readStar,
+      now: () => clock, today: () => T, newId: () => randomUUID(),
+    });
+  };
+  const day = (b, school) => b.rpc('finance_day', dayArgs(school), ADMIN_CTX).data;
+  const withStar = make(() => JSON.parse(JSON.stringify(starStore)));
+  const w = day(withStar, 'worcester');
+  assertClean(w, 'finance_day with the Star store');
+  const star = w.items.filter((it) => it.source === 'star');
+  assert.deepEqual(star.map((it) => [it.last_name, it.method, it.amount_cents, it.state, it.event_date, it.is_private]),
+    [['Vance', 'card', 14000, 'counted', '2026-12-05', false], ['Silva', 'cash', 14000, 'counted', '2026-12-10', true]]);
+  // Worcester today = the Color Belt money (the sample has no Worcester Star row on T) + $140 card + $140 cash.
+  const plain = day(make(undefined), 'worcester');
+  assert.ok(!plain.items.some((it) => it.source === 'star'));
+  assert.equal(w.totals.card.cents, plain.totals.card.cents + 14000);
+  assert.equal(w.totals.cash.cents, plain.totals.cash.cents + 14000);
+  assert.equal(day(withStar, 'shrewsbury').items.filter((it) => it.source === 'star').length, 0); // the stored school won
+  // The made-up sample is gone (none of its names), and its sample closings too.
+  assert.ok(!w.items.some((it) => it.last_name === 'Ortiz' || it.last_name === 'Moreno'));
+  const hist = withStar.rpc('finance_history', { p_location_code: 'shrewsbury', p_month: T }, ADMIN_CTX).data;
+  assert.ok(hist.days.every((d) => d.closed_by_name === null));
+  // Payment detail reads Star's own rows.
+  const det = withStar.rpc('finance_payment_detail', { p_source: 'star', p_payment_id: '00000000-0000-4000-8000-0000000005a1' }, ADMIN_CTX).data;
+  assert.equal(det.status, 'ok');
+  assert.equal(det.event_name, 'Winter Star Testing');
+  assert.deepEqual(det.history.map((h) => [h.what, h.amount_cents, h.method]), [['recorded', 14000, 'card']]);
+  // Fallbacks: no store, an empty one, or one that throws → the made-up sample, exactly as before.
+  const sample = day(make(undefined), 'shrewsbury');
+  assert.ok(sample.items.some((it) => it.source === 'star'));
+  for (const readStar of [() => ({ events: [], candidates: [], payments: [] }), () => { throw new Error('damaged'); }, () => ({ payments: 'x' })]) {
+    assert.deepEqual(day(make(readStar), 'shrewsbury'), sample);
+  }
+});
+
 // money() is a thin wrapper of the shared formatMoneyWithCents (design review F5, v1.026);
 // Finance's report, print and dialogs must keep writing exactly the same text.
 check('money(): Finance keeps $65.00 through the shared helper (F5)', () => {
