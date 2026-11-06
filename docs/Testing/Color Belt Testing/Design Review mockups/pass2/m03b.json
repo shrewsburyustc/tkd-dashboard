@@ -1,0 +1,149 @@
+{
+ "title": "Pass 2 · M-03 follow-up — a cancelled private testing that was only partly paid",
+ "subtitle": "Found by M-03’s review. Since v0.428 a cancelled private testing with money has Print receipt. One case wasn’t drawn: Ava Chen paid $65 of the $85 (moved with her from the event), then her private testing was cancelled. Her receipt then says “Total due $85 · Paid to date $65 · Balance $20”, and her summary says “$20 more to collect” next to Print receipt, though her row (correctly) doesn’t. Nothing is owed on a cancelled private testing, and the $65 isn’t refunded (“Fees are non-refundable”). <span style=\"color:#6B6B6B\">(Preview screenshots, fake data; the options are drawn on top of the real receipt.)</span>",
+ "width": 2200,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "m03b-pc-receipt-today.png",
+       "crop": [
+        384,
+        168,
+        512,
+        465
+       ],
+       "scale": 0.62,
+       "caption": "PC 1280: the receipt says $20 is still owed.",
+       "marks": [
+        [
+         639,
+         440,
+         240,
+         90
+        ]
+       ]
+      },
+      {
+       "src": "m03b-w390-receipt-today.png",
+       "shotWidth": 390,
+       "crop": [
+        16,
+        64,
+        358,
+        465
+       ],
+       "scale": 0.62,
+       "caption": "Phone 390.",
+       "marks": [
+        [
+         117,
+         336,
+         240,
+         90
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "m03b-pc-summary-today.png",
+       "crop": [
+        420,
+        80,
+        440,
+        560
+       ],
+       "scale": 0.62,
+       "caption": "PC 1280: the summary says “$20 more to collect”; the row doesn’t.",
+       "marks": [
+        [
+         568,
+         378,
+         268,
+         42
+        ]
+       ]
+      },
+      {
+       "src": "m03b-w390-summary-today.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        250,
+        390,
+        250
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390.",
+       "marks": [
+        [
+         124,
+         306,
+         250,
+         44
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After, in both options: the summary",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "m03b-pc-summary-after.png",
+       "crop": [
+        420,
+        80,
+        440,
+        560
+       ],
+       "scale": 0.62,
+       "caption": "PC 1280: “Paid · $65 cash · paid Oct 30”, no “more to collect” on a cancelled one.",
+       "marks": [
+        [
+         568,
+         378,
+         190,
+         22
+        ]
+       ]
+      },
+      {
+       "src": "m03b-w390-summary-after.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        250,
+        390,
+        250
+       ],
+       "scale": 0.7,
+       "caption": "Phone 390.",
+       "marks": [
+        [
+         124,
+         306,
+         250,
+         22
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<div style=\"margin:26px 0 8px\"><div style=\"display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px\">To decide</div><h2 style=\"font-size:20px;margin:0 0 6px\">What does the receipt say is owed on a cancelled private testing that was only partly paid?</h2><p style=\"margin:0 0 14px;max-width:1750px\">Both options also do two small things the review asked for: the receipt’s Private testing line says it was cancelled (“· cancelled Nov 6”), and the summary stops saying “$20 more to collect” on a cancelled one (its row already leaves that line out; picture above). Fully paid cancelled ones (Emma Ross) and every active one print as today.</p><div style=\"display:flex;gap:24px;align-items:flex-start\"><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6\"><div style=\"font-weight:700;margin-bottom:10px\">A · Nothing more is owed: Total due = what was paid <span style=\"background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px\">Recommended</span></div><figure style=\"width:317.44px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:317.44px;height:288.3px\"><img src=\"m03b-pc-receipt-A.png\" style=\"left:-238.07999999999998px;top:-104.16px;width:793.6px\"><div class=\"mark\" style=\"left:154.1px;top:164.64px;width:156.8px;height:63.8px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:71.02px;top:56.76px;width:150.6px;height:20.4px;border-color:#1D4ED8\"></div></div><figcaption>PC 1280: Total due $65 · Paid $65 · Balance “$0 · paid in full”.</figcaption></figure><figure style=\"width:221.96px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:221.96px;height:288.3px\"><img src=\"m03b-w390-receipt-A.png\" style=\"left:-9.92px;top:-39.68px;width:241.8px\"><div class=\"mark\" style=\"left:58.62px;top:164.64px;width:156.8px;height:63.8px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:71.64px;top:58px;width:145.64px;height:20.4px;border-color:#1D4ED8\"></div></div><figcaption>Phone 390.</figcaption></figure><figure style=\"width:256px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:256px;height:232.5px\"><img src=\"m03b-w820-receipt-A.png\" style=\"left:-77px;top:-92px;width:410px\"><div class=\"mark\" style=\"left:123.5px;top:132px;width:128px;height:53px;border-color:#1D4ED8\"></div></div><figcaption>Tablet 820 (touch).</figcaption></figure><figure style=\"width:144px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:144px;height:282px\"><img src=\"m03b-w320-receipt-A.png\" style=\"left:-8px;top:-32px;width:160px\"><div class=\"mark\" style=\"left:11.5px;top:172px;width:128px;height:53px;border-color:#1D4ED8\"></div></div><figcaption>320.</figcaption></figure><p style=\"margin:8px 0 0\"><b>What it does:</b> On a cancelled private testing, the receipt’s Total due is what was paid, so the balance is $0 (“paid in full”), and the cancelled date explains why the total is below the price.</p><p style=\"margin:6px 0 0\"><b>+</b> A parent reading it can’t think they still owe $20 for a testing that was cancelled. Matches how the dashboard treats it: the row and the Not paid card don’t count anything as owed on a cancelled one. “Fees are non-refundable” at the bottom still says the $65 stays.</p><p style=\"margin:6px 0 0\"><b>−</b> The receipt no longer shows the $85 price on a cancelled one (the summary’s Price line still does).</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">B · Show the price, say the rest isn’t owed</div><figure style=\"width:317.44px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:317.44px;height:288.3px\"><img src=\"m03b-pc-receipt-B.png\" style=\"left:-238.07999999999998px;top:-104.16px;width:793.6px\"><div class=\"mark\" style=\"left:154.1px;top:164.64px;width:156.8px;height:63.8px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:71.02px;top:56.76px;width:150.6px;height:20.4px;border-color:#1D4ED8\"></div></div><figcaption>PC 1280: Total due $85 · Paid $65 · Balance “$20 · not owed (cancelled)”.</figcaption></figure><figure style=\"width:221.96px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:221.96px;height:288.3px\"><img src=\"m03b-w390-receipt-B.png\" style=\"left:-9.92px;top:-39.68px;width:241.8px\"><div class=\"mark\" style=\"left:58.62px;top:164.64px;width:156.8px;height:63.8px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:71.64px;top:58px;width:145.64px;height:20.4px;border-color:#1D4ED8\"></div></div><figcaption>Phone 390.</figcaption></figure><p style=\"margin:8px 0 0\"><b>What it does:</b> The receipt keeps the price as Total due and the $20 as the balance, with the words “not owed (cancelled)” after it.</p><p style=\"margin:6px 0 0\"><b>+</b> Shows the full price and exactly what was and wasn’t paid.</p><p style=\"margin:6px 0 0\"><b>−</b> A $20 balance on a receipt is easy to read as money owed, even with the words after it; and it uses the shared receipt’s balance note, which the other sections use only for an amount that IS owed (“next due May 29”).</p></div></div></div><p style=\"margin-top:18px\"><b>Answer: A or B.</b></p>"
+}
