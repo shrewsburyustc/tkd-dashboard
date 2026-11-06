@@ -4259,25 +4259,78 @@ check('history: the preview readers end to end — Mark paid, Undo, Edit payment
   // (Rows of one save share a moment; their order inside it is the reader's, so compare the set —
   // newest first is checked by the first and last entries.)
   assert.equal(list[0], 'Result: Passed');
+  // One save is one entry (pass 2 M-02, v1.055 (a)): a payment save that also changed Paying by
+  // says both, money first; the Mark paid by the family's own way changed nothing else.
   assert.deepEqual([...list].sort(), [
     'Result: Passed',
-    `Paying by changed: ${P(family)} → ${P(other)}`,
-    `Payment changed: ${payingByText(family).toLowerCase()} → ${payingByText(other).toLowerCase()}`,
+    `Payment changed: ${payingByText(family).toLowerCase()} → ${payingByText(other).toLowerCase()}; Paying by changed: ${P(family)} → ${P(other)}`,
     `Payment recorded: $65 ${payingByText(family).toLowerCase()}, paid Oct 17`,
-    `Paying by changed: ${P(other)} → ${P(family)}`,
-    'Payment undone: $65',
-    `Paying by changed: ${P(family)} → ${P(other)}`,
-    `Payment recorded: $65 ${payingByText(other).toLowerCase()}, paid Oct 17`,
+    `Payment undone: $65; Paying by changed: ${P(other)} → ${P(family)}`,
+    `Payment recorded: $65 ${payingByText(other).toLowerCase()}, paid Oct 17; Paying by changed: ${P(family)} → ${P(other)}`,
     zoe().source === 'form' ? 'Registered on the family form' : 'Added at the desk',
   ].sort());
-  // Hide private details: only the result and the registration stay; 7 money entries hidden
+  // Hide private details: only the result and the registration stay; 4 money entries hidden
   const hiddenWords = rows.map((r) => describeHistoryRow(r, { hidden: true })).filter(Boolean);
   assert.deepEqual(hiddenWords.filter((w) => !w.hiddenPayment).map((w) => w.text), ['Result: Passed', list[list.length - 1]]);
-  assert.equal(hiddenWords.filter((w) => w.hiddenPayment).length, 7);
+  assert.equal(hiddenWords.filter((w) => w.hiddenPayment).length, 4);
   // who: the person who did it
   assert.equal(describeHistoryRow(rows[0], {}).who, 'Staff');
   assert.equal(describeHistoryRow(rows.find((r) => r.action === 'edit_payment'), {}).who, 'Jeffrey Berg');
   evReset();
+});
+
+check('history: a payment save that changed Paying by is ONE entry, money first (pass 2 M-02)', () => {
+  const at = (s) => `2026-11-05T15:00:${s}Z`;
+  const row = (table, op, action, occurred, before, after) =>
+    ({ occurred_at: occurred, actor_name: 'Jeffrey Berg', action, table_name: table, op, before, after });
+  const words = (rows) => combineHistoryRows(rows).map((r) => describeHistoryRow(r, {})).filter(Boolean).map((e) => e.text);
+  // A private Mark paid by cash while Paying by was card (the preview's few milliseconds apart)
+  const markPaid = [
+    row('testing_private', 'update', 'private_mark_paid', '2026-11-05T15:00:00.004Z', { paying_by: 'card', version: 2 }, { paying_by: 'cash', version: 3 }),
+    row('testing_private_payments', 'insert', 'private_mark_paid', at('00'), null, { kind: 'payment', amount_cents: 2000, method: 'cash', paid_on: '2026-11-05' }),
+  ];
+  assert.deepEqual(words(markPaid), ['Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash']);
+  // … and its Undo payment, newest first: two saves, two entries
+  const undo = [
+    row('testing_private', 'update', 'private_undo_payment', at('30'), { paying_by: 'cash' }, { paying_by: 'card' }),
+    row('testing_private_payments', 'insert', 'private_undo_payment', at('30'), null, { kind: 'reversal', amount_cents: -2000, method: 'cash', paid_on: '2026-11-05' }),
+  ];
+  assert.deepEqual(words([...undo, ...markPaid]), [
+    'Payment undone: $20; Paying by changed: Cash → Card',
+    'Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash',
+  ]);
+  // Hide private details: both parts are money, so the whole entry is left out (one, not two)
+  const hidden = combineHistoryRows(markPaid).map((r) => describeHistoryRow(r, { hidden: true })).filter(Boolean);
+  assert.deepEqual(hidden, [{ hiddenPayment: true }]);
+  // ⋯ Change how they'll pay has no payment in its save: its own entry, as before
+  assert.deepEqual(words([row('testing_registrations', 'update', 'change_paying_by', at('40'), { paying_by: 'cash' }, { paying_by: 'check' })]), ['Paying by changed: Cash → Check']);
+  // No payment row of that save in the list (the 500-row limit): Paying by keeps its own entry
+  assert.deepEqual(words(markPaid.slice(0, 1)), ['Paying by changed: Card → Cash']);
+  // A payment row of another table or action, or more than 5 seconds away, is never joined
+  const apart = [
+    row('testing_registrations', 'update', 'mark_paid', at('00'), { paying_by: 'cash' }, { paying_by: 'card' }),
+    row('testing_payments', 'insert', 'mark_paid', '2026-11-05T15:00:06Z', null, { kind: 'payment', amount_cents: 6500, method: 'card', paid_on: '2026-11-05' }),
+  ];
+  assert.deepEqual(words(apart).sort(), ['Paying by changed: Cash → Card', 'Payment recorded: $65 card, paid Nov 5']);
+  const otherTable = [apart[0], { ...apart[1], table_name: 'testing_private_payments', occurred_at: at('00') }];
+  assert.equal(words(otherTable).length, 2);
+  const otherAction = [apart[0], { ...apart[1], action: 'edit_payment', occurred_at: at('00') }];
+  assert.equal(words(otherAction).length, 2);
+  // The way to pay must match (the 500-row limit can cut one save's payment row): Paying by Cash →
+  // Card whose card payment is cut off, then Undo, then Mark paid by cash within 5 seconds — the
+  // orphaned change must not take the cash payment of the later save.
+  const orphan = [
+    row('testing_registrations', 'update', 'mark_paid', at('04'), { version: 4 }, { version: 5 }), // same way: only the version moved
+    row('testing_payments', 'insert', 'mark_paid', at('04'), null, { kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-11-05' }),
+    row('testing_registrations', 'update', 'mark_paid', at('00'), { paying_by: 'cash' }, { paying_by: 'card' }),
+  ];
+  assert.deepEqual(words(orphan).sort(), ['Paying by changed: Cash → Card', 'Payment recorded: $65 cash, paid Nov 5']);
+  // Undo payment joins its reversal (the old way, before) and Edit payment its new payment (after)
+  const undoEv = [
+    row('testing_registrations', 'update', 'undo_payment', at('10'), { paying_by: 'card' }, { paying_by: 'cash' }),
+    row('testing_payments', 'insert', 'undo_payment', at('10'), null, { kind: 'reversal', amount_cents: -6500, method: 'card', paid_on: '2026-11-05' }),
+  ];
+  assert.deepEqual(words(undoEv), ['Payment undone: $65; Paying by changed: Card → Cash']);
 });
 
 check('history: a moved private testing starts at the move, which names the event (v0.418 Q4, P3)', () => {
