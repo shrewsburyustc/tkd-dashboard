@@ -7,7 +7,8 @@
 // The second build step added its groups at the end (the marked place): the time list's choices
 // (M8, src/lib/times.js), the history line's words and dates (M7, src/lib/historyDates.js) and the
 // QR helper (M5, src/lib/qr.js) — the QR picture is compared with the four sections' own copies, to
-// prove it is the same QR code as today.
+// prove it is the same QR code as today. Then the one offline bar (M12, rulebook v1.123): its store
+// (src/lib/connection.js) and its words.
 import assert from 'node:assert/strict';
 import { formatMoney, formatMoneyWithCents } from '../money.js';
 import { formatCents } from '../blackBelt/money.js';
@@ -17,6 +18,7 @@ import * as STAFF from '../../screens/staff/text.js';
 import * as SETTINGS from '../../screens/settings/text.js';
 import * as LIVE_NEW from '../useLiveLoad.js';
 import * as LIVE_OLD from '../../screens/testing/events/useLiveLoad.js';
+import * as CONNECTION from '../connection.js';
 import * as TIMES from '../times.js';
 import * as QR from '../qr.js';
 import * as HISTORY from '../historyDates.js';
@@ -371,6 +373,24 @@ await check('M5 words: with two schools, Download\'s name starts with its own wo
   assert.equal(SHARED.downloadSchoolQr('Worcester'), 'Download QR code, Worcester');
   assert.equal(SHARED.downloadSchoolQr('Shrewsbury'), 'Download QR code, Shrewsbury');
   assert.ok(SHARED.downloadSchoolQr('Worcester').startsWith(SHARED.DOWNLOAD_QR));
+});
+
+// ======================= M12 — the one offline bar (lib/connection.js; rulebook v1.123) =======================
+// Each screen's live reload reports whether its reloads are failing, and the bar shows while any
+// is. (Node has no browser, so only those reports count here; check-offline.mjs drives a real one.)
+await check('M12 store: trouble while any screen reports failing reloads; each screen clears only its own; clearing twice is harmless', () => {
+  assert.equal(CONNECTION.hasConnectionTrouble(), false);
+  CONNECTION.reportRefreshFailing('screen-a', true);
+  CONNECTION.reportRefreshFailing('screen-b', true);
+  assert.equal(CONNECTION.hasConnectionTrouble(), true);
+  CONNECTION.reportRefreshFailing('screen-a', false);
+  assert.equal(CONNECTION.hasConnectionTrouble(), true, 'screen-b is still failing');
+  CONNECTION.reportRefreshFailing('screen-b', false);
+  CONNECTION.reportRefreshFailing('screen-b', false);
+  assert.equal(CONNECTION.hasConnectionTrouble(), false);
+});
+await check('M12 words: the offline bar says the approved words (v1.005, v1.123; picture 05b)', () => {
+  assert.equal(SHARED.OFFLINE_BAR, 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.');
 });
 
 console.log(`${count} groups of checks ran.`);

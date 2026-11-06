@@ -129,6 +129,9 @@
   background: var(--color-warning-bg);
   color: var(--color-warning-text);
   font-size: var(--text-13);
+  /* Windows high contrast (forced colors) drops the background; this otherwise invisible outline
+     then draws the bar's edge (design review M12). */
+  outline: 1px solid transparent;
 }
 
 .errbar-icon {
