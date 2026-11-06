@@ -212,11 +212,10 @@ export const NOT_ALLOWED = 'Only an admin can do that.'; // NOT IN MOCKUPS — f
 export const LOAD_FAILED = 'Couldn’t load the daily report. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_HISTORY_FAILED = 'Couldn’t load History. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_SETTINGS_FAILED = 'Couldn’t load the settings. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
-export const RETRY = 'Retry';
-export const DISMISS = 'Dismiss';
-export const BACK = 'Back';
-export const CLOSE = 'Close';
-export const CANCEL = 'Cancel';
+// Retry, Dismiss, Back, Close and Cancel are the shared parts' words (src/components/text.js), typed
+// once there so Finance's can't drift from every other section's (design review F6; Jeffrey,
+// 2026-11-05: "Yes, shared words").
+export { RETRY, DISMISS, BACK, CLOSE, CANCEL } from '../../components/text.js';
 
 // ----- Payments list (D1, D4, #q12) -----
 export const COL_TIME = 'Time';
