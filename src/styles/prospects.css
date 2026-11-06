@@ -1587,13 +1587,15 @@ body.is-card-dragging * {
 }
 
 /* =============================================================================================
-   The printed visitor sheet (PrintSheet.jsx; rulebook v0.636, v0.641, mockup rev 3 screen 4)
-   One US Letter sheet per child (one page, except for a very long form), black on white, weight
-   500 at most, the mockup's sizes (its paper is drawn at 96px per inch, so px here are the same
-   size on paper). The sheet's own rules are outside the print rules on purpose: PrintSheet
-   measures the pages on screen (invisibly) with exactly the look they print with. A sheet too long
-   for one page (v0.641) prints its answers one line each (.is-compact), then the part above the
-   signature (.pps-top) up to 10% smaller (--pps-zoom, print rules below).
+   The printed visitor sheet (PrintSheet.jsx; rulebook v0.636, v0.641, v0.643; mockup rev 3
+   screen 4). One US Letter sheet per child (one page, except for a very long form), black on
+   white, the mockup's sizes (its paper is drawn at 96px per inch, so px here are the same size on
+   paper). Since v0.643 the titles, the form's name and the child's name are weight 600 (printed
+   sheets may be heavier than the screen, v1.048 (23)), the rest 500 at most. The sheet's own rules
+   are outside the print rules on purpose: PrintSheet measures the pages on screen (invisibly)
+   with exactly the look they print with. A sheet too long for one page (v0.641) prints its answers
+   one line each (.is-compact), then the part above the signature (.pps-top) up to 10% smaller
+   (--pps-zoom, print rules below).
    ============================================================================================= */
 
 /* Never on screen — except while its pages are measured: laid out at the paper's width (7.5in
@@ -1627,12 +1629,13 @@ body.is-card-dragging * {
   margin: 0;
 }
 
-/* The school, "Visitor information", "Printed … by …" */
+/* The school, "Visitor information", "Printed … by …" (v0.643: the printed line small, the two
+   titles a little stronger, so the eye goes to the family's details below) */
 .pps-head {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 2px solid #000;
 }
 
@@ -1647,51 +1650,85 @@ body.is-card-dragging * {
 }
 
 .pps-school {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 21px;
+  font-weight: 600;
 }
 
 .pps-title {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
 }
 
-.pps-sub {
-  font-size: 13px;
+.pps-head-left .pps-sub {
+  font-size: 14px;
 }
 
-/* The form they filled out, in a box */
+/* "Printed … by …": small on purpose (v0.643) — on paper an exception to §7's 12px minimum */
+.pps-head-right .pps-sub {
+  font-size: 11px;
+  color: #333;
+}
+
+/* The form they filled out and when it was sent, on one line (v0.643: no box around it) */
 .pps-form {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
-  padding: 6px 12px;
-  border: 1.5px solid #000;
-  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #333;
 }
 
 .pps-form b {
-  font-size: 16px;
-  font-weight: 500;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-/* A part's title with a rule under it */
+/* A part's title with a rule under it (v0.643: bigger, so each part is easy to find; the rule
+   stays 1px, as it prints) */
 .pps-sec {
-  margin-top: 10px;
-  padding-bottom: 2px;
+  margin-top: 14px;
+  padding-bottom: 3px;
   border-bottom: 1px solid #000;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-/* Filled-in lines: 6 columns, each line spans some of them */
+/* Student and Parent or guardian side by side, each in its own box (v0.643, picture
+   docs/Prospects/PrintTop-B-whole-page.png); the box's title sits inside it, with its rule.
+   (.pps-person, not the 15 staff boxes further down: those are .pps-boxes.) */
+.pps-people {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 14px;
+}
+
+/* the two boxes are as tall as each other; the shorter one spreads its rows (as in the picture) */
+.pps-person {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #000;
+  border-radius: 6px;
+}
+
+.pps-person .pps-grid {
+  flex: 1;
+}
+
+.pps-person .pps-sec {
+  margin-top: 0;
+  padding: 6px 10px 4px;
+}
+
+/* A box's details: 6 columns, each detail spans some of them */
 .pps-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 4px 14px;
-  margin-top: 4px;
+  gap: 9px 18px;
+  padding: 8px 10px 10px;
 }
 
 .pps-f {
@@ -1699,18 +1736,20 @@ body.is-card-dragging * {
   min-width: 0;
 }
 
-.pps-f--1 {
-  grid-column: span 1;
-}
-
 .pps-f--3 {
   grid-column: span 3;
+}
+
+.pps-f--4 {
+  grid-column: span 4;
 }
 
 .pps-f--6 {
   grid-column: span 6;
 }
 
+/* A filled-in line with its small label under it: the signature row's date (and, inside a box,
+   the details' look below) */
 .pps-v {
   min-height: 21px;
   padding: 0 2px 1px;
@@ -1721,6 +1760,38 @@ body.is-card-dragging * {
 
 .pps-k {
   font-size: 12px;
+}
+
+/* In a box: a small label above each value, and no writing line under a value the family already
+   gave (v0.643). The labels are capitals at 10.5px — on paper two exceptions to §7, recorded in
+   v0.643: under its 12px minimum (capitals that size stand taller than 12px small letters) and
+   not in sentence case. */
+.pps-person .pps-k {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #333;
+}
+
+.pps-person .pps-v {
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* a detail the family left blank (e.g. an optional Home address) keeps a line to write on, as a
+   blank answer does below */
+.pps-person .pps-v:empty {
+  min-height: 20px;
+  border-bottom: 1px solid #999;
+}
+
+/* the child's name: the biggest words in the boxes */
+.pps-person .pps-f--big .pps-v {
+  font-size: 19px;
+  font-weight: 600;
 }
 
 /* Every answer: the question over its answer, two columns; a long one takes the row */

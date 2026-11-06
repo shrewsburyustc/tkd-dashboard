@@ -283,8 +283,9 @@ group('a long visitor sheet keeps the signature on its first page: one-line answ
   assert.deepEqual(planSheet(sheet(900, 860)), { kind: 'whole', compact: false, zoom: 1 });
   // fits with the answers one line each
   assert.deepEqual(planSheet(sheet(1111, 960)), { kind: 'whole', compact: true, zoom: 1 });
-  // Shrewsbury's Visitor Information form (12 answers, 981 px one line each): the part above the
-  // signature at 97.8% — (967 − 335) / 646 — and the signature and the boxes at their own size
+  // a sheet 981 px tall with its answers one line each (Shrewsbury's Visitor Information measured
+  // that before v0.643's two boxes; it now fits as it is): the part above the signature at 97.8% —
+  // (967 − 335) / 646 — and the signature and the boxes at their own size
   assert.deepEqual(planSheet(sheet(1111, 981)), { kind: 'whole', compact: true, zoom: 0.978 });
   // never more than 10% smaller: a 702 px top fits at 0.9, a 703 px top doesn't
   assert.deepEqual(planSheet(sheet(1300, 335 + 702)), { kind: 'whole', compact: true, zoom: 0.9 });
