@@ -236,7 +236,7 @@ export const STALE_DIALOG_PHONE = 'Someone else changed this. Go back and open i
 export const NOT_ALLOWED = "Only admins can change the calendar. Your access may have changed.";
 export const INVALID_DIALOG = "Some values weren't accepted. Check them and try again.";
 export const SAVE_FAILED = "Couldn't save. Check the connection and try again.";
-export const DELETE_FAILED = "Couldn't delete. Check the connection and try again.";
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again."; // the dashboard's words (pass 2 U-08)
 
 // ----- Toasts and banners -----
 export const TOAST_EVENT_ADDED = 'Event added';

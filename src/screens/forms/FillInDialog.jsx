@@ -52,10 +52,16 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
     return () => window.cancelAnimationFrame(id);
   }, [state.step, problemKey, state.sent]);
 
+  // The Sent screen and the steps are two different boxes, each with its own key: without the keys
+  // React would keep the one box open and only swap what is inside, so the Send button (which had
+  // the focus) would vanish and focus would fall to the page, where Esc and Tab do nothing (WCAG
+  // 2.4.3; found by Camps' review, pass 1 step 1b). With them, the Sent box opens fresh and the
+  // shared Dialog puts the focus on its Close (data-autofocus); "Fill in another" opens the steps
+  // fresh and the effect above focuses the first field. (Black Belt's CyclePage does the same.)
   if (state.sent) {
     const childName = (i) => v.children[i]?.first_name || T.CHILD(i + 1);
     return (
-      <Dialog title={T.SENT_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onCancel}>
+      <Dialog key="sent" title={T.SENT_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onCancel}>
         <div className="fsent">
           {/* The same tick as the family page's thank-you screen (ThankYou.jsx), design review N14 */}
           <div className="fsent-icon" aria-hidden="true">
@@ -137,7 +143,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
     </div>
   );
   return (
-    <Dialog title={title} size="medium" fullScreen={isPhone} onRequestClose={onRequestClose}>
+    <Dialog key="steps" title={title} size="medium" fullScreen={isPhone} onRequestClose={onRequestClose}>
       <p className="tdialog-sub">{preview ? (state.form.status === 'draft' || state.draftPreview ? T.PREVIEW_DRAFT_NOTE : T.PREVIEW_NOTE) : T.ENTERED_BY}</p>
       <div className="fprogress" aria-hidden="true">
         {steps.map((s, i) => (
