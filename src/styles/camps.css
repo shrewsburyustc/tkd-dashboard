@@ -772,6 +772,33 @@
   cursor: pointer;
 }
 
+/* "Paid $315 ⚠ $23 overpaid" (rulebook v0.745, copied from Star's .st-paytag / .st-overpaid in
+   star.css): the green tag names what was paid; the overpaid part follows in amber with the
+   triangle, under the tag when the Paid column is narrow. */
+.cp-paytag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.cp-overpaid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* A phone card's tag sits at the right of the name: there the amber part always goes under the
+   tag, both lined up on the right, and the name (not the tag) gives up room on a narrow screen. */
+.cp-rcard-top .cp-paytag {
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
 /* One day of one child: came (user-check icon + time) · Check in · didn't come (user-x icon) · — */
 .cp-dc {
   position: relative;

@@ -18,7 +18,8 @@ export const TEMPLATE_COLUMNS = 'id, name, location_code, both_schools, day_coun
 // Paying by still matches it, "at the desk" once staff changed it (rulebook v0.735).
 // refunded_cents (migration 0039, CONTRACT-0039): the camper's refunds that stand, as a plus number
 // (0 = none) — the ⋯ shows Undo refund and grays Edit payment / Undo payment while it is above 0
-// (rulebook v0.743 (4)). The view only has it once 0039 is pasted, which comes before this app.
+// (rulebook v0.743 (4)), and the roster's Paid tag then names the amount, "Paid $292" (v0.745).
+// The view only has it once 0039 is pasted, which comes before this app.
 export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form, refunded_cents';
 
 // ----- Converting database rows to the §5.1 shapes -----

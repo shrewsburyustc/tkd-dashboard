@@ -646,6 +646,17 @@ export function refundMenuItems(row) {
   return items;
 }
 
+// The roster's Paid tag for a camper who owes nothing (rulebook v0.745 — copied from Star's Payment
+// column, v0.152 / v0.166, CandidateRows.jsx): while they paid more than the total, or while a
+// refund stands, the tag names what they paid ("Paid $315" / "Paid $292"), and while it is too much
+// an amber "⚠ $23 overpaid" follows. Otherwise the plain "Paid".
+// → { paidCents: what to name, or null for the plain "Paid"; overpaidCents: 0 = no amber part }
+export function paidTagParts(row) {
+  const over = overpaidCents(row);
+  const named = over > 0 || refundStands(row);
+  return { paidCents: named ? (Number.isInteger(row?.paidCents) ? row.paidCents : 0) : null, overpaidCents: over };
+}
+
 // The refund Undo refund reverses: the NEWEST refund row that stands (no reversal points at it),
 // from Camper detail's payments (camelCase: id, kind, reversesPaymentId, recordedAt). null = none.
 export function newestStandingRefund(payments) {

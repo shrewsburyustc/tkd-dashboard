@@ -3,7 +3,9 @@
 // Why it exists: the door, the money and the week on one screen. One row per child:
 //   Camper (A–Z; click → Camper detail; a small amber note under the name only for TODAY, when the
 //          child misses an extra offered only on some days: "No pizza") ·
-//   Paid   (Paid green · "$219 due" gray · "Owes $15" amber — tapping one that isn't Paid opens
+//   Paid   (Paid green — "Paid $315 ⚠ $23 overpaid" while a camper paid too much and "Paid $292"
+//          once a refund stands, as Star's (rulebook v0.745) — · "$219 due" gray · "Owes $15"
+//          amber — tapping one that isn't Paid opens
 //          the shared Mark paid box (components/MarkPaidBox.jsx; design review C2, rulebook
 //          v0.735): the name and the amount, Paid by Cash / Check / Card preset to Paying by with
 //          the hint "They chose Cash on the form." (or "… at the desk." once staff changed it),
@@ -71,7 +73,7 @@ import CountCards from '../../components/CountCards.jsx';
 import MarkPaidBox from '../../components/MarkPaidBox.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import {
-  campCardCounts, dayExtraCounts, dayExtrasFor, everyDayExtras, extraDayWord, extraShortName, matchesCardFilter, missingExtraOnDay, payTag, payingByChoiceWhere,
+  campCardCounts, dayExtraCounts, dayExtrasFor, everyDayExtras, extraDayWord, extraShortName, matchesCardFilter, missingExtraOnDay, paidTagParts, payTag, payingByChoiceWhere,
 } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { formatMoney } from '../../lib/money.js';
@@ -87,11 +89,30 @@ export const byFirstName = (a, b) =>
 // busy: another save is running — the tag is grayed (aria-disabled, still focusable) and doesn't
 // open the box, the way the roster's day buttons wait (and the old box's gray Mark paid did).
 // data-pay-tag lets the page put focus back on it after Mark paid when the camper still owes.
-export function CamperTag({ row, onReview, onPay, busy = false }) {
+// amounts: the roster's own Paid cell (PC / tablet column and phone card), where a camper who paid
+// too much reads "Paid $315 ⚠ $23 overpaid" and one with a refund "Paid $292" (rulebook v0.745,
+// copied from Star's CandidateRows.jsx). Camper detail leaves it off: its Payments part has its own
+// amber "Paid $23 more than the total" line (v0.743), so its Status tag stays "Paid".
+export function CamperTag({ row, onReview, onPay, busy = false, amounts = false }) {
   if (row.status !== 'active') return <span className="ttag">{row.withdrawnReason === 'duplicate_copy' ? T.TAG_DUPLICATE_COPY : T.TAG_REMOVED}</span>;
   const tag = payTag(row);
   const name = T.camperLabel(row);
-  if (tag === 'paid') return <span className="ttag ttag--ok">{T.TAG_PAID}</span>;
+  if (tag === 'paid') {
+    const parts = amounts ? paidTagParts(row) : null;
+    if (!parts || parts.paidCents === null) return <span className="ttag ttag--ok">{T.TAG_PAID}</span>;
+    return (
+      <span className="cp-paytag">
+        <span className="ttag ttag--ok">{T.paidAmount(parts.paidCents)}</span>
+        {parts.overpaidCents > 0 && (
+          <span className="cp-overpaid">
+            {/* ti-alert-triangle = needs attention (Star's overpaid mark) */}
+            <IconAlertTriangle size={12} aria-hidden="true" />
+            {T.overpaidText(parts.overpaidCents)}
+          </span>
+        )}
+      </span>
+    );
+  }
   if (tag === 'duplicate') {
     if (!onReview) return <span className="ttag ttag--warn">{T.TAG_POSSIBLE_DUPLICATE}</span>;
     return (
@@ -520,7 +541,7 @@ export default function CampRoster({
                   )}
                 </span>
                 {/* Hidden: no money tag; a possible duplicate keeps its tag here (picture 01). */}
-                {detailsHidden ? duplicateTag(row) : <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} />}
+                {detailsHidden ? duplicateTag(row) : <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} amounts />}
               </div>
               {note && <span className="cp-rnote">{note}</span>}
               <div className="cp-rdays">{shownDays.map((d) => cell(row, d, true))}</div>
@@ -583,7 +604,7 @@ export default function CampRoster({
                   </th>
                   {!detailsHidden && (
                     <td className="cp-rcol-paid">
-                      <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} />
+                      <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} amounts />
                     </td>
                   )}
                   {shownDays.map((d) => (

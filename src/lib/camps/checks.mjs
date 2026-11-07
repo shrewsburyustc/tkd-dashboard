@@ -21,6 +21,7 @@ import {
   getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
   overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
+  paidTagParts,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
@@ -2330,6 +2331,31 @@ check('Record refund: campRules helpers (overpaid, a refund that stands, the ⋯
   assert.deepEqual(parseRefundAmount('9'.repeat(20)), { problem: 'tooBig' }); // always more than what was overpaid
 });
 
+check('the roster\'s Paid tag names the amount once overpaid or refunded (v0.745, copied from Star)', () => {
+  // Paid more than the total: "Paid $315" and the amber "⚠ $23 overpaid".
+  assert.deepEqual(paidTagParts({ paidCents: 31500, owesCents: -2300, refundedCents: 0 }), { paidCents: 31500, overpaidCents: 2300 });
+  // A refund handed all of it back: "Paid $292" alone (Star's v0.166: "the row then reads "Paid $140"").
+  assert.deepEqual(paidTagParts({ paidCents: 29200, owesCents: 0, refundedCents: 2300 }), { paidCents: 29200, overpaidCents: 0 });
+  // Part handed back, part still over: "Paid $305" and "⚠ $13 overpaid".
+  assert.deepEqual(paidTagParts({ paidCents: 30500, owesCents: -1300, refundedCents: 1000 }), { paidCents: 30500, overpaidCents: 1300 });
+  // Paid exactly, no refund — or nothing to pay — the plain "Paid".
+  assert.deepEqual(paidTagParts({ paidCents: 31500, owesCents: 0, refundedCents: 0 }), { paidCents: null, overpaidCents: 0 });
+  assert.deepEqual(paidTagParts({ paidCents: 0, owesCents: 0 }), { paidCents: null, overpaidCents: 0 });
+  // A database from before 0039 sends no refunded_cents: only "overpaid" names the amount.
+  assert.deepEqual(paidTagParts({ paidCents: 31500, owesCents: -2300 }), { paidCents: 31500, overpaidCents: 2300 });
+  assert.deepEqual(paidTagParts({ paidCents: 31500, owesCents: 0 }), { paidCents: null, overpaidCents: 0 });
+  assert.deepEqual(paidTagParts(null), { paidCents: null, overpaidCents: 0 });
+  // Star's words (the triangle is an icon, not text).
+  assert.equal(CampText.paidAmount(31500), 'Paid $315');
+  assert.equal(CampText.paidAmount(102350), 'Paid $1,023.50');
+  assert.equal(CampText.overpaidText(2300), '$23 overpaid');
+});
+
+check('Fill in closed by Hide private details: the camp page\'s words (v0.746)', () => {
+  // (not in the mockups) One amber bar, naming nobody, for a Send that didn't save after the box closed.
+  assert.equal(CampText.FILL_IN_CLOSED_NOT_SAVED, "A Fill in sign-up may not have been saved. If the family isn't on the roster, fill it in again.");
+});
+
 check('Record refund: the words (v0.743 — Star\'s box, Camps\' words)', () => {
   const T = CampText;
   assert.equal(T.RECORD_REFUND, 'Record refund');
@@ -2341,9 +2367,9 @@ check('Record refund: the words (v0.743 — Star\'s box, Camps\' words)', () => 
   assert.equal(T.refundSub('Chloe Martin', 31500, 2300), 'Chloe Martin · paid $315 · $23 overpaid');
   assert.equal(T.refundUpTo(2300), 'Up to $23, the amount overpaid.');
   assert.equal(T.refundDateHint('2027-03-04'), 'Not before Mar 4 (signed up) or after today.');
-  assert.equal(T.refundAfter(31500), 'The $315 payment stays in the history. Afterwards the row reads “Paid”.');
-  assert.equal(T.refundAfter(31500, 1), 'The $315 payment stays in the history. Afterwards the row reads “Paid”.');
-  assert.equal(T.refundAfter(31500, 2), 'The 2 payments ($315) stay in the history. Afterwards the row reads “Paid”.');
+  // Since v0.745 (Star's words) it names what the row then reads: paid minus everything overpaid.
+  assert.equal(T.refundAfter(31500, 1, 29200), 'The $315 payment stays in the history. Afterwards the row reads “Paid $292”.');
+  assert.equal(T.refundAfter(31500, 2, 29200), 'The 2 payments ($315) stay in the history. Afterwards the row reads “Paid $292”.');
   assert.equal(T.refundTooLarge(2300), 'Can’t be more than the $23 overpaid.');
   // The box's words for what picture 22 didn't draw (review L4 / L5).
   assert.equal(T.REFUND_AMOUNT_ZERO, 'Enter an amount more than $0.');
@@ -2460,6 +2486,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   c = chloe();
   assert.equal(overpaidCents(c), 2300);
   assert.deepEqual(refundMenuItems(c), ['record']);
+  assert.deepEqual(paidTagParts(c), { paidCents: 31500, overpaidCents: 2300 }); // the roster: "Paid $315 ⚠ $23 overpaid" (v0.745)
 
   // The contract's refusals, in its order: staff first; then the inputs; then the camper.
   assert.equal(rpcOk(b, 'camp_record_refund', args(), STAFF).status, 'not_allowed');
@@ -2491,6 +2518,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(c.paidOn, '2027-03-11'); // a refund never becomes "the last payment"
   assert.equal(c.paidMethod, 'check');
   assert.deepEqual(refundMenuItems(c), ['undo']); // all of it handed back: only Undo refund
+  assert.deepEqual(paidTagParts(c), { paidCents: 29200, overpaidCents: 0 }); // the roster: "Paid $292" (v0.745)
   // Camper detail (staff too): every row, the refund with its kind, school and date; its line.
   const d1 = detailOf(c.id, STAFF);
   assert.equal(d1.camper.refundedCents, 2300);
@@ -2569,6 +2597,10 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   // A part handed back, some still over: both items (v0.744, picture 22y A) — and the rest goes back
   // as a SECOND refund, never more than what is still overpaid.
   assert.deepEqual(refundMenuItems(liam2), ['record', 'undo']);
+  assert.deepEqual(paidTagParts(liam2), { paidCents: 27000, overpaidCents: 1000 }); // the roster: "Paid $270 ⚠ $10 overpaid" (v0.745)
+  // The second box, opened as CampPage opens it (the camper's paid amount; the cap = what is still
+  // overpaid), says what the row reads once the rest goes back.
+  assert.ok(CampText.refundAfter(27500, 1, liam2.paidCents - overpaidCents(liam2)).endsWith('Afterwards the row reads “Paid $260”.'));
   assert.equal(rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam2.id, expectedVersion: liam2.version, method: 'cash', amountCents: 1100, refundedOn: '2027-04-21', school: 'worcester' })).status, 'refund_too_large');
   const rest = rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam2.id, expectedVersion: liam2.version, method: 'cash', amountCents: 1000, refundedOn: '2027-04-21', school: 'worcester' }));
   assert.equal(rest.status, 'ok');
@@ -2576,6 +2608,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(liamBack.refundedCents, 1500);
   assert.equal(liamBack.owesCents, 0);
   assert.deepEqual(refundMenuItems(liamBack), ['undo']);
+  assert.deepEqual(paidTagParts(liamBack), { paidCents: 26000, overpaidCents: 0 }); // the roster: "Paid $260" (v0.745)
   assert.equal(rpcOk(b, 'camp_withdraw_camper', { p_camper_id: liamBack.id, p_expected_version: liamBack.version }).status, 'ok');
   assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: part.payment_id }).status, 'withdrawn');
   const liam3 = roster().find((r) => r.id === liam.id);
