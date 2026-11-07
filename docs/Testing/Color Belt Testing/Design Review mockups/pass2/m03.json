@@ -1,0 +1,232 @@
+{
+ "title": "Pass 2 · M-03 — Print receipt on a removed student or a cancelled private testing that has money",
+ "subtitle": "Rule v1.055 (b) (you approved A, “Print receipt whenever money still stands”): a removed student or a cancelled private testing with a payment that still stands gets Print receipt in its ⋯, first, in its own group above Restore (§8’s one order: money before taking someone off). Never with nothing paid (Leo Hart, withdrawn without paying, keeps today’s menu); never while Hide private details is on. The receipt itself is the one the active rows print, with that payment. Admin pictures below; the one open question (staff) is under them. <span style=\"color:#6B6B6B\">(Preview screenshots, fake data; the After column is drawn on top of the real page.)</span>",
+ "width": 2200,
+ "columns": [
+  {
+   "label": "Today (admin)",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "m03-pc-event-today.png",
+       "crop": [
+        740,
+        500,
+        540,
+        240
+       ],
+       "scale": 0.8,
+       "caption": "PC 1280: Owen Reed (withdrawn after paying $65): no Print receipt.",
+       "marks": [
+        [
+         1047,
+         598,
+         200,
+         83
+        ]
+       ]
+      },
+      {
+       "src": "m03-pc-private-today.png",
+       "crop": [
+        740,
+        370,
+        540,
+        240
+       ],
+       "scale": 0.8,
+       "caption": "PC 1280: Emma Ross (cancelled, $85 paid).",
+       "marks": [
+        [
+         1047,
+         458,
+         200,
+         83
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "m03-w820-event-today.png",
+       "shotWidth": 820,
+       "crop": [
+        380,
+        760,
+        440,
+        320
+       ],
+       "scale": 0.62,
+       "caption": "Tablet 820 (touch).",
+       "marks": [
+        [
+         587,
+         877,
+         200,
+         107
+        ]
+       ]
+      },
+      {
+       "src": "m03-w390-event-today.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        560,
+        390,
+        284
+       ],
+       "scale": 0.62,
+       "caption": "Phone 390.",
+       "marks": [
+        [
+         0,
+         694,
+         390,
+         150
+        ]
+       ]
+      },
+      {
+       "src": "m03-w320-event-today.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        330,
+        320,
+        310
+       ],
+       "scale": 0.7,
+       "caption": "320.",
+       "marks": [
+        [
+         0,
+         490,
+         320,
+         150
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After (admin)",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "m03-pc-event-admin.png",
+       "crop": [
+        740,
+        500,
+        540,
+        240
+       ],
+       "scale": 0.8,
+       "caption": "PC 1280: Print receipt · line · Restore · line · Delete permanently.",
+       "marks": [
+        [
+         1047,
+         598,
+         200,
+         124
+        ]
+       ]
+      },
+      {
+       "src": "m03-pc-private-admin.png",
+       "crop": [
+        740,
+        370,
+        540,
+        240
+       ],
+       "scale": 0.8,
+       "caption": "PC 1280: the same on the cancelled private testing.",
+       "marks": [
+        [
+         1047,
+         458,
+         200,
+         124
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "m03-w820-event-admin.png",
+       "shotWidth": 820,
+       "crop": [
+        380,
+        760,
+        440,
+        320
+       ],
+       "scale": 0.62,
+       "caption": "Tablet 820 (touch).",
+       "marks": [
+        [
+         587,
+         877,
+         200,
+         160
+        ]
+       ]
+      },
+      {
+       "src": "m03-w390-event-admin.png",
+       "shotWidth": 390,
+       "crop": [
+        0,
+        560,
+        390,
+        284
+       ],
+       "scale": 0.62,
+       "caption": "Phone 390.",
+       "marks": [
+        [
+         0,
+         641,
+         390,
+         203
+        ]
+       ]
+      },
+      {
+       "src": "m03-w320-event-admin.png",
+       "shotWidth": 320,
+       "crop": [
+        0,
+        330,
+        320,
+        310
+       ],
+       "scale": 0.7,
+       "caption": "320.",
+       "marks": [
+        [
+         0,
+         437,
+         320,
+         203
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<div style=\"margin:26px 0 8px\"><div style=\"display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px\">To decide</div><h2 style=\"font-size:20px;margin:0 0 6px\">Do staff get Print receipt on these rows too?</h2><p style=\"margin:0 0 14px;max-width:1700px\">On an active row with money, staff and admins both get Print receipt (CB2, v0.420). On a removed student or a cancelled private testing, staff see no ⋯ at all today, because Restore and Delete permanently are for admins. Rule v1.055 (b) says the receipt is offered whenever money still stands, but not to whom. Star and Camps will meet the same question when they add it (their staff also see no ⋯ on removed rows).</p><div style=\"display:flex;gap:24px;align-items:flex-start\"><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6\"><div style=\"font-weight:700;margin-bottom:10px\">A · Staff too: a ⋯ with only Print receipt <span style=\"background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px\">Recommended</span></div><figure style=\"width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:324px;height:144px\"><img src=\"m03-pc-event-staffA.png\" style=\"left:-444px;top:-300px;width:768px\"><div class=\"mark\" style=\"left:180.2px;top:54.8px;width:128px;height:33.2px;border-color:#1D4ED8\"></div></div><figcaption>PC 1280, staff: Owen Reed (removed, paid $65).</figcaption></figure><figure style=\"width:234px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:234px;height:170.4px\"><img src=\"m03-w390-event-staffA.png\" style=\"left:0px;top:-336px;width:234px\"><div class=\"mark\" style=\"left:-4px;top:108.2px;width:242px;height:66.19999999999999px;border-color:#1D4ED8\"></div></div><figcaption>Phone 390, staff.</figcaption></figure><figure style=\"width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:324px;height:144px\"><img src=\"m03-pc-private-staffA.png\" style=\"left:-444px;top:-222px;width:768px\"><div class=\"mark\" style=\"left:180.2px;top:48.8px;width:128px;height:33.2px;border-color:#1D4ED8\"></div></div><figcaption>PC 1280, staff: Emma Ross (cancelled, paid $85).</figcaption></figure><p style=\"margin:8px 0 0\"><b>What it does:</b> Staff get a ⋯ on a removed or cancelled row that has money, holding only Print receipt. Admins get Print receipt · line · Restore · line · Delete permanently. With nothing paid, staff still see no ⋯ there.</p><p style=\"margin:6px 0 0\"><b>+</b> The person at the desk when a parent asks for a receipt is usually staff, and the same staff can already print one for the same family while the row is active. The same rule everywhere: whoever can print a receipt for a payment can print it for that payment.</p><p style=\"margin:6px 0 0\"><b>−</b> Staff now see a ⋯ on some removed rows (the ones with money), so the Removed list looks a little busier for staff.</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">B · Admins only</div><figure style=\"width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:324px;height:144px\"><img src=\"m03-pc-event-staffB.png\" style=\"left:-444px;top:-300px;width:768px\"><div class=\"mark\" style=\"left:260px;top:104px;width:53.6px;height:32px;border-color:#1D4ED8\"></div></div><figcaption>PC 1280, staff: no ⋯ on Owen's row, as today.</figcaption></figure><figure style=\"width:234px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:234px;height:102px\"><img src=\"m03-w390-event-staffB.png\" style=\"left:0px;top:-198px;width:234px\"><div class=\"mark\" style=\"left:176px;top:21.2px;width:52.4px;height:32px;border-color:#1D4ED8\"></div></div><figcaption>Phone 390, staff: as today.</figcaption></figure><figure style=\"width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:324px;height:144px\"><img src=\"m03-pc-private-staffB.png\" style=\"left:-444px;top:-222px;width:768px\"><div class=\"mark\" style=\"left:260px;top:23px;width:53.6px;height:38px;border-color:#1D4ED8\"></div></div><figcaption>PC 1280, staff: no ⋯ on Emma's row, as today.</figcaption></figure><p style=\"margin:8px 0 0\"><b>What it does:</b> Only admins get Print receipt on removed or cancelled rows; staff see these rows as today.</p><p style=\"margin:6px 0 0\"><b>+</b> Nothing changes for staff; the Removed list stays as it is.</p><p style=\"margin:6px 0 0\"><b>−</b> A staff member at the desk has to find an admin to print a receipt for a withdrawn student's payment, though they could print it a day earlier while the student was active. Two rules for the same receipt.</p></div></div></div><p style=\"margin-top:18px\"><b>Answer: A or B.</b></p>"
+}

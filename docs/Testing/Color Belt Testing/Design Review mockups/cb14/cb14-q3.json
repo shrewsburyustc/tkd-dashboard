@@ -1,0 +1,64 @@
+{
+ "title": "CB14 sheet 3 · Question 3 of 4: how do the two schools show in Settings → Classes and ranks?",
+ "subtitle": "<b>Question 1 answered: B</b> — Settings stays admins only; staff read Color Belt’s Prices tab. Question 2 (the hints as links) is on sheet 2. This sheet is <b>Question 3 of 4</b>. <span style=\"color:#6B6B6B\">(Preview screenshots, fake data, signed in as an admin, top bar on Worcester. The options are drawn on top of the real Settings page with sheet 1’s Classes and ranks part; nothing in the app is built yet. Addresses are hidden.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "q3-pc-today.png",
+     "crop": [
+      56,
+      30,
+      1224,
+      620
+     ],
+     "scale": 0.62,
+     "caption": "<b>Testing → Color belt testing → Classes and ranks</b> (admin, PC): shows only the school chosen in the top bar (here Worcester); to see Shrewsbury’s classes you change the top bar.",
+     "marks": [
+      [
+       993,
+       34,
+       235,
+       32
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After (sheet 1): Settings → Classes and ranks",
+   "tone": "after",
+   "items": [
+    {
+     "src": "q3-pc-BWorcester.png",
+     "crop": [
+      56,
+      80,
+      720,
+      380
+     ],
+     "scale": 0.62,
+     "caption": "<b>Settings ignores the top bar</b>: Schools lists both schools; the new Classes and ranks part (here drawn as option B) must say which school it shows.",
+     "marks": [
+      [
+       76,
+       220,
+       672,
+       82
+      ],
+      [
+       76,
+       334,
+       672,
+       104
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<div style=\"margin:26px 0 8px\"><div style=\"display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px\">To decide</div><h2 style=\"font-size:20px;margin:0 0 6px\">Question 3 of 4 · How do the two schools show in Settings → Classes and ranks?</h2><p style=\"margin:0 0 14px;max-width:1700px\">Today the Classes and ranks tab shows only the school chosen in the top bar. <b>Settings ignores the top bar</b> (Dashboard core’s rule: “Settings keeps ignoring the location switcher, and names the school wherever the classes differ — the shared ChoiceGroup if it’s a switch”). So after the move the part must show the schools some other way. All three keep the same class list, drag order and edit buttons as today; only how you get from one school to the other changes. <span style=\"color:#6B6B6B\">(In the preview both schools have the same seven classes; the real lists can differ.)</span></p><div style=\"display:flex;gap:24px;align-items:flex-start\"><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">A · One school under the other</div><figure style=\"width:360px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:360px;height:660px\"><img src=\"q3-pc-A.png\" style=\"left:-28px;top:-40px;width:640px\"><div class=\"mark\" style=\"left:6px;top:161px;width:344px;height:24px;border-color:#1D4ED8\"></div><div class=\"mark\" style=\"left:6px;top:495px;width:344px;height:24px;border-color:#1D4ED8\"></div></div><figcaption>PC: a “Worcester” heading with its own Add class and its classes, then “Shrewsbury” the same way (Shrewsbury drawn with every class closed; open, it is longer still).</figcaption></figure><div><figure style=\"width:156px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:156px;height:680px\"><img src=\"q3-w390long-A.png\" style=\"left:0px;top:0px;width:156px\"></div><figcaption>Phone 390, the whole page (Shrewsbury closed).</figcaption></figure><figure style=\"width:195px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:195px;height:422px\"><img src=\"q3-w390-A.png\" style=\"left:0px;top:0px;width:195px\"></div><figcaption>Phone 390, first screen.</figcaption></figure><figure style=\"width:192px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:192px;height:384px\"><img src=\"q3-w320-A.png\" style=\"left:0px;top:0px;width:192px\"></div><figcaption>320.</figcaption></figure><figure style=\"width:311.6px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:311.6px;height:448.4px\"><img src=\"q3-w820-A.png\" style=\"left:0px;top:0px;width:311.6px\"></div><figcaption>Tablet 820.</figcaption></figure></div><p style=\"margin:8px 0 0\"><b>What it does:</b> Both schools’ classes are on the page at once, each under its school’s name, each with its own Add class and its own drag order.</p><p style=\"margin:6px 0 0\"><b>+</b> Everything visible at once; nothing to tap to compare the schools.</p><p style=\"margin:6px 0 0\"><b>−</b> A long page, longest on phones (14 class lines plus every open class’s ranks). Two “Add class” buttons on one page. A drag can only stay inside its own school, but two near-identical lists one under the other are easy to mix up while scrolling.</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6\"><div style=\"font-weight:700;margin-bottom:10px\">B · A school switch inside the part <span style=\"background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px\">Recommended</span></div><figure style=\"width:360px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:360px;height:660px\"><img src=\"q3-pc-BWorcester.png\" style=\"left:-28px;top:-40px;width:640px\"><div class=\"mark\" style=\"left:6px;top:158.5px;width:95.5px;height:24px;border-color:#1D4ED8\"></div></div><figcaption>PC: the shared ChoiceGroup “Worcester | Shrewsbury” at the top of the part; it starts on the top bar’s school. Only that school’s classes show.</figcaption></figure><figure style=\"width:360px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:360px;height:660px\"><img src=\"q3-pc-BShrewsbury.png\" style=\"left:-28px;top:-40px;width:640px\"><div class=\"mark\" style=\"left:6px;top:158.5px;width:95.5px;height:24px;border-color:#1D4ED8\"></div></div><figcaption>After one tap on Shrewsbury (the top bar stays on Worcester — Settings ignores it).</figcaption></figure><figure style=\"width:360px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:360px;height:100px\"><img src=\"q3-pc-Bempty.png\" style=\"left:-28px;top:-160px;width:640px\"><div class=\"mark\" style=\"left:130px;top:77px;width:97px;height:18px;border-color:#1D4ED8\"></div></div><figcaption>A school with no classes yet: “No classes yet at Shrewsbury.” (the empty line names the school).</figcaption></figure><div><figure style=\"width:156px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:156px;height:680px\"><img src=\"q3-w390long-BWorcester.png\" style=\"left:0px;top:0px;width:156px\"></div><figcaption>Phone 390, the whole page.</figcaption></figure><figure style=\"width:195px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:195px;height:422px\"><img src=\"q3-w390-BWorcester.png\" style=\"left:0px;top:0px;width:195px\"><div class=\"mark\" style=\"left:4px;top:77.5px;width:95.5px;height:26px;border-color:#1D4ED8\"></div></div><figcaption>Phone 390, first screen.</figcaption></figure><figure style=\"width:192px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:192px;height:384px\"><img src=\"q3-w320-BWorcester.png\" style=\"left:0px;top:0px;width:192px\"></div><figcaption>320.</figcaption></figure><figure style=\"width:311.6px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:311.6px;height:448.4px\"><img src=\"q3-w820-BWorcester.png\" style=\"left:0px;top:0px;width:311.6px\"></div><figcaption>Tablet 820.</figcaption></figure></div><p style=\"margin:8px 0 0\"><b>What it does:</b> A Worcester / Shrewsbury switch (the same joined buttons as Open / Closed and Cash / Check / Card) sits above the list, with Add class on its right. It opens on the school chosen in the top bar (Worcester if the top bar says Both). Add class adds to the school shown.</p><p style=\"margin:6px 0 0\"><b>+</b> Same look and length as today’s tab. The switch always names the school, so nobody edits the wrong school by mistake. One Add class. Uses the shared part Dashboard core’s rule names.</p><p style=\"margin:6px 0 0\"><b>−</b> One extra tap to see the other school; the two schools are never side by side.</p></div><div style=\"flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;\"><div style=\"font-weight:700;margin-bottom:10px\">C · Follow the top bar (as today)</div><figure style=\"width:360px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:360px;height:660px\"><img src=\"q3-pc-C.png\" style=\"left:-28px;top:-40px;width:640px\"><div class=\"mark\" style=\"left:6px;top:166px;width:344px;height:20px;border-color:#1D4ED8\"></div></div><figcaption>PC: no switch. The part says “Worcester’s classes — change school in the top bar”.</figcaption></figure><figure style=\"width:514.0799999999999px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:514.0799999999999px;height:176.4px\"><img src=\"q3-pc-C.png\" style=\"left:-23.52px;top:-12.6px;width:537.6px\"><div class=\"mark\" style=\"left:389.53999999999996px;top:-2.3200000000000003px;width:106.7px;height:21.439999999999998px;border-color:#1D4ED8\"></div></div><figcaption>The school comes from the top bar’s switch, far from the part.</figcaption></figure><div><figure style=\"width:195px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:195px;height:422px\"><img src=\"q3-w390-C.png\" style=\"left:0px;top:0px;width:195px\"></div><figcaption>Phone 390.</figcaption></figure><figure style=\"width:192px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:192px;height:384px\"><img src=\"q3-w320-C.png\" style=\"left:0px;top:0px;width:192px\"></div><figcaption>320.</figcaption></figure><figure style=\"width:311.6px;display:inline-block;vertical-align:top;margin:0 14px 10px 0\"><div class=\"shot\" style=\"width:311.6px;height:448.4px\"><img src=\"q3-w820-C.png\" style=\"left:0px;top:0px;width:311.6px\"></div><figcaption>Tablet 820.</figcaption></figure></div><p style=\"margin:8px 0 0\"><b>What it does:</b> Works like today’s tab: the part shows the school chosen in the top bar, and says so in its heading.</p><p style=\"margin:6px 0 0\"><b>+</b> No new control; exactly today’s behavior.</p><p style=\"margin:6px 0 0\"><b>−</b> Settings would be the only part of Settings that follows the top bar — it breaks the page’s rule. An admin who left the top bar on the other school could add or reorder classes at the wrong school without noticing. With “Both” in the top bar the part would still have to pick one school.</p></div></div></div><div style=\"margin:26px 0 0\"><h2 style=\"font-size:18px;margin:0 0 6px\">Still to come</h2><ol start=\"4\" style=\"margin:0;padding-left:22px;line-height:1.6\"><li><b>Question 4:</b> the Prices tab’s name (drawn as “Prices”).</li></ol></div><p style=\"margin-top:18px\"><b>Answer Question 3 (A, B or C).</b></p>"
+}

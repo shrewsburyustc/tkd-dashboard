@@ -1,9 +1,11 @@
 // StepCheck.jsx — step 2 of the family form: check the details, tick the confirmation, sign,
 // send (mockups F4–F6, F9, F10).
 // Why it exists: rulebook v0.102/v0.132 — a summary of step 1, the required confirmation tick
-// ("…Testing fees are not refundable."), a drawn signature, then Send registration. Messages
+// ("…Testing fees are not refundable."), a drawn signature with its "Date signed" under it (v0.638),
+// then Send registration. Messages
 // after a failed Send appear at the top (F9 / F10 and the spam-check / too-many-tries wording),
 // and nothing the family entered is lost.
+import DateSigned from '../components/DateSigned.jsx';
 import SignaturePad from './SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from './parts.jsx';
 import { TestingFor } from './StepDetails.jsx';
@@ -24,6 +26,7 @@ export default function StepCheck({
   cls,
   rank,
   form,
+  today, // the school's day, 'YYYY-MM-DD': the "Date signed" under the signature (v0.638, v0.430)
   onTestingDay,
   ack,
   setAck,
@@ -118,6 +121,11 @@ export default function StepCheck({
                 {T.SIGNATURE_HINT}
               </div>
             </div>
+
+            {/* Date signed (rule v0.638, v0.430): the day the form is sent, gray, can't be changed. It
+                isn't one of the family's answers: the database saves the same day with the signature
+                (signed_at). The shared part, New students' look. */}
+            <DateSigned id="reg-signed" day={today} />
           </div>
 
           {/* Turnstile puts its "Verify you are human" box here, only when Cloudflare asks (F6).

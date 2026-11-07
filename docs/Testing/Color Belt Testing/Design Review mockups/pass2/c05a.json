@@ -1,0 +1,32 @@
+{
+  "title": "Pass 2 · C-05 (a) — A new event with nobody on it shows no zero cards",
+  "subtitle": "Rule v1.028 (§8 Empty states: an empty list shows one line), and the same as your own Private testing tab, Star and Camps: the four cards (Students · Paid · Not paid · Payments recorded) are drawn only once the event has a registration, active or removed. With nobody, the page goes straight to the class switch and the empty line. As soon as one student is added, the cards show as today. Screenshots: a new event made in preview mode; the After column is drawn on top of the real page.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "c05a-pc-today.png", "crop": [56, 90, 1224, 420], "scale": 0.62, "caption": "PC 1280: four cards, all zero.", "marks": [[76, 240, 1180, 72]] },
+        { "row": [
+          { "src": "c05a-w820-today.png", "shotWidth": 820, "crop": [72, 100, 748, 560], "scale": 0.5, "caption": "Tablet 820 (touch).", "marks": [[96, 279, 700, 72]] },
+          { "src": "c05a-w390-today.png", "shotWidth": 390, "crop": [0, 100, 390, 640], "scale": 0.6, "caption": "Phone 390.", "marks": [[16, 319, 358, 152]] },
+          { "src": "c05a-w320-today.png", "shotWidth": 320, "crop": [0, 100, 320, 540], "scale": 0.7, "caption": "320.", "marks": [[16, 333, 288, 188]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "c05a-pc-after.png", "crop": [56, 90, 1224, 420], "scale": 0.62, "caption": "PC 1280: no cards; the class switch and the empty line move up.", "marks": [[76, 238, 1180, 36]] },
+        { "row": [
+          { "src": "c05a-w820-after.png", "shotWidth": 820, "crop": [72, 100, 748, 560], "scale": 0.5, "caption": "Tablet 820 (touch).", "marks": [[96, 277, 700, 40]] },
+          { "src": "c05a-w390-after.png", "shotWidth": 390, "crop": [0, 100, 390, 640], "scale": 0.6, "caption": "Phone 390.", "marks": [[16, 333, 358, 94]] },
+          { "src": "c05a-w320-after.png", "shotWidth": 320, "crop": [0, 100, 320, 540], "scale": 0.7, "caption": "320.", "marks": [[16, 333, 288, 100]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "Nothing changes for an event that has students (removed ones count too, so “includes $65 from removed students” still shows). The empty line itself (“No students in this class yet.”) stays as today."
+}
