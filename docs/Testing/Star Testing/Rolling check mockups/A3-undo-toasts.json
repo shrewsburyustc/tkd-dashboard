@@ -1,0 +1,219 @@
+{
+ "width": 1920,
+ "title": "Star · R2-08 (1 of 2) — 5-second Undo on “Private testing set”",
+ "subtitle": "The toast gets the same Undo button as Star’s other Undo toasts (e.g. “Alex Kim moved back to the testing day · fee $140 · Undo”, bottom of the Today column): text · thin divider · ↶ Undo. Undo puts the old private day and time back, or clears a newly set one, then the toast says “Undone”. The Set / Change private testing dialog has already closed when the toast shows, so Undo can be reached by mouse and keyboard like any other toast. The make-up toast is a separate choice: picture A3b. Both toast texts (“Private testing set”, “Drew Park added”) are still marked PROPOSAL in the code: these pictures are the first time they are shown for approval, and an OK here removes the PROPOSAL tags.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/A3p-today-pc.png",
+     "crop": [
+      76,
+      380,
+      1194,
+      410
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC 1280×800.</b> Alex Kim set to Sat, Nov 14, 4:00 PM. No Undo.",
+     "marks": [
+      [
+       1130,
+       741,
+       126,
+       35
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A3p-today-tab.png",
+       "crop": [
+        300,
+        860,
+        510,
+        310
+       ],
+       "scale": 0.68,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         670,
+         1121,
+         126,
+         36
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/A3p-today-ph.png",
+       "crop": [
+        0,
+        370,
+        390,
+        474
+       ],
+       "scale": 0.7,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         132,
+         741,
+         126,
+         36
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/A3p-today-p320.png",
+       "crop": [
+        0,
+        300,
+        320,
+        400
+       ],
+       "scale": 0.7,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         97,
+         597,
+         126,
+         36
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A3-model-pc.png",
+       "crop": [
+        560,
+        580,
+        710,
+        210
+       ],
+       "scale": 0.7,
+       "caption": "<b>For comparison, PC:</b> Star’s existing Undo toast after Back to the testing day — the After copies this button exactly (the app’s own markup).",
+       "marks": [],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/A3-model-ph.png",
+       "crop": [
+        0,
+        560,
+        390,
+        284
+       ],
+       "scale": 0.85,
+       "caption": "<b>For comparison, phone.</b>",
+       "marks": [],
+       "shotWidth": 390
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/A3p-after-pc.png",
+     "crop": [
+      76,
+      380,
+      1194,
+      410
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC 1280×800.</b> “Private testing set · ↶ Undo”: Undo puts Alex back on the testing day (he had no private testing before).",
+     "marks": [
+      [
+       1061,
+       736,
+       195,
+       40
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A3p-after-tab.png",
+       "crop": [
+        300,
+        860,
+        510,
+        310
+       ],
+       "scale": 0.68,
+       "caption": "<b>Tablet, touch.</b> 44-px tall, as other touch toasts.",
+       "marks": [
+        [
+         601,
+         1112,
+         195,
+         44
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/A3p-after-ph.png",
+       "crop": [
+        0,
+        370,
+        390,
+        474
+       ],
+       "scale": 0.7,
+       "caption": "<b>Phone, touch.</b> Centered above the bottom bar.",
+       "marks": [
+        [
+         97,
+         732,
+         195,
+         44
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/A3p-after-p320.png",
+       "crop": [
+        0,
+        300,
+        320,
+        400
+       ],
+       "scale": 0.7,
+       "caption": "<b>320 wide, touch.</b> Fits on one line.",
+       "marks": [
+        [
+         62,
+         588,
+         195,
+         44
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "Undo works for 5 seconds; hovering or focusing the toast pauses the time, as on every toast. Build check: on the tablet the wider toast covers more of the bottom row; when the edited candidate is the bottom row, its ⋯ (where focus returns) must not sit under the toast."
+  }
+ ],
+ "footer": "Star testing · rolling check pass 1, Step A (plan OK’d 2026-11-06). Preview screenshots (fake database, admin, Fall Star Testing). The “After” column is drawn over the real page by a small script (mock-stepA.js) — nothing in the app was changed. Amber = what changes; green = the change."
+}

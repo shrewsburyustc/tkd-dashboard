@@ -1,15 +1,16 @@
-# Star testing — Rolling check pass 1: the plan
+# Star testing — Rolling check pass 1 and 2: the plan
 
-**What this is:** how Star builds the fixes in `docs/Design Review/Rolling check/Pass 1/Fix-Star.md`, in which order, which files each touches, which need a mockup, and what goes in the one database migration. Nothing is built before Jeffrey OKs it. Written 2026-11-05 on `star-testing` at main 6b27cdd.
+**What this is:** how Star builds the fixes in `docs/Design Review/Rolling check/Pass 1/Fix-Star.md`, in which order, which files each touches, which need a mockup, and what goes in the one database migration. Nothing is built before Jeffrey OKs it. Written 2026-11-05 on `star-testing` at main 6b27cdd; pass 2 (`docs/Design Review/Rolling check/Pass 2/Fix-Star.md`) and the date signed (v0.638, L-08) added 2026-11-06 at main 1751e82.
 
 ## The order (a push to main deploys)
 
 | Step | Items | Needs | Can merge |
 |---|---|---|---|
 | **A. Screen fixes** | R2-02 (stop-gap Retry), R1-03, R2-10, R4-10, R4-13, R4-08, R2-08, R2-07 (Undone words), Smaller | mockups for R4-10, R4-08, R2-08 | any time after review |
-| **B. Count cards** | R5-05, R3-02, S-1 (the card's school order) | one mockup of the cards (all three changes on it) | any time after review |
-| **C. Migration 0038 + its app** | R2-02 (one-step Undo), R1-01, R1-02, S-1 (belt order, if the database does it) | migration number from Main; security review; Jeffrey applies it | only after 0038 is live **and** Finance's R1-01 migration is live |
-| **D. After Dashboard core** | R2-05, R1-08, R3-12, R3-13, R1-06, R1-07, R2-07 (shared words), R3-06, S-2 | each waits for Dashboard core's item to be on main | as each lands |
+| **A2. Date signed (v0.638, L-08)** | the family form's "Date signed" box; the date on staff's signature line | one mockup at the four sizes; who moves the shared words (Jeffrey) | any time after review (no migration) |
+| **B. Count cards** | R5-05, R3-02, S-1 (the card's school order), pass 2 C-05 (b) (each card's own empty line), pass 2 M-03 (Print receipt on a withdrawn candidate with money) | one mockup of the cards and the withdrawn ⋯ (all changes on it) | any time after review |
+| **C. Migration 0038 + its app** | R2-02 (one-step Undo), R1-01, R1-02 + pass 2 M-02 (one save = one History entry), S-1 (belt order) | migration number from Main; security review; Jeffrey applies it | only after 0038 is live **and** Finance's R1-01 migration is live |
+| **D. After Dashboard core** | R2-05, R1-08, R3-12, R3-13, R1-06, R1-07, R2-07 (shared words) + pass 2 C-06 (c), R3-06, S-2, pass 2 L-02 (roster beside the panel), pass 2 L-06 (grips) | each waits for Dashboard core's item to be on main | as each lands |
 
 A and B are screen-only, so they can go live first. C waits on the database. D waits on another session.
 
@@ -49,6 +50,31 @@ Order: 0038 applied → checks pass → Finance's R1-01 migration live → then 
 
 Each is planned in the fix list and built when Main says Dashboard core's item is on main: R2-05 (queued Undo helper), R1-08 (grayed Mark paid while saving), R3-12 (Dan/Stars "unavailable" Select; show Jeffrey Stars' reason line first), R3-13 ("Past days…" hints), R1-06 (Undo payment box words), R1-07 (payment toast/line/history words), R2-07 (shared "someone else" words), R3-06 (shared back link), S-2 ("then retry" + Retry on the summary and signature box; a failed-read helper in Star's fake store, registered in `src/lib/mockClient.js`, a shared file).
 
+## Pass 2 (added 2026-11-06)
+
+Star merged nothing after pass 1's cut, so pass 2 only adds items from other sections' work and corrects one pass 1 note. No item needs a migration of its own.
+
+- **L-02 (roster beside the panel, v1.053), after Dashboard core's L-02.** Step D. **Settled (Main, 2026-11-06): Jeffrey chose B, "B: shared code" (v1.130, on dashboard-core).** No container query: the shared hook `usePageRoomBelow(px)` says when the room beside the panel is below the roster's own limit; the roster then draws its phone layout and sets a class, and `star/star.css`'s tablet rules follow that class instead of `@container page`. Dialogs and ⋯ menus keep following the window. Build only after Dashboard core's part is merged into main (Main will say). Where the older text below says `@container page`, read "the hook and the class". `star/star.css:886`'s tablet rules become `@container page (…)`; when the room beside the panel is too narrow, the roster uses the phone's stacked rows. `isPhone` for the roster (`CandidatesTab.jsx:111`, read by `CandidateRows.jsx`) comes from Dashboard core's hook; dialogs and ⋯ menus keep the window's. Mockup: the roster at 683 and 700 wide, Standard and Largest panel.
+- **M-03 (Print receipt on a withdrawn candidate with money, v1.055).** Step B. `lib/star/candidateMenu.js`: Print receipt also when withdrawn and a payment or refund still stands; never with nothing paid; never while Hide private details is on. The mockup shows who sees it (today only admins have ⋯ on a withdrawn row). **Question for Jeffrey when Step B starts:** does Star follow Color Belt's v0.428 ("A: staff too": staff also get ⋯ with Print receipt on a removed row with money; on color-belt, not merged yet)? Recommendation: yes, copy it, so the two sections match.
+- **M-02 (one save, one History entry, v1.055).** Step C, with R1-02 and R1-03: the change-log rows of one save make one entry, money first, joined with "; " (the words follow R1-07's set). Color Belt builds the same (its M-02).
+- **C-05 (b) (each card's own empty line, v1.055).** Step B. "No candidates match." becomes what is true for each card, in Color Belt's pattern ("No paid candidates." / "Every candidate has paid." …). Drawn on Step B's mockup.
+- **C-06 (c) (failed Undo of Close / Open registration), after Dashboard core's R2-07.** Step D, inside R2-07: when the call was an Undo, the bar says "Undo didn't save. Check the connection, then retry." (Star's `UNDO_FAILED` until the shared words exist), with Retry and "Not saved" as today. Files: `StarEventsTab.jsx`, `lib/star/eventsText.js`.
+- **L-06 (grips), after Dashboard core's L-06.** Step D: pass `disabled` to the grips in `DanBlock.jsx` while Rubrics and prices saves, if Dashboard core asks screens to.
+- **Smaller:** C-04, C-06 (a) and C-06 (b) are already done or already in R2-07; recorded in the status file.
+- **Correction to R1-02:** Color Belt does *not* already do it right (it has the same fix to make, its M-01). Star's fix stays: copy Camps' 0033. Two details agreed with Color Belt: (1) if a helper is shared, "no form choice" is an input — for Star a missing form choice means "added at the desk", so it reads "at the desk", as a desk-added candidate reads today (`CandidatesTab.jsx:1457`); (2) when 0038 fills in existing candidates, a row with no change-log insert row stays empty ("at the desk") — never fall back to today's Paying by, which may already be a desk change.
+
+## Date signed on the Star family form (v0.638, pass 2 L-08)
+
+Jeffrey decided 2026-11-04 (v0.638, "for signatures it should require date signed always"): every family form shows **"Date signed"** under the signature, filled in automatically with the day the form is sent, gray, can't be changed; wherever staff see a signature, its date signed shows with it.
+
+- **Does Star's form save the day it was sent? Yes — no migration.** `star_candidate_signatures.signed_at` (0006, `not null`) is set to `now()` by `star_public_register` when the form is sent, and `star_candidate_detail` / the signature reader already return it (`signedAt` in `lib/star/candidatesCore.js`).
+- **The family form** (`src/star-register/StepCheck.jsx`, the Check step): under the signature pad, the same box as New students' — label "Date signed", a gray read-only box with today's date in school time, the hint "Filled in automatically with today's date." The one shared look is New students' `.fsigned` box (`src/screens/forms/FormFields.jsx:449–457`, CSS in `src/styles/forms.css:929–938`).
+- **Staff:** the Signature dialog already says "Signed Sat, Oct 17, 2026, 4:12 PM on the family form …". The candidate detail's Acknowledgment line gains the date: "Ticked and signed Oct 17, 2026 · View signature" (and the removed line keeps its date). The printed sheet and lists show no signature, so nothing there.
+- **Shared words:** `DATE_SIGNED` / `DATE_SIGNED_HINT` (`src/screens/forms/text.js:309–310`) move to `src/components/text.js` (a shared file). **Question for Jeffrey:** who moves them (Star in its branch, New students, or Dashboard core).
+- **Shared look:** the `.fsigned` CSS lives in New students' `forms.css`, which the Star form doesn't load. Star copies the three rules into the family form's CSS, or the rules move to `shared.css` — part of the same question.
+- **Mockup** at PC 1280, tablet 820 touch, phone 390 touch and 320: the Check step with the box, and the candidate detail's line. Amber outlines on what changes.
+- **Checks:** the Check step shows today's date (preview's chosen "today"); the box can't be typed in or focused as an input that changes; screen readers hear the label and hint. Both builds, Star's check files.
+
 ## Reviews
 
 Each step: a design reviewer (four sizes, WCAG 2.2 checks), a code reviewer, and for Step C (and R1-03's privacy) a security reviewer. Both builds, Star's eight check files and `src/lib/shared/checks.mjs` pass before a commit.
@@ -60,4 +86,8 @@ Each step: a design reviewer (four sizes, WCAG 2.2 checks), a code reviewer, and
 ## Decisions
 
 - **S-1 → database** (v0.519, 2026-11-05). The screen-side sort was not chosen: two places would decide the order.
-- **Plan OK:** waiting for Jeffrey.
+- **Plan OK:** Jeffrey, 2026-11-06 ("ok"): pass 1, pass 2 and the date signed together. Next: Step A mockups (R4-10, R4-08, R2-08) and the Date signed mockup; no code before he OKs them.
+- **Mockups OK'd one at a time (2026-11-06, pictures in `Rolling check mockups/`):** A1 ⋯ menu icons (R4-10), A2 grayed Email result (R4-08), A3 Undo on "Private testing set" (R2-08 part 1): "ok". A3b make-up Undo: **option A** (Jeffrey: "A"): the make-up picker closes after Add, as Black Belt does, and the toast carries Undo (admins only); focus goes back to Add candidate after Undo. The toast words ("Drew Park added" vs Black Belt's "… · make-up from <cycle>") are still to confirm. Waiting: B1, B2, C1.
+- **All seven mockups answered (2026-11-06):** B1 form Date signed "ok"; B2 staff Date signed **option A** (a separate row; Jeffrey: "A"); C1 roster limit **696** (Jeffrey: "B"). Written as rulebook v0.521 (A1-A3b), v0.522 (Date signed), v0.523 (roster limit). Still open: the make-up toast's words ("Drew Park added" or Black Belt's "… · make-up from <cycle>"); who moves DATE_SIGNED / DATE_SIGNED_HINT to `src/components/text.js`; the M-03 staff question (follow Color Belt's v0.428?).
+- **Three open questions answered (Jeffrey, 2026-11-06: "all 3 questions fine", taken as my recommendations):** (1) make-up toast keeps today's words, "<name> added"; (2) Star moves DATE_SIGNED / DATE_SIGNED_HINT to `src/components/text.js` in its own branch (listed as a shared file; New students' `forms/text.js` re-exports them so nothing breaks); (3) Star follows Color Belt's v0.428: staff too get ⋯ with Print receipt on a withdrawn candidate who paid (decided when Step B's mockup is shown; the cards mockup is not drawn yet).
+- **Build order now:** Step A (R2-02 stop-gap, R1-03, R2-10, R4-10, R4-13, R4-08, R2-08, R2-07 Undone words, Smaller) and A2 (Date signed) in parallel, then L-02 (same files as Step A's candidates work). Step B waits for its mockup.

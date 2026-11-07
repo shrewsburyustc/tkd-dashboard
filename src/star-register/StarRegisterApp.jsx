@@ -371,6 +371,7 @@ export default function StarRegisterApp() {
         dan={dan}
         form={form}
         onTestingDay={onTestingDay}
+        today={today}
         ack={ack}
         setAck={onAckChange}
         errors={checkErrors}

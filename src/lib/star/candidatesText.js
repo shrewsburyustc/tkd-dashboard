@@ -96,14 +96,14 @@ export const TOAST_KEPT_BOTH = 'Kept both registrations';
 //     failure shows in the row bar with Retry and the row's "Not saved" tag) · 'withdraw' · 'restore' · 'undo_duplicate' (the toast's Undo of Keep this
 //     one) · 'undo_payment' (the toast's Undo) · 'admin_undo_payment' · 'undo_refund' · 'duplicate' ·
 //     'undo_edit_payment' and 'undo_paying_by' (the toasts' Undo after Edit payment and Change how
-//     they'll pay, DR G2 / G3, v0.517)
+//     they'll pay, DR G2 / G3, v0.517) · 'undo_private' and 'undo_makeup' (the toasts' Undo after Set / Change\n//     private testing and after Add a make-up, R2-08)
 //   dialogs (note under the buttons): 'add' · 'edit' · 'paying_by' · 'private' · 'record_payment' ·
 //     'edit_payment' · 'refund' · 'delete'
 //   the make-up list: 'add_makeup'
 // options: name (the candidate's name), phone (full-screen dialog, no Cancel), overpaidCents.
 export function statusMessage(action, status, { name = '', phone = false, overpaidCents = 0, gradeCount = 0 } = {}) {
   if (status === 'ok' || status === 'no_access') return null;
-  const rowAction = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'add_makeup', 'undo_edit_payment', 'undo_paying_by', 'mark_paid'].includes(action);
+  const rowAction = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'add_makeup', 'undo_edit_payment', 'undo_paying_by', 'undo_private', 'undo_makeup', 'mark_paid'].includes(action);
   const stale = rowAction ? { text: ROW_STALE } : { text: phone ? DIALOG_STALE_PHONE : DIALOG_STALE };
   switch (status) {
     case 'stale':
