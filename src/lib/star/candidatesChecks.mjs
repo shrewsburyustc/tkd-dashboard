@@ -33,6 +33,7 @@ import { addDays } from '../testing/eventRules.js';
 import { takeSnapshot, writeArgs } from './dialogSnapshot.js';
 import { candidateMenuKeys, canPrintReceipt } from './candidateMenu.js';
 import { buildStarReceipt } from './candidatesReceipt.js';
+import { linesFor, isBookkeepingColumn } from './candidateHistoryLines.js';
 
 let count = 0;
 async function check(label, fn) {
@@ -378,6 +379,12 @@ await check('detail: payments oldest first with "reversed", the fee, the make-up
   const morgan = await detailOf(rig, await cand(rig, 'summer', 'Morgan'));
   assert.deepEqual([morgan.result.status, morgan.result.total, morgan.signature.state], ['passed', 280, 'removed']);
   assert.ok(morgan.signature.signatureDeletedAt);
+  // Date signed (v0.522): the day the form was sent comes with the detail — on file and removed, never for a desk row
+  assert.ok(alex.signature.signedAt && morgan.signature.signedAt, 'on-file and removed signatures keep their signed-at');
+  assert.equal(grace.signature.signedAt, null);
+  const WORDS = await import('../../screens/testing/star/candidates/text.js');
+  assert.equal(WORDS.DATE_SIGNED, 'Date signed');
+  assert.match(WORDS.dateSignedDetail(alex.signature.signedAt), /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4}$/); // "Sat, Oct 31, 2026", like Registered
   const drew = await detailOf(rig, await cand(rig, 'summer', 'Drew'));
   assert.deepEqual([drew.result.status, drew.result.total, drew.result.needs, drew.result.makeupReasons], ['makeup', 210, ['Breaking', 'Knowledge'], ['below']]);
   assert.deepEqual(drew.sent, { sent: null, matches: false });
@@ -1305,6 +1312,48 @@ await check('Undo after Change how they’ll pay: changePayingBy back to the old
   assert.equal((await cand(rig, 'fall', 'Lily')).payingBy, next);
   assert.equal(statusOf(await rig.api.changePayingBy({ candidateId: lily.id, expectedVersion: r.version, payingBy: oldPayingBy })), 'ok');
   assert.equal((await cand(rig, 'fall', 'Lily')).payingBy, oldPayingBy);
+});
+
+// R1-03: the History line shows a Paying by change ("Paying by: Cash to Check"); only the database's own
+// who/when columns are skipped, and by exact name (the old rule skipped anything ending in "_by").
+await check('R1-03 History lines: Paying by change shown, bookkeeping columns skipped by name, hidden details still hide it', async () => {
+  const row = (before, after) => ({ tableName: 'star_candidates', op: 'update', before, after });
+  assert.deepEqual(linesFor(row({ paying_by: 'cash' }, { paying_by: 'check' }), false), ['Paying by: Cash → Check']);
+  assert.deepEqual(linesFor(row({ paying_by: null }, { paying_by: 'card' }), false), ['Paying by: — → Card']);
+  // who / when / version columns alone make no line
+  assert.deepEqual(linesFor(row({ updated_by: 'a' }, { updated_by: 'b', updated_at: 'x', version: 3, withdrawn_by: 'c', withdrawn_by_name: 'D', created_by: 'e' }), false), []);
+  assert.deepEqual(['created_by', 'updated_by', 'withdrawn_by', 'version', 'updated_at', 'withdrawn_by_name'].map(isBookkeepingColumn), [true, true, true, true, true, true]);
+  assert.equal(isBookkeepingColumn('paying_by'), false);
+  // a Paying by change is a payment row for Hide private details: the screen leaves it out there
+  assert.equal(historyPrivacy(row({ paying_by: 'cash' }, { paying_by: 'check' })).payment, true);
+});
+// R2-08: the toasts' Undo. Private testing set: Undo clears a new private day, or puts the old day and
+// time back, with the version the save returned. Make-up added (admins): Undo deletes the new row, and
+// the earlier candidate can be added again afterwards (the picker's "Already added" mark is gone).
+await check('R2-08 Undo plumbing: Private testing set and Make-up added', async () => {
+  const rig = makeRig();
+  const lily = await cand(rig, 'fall', 'Lily');
+  const set = await rig.api.setPrivate({ candidateId: lily.id, expectedVersion: lily.version, privateOn: '2026-12-01', privateTime: '16:00' });
+  assert.equal(statusOf(set), 'ok');
+  const cleared = await rig.api.clearPrivate({ candidateId: lily.id, expectedVersion: set.version }); // Undo of a NEW private day
+  assert.equal(statusOf(cleared), 'ok');
+  const set2 = await rig.api.setPrivate({ candidateId: lily.id, expectedVersion: cleared.version, privateOn: '2026-12-01', privateTime: '16:00' });
+  const changed = await rig.api.setPrivate({ candidateId: lily.id, expectedVersion: set2.version, privateOn: '2026-12-08', privateTime: '17:30' });
+  const restored = await rig.api.setPrivate({ candidateId: lily.id, expectedVersion: changed.version, privateOn: '2026-12-01', privateTime: '16:00' }); // Undo of a CHANGE
+  assert.equal(statusOf(restored), 'ok');
+  const row = (await roster(rig, 'fall')).find((c) => c.id === lily.id);
+  assert.equal(row.privateOn, '2026-12-01');
+  // make-up: add, Undo (delete), add again
+  const s = Object.fromEntries((await roster(rig, 'summer')).map((c) => [c.firstName, c]));
+  const added = await rig.api.addMakeup({ eventId: IDS.spring, earlierCandidateId: s.Taylor.id });
+  assert.equal(statusOf(added), 'ok');
+  const undone = await rig.api.deleteCandidate({ candidateId: added.id, expectedVersion: added.version, expectedPaymentIds: [] });
+  assert.equal(statusOf(undone), 'ok');
+  assert.equal((await roster(rig, 'spring')).some((c) => c.id === added.id), false);
+  assert.equal(statusOf(await rig.api.addMakeup({ eventId: IDS.spring, earlierCandidateId: s.Taylor.id })), 'ok');
+  // the two new Undo actions give a row bar's words (not a dialog's "Cancel, then open it again")
+  assert.equal(statusMessage('undo_private', 'stale').text, statusMessage('undo_paying_by', 'stale').text);
+  assert.equal(statusMessage('undo_makeup', 'stale').text, statusMessage('undo_paying_by', 'stale').text);
 });
 
 console.log(`ALL STAR CANDIDATE CHECKS PASSED (${count} checks)`);

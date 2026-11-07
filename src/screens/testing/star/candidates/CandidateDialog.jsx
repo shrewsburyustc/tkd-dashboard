@@ -169,6 +169,11 @@ function RegistrationPart({ detail, onViewSignature, focusLink = false }) {
         <Row label={T.ACKNOWLEDGMENT}>
           <Acknowledgment detail={detail} onViewSignature={onViewSignature} focusLink={focusLink} />
         </Row>
+        {/* Date signed (v0.522): the day the family sent the form; stays after the drawing is deleted.
+            A desk-added candidate has no signature record, so no row. */}
+        {(detail.signature.state === 'on_file' || detail.signature.state === 'removed') && detail.signature.signedAt && (
+          <Row label={T.DATE_SIGNED}>{T.dateSignedDetail(detail.signature.signedAt)}</Row>
+        )}
       </dl>
     </section>
   );

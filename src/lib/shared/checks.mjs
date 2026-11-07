@@ -139,6 +139,14 @@ await check('M11 words: the shared words, and every old name still gives the sam
   assert.equal(SETTINGS.CANCEL, 'Cancel');
 });
 
+await check('Date signed words (v0.522): the shared file has them, New students\' words file re-exports the same ones', async () => {
+  assert.equal(SHARED.DATE_SIGNED, 'Date signed');
+  assert.equal(SHARED.DATE_SIGNED_HINT, "Filled in automatically with today's date.");
+  const FORMS = await import('../../screens/forms/text.js');
+  assert.equal(FORMS.DATE_SIGNED, SHARED.DATE_SIGNED);
+  assert.equal(FORMS.DATE_SIGNED_HINT, SHARED.DATE_SIGNED_HINT);
+});
+
 // ======================= M10 — the moved helpers =======================
 
 await check('M10 moves: the old useLiveLoad path gives the very same hook and refresh time', () => {

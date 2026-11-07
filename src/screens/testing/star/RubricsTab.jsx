@@ -789,7 +789,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
           label: cantDelete ? (
             <span className="st-menu-two">
               <span>{T.DELETE_CATEGORY}</span>
-              <span className="st-menu-why">{T.CANT_DELETE_REASON}</span>
+              <span className="ev-menu-reason">{T.CANT_DELETE_REASON}</span>
             </span>
           ) : (
             T.DELETE_CATEGORY

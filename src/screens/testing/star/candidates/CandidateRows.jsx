@@ -8,6 +8,9 @@
 //   Tablet:                  Candidate (+ "Shrewsbury · Registered Oct 12") · Testing for ·
 //                            Paying by · Payment · ✓ Mark paid · ⋯   (Paid on is in the detail)
 //   Phone:                   stacked: name + registered; stars · school; payment; tag + Mark paid
+//                            Also drawn when the room beside the left panel is under 696 px, even in a
+//                            tablet-wide window (layout.isPhone is true then; the roster gets the class
+//                            is-stacked; pass 2 L-02, v0.523 — the limit is in CandidatesTab.jsx).
 // The School column / the school in the second line is left out with one school selected (G12).
 // Make-up rows (v0.116, G14): a gray line "Make-up · retests …", "No fee", the Make-up tag, no
 // Mark paid. Private students (G15): a plain gray line "Private · Tue, Dec 1, 4:00 PM · $160".
@@ -281,7 +284,7 @@ export default function CandidateRows({ rows, removedRows, removedOpen, onToggle
   const { layout, nav } = ctx;
   const style = layout.isPhone ? undefined : { '--st-cols': columnsFor(ctx) };
   return (
-    <div className={`clist st-roster${layout.isTouch ? ' is-touch' : ''}`} role="table" aria-label={ctx.tableLabel} style={style}>
+    <div className={`clist st-roster${layout.isTouch ? ' is-touch' : ''}${layout.isPhone ? ' is-stacked' : ''}`} role="table" aria-label={ctx.tableLabel} style={style}>
       {!layout.isPhone && <HeadRow ctx={ctx} />}
       <div role="rowgroup" {...nav.containerProps}>
         {rows.length === 0 && (
