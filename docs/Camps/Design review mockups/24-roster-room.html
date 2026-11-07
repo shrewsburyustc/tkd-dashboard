@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps roster: cards when the table has too little room (L-02)</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1960px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  h2.sec { font-size: 18px; font-weight: 600; margin: 10px 0 12px; padding-top: 14px; border-top: 1px solid #E5E5E2; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps roster: cards when the table has too little room (L-02)</h1>
+<p class="sub">The rule is already approved (v1.053, v1.130; Jeffrey 2026-11-05 and 2026-11-06): a roster picks its layout from the room beside the left panel, not from the window's width. Real preview screens of April Vacation Camp, a 5-day camp. <b>Today</b> the table keeps its columns whatever the room, so in a narrow room it is wider than its box and Friday and the ⋯ column can only be reached by scrolling sideways. <b>After</b>, when the room is too narrow for this week's columns, the roster draws its cards (the phone layout); a mouse also gets a ⋯ on each card. <b>Amber = what differs.</b></p>
+<h2 class="sec">1 · A mouse in a half-width laptop window (683 px wide, Standard panel)</h2>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:580.55px">
+    <div class="shot" style="width:580.55px;height:476px">
+      <img src="shots/l02-before-683-mouse.png" style="left:0px;top:-59.5px;width:580.55px">
+      <div class="mark" style="left:468.59999999999997px;top:38.5px;width:115.95px;height:263px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>The table is 673 px wide in a 561 px box.</b> Friday and the ⋯ column are cut off; the person scrolls sideways to reach them.</figcaption>
+  </figure>
+  <div class="note">§1.3 says no sideways scrolling.</div>
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <div class="row"><figure style="width:580.55px">
+    <div class="shot" style="width:580.55px;height:476px">
+      <img src="shots/l02-after-683-mouse.png" style="left:0px;top:-59.5px;width:580.55px">
+      <div class="mark" style="left:532.35px;top:51.25px;width:31.8px;height:31.8px;border-color:#F59E0B"></div><div class="mark" style="left:532.35px;top:169.4px;width:31.8px;height:31.8px;border-color:#F59E0B"></div><div class="mark" style="left:532.35px;top:274.8px;width:31.8px;height:31.8px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Cards, with a ⋯ on each (mouse).</b> All five days fit. The buttons keep their mouse size (36 px day boxes) because there is no touch.</figcaption>
+  </figure><figure style="width:297.5px">
+    <div class="shot" style="width:297.5px;height:246.5px">
+      <img src="shots/l02-after-683-menu.png" style="left:-280.5px;top:-323px;width:580.55px">
+      <div class="mark" style="left:106.5px;top:40.199999999999996px;width:176.29999999999998px;height:201.79999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>The card's ⋯</b> is the roster row's ⋯: the same items, in the same order.</figcaption>
+  </figure></div>
+  <div class="note">Only the roster changes. The page around it, its dialogs and its ⋯ menus keep following the window.</div>
+</div>
+</div>
+<h2 class="sec">2 · An iPad held upright with the Largest panel (768 px wide, touch)</h2>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:599.04px">
+    <div class="shot" style="width:599.04px;height:390px">
+      <img src="shots/l02-before-768-largest-touch.png" style="left:0px;top:-54.6px;width:599.04px">
+      <div class="mark" style="left:531.08px;top:35px;width:71.96000000000001px;height:343.40000000000003px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>633 px of table in a 622 px box:</b> Friday runs off the edge (“Fri”, “Late” cut).</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <figure style="width:599.04px">
+    <div class="shot" style="width:599.04px;height:390px">
+      <img src="shots/l02-after-768-largest-touch.png" style="left:0px;top:-54.6px;width:599.04px">
+      <div class="mark" style="left:86.48px;top:50.6px;width:500.96000000000004px;height:107.84px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Cards, no ⋯ (touch):</b> the name opens Camper detail, whose More holds the same items, as on a phone. 44 px targets, as today's cards.</figcaption>
+  </figure>
+  
+</div>
+</div>
+<h2 class="sec">3 · Where nothing changes (enough room: the table stays)</h2>
+<div class="cols">
+<div class="col after" style="flex:1">
+  <div class="label">820 × 1180, touch, Standard panel</div>
+  <figure style="width:508.4px">
+    <div class="shot" style="width:508.4px;height:260.4px">
+      <img src="shots/l02-same-820-touch.png" style="left:0px;top:-43.4px;width:508.4px">
+      
+    </div>
+    <figcaption><b>Same as today:</b> 748 px of room; the 5-day table needs 683.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after" style="flex:1.5">
+  <div class="label">1280 × 800</div>
+  <figure style="width:793.6px">
+    <div class="shot" style="width:793.6px;height:260.4px">
+      <img src="shots/l02-same-1280.png" style="left:0px;top:-43.4px;width:793.6px">
+      
+    </div>
+    <figcaption><b>Same as today.</b> Phones (390, 320) are cards today and stay as they are.</figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>How it decides.</b> The table needs room for the page margins (50 px), the Camper and Paid columns (273 px), each day of the week on screen (72 px each, the narrowest a day column gets), with a mouse the ⋯ column (40 px), and 42 px more while someone is overpaid (the amber words widen the Paid column). Measured on the built table by the design review. Room needed, by days in the shown week — <b>1 day</b> 395 touch / 435 mouse · <b>2</b> 467 / 507 · <b>3</b> 539 / 579 · <b>4</b> 611 / 651 · <b>5</b> 683 / 723 · <b>6</b> 755 / 795 · <b>7</b> 827 / 867 (these are the review's corrected numbers; the first drawing said 89 px per day, which was too small for weeks of fewer than 5 days). The limit follows the week on screen, so a week with fewer days can show the table where a longer week shows cards. The room is the window minus the left panel (72 px, 96 with Largest) and, on a PC, the scrollbar. So a 5-day camp with a mouse and the Standard panel switches to cards in windows under about 810 px; on a touch screen under about 755 px (about 779 with Largest). <b>Also:</b> the card layout has no legend under it (as phones today). Mouse sizes on cards are new: 32 px name link, 36 px day boxes, ⋯ as on the table; on touch they stay 44 px. No database change.</div>
+</body></html>

@@ -911,11 +911,27 @@ button.cp-dc:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.cp-rcard-name .cp-name-link {
-  min-height: var(--tap-size);
+/* The tag and, with a mouse, the card's ⋯ at the card's right end */
+.cp-rcard-end {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
 }
 
-/* The day buttons of the week under the name: equal columns, 44px tall */
+/* The card whose ⋯ menu is open: the tint reaches 8px past the text on both sides, like a table row */
+.cp-rcard.is-selected {
+  background: var(--color-blue-tint);
+  box-shadow: -8px 0 0 var(--color-blue-tint), 8px 0 0 var(--color-blue-tint);
+}
+
+/* Cards are drawn for a phone or for a roster with too little room (L-02, v1.053): their buttons
+   follow the kind of screen, not the layout — mouse size here, 44px on touch (below). */
+.cp-rcard-name .cp-name-link {
+  min-height: 32px;
+}
+
+/* The day buttons of the week under the name: equal columns, 36px tall with a mouse, 44px on touch */
 .cp-rdays {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
@@ -930,7 +946,7 @@ button.cp-dc:focus-visible {
   justify-content: center;
   min-width: 0;
   height: auto;
-  min-height: var(--tap-size);
+  min-height: 36px;
   padding: 2px var(--space-4);
   overflow: hidden;
 }
@@ -1056,6 +1072,12 @@ button.cp-dc:focus-visible {
 
   .cp-cal-day {
     height: var(--tap-size);
+  }
+
+  /* The roster's cards on a touch screen: 44px targets (with a mouse they are smaller, above) */
+  .cp-rcard-name .cp-name-link,
+  .cp-rdays .cp-dc {
+    min-height: var(--tap-size);
   }
 
   .cp-daychip {
