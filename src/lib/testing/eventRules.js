@@ -48,6 +48,14 @@ export const MAX_PAYMENT_CENTS = 100000;
 // pretend date. Kept here so the preview database and eventsApi.js read the same key.
 export const PREVIEW_TODAY_KEY = 'tkd.preview.today';
 
+// The narrowest room beside the left panel (px) in which the event roster keeps its tablet columns
+// (design review pass 2 L-02, rulebook v0.431). "Room" is Dashboard core's measure (src/lib/pageRoom.js):
+// the page area's width, the page's own side margins included. Measured in preview on 2026-11-06 with
+// every class of the sample event: with a mouse the first text-on-text overlap comes at 636 px of room,
+// with touch at 611, so 648 keeps a few px to spare. Narrower than this the roster draws the stacked
+// rows phones show, whatever the window's own width. If class or rank names ever grow, measure again.
+export const ROSTER_ROOM = 648;
+
 // The five event states, in the order eventState checks them.
 export const EVENT_STATES = ['finished', 'open', 'closed_by_date', 'not_open_yet', 'closed'];
 
@@ -275,6 +283,14 @@ export function inCardFilter(row, filter) {
   if (filter === null || filter === undefined) return true;
   if (row?.duplicateState === 'possible') return false;
   return filter === 'paid' ? row?.paid === true : row?.paid !== true;
+}
+
+// The Students roster's own layout (pass 2 L-02, rulebook v0.431): the window's, except that in a room
+// narrower than ROSTER_ROOM (narrowRoom, from Dashboard core's usePageRoomBelow) it draws its phone
+// rows even in a tablet-sized window. Only isPhone changes: a mouse keeps its mouse sizes (isTouch)
+// and a wide window its wide columns (isWide). layout = { isPhone, isTouch, isWide }, from the window.
+export function rosterLayoutFor(layout, narrowRoom) {
+  return narrowRoom && !layout.isPhone ? { ...layout, isPhone: true } : layout;
 }
 
 // ----- Class times (§1.4, E4–E6) -----

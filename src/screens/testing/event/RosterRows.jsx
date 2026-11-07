@@ -7,6 +7,10 @@
 //   Tablet:                  the same without Paid on (it's in the detail view, rule 1.3)
 //   Phone:                   stacked: name + registered, testing for, "Cash · paid Nov 3",
 //                            then the tag and Mark paid, with ⋯ on the right
+// Which of the three the roster draws follows the ROOM beside the left panel, not only the window's
+// width (pass 2 L-02, rulebook v1.053, v1.130): in a room narrower than ROSTER_ROOM (eventRules.js)
+// even a tablet-sized window gets the phone rows. EventPage works that out (rosterLayoutFor) and hands
+// it in as ctx.layout; this file only reads ctx.layout.
 // One tag per row (rule 8): Possible duplicate (amber) > Paid (green) > Not paid (gray).
 // Phase 3 (v0.191): a student an admin added after the testing day gets a gray line
 // "Added Nov 21 by Jeffrey Berg (admin)" under the name.

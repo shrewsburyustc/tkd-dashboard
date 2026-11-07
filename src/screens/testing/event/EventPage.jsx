@@ -91,7 +91,7 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { canPrintReceipt, classTimeLabel, feeFor, inCardFilter, rosterCounts } from '../../../lib/testing/eventRules.js';
+import { ROSTER_ROOM, canPrintReceipt, classTimeLabel, feeFor, inCardFilter, rosterCounts, rosterLayoutFor } from '../../../lib/testing/eventRules.js';
 import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
@@ -120,6 +120,7 @@ import {
   testingGroups,
 } from '../../../lib/testing/gradingRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
+import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
@@ -214,6 +215,12 @@ export default function EventPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  // Only the Students roster follows the room beside the left panel (pass 2 L-02, rulebook v1.053,
+  // v1.130; lib/pageRoom.js): narrower than ROSTER_ROOM its tablet columns would run text into text,
+  // so it draws its phone rows. Dialogs, ⋯ menus, the Grading tab and the rest of the page keep
+  // following the window (isPhone).
+  const narrowRoom = usePageRoomBelow(ROSTER_ROOM);
+  const rosterLayout = rosterLayoutFor(layout, narrowRoom);
   const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
 
   // ----- State -----
@@ -431,6 +438,16 @@ export default function EventPage({
   useEffect(() => {
     if (markPaidGone) setMarkPaidBox(null);
   }, [markPaidGone]);
+
+  // The roster draws its rows again when its layout flips (a window resized, a tablet turned, Panel
+  // size changed: pass 2 L-02): a row's ⋯ and Mark paid buttons are then new buttons in other places,
+  // so an open ⋯ menu or Mark paid box would point at a button that is gone. Both close. Nothing is
+  // lost: the Mark paid box only asks how they paid.
+  const rosterIsPhone = rosterLayout.isPhone;
+  useEffect(() => {
+    setMenu(null);
+    setMarkPaidBox(null);
+  }, [rosterIsPhone]);
 
   // ===== Derived data =====
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
@@ -1723,7 +1740,7 @@ export default function EventPage({
   const showStatusCol = !hidden || [...rows, ...(removedOpen ? removedRows : [])].some((r) => hasStatusTag(r, notSavedId));
 
   const ctx = {
-    layout,
+    layout: rosterLayout, // the room beside the panel decides the roster's own layout (L-02)
     nav,
     rankById,
     busy,

@@ -11,6 +11,7 @@
 // that don't need real sign-in sessions.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { NAME_MAX, normalizeName, nameProblem, nameLength, findDuplicateClass, findDuplicateRank } from './names.js';
 import { MAX_PRICE_CENTS, MAX_PRICE_DOLLARS, formatDollars, centsToInputText, parseDollars, isValidCents } from '../money.js';
 import {
@@ -27,7 +28,7 @@ import {
   todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
-  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf, ROSTER_ROOM, rosterLayoutFor,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
@@ -2576,6 +2577,48 @@ check('eventRules: canPrintReceipt — a payment that still stands, active or re
   assert.equal(canPrintReceipt(row({ status: 'withdrawn', movedTo: { privateId: 'p1' } })), false); // the money moved with them
   assert.equal(canPrintReceipt(row(), true), false); // Hide private details
   assert.equal(canPrintReceipt(null), false);
+});
+
+check('eventRules: ROSTER_ROOM — the room below which the roster draws its phone rows (pass 2 L-02, v0.431)', () => {
+  // Measured 2026-11-06: the tablet columns first collide at 636 px of room with a mouse, 611 with touch.
+  assert.equal(ROSTER_ROOM, 648);
+  assert.ok(ROSTER_ROOM >= 636 + 12, 'keeps a few px above the first collision');
+  // The pictures Jeffrey approved (pass2/l02.png): 683 wide with a mouse and 700 wide on touch, with the
+  // Standard panel (72 px) or the Largest (96 px), draw phone rows; 820 wide on touch, Standard, keeps its columns.
+  for (const [width, panel] of [[683, 72], [683, 96], [700, 72], [700, 96]]) {
+    assert.ok(width - panel < ROSTER_ROOM, `${width} wide with a ${panel} px panel draws phone rows`);
+  }
+  assert.ok(820 - 72 >= ROSTER_ROOM, '820 wide with the Standard panel keeps the tablet columns');
+});
+
+check('eventRules: rosterLayoutFor — a narrow room draws the phone rows; touch and wide stay the window\'s (pass 2 L-02)', () => {
+  const tablet = { isPhone: false, isTouch: true, isWide: false };
+  const phone = { isPhone: true, isTouch: true, isWide: false };
+  const pc = { isPhone: false, isTouch: false, isWide: true };
+  assert.deepEqual(rosterLayoutFor(tablet, false), tablet); // enough room: the window's layout
+  assert.deepEqual(rosterLayoutFor(tablet, true), { isPhone: true, isTouch: true, isWide: false }); // too narrow: phone rows
+  assert.deepEqual(rosterLayoutFor(phone, false), phone); // a phone window is a phone window
+  assert.deepEqual(rosterLayoutFor(phone, true), phone);
+  assert.deepEqual(rosterLayoutFor(pc, true), { isPhone: true, isTouch: false, isWide: true }); // a mouse keeps its mouse sizes
+  assert.equal(rosterLayoutFor(tablet, false), tablet); // nothing changes: the same object comes back
+  assert.equal(tablet.isPhone, false); // and the window's own layout is never edited
+});
+
+check('EventPage: only the roster follows the room — rosterLayoutFor feeds ctx.layout; the Grading tab, dialogs and ⋯ menu keep the window (pass 2 L-02)', () => {
+  const page = readFileSync(new URL('../../screens/testing/event/EventPage.jsx', import.meta.url), 'utf8');
+  const imports = (name) => new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from '\\.\\./\\.\\./\\.\\./lib/testing/eventRules\\.js'`);
+  assert.match(page, imports('ROSTER_ROOM'));
+  assert.match(page, imports('rosterLayoutFor'));
+  assert.doesNotMatch(page, /\b(?:const|let|var) ROSTER_ROOM\b/); // no copy of the number
+  // The hook is called on every render, at the top of the component (never inside an if), and its answer is used
+  assert.match(page, /const narrowRoom = usePageRoomBelow\(ROSTER_ROOM\);\s+const rosterLayout = rosterLayoutFor\(layout, narrowRoom\);/);
+  assert.match(page, /layout: rosterLayout,/); // the roster's rows get the room's layout …
+  assert.doesNotMatch(page, /layout=\{rosterLayout\}/); // … the Grading tab does not
+  assert.doesNotMatch(page, /isPhone[=:]\s*\{?\s*rosterLayout/); // … nor the dialogs
+  assert.match(page, /layout=\{layout\}/); // the Grading tab keeps the window's layout
+  assert.match(page, /isSheet=\{isPhone\}/); // the ⋯ menu keeps the window's too
+  // A layout flip redraws the row buttons, so an open ⋯ menu or Mark paid box closes (they'd point at nothing)
+  assert.match(page, /useEffect\(\(\) => \{\s+setMenu\(null\);\s+setMarkPaidBox\(null\);\s+\}, \[rosterIsPhone\]\);/);
 });
 
 check('privateRules: Upcoming / Past order and the cards (P1, E11)', () => {
