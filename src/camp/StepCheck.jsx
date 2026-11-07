@@ -19,7 +19,7 @@ import { extraPriceLabel, priceFor } from './form.js';
 import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, monthDay, shortDate, weekdaysCompact } from './format.js';
 import { formatPhone, phoneDigits } from '../lib/camps/campRules.js';
 import { addDays } from '../lib/testing/eventRules.js';
-import { shortDate as shortDateWithYear } from '../lib/calendarDates.js'; // "Fri, Nov 6, 2026" (Date signed)
+import DateSigned from '../components/DateSigned.jsx'; // the shared "Date signed" box (v0.638)
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
 
@@ -158,25 +158,11 @@ export default function StepCheck({
               </div>
             </div>
 
-            {/* Date signed (rulebook v0.638, as Star's v0.522 and Black Belt's form): today's date at the
-                school in a gray box that can't be changed, like New students' form. It is not one of the
-                answers sent: the database saves the day the sign-up is sent (camp_signups.signed_at). */}
-            <div className="reg-field reg-field--sign">
-              <label className="reg-label" htmlFor="camp-signed">
-                {T.DATE_SIGNED}
-              </label>
-              <input
-                id="camp-signed"
-                className="reg-input camp-signed-box"
-                type="text"
-                readOnly
-                value={shortDateWithYear(today)}
-                aria-describedby="camp-signed-hint"
-              />
-              <div className="reg-hint" id="camp-signed-hint">
-                {T.DATE_SIGNED_HINT}
-              </div>
-            </div>
+            {/* Date signed (rulebook v0.638 / v0.749): the shared box (components/DateSigned.jsx, the same
+                on every family form) — today's date at the school in a gray box that can't be changed. It
+                is not one of the answers sent: the database saves the day the sign-up is sent
+                (camp_signups.signed_at). */}
+            <DateSigned id="camp-signed" day={today} />
           </section>
 
           {inDialog ? null : (

@@ -41,8 +41,8 @@ import {
 // The Camps words (the screens' text.js): only to check the "Hide private details" sentences and
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
-// The family page's own words (src/camp/text.js): only to check the shared "Date signed" sentences (v0.638).
-import * as FamilyText from '../../camp/text.js';
+// The shared words (src/components/text.js): only to check the "Date signed" sentences (v0.638).
+import * as SharedText from '../../components/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
 // … and its starting values (a Blank camp's two extras, rulebook v0.739).
 import { campUndoRefusal, undoAddsPastDay, undoCampPayload, blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate } from '../../screens/camps/sections/campForm.js';
@@ -2408,10 +2408,14 @@ check('a pressed count card that leaves nobody says what is true (C-05 (b), v1.0
   assert.equal(CampText.NO_MATCH_FILTER, undefined); // the old "No campers match." filter line is gone
 });
 
-check('the family form\'s "Date signed" words are the shared ones (v0.638)', () => {
-  // Copied from Star's and Black Belt's family forms: the same two shared sentences (src/components/text.js).
-  assert.equal(FamilyText.DATE_SIGNED, 'Date signed');
-  assert.equal(FamilyText.DATE_SIGNED_HINT, "Filled in automatically with today's date.");
+check('the family form\'s "Date signed" box is the shared one, with the shared words (v0.638)', () => {
+  // components/DateSigned.jsx draws it on every family form; the two sentences live in components/text.js.
+  assert.equal(SharedText.DATE_SIGNED, 'Date signed');
+  assert.equal(SharedText.DATE_SIGNED_HINT, "Filled in automatically with today's date.");
+  // Camps' family page and Fill in use that component (no copy of the box left in the camp page's files).
+  const step = readFileSync(new URL('../../camp/StepCheck.jsx', import.meta.url), 'utf8');
+  assert.ok(step.includes("import DateSigned from '../components/DateSigned.jsx'") && step.includes('<DateSigned id="camp-signed" day={today} />'));
+  assert.ok(!readFileSync(new URL('../../styles/camp.css', import.meta.url), 'utf8').includes('camp-signed-box'));
 });
 
 check('Fill in closed by Hide private details: the camp page\'s words (v0.746)', () => {
