@@ -3060,8 +3060,6 @@ Tested in PGlite on every run (`run.mjs` step0035: the guard refuses without 003
 
 ---
 
----
-
 ## Migration 0036: each child's last name and date of birth, the Address question
 
 **Status: applied 2026-11-04** (Jeffrey, SQL Editor: "success no rows"; 0036a pre-check as expected; 0036c fingerprints equal the PGlite ones, security advisor unchanged; the app went live the same day at main a5d0e1d; the 0036d tests file waits for his UIDs). Built on `claude/prospect-form-system-cd893d` (rulebook v0.634–v0.639; plan `docs/Prospects/TKD-ProspectProfile-Build-Plan.md` §2). Apply it **before** the app version that asks for last names, dates of birth and addresses is deployed (that app reads the new columns and keys). The live app keeps working after it: it still sends each child as first name + age, and that is still accepted.
