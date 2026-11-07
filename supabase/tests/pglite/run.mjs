@@ -9171,7 +9171,8 @@ async function step0038() {
     ['0026_tests.sql', 'ALL 0026 TESTS PASSED']]
     .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file)));
   const tests = async (label, files) => {
-    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+    // under production's rule for new functions (see runTestFileLive): a test helper must be granted to be called as authenticated
+    for (const [file, ok] of files) await runTestFileLive(db, `${L}${file} (${label})`, file, ok);
   };
   await tests('before 0038', baseline);
 
