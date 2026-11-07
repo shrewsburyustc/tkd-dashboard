@@ -1,0 +1,86 @@
+{
+  "title": "Camps — Record refund (pass 1 step 3, R1-05)",
+  "subtitle": "Hand money back to a family that paid more than the total. The refund is saved as its own line, so Finance shows it on the day it was handed back, in its Refunds group. Copied from Star testing's Record refund (its words, its box, its place in the ⋯). Real preview screens: April Vacation Camp, with the preview set to Wed, Apr 21, 2027. Chloe Martin paid $315 by check on Mar 11; Friday was then taken off with Edit details, so her total is now $292 and she paid <b>$23</b> more. The new parts are drawn on top for this picture only; nothing is built yet. <b>Amber = new or changed.</b>",
+  "width": 1900,
+  "sections": [
+    { "heading": "1 · Today → After (PC 1280×800; phone 390 touch)", "columns": [
+      { "label": "Today", "tone": "today", "items": [
+        { "row": [
+          { "src": "shots/x7-pc-detail-today.png", "crop": [420, 410, 440, 235], "scale": 0.9, "marks": [[440, 559, 400, 42]],
+            "caption": "<b>Camper detail, overpaid:</b> the amber line, and a hint that sends admins to Edit payment." },
+          { "src": "shots/x7-pc-menu-today.png", "crop": [900, 372, 360, 300], "scale": 0.9,
+            "caption": "<b>Chloe's ⋯ (admin):</b> nothing for money handed back." }
+        ] },
+        { "src": "shots/x7-ph-more-today.png", "shotWidth": 390, "crop": [0, 940, 390, 235], "scale": 0.8,
+          "caption": "<b>Phone, Camper detail's More</b> (touch screens have no ⋯)." }
+      ] },
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x7-pc-detail-after-hint.png", "crop": [420, 410, 440, 222], "scale": 0.9, "marks": [[440, 559, 400, 24]],
+            "caption": "<b>1a · The hint:</b> “An admin records money handed back with ⋯ → Record refund.” Staff see the same sentence." },
+          { "src": "shots/x7-pc-menu-record.png", "crop": [900, 372, 360, 305], "scale": 0.9, "marks": [[1048, 525, 198, 32]],
+            "caption": "<b>1b · Record refund</b> after Undo payment, before Print receipt. Admins only, only while overpaid (Star's place and icon)." }
+        ] },
+        { "src": "shots/x7-ph-more-record.png", "shotWidth": 390, "crop": [0, 922, 390, 235], "scale": 0.8, "marks": [[16, 1057, 131, 36]],
+          "caption": "<b>1c · Phone / tablet:</b> the same Record refund button in More." }
+      ] }
+    ] },
+    { "heading": "2 · The box at every size (Star's Record refund box, Camps' words)", "columns": [
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x7-pc-box.png", "crop": [454, 74, 372, 428], "scale": 0.9, "marks": [[460, 80, 360, 416]],
+            "caption": "<b>2a · PC 1280.</b> Who, what was paid, how much over. Refunded by Cash or Check (Cash first). Amount filled in with the $23. Date refunded = today. The $315 payment stays in the history. The buttons are Star's: Cancel · Save." },
+          { "src": "shots/x7-pc-box-cal.png", "crop": [440, 320, 400, 370], "scale": 0.9, "marks": [[493, 642, 286, 23]],
+            "caption": "<b>2b · Date refunded, open:</b> “Not before Mar 4 (signed up) or after today.” Later days are gray." },
+          { "src": "shots/x7-tab-box.png", "shotWidth": 820, "crop": [224, 90, 370, 444], "scale": 0.9, "marks": [[230, 96, 360, 432]],
+            "caption": "<b>2c · Tablet 820, touch.</b> The same box, bigger controls." }
+        ] },
+        { "row": [
+          { "src": "shots/x7-ph-box.png", "shotWidth": 390, "crop": [0, 0, 390, 460], "scale": 0.8,
+            "caption": "<b>2d · Phone 390.</b> Full screen with ←; the button is full width." },
+          { "src": "shots/x7-320-box.png", "shotWidth": 320, "crop": [0, 0, 320, 460], "scale": 0.8,
+            "caption": "<b>2e · 320 wide.</b> Everything fits." },
+          { "src": "shots/x7-ph-box-error.png", "shotWidth": 390, "crop": [0, 0, 390, 470], "scale": 0.8, "marks": [[16, 228, 358, 34], [16, 409, 358, 36]],
+            "caption": "<b>2f · Too much ($30):</b> “Can’t be more than the $23 overpaid.” and the button grays (Star's words)." }
+        ] }
+      ] }
+    ] },
+    { "heading": "3 · After saving", "columns": [
+      { "label": "After", "tone": "after", "items": [
+        { "row": [
+          { "src": "shots/x7-pc-toast.png", "crop": [860, 700, 420, 100], "scale": 0.9, "marks": [[1067, 736, 189, 40]],
+            "caption": "<b>3a · Saved:</b> “Refund recorded · Undo” for 5 seconds." },
+          { "src": "shots/x7-pc-detail-after.png", "crop": [420, 425, 440, 200], "scale": 0.85, "marks": [[564, 528, 276, 39]],
+            "caption": "<b>3b · Camper detail:</b> the refund is its own line under the payment (Star's words in Camps' layout). The amber line and the hint are gone: paid now = total." },
+          { "src": "shots/x7-pc-detail-after.png", "crop": [420, 995, 440, 285], "scale": 0.85, "marks": [[440, 1030, 400, 59]],
+            "caption": "<b>3c · History:</b> “Refund recorded: $23 cash, Apr 21”, newest first." },
+          { "src": "shots/x7-pc-menu-after.png", "crop": [900, 372, 360, 335], "scale": 0.9, "marks": [[1048, 461, 198, 125]],
+            "caption": "<b>3d · The ⋯ after a refund:</b> Edit payment and Undo payment gray, “Undo the refund first.”; Undo refund takes Record refund's place." },
+          { "src": "shots/x7-ph-more-after.png", "shotWidth": 390, "crop": [0, 905, 390, 245], "scale": 0.8, "marks": [[16, 991, 336, 52], [16, 1051, 123, 36]],
+            "caption": "<b>3e · Phone, More:</b> the same, as buttons." }
+        ] }
+      ] }
+    ] },
+    { "heading": "4 · Undo refund and the receipt", "columns": [
+      { "label": "Today", "tone": "today", "flex": 1, "items": [
+        { "src": "shots/x7-pc-receipt-today.png", "crop": [376, 176, 528, 504], "scale": 0.85, "marks": [[635, 504, 248, 66]],
+          "caption": "<b>Today, Print receipt:</b> Paid to date $315, Balance −$23 · overpaid." }
+      ] },
+      { "label": "After", "tone": "after", "flex": 2, "items": [
+        { "row": [
+          { "src": "shots/x7-pc-undo.png", "crop": [456, 74, 368, 195], "scale": 1, "marks": [[460, 80, 360, 183]],
+            "caption": "<b>4a · Undo refund asks first</b> (Star's words). Afterwards she shows $23 overpaid again; both lines stay in the history." },
+          { "src": "shots/x7-pc-receipt.png", "crop": [376, 176, 528, 534], "scale": 0.85, "marks": [[401, 470, 478, 30], [635, 534, 248, 66]],
+            "caption": "<b>4b · Receipt:</b> a “Refund” line with a minus (Star's receipt), Paid to date $292, Balance $0 · paid in full." }
+        ] }
+      ] }
+    ] },
+    { "heading": "5 · Staff", "columns": [
+      { "label": "After (unchanged)", "tone": "after", "items": [
+        { "src": "shots/x7-pc-staff-menu.png", "crop": [900, 372, 360, 180], "scale": 0.9,
+          "caption": "<b>Staff's ⋯:</b> no Record refund (as today). Staff see the hint in Camper detail." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>How it was drawn:</b> <code>mock-x7-refund.js</code> puts Star testing's real Record refund box (captured from the preview's Fall Star Testing) on the camp page with Camps' words; the ⋯ items, the toast, the History line, the receipt line and the Undo box use the real markup. <br><br>Database: a new migration (0039) adds the refund — admins only, never more than what was overpaid, logged; Undo reverses it. Finance adds camp refunds to its Refunds group afterwards. Nothing goes live before you paste the migration. <br><b>Your OK: does this picture look right?</b>"
+}

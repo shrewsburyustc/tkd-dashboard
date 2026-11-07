@@ -16,7 +16,10 @@ export const TEMPLATE_COLUMNS = 'id, name, location_code, both_schools, day_coun
 // The camp_roster view (one row per camper; no phones, no signature). paying_by_on_form (migration
 // 0033): the way the family chose on the form — the Mark paid box's hint says "on the form" while
 // Paying by still matches it, "at the desk" once staff changed it (rulebook v0.735).
-export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form';
+// refunded_cents (migration 0039, CONTRACT-0039): the camper's refunds that stand, as a plus number
+// (0 = none) — the ⋯ shows Undo refund and grays Edit payment / Undo payment while it is above 0
+// (rulebook v0.743 (4)). The view only has it once 0039 is pasted, which comes before this app.
+export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form, refunded_cents';
 
 // ----- Converting database rows to the §5.1 shapes -----
 
@@ -118,6 +121,23 @@ export function templateArgs(input = {}) {
     p_extras: extrasArg(input.extras, false, true),
     p_description: input.description ?? null,
     p_waiver_text: input.waiverText,
+  };
+}
+
+// ----- Record refund (migration 0039, CONTRACT-0039, rulebook v0.743) -----
+
+// camp_record_refund's arguments: exactly the six the database function takes (the preview database
+// refuses any other name, as PostgREST does). input = { camperId, expectedVersion, method ('cash' |
+// 'check'), amountCents (a plus number: the money handed back), refundedOn 'YYYY-MM-DD', school
+// (This device's school, v1.040) }.
+export function recordRefundArgs({ camperId, expectedVersion, method, amountCents, refundedOn, school } = {}) {
+  return {
+    p_camper_id: camperId,
+    p_expected_version: expectedVersion,
+    p_method: method,
+    p_amount_cents: amountCents,
+    p_refunded_on: refundedOn,
+    p_school: school,
   };
 }
 

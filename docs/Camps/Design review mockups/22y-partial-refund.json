@@ -1,0 +1,36 @@
+{
+  "title": "Camps — a partial refund: how does the admin hand back the rest?",
+  "subtitle": "The case picture 22 didn't cover: a refund of only part of what was overpaid. Real preview screens of the built Record refund (April Vacation Camp, the preview set to Wed, Apr 21, 2027): Emma Garcia paid $315 by card; Friday was taken off, so she paid $23 more than the total; an admin recorded a $10 cash refund. She is still <b>$13</b> overpaid and the hint still says “⋯ → Record refund”, but the ⋯ and More show Undo refund in Record refund's place (the approved rule v0.743 (4)). <b>Amber = what differs from the built screens.</b>",
+  "width": 1900,
+  "columns": [
+    { "label": "A · both items while still overpaid (recommended)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/x8-pc-detail.png", "crop": [420, 405, 440, 262], "scale": 0.85,
+          "caption": "<b>PC, Camper detail (as built):</b> still “Paid $13 more than the total”; the hint “… ⋯ → Record refund.” stays and is true." },
+        { "src": "shots/x8-pc-menu-A.png", "crop": [900, 372, 360, 365], "scale": 0.85, "marks": [[1048, 554, 198, 32]],
+          "caption": "<b>⋯:</b> Record refund, then Undo refund, after Undo payment; Edit payment and Undo payment stay gray." }
+      ] },
+      { "row": [
+        { "src": "shots/x8-ph-A.png", "shotWidth": 390, "crop": [0, 340, 390, 220], "scale": 0.75,
+          "caption": "<b>Phone 390, touch:</b> the same hint (as built)." },
+        { "src": "shots/x8-ph-A.png", "shotWidth": 390, "crop": [0, 960, 390, 300], "scale": 0.75, "marks": [[16, 1114, 131, 36]],
+          "caption": "<b>More:</b> Record refund and Undo refund." }
+      ] }
+    ], "note": "The admin records the other $13 directly. Undo refund undoes the newest refund. The database already allows a second refund up to what is still overpaid; only the menu changes." },
+    { "label": "B · keep the approved menu, change the hint", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/x8-pc-detail-B.png", "crop": [420, 405, 440, 280], "scale": 0.85, "marks": [[440, 600, 400, 42]],
+          "caption": "<b>PC, Camper detail:</b> while a refund stands and money is still overpaid, the hint reads “To hand back more, an admin first uses ⋯ → Undo refund, then records the whole amount.”" },
+        { "src": "shots/x8-pc-menu-B.png", "crop": [900, 372, 360, 335], "scale": 0.85,
+          "caption": "<b>⋯ as built:</b> Undo refund only." }
+      ] },
+      { "row": [
+        { "src": "shots/x8-ph-B.png", "shotWidth": 390, "crop": [0, 340, 390, 240], "scale": 0.75, "marks": [[12, 528, 366, 42]],
+          "caption": "<b>Phone 390, touch:</b> the same new hint." },
+        { "src": "shots/x8-ph-B.png", "shotWidth": 390, "crop": [0, 978, 390, 260], "scale": 0.75,
+          "caption": "<b>More as built:</b> Undo refund only." }
+      ] }
+    ], "note": "Two steps and two Finance lines for one hand-back." }
+  ],
+  "footer": "<b>How it was drawn:</b> <code>mock-x8-partial-refund.js</code> adds only what differs: in A a Record refund item cloned from the real Undo refund item (ti-receipt-refund icon), in B the hint's words; everything else is the built screen. <br><br><b>Recommendation: A — one step for the desk, and the hint stays true. Your choice: A or B?</b>"
+}

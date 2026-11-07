@@ -64,6 +64,24 @@
 //   - camp_signups.source ('form' | 'desk') and entered_by (the staff member's name, desk only);
 //     camp_camper_detail returns both, and the history's sign-up row carries them. Not readable
 //     from the table itself. A sign-up saved before 0043 has neither and counts as 'form'.
+//
+// Migration 0039 in the preview (Record refund, docs/Camps/CONTRACT-0039.md; rulebook v0.743,
+// v1.039, v1.040):
+//   - camp_payments rows of kind 'refund': a minus amount, cash or check, dated the day the money
+//     went back, at THIS DEVICE's school (the desk that hands it back). A reversal may now undo a
+//     payment OR a refund (never a reversal), for exactly minus its amount, at its school, and no
+//     row may take the camper's rows below 0 in all — the database's kind check and
+//     camp_payments_guard, run on every payment insert here too (paymentRowProblem / addPaymentRow).
+//   - camp_edit_payment answers 'invalid' for a row that isn't a payment (a reversal or a refund),
+//     as the database does; 'stale' only for a payment already undone or edited.
+//   - camp_record_refund(...) and camp_undo_refund(p_payment_id): admins only, the contract's
+//     checks in the contract's order; logged like every save (actions 'camp_record_refund' /
+//     'camp_undo_refund'), so Camper detail's History shows them.
+//   - camp_undo_payment / camp_edit_payment answer 'refund_stands' while a refund of that camper
+//     stands (after their own rights / not-found / stale checks, before writing).
+//   - the roster's last column refunded_cents: the refunds that stand, as a plus number. (Paid is
+//     the sum of every row already, so a refund and its Undo count by themselves; Camper detail
+//     lists every row, refunds included.) No store change: a refund is just another payment row.
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { signatureIsValid } from './testing/eventRules.js';
 import {
@@ -85,6 +103,7 @@ const CODE_PATTERN = /^[a-hjkmnp-z2-9]{8}$/;
 const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // no i, l, o, 0, 1 (look-alikes)
 const INT_MAX = 2147483647;
 const MAX_PAYMENT_CENTS = MAX_CAMPER_CENTS; // one payment: 1 … $10,000 (§1.11; weekly pricing R5, was $2,000)
+const MAX_REFUND_CENTS = 1000000; // one refund: 1 … $10,000, the same limit as a payment (0039 / CONTRACT-0039); the real cap is the overpaid amount
 const FAMILY_FORM = 'Family form'; // the actor label of the public sign-up
 
 // ----- MD5 (the waiver_version is md5(waiver_text), 32 hex characters, §1.16) -----
@@ -690,7 +709,8 @@ const ROSTER_COLS = ['id', 'camp_id', 'signup_id', 'position', 'first_name', 'la
   'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', 'version', 'created_at', 'signup_version', 'reference', 'price_kind',
   'signed_up_on', 'signed', 'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents',
   'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paid_school',
-  'paying_by_on_form']; // 0033: added at the end of the view (create or replace view can only add columns there)
+  'paying_by_on_form', // 0033: added at the end of the view (create or replace view can only add columns there)
+  'refunded_cents']; // 0039: the refunds that stand, as a plus number (also at the end)
 const GRANTED = {
   camps: CAMP_COLS,
   camp_days: ['id', 'camp_id', 'day'],
@@ -745,6 +765,9 @@ const RPC_ARGS = {
   camp_mark_paid: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_school', 'text'], ['p_method', 'text', 'optional']],
   camp_undo_payment: [ID('p_payment_id')],
   camp_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date'], ['p_school', 'text']],
+  // Record refund (0039, CONTRACT-0039): the money handed back, and its Undo
+  camp_record_refund: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_refunded_on', 'date'], ['p_school', 'text']],
+  camp_undo_refund: [ID('p_payment_id')],
   camp_resolve_duplicate: [ID('p_keep_id'), ['p_keep_version', 'int'], ID('p_other_id'), ['p_other_version', 'int'], ['p_keep_both', 'bool']],
   camp_withdraw_camper: [ID('p_camper_id'), ['p_expected_version', 'int']],
   camp_restore_camper: [ID('p_camper_id'), ['p_expected_version', 'int']],
@@ -765,6 +788,7 @@ const RPC_ARGS = {
 const ADMIN_ONLY = new Set([
   'camp_add_camp', 'camp_update_camp', 'camp_delete_camp', 'camp_save_template', 'camp_update_template', 'camp_delete_template',
   'camp_edit_payment', 'camp_delete_camper',
+  'camp_record_refund', 'camp_undo_refund', // 0039: not an admin → not_allowed (after no_access, before invalid)
 ]);
 // The staff functions + camp_camper_detail and camp_camper_history (the app may call these).
 export const CAMP_RPC_NAMES = Object.keys(RPC_ARGS);
@@ -1036,6 +1060,44 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   const camperExtraRows = (db, camperId) => db.camp_camper_extras.filter((r) => r.camper_id === camperId);
   const paymentsOf = (db, camperId) => db.camp_payments.filter((p) => p.camper_id === camperId);
   const isReversed = (db, paymentId) => db.camp_payments.some((p) => p.reverses_payment_id === paymentId);
+  // 0039: the camper's refunds that haven't been undone, and their total as a plus number.
+  const standingRefunds = (db, camperId) => paymentsOf(db, camperId).filter((p) => p.kind === 'refund' && !isReversed(db, p.id));
+  const refundedCents = (db, camperId) => standingRefunds(db, camperId).reduce((total, p) => total - p.amount_cents, 0);
+
+  // What the database's row rules say about a NEW camp_payments row (0039's camp_payments_kind_check
+  // and camp_payments_guard): null = fine, else 'invalid' (the real functions' exception block turns
+  // a broken rule into { status:'invalid' }, and nothing of that save is kept).
+  //   kind rule: a payment is 1 cent … $10,000 (0022); a refund −$10,000 … −1 cent, cash or check
+  //     (0039; camp_record_refund also keeps it to what was overpaid); a reversal ± up to $10,000,
+  //     never 0; any row's way is cash, check or card.
+  //   guard: a reversal undoes a PAYMENT or a REFUND (never a reversal) of the same camper, for
+  //     exactly minus its amount, at its school; and no new row may make the camper's rows add up to
+  //     less than 0 (camp_payments_net_check, Star's rule).
+  function paymentRowProblem(db, row) {
+    const ok = (row.kind === 'payment' && row.amount_cents >= 1 && row.amount_cents <= MAX_PAYMENT_CENTS && row.reverses_payment_id === null)
+      || (row.kind === 'refund' && row.amount_cents <= -1 && row.amount_cents >= -MAX_REFUND_CENTS && row.reverses_payment_id === null
+        && ['cash', 'check'].includes(row.method))
+      || (row.kind === 'reversal' && row.amount_cents !== 0 && Math.abs(row.amount_cents) <= MAX_PAYMENT_CENTS && row.reverses_payment_id !== null);
+    if (!ok || !PAYING_BY.includes(row.method)) return 'invalid';
+    if (row.kind === 'reversal') {
+      const target = db.camp_payments.find((p) => p.id === row.reverses_payment_id);
+      const fits = target && ['payment', 'refund'].includes(target.kind) && target.camper_id === row.camper_id
+        && row.amount_cents === -target.amount_cents && row.school === target.school;
+      if (!fits) return 'invalid';
+    }
+    // The net rule: the camper's rows so far plus this one.
+    if (sum(paymentsOf(db, row.camper_id).map((p) => p.amount_cents)) + row.amount_cents < 0) return 'invalid';
+    return null;
+  }
+  // Adds a camp_payments row the way the database's insert does: the rules above first (the guard
+  // trigger runs on EVERY insert). → null when added, else 'invalid' (the caller then answers
+  // { status:'invalid' } and the whole save is dropped — nothing is written for a non-ok answer).
+  function addPaymentRow(db, row) {
+    const problem = paymentRowProblem(db, row);
+    if (problem) return problem;
+    db.camp_payments.push(row);
+    return null;
+  }
 
   // camp_camper_total_cents / paid / owes (§1.13).
   function money(db, camper) {
@@ -1087,6 +1149,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       paid_on: last?.paid_on ?? null, paid_method: last?.method ?? null, last_payment_id: last?.id ?? null, last_payment_recorded_at: last?.recorded_at ?? null,
       paid_school: last?.school ?? null, // mock-only extra column (campsApi doesn't ask for it)
       paying_by_on_form: c.paying_by_on_form ?? c.paying_by, // 0033: the family's choice on the form
+      refunded_cents: refundedCents(db, c.id), // 0039: the refunds that stand, a plus number (0 = none)
     };
   }
 
@@ -1537,7 +1600,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
         school: a.p_school, paying_by_before: before,
       };
-      db.camp_payments.push(payment);
+      if (addPaymentRow(db, payment)) return st('invalid'); // the row rules (kind check, guard)
       updateRow(camper, { paying_by: method }, ctx, true); // a double click with the old version now gets 'stale'
       purgeOldSignatures(db); // the last step
       return {
@@ -1553,13 +1616,16 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       // Admins any time; staff only their OWN payment, recorded less than 10 seconds ago.
       if (!ctx.isAdmin && !withinUndo(payment.recorded_at, ctx, payment.recorded_by)) return st('not_allowed');
       if (payment.kind !== 'payment' || isReversed(db, payment.id)) return st('stale'); // already undone / a reversal
+      // 0039: while a refund of this camper stands, its payment stays as it is (Undo the refund first).
+      if (standingRefunds(db, payment.camper_id).length > 0) return st('refund_stands');
       const camper = findCamper(db, payment.camper_id);
-      db.camp_payments.push({
+      const undone = addPaymentRow(db, {
         id: newId(), camper_id: camper.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(),
         recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: payment.id,
         school: payment.school, // an undo lands in the same drawer as the payment
         paying_by_before: null,
       });
+      if (undone) return st('invalid'); // the row rules (guard: e.g. it would take the camper below 0)
       // 0033: the payment changed Paying by, and nobody changed it since → it goes back.
       const back = payment.paying_by_before && camper.paying_by === payment.method ? { paying_by: payment.paying_by_before } : {};
       updateRow(camper, back, ctx, true);
@@ -1572,10 +1638,14 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (!LOCATION_CODES.includes(a.p_school)) return { status: 'invalid', field: 'school' };
       const payment = db.camp_payments.find((p) => p.id === a.p_payment_id);
       if (!payment) return st('not_found');
-      if (payment.kind !== 'payment' || isReversed(db, payment.id)) return st('stale');
+      // Only a payment can be edited: a reversal, or a refund (0039 — Undo refund / Record refund
+      // instead), is 'invalid', as the database answers; one already undone or edited is 'stale'.
+      if (payment.kind !== 'payment') return st('invalid');
+      if (isReversed(db, payment.id)) return st('stale');
+      if (standingRefunds(db, payment.camper_id).length > 0) return st('refund_stands'); // 0039: Undo the refund first
       const camper = findCamper(db, payment.camper_id);
       const common = { camper_id: camper.id, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName };
-      db.camp_payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id, school: payment.school, paying_by_before: null });
+      if (addPaymentRow(db, { id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id, school: payment.school, paying_by_before: null })) return st('invalid');
       // Paying by follows the edit (0033 §1c = Color Belt 0030 §4b): the family's choice is what Undo
       // of the old payment would leave; a changed way makes Paying by the new way; the new payment
       // remembers the family's choice when Paying by is now its way and the choice was another.
@@ -1586,9 +1656,57 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null, school: a.p_school,
         paying_by_before: payingBy === a.p_method && familyChoice !== a.p_method ? familyChoice : null,
       };
-      db.camp_payments.push(replacement);
+      if (addPaymentRow(db, replacement)) return st('invalid'); // (the reversal above is dropped with it)
       updateRow(camper, { paying_by: payingBy }, ctx, true);
       return { status: 'ok', payment_id: replacement.id, version: camper.version };
+    },
+
+    // ----- Record refund (0039, CONTRACT-0039; rulebook v0.743 / v1.039 / v1.040). Admins only
+    // (ADMIN_ONLY: not_allowed comes before everything below). -----
+    // Money handed back to a family that paid more than the total: its own refund row (a minus
+    // amount), dated the day it went back, at THIS DEVICE's school (p_school). Never more than
+    // what is overpaid (paid − total, never below 0).
+    camp_record_refund(db, a, ctx) {
+      if (a.p_camper_id === null || a.p_expected_version === null || a.p_refunded_on === null || a.p_refunded_on > today()) return st('invalid');
+      if (!['cash', 'check'].includes(a.p_method)) return st('invalid'); // refunds go back in cash or by check
+      if (a.p_amount_cents === null || a.p_amount_cents < 1 || a.p_amount_cents > MAX_REFUND_CENTS) return st('invalid');
+      if (!LOCATION_CODES.includes(a.p_school)) return { status: 'invalid', field: 'school' }; // the desk's school (v1.040)
+      const camper = findCamper(db, a.p_camper_id);
+      if (!camper) return st('not_found');
+      if (camper.version !== a.p_expected_version) return st('stale');
+      if (camper.status === 'withdrawn') return st('withdrawn');
+      if (a.p_refunded_on < signupOf(db, camper).signed_up_on) return { status: 'invalid', field: 'date' }; // not before the sign-up day
+      const { total, paid } = money(db, camper);
+      const overpaid = Math.max(0, paid - total);
+      if (overpaid === 0 || a.p_amount_cents > overpaid) return { status: 'refund_too_large', overpaid_cents: overpaid };
+      const refund = {
+        id: newId(), camper_id: camper.id, kind: 'refund', amount_cents: -a.p_amount_cents, method: a.p_method, paid_on: a.p_refunded_on,
+        recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
+        school: a.p_school, paying_by_before: null,
+      };
+      if (addPaymentRow(db, refund)) return st('invalid'); // the row rules (kind check, guard)
+      updateRow(camper, {}, ctx, true); // the version moves (a second Save with the old one gets 'stale')
+      return { status: 'ok', payment_id: refund.id, version: camper.version };
+    },
+
+    // Undo refund (admins): a reversal of the refund (+ its amount), dated today, at the REFUND's
+    // school (v1.040: the money goes back into the drawer it came out of). Both rows stay.
+    camp_undo_refund(db, a, ctx) {
+      if (a.p_payment_id === null) return st('invalid');
+      const refund = db.camp_payments.find((p) => p.id === a.p_payment_id);
+      if (!refund) return st('not_found');
+      if (refund.kind !== 'refund') return st('invalid'); // a payment has Undo payment; a reversal can't be undone
+      if (isReversed(db, refund.id)) return st('stale'); // already undone
+      const camper = findCamper(db, refund.camper_id);
+      if (camper.status === 'withdrawn') return st('withdrawn');
+      const reversal = {
+        id: newId(), camper_id: camper.id, kind: 'reversal', amount_cents: -refund.amount_cents, method: refund.method, paid_on: today(),
+        recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: refund.id,
+        school: refund.school, paying_by_before: null,
+      };
+      if (addPaymentRow(db, reversal)) return st('invalid'); // the row rules (kind check, guard)
+      updateRow(camper, {}, ctx, true);
+      return { status: 'ok', version: camper.version };
     },
 
     camp_resolve_duplicate(db, a, ctx) {
@@ -2210,8 +2328,14 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     });
   }
 
+  // For checks.mjs only: what the row rules (kind check + guard, 0039) say about a new
+  // camp_payments row against the saved data — null = fine, 'invalid' = refused. No save path can
+  // reach the net rule by itself (refund_stands and the overpaid cap come first), so the checks
+  // test the rules here directly.
+  const checkPaymentRow = (row) => paymentRowProblem(read(), row);
+
   return {
     select, rpc, publicCamp, publicSignup, failNextSave, failNextCampRead, simulateOtherAdminEdit, reset, snapshot: read,
-    firstOpenCode, simulateSignup,
+    firstOpenCode, simulateSignup, checkPaymentRow,
   };
 }

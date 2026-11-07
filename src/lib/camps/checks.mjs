@@ -20,6 +20,7 @@ import {
   comingCardDay, comesOnDay, campCardCounts, matchesCardFilter,
   getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
+  overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
@@ -27,6 +28,8 @@ import { qrFileName } from '../qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
 // Fill in's mapping (migration 0043): what campsApi.js sends and checks.
 import { staffSignupArgs, staffFormShapeOk, staffSignupShapeOk, signupSourceOf } from './campsArgs.js';
+// Record refund's arguments and the roster's columns (migration 0039): what campsApi.js sends and reads.
+import { recordRefundArgs, ROSTER_COLUMNS } from './campsArgs.js';
 // Print receipt's plain receipt (rulebook v0.734, design review C3).
 import { buildCampReceipt, canPrintReceipt, receiptPayments } from './campReceipt.js';
 // The History words (migration 0033, rulebook v0.736; the Mark paid box's hint is campRules' payingByChoiceWhere).
@@ -341,7 +344,8 @@ check('pay tag priority and the to-collect amount', () => {
     row({ owesCents: 21900 }), row({ owesCents: 1500, paidCents: 33500 }), row({ owesCents: -7500, paidCents: 39000 }),
     row({ owesCents: 31500, duplicateState: 'possible' }), row({ status: 'withdrawn', owesCents: 14000 }),
   ];
-  assert.equal(toCollectCents(rows), 21900 + 1500 + 31500); // overpaid never lowers it; withdrawn don't count
+  // overpaid never lowers it; withdrawn don't count; a possible duplicate stays out until reviewed (v0.742)
+  assert.equal(toCollectCents(rows), 21900 + 1500);
 });
 
 // ======================= check-in and attendance =======================
@@ -1913,9 +1917,13 @@ check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payme
   assert.equal(before.mode, 'next');
   assert.equal(before.campers, 6);
   assert.equal(before.coming, 3); // a, b, d on Monday
-  assert.equal(before.toCollect, 3); // b (owes), c (due), d (a possible duplicate that owes) — not f (paid)
-  assert.equal(before.toCollectCents, 1500 + 21900 + 10000);
-  assert.equal(before.recordedCents, 20000 + 5000 + 12000 + 18600 + 7500 + 3000); // every payment, removed campers' too
+  // v0.742 (R3-02): b (owes), c (due) — not d (a possible duplicate that owes: left out until
+  // reviewed) and not f (a paid possible duplicate: nothing to collect anyway).
+  assert.equal(before.toCollect, 2);
+  assert.equal(before.toCollectCents, 1500 + 21900);
+  assert.equal(before.duplicatesNotCounted, 1); // only d: f would not have counted anyway
+  assert.equal(before.recordedCents, 20000 + 5000 + 12000 + 18600 + 7500 + 3000); // every payment, removed campers' and duplicates' too
+  assert.equal(before.removedPaidCents, 7500 + 3000); // R5-04: the part from removed campers (x, y)
   const monday = campCardCounts(roster, cardDays, '2027-04-19');
   assert.equal(monday.mode, 'today');
   assert.deepEqual([monday.coming, monday.here], [3, 1]);
@@ -1929,14 +1937,44 @@ check('count cards: the numbers (Campers, Coming / here, Came, To collect, Payme
   assert.equal(CampText.ALL_PAID, 'All paid');
   // Nobody at all.
   const none = campCardCounts([], cardDays, '2027-04-01');
-  assert.deepEqual([none.campers, none.coming, none.toCollect, none.recordedCents], [0, 0, 0, 0]);
-  // The filters: Coming keeps that day's campers, To collect the ones not paid, null everyone.
+  assert.deepEqual([none.campers, none.coming, none.toCollect, none.recordedCents, none.removedPaidCents, none.duplicatesNotCounted], [0, 0, 0, 0, 0, 0]);
+  // The filters: Coming keeps that day's campers (a possible duplicate too), To collect exactly the
+  // rows its card counts (no possible duplicate), null everyone.
   const monDay = cardDays[0];
   assert.deepEqual(roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'coming', monDay)).map((r) => r.id), ['a', 'b', 'd']);
-  assert.deepEqual(roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'collect', monDay)).map((r) => r.id), ['b', 'c', 'd']);
+  const collectList = roster.filter((r) => r.status === 'active' && matchesCardFilter(r, 'collect', monDay));
+  assert.deepEqual(collectList.map((r) => r.id), ['b', 'c']);
+  assert.equal(collectList.length, before.toCollect);
+  assert.equal(collectList.reduce((n, r) => n + r.owesCents, 0), before.toCollectCents);
   assert.equal(roster.every((r) => matchesCardFilter(r, null, monDay)), true);
   assert.equal(comesOnDay(roster[2], 'mon'), false);
   assert.equal(comesOnDay(roster[2], 'tue'), true);
+});
+
+check('count cards v0.742: a possible duplicate leaves To collect; removed campers\' money is named', () => {
+  const cardDays = [{ dayId: 'mon', day: '2027-04-19' }];
+  const row = (id, status, paidCents, owesCents, duplicateState = null) => ({
+    id, status, days: [{ dayId: 'mon', checkedInAt: null }], paidCents, owesCents, duplicateState,
+  });
+  // Ava Thompson's pair: the kept row paid, the second sign-up ($315) is marked Possible duplicate.
+  const pair = [row('ava1', 'active', 31500, 0), row('ava2', 'active', 0, 31500, 'possible'), row('ben', 'active', 0, 24500)];
+  const flagged = campCardCounts(pair, cardDays, '2027-04-01');
+  assert.deepEqual([flagged.campers, flagged.coming], [3, 3]); // people counts don't change
+  assert.deepEqual([flagged.toCollect, flagged.toCollectCents, flagged.duplicatesNotCounted], [1, 24500, 1]);
+  assert.equal(flagged.recordedCents, 31500);
+  assert.equal(flagged.removedPaidCents, 0); // nobody removed: no note on Payments recorded
+  // Reviewed → Keep both: the row is whole again (To collect counts it, the duplicate line goes).
+  const kept = campCardCounts(pair.map((r) => (r.id === 'ava2' ? { ...r, duplicateState: 'kept_both' } : r)), cardDays, '2027-04-01');
+  assert.deepEqual([kept.toCollect, kept.toCollectCents, kept.duplicatesNotCounted], [2, 56000, 0]);
+  // A paid camper is withdrawn: Payments recorded keeps the money, and says how much came from removed campers.
+  const withdrawn = campCardCounts([...pair, row('sofia', 'withdrawn', 14000, 0)], cardDays, '2027-04-01');
+  assert.deepEqual([withdrawn.campers, withdrawn.recordedCents, withdrawn.removedPaidCents], [3, 45500, 14000]);
+  // The words (curly quotes as the rest of the app).
+  assert.equal(CampText.duplicatesNotCounted(1), '1 possible duplicate not counted');
+  assert.equal(CampText.duplicatesNotCounted(2), '2 possible duplicates not counted');
+  assert.equal(CampText.includesFromRemoved(14000), 'includes $140 from removed campers');
+  assert.equal(CampText.noCampersMatch('zz'), 'No campers match “zz”.');
+  assert.equal(CampText.CLEAR_SEARCH, 'Clear search');
 });
 
 // ======================= Early drop-off / Late pick-up on the roster (picture 19, option A) =======================
@@ -2233,6 +2271,369 @@ check('Fill in: campsApi\'s mapping (campsArgs staffSignupArgs / staffFormShapeO
   assert.deepEqual(signupSourceOf({ source: 'form', enteredBy: 'Staff' }), { source: 'form', enteredBy: null });
   assert.deepEqual(signupSourceOf({ source: 'desk', enteredBy: '  ' }), { source: 'desk', enteredBy: null });
   assert.equal(CampText.signupLine({ signedUpOn: '2027-05-20', reference: 'CP-1' }, { source: 'desk', enteredBy: null }).startsWith('Signed up on the family form'), true);
+});
+
+// ======================= Record refund (migration 0039, CONTRACT-0039, rulebook v0.743 / v1.039 / v1.040) =======================
+
+check('Record refund: campRules helpers (overpaid, a refund that stands, the ⋯ item, the refund Undo reverses)', () => {
+  assert.equal(overpaidCents({ owesCents: -2300 }), 2300); // "Paid $23 more than the total"
+  assert.equal(overpaidCents({ owesCents: 0 }), 0);
+  assert.equal(overpaidCents({ owesCents: 1500 }), 0);
+  assert.equal(overpaidCents({}), 0);
+  assert.equal(overpaidCents(null), 0);
+  assert.equal(refundStands({ refundedCents: 2300 }), true);
+  assert.equal(refundStands({ refundedCents: 0 }), false);
+  assert.equal(refundStands({}), false); // a database from before 0039: no refunds
+  // The ⋯ items (v0.743, v0.744 = picture 22y A): Record refund while overpaid, Undo refund while one
+  // stands — after a partial refund both, Record refund first.
+  assert.deepEqual(refundMenuItems({ owesCents: -2300, refundedCents: 0 }), ['record']);
+  assert.deepEqual(refundMenuItems({ owesCents: 0, refundedCents: 2300 }), ['undo']);
+  assert.deepEqual(refundMenuItems({ owesCents: -1300, refundedCents: 1000 }), ['record', 'undo']); // part handed back, part still over
+  assert.deepEqual(refundMenuItems({ owesCents: 0, refundedCents: 0 }), []);
+  assert.deepEqual(refundMenuItems({ owesCents: 1500 }), []);
+  // Undo refund reverses the NEWEST refund that stands (rows in any order).
+  const pays = [
+    { id: 'p1', kind: 'payment', amountCents: 31500, recordedAt: '2027-03-11T21:05:00Z' },
+    { id: 'f1', kind: 'refund', amountCents: -1000, recordedAt: '2027-04-20T14:00:00Z' },
+    { id: 'v1', kind: 'reversal', amountCents: 1000, reversesPaymentId: 'f1', recordedAt: '2027-04-20T14:01:00Z' },
+    { id: 'f3', kind: 'refund', amountCents: -500, recordedAt: '2027-04-21T15:00:00Z' },
+    { id: 'f2', kind: 'refund', amountCents: -2300, recordedAt: '2027-04-21T14:00:00Z' },
+  ];
+  assert.equal(newestStandingRefund(pays).id, 'f3');
+  assert.equal(newestStandingRefund(pays.slice(0, 3)), null); // the only refund was undone
+  assert.equal(newestStandingRefund(undefined), null);
+  // A refund's reversal is a PLUS amount; a payment's a minus one.
+  assert.equal(reversesRefund(pays[2]), true);
+  assert.equal(reversesRefund({ kind: 'reversal', amountCents: -31500 }), false);
+  assert.equal(reversesRefund(pays[1]), false);
+  assert.equal(reversesRefund(null), false);
+  // The payments that stand (Record refund's note counts them): not undone, not replaced; refunds aren't payments.
+  const edited = [
+    { id: 'a', kind: 'payment', amountCents: 20000 },
+    { id: 'b', kind: 'payment', amountCents: 11500 },
+    { id: 'x', kind: 'reversal', amountCents: -20000, reversesPaymentId: 'a' },
+    { id: 'c', kind: 'payment', amountCents: 20000 },
+    { id: 'f', kind: 'refund', amountCents: -2300 },
+  ];
+  assert.deepEqual(standingPayments(edited).map((p) => p.id), ['b', 'c']);
+  assert.deepEqual(standingPayments(undefined), []);
+  // The box's Amount: cents allowed, a leading $ and commas fine; the rest isn't an amount.
+  assert.deepEqual(parseRefundAmount('23'), { cents: 2300 });
+  // Whole dollars only (as Edit payment and Star's refund box): "23.00" is fine, cents are refused.
+  assert.deepEqual(parseRefundAmount(' $23.00 '), { cents: 2300 });
+  assert.deepEqual(parseRefundAmount('$1,023'), { cents: 102300 });
+  for (const cents of ['23.50', ' $23.5 ', '$1,023.05']) assert.equal(parseRefundAmount(cents).problem, 'notWhole', cents);
+  assert.deepEqual(parseRefundAmount('0'), { cents: 0 });
+  assert.deepEqual(parseRefundAmount(''), { problem: 'empty' });
+  assert.deepEqual(parseRefundAmount('  '), { problem: 'empty' });
+  for (const bad of ['abc', '-5', '23.505', '2 3', '.5', '23.', '$']) assert.equal(parseRefundAmount(bad).problem, bad === '$' ? 'empty' : 'notNumber', bad);
+  assert.deepEqual(parseRefundAmount('9'.repeat(20)), { problem: 'tooBig' }); // always more than what was overpaid
+});
+
+check('Record refund: the words (v0.743 — Star\'s box, Camps\' words)', () => {
+  const T = CampText;
+  assert.equal(T.RECORD_REFUND, 'Record refund');
+  assert.equal(T.RECORD_REFUND_TITLE, 'Record refund');
+  assert.equal(T.UNDO_REFUND, 'Undo refund');
+  assert.equal(T.UNDO_REFUND_FIRST, 'Undo the refund first.');
+  assert.equal(T.REFUNDED_BY, 'Refunded by');
+  assert.equal(T.DATE_REFUNDED, 'Date refunded');
+  assert.equal(T.refundSub('Chloe Martin', 31500, 2300), 'Chloe Martin · paid $315 · $23 overpaid');
+  assert.equal(T.refundUpTo(2300), 'Up to $23, the amount overpaid.');
+  assert.equal(T.refundDateHint('2027-03-04'), 'Not before Mar 4 (signed up) or after today.');
+  assert.equal(T.refundAfter(31500), 'The $315 payment stays in the history. Afterwards the row reads “Paid”.');
+  assert.equal(T.refundAfter(31500, 1), 'The $315 payment stays in the history. Afterwards the row reads “Paid”.');
+  assert.equal(T.refundAfter(31500, 2), 'The 2 payments ($315) stay in the history. Afterwards the row reads “Paid”.');
+  assert.equal(T.refundTooLarge(2300), 'Can’t be more than the $23 overpaid.');
+  // The box's words for what picture 22 didn't draw (review L4 / L5).
+  assert.equal(T.REFUND_AMOUNT_ZERO, 'Enter an amount more than $0.');
+  assert.equal(T.REFUND_AMOUNT_PROBLEM, 'Enter an amount in whole dollars, like 23.');
+  assert.equal(T.ENTER_DATE_REFUNDED, 'Enter the date refunded.');
+  assert.equal(T.refundDateRange('2027-03-04'), 'Pick a day from Mar 4 to today.');
+  assert.equal(T.UNDO_REFUND_STANDS_STAFF, "Couldn't undo: this camper has a refund. Ask an admin.");
+  assert.equal(T.OVERPAID_ADMIN_TOUCH, 'An admin records money handed back with More → Record refund.');
+  assert.equal(T.NOTHING_OVERPAID, 'Nothing is overpaid any more. Someone else changed this just now. Close this to see the latest.');
+  assert.equal(T.TOAST_REFUND_RECORDED, 'Refund recorded');
+  assert.equal(T.TOAST_REFUND_UNDONE, 'Refund undone');
+  assert.equal(T.undoRefundTitle('Chloe Martin'), "Undo Chloe Martin's refund?");
+  assert.equal(T.undoRefundBody({ amountCents: -2300, method: 'cash', paidOn: '2027-04-21' }),
+    'The $23 cash refund recorded on Apr 21 is reversed and the amount shows as overpaid again. Both stay in the history.');
+  assert.equal(T.KEEP_REFUND, 'Keep refund');
+  assert.equal(T.OVERPAID_ADMIN, 'An admin records money handed back with ⋯ → Record refund.');
+  // Camper detail's lines: the refund as its own line; its Undo the same "(reversed)" line as a
+  // payment's (its own plus amount), so it can't be taken for a second refund (review L4).
+  const base = { method: 'cash', school: 'worcester', paidOn: '2027-04-21', recordedByName: 'Jeffrey Berg' };
+  assert.equal(T.paymentLine({ ...base, kind: 'refund', amountCents: -2300 }), 'Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'reversal', amountCents: 2300, paidOn: '2027-04-22' }), '$23 cash (reversed) · Worcester · Apr 22 · Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'reversal', amountCents: -31500, method: 'check' }), '−$315 check (reversed) · Worcester · Apr 21 · Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'payment', amountCents: 31500, method: 'check' }), '$315 check · Worcester · Apr 21 · Jeffrey Berg');
+  assert.equal(T.historyRefund(2300, 'cash', '2027-04-21'), 'Refund recorded: $23 cash, Apr 21');
+  assert.equal(T.historyRefundUndone(2300), 'Refund undone: $23');
+  assert.equal(T.RECEIPT_FOR_REFUND, 'Refund');
+});
+
+check('Record refund: the receipt\'s minus line, Paid to date net of it; an undone refund left out', () => {
+  const camp = { name: 'April Vacation Camp', locationCode: 'worcester', bothSchools: true };
+  const campDays = ['2027-04-19', '2027-04-20', '2027-04-21', '2027-04-22', '2027-04-23'].map((day, i) => ({ dayId: `d${i}`, day }));
+  const camper = {
+    firstName: 'Chloe', lastName: 'Martin', status: 'active', days: campDays.slice(0, 4), totalCents: 29200, paidCents: 29200,
+    reference: 'CP-4818', refundedCents: 2300,
+  };
+  const payments = [
+    { id: 'f2', kind: 'refund', amountCents: -2300, method: 'cash', paidOn: '2027-04-21', recordedAt: '2027-04-21T14:00:00Z', reversesPaymentId: null },
+    { id: 'p1', kind: 'payment', amountCents: 31500, method: 'check', paidOn: '2027-03-11', recordedAt: '2027-03-11T21:05:00Z', reversesPaymentId: null },
+    { id: 'f1', kind: 'refund', amountCents: -1000, method: 'cash', paidOn: '2027-04-20', recordedAt: '2027-04-20T14:00:00Z', reversesPaymentId: null },
+    { id: 'v1', kind: 'reversal', amountCents: 1000, method: 'cash', paidOn: '2027-04-20', recordedAt: '2027-04-20T14:01:00Z', reversesPaymentId: 'f1' },
+  ];
+  const build = (over = {}) => buildCampReceipt({ detail: { camper, breakdown: { extras: [] }, payments, ...over }, camp, campDays, printedOn: '2027-04-21' });
+  const r = build();
+  assert.deepEqual(r.lines, [
+    { date: '2027-03-11', forText: 'Camp fee', how: 'check', amountCents: 31500 },
+    { date: '2027-04-21', forText: 'Refund', how: 'cash', amountCents: -2300 }, // "−$23" (picture 22 4b)
+  ]);
+  assert.equal(r.paidCents, 29200); // Paid to date counts the refund
+  assert.equal(r.totalDueCents, 29200); // → Balance $0 · paid in full
+  assert.deepEqual(receiptPayments(payments).map((p) => p.id), ['p1', 'f2']);
+  // A refund row with a plus amount (never sent) still prints with a minus (Star's rule).
+  assert.equal(build({ payments: [{ ...payments[0], amountCents: 2300 }] }).lines[0].amountCents, -2300);
+  // Print receipt: a refund that stands counts as money on record (Star's rule); never while hidden.
+  assert.equal(canPrintReceipt({ status: 'active', paidCents: 0, refundedCents: 500 }, false), true);
+  assert.equal(canPrintReceipt({ status: 'active', paidCents: 0, refundedCents: 500 }, true), false);
+  assert.equal(canPrintReceipt({ status: 'active', paidCents: 0, refundedCents: 0 }, false), false);
+});
+
+check('Record refund: the History words ("Refund recorded: $23 cash, Apr 21", "Refund undone: $23")', () => {
+  const row = (batchId, tableName, after, before = null, op = 'insert') => ({ batchId, occurredAt: '2027-04-21T14:00:00Z', actorName: 'Jeffrey Berg', tableName, op, before, after });
+  const say = (rows, opts = {}) => describeCamperBatch(groupCamperHistory(rows)[0], { campDays: [], campExtras: [], familySize: 1, ...opts });
+  const refund = [
+    row('r', 'camp_payments', { kind: 'refund', amountCents: -2300, method: 'cash', paidOn: '2027-04-21', school: 'worcester' }),
+    row('r', 'camp_campers', { version: 5 }, { version: 4 }, 'update'), // the version moved: nothing to say
+  ];
+  assert.deepEqual(say(refund), { text: 'Refund recorded: $23 cash, Apr 21', at: '2027-04-21T14:00:00Z', who: 'Jeffrey Berg' });
+  assert.equal(say([row('u', 'camp_payments', { kind: 'reversal', amountCents: 2300, method: 'cash', paidOn: '2027-04-22', reversesPaymentId: 'f' })]).text, 'Refund undone: $23');
+  // A payment's Undo and Edit payment read as before.
+  assert.equal(say([row('p', 'camp_payments', { kind: 'reversal', amountCents: -31500, method: 'check' })]).text, 'Payment undone: $315 check');
+  assert.equal(say([
+    row('e', 'camp_payments', { kind: 'reversal', amountCents: -31500, method: 'check' }),
+    row('e', 'camp_payments', { kind: 'payment', amountCents: 29200, method: 'check' }),
+  ]).text, 'Payment changed: $315 check → $292 check');
+  // Hidden: a refund is money, so the save is left out of the list.
+  assert.deepEqual(say(refund, { hidden: true }), { hiddenPayment: true });
+});
+
+check('mock (0039): Record refund and its Undo — the contract\'s answers, refund_stands, the roster and Camper detail', () => {
+  const { backend: b, env, store } = makeBackend({ today: '2027-04-21', clock: Date.parse('2027-04-21T14:00:00Z') }); // campWeek
+  const camp = rows(b, 'camps', 'id, name').find((c) => c.name === 'April Vacation Camp');
+  // The app's own roster column list (campsArgs.ROSTER_COLUMNS) reads from the preview database.
+  const roster = () => toCamel(rows(b, 'camp_roster', ROSTER_COLUMNS, [{ col: 'camp_id', value: camp.id }]));
+  const chloe = () => roster().find((r) => r.firstName === 'Chloe' && r.lastName === 'Martin');
+  const detailOf = (id, ctx = ADMIN) => toCamel(rpcOk(b, 'camp_camper_detail', { p_camper_id: id }, ctx));
+  const campDays = toCamel(rows(b, 'camp_days', 'id, day', [{ col: 'camp_id', value: camp.id }])).map((d) => ({ dayId: d.id, day: d.day }));
+  const campExtras = toCamel(rows(b, 'camp_extras', 'id, name, sort', [{ col: 'camp_id', value: camp.id }])).map((e) => ({ extraId: e.extraId ?? e.id, name: e.name }));
+  const words = (r) => groupCamperHistory(toCamel(rpcOk(b, 'camp_camper_history', { p_camper_id: r.id })).rows, {
+    dayIds: r.days.map((d) => d.dayId), extras: r.extras.map((e) => ({ extraId: e.extraId, dayId: e.dayId })),
+  }).map((batch) => describeCamperBatch(batch, { campDays, campExtras, familySize: 1 })).filter(Boolean).map((w) => `${w.text} | ${w.who}`);
+
+  // Picture 22's sample: Chloe Martin paid $315 by check on Mar 11 (signed up Mar 4).
+  let c = chloe();
+  assert.equal(c.totalCents, 31500);
+  assert.equal(c.paidCents, 31500);
+  assert.equal(c.refundedCents, 0);
+  assert.deepEqual(refundMenuItems(c), []);
+  const args = (over = {}) => recordRefundArgs({ camperId: c.id, expectedVersion: c.version, method: 'cash', amountCents: 2300, refundedOn: '2027-04-21', school: 'worcester', ...over });
+  assert.deepEqual(Object.keys(args()).sort(), ['p_amount_cents', 'p_camper_id', 'p_expected_version', 'p_method', 'p_refunded_on', 'p_school']);
+  assert.deepEqual(rpcOk(b, 'camp_record_refund', args()), { status: 'refund_too_large', overpaid_cents: 0 }); // nothing overpaid yet
+
+  // Friday taken off with Edit details: total $292, so $23 overpaid.
+  const d0 = detailOf(c.id);
+  const keep = c.days.map((d) => d.dayId).slice(0, 4);
+  const late = c.extras[0].extraId;
+  const edited = rpcOk(b, 'camp_update_details', {
+    p_camper_id: c.id, p_camper_version: c.version, p_signup_version: c.signupVersion, p_first: 'Chloe', p_last: 'Martin', p_age: 8, p_member: true,
+    p_day_ids: keep, p_extras: [{ extra_id: late, day_ids: keep }], p_parent_name: d0.family.parentName, p_parent_phone: d0.family.parentPhone,
+    p_parent_relation: d0.family.parentRelation, p_emergency_name: d0.family.emergencyName, p_emergency_phone: d0.family.emergencyPhone,
+    p_emergency_relation: d0.family.emergencyRelation,
+  });
+  assert.equal(edited.status, 'ok');
+  assert.equal(edited.total_cents, 29200);
+  assert.equal(edited.owes_cents, -2300);
+  c = chloe();
+  assert.equal(overpaidCents(c), 2300);
+  assert.deepEqual(refundMenuItems(c), ['record']);
+
+  // The contract's refusals, in its order: staff first; then the inputs; then the camper.
+  assert.equal(rpcOk(b, 'camp_record_refund', args(), STAFF).status, 'not_allowed');
+  assert.equal(rpcOk(b, 'camp_record_refund', args(), LOCKED).status, 'no_access');
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ method: 'card' })).status, 'invalid'); // a refund goes back in cash or by check
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ amountCents: 0 })).status, 'invalid');
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ amountCents: 1000001 })).status, 'invalid'); // over $10,000 (0022's limit; the real cap is what was overpaid)
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ refundedOn: '2027-04-22' })).status, 'invalid'); // after today
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ refundedOn: null })).status, 'invalid');
+  assert.deepEqual(rpcOk(b, 'camp_record_refund', args({ school: 'boston' })), { status: 'invalid', field: 'school' });
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ camperId: randomUUID() })).status, 'not_found');
+  assert.equal(rpcOk(b, 'camp_record_refund', args({ expectedVersion: c.version - 1 })).status, 'stale');
+  assert.deepEqual(rpcOk(b, 'camp_record_refund', args({ refundedOn: '2027-03-03' })), { status: 'invalid', field: 'date' }); // before signing up (Mar 4)
+  assert.deepEqual(rpcOk(b, 'camp_record_refund', args({ amountCents: 3000 })), { status: 'refund_too_large', overpaid_cents: 2300 });
+  assert.equal(b.rpc('camp_record_refund', { ...args(), p_extra: 1 }, ADMIN).error.code, 'PGRST202'); // an unknown argument
+
+  // The refund: $23 cash on the sign-up day, at Shrewsbury's desk (This device, v1.040).
+  env.clock += 1000;
+  const saved = rpcOk(b, 'camp_record_refund', args({ refundedOn: '2027-03-04', school: 'shrewsbury' }));
+  assert.equal(saved.status, 'ok');
+  assert.equal(typeof saved.payment_id, 'string');
+  assert.equal(saved.version, c.version + 1);
+  assert.equal(rpcOk(b, 'camp_record_refund', args()).status, 'stale'); // a second Save with the old version
+  c = chloe();
+  assert.equal(c.paidCents, 29200);
+  assert.equal(c.owesCents, 0);
+  assert.equal(c.refundedCents, 2300);
+  assert.equal(payTag(c), 'paid');
+  assert.equal(c.paidOn, '2027-03-11'); // a refund never becomes "the last payment"
+  assert.equal(c.paidMethod, 'check');
+  assert.deepEqual(refundMenuItems(c), ['undo']); // all of it handed back: only Undo refund
+  // Camper detail (staff too): every row, the refund with its kind, school and date; its line.
+  const d1 = detailOf(c.id, STAFF);
+  assert.equal(d1.camper.refundedCents, 2300);
+  assert.deepEqual(d1.payments.map((p) => p.kind), ['payment', 'refund']);
+  const refundRow = d1.payments[1];
+  assert.equal(refundRow.id, saved.payment_id);
+  assert.equal(refundRow.amountCents, -2300);
+  assert.equal(refundRow.school, 'shrewsbury');
+  assert.equal(refundRow.paidOn, '2027-03-04');
+  assert.equal(CampText.paymentLine(refundRow), 'Refunded $23 cash · Shrewsbury · Mar 4 · Jeffrey Berg');
+  assert.equal(newestStandingRefund(d1.payments).id, saved.payment_id);
+  assert.equal(words(c)[0], 'Refund recorded: $23 cash, Mar 4 | Jeffrey Berg');
+
+  // refund_stands: Edit payment and Undo payment wait for Undo refund (their own refusals come first).
+  const paymentId = c.lastPaymentId;
+  assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paymentId }).status, 'refund_stands');
+  assert.equal(rpcOk(b, 'camp_edit_payment', { p_payment_id: paymentId, p_method: 'cash', p_amount_cents: 29200, p_paid_on: '2027-03-11', p_school: 'worcester' }).status, 'refund_stands');
+  assert.equal(rpcOk(b, 'camp_edit_payment', { p_payment_id: paymentId, p_method: 'cash', p_amount_cents: 29200, p_paid_on: '2027-03-11', p_school: 'worcester' }, STAFF).status, 'not_allowed');
+  assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paymentId }, STAFF).status, 'not_allowed'); // not their own, recent Mark paid
+  assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: randomUUID() }).status, 'not_found');
+  // A second refund: nothing is overpaid now.
+  assert.deepEqual(rpcOk(b, 'camp_record_refund', args({ expectedVersion: c.version, amountCents: 100 })), { status: 'refund_too_large', overpaid_cents: 0 });
+
+  // Undo refund: admins; only a refund; once.
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: saved.payment_id }, STAFF).status, 'not_allowed');
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: paymentId }).status, 'invalid'); // a payment has Undo payment
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: randomUUID() }).status, 'not_found');
+  env.clock += 1000;
+  const undone = rpcOk(b, 'camp_undo_refund', { p_payment_id: saved.payment_id });
+  assert.equal(undone.status, 'ok');
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: saved.payment_id }).status, 'stale'); // already undone
+  c = chloe();
+  assert.equal(c.version, undone.version);
+  assert.equal(c.refundedCents, 0);
+  assert.equal(c.owesCents, -2300); // overpaid again
+  assert.deepEqual(refundMenuItems(c), ['record']);
+  // The reversal: + the refund's amount, same way, today, at the REFUND's school (v1.040).
+  const reversal = store().camp_payments.find((p) => p.reverses_payment_id === saved.payment_id);
+  assert.deepEqual([reversal.kind, reversal.amount_cents, reversal.method, reversal.paid_on, reversal.school], ['reversal', 2300, 'cash', '2027-04-21', 'shrewsbury']);
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: reversal.id }).status, 'invalid'); // a reversal is never undone
+  assert.equal(words(c)[0], 'Refund undone: $23 | Jeffrey Berg');
+  const d2 = detailOf(c.id);
+  assert.deepEqual(d2.payments.map((p) => CampText.paymentLine(p)), [
+    '$315 check · Worcester · Mar 11 · Staff',
+    'Refunded $23 cash · Shrewsbury · Mar 4 · Jeffrey Berg',
+    '$23 cash (reversed) · Shrewsbury · Apr 21 · Jeffrey Berg',
+  ]);
+  assert.equal(newestStandingRefund(d2.payments), null);
+  // The receipt: only the payment again; Paid to date $315.
+  const receipt = buildCampReceipt({ detail: d2, camp: { name: camp.name, locationCode: 'worcester', bothSchools: true }, campDays, printedOn: '2027-04-21' });
+  assert.deepEqual(receipt.lines.map((l) => [l.forText, l.amountCents]), [['Camp fee', 31500]]);
+  assert.equal(receipt.paidCents, 31500);
+  // With the refund undone, Undo payment works again.
+  assert.equal(rpcOk(b, 'camp_edit_payment', { p_payment_id: paymentId, p_method: 'check', p_amount_cents: 29200, p_paid_on: '2027-03-11', p_school: 'worcester' }).status, 'ok');
+
+  // A withdrawn camper: no refund, and a standing refund can't be undone (Restore first).
+  c = chloe();
+  assert.equal(overpaidCents(c), 0); // the edit made the payment $292
+  // Liam Ortiz paid $275 for every day; Friday off → $15 overpaid; $5 of it handed back by check.
+  const liam = roster().find((r) => r.firstName === 'Liam' && r.lastName === 'Ortiz');
+  const dl = detailOf(liam.id);
+  const liamEdit = rpcOk(b, 'camp_update_details', {
+    p_camper_id: liam.id, p_camper_version: liam.version, p_signup_version: liam.signupVersion, p_first: liam.firstName, p_last: liam.lastName, p_age: liam.age,
+    p_member: liam.member, p_day_ids: liam.days.map((d) => d.dayId).slice(0, 4), p_extras: [], p_parent_name: dl.family.parentName,
+    p_parent_phone: dl.family.parentPhone, p_parent_relation: dl.family.parentRelation, p_emergency_name: dl.family.emergencyName,
+    p_emergency_phone: dl.family.emergencyPhone, p_emergency_relation: dl.family.emergencyRelation,
+  });
+  assert.equal(liamEdit.status, 'ok');
+  assert.equal(liamEdit.owes_cents, -1500);
+  const liam1 = roster().find((r) => r.id === liam.id);
+  const part = rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam1.id, expectedVersion: liam1.version, method: 'check', amountCents: 500, refundedOn: '2027-04-21', school: 'worcester' }));
+  assert.equal(part.status, 'ok');
+  const liam2 = roster().find((r) => r.id === liam.id);
+  assert.equal(liam2.refundedCents, 500);
+  assert.equal(liam2.owesCents, -1000);
+  // A part handed back, some still over: both items (v0.744, picture 22y A) — and the rest goes back
+  // as a SECOND refund, never more than what is still overpaid.
+  assert.deepEqual(refundMenuItems(liam2), ['record', 'undo']);
+  assert.equal(rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam2.id, expectedVersion: liam2.version, method: 'cash', amountCents: 1100, refundedOn: '2027-04-21', school: 'worcester' })).status, 'refund_too_large');
+  const rest = rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam2.id, expectedVersion: liam2.version, method: 'cash', amountCents: 1000, refundedOn: '2027-04-21', school: 'worcester' }));
+  assert.equal(rest.status, 'ok');
+  const liamBack = roster().find((r) => r.id === liam.id);
+  assert.equal(liamBack.refundedCents, 1500);
+  assert.equal(liamBack.owesCents, 0);
+  assert.deepEqual(refundMenuItems(liamBack), ['undo']);
+  assert.equal(rpcOk(b, 'camp_withdraw_camper', { p_camper_id: liamBack.id, p_expected_version: liamBack.version }).status, 'ok');
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: part.payment_id }).status, 'withdrawn');
+  const liam3 = roster().find((r) => r.id === liam.id);
+  assert.equal(rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam3.id, expectedVersion: liam3.version, method: 'cash', amountCents: 100, refundedOn: '2027-04-21', school: 'worcester' })).status, 'withdrawn');
+  assert.equal(CAMP_RPC_NAMES.includes('camp_record_refund') && CAMP_RPC_NAMES.includes('camp_undo_refund'), true);
+});
+
+check('mock (0039): the row rules (kind check + guard) and Edit payment of a refund or reversal → invalid', () => {
+  const { backend: b, env, store } = makeBackend({ today: '2027-04-21', clock: Date.parse('2027-04-21T14:00:00Z') });
+  const camp = rows(b, 'camps', 'id, name').find((c) => c.name === 'April Vacation Camp');
+  const roster = () => toCamel(rows(b, 'camp_roster', ROSTER_COLUMNS, [{ col: 'camp_id', value: camp.id }]));
+  let c = roster().find((r) => r.firstName === 'Chloe' && r.lastName === 'Martin');
+  const d0 = toCamel(rpcOk(b, 'camp_camper_detail', { p_camper_id: c.id }));
+  const keep = c.days.map((d) => d.dayId).slice(0, 4);
+  assert.equal(rpcOk(b, 'camp_update_details', {
+    p_camper_id: c.id, p_camper_version: c.version, p_signup_version: c.signupVersion, p_first: 'Chloe', p_last: 'Martin', p_age: 8, p_member: true,
+    p_day_ids: keep, p_extras: [{ extra_id: c.extras[0].extraId, day_ids: keep }], p_parent_name: d0.family.parentName, p_parent_phone: d0.family.parentPhone,
+    p_parent_relation: d0.family.parentRelation, p_emergency_name: d0.family.emergencyName, p_emergency_phone: d0.family.emergencyPhone,
+    p_emergency_relation: d0.family.emergencyRelation,
+  }).status, 'ok');
+  c = roster().find((r) => r.id === c.id);
+  env.clock += 1000;
+  const refund = rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: c.id, expectedVersion: c.version, method: 'cash', amountCents: 2300, refundedOn: '2027-04-21', school: 'worcester' }));
+  assert.equal(refund.status, 'ok');
+  const paymentId = c.lastPaymentId; // $315 check at Worcester; the camper's rows now add up to $292
+  const row = (over) => ({ camper_id: c.id, kind: 'refund', amount_cents: -100, method: 'cash', reverses_payment_id: null, school: 'worcester', ...over });
+  // The kind rule: a refund is cash or check, −$10,000 … −1 cent, and undoes nothing.
+  assert.equal(b.checkPaymentRow(row()), null);
+  assert.equal(b.checkPaymentRow(row({ method: 'check' })), null);
+  assert.equal(b.checkPaymentRow(row({ method: 'card' })), 'invalid');
+  assert.equal(b.checkPaymentRow(row({ amount_cents: 100 })), 'invalid');
+  assert.equal(b.checkPaymentRow(row({ amount_cents: -1000001 })), 'invalid');
+  assert.equal(b.checkPaymentRow(row({ reverses_payment_id: paymentId })), 'invalid');
+  assert.equal(b.checkPaymentRow(row({ kind: 'payment', amount_cents: 0 })), 'invalid');
+  assert.equal(b.checkPaymentRow(row({ kind: 'payment', amount_cents: 1000001 })), 'invalid');
+  // The net rule: no row may take the camper's rows below 0 ($292 now).
+  assert.equal(b.checkPaymentRow(row({ amount_cents: -29200 })), null); // exactly 0 is fine
+  assert.equal(b.checkPaymentRow(row({ amount_cents: -29201 })), 'invalid');
+  // A reversal undoes a payment or a refund of the same camper, for exactly minus it, at its school.
+  const reversal = (over) => ({ camper_id: c.id, kind: 'reversal', amount_cents: 2300, method: 'cash', reverses_payment_id: refund.payment_id, school: 'worcester', ...over });
+  assert.equal(b.checkPaymentRow(reversal()), null); // the refund's Undo
+  assert.equal(b.checkPaymentRow(reversal({ school: 'shrewsbury' })), 'invalid');
+  assert.equal(b.checkPaymentRow(reversal({ amount_cents: 2200 })), 'invalid');
+  assert.equal(b.checkPaymentRow(reversal({ camper_id: roster().find((r) => r.firstName === 'Liam').id })), 'invalid');
+  assert.equal(b.checkPaymentRow(reversal({ reverses_payment_id: randomUUID() })), 'invalid');
+  // Undoing the payment would take the rows to −$23 (the refund stands): the net rule says no too.
+  assert.equal(b.checkPaymentRow(reversal({ amount_cents: -31500, method: 'check', reverses_payment_id: paymentId })), 'invalid');
+  env.clock += 1000;
+  assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: refund.payment_id }).status, 'ok');
+  const undoRow = store().camp_payments.find((p) => p.reverses_payment_id === refund.payment_id);
+  assert.equal(b.checkPaymentRow(reversal({ amount_cents: -2300, reverses_payment_id: undoRow.id })), 'invalid'); // never a reversal of a reversal
+  // Edit payment: a refund or a reversal is 'invalid' (only a payment can be edited); an edited payment 'stale'.
+  const edit = (id) => rpcOk(b, 'camp_edit_payment', { p_payment_id: id, p_method: 'cash', p_amount_cents: 29200, p_paid_on: '2027-03-11', p_school: 'worcester' }).status;
+  assert.equal(edit(refund.payment_id), 'invalid');
+  assert.equal(edit(undoRow.id), 'invalid');
+  env.clock += 1000;
+  assert.equal(edit(paymentId), 'ok');
+  assert.equal(edit(paymentId), 'stale'); // already replaced
 });
 
 console.log(`${count} groups of checks ran.`);
