@@ -1172,7 +1172,8 @@ export function movePaymentHint(payments, firstName, rankName) {
 export const moveClearsNoShow = (firstName, dateIso) => `${firstName} was marked No show on ${weekdayMonthDay(dateIso)}. Moving clears that result.`;
 export const movedToast = (name) => `${name} moved to private testing`;
 // The event's Removed row: tag "Moved to private testing, Tue, Dec 1", line "moved Nov 10 by Staff"
-export const movedTag = (dateIso) => `Moved to private testing, ${weekdayMonthDay(dateIso)}`;
+// The date's spaces are non-breaking, so a narrow cell wraps before the date, never inside it (pass 2 L-02).
+export const movedTag = (dateIso) => `Moved to private testing, ${weekdayMonthDay(dateIso).replace(/ /g, '\u00A0')}`;
 export const movedBy = (stamp, name) => (name ? `moved ${stampDay(stamp)} by ${name}` : `moved ${stampDay(stamp)}`);
 export const OPEN_PRIVATE = 'Open private testing';
 export const restoreMovedReason = (firstName) => `Not available: ${firstName} is on the Private testing tab with their payment.`;

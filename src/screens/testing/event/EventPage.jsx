@@ -441,13 +441,14 @@ export default function EventPage({
 
   // The roster draws its rows again when its layout flips (a window resized, a tablet turned, Panel
   // size changed: pass 2 L-02): a row's ⋯ and Mark paid buttons are then new buttons in other places,
-  // so an open ⋯ menu or Mark paid box would point at a button that is gone. Both close. Nothing is
-  // lost: the Mark paid box only asks how they paid.
+  // so an open ⋯ menu or Mark paid box would point at a button that is gone. Both close, and also when
+  // the window itself becomes a phone (the ⋯ popover turns into the bottom sheet there, which would stay
+  // open with no key to close it). Nothing is lost: the Mark paid box only asks how they paid.
   const rosterIsPhone = rosterLayout.isPhone;
   useEffect(() => {
     setMenu(null);
     setMarkPaidBox(null);
-  }, [rosterIsPhone]);
+  }, [rosterIsPhone, isPhone]);
 
   // ===== Derived data =====
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));

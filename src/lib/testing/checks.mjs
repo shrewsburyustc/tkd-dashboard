@@ -2604,6 +2604,12 @@ check('eventRules: rosterLayoutFor — a narrow room draws the phone rows; touch
   assert.equal(tablet.isPhone, false); // and the window's own layout is never edited
 });
 
+check('words: the moved-to-private tag keeps its date together, so a narrow cell never splits it (pass 2 L-02)', () => {
+  assert.equal(CBT.movedTag('2026-12-01'), 'Moved to private testing, Tue,\u00A0Dec\u00A01');
+  // only the date is held together: the words before it still wrap
+  assert.equal(CBT.movedTag('2026-12-01').split(' ').length, 5);
+});
+
 check('EventPage: only the roster follows the room — rosterLayoutFor feeds ctx.layout; the Grading tab, dialogs and ⋯ menu keep the window (pass 2 L-02)', () => {
   const page = readFileSync(new URL('../../screens/testing/event/EventPage.jsx', import.meta.url), 'utf8');
   const imports = (name) => new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from '\\.\\./\\.\\./\\.\\./lib/testing/eventRules\\.js'`);
@@ -2618,7 +2624,7 @@ check('EventPage: only the roster follows the room — rosterLayoutFor feeds ctx
   assert.match(page, /layout=\{layout\}/); // the Grading tab keeps the window's layout
   assert.match(page, /isSheet=\{isPhone\}/); // the ⋯ menu keeps the window's too
   // A layout flip redraws the row buttons, so an open ⋯ menu or Mark paid box closes (they'd point at nothing)
-  assert.match(page, /useEffect\(\(\) => \{\s+setMenu\(null\);\s+setMarkPaidBox\(null\);\s+\}, \[rosterIsPhone\]\);/);
+  assert.match(page, /useEffect\(\(\) => \{\s+setMenu\(null\);\s+setMarkPaidBox\(null\);\s+\}, \[rosterIsPhone, isPhone\]\);/);
 });
 
 check('privateRules: Upcoming / Past order and the cards (P1, E11)', () => {
