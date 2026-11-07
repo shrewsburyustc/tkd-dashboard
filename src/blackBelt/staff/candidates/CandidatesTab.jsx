@@ -4,8 +4,9 @@
 //   - (one school on the location switcher) "Showing Worcester candidates only · Show both schools"
 //   - the amber possible-duplicate box with Review (DuplicateBox.jsx)
 //   - the four summary cards that filter the list (SummaryCards.jsx)
-//   - Search candidates (tablet: the full width), and on the PC the caption "9 candidates · Dan,
-//     then school, then last name" right beside it
+//   - Find a candidate (tablet: the full width; its ✕ is the shared icon button), and on the PC the
+//     caption "9 candidates · Dan, then school, then last name" right beside it. When nobody
+//     matches, one gray line replaces the list: 'No candidates match "x". · Clear search'
 //   - phones: Search first, then the two filter pills and the gray duplicates line (mockup 1)
 //   - the roster (RosterRows.jsx) with each row's ⋯ menu, and the Removed group at the bottom
 //   - every dialog: the candidate detail and what opens from it (useCandidateActions.js decides)
@@ -18,8 +19,10 @@
 // The row ⋯ (v0.963, mockup A option 2; the order of v1.011): three groups with a line between —
 // Edit details · Change plan or Kukkiwon — Record payment (tablets / phones) · Edit payment ·
 // Undo payment · Record refund · Print receipt — Withdraw · Delete permanently. A withdrawn row:
-// Record refund · Print receipt — Restore · Delete permanently. For an admin, a row with payment
-// rows is read first (Edit / Undo payment act on the LATEST payment, which the row doesn't carry).
+// Record refund · Print receipt — Restore — Delete permanently (its own line, C-04 / v1.055). A row
+// marked "Possible duplicate" has no Record payment (R3-02) until the pair is resolved. For an
+// admin, a row with payment rows is read first (Edit / Undo payment act on the LATEST payment,
+// which the row doesn't carry).
 //
 // It follows the location switcher (v0.118): on Worcester or Shrewsbury the list, the cards and
 // the duplicate box show that school only; Both shows everyone. With the device's Hide payments
@@ -34,6 +37,7 @@
 // dialog or what someone is typing.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadRoster, schoolToday } from '../../../lib/blackBelt/api.js';
 import { duplicatePairs, rosterCards, rosterFilter } from '../../../lib/blackBelt/rules.js';
@@ -61,6 +65,7 @@ import SummaryCards from './SummaryCards.jsx';
 import UndoPaymentDialog from './UndoPaymentDialog.jsx';
 import { useCandidateActions } from './useCandidateActions.js';
 import { useMakeupPicker } from './useMakeupPicker.js';
+import { canRecordPayment } from './checks.js';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
@@ -124,6 +129,13 @@ export default function CandidatesTab({
   const layout = { isPhone, isWide: isWide && !isPhone, isTouch };
 
   const [search, setSearch] = useState('');
+  // Clear search (the ✕ and the "Clear search" link): empty the box, then put the keyboard back in
+  // it — the control that was pressed disappears, and focus would otherwise fall to the page.
+  const searchInputRef = useRef(null);
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, []);
   const [card, setCard] = useState(null);
   const [removedOpen, setRemovedOpen] = useState(false);
   const [menu, setMenu] = useState(null); // { row, anchor, data } — data: the candidate as read for an admin's ⋯, else null
@@ -241,7 +253,7 @@ export default function CandidatesTab({
   function rowMenuItems(row, loaded = null) {
     const name = T.candidateName(row);
     const m = row.money ?? {};
-    const target = { id: row.id, firstName: row.firstName, lastName: row.lastName, version: row.version, hasPaymentRows: row.hasPaymentRows, hasGrades: row.hasGrades };
+    const target = { id: row.id, firstName: row.firstName, lastName: row.lastName, version: row.version, hasPaymentRows: row.hasPaymentRows, hasGrades: row.hasGrades, withdrawnReason: row.withdrawnReason };
     const anchor = menu?.anchor;
     const makeup = row.isMakeup === true;
     const about = [];
@@ -255,7 +267,8 @@ export default function CandidatesTab({
         // Payment records, and (0025, Q-G3 v0.950) grades, block deleting (the short reason: they
         // are already withdrawn). Hidden: the same desk line on every row (R1-04).
         const reason = hidden ? T.DELETE_AT_DESK : row.hasPaymentRows ? T.hasPaymentRecordsShort(name) : row.hasGrades ? T.hasGradesShort(name) : null;
-        off.push(deleteItem(reason, target, anchor));
+        // Delete permanently gets its own group, so a line sits between it and Restore (C-04, v1.055 (f))
+        return joinGroups(about, money, off, [deleteItem(reason, target, anchor)]);
       }
       return joinGroups(about, money, off);
     }
@@ -290,7 +303,8 @@ export default function CandidatesTab({
     }
 
     // (2) Money. Record payment first — on tablets and phones only (on a PC it is the row's button).
-    if (!hidden && !makeup && !layout.isWide && m.balanceCents > 0) money.push({ key: 'record', label: T.RECORD_PAYMENT, Icon: ICONS.recordPayment, onSelect: () => actions.openRecordPayment(row.id, anchor) });
+    // A possible duplicate offers no Record payment until the pair is resolved (R3-02, v1.046 (8)).
+    if (!hidden && canRecordPayment({ isMakeup: makeup, duplicateState: row.duplicateState }) && !layout.isWide && m.balanceCents > 0) money.push({ key: 'record', label: T.RECORD_PAYMENT, Icon: ICONS.recordPayment, onSelect: () => actions.openRecordPayment(row.id, anchor) });
     // Edit payment / Undo payment (admins): the LATEST live payment (older ones: each payment
     // line's ⋯ in the detail), grayed with the detail's reasons (CandidateDialog lineItems).
     const latest = isAdmin && !hidden && !makeup ? latestPayment(loaded?.payments) : null;
@@ -417,6 +431,9 @@ export default function CandidatesTab({
   let emptyText = T.NO_CANDIDATES;
   if (searchText) emptyText = T.noMatch(searchText);
   else if (card) emptyText = T.NO_FILTER_MATCH;
+  // Nobody at all matches the search (no active row and nothing in Removed): the roster gives way
+  // to the one "No candidates match … · Clear search" line (R3-09).
+  const searchMissing = Boolean(searchText) && activeRows.length === 0 && removedRows.length === 0;
   const SearchIcon = ICONS.search;
   const ClearIcon = ICONS.clear;
 
@@ -434,30 +451,39 @@ export default function CandidatesTab({
       {!hidden && !isPhone && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone={false} />}
 
       <div className={`bb-list-bar${layout.isWide ? ' is-wide' : ''}`}>
-        <label className="bb-search">
+        {/* A div, not a label: the ✕ is the shared icon button (tooltip "Clear search", R3-09), and a
+            button inside a label would be read as part of the box's name. */}
+        <div className="bb-search">
           <SearchIcon size={16} aria-hidden="true" className="bb-search-icon" />
-          <span className="visually-hidden">{T.SEARCH_CANDIDATES}</span>
-          <input type="search" className="bb-search-input" placeholder={T.SEARCH_CANDIDATES} value={search} maxLength={80} autoComplete="off" onChange={(event) => setSearch(event.target.value)} />
-          {search && (
-            <button type="button" className="bb-search-clear" aria-label={T.CLEAR_SEARCH} onClick={() => setSearch('')}>
-              <ClearIcon size={16} aria-hidden="true" />
-            </button>
-          )}
-        </label>
+          <input ref={searchInputRef} type="search" className="bb-search-input" placeholder={T.FIND_CANDIDATE} aria-label={T.FIND_CANDIDATE} value={search} maxLength={80} autoComplete="off" onChange={(event) => setSearch(event.target.value)} />
+          {search && <IconButton label={T.CLEAR_SEARCH} Icon={ClearIcon} className="bb-search-clear" onClick={clearSearch} />}
+        </div>
         {layout.isWide && <p className="bb-caption">{T.listCaption(activeRows.length)}</p>}
       </div>
       {/* Phones: the Late / Not paid pills and the gray line come after Search (mockup 1) */}
       {!hidden && isPhone && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone />}
 
-      <RosterRows
-        rows={activeRows}
-        removedRows={removedRows}
-        removedOpen={removedOpen}
-        onToggleRemoved={() => setRemovedOpen(!removedOpen)}
-        emptyText={emptyText}
-        caption={T.listCaption(activeRows.length)}
-        ctx={ctx}
-      />
+      {/* The search found nobody: one gray line in the roster's place, drawn like the cards'
+          "Showing … only · Show all" line (the shared .ev-filter-line.cards-showing, whose touch
+          rules give the link its 44px tap area; as Camps' roster, R3-09). */}
+      {searchMissing ? (
+        <p className="ev-filter-line cards-showing bb-nomatch">
+          {emptyText} ·{' '}
+          <button type="button" className="link-button inline-link" onClick={clearSearch}>
+            {T.CLEAR_SEARCH}
+          </button>
+        </p>
+      ) : (
+        <RosterRows
+          rows={activeRows}
+          removedRows={removedRows}
+          removedOpen={removedOpen}
+          onToggleRemoved={() => setRemovedOpen(!removedOpen)}
+          emptyText={emptyText}
+          caption={T.listCaption(activeRows.length)}
+          ctx={ctx}
+        />
+      )}
 
       {/* The row ⋯ (its subtitle while hidden: Dan and school only, no plan words — v1.036) */}
       {menu && !screenLocked && (

@@ -97,22 +97,18 @@
   margin-top: 1px;
 }
 
-/* Offline (proposal 35): the amber bar with ti-alert-triangle (§7) */
-.bbres-offline {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-8);
-  margin: 0 0 var(--space-12);
-  padding: var(--space-8) var(--space-12);
-  border-radius: var(--radius-control);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  font-size: var(--text-13);
+/* Offline (M12, picture Q): the tab has no amber bar of its own; the "why" line under Print results /
+   Download CSV is right-aligned on PC and tablet, full width on phones (a .bbres-note, gray) */
+.bbres-note--buttons {
+  justify-content: flex-end;
+  text-align: right;
 }
 
-.bbres-offline svg {
-  flex: none;
-  margin-top: 1px;
+@media (max-width: 639.98px) {
+  .bbres-note--buttons {
+    justify-content: flex-start;
+    text-align: left;
+  }
 }
 
 .bbres-school-line {
@@ -223,7 +219,7 @@
 /* PC and tablet: the Total larger and semibold, as drawn (phones keep it in the line) */
 .bbres-totalcell .bbres-total {
   font-size: var(--text-16);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbres-sofar {

@@ -165,7 +165,7 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
     }
     if (result.status === 'not_allowed') a.onRefreshProfile();
     const words = {
-      stale: T.UNDO_STALE_CANDIDATE,
+      stale: T.candidateStale(name),
       has_grades: T.hasGrades(name),
       has_payments: T.hasPaymentRecords(name),
       not_allowed: T.NOT_ALLOWED,

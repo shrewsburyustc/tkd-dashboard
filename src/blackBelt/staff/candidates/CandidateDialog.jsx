@@ -21,7 +21,8 @@
 // grayed while the candidate has grades (Q-G3, v0.950).
 // Privacy (§5): the date of birth and email appear only here, and with the device's Hide payments
 // switch on they read the gray "Hidden on this tablet" (OP-B7, v0.974; gray .ev-hidden-value,
-// R4-03); so do the payments, and View signature isn't offered. Nothing in the ⋯ tells who has
+// R4-03); so do the payments. View signature stays for admins (M-04, v1.055 (c), as Star's;
+// a signature opened while hidden stays open). Nothing in the ⋯ tells who has
 // paid (R1-04, R4-01 / v1.036): Change plan or Kukkiwon is grayed "Change the plan at the desk."
 // for everyone and Delete permanently "Delete candidates at the desk." on every candidate. Edit
 // details opens (R4-04, v1.037, as Star's): the date of birth and email are gray boxes reading
@@ -43,7 +44,7 @@ import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
 import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
-import { detailsProblems } from './checks.js';
+import { canRecordPayment, detailsProblems } from './checks.js';
 import CandidateHistory from './CandidateHistory.jsx';
 import { ICONS } from './icons.js';
 import { MoneyTag } from './RosterRows.jsx';
@@ -485,7 +486,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         onSelect: () => actions.openChangePlan(c.id, moreButtonElement()),
       });
     }
-    const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0, hasGrades: c.hasGrades };
+    const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0, hasGrades: c.hasGrades, withdrawnReason: c.withdrawnReason };
     if (isAdmin) {
       // The last group (v1.007): Withdraw (plain, at once, with Undo) or Restore, then Delete
       // permanently — red and it asks first. The database refuses a delete while ANY payment row
@@ -505,6 +506,8 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         key: 'delete',
         label: reason ? <TwoLines label={T.DELETE_PERMANENTLY} reason={reason} /> : T.DELETE_PERMANENTLY,
         Icon: ICONS.deleteForever,
+        // On a removed person's ⋯, Restore sits above the line and Delete permanently below it (C-04, v1.055 (f))
+        separatorBefore: withdrawn,
         danger: !reason,
         disabled: Boolean(reason),
         onSelect: () => actions.openDelete(target, moreButtonElement()),
@@ -670,7 +673,8 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
     ) : hidden ? null : (
       <MoneyTag money={data.money} />
     );
-  const showRecord = !hidden && !withdrawn && !c.isMakeup;
+  // A possible duplicate offers no Record payment until the pair is resolved (R3-02, v1.046 (8))
+  const showRecord = !hidden && canRecordPayment({ withdrawn, isMakeup: c.isMakeup, duplicateState: c.duplicateState });
   const RecordIcon = ICONS.recordPayment;
   const PrintIcon = ICONS.print;
   const recordButton = showRecord && (
@@ -730,9 +734,10 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
           <Row label={T.ROW_REFERENCE}>{c.reference}</Row>
           <Row label={T.ROW_WAIVER}>
             {c.isMakeup && !w ? T.WAIVER_MAKEUP : T.waiverLine(w)}
-            {/* Not with Hide payments on (mat-side): the signature stays at the desk. "· View
-                signature" never wraps apart, so no lone "on file ·" is left at a line's end. */}
-            {isAdmin && !hidden && w && w.how === 'drawn' && !w.removedAt && (
+            {/* Admins also while private details are hidden, as Star's View signature (M-04,
+                v1.055 (c)). "· View signature" never wraps apart, so no lone "on file ·" is left
+                at a line's end. */}
+            {isAdmin && w &&w.how === 'drawn' && !w.removedAt && (
               <>
                 {' '}
                 <span className="bb-nowrap">
