@@ -411,7 +411,7 @@ export const keepConfirmBody = (n) =>
   `Saving deletes the signature, signer's name, date of birth and email of ${candidatesCount(n)} now. This can't be undone.`;
 export const KEEP_CONFIRM_TITLE = 'Delete personal details now?';
 export const SAVE_AND_DELETE = 'Save and delete';
-export const KEEP_CONFIRM_KEEP = 'Cancel'; // Keep … word waiting for Jeffrey (Q1): the box's left button, the one that changes nothing
+export const KEEP_CONFIRM_KEEP = 'Keep details'; // Jeffrey's word (Q1): the left button, the one that changes nothing
 // (DELETING, the red button's words while a delete works, is defined once further down.)
 
 // ===== Cycles 7 · Registration links =====

@@ -579,7 +579,7 @@
 
 /* ===== Registration link: since the design review's part 2 (BB10, v1.015) the shared
    RegistrationLinkBox draws the box (shared.css .ev-link-*, .lnk-*); only the header's second
-   button on phones is Black Belt's own (.bb-phone-link, below the Add candidate row) ===== */
+   button on phones sits beside Add candidate in Black Belt's own row (.bb-phone-actions) ===== */
 
 /* ===== Touch screens: bigger rows and tap areas (guidelines 2.5) ===== */
 @media (pointer: coarse) {
@@ -700,27 +700,25 @@
   flex: none;
 }
 
-.bb-phone-add {
+/* Phones: Add candidate and Registration link sit side by side under the summary line, each at its
+   own size, like Star's event page header (Q3, Jeffrey). The row's -4px top margin runs into the
+   title block's gap; below 360px (320 phones) the two don't fit, so the second wraps under the
+   first, both left-aligned with their labels on one line. */
+.bb-phone-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
   margin: calc(-1 * var(--space-4)) 0 var(--space-12);
 }
 
-.bb-phone-add .bb-add-candidate {
-  width: 100%;
+.bb-phone-actions .btn {
+  white-space: nowrap;
 }
 
-/* "Registration link" (BB10, v1.015): beside Add candidate in the header on PC and tablet; on
-   phones a full-width outline button on its own row under Add candidate (8px between them: the
-   row's -4px top margin runs into Add candidate's 12px bottom margin) */
+/* "Registration link" (BB10, v1.015): beside Add candidate in the header on PC and tablet; on phones
+   in the row above */
 .bb-reg-link {
   flex: none;
-}
-
-.bb-phone-link {
-  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
-}
-
-.bb-phone-link .bb-reg-link {
-  width: 100%;
 }
 
 /* ----- Above the list ----- */

@@ -54,7 +54,7 @@ import {
 } from './rubric.js';
 import { DEFAULT_RUBRIC } from './rubricDefault.js';
 import { cycleDateYears, dobYears, dueKey, formDobYears, lastTestingDay, notBeforeToday, pastHint, savedDueDates, testingDayMin, yearRange } from './dateLimits.js';
-import { canOpenRegistration, deskSchoolCode, deskSchoolArg } from './rules.js';
+import { canOpenRegistration, deskSchoolCode, deskSchoolArg, compareDanSchoolName, sortWorcesterFirst, sortMakeupPicker } from './rules.js';
 import {
   gradeResult, keptMatch, ageGroups, ageGroupOf, measuredLetter, extraPoints, resultKey, resultKeyInput, trimScaleText, WITHDRAWN_RESULT_KEY,
   RESULT_KEYS, RESULT_SUBJECT_KEYS, danSubjects, subjectNames, minutesFromText, minutesText, parseMeasured, formatMeasured, feetAndInches,
@@ -594,8 +594,8 @@ await checkAsync('BB7: the confirm boxes\' words (one constant each; the "Keep �
   assert.equal(results.UNDO_CONFIRM_BUSY, 'Undoing…');
   // Jeffrey has not answered the "Keep …" question: both safe buttons still say "Cancel", each
   // from ONE constant, so the answer is a one-line change
-  assert.equal(text.KEEP_CONFIRM_KEEP, 'Cancel');
-  assert.equal(results.UNDO_CONFIRM_KEEP, 'Cancel');
+  assert.equal(text.KEEP_CONFIRM_KEEP, 'Keep details');
+  assert.equal(results.UNDO_CONFIRM_KEEP, 'Keep send record');
   // the leave warning's words come from Star's shared grading words
   const gradingText = await import('../../blackBelt/staff/grading/text.js');
   assert.equal(gradingText.S.STAY_ON_PAGE, 'Stay on this page');
@@ -1664,8 +1664,8 @@ check('B2 store: the roster = 16c (Candidates 1 sample, order, money, no persona
   assert.equal(answer.status, 'ok');
   assert.equal(answer.state.registration, 'closed_by_date');
   assert.deepEqual(answer.rows.map((r) => `${r.dan} ${r.location_code} ${r.last_name}`), [
-    '1 shrewsbury Kim', '1 worcester Chen', '1 worcester Patel', '2 shrewsbury Brooks', '2 worcester Lee', '2 worcester Silva',
-    '2 worcester Silva', '3 shrewsbury Nguyen', '4 shrewsbury Garcia',
+    '1 worcester Chen', '1 worcester Patel', '1 shrewsbury Kim', '2 worcester Lee', '2 worcester Silva',
+    '2 worcester Silva', '2 shrewsbury Brooks', '3 shrewsbury Nguyen', '4 shrewsbury Garcia',
   ]);
   assert.deepEqual(Object.keys(answer.rows[0]).sort(), ['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon',
     'last_name', 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status', 'version', 'withdrawn_reason',
@@ -3656,7 +3656,7 @@ check('grading store: the cast sample = the cast (grid, Results, the Fall make-u
     }
   }
   const g1 = castCall('bb_grading_grid', { p_cycle_id: spring.id, p_dan: 1 }, STAFF);
-  assert.deepEqual(g1.rows.map((r) => r.last_name), ['Kim', 'Martin', 'Chen', 'Ferreira', 'Patel']); // Shrewsbury, then Worcester, last name
+  assert.deepEqual(g1.rows.map((r) => r.last_name), ['Chen', 'Ferreira', 'Patel', 'Kim', 'Martin']); // Worcester, then Shrewsbury, last name (S-1)
   assert.deepEqual(g1.dan_counts, [{ dan: 1, location_code: 'shrewsbury', count: 2 }, { dan: 1, location_code: 'worcester', count: 3 },
     { dan: 2, location_code: 'shrewsbury', count: 1 }, { dan: 2, location_code: 'worcester', count: 2 }, { dan: 3, location_code: 'shrewsbury', count: 1 },
     { dan: 4, location_code: 'shrewsbury', count: 1 }]);
@@ -3834,6 +3834,58 @@ check('grading store: Choose subjects (A) — stale, already_added, invalid; cho
   assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: zoe.id }, STAFF), { status: 'finished' });
 });
 
+check('S-1: Worcester before Shrewsbury inside each Dan (roster, Grading, Results, make-up picker, fake CSV); the other keys stay', () => {
+  const row = (id, dan, locationCode, lastName, firstName, extra = {}) => ({ id, dan, locationCode, lastName, firstName, ...extra });
+  const rows = [
+    row('a', 2, 'shrewsbury', 'Brooks', 'Ava'), row('b', 1, 'shrewsbury', 'Kim', 'Alex'), row('c', 1, 'worcester', 'patel', 'Rina'),
+    row('d', 1, 'worcester', 'Chen', 'Mia'), row('e', 2, 'worcester', 'Silva', 'Zed'), row('f', 2, 'worcester', 'silva', 'Amy'),
+    row('g', 1, 'worcester', 'Chen', 'Al'), row('h', 3, 'shrewsbury', 'Nguyen', 'Li'),
+  ];
+  const ids = (list) => list.map((r) => r.id).join('');
+  // Dan, then Worcester before Shrewsbury, then last name (capitals ignored), first name
+  assert.equal(ids(sortWorcesterFirst(rows)), 'gdcbfeah');
+  assert.equal(ids(rows), 'abcdefgh', 'the input is not changed');
+  // same everything but id → by id
+  assert.equal(ids(sortWorcesterFirst([row('z', 1, 'worcester', 'Chen', 'Mia'), row('y', 1, 'worcester', 'Chen', 'Mia')])), 'yz');
+  // one school: nothing but last / first name decides, exactly as before
+  const shrewsbury = rows.filter((r) => r.locationCode === 'shrewsbury');
+  assert.equal(ids(sortWorcesterFirst(shrewsbury)), 'bah');
+  assert.equal(compareDanSchoolName(row('w', 1, 'worcester', 'Z', 'Z'), row('s', 1, 'shrewsbury', 'A', 'A')) < 0, true);
+  // Grading grid: make-ups stay last, each group in the new order
+  const grid = [
+    row('m1', 1, 'worcester', 'Aaa', 'A', { isMakeup: true }), row('s1', 1, 'shrewsbury', 'Kim', 'K'), row('w1', 1, 'worcester', 'Zee', 'Z'),
+    row('m2', 1, 'shrewsbury', 'Bbb', 'B', { isMakeup: true }), row('w2', 1, 'worcester', 'Chen', 'C'),
+  ];
+  assert.equal(ids(sortWorcesterFirst(grid, { makeupsLast: true })), 'w2w1s1m1m2');
+  // the make-up picker: newest earlier cycle first, then Dan, Worcester, names
+  const picker = [
+    row('p1', 1, 'shrewsbury', 'Kim', 'K', { cycleFirstDay: '2026-10-03' }), row('p2', 1, 'worcester', 'Chen', 'C', { cycleFirstDay: '2026-10-03' }),
+    row('p3', 2, 'shrewsbury', 'Lee', 'L', { cycleFirstDay: '2027-04-03' }), row('p4', 1, 'worcester', 'Zee', 'Z', { cycleFirstDay: '2027-04-03' }),
+  ];
+  assert.equal(ids(sortMakeupPicker(picker)), 'p4p3p2p1');
+  // two earlier cycles that start the same day stay apart (the database keeps each cycle's rows together)
+  const sameDay = [
+    row('b1', 1, 'worcester', 'Aaa', 'A', { cycleFirstDay: '2026-10-03', cycleId: 'cyc-b' }),
+    row('a2', 2, 'worcester', 'Bbb', 'B', { cycleFirstDay: '2026-10-03', cycleId: 'cyc-a' }),
+    row('a1', 1, 'shrewsbury', 'Ccc', 'C', { cycleFirstDay: '2026-10-03', cycleId: 'cyc-a' }),
+  ];
+  assert.equal(ids(sortMakeupPicker(sameDay)), 'a1a2b1');
+  // the fake stores the preview and these checks run on send the same order, the CSV included
+  loadCast();
+  const spring = springCycle();
+  const order = (list) => list.map((r) => `${r.dan} ${r.location_code}`);
+  const results = castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: null }, STAFF).rows;
+  for (const rowsOf of [results, castCall('bb_results_csv', { p_cycle_id: spring.id }).rows]) {
+    const list = order(rowsOf);
+    for (let i = 1; i < list.length; i += 1) {
+      const [dA, sA] = list[i - 1].split(' ');
+      const [dB, sB] = list[i].split(' ');
+      assert.ok(Number(dA) < Number(dB) || (dA === dB && !(sA === 'shrewsbury' && sB === 'worcester')), `${list[i - 1]} then ${list[i]}`);
+    }
+  }
+  assert.ok(results.some((r) => r.location_code === 'worcester') && results.some((r) => r.location_code === 'shrewsbury'));
+});
+
 check('grading store: Mark as sent / Undo (10 s own, admins later), Email result, no_email, not_finished, the CSV (A, logged first)', () => {
   loadCast();
   const spring = springCycle();
@@ -3888,7 +3940,7 @@ check('grading store: Mark as sent / Undo (10 s own, admins later), Email result
   setDay('2030-06-06');
   const after = castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: 1 }, STAFF);
   const rinaRow = after.rows.find((r) => r.first_name === 'Rina');
-  assert.deepEqual(after.rows.map((r) => [r.first_name, r.has_email]), [['Alex', true], ['Zoe', true], ['Mia', true], ['Lucas', true], ['Rina', false]]);
+  assert.deepEqual(after.rows.map((r) => [r.first_name, r.has_email]), [['Mia', true], ['Lucas', true], ['Rina', false], ['Alex', true], ['Zoe', true]]); // Worcester first (S-1)
   assert.deepEqual(castCall('bb_result_email', { p_candidate_id: rinaRow.id }, STAFF), { status: 'no_email' });
   assert.deepEqual(castCall('bb_mark_result_sent', { p_candidate_id: rinaRow.id, p_expected_result_key: rinaRow.result.result_key }, STAFF), { status: 'no_email' });
   // the CSV: admins only; the log row first; DOB and email null from the purge day on
@@ -4596,12 +4648,18 @@ await (async () => {
 await (async () => {
   const label = 'step 1b: Date signed day, Undo toast words, staff words, offline lines';
   try {
-    const { signedDayLabel } = await import('../../blackBelt/form/format.js');
-    assert.equal(signedDayLabel('2027-03-10'), 'Mar 10, 2027'); // month day, year, no weekday
-    assert.equal(signedDayLabel('2027-12-01'), 'Dec 1, 2027');
-    const formText = await import('../../blackBelt/form/text.js');
-    assert.equal(formText.DATE_SIGNED, 'Date signed');
-    assert.equal(formText.DATE_SIGNED_HINT, "Filled in automatically with today's date."); // the shared words
+    // The family form draws the shared DateSigned part (no Black Belt box of its own any more):
+    // the day shows with its weekday, and the words are the shared ones.
+    const formFormat = await import('../../blackBelt/form/format.js');
+    assert.equal(formFormat.signedDayLabel, undefined);
+    const { shortDate } = await import('../calendarDates.js');
+    assert.equal(shortDate('2027-03-10'), 'Wed, Mar 10, 2027');
+    const sharedText = await import('../../components/text.js');
+    assert.equal(sharedText.DATE_SIGNED, 'Date signed');
+    assert.equal(sharedText.DATE_SIGNED_HINT, "Filled in automatically with today's date."); // the shared words
+    const stepCheckSource = (await import('node:fs')).readFileSync(new URL('../../blackBelt/form/StepCheck.jsx', import.meta.url), 'utf8');
+    assert.ok(stepCheckSource.includes('<DateSigned id="bbf-signed" day={today} />'));
+    assert.ok(!stepCheckSource.includes('bbf-field--signed'));
     // R2-07: the Undo that puts registration back to open says so; the plain one stays plain
     const staffText = await import('../../blackBelt/staff/text.js');
     assert.equal(staffText.TOAST_UNDONE, 'Undone');

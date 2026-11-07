@@ -34,7 +34,7 @@
 import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { todayInSchoolTime, isIsoDate, shortTime, normalizeNote, PREVIEW_TODAY_KEY } from '../testing/eventRules.js';
-import { cycleState, nextWaiverVersionName, buildAddPayload, buildUpdatePayload, deskSchoolArg, PARTS, DANS } from './rules.js';
+import { cycleState, nextWaiverVersionName, buildAddPayload, buildUpdatePayload, deskSchoolArg, sortWorcesterFirst, PARTS, DANS } from './rules.js';
 import { normalizeDan, RUBRIC_SCHEMA_VERSION, RUBRIC_DANS } from './rubric.js';
 
 // Every status a call here can return.
@@ -692,14 +692,14 @@ function toPaymentLine(p) {
 
 // The Candidates tab of one cycle: every candidate (withdrawn too) with their money picture.
 // Runs the purge, so it is a normal POST.
-// → { status:'ok', state: CycleState, rows: RosterRow[] } (the database's order: Dan,
-//   Shrewsbury then Worcester, last name, first name) · 'not_found' · 'invalid' · 'no_access' · 'error'
+// → { status:'ok', state: CycleState, rows: RosterRow[] } (in rules.js sortWorcesterFirst's order: Dan,
+//   Worcester then Shrewsbury, last name, first name; S-1) · 'not_found' · 'invalid' · 'no_access' · 'error'
 export async function loadRoster({ cycleId } = {}) {
   return callRpc('bb_cycle_roster', { p_cycle_id: cycleId ?? null }, (d) => {
     const state = toState(d.state);
     if (!state || !Array.isArray(d.rows)) return null;
     const rows = d.rows.map(toRosterRow);
-    return rows.every(Boolean) ? { state, rows } : null;
+    return rows.every(Boolean) ? { state, rows: sortWorcesterFirst(rows) } : null;
   });
 }
 

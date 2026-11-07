@@ -157,8 +157,8 @@ export const undoConfirmTitle = (name) => `Undo Mark as sent for ${name}?`;
 export const undoConfirmBody = (day) =>
   `This removes the ${monthDay(day)} send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn’t really sent.`;
 export const UNDO_CONFIRM_GO = 'Undo Mark as sent';
-export const UNDO_CONFIRM_BUSY = 'Undoing…'; // the red button's words while the Undo works (shared ConfirmBox, BB7)
-export const UNDO_CONFIRM_KEEP = 'Cancel'; // Keep … word waiting for Jeffrey (Q1): the box's left button, the one that changes nothing
+export const UNDO_CONFIRM_BUSY = 'Undoing…'; // the button's words while the Undo works (shared ConfirmBox, BB7)
+export const UNDO_CONFIRM_KEEP = 'Keep send record'; // same word as Star's Undo Mark as sent box, rulebook v1.008: the left button, the one that changes nothing
 export const CANCEL = 'Cancel';
 
 // ----- Print results and Download CSV (proposals 43, 46) -----

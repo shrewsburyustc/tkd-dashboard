@@ -7,7 +7,7 @@
 //     grayed after the application date, with the reason)
 //   - an outline "Registration link" button (Star's, BB10 / v1.015; staff and admins) beside Add
 //     candidate: it opens the shared box with both schools' links and QR codes (LinksDialog.jsx).
-//     Phones: its own full-width row under Add candidate.
+//     Phones: a row under the summary line, side by side like Star's (Q3, Jeffrey); at 320 the second wraps under the first.
 //   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
 //     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason only when the cycle
 //     is past ("This cycle is finished, so candidates can't be added."); the reason is one gray line
@@ -360,8 +360,12 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         )}
       </div>
       {addReasonLine}
-      {isPhone && <div className="bb-phone-add">{addButton}</div>}
-      {isPhone && <div className="bb-phone-link">{registrationLinkButton}</div>}
+      {isPhone && (
+        <div className="bb-phone-actions">
+          {addButton}
+          {registrationLinkButton}
+        </div>
+      )}
       <div
         className="ttabs ev-tabs bb-cycle-tabs"
         role="tablist"

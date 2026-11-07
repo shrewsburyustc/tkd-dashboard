@@ -2007,11 +2007,12 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // A payment function's ok answer: the candidate's new version and money (+ the row's id).
   const moneyAnswer = (db, c, extra = {}) => ({ status: 'ok', ...extra, version: c.version, money: moneyOf(db, c) });
 
-  // The roster's order (16c): Dan, Shrewsbury then Worcester, last name, first name (lower
-  // case, compared like the database's en-US collation), then id.
+  // The roster's order (16c; S-1, v1.047 (19)): Dan, Worcester then Shrewsbury, last name, first name
+  // (lower case, compared like the database's en-US collation), then id. The real database still
+  // sends Shrewsbury first until its small migration; the app sorts again, so both agree.
   const collate = (a, b) => collator.compare(String(a ?? '').toLowerCase(), String(b ?? '').toLowerCase());
   const rosterOrder = (x, y) => x.dan - y.dan
-    || (x.location_code === 'shrewsbury' ? 0 : 1) - (y.location_code === 'shrewsbury' ? 0 : 1)
+    || (x.location_code === 'worcester' ? 0 : 1) - (y.location_code === 'worcester' ? 0 : 1)
     || collate(x.last_name, y.last_name) || collate(x.first_name, y.first_name) || byId(x, y);
 
   // The first testing day of a candidate's cycle (for "under 18 on the first testing day").

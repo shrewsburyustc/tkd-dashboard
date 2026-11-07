@@ -2955,6 +2955,56 @@ Tested in PGlite on every run (`run.mjs` step0046: a payment made before 0046 ke
 - **Undo, Edit and Mark check returned left alone:** they already copy the corrected row's school, and the table's own guard refuses a reversal or returned row whose school differs, so they can't drift from the payment.
 - **Old versions removed in the same file:** one version of each function, so a call is never "not unique".
 
+## Migration 0048: Black Belt: the results CSV lists Worcester before Shrewsbury
+
+**Status: built and tested in PGlite, NOT applied** (reserved 2026-11-07). Built on `black-belt`, rulebook v1.047 (19) (Jeffrey 2026-11-04, "Approve all", and his "C" on 2026-11-07): wherever both schools are listed, Worcester comes before Shrewsbury, as the school switcher does. Apply it any time after 0025; the app does not depend on it (the CSV is downloaded as the database sends it, and the CSV's own sort is the only thing that changes). It is independent of 0046.
+
+**Production order:** … 0016 → 0024 → 0025 → 0026 → 0032 → 0034 (live) → 0046 (independent) → **0048**. It needs 0025 (it stops with "0048 needs migration 0025 … first" otherwise).
+
+**What it does** (`supabase/migrations/0048_black_belt_results_csv_order.sql`): replaces **one** function and nothing else. **`bb_results_csv(p_cycle_id uuid)`** (0025, section 8e), the admin-only download of a whole cycle's results, sorted its rows by Dan, then the school with **Shrewsbury** first, then last name, first name, id. Now it is by Dan, then **Worcester** first, then last name, first name, id. That is one line (`case x.location_code when 'worcester' then 0 else 1 end`); the body is 0025's word for word otherwise: same signature, same `jsonb` answer, same rows and columns, same download log row, same rules (`security definer`, `search_path = ''`, `has_data_access()` first, then admin only — staff get `not_allowed`), revoked from public, anon, authenticated and service_role and granted to `authenticated` only (restated in the file). Nothing for anon.
+- **Not changed, on purpose (Jeffrey's "C"):** `bb_cycle_roster`, `bb_grading_grid`, `bb_cycle_results` and `bb_makeup_list` — the screens sort those themselves. No table, no row, no other function, no other section is touched.
+- **Connector-safe:** the file has none of the words the Supabase connection refuses (the signature doesn't change, so `create or replace function` is enough: no function has to be removed). Jeffrey still pastes it himself in the SQL Editor, after his OK, as with every migration; Claude uses the connection only for the read-only checks below.
+
+**Each step needs Jeffrey's OK.**
+
+### 0048a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0048_preapply_check.sql` must answer `csv_is_0025 = true`, `csv_is_0048 = false`, `csv_versions = 1`. A false / false pair → someone changed the function since 0025 — stop and tell Claude (0048 must be rebuilt on the newer code). `false / true` = already applied.
+2. Claude runs `supabase/tests/0016_fingerprints.sql` and `supabase/tests/0025_fingerprints.sql` and keeps the result (the "before" record for 0048c and the undo).
+
+### 0048b. Apply 0048 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0048_black_belt_results_csv_order.sql`, **SQL Editor → New query**, paste, **Run**.
+2. "Success. No rows returned." One transaction: on any error nothing is kept. No data is touched.
+3. Running it again is safe. **Re-running 0025 after this** puts 0025's order (Shrewsbury first) back → run 0048 straight after.
+
+### 0048c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0048_fingerprints.sql` — the one line must match what `run.mjs` printed ("0048 fingerprints"): `bb_results_csv(p_cycle_id uuid)`, `lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0016_fingerprints.sql` and `0025_fingerprints.sql` (each lists every Black Belt function): **only** the `bb_results_csv` line differs from 0048a's record (the body md5). Every other fingerprint file unchanged (`run.mjs` step0048 checks exactly that).
+3. `0048_preapply_check.sql` again: `false / true / 1`.
+4. **Security advisor:** nothing new.
+
+### 0048d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0048_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0048 TESTS PASSED**. It checks the new order (a cycle with both schools in the same Dan and two of the same last name), that a copy of the old function gives the old order and that every row is otherwise exactly the same in both, a one-school cycle unchanged, the download log (one row per download, none for a refused one), who may call it (the desk → `not_allowed`; an ended PIN unlock or no sign-in → `no_access`; anon, the family form's login and service_role may not), and the catalog (one version, security definer, `search_path = ''`). It rolls everything back.
+2. Then `0025_tests.sql` (and `0016_tests.sql`, `0024_tests.sql`, `0026_tests.sql`, `0032_tests.sql`, `0034_tests.sql`) — all must still pass. Put the placeholders back afterwards.
+
+### 0048e. Undo 0048 (only with Jeffrey's OK)
+
+1. Paste **the whole file** `supabase/manual/0048u_undo_black_belt_results_csv_order.sql` → **Run**. It puts back 0025's exact `bb_results_csv` (word for word, same revoke and grant). No table or data is touched. One transaction.
+2. Claude checks `0016_fingerprints.sql` and `0025_fingerprints.sql` (must equal 0048a's record) and `0048_preapply_check.sql` (`true / false / 1`). Then run `0025_tests.sql`. To redo: paste 0048 again.
+
+Tested in PGlite on every run (`run.mjs` step0048: the pre-apply check, only that function's line moves, the tests, 0016's, 0024's, 0025's, 0026's, 0032's and 0034's tests after it, re-run safety, the undo file exactly as named here, then the redo; and also on a database where 0046 is applied).
+
+**Why:**
+- **One rule everywhere:** the school switcher already lists Worcester first; the CSV was the one place that still said Shrewsbury first.
+- **Only the CSV's sort changes:** the download is a file Jeffrey opens in a spreadsheet; the screens sort their own lists, so the other four functions stay as they are.
+- **`create or replace`, same signature:** nothing is removed and nothing is made twice, so there is no "not unique" risk.
+- **After any re-run of 0025, run `0048_preapply_check.sql`:** it must say `false / true / 1`; if it says `true / false / 1`, paste 0048 again.
+
+---
+
 ---
 
 ## Migration 0034: Black Belt History names the subject of a correction (record_id)

@@ -759,14 +759,16 @@ export default function ResultsTab({
       </div>
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {confirm && !screenLocked && (
-        // The shared ConfirmBox (BB7): the button that changes nothing on the left and focused first,
-        // "Undo Mark as sent" on the right and red (it removes a send record), "Undoing…" while it works.
+        // The shared ConfirmBox, the same as Star's Undo Mark as sent box (rulebook v1.008): "Keep send
+        // record" on the left and focused first, the action blue (it only reverses) with the undo arrow,
+        // "Undoing…" while it works.
         <ConfirmBox
           title={T.undoConfirmTitle(nameOf(confirm.row))}
           keepLabel={T.UNDO_CONFIRM_KEEP}
           actionLabel={T.UNDO_CONFIRM_GO}
           busyLabel={T.UNDO_CONFIRM_BUSY}
-          loses="forGood"
+          actionIcon={IconArrowBackUp}
+          loses="something"
           busy={confirm.saving}
           failed={confirm.failed ? T.undoSentRefusal('error') : null}
           onConfirm={confirmUndo}
