@@ -87,3 +87,4 @@ Each step: a design reviewer (four sizes, WCAG 2.2 checks), a code reviewer, and
 
 - **S-1 → database** (v0.519, 2026-11-05). The screen-side sort was not chosen: two places would decide the order.
 - **Plan OK:** Jeffrey, 2026-11-06 ("ok"): pass 1, pass 2 and the date signed together. Next: Step A mockups (R4-10, R4-08, R2-08) and the Date signed mockup; no code before he OKs them.
+- **Mockups OK'd one at a time (2026-11-06, pictures in `Rolling check mockups/`):** A1 ⋯ menu icons (R4-10), A2 grayed Email result (R4-08), A3 Undo on "Private testing set" (R2-08 part 1): "ok". A3b make-up Undo: **option A** (Jeffrey: "A"): the make-up picker closes after Add, as Black Belt does, and the toast carries Undo (admins only); focus goes back to Add candidate after Undo. The toast words ("Drew Park added" vs Black Belt's "… · make-up from <cycle>") are still to confirm. Waiting: B1, B2, C1.
