@@ -31,7 +31,9 @@
 // Gray (aria-disabled, still focusable, pressing does nothing) with a tip saying why: for staff
 // while family sign-up isn't open ("Family sign-up is closed. Ask an admin …" / "The closing date
 // has passed. Ask an admin …"), for everyone after the camp's last day ("This camp is over.") and
-// while Hide private details is on (desk-only, Forms' v0.616 words).
+// while Hide private details is on (desk-only, Forms' v0.616 words). Switching that on while the box
+// is open closes it at once, even during a Send, and what was typed is not kept (v0.746, Jeffrey
+// chose A): the box shows the family's answers.
 //
 // "Hide private details" (the top-bar switch, src/lib/privateDetails.js; rulebook v0.722, design
 // review C1) — copied from Color Belt's built event page (v0.412). While it is on, Camps hides
@@ -39,8 +41,9 @@
 // Mark paid (CampRoster), gray "Hidden on this tablet" in
 // Camper detail, Compare and Edit details, no money items in ⋯ / "More", "any recorded payment" in
 // the delete sentences, no amounts in toasts. Turning it on closes the payment dialogs (Change how
-// they'll pay, Edit payment, the Undo payment box), the ⋯ menu, the toast and every banner (they may name money or carry
-// a Retry that records money). Camp and template prices are settings: they stay.
+// they'll pay, Edit payment, the Undo payment box, Record refund, the Undo refund box), the Fill in
+// box (v0.746), the ⋯ menu, the toast and every banner (they may name money or carry a Retry that
+// records money). Camp and template prices are settings: they stay.
 // Naming: `detailsHidden` is that switch; `hidden` below means "the screen is locked".
 // Print receipt (design review C3, rulebook v0.734; Star's build, v0.518, is the model): the camper's
 // ⋯ (last in the money group), Camper detail's button (PC / tablet without touch) and "More" (touch)
@@ -266,6 +269,7 @@ export default function CampPage({
     onNoAccess,
     onRefreshProfile,
     onSent: () => reloadQuiet(),
+    onClosedProblem: (status) => closedFillInProblem(status),
   });
   const [fillTipOpen, setFillTipOpen] = useState(false); // a gray Fill in's tip after a tap (touch screens have no hover)
 
@@ -328,6 +332,19 @@ export default function CampPage({
       if (status !== 'error') reloadQuiet();
     }
   }
+  // The same for a Fill in Send that was still saving when the switch closed the box (v0.746) and
+  // didn't save — or whose answer never came (it may have saved): one amber bar that names nobody
+  // (the switch is on), and the roster read again, so staff can see whether the family is on it.
+  function closedFillInProblem(status) {
+    if (status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (status === 'admin_only') onRefreshProfile(); // maybe this person is no longer an admin
+    // reveal: the bar is scrolled into view and its × focused, in case the person scrolled meanwhile
+    setBanner({ text: T.FILL_IN_CLOSED_NOT_SAVED, reveal: true });
+    reloadQuiet();
+  }
   // Switched on: no payment dialog, ⋯ menu, toast or banner may stay (the roster closes its own
   // Mark paid box). Only when the switch changes, not on the first drawing.
   const hiddenBeforeRef = useRef(detailsHidden);
@@ -341,6 +358,9 @@ export default function CampPage({
       setDialog(null);
       if (d.opener) focusSoon(d.opener);
     }
+    // The Fill in box shows a family's answers: it closes too, even during a Send, and what was
+    // typed is not kept (v0.746, Jeffrey chose A); focus goes back to Fill in, now gray (desk-only).
+    fill.closeNow();
     // The ⋯ menu closes; focus goes back to the button that opened it (the row's ⋯ or the header's),
     // or to "← Camps" if that button is gone — never to the page body.
     if (menu) {
@@ -1467,6 +1487,7 @@ export default function CampPage({
               Icon={IconDots}
               aria-haspopup="menu"
               aria-expanded={menu?.kind === 'header' ? 'true' : 'false'}
+              data-camp-head-more // where a closing Fill in box sends focus on a phone (FillInDialog's usable)
               onClick={(event) => openMenu('header', null, event.currentTarget)}
             />
           </div>
@@ -1513,6 +1534,7 @@ export default function CampPage({
             Icon={IconDots}
             aria-haspopup="menu"
             aria-expanded={menu?.kind === 'header' ? 'true' : 'false'}
+            data-camp-head-more
             onClick={(event) => openMenu('header', null, event.currentTarget)}
           />
         </div>

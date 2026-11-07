@@ -16,9 +16,19 @@
 // camp's last day nobody. The camp page grays the button first (CampPage.jsx); the database checks
 // again, and its answer shows here as a note.
 //
-//   const fill = useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked, onNoAccess,
-//                                onRefreshProfile, onSent });
-//   fill.open(openerButton)   fill.isOpen   fill.element (the dialog, or null; hidden while locked)
+//   const fill = useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked, today, onNoAccess,
+//                                onRefreshProfile, onSent, onClosedProblem });
+//   fill.open(openerButton)   fill.close()   fill.isOpen   fill.element (the dialog, or null; hidden while locked)
+//   fill.closeNow()           Hide private details switched on (rulebook v0.746, Jeffrey chose A):
+//                             closes at once, even during a Send, and what was typed is not kept
+//
+// Hide private details: Fill in can't be opened while it is on (the camp page grays the button with
+// the desk-only words, v0.741 / Forms' v0.616), and switching it on closes an open box (v0.746) — the
+// box shows the family's answers. A Send that was saving still finishes in the database: if it
+// saved, the roster is read again so the new camper shows; if it didn't (or the connection dropped),
+// onClosedProblem(status) lets the camp page say so, naming nobody (as its money boxes do).
+// The switch sits in the top bar, which can't be used while a box is open, so this happens when it
+// is switched in another tab or window of the same browser (src/lib/privateDetails.js).
 //
 // Each Send keeps one submission id (a random id): pressing Send again after a dropped connection
 // sends the SAME id, so the database answers with the first save instead of saving twice. The id
@@ -49,7 +59,10 @@ import { focusSoon } from './focusSoon.js';
 import * as T from './text.js';
 
 const newSubmissionId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
-const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null) ?? document.querySelector('[data-camp-fill-in]');
+// Where focus goes back to: the button that opened the box, if it is still on screen; else the PC /
+// tablet Fill in button, or — on a phone, which has none — the header's ⋯ (marked in CampPage.jsx).
+const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null)
+  ?? document.querySelector('button[data-camp-fill-in]') ?? document.querySelector('[data-camp-head-more]');
 const FORM_ID = 'cfill-step1'; // step 1's <form>: the dialog's Continue button submits it
 
 // The family form's styles, added to the page once, the first time Fill in opens.
@@ -58,7 +71,7 @@ function addFamilyFormStyles() {
   if (stylesAdded || typeof document === 'undefined') return;
   stylesAdded = true;
   const style = document.createElement('style');
-  style.setAttribute('data-camp-fill-in', '');
+  style.setAttribute('data-camp-fill-in-css', ''); // its own mark: not the Fill in button's (see usable)
   style.textContent = `${scopedRegisterCss(registerCssText)}\n${campCssText}`;
   document.head.append(style);
 }
@@ -83,7 +96,7 @@ function isBlank(form, camp) {
 export const closedWords = (signupState, closesOn, today) =>
   (signupState === 'closed' && closesOn && today > closesOn ? T.FILL_IN_PAST_CLOSING_STAFF : T.FILL_IN_CLOSED_STAFF);
 
-export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked, today, onNoAccess, onRefreshProfile, onSent }) {
+export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked, today, onNoAccess, onRefreshProfile, onSent, onClosedProblem }) {
   const [state, setState] = useState(null);
   const ref = useRef(state);
   useLayoutEffect(() => {
@@ -127,6 +140,18 @@ export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked
     focusSoon(() => usable(d.opener));
   }
 
+  // Hide private details switched on (v0.746): close at once — unlike close(), even during a Send,
+  // and with no unsaved-changes note: what was typed is not kept. The Send's answer is then ignored,
+  // except that a save that went through still reads the roster again (in submit, below).
+  function closeNow() {
+    const d = ref.current;
+    if (!d) return;
+    keyRef.current = null;
+    setState(null);
+    if (d.result) onSent?.(); // the Sent screen was showing: as close()
+    focusSoon(() => usable(d.opener));
+  }
+
   // Esc, a click outside, the phone's ← or the browser's Back: with something typed, the note shows
   // and the dialog stays open until Send or Cancel (v0.627) — an error note already showing stays.
   function requestClose() {
@@ -161,7 +186,14 @@ export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked
     const kind = kindOf(d.staff);
     const body = buildBody({ form: d.form, camp, kind, waiverVersion: camp.waiverVersion, signature, submissionId: d.submissionId, honeypot: '', startedAt: 0, token: '' });
     const res = await staffSignup(campId, body);
-    if (keyRef.current !== d.key) return null;
+    if (keyRef.current !== d.key) {
+      // Closed while saving (only closeNow can: Hide private details switched on, v0.746). The box
+      // can't show its note any more: a family that was saved shows on the roster; any other answer
+      // (not saved, or no connection) is said by the camp page, naming nobody.
+      if (res.status === 'ok') onSent?.();
+      else onClosedProblem?.(res.status);
+      return null;
+    }
     const status = res.status;
     // The Sent screen's parent name must belong to the sign-up the answer is about. The answer
     // carries the reference, total and children but not the parent, so it is the parent of the Send
@@ -245,7 +277,7 @@ export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked
     })
     : null;
 
-  return { open, close, isOpen: state !== null, element };
+  return { open, close, closeNow, isOpen: state !== null, element };
 }
 
 function CampFillInDialog({ d, campName, isAdmin, isPhone, today, setters, onPatch, onSubmit, onRetryLoad, onAnother, onCancel, onRequestClose }) {

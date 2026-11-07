@@ -15,8 +15,9 @@
 //                  and anything that isn't an amount have their own words (text.js).
 //   After a partial refund the box opens again for the rest (v0.744): "paid" is what stands now.
 //   Date refunded  today. The calendar allows the sign-up day … today; its gray line says so.
-//   "The $315 payment stays in the history. Afterwards the row reads “Paid”." ("The 2 payments
-//                  ($315) stay …" when more than one payment stands.)
+//   "The $315 payment stays in the history. Afterwards the row reads “Paid $292”." ("The 2 payments
+//                  ($315) stay …" when more than one payment stands. The amount is what stays paid
+//                  once everything overpaid goes back — Star's words, rulebook v0.745.)
 //   Cancel · Save — Camps' Footer (PaymentDialogs.jsx): on phones full screen with ← and a
 //   full-width Save, the amber note above it.
 // Saving works like Camps' Edit payment: the fields are read-only while it saves; a refused or failed
@@ -190,7 +191,7 @@ export default function RefundDialog({ name, paidCents, paymentsCents, paymentCo
           />
           {dateMessage && <Notice id={`${idBase}-date-error`}>{dateMessage}</Notice>}
         </div>
-        <p className="field-hint">{T.refundAfter(paymentsCents, paymentCount)}</p>
+        <p className="field-hint">{T.refundAfter(paymentsCents, paymentCount, paidCents - cap)}</p>
         <Footer saving={saving} note={note} isPhone={isPhone} canSave={canSave} onCancel={() => !saving && onClose()} />
       </form>
     </Dialog>
