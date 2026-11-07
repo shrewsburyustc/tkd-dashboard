@@ -88,7 +88,7 @@ export const DELETE_FAILED = "Couldn't delete. Check the connection, then try ag
 export const DELETE_STALE = "Couldn't delete. Someone else changed this cycle just now."; // (not in the mockups)
 export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry."; // (not in the mockups)
 export const UNDO_STALE = "Couldn't undo. Someone else changed this cycle just now."; // (not in the mockups)
-export const REOPEN_NEEDS_ADMIN = 'The application date has passed. Ask an admin to reopen.';
+export const REOPEN_NEEDS_ADMIN = 'The application date has passed. Ask an admin to open it.'; // R4-13 (v1.045): "open", not "reopen"
 // OP-4: the cycle saved, the Registration switch (a second call) didn't. (not in the mockups)
 export const registrationNotChanged = (reason) => `The cycle was saved, but registration didn't change: ${reason}`;
 export const COPY_FAILED = "Couldn't copy the link. Open Registration links on the cycle page and copy it from there."; // (not in the mockups)
@@ -116,6 +116,7 @@ export const TOAST_CHANGES_SAVED = 'Changes saved';
 export const toastWaiverSaved = (version) => `Waiver saved · version ${version}`;
 export const TOAST_KEEPING_SAVED = 'Keeping time saved'; // (not in the mockups, OP-8)
 export const TOAST_UNDONE = 'Undone';
+export const TOAST_UNDONE_OPEN_AGAIN = 'Undone. Registration is open again.'; // R2-07 (rulebook v1.051): an Undo that puts registration back to open says so
 
 // ===== Cycles 2 / 3 · Black Belt home and the Cycles tab =====
 export const BACK_TO_TESTING = 'Testing';
@@ -496,7 +497,7 @@ export const ADD_CANDIDATE = 'Add candidate';
 // is grayed inside it with Star's exact reason (Star's text.js NEW_CANDIDATE_HIDDEN). Make-up works.
 // (approved by Jeffrey 2026-11-06, step 1)
 export const NEW_CANDIDATE_HIDDEN = 'Add new candidates at the desk. Date of birth, email and payments are hidden on this tablet.';
-export const registrationClosedStaff = (date) => `Registration closed on ${weekdayMonthDay(date)}. Ask an admin to reopen it.`;
+export const registrationClosedStaff = (date) => `Registration closed on ${weekdayMonthDay(date)}. Ask an admin to open it.`; // R4-13 (v1.045): "open", not "reopen"
 export const LOADING_CANDIDATES = 'Loading the candidates'; // screen readers only (not in the mockups)
 export const showingSchoolOnly = (school) => `Showing ${school} candidates only`;
 export const SHOW_BOTH_SCHOOLS = 'Show both schools';
@@ -524,7 +525,7 @@ export const SHOWING_FILTER = {
 export const SHOW_ALL = 'Show all';
 
 // Search and the list
-export const SEARCH_CANDIDATES = 'Search candidates';
+export const FIND_CANDIDATE = 'Find a candidate'; // the box's placeholder and screen-reader name (R3-09, v1.050)
 export const CLEAR_SEARCH = 'Clear search'; // (not in the mockups)
 export const listCaption = (n) => `${candidatesCount(n)} · Dan, then school, then last name`;
 export const COL_CANDIDATE = 'Candidate';
@@ -562,7 +563,7 @@ export function moneyTag(m) {
         ? { kind: 'warn', text: `Late · ${money(m.lateCents)} Kukkiwon since ${monthDay(m.lateSince)}` }
         : { kind: 'warn', text: `Late · ${money(m.lateCents)} since ${monthDay(m.lateSince)}` };
     case 'not_paid':
-      return { kind: 'red', text: 'Not paid' };
+      return { kind: 'warn', text: 'Not paid' }; // amber like Late (R3-01, v1.044); red is for "gone for good"
     default:
       return { kind: 'gray', text: '' };
   }
@@ -983,7 +984,6 @@ export const signedByOn = (name, stamp) => `Signed by ${name} · ${stampDate(sta
 export const SIGNED_ON_PAPER_ONLY = 'Signed on paper. There is no signature picture.';
 export const signatureDeleted = (stamp) => `The signature and signer's name were deleted on ${stampDate(stamp)} after the keeping time.`;
 export const LOADING_SIGNATURE = 'Loading the signature'; // (not in the mockups)
-export const UNDO_STALE_CANDIDATE = "Couldn't undo. Someone else changed this candidate just now."; // (not in the mockups)
 
 // ===== The rubric: Rubric and waiver's Default rubric card, and a cycle's Rubric tab =====
 // (CONTRACT-0024 §10.3, mockups TKD-BlackBelt-Rubric-Mockups.html R1–R14, rulebook v0.921–v0.935.)
@@ -1090,7 +1090,7 @@ export const BRACKETS_HINT =
 export const NO_D_TICK = 'No D in any subject';
 export const MAKEUP_SENTENCE = 'Make-up sentence';
 export const MAKEUP_HINT = 'Shown under the pass mark on the family form and on the printed requirements.';
-export const bracketMore = (label) => `More for ${label}`; // screen readers (new wording, not in the mockups)
+export const bracketMore = (label) => `More actions for ${label}`; // screen readers (new wording, not in the mockups)
 export const passMarkLabel = (label) => `Pass mark, ${label}`; // screen readers (new wording, not in the mockups)
 export const bracketFromLabel = (n) => `Bracket ${n}, from age`; // screen readers (new wording, not in the mockups)
 export const bracketToLabel = (n) => `Bracket ${n}, to age`; // screen readers (new wording, not in the mockups)
@@ -1107,7 +1107,7 @@ export const creditsTotal = (count) => `${count} ${count === 1 ? 'credit' : 'cre
 export const subjectNameLabel = (name) => `Subject name${name ? `, ${name}` : ''}`; // screen readers (new wording, not in the mockups)
 export const creditsLabel = (name) => `Credits${name ? `, ${name}` : ''}`; // screen readers (new wording, not in the mockups)
 export const editSubjectLabel = (name) => `Edit ${name || 'subject'}`;
-export const subjectMore = (name) => `More for ${name || 'subject'}`;
+export const subjectMore = (name) => `More actions for ${name || 'subject'}`;
 export const dragSubjectLabel = (name) => `Drag ${name || 'subject'} to reorder`;
 export const REMOVE_SUBJECT = 'Remove subject';
 export const NEW_SUBJECT_NAME = 'New subject'; // the name a new subject starts with (new wording, not in the mockups)
@@ -1125,7 +1125,7 @@ export const stepAtLeastLabel = (name, n) => `${name || 'Item'}, step ${n}, at l
 export const stepPointsLabel = (name, n) => `${name || 'Item'}, step ${n}, points`; // screen readers (new wording, not in the mockups)
 export const pointsEachLabel = (name) => `${name || 'Item'}, points each`; // screen readers (new wording, not in the mockups)
 export const removeStepLabel = (n) => `Remove step ${n}`; // screen readers (new wording, not in the mockups)
-export const itemMore = (name) => `More for ${name || 'item'}`;
+export const itemMore = (name) => `More actions for ${name || 'item'}`;
 export const dragItemLabel = (name) => `Drag ${name || 'item'} to reorder`;
 export const REMOVE_ITEM = 'Remove item';
 export const ADD_EXTRA_ITEM = 'Add extra-points item';

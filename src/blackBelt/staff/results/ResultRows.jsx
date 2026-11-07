@@ -31,7 +31,7 @@
 // Props:
 //   rows   the Dan's rows (already filtered by school)
 //   ctx    { layout: { isPhone, isWide, isTouch }, nav (useRowArrowNav), isAdmin, emailOff,
-//            markOff, today, danObj, submissionsDue, label, menuFor, busyId, asked(row) →
+//            markOff, whyId (id of the gray offline line, for aria-describedby; offline only), today, danObj, submissionsDue, label, menuFor, busyId, asked(row) →
 //            { copied } | null, handlers: { onOpen(row), onEmail(row), onMarkSent(row),
 //            onMore(row, anchor), onChooseSubjects(row, opener) } }
 import { IconAlertTriangle, IconCopy, IconDots, IconMail } from '@tabler/icons-react';
@@ -126,6 +126,7 @@ function SentLine({ row, ctx }) {
           className="btn btn-sm bbres-tap bbres-mark"
           aria-label={T.markSentLabel(nameOf(row))}
           aria-disabled={off ? 'true' : undefined}
+          aria-describedby={ctx.whyId}
           tabIndex={ctx.nav.itemTabIndex(row.id)}
           data-bbres-mark={row.id}
           onClick={(event) => {
@@ -149,6 +150,7 @@ function EmailButton({ row, ctx }) {
       className="btn btn-sm bbres-tap bbres-email"
       aria-label={T.emailResultLabel(nameOf(row))}
       aria-disabled={off ? 'true' : undefined}
+      aria-describedby={ctx.whyId}
       tabIndex={ctx.nav.itemTabIndex(row.id)}
       data-bbres-email={row.id}
       onClick={(event) => {

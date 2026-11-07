@@ -98,7 +98,10 @@ export const signerHintAdult = (first, firstDay) => `Filled in from the candidat
 export const SIGNATURE = 'Signature';
 export const SIGNATURE_MINOR = ' (parent or guardian)';
 export const SIGNATURE_HINT = 'Sign with your finger or mouse. Can’t sign here? Please sign at the front desk.';
-export const SIGNATURE_BOX = 'Signature, draw with finger or mouse'; // the box's accessible name (Form 9)
+// Date signed (v0.638, picture R): the words are the shared ones in src/components/text.js (New
+// students', Star's and Black Belt's family forms all say the same), so they live once.
+export { DATE_SIGNED, DATE_SIGNED_HINT } from '../../components/text.js';
+export const SIGNATURE_BOX ='Signature, draw with finger or mouse'; // the box's accessible name (Form 9)
 export const CLEAR = 'Clear';
 export const SEND = 'Send registration';
 export const SENDING = 'Sending…'; // (not in the mockups)

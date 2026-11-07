@@ -64,7 +64,8 @@ import {
 } from './resultEmail.js';
 // BB8: the History line's grouping and words (pure; they import only the staff words and grading.js)
 import { groupHistory, describeEntry } from '../../blackBelt/staff/candidates/historyWords.js';
-import { editValuesToSave } from '../../blackBelt/staff/candidates/checks.js';
+import { editValuesToSave, canRecordPayment, restoreHasUndo } from '../../blackBelt/staff/candidates/checks.js';
+import * as StaffWords from '../../blackBelt/staff/text.js'; // the Candidates words (R3-01, R3-09, R4-14 checks)
 
 let count = 0;
 function check(label, fn) {
@@ -4195,6 +4196,37 @@ check('R4-04 Edit details while hidden: what Save sends', () => {
   assert.deepEqual(editValuesToSave(staffTyped, initial, { hidden: true, isAdmin: false }), initial);
 });
 
+// Design review, rolling check, Black Belt Candidates small fixes (v1.043, v1.044, v1.046 (8), v1.050)
+check('rolling check: Not paid is amber, Find a candidate, Record payment and Restore rules, one stale sentence', () => {
+  // R3-01 (v1.044): the past-due "Not paid" is amber, the same kind as Late; nothing is red any more
+  assert.deepEqual(StaffWords.moneyTag({ tag: 'not_paid' }), { kind: 'warn', text: 'Not paid' });
+  assert.equal(StaffWords.moneyTag({ tag: 'late', lateCents: 5000, lateSince: '2027-03-01' }).kind, 'warn');
+  for (const m of [{ tag: 'not_paid' }, { tag: 'late', lateCents: 5000, lateSince: '2027-03-01' }, { tag: 'paid_in_full' }, { tag: 'next', nextCents: 100, nextOn: '2027-03-01' }, null]) {
+    assert.notEqual(StaffWords.moneyTag(m).kind, 'red');
+  }
+  // R3-09 (v1.050): the box reads "Find a candidate"; the no-match words are unchanged
+  assert.equal(StaffWords.FIND_CANDIDATE, 'Find a candidate');
+  assert.equal(StaffWords.SEARCH_CANDIDATES, undefined);
+  assert.equal(StaffWords.noMatch('zz'), 'No candidates match "zz".');
+  assert.equal(StaffWords.CLEAR_SEARCH, 'Clear search');
+  // R3-02 (v1.046 (8)): a possible duplicate offers no Record payment; a removed row or a make-up never did
+  assert.equal(canRecordPayment({ duplicateState: 'possible' }), false);
+  assert.equal(canRecordPayment({ duplicateState: null }), true);
+  assert.equal(canRecordPayment({ duplicateState: 'resolved' }), true);
+  assert.equal(canRecordPayment({ withdrawn: true }), false);
+  assert.equal(canRecordPayment({ isMakeup: true }), false);
+  assert.equal(canRecordPayment({}), true);
+  // R2-03 (v1.043): restoring a Duplicate copy has no Undo; other restores keep theirs
+  assert.equal(restoreHasUndo({ withdrawnReason: 'duplicate_copy' }), false);
+  assert.equal(restoreHasUndo({ withdrawnReason: 'manual' }), true);
+  assert.equal(restoreHasUndo({ withdrawnReason: null }), true);
+  assert.equal(restoreHasUndo({}), true);
+  assert.equal(StaffWords.toastRestored('Noah Silva'), 'Noah Silva restored');
+  // R4-14: one sentence for a refused Undo; the old one is retired
+  assert.equal(StaffWords.UNDO_STALE_CANDIDATE, undefined);
+  assert.equal(StaffWords.candidateStale('Sam Lee'), 'Someone else changed Sam Lee just now, so nothing was done. Their change is shown.');
+});
+
 check('BB8 words: the preview store end to end — grade changes name the subject, a Dan change and Add make-up are one line', () => {
   loadCast();
   const spring = springCycle();
@@ -4421,6 +4453,43 @@ await (async () => {
     assert.match(helpers.setToday('nope'), /Use a date/);
     // no canvas in Node: the PNG download resolves to null instead of failing
     assert.equal(await qrPngBlob(code), null);
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+// Step 1b words and the family form's "Date signed" (rulebook v0.638, v1.045, v1.051, v1.123).
+await (async () => {
+  const label = 'step 1b: Date signed day, Undo toast words, staff words, offline lines';
+  try {
+    const { signedDayLabel } = await import('../../blackBelt/form/format.js');
+    assert.equal(signedDayLabel('2027-03-10'), 'Mar 10, 2027'); // month day, year, no weekday
+    assert.equal(signedDayLabel('2027-12-01'), 'Dec 1, 2027');
+    const formText = await import('../../blackBelt/form/text.js');
+    assert.equal(formText.DATE_SIGNED, 'Date signed');
+    assert.equal(formText.DATE_SIGNED_HINT, "Filled in automatically with today's date."); // the shared words
+    // R2-07: the Undo that puts registration back to open says so; the plain one stays plain
+    const staffText = await import('../../blackBelt/staff/text.js');
+    assert.equal(staffText.TOAST_UNDONE, 'Undone');
+    assert.equal(staffText.TOAST_UNDONE_OPEN_AGAIN, 'Undone. Registration is open again.');
+    // R4-13: "open it", never "reopen", in the staff's words
+    assert.equal(staffText.REOPEN_NEEDS_ADMIN, 'The application date has passed. Ask an admin to open it.');
+    assert.equal(staffText.registrationClosedStaff('2027-03-27'), 'Registration closed on Sat, Mar 27. Ask an admin to open it.');
+    for (const [name, value] of Object.entries(staffText)) {
+      if (typeof value === 'string') assert.ok(!/reopen/i.test(value), `"reopen" in ${name}`);
+    }
+    // Pass 1b: the ⋯ names start with "More actions for"
+    assert.equal(staffText.subjectMore('Sparring'), 'More actions for Sparring');
+    assert.equal(staffText.subjectMore(''), 'More actions for subject');
+    assert.equal(staffText.itemMore(''), 'More actions for item');
+    assert.equal(staffText.bracketMore('18–24'), 'More actions for 18–24');
+    // M12: the Results tab's two gray offline lines
+    const resultsText = await import('../../blackBelt/staff/results/text.js');
+    assert.equal(resultsText.OFFLINE_WHY_BUTTONS, 'Print results and Download CSV are off while you’re offline. Try again when the connection is back.');
+    assert.equal(resultsText.OFFLINE_WHY_ROWS, 'Email result and Mark as sent are off while you’re offline. Try again when the connection is back.');
+    assert.equal(resultsText.OFFLINE, undefined); // the tab's own amber bar is gone
     count += 1;
   } catch (error) {
     console.error(`FAILED: ${label}`);

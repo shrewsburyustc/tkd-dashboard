@@ -21,7 +21,9 @@
 //
 // Design review BB4 (v0.966): no problem is a toast any more — refusals and failures go in the
 // shared amber bar (report(): inside the open detail, else the Candidates tab's bar). BB5 (v0.967):
-// Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades).
+// Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades, and
+// not a restored "Duplicate copy", R2-03). A saved Edit details closes the detail back to the
+// roster, with focus on the candidate's row (v1.047 (21)); a refused save keeps it open.
 //
 // Privacy (§3.1): the detail's date of birth, email and the signature live only inside `dlg`,
 // which is emptied when the dialog closes. Nothing here writes them to storage, the console, a
@@ -48,7 +50,7 @@ import {
 import { amountInputText } from '../../../lib/blackBelt/money.js';
 import { defaultTicks, sumRemaining, trimSpaces } from '../../../lib/blackBelt/rules.js';
 import { normalizeName } from '../../../lib/testing/names.js';
-import { addProblems, anyProblem, detailsProblems, editValuesToSave, paymentProblems } from './checks.js';
+import { addProblems, anyProblem, detailsProblems, editValuesToSave, paymentProblems, restoreHasUndo } from './checks.js';
 import * as T from '../text.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -66,6 +68,23 @@ const focusSoon = (element) => {
       return;
     }
     element.focus();
+  };
+  window.requestAnimationFrame(() => window.requestAnimationFrame(attempt));
+};
+// Focus goes to a candidate's ROW on the roster (not to a button): used after Edit details saves
+// and closes. The row is looked up fresh on every frame, because the roster reloads after the save
+// and may redraw (or move) the row; it waits for the row to exist and for the page to stop being
+// inert, for about half a second at most.
+const focusRowSoon = (candidateId) => {
+  let frames = 0;
+  const attempt = () => {
+    const row = document.querySelector(`[data-nav-row="${CSS.escape(String(candidateId))}"]`);
+    if ((!row || row.closest('[inert]')) && frames < 30) {
+      frames += 1;
+      window.requestAnimationFrame(attempt);
+      return;
+    }
+    row?.focus();
   };
   window.requestAnimationFrame(() => window.requestAnimationFrame(attempt));
 };
@@ -268,8 +287,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // tablet" (CandidateDialog.jsx) and Save keeps their stored values (editValuesToSave). The
   // detail itself redraws with "Hidden on this tablet"; Compare and Add hide their parts themselves.
   const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt', 'plan'];
-  // Also closed when the switch turns on: the signature picture, Add candidate, Delete confirm.
-  const CLOSE_ON_HIDE = ['signature', 'add', 'deleteConfirm'];
+  // Also closed when the switch turns on: Add candidate and the Delete confirm.
+  // (Not the signature: View signature now also shows for admins while hidden, M-04, v1.055 (c).)
+  const CLOSE_ON_HIDE = ['add', 'deleteConfirm'];
   function paymentsHiddenNow() {
     const d = dlgRef.current;
     latest.current.clearToast();
@@ -285,8 +305,8 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       }
       return;
     }
-    // The signature picture (and the signer's name), the Add candidate form and the Delete
-    // permanently confirm must not stay on a mat tablet either: they close the way any child
+    // The Add candidate form and the Delete permanently confirm must not stay on a mat tablet
+    // either (an admin's View signature may, M-04): they close the way any child
     // closes (focus goes back to the button that opened them).
     if (d.child && CLOSE_ON_HIDE.includes(d.child.kind)) {
       closeChild();
@@ -709,7 +729,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
         undoAction(() =>
           runQuick(() => changePlan({ candidateId, expectedVersion: version, planId: old.planId, kukkiwon: old.kukkiwon }), {
             ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-            statuses: { stale: T.UNDO_STALE_CANDIDATE, not_allowed: T.PAYMENT_RECORDED_ASK_ADMIN, withdrawn: T.planWithdrawn(name) },
+            statuses: { stale: T.candidateStale(name), not_allowed: T.PAYMENT_RECORDED_ASK_ADMIN, withdrawn: T.planWithdrawn(name) },
           }),
         ),
       );
@@ -780,7 +800,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
               runQuick(() => deleteCandidate({ candidateId: id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
-                statuses: { stale: T.UNDO_STALE_CANDIDATE, has_payments: T.hasPaymentRecords(name), has_grades: T.hasGrades(name) },
+                statuses: { stale: T.candidateStale(name), has_payments: T.hasPaymentRecords(name), has_grades: T.hasGrades(name) },
               }),
             )
           : { icon: false },
@@ -899,8 +919,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
           ),
         ),
       );
-      patchDetail({ mode: 'view', edit: null });
-      refreshDetail();
+      // A save that worked closes the detail back to the roster, as Star and Camps do (v1.047
+      // (21)); focus goes to the candidate's row, and the toast with its Undo stays. A refused
+      // save (below) keeps the detail open.
+      setDlg(null);
+      focusRowSoon(candidateId);
       return;
     }
     if (result.status === 'no_access') {
@@ -979,8 +1002,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (result.status === 'ok') {
       afterWrite();
       latest.current.showToast(T.TOAST_CHANGES_SAVED, { icon: false });
-      setDlg((x) => (x?.detail ? { detail: { ...x.detail, mode: 'view', edit: null, focusKey: 'detail-more' }, child: null } : x));
-      refreshDetail();
+      // The Dan change is Edit details saved too: the detail closes back to the roster with focus
+      // on the candidate's row, as after a plain save (v1.047 (21)).
+      setDlg(null);
+      focusRowSoon(cand.id);
       return;
     }
     // DC 5: someone graded meanwhile — the question stays open with the NEW counts
@@ -1035,7 +1060,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
               runQuick(() => restoreCandidate({ candidateId: target.id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
-                statuses: { stale: T.UNDO_STALE_CANDIDATE, already_added: T.restoreAlreadyAdded(name) },
+                statuses: { stale: T.candidateStale(name), already_added: T.restoreAlreadyAdded(name) },
               }),
             )
           : { icon: false },
@@ -1112,7 +1137,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       ok: (result) =>
         latest.current.showToast(
           T.toastRestored(name),
-          undoAction(() =>
+          // A "Duplicate copy" restored: no Undo (R2-03, v1.043; restoreHasUndo in checks.js)
+          !restoreHasUndo(target)
+            ? { icon: false }
+            : undoAction(() =>
             runQuick(() => withdrawCandidate({ candidateId: target.id, expectedVersion: result.version }), {
               ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
               countChanged: true,
@@ -1188,7 +1216,8 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // ===== View signature (admins) and the receipt =====
   async function openSignature(opener) {
     const d = dlgRef.current?.detail;
-    if (!d?.data || latest.current.paymentsHidden) return;
+    // Admins may open View signature while private details are hidden, as Star's (v1.055 (c))
+    if (!d?.data) return;
     openChild({ kind: 'signature', candidateId: d.candidateId, status: 'loading', result: null, values: null }, opener);
     const result = await loadSignature({ candidateId: d.candidateId });
     if (dlgRef.current?.child?.kind !== 'signature') return; // closed meanwhile

@@ -4,7 +4,9 @@
 // shows under the field before anything is sent. The database still checks everything again (it
 // decides); these checks only save a round trip. Pure functions: no React, no browser.
 // It also holds editValuesToSave: what Edit details SENDS while Hide private details is on (the
-// stored date of birth and email, and for staff the stored Dan, go back unchanged).
+// stored date of birth and email, and for staff the stored Dan, go back unchanged), and two small
+// yes/no rules the screens share: canRecordPayment (no Record payment on a possible duplicate) and
+// restoreHasUndo (no Undo after restoring a Duplicate copy).
 import { nameProblem } from '../../../lib/testing/names.js';
 import { parseAmount } from '../../../lib/blackBelt/money.js';
 import { DANS, METHODS, NOTE_MAX, SCHOOL_CODES, emailIsValid, trimSpaces } from '../../../lib/blackBelt/rules.js';
@@ -69,6 +71,20 @@ export function editValuesToSave(values, initial, { hidden = false, isAdmin = fa
   if (!isAdmin) out.dan = initial.dan;
   return out;
 }
+
+// Does this candidate offer Record payment at all (R3-02, v1.046 (8))? Not a removed one, not a
+// make-up (no fee), and not a row marked "Possible duplicate": a payment could land on the copy that
+// is later withdrawn, so it waits until the pair is resolved. The three places that draw it (the PC
+// row button, the row ⋯ and the detail's button) all ask here. Hide private details and "has a
+// balance" are still checked where the button is drawn.
+//   who  { withdrawn: boolean, isMakeup: boolean, duplicateState: string | null }
+export const canRecordPayment = ({ withdrawn = false, isMakeup = false, duplicateState = null } = {}) =>
+  !withdrawn && !isMakeup && duplicateState !== 'possible';
+
+// Does Restore's toast carry an Undo (R2-03, v1.043, as Star's v0.517 G3)? Not for a row that was
+// set aside as a "Duplicate copy": an Undo would withdraw it again as a plain "Removed" and lose the
+// reason (an admin uses Review, then Keep this one, instead). Every other restore keeps its Undo.
+export const restoreHasUndo = (target) => target?.withdrawnReason !== 'duplicate_copy';
 
 // Add candidate (the family form's fields + School + "Waiver signed on paper").
 export function addProblems(values, { today, planIds }) {

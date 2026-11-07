@@ -16,6 +16,9 @@
 // in the Plan column, and in place of the plan words on the phone line ("1st Dan · Shrewsbury ·
 // Hidden on this tablet"). A make-up's "No fee" is hidden the same way, so every row reads alike.
 // One tag per row (§8): "⚠ Possible duplicate" (amber; opens the compare) outranks the money tag.
+// The money tag has three looks: gray, green (paid in full) and amber (Late, and the past-due
+// Not paid, R3-01); red is only for "gone for good". A possible duplicate has no Record payment
+// button (R3-02; canRecordPayment in checks.js).
 // Withdrawn candidates sit in a collapsed "Removed (N)" group at the bottom, with a gray Removed /
 // Duplicate copy tag and their balance (Star v0.113, OP-B10).
 // A make-up from an earlier cycle (contract 0025 §14.5, mockup G06, proposal 27): Plan "No fee",
@@ -27,6 +30,7 @@
 import { Fragment } from 'react';
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
+import { canRecordPayment } from './checks.js';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
@@ -61,7 +65,7 @@ export function RowTag({ row, onReview }) {
 export function MoneyTag({ money }) {
   const tag = T.moneyTag(money);
   if (!tag.text) return null;
-  const kind = { ok: ' ttag--ok', warn: ' ttag--warn', red: ' bb-tag--red', gray: '' }[tag.kind];
+  const kind = { ok: ' ttag--ok', warn: ' ttag--warn', gray: '' }[tag.kind];
   return <span className={`ttag${kind}`}>{tag.text}</span>;
 }
 
@@ -78,7 +82,8 @@ function CandidateRow({ row, ctx }) {
   const removed = row.status === 'withdrawn';
   const open = ctx.menuFor === row.id;
   const makeup = row.isMakeup === true;
-  const showRecord = !hidden && !removed && !makeup && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
+  // A possible duplicate offers no Record payment until the pair is resolved (R3-02, v1.046 (8))
+  const showRecord = !hidden && canRecordPayment({ withdrawn: removed, isMakeup: makeup, duplicateState: row.duplicateState }) && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
   // The plan words, or (hidden, v1.036) the gray "Hidden on this tablet" (.ev-hidden-value)
   const hiddenPlan = <span className="ev-hidden-value">{T.HIDDEN_ON_DEVICE}</span>;
   const plan = hidden ? hiddenPlan : makeup ? T.PLAN_NO_FEE : T.planCell(row.planName, row.kukkiwon);

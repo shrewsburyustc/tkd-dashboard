@@ -28,7 +28,7 @@
 //     first opens…" (admins), "View only…" (staff), and the lock line with "Go to the default
 //     rubric" once registration has opened.
 //   - for staff, once registration has closed by its date: the gray line "Registration closed on
-//     Sat, Mar 27. Ask an admin to reopen it." under the tabs (approved on Candidates 2).
+//     Sat, Mar 27. Ask an admin to open it." under the tabs (approved on Candidates 2).
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
