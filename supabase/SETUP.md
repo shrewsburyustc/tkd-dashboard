@@ -3332,3 +3332,39 @@ Tested in PGlite on every run (`run.mjs` step0039: a camper paid, then overpaid,
 - **0022's $10,000 limit for every kind:** payments keep it (Mark paid and Edit payment work exactly as before), and a refund may be as large — a camper can pay up to $10,000, so what is overpaid can be more than $2,000, and the box's amount (filled in with the overpaid amount) is never refused for its size. The real limit on a refund is what was overpaid.
 
 ---
+
+## Migration 0037: Finance — Export keeps "private"
+
+**What it does** (`supabase/migrations/0037_finance_export_private.sql`; design review rolling check pass 1, Fix-Finance.md "Smaller"): every row of the admin's **Export…** download (`finance_export`) now carries `is_private` (true / false), taken from the same place the Daily report takes it. With the app change in `src/lib/finance/csv.js`, the CSV's **For** cell then says "Star testing, private" / "Color belt testing, private" for a private testing's payment, as the Daily report already does. It replaces **one** function, `finance_export(text, date, date)`, starting from 0026's live version; the only change in its text is the one new key. Same checks (`has_data_access()` first, then admins only), same date rules, same log row in `finance_exports`, same `security definer` with `search_path = ''`, same owner and rights (authenticated only; nothing for anon). No table, table rule, other function, right or row changes. `is_private` only says which kind of testing the money was for — no private data.
+
+**Order:** after 0026 (live) — pasted after 0039. It must be live **before** the Finance app with the `csv.js` change is pushed; until that push nothing visible changes (the live app ignores the new key). It touches no other section: Star's 0038 and Color Belt's 0044 change only `star_*` / `testing_*` functions, and Finance's later R1-01 migration replaces `finance_money_rows_core`, not this function. A **guard** at the top stops it — and changes nothing — if 0026 is missing or if the live `finance_export` is not exactly 0026's text (or 0037's, on a re-run), compared by the md5 of its code without comments and white space. **Forward-only** — no undo file (the app works with or without the key). Each step needs Jeffrey's OK.
+
+### 0037a. Before you apply 0037 (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0037_fingerprints.sql` and keeps the result (2 rows). The `function` line's md5 must be **`21eedfa15256ea81d56dd2dc8e7a5706`** (0026's text — the one the guard accepts); `definer=true`, `settings=search_path=""`, `rights=authenticated:EXECUTE,postgres:EXECUTE`. A different md5: stop — 0037 must be rebuilt (the guard would refuse it anyway). (Checked 2026-11-06: production has 0026's md5.)
+
+### 0037b. Apply 0037 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0037_finance_export_private.sql`, **SQL Editor → New query**, paste, **Run**.
+2. This file removes nothing, so Supabase should not show a destructive-operations warning.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: no fingerprint changes).
+
+### 0037c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0037_fingerprints.sql` must match what `run.mjs` printed ("0037 fingerprints"): the `function` line md5 **`f812a5b147fda8d8603afe907abd2137`** with `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`; `function-kind` `volatility=v language=plpgsql returns=jsonb`. The file contains neither of the words the connection refuses.
+2. `0011_fingerprints.sql`, camps' `0017_fingerprints.sql` and `0026_fingerprints.sql` (they list `finance_export`): **only** the `finance_export(...)` line differs from before — its code md5, `21eedfa1…` → `f812a5b1…`; rights, owner and settings the same. Every other migration's fingerprints: unchanged (`run.mjs` step0037 checks exactly that).
+3. **Security advisor:** nothing new (no new function or table).
+
+### 0037d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0037_tests.sql`: replace `<paste-admin-UID-here>`, paste, **Run** → **ALL 0037 TESTS PASSED**. It makes a Color Belt event payment and a Star payment at Worcester and a Color Belt private testing payment and a Star private-day payment at Shrewsbury (August 9 2021, inside the test only), then checks: is_private false / true on the right rows, the export's rows match the Daily report's, is_private is always a real true / false, a row's keys are 0026's plus is_private, one log row per export, the function's settings and rights, and Finance's privacy key list. Everything is rolled back.
+2. Then `0011_tests.sql` again — it must still pass (its exact-row export check leaves is_private out, so it passes before and after 0037).
+3. Put the placeholder back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0037, or `node run.mjs --only-step0037`): a database built in the production order with every live migration (… 0025 → 0027 → 0026 → 0028 → 0029 → 0031 → 0030 → 0032 → 0033 → 0034 → 0036 → 0041 → 0042 → 0043 → 0039), finance_export being 0026's before, the guard refusing a changed function, the fingerprint comparison above, 0037 writing nothing, `0037_tests.sql` then `0011_tests.sql`, camps' `0017_tests.sql`, `0018_tests.sql`, `0026_tests.sql` and `finance_camp_refunds_tests.sql`, and a second run of 0037.
+
+**Why:**
+- **The database sends it, the app words it:** the export already sends codes (`what`, `kind`, `state`) and the app turns them into words; `is_private` follows that, with the same words as the Daily report (`screens/finance/text.js`).
+- **A new migration, not an edit of 0026:** 0026 is live; replacing one function in a later file keeps the history clear.
+
+---

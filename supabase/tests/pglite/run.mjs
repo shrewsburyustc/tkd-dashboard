@@ -406,6 +406,15 @@
 //       fingerprints file; a stored 15-minute time stays valid; 0029's
 //       tests and the Finance tests after it; re-run safety - see step0029
 //       below. Run only this step with   node run.mjs --only-step0029
+//   step0037. 0037 (Finance: Export keeps "private" - finance_export's
+//       rows carry is_private, design review pass 1) on its own database in
+//       the production order (0025's order, then 0027, 0026, 0028, 0029,
+//       0031, 0030, 0032, 0033, 0034, 0036, 0041, 0042, 0043, 0039): the
+//       guard refuses a changed function; only the finance_export line
+//       moves (code md5 only, 0026's -> 0037's) in every fingerprints
+//       file; 0037's tests and the Finance tests after it; re-run safety -
+//       see step0037 below. Run only this step with
+//       node run.mjs --only-step0037
 //   step0028. 0028 (Star start times 6:00 AM - 10:00 PM every 5 minutes,
 //       v1.019 / S12) on its own database in the production order with
 //       every live migration (0025's order, then 0027 and 0026): the
@@ -589,6 +598,7 @@ const onlyStep0042 = process.argv.includes('--only-step0042');
 const onlyStep0043 = process.argv.includes('--only-step0043');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
+const onlyStep0037 = process.argv.includes('--only-step0037');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -869,6 +879,15 @@ async function main() {
     if (prints39) {
       console.log('\n0039 fingerprints (kind  item  detail):');
       for (const line of prints39) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0037: just Finance's Export keeps "private" step (0037)
+  if (onlyStep0037) {
+    const prints37 = await step0037();
+    if (prints37) {
+      console.log('\n0037 fingerprints (kind  item  detail):');
+      for (const line of prints37) console.log('  ' + line);
     }
     return finish();
   }
@@ -1168,6 +1187,13 @@ async function main() {
   // stepFinanceCampRefunds: Finance R1-05, camp refunds (Camps' 0039) in the live Finance functions
   console.log('\nFinance R1-05 (camp refunds in the Daily report, after Camps\' 0039):');
   if (after5) await stepFinanceCampRefunds();
+  // step0037: Finance - Export keeps "private" (its own database, production order: pasted after 0039)
+  console.log('\nMigration 0037 (Finance: Export keeps "private"):');
+  const after37 = after5 ? await step0037() : null;
+  if (after37) {
+    console.log('\n0037 fingerprints (kind  item  detail):');
+    for (const line of after37) console.log('  ' + line);
+  }
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -9473,6 +9499,127 @@ function finish() {
     for (const f of failed) console.log(`  - ${f.name}: ${f.detail}`);
   }
   process.exitCode = failed.length ? 1 : 0;
+}
+
+// =====================================================================
+// step0037: Finance - Export keeps "private" (0037, design review pass 1,
+// Fix-Finance.md "Smaller")
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034, 0036, 0041, 0042, 0043 and 0039 - the order
+// they were pasted; each only if its file is on this branch):
+//   a. 0037_fingerprints.sql is connector-safe (no "delete" / "drop")
+//   b. before 0037, finance_export is 0026's (the md5 the guard names)
+//   c. the guard: 0037 stops - and changes nothing - when the live
+//      function is not 0026's (a changed copy is planted, rolled back)
+//   d. apply 0037: in every fingerprints file only the finance_export
+//      line moves, and only its code md5 (0026's -> 0037's; definer,
+//      settings, owner and rights stay)
+//   e. 0037_tests.sql, then 0011's, camps' 0017's, 0018's, 0026's tests
+//      and finance_camp_refunds_tests.sql again
+//   f. 0037 applied a SECOND time: no fingerprint changes
+// Run only this step with   node run.mjs --only-step0037
+// =====================================================================
+const MD5_0026_EXPORT = '21eedfa15256ea81d56dd2dc8e7a5706';
+const MD5_0037_EXPORT = 'f812a5b147fda8d8603afe907abd2137';
+
+async function step0037() {
+  const L = '[0037] ';
+  record(`${L}0037_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0037_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  const order = [['0027', '0027_camps_edit_guard.sql'], ['0026', '0026_finance_black_belt.sql'], ['0028', '0028_star_start_times.sql'],
+    ['0029', '0029_finance_reminder_5min.sql'], ['0031', '0031_class_ages.sql'], ['0030', '0030_color_belt_review.sql'],
+    ['0032', '0032_black_belt_review.sql'], ['0033', '0033_camps_design_review.sql'], ['0034', '0034_black_belt_history_ids.sql'],
+    ['0036', '0036_new_students_profile.sql'], ['0041', '0041_star_end_time.sql'], ['0042', '0042_forms_copy_to_school.sql'],
+    ['0043', '0043_camps_fill_in.sql'], ['0039', '0039_camps_record_refund.sql']];
+  const applied = [];
+  for (const [n, file] of order) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${n}`, read('migrations', file)))) return null;
+    applied.push(n);
+  }
+  const migration = read('migrations', '0037_finance_export_private.sql');
+  const fnMd5 = `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                   from pg_proc p where p.oid = to_regprocedure('public.finance_export(text, date, date)')`;
+  record(`${L}before 0037 finance_export is 0026's (md5 ${MD5_0026_EXPORT})`, (await one(db, fnMd5)) === MD5_0026_EXPORT);
+
+  // c. the guard refuses a function that isn't 0026's (planted in a transaction, rolled back)
+  {
+    let message = '';
+    try {
+      await db.exec(`begin;
+        create or replace function public.finance_export(p_location_code text, p_from date, p_to date)
+        returns jsonb language plpgsql volatile security definer set search_path = '' as $$ begin return '{}'::jsonb; end; $$;
+        ${migration}`);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0037 over a changed finance_export (it stops, nothing changes)`,
+      message.includes('rebuild 0037 first') && (await one(db, fnMd5)) === MD5_0026_EXPORT, message || 'it ran');
+  }
+
+  // d. apply: only finance_export's code md5 moves
+  const numbers = [...NUMBERS_0025, ...applied, '0037']
+    .filter((n, i, all) => all.indexOf(n) === i && existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const exportsBefore = await one(db, 'select count(*)::integer from public.finance_exports');
+  if (!(await run(db, `${L}apply 0037_finance_export_private.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isFn = (line) => /^function {2}finance_export\(/.test(line);
+  const wrong = [];
+  const movedIn = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (!gone.length && !added.length) continue;
+    if (gone.length !== 1 || added.length !== 1 || !isFn(gone[0]) || !isFn(added[0])) {
+      wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      continue;
+    }
+    movedIn.push(n);
+    // only the 32-character code md5 may differ; it must go from 0026's to 0037's
+    const g = gone[0].replace(MD5_0026_EXPORT, '<md5>');
+    const a = added[0].replace(MD5_0037_EXPORT, '<md5>');
+    if (g === gone[0] || a === added[0] || g !== a) {
+      wrong.push(`${n}: more than the code md5 changed, or not 0026's -> 0037's: ${gone[0]} => ${added[0]}`);
+    }
+  }
+  record(`${L}fingerprints: only finance_export's code md5 moved (0026's -> 0037's), every other line of every file byte-identical`,
+    wrong.length === 0 && movedIn.includes('0037') && movedIn.includes('0026'),
+    wrong.join('; ') || `moved in ${movedIn.join(', ')}; ${numbers.length} files checked`);
+  const prints37 = after['0037_fingerprints.sql'];
+  record(`${L}0037 fingerprints: definer, search_path="", only authenticated (+ owner) may run it, volatile plpgsql jsonb`,
+    prints37.length === 2
+      && prints37.some((l) => isFn(l) && l.includes(MD5_0037_EXPORT) && l.includes('definer=true') && l.includes('settings=search_path=""')
+        && /rights=authenticated:EXECUTE,postgres:EXECUTE$/.test(l))
+      && prints37.some((l) => l.startsWith('function-kind') && l.endsWith('volatility=v language=plpgsql returns=jsonb')),
+    prints37.join(' | '));
+  record(`${L}applying 0037 wrote nothing (no export log row)`,
+    (await one(db, 'select count(*)::integer from public.finance_exports')) === exportsBefore);
+
+  // e. the tests
+  const testFiles = [['0037_tests.sql', 'ALL 0037 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
+    [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED'],
+    ['finance_camp_refunds_tests.sql', 'ALL FINANCE CAMP REFUND TESTS PASSED']];
+  for (const [file, ok] of testFiles) {
+    if (file === 'finance_camp_refunds_tests.sql' && !applied.includes('0039')) continue;
+    if (existsSync(path.join(supabaseDir, 'tests', file))) await runTestFile(db, `${L}${file} (after 0037)`, file, ok);
+  }
+
+  // f. re-run safety
+  await run(db, `${L}apply 0037 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0037 re-run: no fingerprint changed`, movedAgain.length === 0, movedAgain.join(', '));
+  await runTestFile(db, `${L}0037_tests.sql (after the re-run)`, '0037_tests.sql', 'ALL 0037 TESTS PASSED');
+  await db.close().catch(() => {});
+  return prints37;
 }
 
 // =====================================================================
