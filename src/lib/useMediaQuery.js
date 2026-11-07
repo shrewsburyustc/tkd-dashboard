@@ -8,7 +8,9 @@ import { useEffect, useState } from 'react';
 // Touch screen OR narrower than a PC → the PIN screens show the on-screen keypad.
 export const KEYPAD_QUERY = '(pointer: coarse), (max-width: 1023.98px)';
 
-// Phone width — the same breakpoint as the phone rules in app.css.
+// Phone width — the same breakpoint as the phone rules in app.css. A roster's phone layout also
+// follows the room beside the panel (lib/pageRoom.js, rulebook v1.053 and v1.130): its dialogs and
+// ⋯ menus keep following this window rule.
 export const PHONE_QUERY = '(max-width: 639.98px)';
 
 // A very narrow phone (under 360px, e.g. 320px). Testing's rank rows drop their Edit pencil here
