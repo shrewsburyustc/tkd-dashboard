@@ -526,6 +526,7 @@ function CampFillInDialog({ d, campName, isAdmin, isPhone, today, setters, onPat
             onBack={() => onPatch({ screen: 'details', banner: null })}
             refs={checkRefs}
             headingRef={headingRef}
+            today={today}
           />
         )}
       </div>

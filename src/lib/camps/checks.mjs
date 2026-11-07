@@ -41,6 +41,8 @@ import {
 // The Camps words (the screens' text.js): only to check the "Hide private details" sentences and
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
+// The family page's own words (src/camp/text.js): only to check the shared "Date signed" sentences (v0.638).
+import * as FamilyText from '../../camp/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
 // … and its starting values (a Blank camp's two extras, rulebook v0.739).
 import { campUndoRefusal, undoAddsPastDay, undoCampPayload, blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate } from '../../screens/camps/sections/campForm.js';
@@ -2404,6 +2406,12 @@ check('a pressed count card that leaves nobody says what is true (C-05 (b), v1.0
   assert.equal(CampText.cardEmptyLine('coming', true, '2027-04-21'), 'No campers are coming today.');
   assert.equal(CampText.cardEmptyLine('coming', false, '2027-04-19'), 'No campers are coming on Mon, Apr 19.');
   assert.equal(CampText.NO_MATCH_FILTER, undefined); // the old "No campers match." filter line is gone
+});
+
+check('the family form\'s "Date signed" words are the shared ones (v0.638)', () => {
+  // Copied from Star's and Black Belt's family forms: the same two shared sentences (src/components/text.js).
+  assert.equal(FamilyText.DATE_SIGNED, 'Date signed');
+  assert.equal(FamilyText.DATE_SIGNED_HINT, "Filled in automatically with today's date.");
 });
 
 check('Fill in closed by Hide private details: the camp page\'s words (v0.746)', () => {
