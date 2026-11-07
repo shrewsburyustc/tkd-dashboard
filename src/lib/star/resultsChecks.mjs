@@ -777,4 +777,9 @@ await check('the fake: every results write is a POST-only write, failNextSave re
   assert.deepEqual(rig.snap().downloads, []);
 });
 
+// R2-07 (v1.051): the Mark as sent Undo toast says "Undone".
+await check('R2-07 words: Mark as sent Undo says Undone', async () => {
+  assert.equal(T.TOAST_UNDONE, 'Undone');
+});
+
 console.log(`ALL STAR RESULTS CHECKS PASSED (${count} checks)`);

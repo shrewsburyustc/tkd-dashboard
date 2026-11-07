@@ -564,12 +564,10 @@
   flex-direction: column;
 }
 
-/* The reason stays readable (#6B6B6B on white = 5.3:1, above 4.5:1) */
-.st-menu-why {
+/* The reason stays readable (#6B6B6B on white = 5.3:1, above 4.5:1). Its colour and size come from the
+   shared .ev-menu-reason (one class for the grayed-reason line); here it only gets the small gap. */
+.st-menu-two .ev-menu-reason {
   margin-top: 2px;
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-  line-height: 1.4;
 }
 
 /* ===== Hover — mouse only ===== */

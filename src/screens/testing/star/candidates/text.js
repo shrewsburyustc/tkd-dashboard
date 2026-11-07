@@ -253,6 +253,11 @@ export const TICKED_AND_SIGNED = 'Ticked and signed';
 export const VIEW_SIGNATURE = 'View signature';
 export const signatureRemoved = (stamp) => `signature removed ${monthDayYear(stampDay(stamp))} (deleted 90 days after the testing day)`;
 export const NOT_SIGNED_HERE = 'Not signed here (added at the desk)';
+// The "Date signed" row under Acknowledgment (v0.522 / v0.638, picture B2 option A): the label is the
+// shared word (New students' form and Star's family form say the same); the value is written like the
+// Registered row, "Sat, Oct 31, 2026", in school time. It stays after the drawing is deleted.
+export { DATE_SIGNED } from '../../../../components/text.js';
+export const dateSignedDetail = (stamp) => shortDate(stampDay(stamp));
 export const PAYING_BY = 'Paying by';
 export const payingByDetail = (method, source) => `${payingByText(method)} (chosen ${source === 'form' ? 'on the form' : 'at the desk'})`;
 export const PAYMENT = 'Payment';

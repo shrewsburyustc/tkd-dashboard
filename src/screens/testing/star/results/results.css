@@ -180,10 +180,10 @@
    readers still find it and hear why. The approved gray "unavailable" look, with the same tokens
    as Black Belt's Email result (no opacity: the colors themselves are the gray). */
 .str-email[aria-disabled='true'] {
-  border-color: var(--color-border);
+  border-color: var(--color-border-strong); /* R4-08, mockup A2: the border stays visible */
   background: var(--color-surface);
   color: var(--color-disabled-text);
-  cursor: default;
+  cursor: not-allowed;
 }
 
 /* ----- Phones: stacked rows ----- */
