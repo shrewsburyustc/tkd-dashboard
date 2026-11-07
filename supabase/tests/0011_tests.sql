@@ -330,7 +330,7 @@ declare
     'status', 'day', 'school', 'fingerprint', 'totals', 'count', 'total_cents', 'in_cents', 'net_cents',
     'cash', 'check', 'card', 'cents', 'refunds', 'cash_cents', 'check_cents', 'card_cents', 'items', 'source', 'payment_id',
     'time', 'first_name', 'last_name', 'what', 'event_date', 'is_private', 'kind', 'method', 'amount_cents',
-    'state', 'was_amount_cents', 'was_method', 'moved_to', 'moved_from', 'changed_by_name', 'changed_on',
+    'state', 'was_amount_cents', 'was_method', 'was_school', 'moved_to', 'moved_from', 'changed_by_name', 'changed_on',
     'recorded_by_name', 'added_after_closing', 'closing', 'id', 'by_name', 'at', 'cash_counted_cents',
     'checks_counted', 'checks_counted_cents', 'card_counted_cents', 'expected_count', 'expected_cash_cents',
     'expected_checks', 'expected_checks_cents', 'expected_card_cents', 'note', 'results', 'result', 'diff_cents',
@@ -1301,10 +1301,11 @@ begin
   perform pg_temp.t_eq('F9 note for moved out', v_txt, 'moved to ' || (v_b + 82));
   -- case 12: the Oct 1 payment undone on Oct 20, exported Oct 1 - 15
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_export(%L, %L, %L)', 'worcester', v_b + 120, v_b + 134));
-  -- (0037 adds is_private to every row; it is left out here so this check
-  -- passes before and after 0037 - 0037_tests.sql checks is_private)
+  -- (0037 adds is_private and 0047 adds was_school to every row; both are left
+  -- out here so this check passes before and after them - 0037_tests.sql and
+  -- 0047_tests.sql check them)
   perform pg_temp.t_eq('F9 undone weeks later, in a shorter export',
-    (select jsonb_agg(e - 'is_private') from jsonb_array_elements(v_r -> 'rows') e)::text, jsonb_build_array(jsonb_build_object(
+    (select jsonb_agg(e - 'is_private' - 'was_school') from jsonb_array_elements(v_r -> 'rows') e)::text, jsonb_build_array(jsonb_build_object(
     'day', v_b + 120, 'school', 'worcester', 'time', '15:00', 'first_name', 'Fin', 'last_name', 'Cb 12', 'what', 'color_belt',
     'event_date', v_today + 5, 'kind', 'payment', 'method', 'cash', 'amount_cents', 7000, 'counted_cents', 0,
     'recorded_by_name', v_dn, 'state', 'undone', 'note', 'undone by ' || v_an || ' on ' || (v_b + 139)))::text);

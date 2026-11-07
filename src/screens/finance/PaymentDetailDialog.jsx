@@ -128,6 +128,9 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
                   {tag && <span className="ttag fin-drow-tag">{tag}</span>}
                 </>,
               )}
+              {/* An edited payment says what it was before, in the row's own words: "Was Worcester",
+                  "Was $70.00 cash, Worcester" (Batch A). Nothing when no such text exists. */}
+              {edited && T.wasText(shown) && row(T.D_WAS, T.wasText(shown))}
               {row(T.D_DATE_PAID, dayShortYear(shown.day))}
             </>
           )}
