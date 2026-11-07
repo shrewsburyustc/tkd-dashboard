@@ -62,7 +62,7 @@ const col = (v, caps) => [
   sh('on', v, 'pc', `<b>${NAME.pc} · signature on file.</b> ${caps.on}`, [MARKS[v].on.pc]),
   sh('rm', v, 'pc', `<b>${NAME.pc} · signature removed</b> (90 days after testing). ${caps.rm}`, [MARKS[v].rm.pc]),
   row(sh('on', v, 'ph', `<b>${NAME.ph}.</b>`, [MARKS[v].on.ph]), sh('on', v, 'p320', `<b>${NAME.p320}.</b> ${caps.on320 ?? ''}`, [MARKS[v].on.p320])),
-  row(sh('rm', v, 'ph', `<b>Phone · removed.</b>`, [MARKS[v].rm.ph]), sh('rm', v, 'p320', `<b>320 · removed.</b>`, [MARKS[v].rm.p320])),
+  row(sh('rm', v, 'ph', `<b>Phone · removed.</b>`, [MARKS[v].rm.ph]), sh('rm', v, 'p320', `<b>320 · removed.</b> ${caps.rm320 ?? ''}`, [MARKS[v].rm.p320])),
 ];
 write('B2-date-signed-staff.json', {
   title: 'Date signed · B2 — staff: candidate detail (a choice: option a or b)',
@@ -87,8 +87,10 @@ write('B2-date-signed-staff.json', {
       ...col('b', {
         on: '“Ticked and signed Sat, Oct 31, 2026” then “· View signature” kept together on line 2.',
         rm: '“Ticked and signed Sat, Jul 4, 2026 · signature removed Oct 31, 2026 (…)”: three lines.',
+        on320: 'The date itself breaks: “Sat, Oct 31, / 2026 · View signature”.',
+        rm320: 'The date breaks too: “Sat, Jul 4, / 2026 · signature removed …”, 4 lines.',
       }),
-    ], note: '<b>Pros:</b> no new row; the date sits right next to the signature it belongs to. <b>Cons:</b> the line wraps at every size (2 lines with the link, 3 when removed), and two dates sit in one line in the removed state, which is harder to read.' },
+    ], note: '<b>Pros:</b> no new row; the date sits right next to the signature it belongs to. <b>Cons:</b> the line wraps at every size (2 lines with the link, 3 when removed); at 320 the date signed itself breaks across lines (“Sat, Oct 31, / 2026”), unless the build also keeps the date in one piece; and two dates sit in one line in the removed state, which is harder to read.' },
   ],
   footer: FOOT + ' For a family-form registration the date signed is the same day as “Registered” (the signature is saved when the form is sent) — by design; v0.638 still asks for it.',
 });

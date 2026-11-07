@@ -69,3 +69,101 @@ Read-only review. Checked against the rulebook (§1.4, §2.4 icon map, §3.5, §
   - Show Jeffrey both, with (a) as the recommendation.
 - **Note only:** for a family-form registration the date signed is always the same day as the Registered row (the signature is saved when the form is sent). v0.638 still asks for it, so it's right to add. If Jeffrey asks "isn't that the same date?", the answer is yes, by design.
 - **Sizes present:** PC, tablet and phone. The View signature dialog not changing is shown and correct (`SignatureDialog.jsx:36` / `text.js:274` already has the date and time).
+
+---
+
+## Second review (independent reviewer, 2026-11-06)
+
+Re-checked the redrawn A2, A3, A3b, B1, B2 and reviewed the new C1. Read-only; nothing in the app changed.
+
+| Picture | Verdict | One line |
+|---|---|---|
+| A2 grayed Email result | **OK** | Both SHOULDs done: the line is amber in Today and the caption says it doesn't change (`A2-email-grayed.html:27`); the build note limits aria-describedby to "hidden" only (`:101`). |
+| A3 Undo toasts | **OK** | Make-up toast moved to its own choice (A3b); the "dialog has already closed, reachable by mouse and keyboard" claim is now true for the only toast left (`A3-undo-toasts.html:27`); PROPOSAL wording fixed. |
+| A3b make-up Undo options | **OK** (1 SHOULD) | Keyboard problem stated plainly; (c) labelled as breaking §4 / WCAG 2.1.1; pros/cons fair; Black Belt's wording offered. Missing: where focus goes after Undo. |
+| B1 Date signed on the form | **OK** | Label drawn 12 px on every size, caption says the build matches `.reg-field--sign` (`B1-date-signed-form.html:94`). |
+| B2 Date signed for staff | **OK** (1 SHOULD) | 320 and removed states drawn for Today, (a) and (b); (a) keeps the date after removal, as v0.635 says. Option (b) splits the date itself across lines at 320. |
+| C1 roster room | **MUST-FIX** (+2 SHOULDs) | Today/After honest and well measured, but the 696 alternative is offered as "your call" without a picture, and the measurement used one font only. |
+
+### A2 — OK
+- Today now outlines the "Email result is off…" line in amber at every size, and the caption says "The 'Email result is off …' line itself doesn't change; it is outlined because the button now points at it" (`A2-email-grayed.html:27`). First review's picture SHOULD is done.
+- The green note says aria-describedby points at the line "only while private details are hidden — not while the button is only busy" (`:101`). First review's build SHOULD is done.
+
+### A3 — OK
+- The subtitle (`A3-undo-toasts.html:27`) now says the make-up toast is a separate choice (A3b), and that both toast texts are still PROPOSAL and an OK removes the tags. Both first-review wording SHOULDs are done.
+- The note "hovering or focusing the toast pauses the time" now only covers "Private testing set", whose dialog has closed before the toast shows. That's true.
+- The tablet "bottom row under the toast" build check is still written down. Good.
+
+### A3b — OK, 1 SHOULD
+- **Honest:** the subtitle explains *why* (Tab stays inside the dialog), and (c) is drawn as it is today with the con in bold: "breaks the rulebook's keyboard-only rule (§4 …, WCAG 2.1.1)" (`A3b-makeup-options.html:99`). It isn't hidden or softened.
+- **Fair:**
+  - (a)'s con, reopening Add candidate → Make-up for each extra make-up, is the real cost.
+  - (b)'s cons are real: it's a new look, and nobody has decided how long the row Undo stays (`:81`).
+  - The (b) row Undo is the row's own Add button, renamed, with an aria-label "Undo adding Drew Park" (`mock-stepA.js:96–102`). So its touch size is the Add button's, not a new smaller target.
+- **Facts check out:**
+  - (a) "focus goes back to Add candidate" (`:54`) matches the code. The picker is opened from the Add candidate menu (`CandidatesTab.jsx:1113`, `openMakeups(menu.anchor)`), and Black Belt closes, then `focusSoon(opener)` (`useMakeupPicker.js:87–92`).
+  - Staff get no Undo in any option (v0.110). Correct.
+  - Black Belt's "… added · make-up from <earlier testing>" wording is offered in the subtitle. Good.
+- **SHOULD (still open from the first review):** say where focus goes **after Undo**.
+  - In (a), the toast's Undo button disappears when the toast turns to "Undone", and Drew's row is deleted. Without a target, focus falls to the page body. Suggest: back to Add candidate, the same place focus went after the Add.
+  - In (b), focus stays on Drew's row, whose button turns back into "Add".
+  - One line in each option's note is enough.
+
+### B1 — OK
+- The touch label is drawn at 12 px, and the tablet/phone captions say "Label 12 px, the same as 'Signature' above it" / "both labels 12 px".
+- The green note gives the build two ways to do it: put the box inside `.reg-field--sign`, or give its label 12 px (`B1-date-signed-form.html:94`). The first review's SHOULD is done.
+- The New-students reference shot and its caption explain why this is 12 px and not 13 px. Clear.
+
+### B2 — OK, 1 SHOULD
+- **320 is there** for Today, (a) and (b), each with the signature on file and removed (`B2-date-signed-staff.html:53–69, 104–120, 148–164`). The first review's MUST-FIX is done.
+- **Removed state follows v0.635** (rulebook line 970: the date signed "stays after the signature picture is deleted"):
+  - In (a), the "Date signed · Sat, Jul 4, 2026" row stays under "Ticked and signed · signature removed Oct 31, 2026 (deleted 90 days after the testing day)" (`:94`). This is how Color Belt, Black Belt and Prospects keep it. The first review's MUST-FIX is done.
+  - In (b), the date is folded into the line (`:138`). Also correct, just long.
+- **Choice drawn fairly:**
+  - (a) is recommended. Its pros/cons say it copies Prospects' row and the family box, adds the weekday, and costs one more row.
+  - (b)'s con, "wraps at every size … two dates in one line", is honest (`:166`).
+- **Tablet left out:** the subtitle says the candidate detail is the same centred dialog on tablet as on PC. That's acceptable for this one-row change.
+- **SHOULD (option b only):** at 320, (b) breaks inside the date: "Ticked and signed Sat, Oct 31, / 2026 · View signature", and the removed state does the same with "Sat, Jul 4, / 2026". The 320 caption doesn't say so (`:151`, empty caption). Either add "the date itself breaks at 320" to (b)'s cons, or say the build keeps the date in one piece (non-breaking spaces). This is one more point for (a). It doesn't block, because (a) is the recommendation.
+
+### C1 — L-02 roster room · MUST-FIX, 2 SHOULDs
+
+**What's right**
+- Matches Fix-Star pass 2 L-02 (`docs/Design Review/Rolling check/Pass 2/Fix-Star.md:53–62`). It shows 683 and 700 wide with Standard and Largest, plus 667 × 375 sideways, which the fix list names. It also shows 1280 / 820 Standard / 820 Largest / 390 / 320 unchanged.
+- The room numbers add up: window minus 72 or 96 (683 → 611 / 587, 700 → 628 / 604, 667 → 571, 820 → 748 / 724).
+- Follows v1.130 (rulebook line 1012) and `src/lib/pageRoom.js:18–34`:
+  - A class follows `usePageRoomBelow(limit)`.
+  - Only the roster switches. Dialogs and ⋯ menus keep the window, said in the subtitle.
+  - The phone rows' styles aren't behind a phone-width @media rule.
+  - The roster isn't drawn at the 1023.98 window rule (`star.css:886`).
+- **Method is honest** (`C1-roster-room.html:111`):
+  - It says plainly that After is the phone roster's own markup, copied at a 600 px window and swapped in.
+  - It says the buttons in the drawn roster don't work, and the page around the roster is today's.
+  - It says nothing in the app changed.
+  - `mock-room.js` does what it says: real overlap measured with `Range.getClientRects` per text line, cell by cell.
+  - The 617 / 636 thresholds come from 1–8 px steps on the real roster in the widest case (both schools, details shown, Largest).
+  - This is the right way to pick a limit. It's better than the parts page's sample.
+
+**MUST-FIX: the 696 alternative is offered but not drawn.**
+- The note ends "Your call if you want more: … from 696 they look exactly as at 820" (`:101`). That makes it a choice for Jeffrey.
+- CLAUDE.md says "show each option visually". The picture shows neither a 640–695 room with the "tight" columns (names on 4–5 lines, "Testing for" on 2 lines) nor what 696 would stack.
+- Add one Today/After pair at a window in that band. For example, 720 wide touch Standard (room 648): with limit 640 it keeps tight columns; with limit 696 it gets stacked rows. Then he can see what he's choosing between.
+- Or drop the alternative and state the limit as the drawer's decision. But see the recommendation below.
+
+**SHOULD: the limit was measured in one font only.**
+- The app's font is `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif` (`src/styles/tokens.css`). The measurements were taken in Chrome on Windows, which uses Segoe UI.
+- On an iPad, the text is in San Francisco, which is generally wider than Segoe UI at the same size. So "Shrewsbury" in its 61 px column will stick out at a larger room than 636. A limit of 640 leaves 4 px of margin over the measured overflow.
+- The note should say which browser and font it measured in. If possible, also re-measure once with Safari or WebKit, or with `-apple-system` forced.
+
+**SHOULD: "the same as Dashboard core's sample" is not a reason.**
+- `src/parts/L02.jsx:18` is `SAMPLE_ROOM = 640`, "the sample roster's limit". It describes the parts page's made-up roster.
+- v1.130 says each roster's limit is its own, written once.
+- No section roster on `main` calls the hook yet (`git grep usePageRoomBelow main` finds only `pageRoom.js`, `L02.jsx` and the checks). Color Belt's uncommitted worktree has `ROSTER_ROOM = 0` as a placeholder (`color-belt-session-01afc8/src/screens/testing/event/EventPage.jsx:128`). Camps and Black Belt have nothing.
+- So there is no section number to match. Drop the "same as the sample" wording so it doesn't read as a rule.
+
+**640 vs 696: recommend 696.**
+- **640 is the bare minimum.** It's 4 px over the overflow measured in Segoe UI. It keeps columns in which names break to 4–5 lines. That is "no overlap", but hardly "fits": the Today 700-Standard shot already shows the names breaking.
+- **Rulebook wording:** v1.053 (rulebook line 56) says the phone layout is used "when that room is too narrow for its tablet columns". The tablet columns approved and drawn are the 820 ones, and they look like 820 only from 696.
+- **Cost of 696:** windows of 712–767 (Standard) and 736–791 (Largest) get the approved phone rows. Those rows work fully, use touch sizes, and need no sideways scroll. On a 744 iPad mini or a 768 iPad with Largest, the roster would be stacked rather than tight columns.
+- **Benefit of 696:** it absorbs font differences between devices. And it removes the 640–695 band, where nobody has approved the columns.
+- **If Jeffrey prefers the most columns:** 640 is defensible only after a measurement in the iPad's font confirms the margin.
+

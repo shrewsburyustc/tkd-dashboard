@@ -99,11 +99,11 @@ write('A3b-makeup-options.json', {
       it('A3m-today-ph', [0, 0, 390, 844], 0.62, '<b>Phone 390×844, touch</b> (full-screen list).', [[134, 741, 122, 36]], 390),
     ] },
     { label: '(a) Recommended — close the list after Add', tone: 'after', items: [
-      it('A3b-a-pc', PG_PC, 0.345, '<b>PC.</b> The list closes (as Black Belt’s does), focus goes back to Add candidate, and “Drew Park added · ↶ Undo” shows over the event page, where Drew’s row is now first.', [[1065, 736, 191, 40], [77, 499, 1178, 48]]),
+      it('A3b-a-pc', PG_PC, 0.345, '<b>PC.</b> The list closes (as Black Belt’s does), focus goes back to Add candidate, and “Drew Park added · ↶ Undo” shows over the event page, where Drew’s row is now first. <b>After Undo,</b> focus goes back to Add candidate.', [[1065, 736, 191, 40], [77, 499, 1178, 48]]),
       it('A3b-a-ph', [0, 0, 390, 844], 0.62, '<b>Phone.</b> Same: list closed, toast above the bottom bar.', [[99, 732, 191, 44], [17, 683, 356, 92]], 390),
     ], note: '<b>Pros:</b> Undo works by keyboard like every other toast; copies Black Belt (useMakeupPicker), so both sections behave the same. <b>Cons:</b> adding a second make-up means opening Add candidate → Make-up again.' },
     { label: '(b) Keep the list open, Undo in the row', tone: 'after', items: [
-      it('A3b-b-pc', MK_PC, 0.48, '<b>PC.</b> Drew’s row says “Added” with an Undo button where “Already added” was; the toast stays “Drew Park added” without Undo.', [[698, 236, 125, 28]]),
+      it('A3b-b-pc', MK_PC, 0.48, '<b>PC.</b> Drew’s row says “Added” with an Undo button where “Already added” was; the toast stays “Drew Park added” without Undo. <b>After Undo,</b> focus stays on Drew’s row, whose button turns back into “Add”.', [[698, 236, 125, 28]]),
       it('A3b-b-ph', [0, 0, 390, 844], 0.62, '<b>Phone.</b>', [[236, 142, 125, 36]], 390),
     ], note: '<b>Pros:</b> several make-ups in a row without reopening; Undo is inside the dialog, so the keyboard reaches it, with no 5-second timer. <b>Cons:</b> a new look no other section has (Undo as a row button); how long the row Undo stays offered (until the list closes?) needs deciding.' },
     { label: '(c) Keep it as it is today', tone: 'today', items: [

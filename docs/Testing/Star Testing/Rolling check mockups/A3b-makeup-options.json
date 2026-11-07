@@ -62,7 +62,7 @@
       710
      ],
      "scale": 0.345,
-     "caption": "<b>PC.</b> The list closes (as Black Belt’s does), focus goes back to Add candidate, and “Drew Park added · ↶ Undo” shows over the event page, where Drew’s row is now first.",
+     "caption": "<b>PC.</b> The list closes (as Black Belt’s does), focus goes back to Add candidate, and “Drew Park added · ↶ Undo” shows over the event page, where Drew’s row is now first. <b>After Undo,</b> focus goes back to Add candidate.",
      "marks": [
       [
        1065,
@@ -121,7 +121,7 @@
       740
      ],
      "scale": 0.48,
-     "caption": "<b>PC.</b> Drew’s row says “Added” with an Undo button where “Already added” was; the toast stays “Drew Park added” without Undo.",
+     "caption": "<b>PC.</b> Drew’s row says “Added” with an Undo button where “Already added” was; the toast stays “Drew Park added” without Undo. <b>After Undo,</b> focus stays on Drew’s row, whose button turns back into “Add”.",
      "marks": [
       [
        698,

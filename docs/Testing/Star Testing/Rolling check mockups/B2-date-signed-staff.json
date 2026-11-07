@@ -122,7 +122,7 @@
         270
        ],
        "scale": 0.75,
-       "caption": "<b>320 · removed.</b>",
+       "caption": "<b>320 · removed.</b> ",
        "marks": [
         [
          16,
@@ -269,7 +269,7 @@
         270
        ],
        "scale": 0.75,
-       "caption": "<b>320 · removed.</b>",
+       "caption": "<b>320 · removed.</b> ",
        "marks": [
         [
          16,
@@ -360,7 +360,7 @@
         240
        ],
        "scale": 0.75,
-       "caption": "<b>320 wide, touch.</b> ",
+       "caption": "<b>320 wide, touch.</b> The date itself breaks: “Sat, Oct 31, / 2026 · View signature”.",
        "marks": [
         [
          16,
@@ -404,7 +404,7 @@
         270
        ],
        "scale": 0.75,
-       "caption": "<b>320 · removed.</b>",
+       "caption": "<b>320 · removed.</b> The date breaks too: “Sat, Jul 4, / 2026 · signature removed …”, 4 lines.",
        "marks": [
         [
          16,
@@ -418,7 +418,7 @@
      ]
     }
    ],
-   "note": "<b>Pros:</b> no new row; the date sits right next to the signature it belongs to. <b>Cons:</b> the line wraps at every size (2 lines with the link, 3 when removed), and two dates sit in one line in the removed state, which is harder to read."
+   "note": "<b>Pros:</b> no new row; the date sits right next to the signature it belongs to. <b>Cons:</b> the line wraps at every size (2 lines with the link, 3 when removed); at 320 the date signed itself breaks across lines (“Sat, Oct 31, / 2026”), unless the build also keeps the date in one piece; and two dates sit in one line in the removed state, which is harder to read."
   }
  ],
  "footer": "Rulebook v0.638 (Jeffrey, 2026-11-04): every family form shows “Date signed” under the signature, filled in automatically with the day the form is sent, gray, can’t be changed; wherever staff see a signature, its date signed shows with it. Preview screenshots (fake database, today = Fri, Nov 6, 2026). The “After” column is drawn over the real page by a small script (mock-dates.js) — nothing in the app was changed. No database change: the day the form is sent is already saved (star_candidate_signatures.signed_at). For a family-form registration the date signed is the same day as “Registered” (the signature is saved when the form is sent) — by design; v0.638 still asks for it."
