@@ -9,6 +9,8 @@ import { createRoot } from 'react-dom/client';
 import '../styles/tokens.css';
 import '../styles/register.css';
 import '../styles/camp.css';
+// The "Remove child" icon button's look (the trash icon; rulebook v1.048 (22), design review R5-03)
+import '../styles/icon-button-public.css';
 import CampApp from './CampApp.jsx';
 
 createRoot(document.getElementById('root')).render(

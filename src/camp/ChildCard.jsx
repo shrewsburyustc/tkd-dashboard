@@ -6,6 +6,8 @@
 // A camp longer than one week (Mon–Sun) shows its days week by week: "Week 1 · Oct 26 – 30" with
 // a Whole week button, then that week's buttons "Mon 26" … (Jeffrey, 2026-10-21).
 // The card only draws; CampApp keeps the values and the rules live in form.js / campRules.js.
+import { IconTrash } from '@tabler/icons-react';
+import IconButton from '../components/IconButton.jsx';
 import { FieldError, TickBox } from './parts.jsx';
 import { extraPriceLabel, extrasFor, fieldId, isLimited, offeredDayIds, onlyOnLines, priceFor, tidyChild } from './form.js';
 import { formatDollars, monthDay, shortDate, weekdayAndNumber, weekRange, weeksOf } from './format.js';
@@ -89,11 +91,9 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
         <h3 className="reg-card__title" id={`${fieldId(c)}-title`}>
           {T.childTitle(index + 1)}
         </h3>
-        {onRemove ? (
-          <button type="button" className="reg-link" onClick={onRemove} aria-label={T.removeChildLabel(index + 1)}>
-            {T.REMOVE_CHILD}
-          </button>
-        ) : null}
+        {/* Remove child 2 or 3: the gray trash icon button, as every family page (rulebook v1.048 (22),
+            v0.626; design review R5-03). Its name shows as a tooltip and is the screen-reader label. */}
+        {onRemove ? <IconButton label={T.removeChildLabel(index + 1)} Icon={IconTrash} onClick={onRemove} /> : null}
       </div>
 
       {/* First and last name, side by side (also on phones, as in the mockup) */}
