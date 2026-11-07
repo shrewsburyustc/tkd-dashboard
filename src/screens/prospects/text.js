@@ -229,6 +229,9 @@ export const SIGNATURE = 'Signature';
 export const SIGNATURE_GONE = 'The picture was deleted 90 days after the free class. The waiver was signed on the date above.';
 export const SIGNATURE_FAILED = "Couldn't load the signature. Check the connection and try again.";
 export const LOADING_PANEL = 'Loading…';
+// The profile window's read failed (pass 2 P-02): the shared amber bar with Retry, in place of
+// "Loading…" (v1.051 (2)'s ending).
+export const loadDetailFailed = (firstName) => `Couldn't load ${firstName ? `${firstName}'s` : 'the'} details. Check the connection, then retry.`;
 
 // ----- Dates and times as the profile and the sheet show them -----
 // 'YYYY-MM-DD' → "Mon, Mar 4, 2019"; withWeekday false → "Mar 4, 2019"
@@ -246,6 +249,8 @@ export function clockOf(at) {
 }
 // the free class with its year, for the sheet: "Mon, Nov 9, 2026 · 4:00 pm · White"
 export const classLineYear = (b) => `${formatDate(b.date)} · ${formatTime(parseTime(b.start), true)} · ${b.className}`;
+// (On the printed sheet a class that was cancelled reads CLASS_GONE in bold, then this line in
+// brackets: PrintSheet.jsx, pass 2 P-01.)
 
 // ----- The printed visitor sheet (PrintSheet.jsx; v0.636, mockup rev 3 screen 4) -----
 export const SCHOOL_FULL = 'Jae H. Jeong’s U.S. Taekwondo Center';
@@ -320,6 +325,11 @@ export const CANCELLED_BOOKING = (name) => `${name}'s free class was cancelled.`
 export const DELETED = (name) => `${name} was deleted.`;
 export const STALE = 'Someone else changed this prospect. It was reloaded — please try again.';
 export const SAVE_FAILED = "It wasn't saved. Check the connection and try again.";
+// A box that stays open when its save fails (pass 2 U-01, rulebook v1.103): the amber note in the box.
+// Delete prospect and Delete status use the dashboard's delete words (U-08: Forms, Schedule, Color
+// Belt, Star and Black Belt say the same); Came, Joined and Book a free class the save words.
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
+export const BOX_SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
 export const NOT_ALLOWED = "That can't be done right now.";
 export const ADMIN_ONLY = 'Only an admin can do that.';
 export const TIME_TAKEN = 'That time just filled up or was cancelled. Pick another time.';

@@ -8,7 +8,8 @@
 // (M8, src/lib/times.js), the history line's words and dates (M7, src/lib/historyDates.js) and the
 // QR helper (M5, src/lib/qr.js) — the QR picture is compared with the four sections' own copies, to
 // prove it is the same QR code as today. Then the one offline bar (M12, rulebook v1.123): its store
-// (src/lib/connection.js) and its words.
+// (src/lib/connection.js) and its words. Then the room beside the panel (L-02, rulebook v1.053 and
+// v1.130): its store (src/lib/pageRoom.js).
 import assert from 'node:assert/strict';
 import { formatMoney, formatMoneyWithCents } from '../money.js';
 import { formatCents } from '../blackBelt/money.js';
@@ -22,6 +23,7 @@ import * as CONNECTION from '../connection.js';
 import * as TIMES from '../times.js';
 import * as QR from '../qr.js';
 import * as HISTORY from '../historyDates.js';
+import * as ROOM from '../pageRoom.js';
 // The four sections' own QR helpers, read only, to compare with the shared one (M5).
 import { qrSvgDataUrl as cbQrSvgDataUrl, registrationLink } from '../testing/qr.js';
 import { starQrSvgDataUrl, starRegistrationLink } from '../star/links.js';
@@ -391,6 +393,37 @@ await check('M12 store: trouble while any screen reports failing reloads; each s
 });
 await check('M12 words: the offline bar says the approved words (v1.005, v1.123; picture 05b)', () => {
   assert.equal(SHARED.OFFLINE_BAR, 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.');
+});
+
+// ======================= L-02 — the room beside the panel (lib/pageRoom.js; v1.053, v1.130) =======================
+// Shell.jsx reports the page area's inside width, and a roster asks whether it's narrower than its
+// own limit. (Node has no browser, so the reports are made here by hand; check-room.mjs measures a
+// real page area.)
+await check('L-02 store: no room until measured (as today); "below" only under the limit; changes heard once each', () => {
+  assert.equal(ROOM.pageRoom(), null, 'nothing has measured it yet');
+  assert.equal(ROOM.pageRoomIsBelow(640), false, 'unknown room: the roster keeps today\'s layout');
+  let heard = 0;
+  const stop = ROOM.subscribePageRoom(() => {
+    heard += 1;
+  });
+  ROOM.reportPageRoom(611); // a 683 px window with the 72 px panel
+  assert.equal(ROOM.pageRoom(), 611);
+  assert.equal(ROOM.pageRoomIsBelow(640), true);
+  assert.equal(ROOM.pageRoomIsBelow(612), true);
+  assert.equal(ROOM.pageRoomIsBelow(611), false, 'exactly the limit is enough room');
+  assert.equal(ROOM.pageRoomIsBelow(600), false);
+  ROOM.reportPageRoom(611);
+  assert.equal(heard, 1, 'the same room again: nobody re-draws');
+  ROOM.reportPageRoom(672); // a 768 px window with the 96 px panel
+  assert.equal(ROOM.pageRoomIsBelow(640), false);
+  assert.equal(heard, 2);
+  ROOM.reportPageRoom(null); // signed out: the frame is gone
+  assert.equal(ROOM.pageRoomIsBelow(640), false);
+  assert.equal(heard, 3);
+  stop();
+  ROOM.reportPageRoom(500);
+  assert.equal(heard, 3, 'a hook that stopped listening hears nothing');
+  ROOM.reportPageRoom(null);
 });
 
 console.log(`${count} groups of checks ran.`);

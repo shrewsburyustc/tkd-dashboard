@@ -14,6 +14,8 @@
 // outside the page's scrolling part, so they never cover what the keyboard is on (v1.033). They
 // line up with the page's own edges, also when the page has a scrollbar of its own. When one comes
 // or goes, the page stays still under the person's finger (v1.124).
+// The page area's width is "the room beside the panel" (v1.053, v1.130; lib/pageRoom.js): the frame
+// measures it here, and a roster asks it whether to use its phone layout.
 import { useLayoutEffect, useRef, useState } from 'react';
 import Rail from './Rail.jsx';
 import TopBar from './TopBar.jsx';
@@ -22,6 +24,7 @@ import ErrorBanner from './ErrorBanner.jsx';
 import OfflineBar from './OfflineBar.jsx';
 import { PANEL_SIZE_NOT_SAVED } from '../lib/panelSize.js';
 import { useConnectionTrouble } from '../lib/connection.js';
+import { useMeasurePageRoom } from '../lib/pageRoom.js';
 
 export default function Shell({
   hidden,
@@ -63,6 +66,9 @@ export default function Shell({
     observer.observe(content);
     return () => observer.disconnect();
   }, [barShown]);
+
+  // The room beside the panel: the page area's inside width, for the rosters (lib/pageRoom.js).
+  useMeasurePageRoom(contentRef);
 
   // The page stays still when a bar comes or goes (v1.124). The bars take room above the page, so
   // when one comes or goes, the page's box moves down or up in the layout. Its own scroll then moves

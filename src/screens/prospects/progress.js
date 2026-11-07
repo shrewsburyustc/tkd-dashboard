@@ -8,6 +8,7 @@
 // the Board cards' one line all come from this one function, so they never disagree.
 import { addDays, localDay } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
+import { freeClassState } from '../../lib/prospects/child.js';
 import * as T from './text.js';
 
 export const STEP_NAMES = [T.STEP_SIGNED, T.STEP_BOOKED, T.STEP_CAME, T.STEP_JOINED];
@@ -81,7 +82,8 @@ export function progressOf(p, status, today) {
     line = { text: b ? T.cameAskLine(b.date) : T.ASK_TO_JOIN, tone: 'next' };
     short = line;
     next = { text: T.NEXT_ASK_JOIN, warn: false };
-  } else if (booked && !b.classRunning) {
+  } else if (freeClassState(b) === 'class_gone') {
+    // the same state as the profile and the printed sheet (pass 2 P-01)
     line = { text: `${T.classShort(b)} · ${T.CLASS_GONE_SHORT}`, tone: 'warn' };
     short = { text: T.CLASS_GONE_CARD, tone: 'warn' };
     next = { text: T.NEXT_CLASS_GONE, warn: true };

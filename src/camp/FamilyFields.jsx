@@ -7,10 +7,12 @@ import { TextField } from './ChildCard.jsx';
 import { fieldId } from './form.js';
 import * as T from './text.js';
 
-export default function FamilyFields({ form, setPerson, show, onLeave }) {
+// noAutofill (the dashboard's Fill in dialog, a shared desk computer): the parent's name and phone
+// aren't offered for the browser to remember either. Left out (the family page): as before.
+export default function FamilyFields({ form, setPerson, show, onLeave, noAutofill = false }) {
   return (
     <>
-      <PersonCard who="parent" title={T.PARENT} person={form.parent} setPerson={setPerson} show={show} onLeave={onLeave} ownDetails />
+      <PersonCard who="parent" title={T.PARENT} person={form.parent} setPerson={setPerson} show={show} onLeave={onLeave} ownDetails={!noAutofill} />
       <PersonCard who="emergency" title={T.EMERGENCY} person={form.emergency} setPerson={setPerson} show={show} onLeave={onLeave} hint={T.EMERGENCY_HINT} />
     </>
   );

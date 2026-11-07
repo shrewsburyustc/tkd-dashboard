@@ -6,10 +6,16 @@
 // with a line between two groups that both have items (never a line above the first item):
 //   1. About the person — Edit details (always first), Change how they'll pay (ti-switch-horizontal,
 //      while they still owe), Review possible duplicate (when flagged)
-//   2. Money — admins, when something is paid: Edit payment, Undo payment (asks first, v0.730);
-//      then Print receipt (ti-printer, design review C3, rulebook v0.734), LAST in the group, for
-//      staff and admins on an active camper with money paid that still stands. Staff, who see no
-//      other money item, get a money group holding only Print receipt (as Star v0.518).
+//   2. Money — admins, when something is paid: Edit payment, Undo payment (asks first, v0.730),
+//      then the refund items (rulebook v0.743, Star's place): Record refund (ti-receipt-refund)
+//      while the camper paid more than the total, and Undo refund (ti-arrow-back-up, asks first)
+//      while a refund stands — after a partial refund both show, Record refund first (v0.744,
+//      picture 22y, option A); then Print receipt (ti-printer, design review C3, rulebook v0.734),
+//      LAST in the group, for staff and admins on an active camper with money paid that still
+//      stands. Staff, who see no other money item, get a money group holding only Print receipt (as
+//      Star v0.518). While a refund stands, Edit payment and Undo payment stay in place but gray,
+//      with "Undo the refund first." under their words (v0.743 (4), as Star's) — pressing them does
+//      nothing (`grayed`: Camper detail's More draws them gray too).
 //   3. Taking someone off — Withdraw (ti-user-minus, instant with Undo), then for admins Delete
 //      permanently (red, asks first, always last)
 //   Removed camper — Restore (ti-arrow-back-up, C16; staff and admins for an ordinary withdrawal,
@@ -18,17 +24,34 @@
 // No "Admin" heading (v1.012, C9): staff simply don't see the admin-only items; admins see them
 // all in this same order. Items that don't apply are left out; the rest never move.
 // While "Hide private details" is on (detailsHidden, rulebook v0.722 / design review C1): the
-// money items — Change how they'll pay, Edit payment, Undo payment, and Print receipt (v0.734,
-// option A) — are left out (as Color Belt v0.412), so the money group is empty and gets no line;
-// Delete permanently stays for admins.
-import { IconAlertTriangle, IconArrowBackUp, IconCashEdit, IconEdit, IconPrinter, IconSwitchHorizontal, IconTrash, IconUserMinus } from '@tabler/icons-react';
+// money items — Change how they'll pay, Edit payment, Undo payment, Record refund / Undo refund,
+// and Print receipt (v0.734, option A) — are left out (as Color Belt v0.412), so the money group
+// is empty and gets no line; Delete permanently stays for admins.
+import {
+  IconAlertTriangle, IconArrowBackUp, IconCashEdit, IconEdit, IconPrinter, IconReceiptRefund, IconSwitchHorizontal, IconTrash, IconUserMinus,
+} from '@tabler/icons-react';
 import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
+import { refundMenuItems, refundStands } from '../../lib/camps/campRules.js';
 import * as T from './text.js';
 
-// h = { onPayingBy, onEdit, onReview, onWithdraw, onRestore, onEditPayment, onUndoPayment, onPrintReceipt, onDelete }
+// A gray item's words with its reason under them (the shared .ev-menu-two look, as Camps' Fill in
+// and Open sign-up items): "Edit payment" / "Undo the refund first."
+function grayedLabel(text, reason) {
+  return (
+    <span className="ev-menu-two">
+      <span>{text}</span>
+      <span className="ev-menu-reason">{reason}</span>
+    </span>
+  );
+}
+
+// h = { onPayingBy, onEdit, onReview, onWithdraw, onRestore, onEditPayment, onUndoPayment,
+//       onRecordRefund, onUndoRefund, onPrintReceipt, onDelete }
 // Print receipt's onSelect takes the pressed button when there is one (Camper detail's "More"
 // passes it, so focus goes back there when the receipt on top closes); else the ⋯ menu's anchor.
 // detailsHidden = Hide private details is on (no money items).
+// An item may carry `grayed: true` (a refund stands): it is also `disabled`, and Camper detail's
+// More draws it gray with its reason (the menu grays every disabled item by itself).
 export function camperMenuItems(row, { isAdmin, busy, anchor, h, detailsHidden = false }) {
   const items = [];
   // A line (separatorBefore) starts each later group — but only if something is above it, so the
@@ -39,13 +62,38 @@ export function camperMenuItems(row, { isAdmin, busy, anchor, h, detailsHidden =
     items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => h.onEdit(row, anchor) });
     if (!detailsHidden && (row.owesCents ?? 0) > 0) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => h.onPayingBy(row, anchor) });
     if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => h.onReview(row, anchor) });
-    // 2. Money — Edit payment and Undo payment for admins when there is a payment to fix, then
-    //    Print receipt last, for staff and admins (v0.734). Only the group's first item gets the line.
+    // 2. Money — Edit payment and Undo payment for admins when there is a payment to fix (or a
+    //    refund standing on it), then the refund item, then Print receipt last, for staff and admins
+    //    (v0.734). Only the group's first item gets the line.
     const moneyStart = items.length;
     const moneyLine = () => items.length === moneyStart && groupStart();
-    if (isAdmin && !detailsHidden && (row.paidCents ?? 0) > 0 && row.lastPaymentId) {
-      items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: moneyLine(), onSelect: () => h.onEditPayment(row, anchor) });
-      items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onUndoPayment(row, anchor) });
+    const standing = refundStands(row);
+    if (isAdmin && !detailsHidden && ((row.paidCents ?? 0) > 0 || standing) && row.lastPaymentId) {
+      items.push({
+        key: 'editpay',
+        label: standing ? grayedLabel(T.EDIT_PAYMENT, T.UNDO_REFUND_FIRST) : T.EDIT_PAYMENT,
+        Icon: IconCashEdit,
+        separatorBefore: moneyLine(),
+        disabled: standing,
+        grayed: standing,
+        onSelect: () => h.onEditPayment(row, anchor),
+      });
+      items.push({
+        key: 'undopay',
+        label: standing ? grayedLabel(T.UNDO_PAYMENT, T.UNDO_REFUND_FIRST) : T.UNDO_PAYMENT,
+        Icon: IconArrowBackUp,
+        disabled: busy || standing,
+        grayed: standing,
+        onSelect: () => h.onUndoPayment(row, anchor),
+      });
+      // Record refund while the camper paid more than the total (v0.743 (1)); Undo refund while a
+      // refund stands (v0.743 (4)). After a partial refund both show, Record refund first, so the
+      // rest goes back in one step (v0.744, Jeffrey chose A on picture 22y).
+      // ti-receipt-refund = record a refund (Star's); ti-arrow-back-up = undo (Undo payment's icon)
+      for (const refundItem of refundMenuItems(row)) {
+        if (refundItem === 'record') items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: IconReceiptRefund, disabled: busy, onSelect: () => h.onRecordRefund(row, anchor) });
+        else items.push({ key: 'undorefund', label: T.UNDO_REFUND, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onUndoRefund(row, anchor) });
+      }
     }
     if (h.onPrintReceipt && canPrintReceipt(row, detailsHidden)) {
       // ti-printer = print
