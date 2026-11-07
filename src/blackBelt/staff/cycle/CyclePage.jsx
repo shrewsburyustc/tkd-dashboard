@@ -66,7 +66,7 @@ function TwoLines({ label, reason }) {
   );
 }
 
-export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, deviceLocation, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const live = useLiveLoad({ key: cycleId, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const cycle = live.data?.cycle ?? null;
   const today = schoolToday();
@@ -436,6 +436,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         isAdmin={isAdmin}
         location={location}
         onLocationChange={onLocationChange}
+        deviceLocation={deviceLocation}
         screenLocked={screenLocked}
         onNoAccess={onNoAccess}
         onRefreshProfile={onRefreshProfile}

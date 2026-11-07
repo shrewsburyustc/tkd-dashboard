@@ -197,11 +197,12 @@ const RPC_ARGS = /* @__PURE__ */ Object.assign({
   bb_delete_candidate: [ID('p_candidate_id'), ['p_expected_version', 'int']],
   bb_record_paper_waiver: [ID('p_candidate_id'), ['p_expected_version', 'int']],
   bb_record_payment: [ID('p_candidate_id'), ['p_expected_version', 'int'], ['p_amount_cents', 'int'], ['p_method', 'text'],
-    ['p_for_items', 'text[]'], ['p_note', 'text']],
+    ['p_for_items', 'text[]'], ['p_note', 'text'], ['p_school', 'text', 'optional']], // p_school (0046, R1-01): the desk's school; may be left out
   bb_undo_payment: [ID('p_payment_id')],
   bb_edit_payment: [ID('p_payment_id'), ['p_amount_cents', 'int'], ['p_method', 'text'], ['p_for_items', 'text[]'], ['p_note', 'text'],
     ['p_reason', 'text']],
-  bb_record_refund: [ID('p_candidate_id'), ['p_expected_version', 'int'], ['p_amount_cents', 'int'], ['p_method', 'text'], ['p_note', 'text']],
+  bb_record_refund: [ID('p_candidate_id'), ['p_expected_version', 'int'], ['p_amount_cents', 'int'], ['p_method', 'text'], ['p_note', 'text'],
+    ['p_school', 'text', 'optional']], // p_school (0046, R1-01): the desk's school; may be left out
   bb_mark_check_returned: [ID('p_payment_id'), ['p_note', 'text']],
   // the rubric editor (0024 §6, all admins only)
   bb_save_default_dan: [['p_dan', 'int'], ['p_expected_rev', 'int'], ['p_sheet', 'jsonb']],
@@ -312,15 +313,17 @@ function toDbType(value, type) {
   }
 }
 
-// Matches the call's argument names to the function (all required — no defaults) and converts them.
+// Matches the call's argument names to the function (all required — no defaults, except an argument
+// marked 'optional' as a third entry: a database input with `default null`, which a call may leave
+// out, like p_school on the payment functions from 0046) and converts them.
 function readArgs(name, args) {
   const spec = RPC_ARGS[name];
   const sent = Object.keys(args ?? {}).filter((key) => args[key] !== undefined);
   const known = new Set(spec.map(([key]) => key));
-  if (spec.some(([key]) => !sent.includes(key)) || sent.some((key) => !known.has(key))) {
+  if (spec.some(([key, , optional]) => !optional && !sent.includes(key)) || sent.some((key) => !known.has(key))) {
     throw new DbError('PGRST202', `Could not find the function public.${name}(${[...sent].sort().join(', ')}) in the schema cache`, 404);
   }
-  return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key], type)]));
+  return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key] === undefined ? null : args[key], type)]));
 }
 
 // ----- Small helpers -----
@@ -1616,9 +1619,11 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       if (c.version !== a.p_expected_version) return { answer: st('stale') };
       if (c.status === 'withdrawn') return { answer: st('withdrawn') };
       if (!itemsInPlan(db, c, a.p_for_items)) return { answer: st('invalid') };
+      // R1-01 (0046): the payment counts at the DESK's school (p_school), blank = the candidate's school.
+      // (A school that isn't worcester/shrewsbury fails insertPayment's "school must exist" rule.)
       const row = insertPayment(db, paymentRow({
         candidate_id: c.id, cycle_id: c.cycle_id, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method,
-        paid_on: today(), for_items: [...a.p_for_items], note, location_code: c.location_code,
+        paid_on: today(), for_items: [...a.p_for_items], note, location_code: a.p_school ?? c.location_code,
         cycle_name: findCycle(db, c.cycle_id).name, recorded_by: ctx.userId, recorded_by_name: ctx.actorName,
       }));
       updateRow(c, {}, ctx.actorName, true);
@@ -1696,7 +1701,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         .sort((x, y) => cmp(y.recorded_at, x.recorded_at) || -byId(x, y))[0] ?? null;
       const row = insertPayment(db, paymentRow({
         candidate_id: c.id, cycle_id: c.cycle_id, kind: 'refund', amount_cents: -a.p_amount_cents, method: a.p_method, paid_on: today(),
-        note, location_code: latest ? latest.location_code : c.location_code,
+        // R1-01 (0046): the desk's school (p_school), else the latest live payment's school, else the candidate's
+        note, location_code: a.p_school ?? (latest ? latest.location_code : c.location_code),
         cycle_name: latest ? latest.cycle_name : findCycle(db, c.cycle_id).name, recorded_by: ctx.userId, recorded_by_name: ctx.actorName,
       }));
       updateRow(c, {}, ctx.actorName, true);

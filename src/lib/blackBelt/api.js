@@ -34,7 +34,7 @@
 import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { todayInSchoolTime, isIsoDate, shortTime, normalizeNote, PREVIEW_TODAY_KEY } from '../testing/eventRules.js';
-import { cycleState, nextWaiverVersionName, buildAddPayload, buildUpdatePayload, PARTS, DANS } from './rules.js';
+import { cycleState, nextWaiverVersionName, buildAddPayload, buildUpdatePayload, deskSchoolArg, PARTS, DANS } from './rules.js';
 import { normalizeDan, RUBRIC_SCHEMA_VERSION, RUBRIC_DANS } from './rubric.js';
 
 // Every status a call here can return.
@@ -943,9 +943,11 @@ const moneyAnswer = (d) => {
 
 // Record payment: amountCents 1–500000 (any cents), method 'cash'|'check'|'card', forItems
 // ['p1', 'kukkiwon'] (items of the CURRENT plan), note optional (trimmed; '' → none). Counts today.
+// school (R1-01, migration 0046): This device's school ('Worcester' | 'Shrewsbury'); the payment counts
+// at that desk. Sent as p_school only when it is a known school; otherwise left out (the old rule).
 // → { status:'ok', paymentId, version, money } · 'withdrawn' · 'invalid' · 'stale' · 'not_found' ·
 //   'no_access' · 'error'
-export async function recordPayment({ candidateId, expectedVersion, amountCents, method, forItems, note = null } = {}) {
+export async function recordPayment({ candidateId, expectedVersion, amountCents, method, forItems, note = null, school = null } = {}) {
   return callRpc('bb_record_payment', {
     p_candidate_id: candidateId ?? null,
     p_expected_version: expectedVersion ?? null,
@@ -953,6 +955,7 @@ export async function recordPayment({ candidateId, expectedVersion, amountCents,
     p_method: method ?? null,
     p_for_items: Array.isArray(forItems) ? [...forItems] : null,
     p_note: tidyNote(note),
+    ...deskSchoolArg(school),
   }, paymentAnswer);
 }
 
@@ -982,16 +985,17 @@ export async function editPayment({ paymentId, amountCents, method, forItems, no
 }
 
 // Record refund (admins): entered positive, stored negative, counted today; never more than
-// what's been paid (all rows added up).
+// what's been paid (all rows added up). school: as for recordPayment (the desk that hands the money back).
 // → { status:'ok', paymentId, version, money } · 'refund_too_large' (+ paidCents) · 'invalid' ·
 //   'stale' · 'not_found' · 'not_allowed' · 'no_access' · 'error'
-export async function recordRefund({ candidateId, expectedVersion, amountCents, method, note = null } = {}) {
+export async function recordRefund({ candidateId, expectedVersion, amountCents, method, note = null, school = null } = {}) {
   return callRpc('bb_record_refund', {
     p_candidate_id: candidateId ?? null,
     p_expected_version: expectedVersion ?? null,
     p_amount_cents: amountCents ?? null,
     p_method: method ?? null,
     p_note: tidyNote(note),
+    ...deskSchoolArg(school),
   }, paymentAnswer, (status, d) => (status === 'refund_too_large' ? (isNum(d.paid_cents) ? { paidCents: d.paid_cents } : undefined) : null));
 }
 

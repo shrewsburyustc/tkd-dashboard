@@ -94,7 +94,7 @@ const inItemOrder = (codes, money) => {
   return [...codes].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 };
 
-export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner }) {
+export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, deviceLocation, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner }) {
   const [dlg, setDlgState] = useState(null);
   const dlgRef = useRef(null);
   const setDlg = (next) => {
@@ -105,7 +105,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // The newest props, for the async calls below (an answer may arrive after a re-render).
   const latest = useRef({});
   useLayoutEffect(() => {
-    latest.current = { cycle, isAdmin, today, paymentsHidden, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner };
+    latest.current = { cycle, isAdmin, today, paymentsHidden, deviceLocation, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner };
   });
 
   // One write at a time (a double click must not record a payment twice).
@@ -449,6 +449,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       method: c.values.method,
       forItems: inItemOrder(c.values.ticks, c.data.money),
       note: trimSpaces(c.values.note),
+      school: latest.current.deviceLocation, // the desk's school (R1-01); unknown → nothing sent
     });
     endWrite();
     if (result.status === 'ok') {
@@ -623,7 +624,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!beginWrite()) return;
     patchChild({ saving: true, failed: false, note: null });
     const name = T.candidateName(c.data.candidate);
-    const result = await recordRefund({ candidateId: c.candidateId, expectedVersion: c.version, amountCents: cents, method: c.values.method, note: trimSpaces(c.values.note) });
+    const result = await recordRefund({ candidateId: c.candidateId, expectedVersion: c.version, amountCents: cents, method: c.values.method, note: trimSpaces(c.values.note), school: latest.current.deviceLocation });
     endWrite();
     if (result.status === 'ok') {
       afterWrite();

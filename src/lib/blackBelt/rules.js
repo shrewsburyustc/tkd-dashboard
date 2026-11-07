@@ -40,6 +40,20 @@ import { dueKey, savedDueDates } from './dateLimits.js';
 export const PARTS = ['physical', 'technical', 'curriculum']; // always in this order
 export const DANS = [1, 2, 3, 4];
 export const SCHOOL_CODES = ['worcester', 'shrewsbury'];
+// The school of the DESK taking a payment or refund (R1-01, rulebook v1.035): the school set under
+// "This device" in the account menu ('Worcester' | 'Shrewsbury', or a code). Gives the lowercase
+// code the database stores, or null when it isn't a known school — then the app sends no p_school
+// and the database falls back to its old rule (the candidate's school).
+export const deskSchoolCode = (deviceLocation) => {
+  const code = typeof deviceLocation === 'string' ? deviceLocation.trim().toLowerCase() : '';
+  return SCHOOL_CODES.includes(code) ? code : null;
+};
+// The extra database input for Record payment / Record refund: { p_school } for a known school,
+// else nothing at all (an empty object), so the call is the old call.
+export const deskSchoolArg = (deviceLocation) => {
+  const code = deskSchoolCode(deviceLocation);
+  return code ? { p_school: code } : {};
+};
 export const MAX_DAYS = 20; // 1–20 testing days per cycle
 export const MAX_PLANS = 10; // 1–10 payment plans per cycle
 export const MAX_PAYMENTS = 12; // 1–12 payments per plan

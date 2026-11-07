@@ -32,6 +32,8 @@
 //   onModalOpenChange  tells the App a dialog is open (the page behind becomes inert)
 //   location / onLocationChange   the top bar's location switcher (phase B2: the cycle page's
 //                      Candidates tab follows it — v0.118; Cycles and Rubric don't)
+//   deviceLocation     This device's school from the account menu ('Worcester' | 'Shrewsbury'): the desk
+//                      a payment or refund counts at (R1-01, v1.035) — sent as p_school to the database
 //   onLeaveGuardChange (fn | null) — App.jsx asks fn before it leaves this page (the rail, the
 //                      account menu, the browser's Back …). Migration 0024: while a rubric Dan has
 //                      unsaved changes, every way out asks "Discard changes to 1st Dan?" (R10). The
@@ -104,7 +106,7 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   );
 }
 
-export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab: askedTab, onTab, onOpen, location, onLocationChange, onLeaveGuardChange, ...shared }) {
+export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab: askedTab, onTab, onOpen, location, onLocationChange, deviceLocation, onLeaveGuardChange, ...shared }) {
   const baseId = useId();
 
   // ----- The leave guard (R10) -----
@@ -158,6 +160,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab:
           guarded={guarded}
           location={location}
           onLocationChange={onLocationChange}
+          deviceLocation={deviceLocation}
           {...shared}
         />
       </div>

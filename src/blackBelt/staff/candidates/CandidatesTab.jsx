@@ -107,6 +107,7 @@ export default function CandidatesTab({
   isAdmin,
   location = 'Both',
   onLocationChange,
+  deviceLocation, // This device's school: where a payment or refund counts (R1-01)
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -159,6 +160,7 @@ export default function CandidatesTab({
     isAdmin,
     today,
     paymentsHidden: hidden,
+    deviceLocation,
     reloadRoster,
     onCandidatesChanged,
     showToast,

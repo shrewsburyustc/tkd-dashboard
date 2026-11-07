@@ -149,3 +149,18 @@ Each waits until Dashboard core's (or Star's) item is on main; Main says when.
 **Docs at the next rulebook edit:** R4-15's four "(See …)" notes. **Status-file checks:** the chooser check (passed in the checker's preview), BB3's Finance check after Edit payment + Undo (to run).
 
 **Each step:** mockups OK'd one screen at a time → build in preview mode → design reviewer (four sizes, §4's WCAG checks) + code reviewer (+ security reviewer for privacy and database work) → both builds + check files + Function tests → commit on `black-belt` → report to Main. Never push.
+
+## 6. Batches (re-planned 2026-11-07 for the new process rule P8: a whole page or area per batch)
+
+**Done and live:** Step 1 (privacy at the mat, v0.976–v0.978) and Step 1b (the decided small fixes, Results offline lines, Date signed, v0.979–v0.980; main 50d001e9).
+
+**Rule P8:** build every open item of one page/area together; no mockup for something already decided; a picture only for something new, one per page; ask a batch's questions together at its start; one review (design + code, + security for database work), one report to Main, one merge per batch.
+
+| Batch | What | Database? | Questions for Jeffrey |
+|---|---|---|---|
+| **1 · Payments and the desk's school** | R1-01: migration **0046** (`bb_record_payment` and `bb_record_refund` take This device's school; blank = today's rule; undo / edit / returned copy from the payment they correct), the app passes This device's school (`src/App.jsx`, `src/screens/Testing.jsx`), the preview store; S-1 (Worcester first on Both) per his answer. | Yes (0046, critical path to Finance's R1-01) | S-1: A screens only / **C** screens + the CSV in 0046 / B all in the database |
+| **2 · Candidates page, Part 2** | BB15 (shared Compare + Duplicate box, Count cards incl. 2×2 on phones and the one-card row while hidden, the shared "Showing … only" line, R3-05, R3-10 order, C-05 (a) no cards on an empty roster and (b) each card's own empty line, empty-roster line), BB1 ("Paid by" / "Refunded by"), BB2 (shared receipt; Print receipt only on a row with a payment or refund that still stands, M-03), BB7 (confirm boxes), R4-11 (Retry on a failed ⋯ read), shared Select / TimeList / ChoiceGroup / Paid-by field / Grip where they replace our copies. | No | the "Keep …" words; whether our own choice-button looks may stay; the phone header's full-width Add candidate (keep or its own size) |
+| **3 · Cycle page, Part 2** | BB10 (Registration link button in the header, shared box, 1024-px QR), BB19 (Discard: Keep editing left / Discard right and red; the Dan-change box as the shared small box on phones), BB14 (one money helper; Add cycle grid "$12.50"), BB7 on the cycle boxes. | No | none expected |
+| **4 · Waiting on Dashboard core / Star** | After Dashboard core: R2-05 (queued Undo), R2-04 (our toast rule goes), R3-13, R1-06, R1-07, R2-07 words, R3-06 (shared back link), S-2 (one load line + Retry in five places), L-06 (shared Grip gray). After Star: R4-08. Built as one batch when the last of them is on main. | No | none |
+
+**Order:** batch 1 now (it is on the critical path; its migration needs Jeffrey's paste after the security review), batches 2 and 3 in parallel with its review, batch 4 when Main says the shared parts are on main.

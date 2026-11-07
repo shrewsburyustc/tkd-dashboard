@@ -52,7 +52,7 @@ import {
 } from './rubric.js';
 import { DEFAULT_RUBRIC } from './rubricDefault.js';
 import { cycleDateYears, dobYears, dueKey, formDobYears, lastTestingDay, notBeforeToday, pastHint, savedDueDates, testingDayMin, yearRange } from './dateLimits.js';
-import { canOpenRegistration } from './rules.js';
+import { canOpenRegistration, deskSchoolCode, deskSchoolArg } from './rules.js';
 import {
   gradeResult, keptMatch, ageGroups, ageGroupOf, measuredLetter, extraPoints, resultKey, resultKeyInput, trimScaleText, WITHDRAWN_RESULT_KEY,
   RESULT_KEYS, RESULT_SUBJECT_KEYS, danSubjects, subjectNames, minutesFromText, minutesText, parseMeasured, formatMeasured, feetAndInches,
@@ -1971,6 +1971,57 @@ check('B2 store: Edit payment (15q, T7d) — exactly two rows, same recorded_at,
   assert.deepEqual(w('bb_edit_payment', { p_payment_id: kp.payment_id, p_amount_cents: 100, p_method: 'cash', p_for_items: ['p1'], p_note: null, p_reason: 'x' }), { status: 'withdrawn' });
   assert.deepEqual(w('bb_edit_payment', { p_payment_id: randomUUID(), p_amount_cents: 100, p_method: 'cash', p_for_items: ['p1'], p_note: null, p_reason: 'x' }), { status: 'not_found' });
   setDay('2027-04-26');
+});
+
+// R1-01 (0046, rulebook v1.035): a payment or refund counts at the DESK's school (This device), not the candidate's.
+check('R1-01: the desk school helper — known schools become codes, anything else sends nothing', () => {
+  assert.equal(deskSchoolCode('Worcester'), 'worcester');
+  assert.equal(deskSchoolCode('Shrewsbury'), 'shrewsbury');
+  assert.equal(deskSchoolCode('shrewsbury'), 'shrewsbury');
+  for (const bad of [undefined, null, '', 'Both', 'Boston', 7, {}]) assert.equal(deskSchoolCode(bad), null, String(bad));
+  assert.deepEqual(deskSchoolArg('Shrewsbury'), { p_school: 'shrewsbury' });
+  assert.deepEqual(deskSchoolArg('Both'), {}); // no p_school key at all: the old call
+  assert.deepEqual(deskSchoolArg(undefined), {});
+});
+
+check('R1-01 store: payment and refund count at the desk school; blank = the old rule; undo and edit keep it', () => {
+  fresh();
+  const sam = addDesk('Sam'); // a Worcester candidate
+  // Recorded at a Shrewsbury desk: the payment's school is shrewsbury, not worcester
+  const p = w('bb_record_payment', { ...payArgs(sam, 29000, 'cash', ['p1']), ...deskSchoolArg('Shrewsbury') }, STAFF);
+  assert.equal(p.status, 'ok');
+  assert.equal(db().bb_payments.find((x) => x.id === p.payment_id).location_code, 'shrewsbury');
+  // No device school: the candidate's own school (the old rule)
+  const q = w('bb_record_payment', { ...payArgs(sam, 100, 'cash', ['p2']), ...deskSchoolArg('Both') }, STAFF);
+  assert.equal(db().bb_payments.find((x) => x.id === q.payment_id).location_code, 'worcester');
+  // A school that isn't one of ours is refused, nothing stored
+  const n = db().bb_payments.length;
+  assert.deepEqual(w('bb_record_payment', { ...payArgs(sam, 100, 'cash', ['p3']), p_school: 'boston' }, STAFF), { status: 'invalid' });
+  assert.equal(db().bb_payments.length, n);
+  // Edit payment (admin) and Undo copy the school of the payment they correct, whatever the desk
+  const e = w('bb_edit_payment', { p_payment_id: p.payment_id, p_amount_cents: 29000, p_method: 'card', p_for_items: ['p1'], p_note: null, p_reason: 'was card' });
+  assert.equal(e.status, 'ok');
+  assert.equal(db().bb_payments.find((x) => x.id === e.payment_id).location_code, 'shrewsbury');
+  assert.equal(db().bb_payments.find((x) => x.reverses_payment_id === p.payment_id).location_code, 'shrewsbury');
+  const u = w('bb_undo_payment', { p_payment_id: e.payment_id });
+  assert.equal(u.status, 'ok');
+  assert.equal(db().bb_payments.find((x) => x.reverses_payment_id === e.payment_id).location_code, 'shrewsbury');
+  // A refund at a Shrewsbury desk counts at shrewsbury; without a device school it takes the latest live payment's school
+  const sue = addDesk('Sue');
+  w('bb_record_payment', payArgs(sue, 29000, 'cash', ['p1']), STAFF); // worcester
+  const r1 = w('bb_record_refund', { p_candidate_id: sue, p_expected_version: version(sue), p_amount_cents: 1000, p_method: 'cash', p_note: null, ...deskSchoolArg('Shrewsbury') });
+  assert.equal(db().bb_payments.find((x) => x.id === r1.payment_id).location_code, 'shrewsbury');
+  const r2 = w('bb_record_refund', { p_candidate_id: sue, p_expected_version: version(sue), p_amount_cents: 1000, p_method: 'cash', p_note: null });
+  assert.equal(db().bb_payments.find((x) => x.id === r2.payment_id).location_code, 'worcester');
+  // Undo of the Shrewsbury refund keeps its school
+  const ru = w('bb_undo_payment', { p_payment_id: r1.payment_id });
+  assert.equal(db().bb_payments.find((x) => x.id !== r1.payment_id && x.reverses_payment_id === r1.payment_id).location_code, 'shrewsbury');
+  // A returned check keeps the check's school
+  const cs = addDesk('Cy');
+  const ck = w('bb_record_payment', { ...payArgs(cs, 29000, 'check', ['p1']), ...deskSchoolArg('Shrewsbury') }, STAFF);
+  const ret = w('bb_mark_check_returned', { p_payment_id: ck.payment_id, p_note: null });
+  assert.equal(db().bb_payments.find((x) => x.id === ret.payment_id).location_code, 'shrewsbury');
+  assert.equal(ru.status, 'ok');
 });
 
 check('B2 store: Refund (15r, T7e) — up to the net paid, refund_too_large, its Undo, the net floor', () => {
