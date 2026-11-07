@@ -1,0 +1,49 @@
+{
+  "title": "Camps roster: cards when the table has too little room (L-02)",
+  "subtitle": "The rule is already approved (v1.053, v1.130; Jeffrey 2026-11-05 and 2026-11-06): a roster picks its layout from the room beside the left panel, not from the window's width. Real preview screens of April Vacation Camp, a 5-day camp. <b>Today</b> the table keeps its columns whatever the room, so in a narrow room it is wider than its box and Friday and the ⋯ column can only be reached by scrolling sideways. <b>After</b>, when the room is too narrow for this week's columns, the roster draws its cards (the phone layout); a mouse also gets a ⋯ on each card. <b>Amber = what differs.</b>",
+  "width": 1960,
+  "sections": [
+    {
+      "heading": "1 · A mouse in a half-width laptop window (683 px wide, Standard panel)",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/l02-before-683-mouse.png", "shotWidth": 683, "crop": [0, 70, 683, 560], "scale": 0.85, "marks": [[556, 120, 127, 300]],
+            "caption": "<b>The table is 673 px wide in a 561 px box.</b> Friday and the ⋯ column are cut off; the person scrolls sideways to reach them." }
+        ], "note": "§1.3 says no sideways scrolling." },
+        { "label": "After", "tone": "after", "items": [
+          { "row": [
+            { "src": "shots/l02-after-683-mouse.png", "shotWidth": 683, "crop": [0, 70, 683, 560], "scale": 0.85, "marks": [[631, 135, 28, 28], [631, 274, 28, 28], [631, 398, 28, 28]],
+              "caption": "<b>Cards, with a ⋯ on each (mouse).</b> All five days fit. The buttons keep their mouse size (36 px day boxes) because there is no touch." },
+            { "src": "shots/l02-after-683-menu.png", "shotWidth": 683, "crop": [330, 380, 350, 290], "scale": 0.85, "marks": [[460, 432, 198, 228]],
+              "caption": "<b>The card's ⋯</b> is the roster row's ⋯: the same items, in the same order." }
+          ] }
+        ], "note": "Only the roster changes. The page around it, its dialogs and its ⋯ menus keep following the window." }
+      ]
+    },
+    {
+      "heading": "2 · An iPad held upright with the Largest panel (768 px wide, touch)",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/l02-before-768-largest-touch.png", "shotWidth": 768, "crop": [0, 70, 768, 500], "scale": 0.78, "marks": [[686, 120, 82, 430]],
+            "caption": "<b>633 px of table in a 622 px box:</b> Friday runs off the edge (“Fri”, “Late” cut)." }
+        ] },
+        { "label": "After", "tone": "after", "items": [
+          { "src": "shots/l02-after-768-largest-touch.png", "shotWidth": 768, "crop": [0, 70, 768, 500], "scale": 0.78, "marks": [[116, 140, 632, 128]],
+            "caption": "<b>Cards, no ⋯ (touch):</b> the name opens Camper detail, whose More holds the same items, as on a phone. 44 px targets, as today's cards." }
+        ] }
+      ]
+    },
+    {
+      "heading": "3 · Where nothing changes (enough room: the table stays)",
+      "columns": [
+        { "label": "820 × 1180, touch, Standard panel", "tone": "after", "flex": 1, "items": [
+          { "src": "shots/l02-same-820-touch.png", "shotWidth": 820, "crop": [0, 70, 820, 420], "scale": 0.62, "caption": "<b>Same as today:</b> 748 px of room; the 5-day table needs 683." }
+        ] },
+        { "label": "1280 × 800", "tone": "after", "flex": 1.5, "items": [
+          { "src": "shots/l02-same-1280.png", "shotWidth": 1280, "crop": [0, 70, 1280, 420], "scale": 0.62, "caption": "<b>Same as today.</b> Phones (390, 320) are cards today and stay as they are." }
+        ] }
+      ]
+    }
+  ],
+  "footer": "<b>How it decides.</b> The table needs room for the page margins (50 px), the Camper and Paid columns, each day of the week on screen (about 89 px each) and, with a mouse, the ⋯ column (40 px). Measured on the built table. Room needed, by days in the shown week — <b>1 day</b> 327 touch / 367 mouse · <b>2</b> 416 / 456 · <b>3</b> 505 / 545 · <b>4</b> 594 / 634 · <b>5</b> 683 / 723 · <b>6</b> 772 / 812 · <b>7</b> 861 / 901. The room is the window minus the left panel (72 px, 96 with Largest) and, on a PC, the scrollbar. So a 5-day camp with a mouse and the Standard panel switches to cards in windows under about 810 px; on a touch screen under about 755 px (about 779 with Largest). <b>Also:</b> the card layout has no legend under it (as phones today). Mouse sizes on cards are new: 32 px name link, 36 px day boxes, ⋯ as on the table; on touch they stay 44 px. No database change."
+}
