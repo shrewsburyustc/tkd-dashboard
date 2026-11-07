@@ -24,6 +24,11 @@
 // Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades, and
 // not a restored "Duplicate copy", R2-03). A saved Edit details closes the detail back to the
 // roster, with focus on the candidate's row (v1.047 (21)); a refused save keeps it open.
+// R4-11 / S-2 (v0.966 (1), v1.051): a lost connection while reading a candidate (the detail, a
+// payment dialog's data, the compare, an admin's row ⋯) shows the bar with Retry, which repeats
+// THAT read; the row ⋯ shows busy while it reads (`menuLoading`). A refusal has × only.
+// BB15 / BB7 (v1.008 / v1.102): the compare, the duplicate box and the confirm boxes are the shared
+// parts; this file only says which button is busy (`busyKind`) and keeps the state.
 //
 // Privacy (§3.1): the detail's date of birth, email and the signature live only inside `dlg`,
 // which is emptied when the dialog closes. Nothing here writes them to storage, the console, a
@@ -50,7 +55,7 @@ import {
 import { amountInputText } from '../../../lib/blackBelt/money.js';
 import { defaultTicks, sumRemaining, trimSpaces } from '../../../lib/blackBelt/rules.js';
 import { normalizeName } from '../../../lib/testing/names.js';
-import { addProblems, anyProblem, detailsProblems, editValuesToSave, paymentProblems, restoreHasUndo } from './checks.js';
+import { addProblems, anyProblem, detailsProblems, editValuesToSave, isMoneyChild, paymentProblems, restoreHasUndo } from './checks.js';
 import * as T from '../text.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -122,6 +127,19 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     setBusy(false);
   }
 
+  // True while the amber bar on screen is the Retry of a MONEY opener's failed read (Record payment,
+  // Record refund, Edit / Undo payment from a row's ⋯): it goes away when Hide private details turns on
+  // (paymentsHiddenNow), so its Retry can never open a money dialog on a mat tablet (P1).
+  const moneyBannerRef = useRef(false);
+
+  // A money toast (payment recorded / undone / changed, refund, returned check, plan change, and the
+  // Undo answers) is never shown while Hide private details is on: a save that was already in flight
+  // may finish after the switch turned on (P2). The save itself still counts; only the words are held back.
+  function showMoneyToast(text, options) {
+    if (latest.current.paymentsHidden) return;
+    latest.current.showToast(text, options);
+  }
+
   const patchChild = (changes) =>
     setDlg((d) => (d?.child ? { ...d, child: { ...d.child, ...(typeof changes === 'function' ? changes(d.child) : changes) } } : d));
   const patchDetail = (changes) =>
@@ -148,6 +166,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   //   opener   the ⋯ the action came from: focus goes back to it (v0.966 review: never the page
   //            body). Inside an open detail, to the detail's ⋯ when that one is gone.
   function report(banner, { from = latest.current, opener = null } = {}) {
+    moneyBannerRef.current = false; // a new bar replaces the old one (loadProblem marks a money one after this)
     if (dlgRef.current?.detail) {
       const inside = opener?.isConnected && opener.closest('[role="dialog"]');
       patchDetail({ banner, focusKey: inside ? null : 'detail-more' });
@@ -166,14 +185,20 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   // ----- Loading one candidate (the detail and every dialog that needs the money items) -----
   // → the detail's data { candidate, waiver, needsParentSignature, payments, money } or null
   // (the problem is already shown: lock screen or the amber bar).
-  function loadProblem(status) {
+  // retry: what the amber bar's Retry does for a LOST CONNECTION ('error'); every other problem is
+  // a refusal and has × only (v0.966 (1), R4-11: a connection failure always has Retry in the bar).
+  function loadProblem(status, retry = null, { money = false } = {}) {
     const a = latest.current;
     if (status === 'no_access') a.onNoAccess();
     else if (status === 'not_found') {
       // "This candidate was deleted." goes in the Candidates tab's bar: the detail closes (v0.966).
       a.setBanner({ text: T.CANDIDATE_GONE });
       a.reloadRoster();
-    } else report({ text: T.LOAD_FAILED });
+    } else {
+      // The words with "retry" only where the bar has a Retry; a refusal has × only (C1).
+      report(status === 'error' && retry ? { text: T.LOAD_FAILED, retry } : { text: T.LOAD_FAILED_NO_RETRY });
+      moneyBannerRef.current = money && status === 'error' && Boolean(retry);
+    }
   }
   async function fetchCandidate(candidateId) {
     const result = await loadCandidate({ candidateId });
@@ -181,12 +206,17 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     const { status: _status, ...data } = result;
     return { data };
   }
-  async function withCandidate(candidateId, use) {
-    if (!beginWrite()) return;
+  // Reads one candidate, then `use(data)`. A lost connection shows the bar with Retry, and Retry
+  // repeats THIS read (`retry` — by default the same call again; the row ⋯ passes its own so the
+  // ⋯ shows busy again while it reads).
+  // money: true when use opens a money dialog (its Retry bar is cleared when the switch turns on).
+  async function withCandidate(candidateId, use, { retry = () => withCandidate(candidateId, use, { money }), onSettled = null, money = false } = {}) {
+    if (!beginWrite()) return; // another read or write is running: this call did not start, so it settles nothing
     const { data, problem } = await fetchCandidate(candidateId);
     endWrite();
+    onSettled?.();
     if (problem) {
-      loadProblem(problem);
+      loadProblem(problem, retry, { money });
       return;
     }
     use(data);
@@ -198,8 +228,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   // menu opens. Nothing opens either if a dialog came up meanwhile.
   // Privacy (§3.1): the menu keeps only what Edit / Undo payment need — the name, version and
   // plan, the payment lines and the money — never the date of birth, the email or the waiver.
+  // While it reads, `menuLoading` holds the candidate's id, so the row's ⋯ can show busy (R4-11);
+  // after a lost connection the bar's Retry reads again, and the ⋯ shows busy again.
+  const [menuLoading, setMenuLoading] = useState(null);
   function loadForMenu(candidateId, use) {
-    return withCandidate(candidateId, (data) => {
+    const useData = (data) => {
       if (dlgRef.current) return;
       const c = data.candidate;
       use({
@@ -207,7 +240,15 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
         payments: data.payments ?? [],
         money: data.money,
       });
-    });
+    };
+    const run = () => {
+      // Only a call that really starts the read shows the ⋯ busy and clears it again (C8): while
+      // another read is running nothing starts, and that read's own end must not be cut short.
+      if (busyRef.current) return;
+      setMenuLoading(candidateId);
+      return withCandidate(candidateId, useData, { retry: run, onSettled: () => setMenuLoading(null), money: true });
+    };
+    return run();
   }
 
   // ----- The detail (Candidates 3) -----
@@ -286,15 +327,20 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   // open (R4-04, v1.037, as Star's): its date of birth and email turn into the gray "Hidden on this
   // tablet" (CandidateDialog.jsx) and Save keeps their stored values (editValuesToSave). The
   // detail itself redraws with "Hidden on this tablet"; Compare and Add hide their parts themselves.
-  const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt', 'plan'];
   // Also closed when the switch turns on: Add candidate and the Delete confirm.
   // (Not the signature: View signature now also shows for admins while hidden, M-04, v1.055 (c).)
   const CLOSE_ON_HIDE = ['add', 'deleteConfirm'];
   function paymentsHiddenNow() {
     const d = dlgRef.current;
     latest.current.clearToast();
+    // The Retry bar of a failed money read goes too (P1): its Retry would reopen a money dialog.
+    if (moneyBannerRef.current) {
+      moneyBannerRef.current = false;
+      latest.current.setBanner(null);
+      if (d?.detail?.banner) patchDetail({ banner: null });
+    }
     if (!d) return;
-    if (d.child && MONEY_CHILDREN.includes(d.child.kind)) {
+    if (d.child && isMoneyChild(d.child.kind)) {
       if (d.detail) {
         // (back to the detail's view, as before; a money dialog never opens over Edit details)
         setDlg({ detail: { ...d.detail, mode: 'view', edit: null, menu: null }, child: null });
@@ -414,10 +460,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     return { ticks, amount: cents > 0 ? amountInputText(cents) : '', amountTyped: false, method, note: '' };
   }
   function openRecordPayment(candidateId, opener) {
+    if (latest.current.paymentsHidden) return; // money waits for the desk (also after a failed read's Retry)
     const from = dlgRef.current?.detail?.data;
-    const start = (data) => openChild({ kind: 'record', candidateId, data, version: data.candidate.version, values: paymentValues(data.money) }, opener);
+    const start = (data) => !latest.current.paymentsHidden && openChild({ kind: 'record', candidateId, data, version: data.candidate.version, values: paymentValues(data.money) }, opener);
     if (from && dlgRef.current.detail.candidateId === candidateId) start(from);
-    else withCandidate(candidateId, start);
+    else withCandidate(candidateId, start, { money: true });
   }
   // A tick changes: the Amount follows the ticked items until someone types in it (OP-B6).
   function setTicks(ticks) {
@@ -455,11 +502,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     if (result.status === 'ok') {
       afterWrite();
       const paymentId = result.paymentId;
-      latest.current.showToast(
+      showMoneyToast(
         T.toastPaymentRecorded(cents, name),
         undoAction(() =>
           runQuick(() => undoPayment({ paymentId }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
+            ok: () => showMoneyToast(T.TOAST_UNDONE, { icon: false }),
             statuses: { not_allowed: T.TOO_LATE_TO_UNDO, stale: T.PAYMENT_GONE, invalid: T.INVALID },
           }),
         ),
@@ -502,6 +549,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   }
   // loaded: from the roster row's ⋯ only (its line is the candidate's latest payment, v0.963)
   function openEditPayment(line, opener, loaded = null) {
+    if (latest.current.paymentsHidden) return;
     const data = paymentData(loaded);
     if (!data) return;
     const ticks = stillInPlan(line.forItems, data.money);
@@ -536,12 +584,12 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     if (result.status === 'ok') {
       afterWrite();
       const newId = result.paymentId;
-      latest.current.showToast(
+      showMoneyToast(
         T.TOAST_PAYMENT_CHANGED,
         undoAction(() =>
           runQuick(
             () => editPayment({ paymentId: newId, amountCents: old.amountCents, method: old.method, forItems: undoTicks, note: old.note ?? '', reason: T.UNDO_EDIT_REASON }),
-            { ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }), statuses: { stale: T.PAYMENT_GONE } },
+            { ok: () => showMoneyToast(T.TOAST_UNDONE, { icon: false }), statuses: { stale: T.PAYMENT_GONE } },
           ),
         ),
       );
@@ -564,6 +612,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   // OP-B1: a short confirmation, then a toast WITHOUT Undo (an undo can't be undone).
   // loaded: from the roster row's ⋯ only (as openEditPayment)
   function openUndoPayment(line, what, opener, loaded = null) {
+    if (latest.current.paymentsHidden) return;
     const data = paymentData(loaded);
     if (!data) return;
     openChild({ kind: 'undo', candidateId: data.candidate.id, data, line, what, values: null }, opener);
@@ -586,7 +635,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
           : line.kind === 'returned'
             ? T.toastReturnedUndone(cents, name)
             : T.toastPaymentUndone(cents, line.method, name);
-      latest.current.showToast(text, { icon: false });
+      showMoneyToast(text, { icon: false });
       patchChild({ saving: false });
       closeChild();
       return;
@@ -604,13 +653,15 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   }
 
   function openRefund(candidateId, opener) {
+    if (latest.current.paymentsHidden) return;
     const start = (data) => {
+      if (latest.current.paymentsHidden) return;
       const over = data.money?.overpaidCents ?? 0;
       openChild({ kind: 'refund', candidateId, data, version: data.candidate.version, values: { amount: over > 0 ? amountInputText(over) : '', method: null, note: '' } }, opener);
     };
     const from = dlgRef.current?.detail;
     if (from?.data && from.candidateId === candidateId) start(from.data);
-    else withCandidate(candidateId, start);
+    else withCandidate(candidateId, start, { money: true });
   }
   async function saveRefund() {
     const c = dlgRef.current?.child;
@@ -629,11 +680,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     if (result.status === 'ok') {
       afterWrite();
       const refundId = result.paymentId;
-      latest.current.showToast(
+      showMoneyToast(
         T.toastRefund(cents, name),
         undoAction(() =>
           runQuick(() => undoPayment({ paymentId: refundId }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
+            ok: () => showMoneyToast(T.TOAST_UNDONE, { icon: false }),
             statuses: { stale: T.PAYMENT_GONE },
           }),
         ),
@@ -651,6 +702,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   }
 
   function openReturned(line, what, opener) {
+    if (latest.current.paymentsHidden) return;
     const d = dlgRef.current?.detail;
     if (!d?.data) return;
     openChild({ kind: 'returned', candidateId: d.candidateId, data: d.data, line, what, values: { note: '' } }, opener);
@@ -671,11 +723,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     if (result.status === 'ok') {
       afterWrite();
       const returnedId = result.paymentId;
-      latest.current.showToast(
+      showMoneyToast(
         T.toastReturned(cents, name),
         undoAction(() =>
           runQuick(() => undoPayment({ paymentId: returnedId }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
+            ok: () => showMoneyToast(T.TOAST_UNDONE, { icon: false }),
             statuses: { stale: T.PAYMENT_GONE },
           }),
         ),
@@ -706,7 +758,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
       openChild({ kind: 'plan', candidateId, data, version: data.candidate.version, values: { planId: data.candidate.cyclePlanId, kukkiwon: data.candidate.kukkiwon === true } }, opener);
     const from = dlgRef.current?.detail;
     if (from?.data && from.candidateId === candidateId) start(from.data);
-    else withCandidate(candidateId, start);
+    else withCandidate(candidateId, start, { money: true });
   }
   async function saveChangePlan() {
     const c = dlgRef.current?.child;
@@ -725,11 +777,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     if (result.status === 'ok') {
       afterWrite();
       const version = result.version;
-      latest.current.showToast(
+      showMoneyToast(
         T.toastPlanChanged(name),
         undoAction(() =>
           runQuick(() => changePlan({ candidateId, expectedVersion: version, planId: old.planId, kukkiwon: old.kukkiwon }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
+            ok: () => showMoneyToast(T.TOAST_UNDONE, { icon: false }),
             statuses: { stale: T.candidateStale(name), not_allowed: T.PAYMENT_RECORDED_ASK_ADMIN, withdrawn: T.planWithdrawn(name) },
           }),
         ),
@@ -1164,7 +1216,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     endWrite();
     const problem = a.problem ?? b.problem;
     if (problem) {
-      loadProblem(problem);
+      loadProblem(problem, () => openCompare(row, partner, opener));
       return;
     }
     // The earlier registration is "First registration" (by the moment itself, not its text — two
@@ -1180,7 +1232,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     const c = dlgRef.current?.child;
     if (!c || c.saving || c.blocking) return;
     if (!beginWrite()) return;
-    patchChild({ saving: true, failed: false, note: null });
+    // busyKind: which button was pressed, so the shared compare can say "Keeping…" on that one
+    const busyKind = keepBoth ? 'keep-both' : keep.candidate.id === c.first?.candidate?.id ? 'keep-first' : 'keep-second';
+    patchChild({ saving: true, busyKind, failed: false, note: null });
     const name = T.candidateName(keep.candidate);
     const result = await resolveDuplicate({ keepId: keep.candidate.id, keepVersion: keep.candidate.version, otherId: other.candidate.id, otherVersion: other.candidate.version, keepBoth });
     endWrite();
@@ -1229,7 +1283,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
     if (result.status === 'not_allowed') latest.current.onRefreshProfile();
     patchChild({ status: result.status === 'ok' ? 'ready' : result.status, result: result.status === 'ok' ? result : null });
   }
-  // The receipt reads its own data (ReceiptDialog). It also needs the day the Kukkiwon fee was
+  // The receipt reads its own data (CandidateReceipt, which hands it to the shared receipt box). It also needs the day the Kukkiwon fee was
   // added (the receipt data doesn't carry it): from the open detail, or — from a row's ⋯ — read
   // once here, keeping ONLY those two dates (nothing else of the detail is kept).
   function openReceipt(candidateId, opener) {
@@ -1253,6 +1307,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
   return {
     dlg,
     busy,
+    menuLoading,
     openDetail,
     refreshDetail,
     requestCloseDetail,

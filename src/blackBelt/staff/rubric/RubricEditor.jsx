@@ -65,7 +65,7 @@ function boldNew(text) {
   return (
     <>
       {text.slice(0, at + 2)}
-      <strong>{number[0]}</strong>
+      <strong className="bb-medium">{number[0]}</strong>
       {rest.slice(number[0].length)}
     </>
   );

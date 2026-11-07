@@ -1,7 +1,7 @@
 // AddPlanDialog.jsx — "+ Add plan" in Add cycle: asks the plan's name and number of payments.
 // Why it exists: approved v0.902 redraw of Cycles 4 — "+ Add plan asks name + number of
 // payments, then its amounts and due dates are typed in the grid". This small box opens on top
-// of Add cycle (a sibling InnerDialog, like the testing-day dialog); Add puts an empty plan at the
+// of Add cycle (the shared Dialog with onTop, like the testing-day dialog); Add puts an empty plan at the
 // end of the list. Its wording is not in the mockups (listed for CP2). On phones the Add button
 // sits at the bottom of the screen, like Add cycle's Save (bb-addplan-form--page).
 // The plan's name is typed and checked ONLY here ("Enter a plan name.", "Another plan has this
@@ -9,10 +9,10 @@
 // The values live in useCycleEditor.jsx; this file only draws.
 import { useId } from 'react';
 import { IconPlus } from '@tabler/icons-react';
+import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { nameKey, nameProblem } from '../../../lib/testing/names.js';
 import { MAX_PAYMENTS } from '../../../lib/blackBelt/rules.js';
-import InnerDialog from '../parts/InnerDialog.jsx';
 import * as T from '../text.js';
 
 export function checkAddPlan(state, plans) {
@@ -31,7 +31,7 @@ export default function AddPlanDialog({ state, plans, isPhone, onChange, onAdd, 
   const id = useId();
   const check = checkAddPlan(state, plans);
   return (
-    <InnerDialog title={T.ADD_PLAN_TITLE} size="small" fullScreen={isPhone} onRequestClose={onCancel}>
+    <Dialog title={T.ADD_PLAN_TITLE} size="small" fullScreen={isPhone} onTop onRequestClose={onCancel}>
       <form
         noValidate
         className={isPhone ? 'bb-addplan-form--page' : undefined}
@@ -93,6 +93,6 @@ export default function AddPlanDialog({ state, plans, isPhone, onChange, onAdd, 
           </button>
         </div>
       </form>
-    </InnerDialog>
+    </Dialog>
   );
 }

@@ -21,8 +21,10 @@
 //   bb.select(table, columns, filters, orders, ctx)   filters: [{ col, value, op:'eq'|'in'|'lte'|'gte' }]
 //   bb.publicCycle(code) / bb.publicRegister({...})   — what bb_registrar may call (the stand-in)
 //   bb.snapshot(), reset(), loadSample(), loadSampleRoster(), loadSampleEdge(), failNextSave(),
-//   simulateOtherAdminEdit(), waiverChanged(), links(), expireUndo(), addDuplicate()
-//                                                     — test and console helpers
+//   failNextRead(target?), simulateOtherAdminEdit(), waiverChanged(), links(), expireUndo(),
+//   addDuplicate()                                    — test and console helpers
+//   failNextRead (R4-11): the next read fails like a dropped connection, to see a bar's Retry. In
+//   the browser: `__tkdBlackBeltPreview.failNextRead()` (or `__tkdPreview.failNextBlackBeltRead()`).
 //
 // The store (snake_case columns exactly as 0016, so phase B2 adds candidates and payments here
 // without a rewrite): bb_settings, bb_waiver_versions, bb_starting_point, bb_cycles,
@@ -246,6 +248,12 @@ export const BB_WRITE_RPC_NAMES = /* @__PURE__ */ ['bb_add_cycle', 'bb_update_cy
 const VOLATILE = /* @__PURE__ */ new Set(/* @__PURE__ */ ['bb_cycles_list', 'bb_cycle_roster'].concat(BB_WRITE_RPC_NAMES));
 // Every function name mockClient routes here (one list B2 extends).
 export const BB_RPC_NAMES = /* @__PURE__ */ Object.keys(RPC_ARGS).concat(RESTRICTED);
+// The functions that only READ (failNextRead fails the next one of these; failNextSave never does).
+// The two lists the screens re-read by themselves every 15 seconds are left out of "any read", so a
+// failure armed with no name isn't used up by the page's own refresh (a name can still target them).
+export const BB_READ_RPC_NAMES = /* @__PURE__ */ Object.keys(RPC_ARGS).filter((name) => !BB_WRITE_RPC_NAMES.includes(name));
+const SELF_REFRESHING_READS = /* @__PURE__ */ new Set(['bb_cycle_roster', 'bb_cycles_list']);
+const READ_FAIL_MOMENT_MS = 100; // how long one armed failure keeps failing every matching read (see failNextRead)
 
 class DbError extends Error {
   constructor(code, message, httpStatus = 400) {
@@ -392,8 +400,9 @@ const SAMPLE_SIGNATURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAABI
 
 // ----- The backend -----
 
-export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.now(), today, newId, getLocations = null }) {
+export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.now(), today, newId, getLocations = null, defer = (fn) => setTimeout(fn, READ_FAIL_MOMENT_MS) }) {
   let failNext = false; // set by failNextSave()
+  let failRead = null; // set by failNextRead(): { target, firing } or null
   // Compares names like the database's en-US collation (the roster's order).
   const collator = new Intl.Collator('en-US');
 
@@ -2196,6 +2205,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // supabase.from(table).select(columns).eq(…).in(…).gte(…).order(…)
   function select(table, columns, filters = [], orders = [], ctx = {}) {
     if (!(table in GRANTED)) return fail('PGRST205', `Could not find the table 'public.${table}' in the schema cache`, 404);
+    if (readFails(table)) return droppedRead(); // failNextRead helper
     if (!ctx.signedIn) return denied(`table ${table}`);
     const existing = [...GRANTED[table], ...HIDDEN[table]];
     const wanted = String(columns ?? '*').split(',').map((col) => col.trim()).filter(Boolean);
@@ -2234,6 +2244,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       failNext = false; // pretend the connection dropped: nothing changes (failNextSave helper)
       return { data: null, error: { message: 'Failed to fetch (preview: failNextSave)' }, count: null, status: 0, statusText: '' };
     }
+    if (BB_READ_RPC_NAMES.includes(name) && readFails(name)) return droppedRead(); // failNextRead helper
     if (!ctx.signedIn) return denied(`function ${name}`);
     if (options?.get === true && VOLATILE.has(name)) {
       // A read-only GET can't run a function that writes (the purge, or a save).
@@ -2273,6 +2284,52 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
 
   function failNextSave() {
     failNext = true;
+  }
+
+  // failNextRead(target?): the NEXT Black Belt read answers like a dropped connection (design review
+  // R4-11 / S-2, rulebook v0.966 (1) / v1.051). failNextSave skips reads, so this is how the
+  // preview shows the Retry of a failed read: an admin's row ⋯, the candidate detail, a signature,
+  // Edit cycle, Delete cycle, the receipt …
+  //   target — a Black Belt table or read-function name ('bb_candidate_detail', 'bb_receipt',
+  //            'bb_view_signature', 'bb_cycle_roster', …): only a read of that one fails. No
+  //            target: any read except the two lists that refresh by themselves (SELF_REFRESHING_READS).
+  // "The next read" means the first matching read AND every other matching read in the same
+  // moment: the failure stays on until `defer` runs (READ_FAIL_MOMENT_MS = 100 ms after the first
+  // failed read in the browser; the checks run it by hand). Why: in development React's StrictMode
+  // starts an effect's read twice on purpose and throws the first away, so a failure used up only
+  // by that throwaway read would never show.
+  function failNextRead(target = null) {
+    failRead = { target: typeof target === 'string' && target !== '' ? target : null, firing: false };
+  }
+  // Does this read (a table or function name) fail now? The first match starts the "same moment".
+  function readFails(name) {
+    if (failRead === null) return false;
+    if (failRead.target === null ? SELF_REFRESHING_READS.has(name) : failRead.target !== name) return false;
+    if (!failRead.firing) {
+      failRead.firing = true;
+      const armed = failRead;
+      defer(() => {
+        if (failRead === armed) failRead = null; // cleared (unless it was armed again meanwhile)
+      });
+    }
+    return true;
+  }
+  function droppedRead() {
+    return { data: null, error: { message: 'Failed to fetch (preview: failNextRead)' }, count: null, status: 0, statusText: '' };
+  }
+  // The console helper: this store has no __tkdPreview entry of its own (src/lib/mockClient.js is a
+  // shared file), so it hangs one on the page's own name, `__tkdBlackBeltPreview.failNextRead()`,
+  // and — once mockClient has made __tkdPreview a moment later — on `__tkdPreview.failNextBlackBeltRead()`.
+  if (typeof window !== 'undefined') {
+    window.__tkdBlackBeltPreview = { ...(window.__tkdBlackBeltPreview ?? {}), failNextRead };
+    setTimeout(() => {
+      if (window.__tkdPreview && !window.__tkdPreview.failNextBlackBeltRead) {
+        window.__tkdPreview.failNextBlackBeltRead = (target) => {
+          failNextRead(target);
+          return 'The next Black Belt read will fail like a dropped connection (an admin row ⋯, the detail, a signature, Edit cycle…). The roster and the cycles list re-read every 15 seconds and are skipped; name one, e.g. failNextBlackBeltRead(\'bb_candidate_detail\'), to target a single read.';
+        };
+      }
+    }, 0);
   }
 
   // "Another admin" changes every cycle, every candidate and the settings, and saves a new
@@ -2641,7 +2698,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   Object.assign(handlers, handlers2, grading.handlers);
 
   return {
-    rpc, select, publicCycle, publicRegister, snapshot: read, reset, loadSample, failNextSave, simulateOtherAdminEdit,
+    rpc, select, publicCycle, publicRegister, snapshot: read, reset, loadSample, failNextSave, failNextRead, simulateOtherAdminEdit,
     waiverChanged, links, loadSampleRoster, loadSampleEdge, expireUndo, addDuplicate, loadGradingSample,
   };
 }

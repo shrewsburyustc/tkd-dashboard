@@ -1,18 +1,19 @@
-// qr.js — the two family registration links of a Black Belt cycle, their QR codes, and the PNG
-// file for "Download QR code" (Registration links dialog, Cycles 7).
+// qr.js — the two family registration links of a Black Belt cycle (Registration link box, Cycles 7).
 // Why it exists: each cycle has two links, one per school (the link sets the candidate's school,
-// v0.900). The QR code is made right here in the browser by the small `qrcode-generator` library
-// (already used by Color Belt — no new package, no network, nothing sent anywhere), always for the
-// fixed production address https://tkd-dashboard.pages.dev/black-belt/<code> — never the address
-// of the page you are on, so a QR code made in preview or a test copy still points at the real
-// form (contract 0016-B1 §1.5, OP-2). In preview, __tkdPreview.bbLinks() prints local addresses
-// that preview can open (OP-20).
+// v0.900), always for the fixed production address https://tkd-dashboard.pages.dev/black-belt/<code>
+// — never the address of the page you are on, so a QR code made in preview or a test copy still
+// points at the real form (contract 0016-B1 §1.5, OP-2). In preview, __tkdPreview.bbLinks() prints
+// local addresses that preview can open (OP-20).
+// Since the design review's part 2 (BB10, rulebook v1.015 / v1.106) the screens draw the QR picture
+// and save the 1024-pixel PNG with the shared src/lib/qr.js (through components/
+// RegistrationLinkBox.jsx); the old PNG maker and file name ("Black Belt … QR.png", about 450 px)
+// are gone. This file keeps `blackBeltLink` (the address rule) and, like Star's links.js, its own
+// qrSvgDataUrl only as the yardstick the shared checks (src/lib/shared/checks.mjs, "M5 QR") compare
+// the shared picture with — made in the browser by the small `qrcode-generator` library.
 //
 // How the screens use it:
 //   blackBeltLink(cycle.codes.worcester) → 'https://tkd-dashboard.pages.dev/black-belt/p4w9tdkm'
-//   <img src={qrSvgDataUrl(code)} alt="…" />          — always as an image, never innerHTML
-//   const blob = await qrPngBlob(code)                  — black on white PNG, 10 px per square
-//   qrFileName('Spring 2027', 'Shrewsbury')  → 'Black Belt Spring 2027 - Shrewsbury QR.png'
+//   qrSvgDataUrl(code)                   → the picture as a data URL ('' for a bad code); checks only
 // Nothing here is logged (S20).
 import qrcode from 'qrcode-generator';
 import { PUBLIC_ORIGIN } from '../testing/eventRules.js';
@@ -48,38 +49,3 @@ export function qrSvgDataUrl(code) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-// The QR code as a PNG file (a Blob) for "Download QR code": drawn on a <canvas>, black squares
-// on white, cellPx pixels per square, with the 4-square quiet zone (about 450 px wide at 10 px —
-// OP-19). Resolves to null for a bad code or where there is no canvas (e.g. Node).
-export function qrPngBlob(code, { cellPx = 10 } = {}) {
-  const qr = makeQr(code);
-  if (!qr || typeof document === 'undefined') return Promise.resolve(null);
-  const count = qr.getModuleCount(); // squares per side
-  const size = (count + QUIET_ZONE * 2) * cellPx;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return Promise.resolve(null);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#000000';
-  for (let row = 0; row < count; row += 1) {
-    for (let col = 0; col < count; col += 1) {
-      if (qr.isDark(row, col)) ctx.fillRect((col + QUIET_ZONE) * cellPx, (row + QUIET_ZONE) * cellPx, cellPx, cellPx);
-    }
-  }
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob ?? null), 'image/png');
-  });
-}
-
-// Characters a Windows / Mac file name can't hold (and invisible control characters).
-const BAD_FILE_CHARACTERS = /[\\/:*?"<>|\u0000-\u001f\u007f]/g;
-
-// The downloaded file's name: 'Black Belt Spring 2027 - Shrewsbury QR.png'. Characters a file
-// name can't hold are dropped; runs of spaces become one.
-export function qrFileName(cycleName, schoolName) {
-  const clean = (text) => String(text ?? '').replace(BAD_FILE_CHARACTERS, '').replace(/\s+/g, ' ').trim();
-  return `${clean(`Black Belt ${clean(cycleName)} - ${clean(schoolName)} QR`)}.png`;
-}
