@@ -1597,6 +1597,8 @@ export default function CampPage({
         handlers={{
           onOpen: (row, el) => openCamper(row, el),
           onMore: (row, anchor) => openMenu('camper', row, anchor),
+          // The roster flipped between table and cards (v0.747): the ⋯ a menu hangs from is gone.
+          onLayoutChange: () => setMenu(null),
           onMarkPaid: (row, method) => doMarkPaid(row, method),
           onReview: (row, anchor) => openCompareFor(row, anchor),
           onReviewPair: (pair, opener) => openDialog({ type: 'compare', pair, saving: false, failed: false, opener }),

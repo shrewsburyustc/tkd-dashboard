@@ -657,6 +657,23 @@ export function paidTagParts(row) {
   return { paidCents: named ? (Number.isInteger(row?.paidCents) ? row.paidCents : 0) : null, overpaidCents: over };
 }
 
+// ----- The roster's layout from the room beside the panel (rulebook v1.053, v1.130; L-02) -----
+// The roster's table needs room for its columns: the page's side margins (50 px), the Camper and Paid
+// columns (273 px, with the widest ordinary tag, "Possible duplicate"), one column per day of the
+// shown week (72 px each: a day column can't get narrower), and — with a mouse — the ⋯ column
+// (40 px). While someone is overpaid, the amber "Paid $315 ⚠ $23 overpaid" widens the Paid column by
+// another 42 px (27 px measured, 14 more for a four-digit amount). Measured on the built table by the
+// design review (a 5-day camp: 683 px of room with touch, 723 with a mouse; 7 days about 867 with a
+// mouse). When the page area beside the left panel is narrower than that, the roster draws its cards
+// instead (the phone layout), whatever the window's width. The shared hook `usePageRoomBelow(px)`
+// (src/lib/pageRoom.js) answers; this says the px for the shown week.
+export const ROSTER_ROOM = { margins: 50, fixed: 273, perDay: 72, more: 40, overpaid: 42 };
+export function rosterRoomNeeded(dayCount, withMore, anyOverpaid = false) {
+  const days = Number.isInteger(dayCount) && dayCount > 0 ? dayCount : 1;
+  return ROSTER_ROOM.margins + ROSTER_ROOM.fixed + ROSTER_ROOM.perDay * days
+    + (withMore ? ROSTER_ROOM.more : 0) + (anyOverpaid ? ROSTER_ROOM.overpaid : 0);
+}
+
 // The refund Undo refund reverses: the NEWEST refund row that stands (no reversal points at it),
 // from Camper detail's payments (camelCase: id, kind, reversesPaymentId, recordedAt). null = none.
 export function newestStandingRefund(payments) {
