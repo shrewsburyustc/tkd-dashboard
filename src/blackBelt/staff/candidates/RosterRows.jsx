@@ -11,7 +11,10 @@
 //   Phone:                  name; "1st Dan · Shrewsbury · 3 payments · Kukkiwon"; the tag and the
 //                           balance; ⋯ on the right; no row button
 // With the device's Hide payments switch on (v0.215, OP-B7) the Payments and Balance columns and
-// the Record payment button aren't drawn at all.
+// the Record payment button aren't drawn at all, and the plan — how a family pays, a payment
+// detail (R4-01, v1.036, as Camps' Paying by, v0.722) — reads the gray "Hidden on this tablet":
+// in the Plan column, and in place of the plan words on the phone line ("1st Dan · Shrewsbury ·
+// Hidden on this tablet"). A make-up's "No fee" is hidden the same way, so every row reads alike.
 // One tag per row (§8): "⚠ Possible duplicate" (amber; opens the compare) outranks the money tag.
 // Withdrawn candidates sit in a collapsed "Removed (N)" group at the bottom, with a gray Removed /
 // Duplicate copy tag and their balance (Star v0.113, OP-B10).
@@ -76,7 +79,9 @@ function CandidateRow({ row, ctx }) {
   const open = ctx.menuFor === row.id;
   const makeup = row.isMakeup === true;
   const showRecord = !hidden && !removed && !makeup && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
-  const plan = makeup ? T.PLAN_NO_FEE : T.planCell(row.planName, row.kukkiwon);
+  // The plan words, or (hidden, v1.036) the gray "Hidden on this tablet" (.ev-hidden-value)
+  const hiddenPlan = <span className="ev-hidden-value">{T.HIDDEN_ON_DEVICE}</span>;
+  const plan = hidden ? hiddenPlan : makeup ? T.PLAN_NO_FEE : T.planCell(row.planName, row.kukkiwon);
   // The make-up's gray line (G 27)
   const makeupText = makeup ? <span className="bb-cline bb-makeup-line">{T.makeupLine(row.makeupOfCycleName, row.retestNames)}</span> : null;
   const RecordIcon = ICONS.recordPayment;
@@ -128,7 +133,17 @@ function CandidateRow({ row, ctx }) {
         <span className="ev-srow-main" role="cell">
           <span className="ev-sname">{name}</span>
           {makeupText}
-          <span className="bb-cline">{makeup ? `${T.danSchool(row.dan, row.locationCode)} · ${T.PLAN_NO_FEE}` : T.phoneSubline(row)}</span>
+          <span className="bb-cline">
+            {hidden ? (
+              <>
+                {T.danSchool(row.dan, row.locationCode)} · {hiddenPlan}
+              </>
+            ) : makeup ? (
+              `${T.danSchool(row.dan, row.locationCode)} · ${T.PLAN_NO_FEE}`
+            ) : (
+              T.phoneSubline(row)
+            )}
+          </span>
           {(tag || !hidden) && (
             <span className="ev-sline-tag bb-ctagline">
               {tag}

@@ -15,7 +15,9 @@
 // order, and a same-name + same-birthday match shows the duplicate box.
 // Layout as drawn: First and Last name side by side on the PC and tablet (stacked on phones);
 // School, Testing for and Kukkiwon are joined buttons of equal width across the dialog.
-// With Hide payments on (mat-side) no amount, fee or total shows (OP-B7).
+// This dialog now closes if the device's Hide private details switch turns on while it is open
+// (useCandidateActions.paymentsHiddenNow). The `hidden` branches (no amount, fee or total, OP-B7)
+// are only a safety net for the one render before it closes.
 import { useId } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';

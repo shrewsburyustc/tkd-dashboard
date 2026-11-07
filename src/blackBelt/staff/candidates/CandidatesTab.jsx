@@ -23,7 +23,12 @@
 //
 // It follows the location switcher (v0.118): on Worcester or Shrewsbury the list, the cards and
 // the duplicate box show that school only; Both shows everyone. With the device's Hide payments
-// switch on (v0.215, OP-B7) there are no cards, no money columns and no payment actions.
+// switch on (v0.215, OP-B7) there are no cards, no money columns and no payment actions, and
+// nothing in a ⋯ tells who has paid (R1-04, R4-01 / v1.036): on EVERY row, for admins and staff,
+// Change plan or Kukkiwon is grayed "Change the plan at the desk." and (admins) Delete
+// permanently is grayed "Delete candidates at the desk."; Edit details opens (R4-04, v1.037). The
+// Add candidate menu opens too: New candidate is grayed inside it with Star's reason, and
+// "Make-up from an earlier cycle…" keeps working.
 // The list reloads by itself (useLiveLoad): on open, after every own change, when the screen
 // unlocks or the browser tab comes back, and quietly every 15 seconds — never touching an open
 // dialog or what someone is typing.
@@ -201,7 +206,8 @@ export default function CandidatesTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenLocked]);
   // Hide payments switched on (mat-side): the cards are gone, so is their filter; every money
-  // dialog closes, Edit details is left and a money toast is cleared (useCandidateActions).
+  // dialog (and Change plan) closes and a money toast is cleared; Edit details stays open with its
+  // date of birth and email turning gray (useCandidateActions).
   useEffect(() => {
     if (!hidden) return;
     setCard(null);
@@ -247,21 +253,20 @@ export default function CandidatesTab({
       if (isAdmin) {
         off.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, disabled: actions.busy, onSelect: () => actions.restore(target, anchor) });
         // Payment records, and (0025, Q-G3 v0.950) grades, block deleting (the short reason: they
-        // are already withdrawn)
-        const reason = row.hasPaymentRows ? T.hasPaymentRecordsShort(name) : row.hasGrades ? T.hasGradesShort(name) : null;
+        // are already withdrawn). Hidden: the same desk line on every row (R1-04).
+        const reason = hidden ? T.DELETE_AT_DESK : row.hasPaymentRows ? T.hasPaymentRecordsShort(name) : row.hasGrades ? T.hasGradesShort(name) : null;
         off.push(deleteItem(reason, target, anchor));
       }
       return joinGroups(about, money, off);
     }
 
     // (1) About the person.
-    // Hide payments on (mat-side): Edit details shows the date of birth and email, so it waits
-    // for the desk (grayed with its reason, like Add candidate).
+    // Edit details opens also with Hide private details on (R4-04, v1.037, as Star's): there the
+    // date of birth and email read the gray "Hidden on this tablet".
     about.push({
       key: 'edit',
-      label: hidden ? <TwoLines label={T.EDIT_DETAILS} reason={T.EDIT_AT_DESK} /> : T.EDIT_DETAILS,
+      label: T.EDIT_DETAILS,
       Icon: ICONS.editDetails,
-      disabled: hidden,
       onSelect: () => actions.openDetail(row.id, anchor, { edit: true }),
     });
     // Staff can change the plan only until a payment is recorded — the database's rule is "any
@@ -269,8 +274,10 @@ export default function CandidatesTab({
     // total alone can't tell. The row knows whether any payment row exists (hasPaymentRows) and,
     // through its "Not paid" tag, that none is live; grayed when a row exists and the tag isn't
     // Not paid (the database still decides: not_allowed). The detail's ⋯ checks the live lines.
-    const planLocked = !isAdmin && (m.paidCents > 0 || (row.hasPaymentRows && m.tag !== 'not_paid'));
-    const planReason = hidden || !(m.paidCents > 0) ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(m.paidCents);
+    // Hide private details on (R1-04, R4-01 / v1.036): the plan is desk-only — grayed on EVERY
+    // row, for admins and staff alike, with a line that names no payment.
+    const planLocked = hidden || (!isAdmin && (m.paidCents > 0 || (row.hasPaymentRows && m.tag !== 'not_paid')));
+    const planReason = hidden ? T.CHANGE_PLAN_AT_DESK : !(m.paidCents > 0) ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(m.paidCents);
     // A make-up has no plan: no Change plan (G 27)
     if (!makeup) {
       about.push({
@@ -314,9 +321,10 @@ export default function CandidatesTab({
 
     // (3) Taking someone off (admins, v1.007): Withdraw is plain and acts at once (with Undo);
     // Delete permanently is red and asks first, grayed with what to do instead (v0.904, v0.950).
+    // Hidden: grayed on every row with the desk line, so it can't tell who has paid (R1-04).
     if (isAdmin) {
       off.push({ key: 'withdraw', label: T.WITHDRAW, Icon: ICONS.withdraw, disabled: actions.busy, onSelect: () => actions.withdraw(target, anchor) });
-      const reason = row.hasPaymentRows ? T.hasPaymentRecords(name) : row.hasGrades ? T.hasGrades(name) : null;
+      const reason = hidden ? T.DELETE_AT_DESK : row.hasPaymentRows ? T.hasPaymentRecords(name) : row.hasGrades ? T.hasGrades(name) : null;
       off.push(deleteItem(reason, target, anchor));
     }
     return joinGroups(about, money, off);
@@ -451,12 +459,13 @@ export default function CandidatesTab({
         ctx={ctx}
       />
 
+      {/* The row ⋯ (its subtitle while hidden: Dan and school only, no plan words — v1.036) */}
       {menu && !screenLocked && (
         <RowMenu
           anchor={menu.anchor}
           isSheet={isPhone}
           title={T.candidateName(menu.row)}
-          subtitle={T.phoneSubline(menu.row)}
+          subtitle={hidden ? T.danSchool(menu.row.dan, menu.row.locationCode) : T.phoneSubline(menu.row)}
           label={T.moreForCandidate(T.candidateName(menu.row))}
           items={rowMenuItems(menu.row, menu.data)}
           onClose={(reason) => {
@@ -475,8 +484,12 @@ export default function CandidatesTab({
           subtitle={cycle.name}
           label={T.ADD_CANDIDATE}
           items={[
-            // ti-user-plus / ti-history (G 24)
-            { key: 'new', label: <span className="bb-add-menu-item">{T.NEW_CANDIDATE}</span>, Icon: ICONS.newCandidate, onSelect: () => actions.openAdd(addMenu.anchor, schoolCode) },
+            // ti-user-plus / ti-history (G 24). Hide private details on (R4-04, v1.037, Star's
+            // v0.507 Q1): New candidate is grayed with Star's reason (it stays focusable, so a
+            // screen reader hears why); Make-up from an earlier cycle keeps working.
+            hidden
+              ? { key: 'new', label: <span className="bb-add-menu-item"><TwoLines label={T.NEW_CANDIDATE} reason={T.NEW_CANDIDATE_HIDDEN} /></span>, Icon: ICONS.newCandidate, disabled: true, onSelect: () => {} }
+              : { key: 'new', label: <span className="bb-add-menu-item">{T.NEW_CANDIDATE}</span>, Icon: ICONS.newCandidate, onSelect: () => actions.openAdd(addMenu.anchor, schoolCode) },
             { key: 'makeup', label: <span className="bb-add-menu-item">{T.MAKEUP_ITEM}</span>, Icon: ICONS.makeup, onSelect: () => picker.open(addMenu.anchor) },
           ]}
           onClose={(reason) => {
