@@ -26,7 +26,7 @@ Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into mai
 
 - **Already done, nothing to build (v1.055):** C-04 (the line between Restore and Delete permanently, `candidateMenu.js`), C-06 (a) (failed Mark paid already ends "then retry."), C-06 (b) (already in pass 1's R2-07).
 - **Correction to pass 1's R1-02:** Color Belt has the same fix to make (its M-01); Star still copies Camps' 0033. A candidate with no form choice reads "at the desk"; 0038's fill-in leaves rows with no change-log insert row empty.
-- **Date signed (v0.638, L-08):** Star's form already saves the day it was sent (`star_candidate_signatures.signed_at = now()` in `star_public_register`), so **no migration**. Planned: the "Date signed" box under the signature on the family form's Check step (New students' `.fsigned` look) and the date on the candidate detail's "Ticked and signed" line. Waiting: Jeffrey's plan OK, then a mockup at the four sizes; who moves the shared words to `src/components/text.js`.
+- **Date signed (v0.638, L-08):** Star's form already saves the day it was sent (`star_candidate_signatures.signed_at = now()` in `star_public_register`), so **no migration**. Planned: the "Date signed" box under the signature on the family form's Check step (New students' `.fsigned` look) and the date on the candidate detail's "Ticked and signed" line. **Plan OK'd by Jeffrey 2026-11-06 ("ok", pass 1 + pass 2 + date signed).** Next: a mockup at the four sizes; who moves the shared words to `src/components/text.js`.
 - Nothing built yet.
 
 ---

@@ -86,4 +86,4 @@ Each step: a design reviewer (four sizes, WCAG 2.2 checks), a code reviewer, and
 ## Decisions
 
 - **S-1 → database** (v0.519, 2026-11-05). The screen-side sort was not chosen: two places would decide the order.
-- **Plan OK:** waiting for Jeffrey (pass 1, pass 2 and the date signed together).
+- **Plan OK:** Jeffrey, 2026-11-06 ("ok"): pass 1, pass 2 and the date signed together. Next: Step A mockups (R4-10, R4-08, R2-08) and the Date signed mockup; no code before he OKs them.
