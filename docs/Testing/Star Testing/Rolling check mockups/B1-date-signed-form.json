@@ -1,0 +1,213 @@
+{
+ "title": "Date signed · B1 — Star family form, “Check and send” step",
+ "subtitle": "Under the signature pad (after its hint line) a new box: label “Date signed”, a gray box that can’t be changed with today’s date (“Fri, Nov 6, 2026”), and the hint “Filled in automatically with today’s date.” — the same box New students’ forms already have. Amber = where the box goes; green = the new box.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/b-form-today-pc.png",
+       "crop": [
+        380,
+        600,
+        520,
+        350
+       ],
+       "scale": 0.82,
+       "caption": "<b>PC 1280×800.</b> The signature ends with its hint line; nothing shows the date.",
+       "marks": [
+        [
+         393,
+         761,
+         494,
+         18
+        ]
+       ],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/b-form-today-tab.png",
+       "crop": [
+        150,
+        600,
+        520,
+        350
+       ],
+       "scale": 0.82,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         163,
+         761,
+         494,
+         18
+        ]
+       ],
+       "shotWidth": 820
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b-form-today-ph.png",
+       "crop": [
+        0,
+        670,
+        390,
+        430
+       ],
+       "scale": 0.95,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         33,
+         834,
+         324,
+         36
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b-form-today-p320.png",
+       "crop": [
+        0,
+        842,
+        320,
+        450
+       ],
+       "scale": 0.95,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         33,
+         1024,
+         254,
+         36
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/b-form-after-pc.png",
+       "crop": [
+        380,
+        600,
+        520,
+        350
+       ],
+       "scale": 0.82,
+       "caption": "<b>PC 1280×800.</b> “Date signed · Fri, Nov 6, 2026”, gray box, hint under it.",
+       "marks": [
+        [
+         393,
+         791,
+         494,
+         76
+        ]
+       ],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/b-form-after-tab.png",
+       "crop": [
+        150,
+        600,
+        520,
+        350
+       ],
+       "scale": 0.82,
+       "caption": "<b>Tablet 820×1180, touch.</b> Box 40 px tall, 16 px text (like the form’s other boxes on touch). Label 12 px, the same as “Signature” above it.",
+       "marks": [
+        [
+         163,
+         791,
+         494,
+         84
+        ]
+       ],
+       "shotWidth": 820
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b-form-after-ph.png",
+       "crop": [
+        0,
+        670,
+        390,
+        430
+       ],
+       "scale": 0.95,
+       "caption": "<b>Phone 390×844, touch.</b> Full width of the card; both labels 12 px.",
+       "marks": [
+        [
+         33,
+         882,
+         324,
+         84
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b-form-after-p320.png",
+       "crop": [
+        0,
+        842,
+        320,
+        450
+       ],
+       "scale": 0.95,
+       "caption": "<b>320 wide, touch.</b> The date fits on one line.",
+       "marks": [
+        [
+         33,
+         1072,
+         254,
+         84
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b-newstudents-ref-pc.png",
+       "crop": [
+        380,
+        1128,
+        520,
+        104
+       ],
+       "scale": 1,
+       "caption": "<b>Reference — New students’ form today</b> (Walk-in, PC): the box being copied. Same gray box, words and hint; its label is 13 px on PC, the Star form’s labels are 12 px on PC (13 px on touch), so the Star box uses the Star form’s own label size.",
+       "marks": [],
+       "shotWidth": 1280
+      }
+     ]
+    }
+   ],
+   "note": "Label size on touch: the Signature label is held at 12 px on every size (.reg-field--sign .reg-label), while other Star labels grow to 13 px on touch. The “Date signed” label is drawn at 12 px everywhere so the two labels under each other match; the build does the same (e.g. puts the box inside .reg-field--sign, or gives its label 12 px). The date is the day in Massachusetts time, written like the rest of the forms (“Fri, Nov 6, 2026”). The box is read-only: families can’t type in it. It is not saved from the box — the database already stores the moment the form is sent, and staff see that date (picture B2)."
+  }
+ ],
+ "footer": "Rulebook v0.638 (Jeffrey, 2026-11-04): every family form shows “Date signed” under the signature, filled in automatically with the day the form is sent, gray, can’t be changed; wherever staff see a signature, its date signed shows with it. Preview screenshots (fake database, today = Fri, Nov 6, 2026). The “After” column is drawn over the real page by a small script (mock-dates.js) — nothing in the app was changed. No database change: the day the form is sent is already saved (star_candidate_signatures.signed_at)."
+}

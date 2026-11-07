@@ -466,7 +466,7 @@ export default function StarEventsTab({
             onAction: () =>
               runUndo(() => setStarRegistration({ eventId: d.eventId, expectedVersion: closedVersion, open: true }), {
                 find: () => rowEl(d.eventId),
-                doneText: T.TOAST_REGISTRATION_OPEN, // it reopens, so it says so (not "Undone")
+                doneText: T.TOAST_UNDONE_REGISTRATION_OPEN, // it reopens, so it says so
               }),
           },
         });
@@ -499,6 +499,11 @@ export default function StarEventsTab({
       };
       const switchChanged = result.registration !== null;
       const savedVersion = result.version;
+      // R2-02 stop-gap: the Undo is two calls (details, then the Registration switch). If the first
+      // worked and the second didn't, Retry re-sends ONLY the second, with the version the first
+      // one returned (kept here, in the toast's own closure). Until the one-step database
+      // function exists (migration 0038).
+      const undoState = { detailsBackVersion: null, openAgain: record.registrationOpen };
       showToast(T.TOAST_CHANGES_SAVED, {
         icon: false,
         action: {
@@ -506,11 +511,29 @@ export default function StarEventsTab({
           onAction: () =>
             runUndo(
               async () => {
-                const back = await updateStarEvent({ eventId: d.eventId, expectedVersion: savedVersion, ...previous });
-                if (back.status !== 'ok' || !switchChanged) return back;
-                return setStarRegistration({ eventId: d.eventId, expectedVersion: back.version, open: record.registrationOpen });
+                if (undoState.detailsBackVersion === null) {
+                  const back = await updateStarEvent({ eventId: d.eventId, expectedVersion: savedVersion, ...previous });
+                  if (back.status !== 'ok' || !switchChanged) return back;
+                  undoState.detailsBackVersion = back.version;
+                }
+                let second = await setStarRegistration({ eventId: d.eventId, expectedVersion: undoState.detailsBackVersion, open: undoState.openAgain });
+                // "stale" here only means the version we hold is old (the details step may have been
+                // saved elsewhere meanwhile): read the event's current version and try once more,
+                // so Retry never loops on the same old version.
+                if (second.status === 'stale') {
+                  const fresh = await loadStarEvent(d.eventId);
+                  if (fresh.status === 'ok') {
+                    undoState.detailsBackVersion = fresh.event.version;
+                    second = await setStarRegistration({ eventId: d.eventId, expectedVersion: fresh.event.version, open: undoState.openAgain });
+                  }
+                }
+                // The details are already back, so a refusal here must not blame "someone else":
+                // anything but ok / no access / not allowed is shown as "didn't save", with Retry.
+                if (second.status === 'ok' || second.status === 'no_access' || second.status === 'not_allowed') return second;
+                return { status: 'error' };
               },
-              { find: () => rowEl(d.eventId) },
+              // Undo that puts registration back to Open says so (R2-07, v1.051).
+              { find: () => rowEl(d.eventId), doneText: record.registrationOpen && switchChanged ? T.TOAST_UNDONE_REGISTRATION_OPEN : undefined },
             ),
         },
       });
@@ -588,7 +611,8 @@ export default function StarEventsTab({
       setBanner((current) => (current?.kind === 'switch' ? null : current));
       const reloaded = reloadQuiet();
       if (isUndo) {
-        showToast(T.TOAST_UNDONE, { icon: false });
+        // R2-07: an Undo that opens registration again says so.
+        showToast(open ? T.TOAST_UNDONE_REGISTRATION_OPEN : T.TOAST_UNDONE, { icon: false });
         return;
       }
       // An admin opening after the closing date has passed also removes the date (v0.85, screen 9).

@@ -21,7 +21,7 @@ import {
   getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
   overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
-  paidTagParts,
+  paidTagParts, rosterRoomNeeded, ROSTER_ROOM,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
@@ -2349,6 +2349,28 @@ check('the roster\'s Paid tag names the amount once overpaid or refunded (v0.745
   assert.equal(CampText.paidAmount(31500), 'Paid $315');
   assert.equal(CampText.paidAmount(102350), 'Paid $1,023.50');
   assert.equal(CampText.overpaidText(2300), '$23 overpaid');
+});
+
+check('the roster\'s room limit per week (L-02, v0.747, picture 24)', () => {
+  // The numbers of picture 24's footer: touch / mouse, by days in the shown week.
+  const table = { 1: [395, 435], 2: [467, 507], 3: [539, 579], 4: [611, 651], 5: [683, 723], 6: [755, 795], 7: [827, 867] };
+  for (const [days, [touch, mouse]] of Object.entries(table)) {
+    assert.equal(rosterRoomNeeded(Number(days), false), touch, `${days} days, touch`);
+    assert.equal(rosterRoomNeeded(Number(days), true), mouse, `${days} days, mouse`);
+    // While someone is overpaid, the amber words widen the Paid column: 42 px more, mouse or touch.
+    assert.equal(rosterRoomNeeded(Number(days), false, true), touch + 42);
+    assert.equal(rosterRoomNeeded(Number(days), true, true), mouse + 42);
+  }
+  // Measured on the built table by the design review (a 5-day camp, widest ordinary tag): 633 / 673 px of
+  // table + 50 px of margins; a day column can't be narrower than 72 px, so fewer days save 72 px each.
+  assert.equal(rosterRoomNeeded(5, false), 633 + ROSTER_ROOM.margins);
+  assert.equal(rosterRoomNeeded(5, true), 673 + ROSTER_ROOM.margins);
+  assert.equal(rosterRoomNeeded(4, true) - rosterRoomNeeded(5, true), -72);
+  // A week with no days, or something that isn't a number, counts as one day (never NaN, never a smaller limit).
+  for (const odd of [0, -2, null, undefined, 2.5, '5']) assert.equal(rosterRoomNeeded(odd, false), rosterRoomNeeded(1, false), String(odd));
+  // More days always need more room; a mouse always needs more than touch.
+  for (let d = 1; d < 7; d += 1) assert.ok(rosterRoomNeeded(d + 1, false) > rosterRoomNeeded(d, false));
+  for (let d = 1; d <= 7; d += 1) assert.ok(rosterRoomNeeded(d, true) > rosterRoomNeeded(d, false));
 });
 
 check('Fill in closed by Hide private details: the camp page\'s words (v0.746)', () => {

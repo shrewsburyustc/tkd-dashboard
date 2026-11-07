@@ -343,6 +343,8 @@ export default function ResultsTab({
     if (answer.status !== 'ok') {
       const retry = answer.status === 'error' ? () => undoFromToast(sentId) : undefined;
       setBanner({ text: R.undoSentRefusal(answer.status), retry });
+    } else {
+      toast(R.TOAST_UNDONE, { icon: false }); // R2-07: after an Undo the toast says "Undone"
     }
     reload();
   }
@@ -599,7 +601,7 @@ export default function ResultsTab({
               {R.summaryLine('', counts) /* " · 8 candidates · 3 passed …" after the Dan in medium weight */}
             </p>
             {hidden && (
-              <p className="str-hidden-line">
+              <p className="str-hidden-line" id={T.EMAIL_OFF_ID}>
                 {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
                 <IconCurrencyDollarOff size={16} aria-hidden="true" />
                 {R.EMAIL_OFF_WHILE_HIDDEN}
