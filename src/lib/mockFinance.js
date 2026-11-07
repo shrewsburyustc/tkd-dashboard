@@ -894,7 +894,8 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       const rows = rangeItems(db, a)
         .map((it) => ({
           day: it.day, school: it.school, time: schoolNow(it.recorded_at).time, first_name: it.first_name, last_name: it.last_name,
-          what: it.what, event_date: it.event_date, kind: it.kind, method: it.method, amount_cents: it.amount_cents,
+          what: it.what, event_date: it.event_date, is_private: it.is_private === true, // 0037: like finance_day's items
+          kind: it.kind, method: it.method, amount_cents: it.amount_cents,
           counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
           note: exportNote(it),
           ...(it.source === 'camp' ? { event_name: it.event_name } : {}), // camp rows: the camp's name (not a CSV column)
