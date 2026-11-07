@@ -1,0 +1,271 @@
+{
+ "width": 1920,
+ "title": "Star · R4-08 — the grayed Email result (Hide private details on)",
+ "subtitle": "Results tab with the account menu’s Hide private details switch on. The grayed Email result takes the approved “unavailable” look (v1.103, as Prospects’ grayed Email): a stronger border (--color-border-strong, rgb 207 207 202, was the hairline --color-border, rgb 229 229 226) and the not-allowed mouse pointer (a circle with a line through it) instead of the plain arrow. It stays focusable, and screen readers now hear the line above the list after the button’s name (aria-describedby points the button at that line). The “Email result is off …” line itself doesn’t change; it is outlined because the button now points at it.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/A2-today-pc.png",
+     "crop": [
+      60,
+      300,
+      1210,
+      230
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC 1280×800.</b> Hairline border; the pointer is a plain arrow; a screen reader hears only “Email result for Noah Chen, dimmed” — the line (outlined) isn’t linked to the button.",
+     "marks": [
+      [
+       1099,
+       481,
+       116,
+       28
+      ],
+      [
+       100,
+       311,
+       432,
+       20
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A2-today-pc.png",
+       "crop": [
+        1090,
+        474,
+        134,
+        42
+       ],
+       "scale": 2.6,
+       "caption": "<b>PC, zoomed 2.6×</b> (no outline, so the border shows). Border rgb(229, 229, 226).",
+       "marks": [],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/A2-today-tab.png",
+       "crop": [
+        86,
+        330,
+        720,
+        240
+       ],
+       "scale": 0.6,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         623,
+         504,
+         116,
+         36
+        ],
+        [
+         120,
+         339,
+         432,
+         20
+        ]
+       ],
+       "shotWidth": 820
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A2-today-ph.png",
+       "crop": [
+        0,
+        190,
+        390,
+        250
+       ],
+       "scale": 1,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         29,
+         384,
+         116,
+         36
+        ],
+        [
+         16,
+         202,
+         358,
+         39
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/A2-today-p320.png",
+       "crop": [
+        0,
+        190,
+        320,
+        250
+       ],
+       "scale": 1,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         29,
+         383,
+         116,
+         36
+        ],
+        [
+         16,
+         202,
+         288,
+         39
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/A2-after-pc.png",
+     "crop": [
+      60,
+      300,
+      1210,
+      230
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC 1280×800.</b> Stronger gray border, not-allowed pointer on hover; the button is now described by the line “Email result is off while private details are hidden. Email results at the desk.” (the line looks the same as today).",
+     "marks": [
+      [
+       1099,
+       481,
+       116,
+       28
+      ],
+      [
+       100,
+       311,
+       432,
+       20
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A2-after-pc.png",
+       "crop": [
+        1090,
+        474,
+        134,
+        42
+       ],
+       "scale": 2.6,
+       "caption": "<b>PC, zoomed 2.6×.</b> Border rgb(207, 207, 202): a clearer edge.",
+       "marks": [],
+       "shotWidth": 1280
+      },
+      {
+       "src": "shots/A2-after-tab.png",
+       "crop": [
+        86,
+        330,
+        720,
+        240
+       ],
+       "scale": 0.6,
+       "caption": "<b>Tablet 820×1180, touch.</b> (No pointer on touch; the border and the description still apply.)",
+       "marks": [
+        [
+         623,
+         504,
+         116,
+         36
+        ],
+        [
+         120,
+         339,
+         432,
+         20
+        ]
+       ],
+       "shotWidth": 820
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A2-after-ph.png",
+       "crop": [
+        0,
+        190,
+        390,
+        250
+       ],
+       "scale": 1,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         29,
+         384,
+         116,
+         36
+        ],
+        [
+         16,
+         202,
+         358,
+         39
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/A2-after-p320.png",
+       "crop": [
+        0,
+        190,
+        320,
+        250
+       ],
+       "scale": 1,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         29,
+         383,
+         116,
+         36
+        ],
+        [
+         16,
+         202,
+         288,
+         39
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "A screenshot can’t show the mouse pointer or what a screen reader says; both were checked on the drawn page: cursor “not-allowed”, aria-describedby → the line. <b>In the build, aria-describedby points at the line only while private details are hidden</b> — not while the button is only busy (reading the family’s address), because the line isn’t on the page then. With the switch off, Email result looks and works as today. Black Belt copies this in its own Part 2."
+  }
+ ],
+ "footer": "Star testing · rolling check pass 1, Step A (plan OK’d 2026-11-06). Preview screenshots (fake database, admin, Fall Star Testing). The “After” column is drawn over the real page by a small script (mock-stepA.js) — nothing in the app was changed. Amber = what changes; green = the change."
+}

@@ -1,0 +1,280 @@
+{
+ "width": 2400,
+ "title": "Star · L-02 (pass 2) — the candidate roster follows the room beside the panel",
+ "subtitle": "Fall Star Testing, Candidates tab, both schools shown (the widest case: the second line carries the school). Today the roster picks its tablet columns from the window’s width, so with the side panel taking 72 px (Standard) or 96 px (Largest) the Candidate and Testing for columns get squeezed to 40–60 px and text runs into text. After (v1.053, built per v1.130): <code>const narrowRoom = usePageRoomBelow(640); const stacked = isPhone || narrowRoom;</code> for the roster only. <b>Limit: 640 px of room.</b> Below it the roster draws the phone’s stacked rows (the ones phones already show); at 640 and above nothing changes. Dialogs, ⋯ menus and the rest of the page keep following the window.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/c-683S-today.png",
+       "crop": [
+        0,
+        0,
+        683,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>683 wide, touch, Standard</b> (room beside the panel 611 px). 2 pairs of text over text (outlined): “Shrewsbury” runs into “0 stars”. Most second lines also stick out of a 56–61 px column.",
+       "marks": [
+        [
+         109,
+         232,
+         84,
+         20
+        ]
+       ],
+       "shotWidth": 683
+      },
+      {
+       "src": "shots/c-683L-today.png",
+       "crop": [
+        0,
+        0,
+        683,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>683 wide, touch, Largest</b> (room beside the panel 587 px). 11 overlapping pairs, headers included (“Candidate” / “Testing for” / “Paying by”).",
+       "marks": [
+        [
+         133,
+         150,
+         79,
+         34
+        ],
+        [
+         175,
+         150,
+         82,
+         25
+        ],
+        [
+         133,
+         231,
+         69,
+         57
+        ],
+        [
+         133,
+         381,
+         69,
+         76
+        ],
+        [
+         133,
+         531,
+         69,
+         57
+        ],
+        [
+         133,
+         671,
+         69,
+         57
+        ]
+       ],
+       "shotWidth": 683
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c-700S-today.png",
+       "crop": [
+        0,
+        0,
+        700,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>700 wide, touch, Standard</b> (room beside the panel 628 px). No text over text, but “Shrewsbury” sticks out of its 61 px column into the gap before “0 stars” (outlined), and names break to 2–6 lines.",
+       "marks": [
+        [
+         109,
+         215,
+         61,
+         18
+        ],
+        [
+         109,
+         645,
+         61,
+         18
+        ]
+       ],
+       "shotWidth": 700
+      },
+      {
+       "src": "shots/c-700L-today.png",
+       "crop": [
+        0,
+        0,
+        700,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>700 wide, touch, Largest</b> (room beside the panel 604 px). 10 overlapping pairs: “Registered Oct 30” runs into “0 stars → 1 star”; the headers overlap.",
+       "marks": [
+        [
+         133,
+         150,
+         90,
+         34
+        ],
+        [
+         133,
+         232,
+         79,
+         56
+        ],
+        [
+         133,
+         393,
+         74,
+         17
+        ],
+        [
+         133,
+         515,
+         74,
+         17
+        ],
+        [
+         133,
+         637,
+         74,
+         17
+        ]
+       ],
+       "shotWidth": 700
+      }
+     ]
+    },
+    {
+     "src": "shots/c-667L-today.png",
+     "crop": [
+      0,
+      0,
+      667,
+      375
+     ],
+     "scale": 1.2,
+     "caption": "<b>667 wide, touch, Largest</b> (room beside the panel 571 px). A phone turned sideways (667 × 375). 12 overlapping pairs on the roster (“Mi / a / Pat / el”), headers on top of each other.",
+     "marks": [
+      [
+       133,
+       88,
+       70,
+       34
+      ],
+      [
+       165,
+       88,
+       76,
+       25
+      ],
+      [
+       133,
+       208,
+       61,
+       57
+      ],
+      [
+       133,
+       208,
+       85,
+       21
+      ]
+     ],
+     "shotWidth": 667
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "row": [
+      {
+       "src": "shots/c-683S-after.png",
+       "crop": [
+        0,
+        0,
+        683,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>683 wide, touch, Standard</b> (room beside the panel 611 px). Room 611 &lt; 640: stacked rows. Name + Registered, stars · school, paying by · paid on, tag + Mark paid, ⋯ on the right.",
+       "marks": [],
+       "shotWidth": 683
+      },
+      {
+       "src": "shots/c-683L-after.png",
+       "crop": [
+        0,
+        0,
+        683,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>683 wide, touch, Largest</b> (room beside the panel 587 px). Room 587: stacked rows.",
+       "marks": [],
+       "shotWidth": 683
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c-700S-after.png",
+       "crop": [
+        0,
+        0,
+        700,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>700 wide, touch, Standard</b> (room beside the panel 628 px). Room 628 &lt; 640: stacked rows. (Today this size has no text over text, but the columns are too narrow to read — see the Today shot.)",
+       "marks": [],
+       "shotWidth": 700
+      },
+      {
+       "src": "shots/c-700L-after.png",
+       "crop": [
+        0,
+        0,
+        700,
+        760
+       ],
+       "scale": 0.8,
+       "caption": "<b>700 wide, touch, Largest</b> (room beside the panel 604 px). Room 604: stacked rows.",
+       "marks": [],
+       "shotWidth": 700
+      }
+     ]
+    },
+    {
+     "src": "shots/c-667L-after.png",
+     "crop": [
+      0,
+      0,
+      667,
+      375
+     ],
+     "scale": 1.2,
+     "caption": "<b>667 wide, touch, Largest</b> (room beside the panel 571 px). Room 571: stacked rows; the panel stays on the left (the window is still a tablet’s width).",
+     "marks": [],
+     "shotWidth": 667
+    }
+   ],
+   "note": "<b>How the limit was measured.</b> The real roster in preview, touch, admin, details shown, both schools (the widest case), Panel size Largest, window 640–1024 px in 1–8 px steps; for each width: the room (the page area’s own <code>data-page-room</code>), text boxes of two cells of one row that overlap, and cells whose text is wider than the cell. <b>Text over text</b> stops at room 617; <b>text sticking out of its column</b> stops at 636 (632 still has 6); 640 is the first clean round number above both and the same as Dashboard core’s sample (<code>parts.html#L02/room</code>). Standard gives the same results at the same room (the room is what counts). With a mouse the actions column is 24 px narrower, so the roster is clean from about 616: 640 covers both. One school selected and Hide private details need less room. PC columns (1024+) are clean at 1024 with Largest (room 928). <b>Your call if you want more:</b> at room 640–695 the tablet columns are clean but tight (names on 4–5 lines, “Testing for” header on 2 lines); from <b>696</b> they look exactly as at 820 (the approved tablet). A limit of 696 would also stack 700 / 720 / 760-wide windows with Largest."
+  }
+ ],
+ "footer": "<div class=\"label\" style=\"background:#ECECE8;color:#3A3A3A\">Unchanged</div>\n<div class=\"row\">\n<figure style=\"width:768px\"><div class=\"shot\" style=\"width:768px;height:480px\"><img src=\"shots/c-1280-today.png\" style=\"left:0;top:0;width:768px\"></div><figcaption><b>PC 1280×800, mouse</b> (room 1228): PC columns, as today.</figcaption></figure>\n<figure style=\"width:369px\"><div class=\"shot\" style=\"width:369px;height:531px\"><img src=\"shots/c-820S-today.png\" style=\"left:0;top:0;width:369px\"></div><figcaption><b>820×1180 touch, Standard</b> (room 748): tablet columns, as today.</figcaption></figure>\n<figure style=\"width:369px\"><div class=\"shot\" style=\"width:369px;height:531px\"><img src=\"shots/c-820L-today.png\" style=\"left:0;top:0;width:369px\"></div><figcaption><b>820 touch, Largest</b> (room 724 ≥ 640): tablet columns, as today.</figcaption></figure>\n<figure style=\"width:234px\"><div class=\"shot\" style=\"width:234px;height:506.4px\"><img src=\"shots/c-390-today.png\" style=\"left:0;top:0;width:234px\"></div><figcaption><b>390×844 touch</b>: phone rows, as today.</figcaption></figure>\n<figure style=\"width:192px\"><div class=\"shot\" style=\"width:192px;height:420px\"><img src=\"shots/c-320-today.png\" style=\"left:0;top:0;width:192px\"></div><figcaption><b>320 wide, touch</b>: phone rows, as today.</figcaption></figure>\n</div><p style=\"margin-top:16px\"><b>How the pictures were made.</b> Star testing · rolling check pass 2, L-02. Preview screenshots (fake database, admin, Fall Star Testing, “Show both schools”), Panel size set through the Account menu. <b>Today</b> = the app as it is. <b>After</b> = drawn on the real page by mock-room.js: the phone roster’s own markup was copied from the app at a 600 px phone window (same event, same rows) and put in place of the tablet roster at each target size. Its styles (<code>.st-crow-c.is-phone</code>, <code>.ev-srow-main</code> …) are not behind a phone-width rule, so they draw as they will once the roster follows a class. So the rows are exactly the phone’s; what a copy can’t show: buttons don’t work in the drawn roster, and the tablet page around it (summary cards, Dan switch, top bar) is today’s — which is also what the change keeps. Nothing in the app was changed. Amber = text over text, or text sticking out of its column.</p>"
+}

@@ -1,0 +1,207 @@
+{
+ "width": 1960,
+ "title": "Star · R2-08 (2 of 2) — Undo after adding a make-up: which way? (choice for Jeffrey)",
+ "subtitle": "Today Star’s Add a make-up list stays open after Add, and the “Drew Park added” toast shows outside it. A dialog keeps the keyboard (Tab) inside itself, so a toast Undo there could be reached by mouse only — not by keyboard until the list is closed, and by then the 5 seconds are usually over. Three ways out. Undo (admins only; staff can’t delete a candidate, v0.110, so staff get no Undo in any option) deletes the new make-up row, as Add candidate’s Undo does, then says “Undone”. Both toast texts (“Private testing set”, “Drew Park added”) are still marked PROPOSAL in the code: these pictures are the first time they are shown for approval, and an OK here removes the PROPOSAL tags. Possible wording, Black Belt’s form: “Drew Park added · make-up from Summer” (“… added · make-up from &lt;earlier testing&gt;”), so it doesn’t read like Add candidate’s toast.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/A3m-today-pc.png",
+     "crop": [
+      400,
+      60,
+      870,
+      740
+     ],
+     "scale": 0.48,
+     "caption": "<b>PC 1280×800.</b> Add on Drew Park: the list stays open (“Already added”), toast “Drew Park added”, no Undo.",
+     "marks": [
+      [
+       1134,
+       741,
+       122,
+       36
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/A3m-today-ph.png",
+     "crop": [
+      0,
+      0,
+      390,
+      844
+     ],
+     "scale": 0.62,
+     "caption": "<b>Phone 390×844, touch</b> (full-screen list).",
+     "marks": [
+      [
+       134,
+       741,
+       122,
+       36
+      ]
+     ],
+     "shotWidth": 390
+    }
+   ]
+  },
+  {
+   "label": "(a) Recommended — close the list after Add",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/A3b-a-pc.png",
+     "crop": [
+      60,
+      90,
+      1210,
+      710
+     ],
+     "scale": 0.345,
+     "caption": "<b>PC.</b> The list closes (as Black Belt’s does), focus goes back to Add candidate, and “Drew Park added · ↶ Undo” shows over the event page, where Drew’s row is now first.",
+     "marks": [
+      [
+       1065,
+       736,
+       191,
+       40
+      ],
+      [
+       77,
+       499,
+       1178,
+       48
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/A3b-a-ph.png",
+     "crop": [
+      0,
+      0,
+      390,
+      844
+     ],
+     "scale": 0.62,
+     "caption": "<b>Phone.</b> Same: list closed, toast above the bottom bar.",
+     "marks": [
+      [
+       99,
+       732,
+       191,
+       44
+      ],
+      [
+       17,
+       683,
+       356,
+       92
+      ]
+     ],
+     "shotWidth": 390
+    }
+   ],
+   "note": "<b>Pros:</b> Undo works by keyboard like every other toast; copies Black Belt (useMakeupPicker), so both sections behave the same. <b>Cons:</b> adding a second make-up means opening Add candidate → Make-up again."
+  },
+  {
+   "label": "(b) Keep the list open, Undo in the row",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/A3b-b-pc.png",
+     "crop": [
+      400,
+      60,
+      870,
+      740
+     ],
+     "scale": 0.48,
+     "caption": "<b>PC.</b> Drew’s row says “Added” with an Undo button where “Already added” was; the toast stays “Drew Park added” without Undo.",
+     "marks": [
+      [
+       698,
+       236,
+       125,
+       28
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/A3b-b-ph.png",
+     "crop": [
+      0,
+      0,
+      390,
+      844
+     ],
+     "scale": 0.62,
+     "caption": "<b>Phone.</b>",
+     "marks": [
+      [
+       236,
+       142,
+       125,
+       36
+      ]
+     ],
+     "shotWidth": 390
+    }
+   ],
+   "note": "<b>Pros:</b> several make-ups in a row without reopening; Undo is inside the dialog, so the keyboard reaches it, with no 5-second timer. <b>Cons:</b> a new look no other section has (Undo as a row button); how long the row Undo stays offered (until the list closes?) needs deciding."
+  },
+  {
+   "label": "(c) Keep it as it is today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/A3m-after-pc.png",
+     "crop": [
+      400,
+      60,
+      870,
+      740
+     ],
+     "scale": 0.48,
+     "caption": "<b>PC.</b> “Drew Park added · ↶ Undo” over the open list (as first drawn).",
+     "marks": [
+      [
+       1065,
+       736,
+       191,
+       40
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/A3m-after-ph.png",
+     "crop": [
+      0,
+      0,
+      390,
+      844
+     ],
+     "scale": 0.62,
+     "caption": "<b>Phone.</b>",
+     "marks": [
+      [
+       99,
+       732,
+       191,
+       44
+      ]
+     ],
+     "shotWidth": 390
+    }
+   ],
+   "note": "<b>Pros:</b> smallest change; the list stays open. <b>Cons: breaks the rulebook’s keyboard-only rule</b> (§4 “Everything works with keyboard only”, WCAG 2.1.1): while the list is open, Undo can be clicked with a mouse but not reached with Tab."
+  }
+ ],
+ "footer": "Star testing · rolling check pass 1, Step A (plan OK’d 2026-11-06). Preview screenshots (fake database, admin, Fall Star Testing). The “After” column is drawn over the real page by a small script (mock-stepA.js) — nothing in the app was changed. Amber = what changes; green = the change. Tablet and 320 look like PC and phone here, so they aren’t repeated (A3 shows the toast at all four sizes)."
+}

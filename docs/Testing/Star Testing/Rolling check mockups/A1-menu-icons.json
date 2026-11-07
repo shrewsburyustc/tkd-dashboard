@@ -1,0 +1,189 @@
+{
+ "width": 1920,
+ "title": "Star · R4-10 — ⋯ menu icons for the private-testing items",
+ "subtitle": "A candidate with a private testing (Alex Kim). “Change private day or time” gets the calendar icon (ti-calendar, as Color Belt’s “Change day or time” and Star’s own “Set private testing”); “Back to the testing day” gets the calendar-with-a-day icon (ti-calendar-event), so the Undo arrow means only Undo and Restore again (v1.048 (13)). Words, order and everything else in the menu stay the same.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/A1-today-pc.png",
+     "crop": [
+      700,
+      370,
+      570,
+      380
+     ],
+     "scale": 1.3,
+     "caption": "<b>PC 1280×800, Alex Kim’s ⋯.</b> Change private day or time uses Edit’s pencil; Back to the testing day uses Undo’s arrow (same as Undo payment below it).",
+     "marks": [
+      [
+       990,
+       457,
+       256,
+       64
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A1-today-tab.png",
+       "crop": [
+        440,
+        560,
+        370,
+        490
+       ],
+       "scale": 0.85,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         530,
+         662,
+         256,
+         88
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/A1-today-ph.png",
+       "crop": [
+        0,
+        280,
+        390,
+        564
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone 390×844, touch</b> (bottom sheet).",
+       "marks": [
+        [
+         0,
+         405,
+         390,
+         88
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/A1-today-p320.png",
+       "crop": [
+        0,
+        140,
+        320,
+        560
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         0,
+         261,
+         320,
+         88
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/A1-after-pc.png",
+     "crop": [
+      700,
+      370,
+      570,
+      380
+     ],
+     "scale": 1.3,
+     "caption": "<b>PC 1280×800.</b> ti-calendar on Change private day or time; ti-calendar-event on Back to the testing day.",
+     "marks": [
+      [
+       990,
+       457,
+       256,
+       64
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/A1-after-tab.png",
+       "crop": [
+        440,
+        560,
+        370,
+        490
+       ],
+       "scale": 0.85,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         530,
+         662,
+         256,
+         88
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/A1-after-ph.png",
+       "crop": [
+        0,
+        280,
+        390,
+        564
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         0,
+         405,
+         390,
+         88
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/A1-after-p320.png",
+       "crop": [
+        0,
+        140,
+        320,
+        560
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         0,
+         261,
+         320,
+         88
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "Both icons exist in @tabler/icons-react (IconCalendar, IconCalendarEvent). A candidate without a private testing keeps “Set private testing” with ti-calendar, as today. The menu looks the same at every size; only the row height changes on touch."
+  }
+ ],
+ "footer": "Star testing · rolling check pass 1, Step A (plan OK’d 2026-11-06). Preview screenshots (fake database, admin, Fall Star Testing). The “After” column is drawn over the real page by a small script (mock-stepA.js) — nothing in the app was changed. Amber = what changes; green = the change."
+}
