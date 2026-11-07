@@ -1,0 +1,46 @@
+{
+  "title": "Pass 2 for Camps: Print receipt on a removed camper who paid (M-03) and each count card's empty line (C-05 b)",
+  "subtitle": "Real preview screens of the built app with each change tried (April Vacation Camp, the preview set to Wed, Apr 21, 2027). Both rules are already approved by Jeffrey (v1.055 (b) and (g)); this picture draws where they sit on Camps' screens and the words. <b>One choice is yours:</b> in section 1, <b>A</b> (drawn, recommended) staff get Print receipt on a removed camper too, as Color Belt decided (v0.428, “A: staff too”); <b>B</b> admins only, so staff keep today's menu. <b>Amber = what differs.</b>",
+  "width": 1960,
+  "sections": [
+    {
+      "heading": "1 · Print receipt on a removed camper who paid (M-03) — Emma Garcia, paid $315, withdrawn",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/m03-before-staff-1280.png", "shotWidth": 1280, "crop": [76, 360, 1180, 185], "scale": 0.75, "marks": [[1048, 407, 198, 41]],
+            "caption": "<b>Staff, ⋯ of the removed row:</b> only Restore. No way to print the receipt of money that was taken." },
+          { "src": "shots/m03-before-admin-1280.png", "shotWidth": 1280, "crop": [76, 360, 1180, 185], "scale": 0.75,
+            "caption": "<b>Admin:</b> Restore · line · Delete permanently." },
+          { "src": "shots/m03-before-detail-390.png", "shotWidth": 390, "crop": [0, 700, 390, 140], "scale": 0.9,
+            "caption": "<b>Phone, Camper detail (shown as an admin):</b> More holds Restore and Delete permanently; staff see only Restore. No Print receipt." }
+        ], "note": "Yet “Payments recorded” already counts a removed camper's money (v0.737)." },
+        { "label": "After (A, recommended)", "tone": "after", "items": [
+          { "src": "shots/m03-staff-paid-1280.png", "shotWidth": 1280, "crop": [76, 360, 1180, 185], "scale": 0.75, "marks": [[1048, 407, 198, 41]],
+            "caption": "<b>Staff:</b> Print receipt first, in its own group, then Restore." },
+          { "src": "shots/m03-admin-paid-1280.png", "shotWidth": 1280, "crop": [76, 360, 1180, 185], "scale": 0.75, "marks": [[1048, 407, 198, 41]],
+            "caption": "<b>Admin:</b> Print receipt · line · Restore · line · Delete permanently (money before taking someone off, §8)." },
+          { "src": "shots/m03-staff-detail-390.png", "shotWidth": 390, "crop": [0, 700, 390, 140], "scale": 0.9, "marks": [[16, 731, 121, 36]],
+            "caption": "<b>Phone, Camper detail (shown as staff):</b> More holds Print receipt, then Restore; an admin also sees Delete permanently below. It opens the same receipt an active camper gets, with the payments that still stand." }
+        ], "note": "<b>Never</b> with nothing paid (Ethan Brooks, removed, paid nothing: Restore · Delete as today) and <b>never</b> while Hide private details is on. A “Duplicate copy” row, which staff cannot restore, gets a ⋯ for staff only when money stands: it holds just Print receipt. <b>B</b> would leave staff exactly as in the Today column." }
+      ]
+    },
+    {
+      "heading": "2 · A count card that leaves nobody says what is true (C-05 b) — Color Belt's pattern (“Everyone in this class has paid.”)",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/c05-before-collect-1280.png", "shotWidth": 1280, "crop": [76, 310, 1180, 190], "scale": 0.75, "marks": [[520, 455, 290, 32]],
+            "caption": "<b>To collect pressed, everyone has paid:</b> “No campers match.” (the same words for every card)." }
+        ] },
+        { "label": "After", "tone": "after", "items": [
+          { "src": "shots/c05-collect-1280.png", "shotWidth": 1280, "crop": [76, 310, 1180, 190], "scale": 0.75, "marks": [[520, 455, 290, 32]],
+            "caption": "<b>To collect:</b> “Every camper has paid.”" },
+          { "src": "shots/c05-coming-1280-mock.png", "shotWidth": 1280, "crop": [76, 310, 1180, 190], "scale": 0.75, "marks": [[520, 455, 290, 32]],
+            "caption": "<b>Coming (today):</b> “No campers are coming today.” Before the camp or between camp days: “No campers are coming on Mon, Apr 19.” (<i>Drawn by changing the words of the same screen: no sample camp has an empty day.</i>)" },
+          { "src": "shots/c05-collect-390.png", "shotWidth": 390, "crop": [0, 540, 390, 170], "scale": 0.9, "marks": [[100, 660, 190, 30]],
+            "caption": "<b>Phone:</b> the same line." }
+        ], "note": "Search text that finds nobody keeps its own line (“No campers match “zz”. · Clear search”, v0.742). “Campers” and “Payments recorded” are not filters, so they have no empty line." }
+      ]
+    }
+  ],
+  "footer": "<b>Words (not in earlier mockups):</b> “Every camper has paid.” · “No campers are coming today.” · “No campers are coming on [day].” <b>Note on To collect:</b> a possible duplicate that still owes is not counted (v0.742), so “Every camper has paid.” can show while a duplicate row owes; the card's own line already says “1 possible duplicate not counted”. No database change."
+}
