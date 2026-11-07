@@ -26,12 +26,14 @@ import * as T from '../../screens/camps/text.js';
 import { refundStands } from './campRules.js';
 
 // Print receipt's one rule, the same for the ⋯ menu, Camper detail's button and "More" (v0.734):
-// an ACTIVE camper with money paid that still stands (paidCents is net of reversals and refunds) —
-// or a refund that stands (Star's rule: a receipt can show money that was all handed back) — and
-// never while Hide private details is on (option A — the item is simply absent, as Star and Camps'
-// other money items).
+// a camper with money paid that still stands (paidCents is net of reversals and refunds) — or a
+// refund that stands (Star's rule: a receipt can show money that was all handed back) — and never
+// while Hide private details is on (option A — the item is simply absent, as Star and Camps' other
+// money items). Since rulebook v1.055 (b) / design review M-03 this includes a REMOVED camper
+// (withdrawn or a duplicate copy) whose money still stands, for staff too (as Color Belt's v0.428);
+// a removed camper with nothing paid has none.
 export function canPrintReceipt(row, detailsHidden) {
-  return Boolean(row) && row.status === 'active' && !detailsHidden && ((row.paidCents ?? 0) > 0 || refundStands(row));
+  return Boolean(row) && !detailsHidden && ((row.paidCents ?? 0) > 0 || refundStands(row));
 }
 
 // The payment and refund lines that still stand: kind 'payment' or 'refund' with no reversal row
@@ -77,9 +79,17 @@ export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [],
   const campDayIsos = campDays.map((d) => (typeof d === 'string' ? d : d.day)).sort();
   const myDays = (c.days ?? []).map((d) => d.day).sort();
   const allDays = campDayIsos.length > 0 && myDays.length === campDayIsos.length;
+  // A REMOVED camper (rulebook v0.748, M-03) owes nothing more — Color Belt's rule for a cancelled
+  // private testing (v0.429, Jeffrey: "A: nothing owed"): Total due is what was paid (the payments that
+  // still stand), never more than the camp's price for them, so the Balance reads "$0 · paid in full"
+  // (one paid above the price still shows the overpayment); the Camp line names the removal. Payments
+  // stay as they are (fees aren't refunded). An active camper prints as before.
+  const removed = c.status !== 'active';
+  const priceCents = c.totalCents ?? detail.breakdown?.totalCents ?? 0;
+  const paidNow = c.paidCents ?? 0;
   const facts = [
     [T.RECEIPT_CAMPER, T.camperLabel(c)],
-    [T.RECEIPT_CAMP, `${camp.name} · ${T.campDatesText(campDayIsos)}`],
+    [T.RECEIPT_CAMP, `${camp.name} · ${T.campDatesText(campDayIsos)}${removed && c.withdrawnAt ? ` · ${T.removedBy(c.withdrawnAt, null).replace(/ /g, ' ')}` : ''}`], // (no line break inside "removed Nov 7")
     [T.RECEIPT_SCHOOL_LABEL, T.campSchoolLine(camp)],
     [T.RECEIPT_DAYS, T.detailDaysLine(myDays, allDays)],
   ];
@@ -97,8 +107,8 @@ export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [],
     kindLine: T.RECEIPT_KIND,
     facts,
     lines,
-    totalDueCents: c.totalCents ?? detail.breakdown?.totalCents ?? 0, // the camper's total now
-    paidCents: c.paidCents ?? 0, // what still stands (net of reversals)
+    totalDueCents: removed ? Math.min(Math.max(paidNow, 0), priceCents) : priceCents, // the camper's total now (a removed camper: what was paid)
+    paidCents: paidNow, // what still stands (net of reversals)
     balanceNote: null, // Camps has no "next due"
     schools: (schools ?? []).map((s) => ({ name: s.name, street: s.address?.street ?? '', phone: s.phone ?? '' })),
     printedOn,
