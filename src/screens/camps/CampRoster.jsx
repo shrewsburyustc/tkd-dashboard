@@ -78,6 +78,7 @@ import CountCards from '../../components/CountCards.jsx';
 import MarkPaidBox from '../../components/MarkPaidBox.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { usePageRoomBelow } from '../../lib/pageRoom.js';
+import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
 import {
   rosterRoomNeeded, overpaidCents, campCardCounts, dayExtraCounts, dayExtrasFor, everyDayExtras, extraDayWord, extraShortName, matchesCardFilter, missingExtraOnDay, paidTagParts, payTag, payingByChoiceWhere,
 } from '../../lib/camps/campRules.js';
@@ -437,11 +438,12 @@ export default function CampRoster({
   //   - search text found nobody on the roster but someone in Removed → no line and no roster, only
   //     the Removed group below (the line would say "No campers match" right above the camper it
   //     found; design and code review, 2026-11-06).
-  //   - no search text, but a pressed card left nobody → today's gray row "No campers match."
-  //     inside the roster (noMatchText; pass 2 changes this one).
+  //   - no search text, but a pressed card left nobody → a gray row inside the roster that says what
+  //     is true for that card (noMatchText: "Every camper has paid." / "No campers are coming today.";
+  //     rulebook v0.748, C-05 b).
   const searchFoundNoActive = active.length > 0 && Boolean(q) && rows.length === 0;
   const searchMissText = searchFoundNoActive && removedRows.length === 0 ? T.noCampersMatch(query.trim()) : null;
-  const noMatchText = active.length > 0 && rows.length === 0 && !q && shownFilter ? T.NO_MATCH_FILTER : null;
+  const noMatchText = active.length > 0 && rows.length === 0 && !q && shownFilter ? T.cardEmptyLine(shownFilter, counts.mode === 'today', cardDay?.day) : null;
   // Empties Find a camper and puts the focus back in the box (the ✕ and the Clear search link both
   // disappear as they're pressed, so the focus must not fall to the page).
   const searchInput = useRef(null);
@@ -698,8 +700,9 @@ export default function CampRoster({
                 <span className="ev-ssub cp-gray-line">{T.removedBy(row.withdrawnAt, row.withdrawnByName)}</span>
               </span>
               <CamperTag row={row} />
-              {/* A staff member has nothing to do on a duplicate copy (only admins restore it). */}
-              {(row.withdrawnReason !== 'duplicate_copy' || isAdmin) && more(row)}
+              {/* A staff member has nothing to do on a duplicate copy (only admins restore it) — unless
+                  money still stands: then the ⋯ holds Print receipt (v0.748, M-03). */}
+              {(row.withdrawnReason !== 'duplicate_copy' || isAdmin || canPrintReceipt(row, detailsHidden)) && more(row)}
             </div>
           ))}
       </div>
