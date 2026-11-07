@@ -1,7 +1,7 @@
 // api.js — every call the Calendar makes to the database, in one place.
 // Why it exists: like schedule/api.js — the screen never needs table names, column lists or the
 // argument names of the database functions (migration 0008). Every function returns a plain
-// object with a `status` and NEVER throws:
+// object with a `status` and NEVER throws (loadCalendarItems reads every other section's dates, v0.645):
 //   'ok'             it worked (plus the result fields)
 //   'no_access'      this sign-in can't see data right now (locked, password too old …)
 //   'not_allowed'    only an admin can change the calendar — or a type in use can't go
@@ -14,6 +14,7 @@
 // after midnight (schedule/time.js).
 import { supabase } from '../supabase.js';
 import { parseTime, toTimeText } from '../schedule/time.js';
+import { toItem } from './items.js';
 
 export const CALENDAR_STATUSES = ['ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'error'];
 const SERVER_STATUSES = new Set(CALENDAR_STATUSES.filter((s) => s !== 'error'));
@@ -122,12 +123,25 @@ export async function loadCalendar({ from, to }) {
   }
 }
 
-// Color Belt and Star testing events, read from Testing (rulebook v0.239 answer 1). Their tables
-// arrive with migrations 0005 (Color Belt phase 2) and 0006 (Star testing), which aren't built
-// yet; until then there is nothing to show. When they exist, this reads them (read-only) and
-// returns [{ id, locationCode, title, date, start, kind: 'colorBelt' | 'star' }].
-export async function loadTestingEvents() {
-  return { status: 'ok', events: [] };
+// Every other section's dated things (rulebook v0.645, migration 0045): Color Belt and Star testing
+// days and private tests, Black Belt testing days, camp days, new sign-ups and deadlines. ONE
+// read-only database function, calendar_items(p_from, p_to) (at most 63 days). It already turns
+// a child's name into "Ava N." — this file never builds a name itself.
+// Returns { status: 'ok', items } | { status: 'no_access' } | { status: 'error', error }.
+// Each item: { kind, id, date, start, end (minutes or null; both null = all day), locationCode
+// (null = both schools), title, child, what, place, opens, refId, eventId }.
+// (the row-by-row conversion is items.js toItem, so Node checks can test it)
+export async function loadCalendarItems({ from, to }) {
+  try {
+    if (!supabase) return failure(new Error('No connection is set up'));
+    const { data, error } = await supabase.rpc('calendar_items', { p_from: from, p_to: to });
+    if (error) return failure(error);
+    if (data?.status === 'no_access') return { status: 'no_access' };
+    if (data?.status !== 'ok' || !Array.isArray(data.items)) return unexpected('calendar_items');
+    return { status: 'ok', items: data.items.map(toItem).filter(Boolean) };
+  } catch (error) {
+    return failure(error);
+  }
 }
 
 // How many events use a type (the delete confirmation names it).

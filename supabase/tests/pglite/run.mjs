@@ -599,6 +599,7 @@ const onlyStep0043 = process.argv.includes('--only-step0043');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
 const onlyStep0037 = process.argv.includes('--only-step0037');
+const onlyStep0045 = process.argv.includes('--only-step0045');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -852,6 +853,15 @@ async function main() {
     if (prints41) {
       console.log('\n0041 fingerprints (kind  item  detail):');
       for (const line of prints41) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0045: just the Calendar reader step (0045)
+  if (onlyStep0045) {
+    const prints45 = await step0045();
+    if (prints45) {
+      console.log('\n0045 fingerprints (kind  item  detail):');
+      for (const line of prints45) console.log('  ' + line);
     }
     return finish();
   }
@@ -1195,6 +1205,9 @@ async function main() {
     for (const line of after37) console.log('  ' + line);
   }
 
+  // step0045: New students - the Calendar reader calendar_items (its own database, production order)
+  console.log('\nMigration 0045 (New students: the Calendar reader calendar_items):');
+  const after45 = after5 ? await step0045() : null;
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
   const after20 = after5 ? await step0020(db, upgradeDb) : null;
@@ -1324,6 +1337,10 @@ async function main() {
   if (after39) {
     console.log('\n0039 fingerprints (kind  item  detail):');
     for (const line of after39) console.log('  ' + line);
+  }
+  if (after45) {
+    console.log('\n0045 fingerprints (kind  item  detail):');
+    for (const line of after45) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -8918,6 +8935,163 @@ async function step0042() {
   }
   await db.close().catch(() => {});
   return prints42;
+}
+
+// =====================================================================
+// step0045: the Calendar reader calendar_items (0045, rulebook v0.645,
+// docs/Prospects/CONTRACT-0045.md)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034, 0036 and 0041 - each only if its file is on
+// this branch). 0045 adds ONE read-only function and nothing else, so the
+// step checks that: only 0008's file gains two lines (it lists every calendar_*
+// function), no row and no history changes, the new function's own fingerprint, the pre-apply
+// check before / after / after the undo, the tests, re-run safety, and the
+// undo file exactly as SETUP.md 0045e names it (then the redo).
+// Run only this step with   node run.mjs --only-step0045
+// =====================================================================
+const MD5_0045_CALENDAR = '903a135a992584d3215447e1d2545495';   // calendar_items, 0045
+
+async function step0045() {
+  const L = '[0045] ';
+  const preSql = read('tests', '0045_preapply_check.sql');
+  const migration = read('migrations', '0045_calendar_items.sql');
+  const unsafe = [['migrations', '0045_calendar_items.sql'], ['tests', '0045_fingerprints.sql'], ['tests', '0045_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0045's migration, fingerprints and pre-apply check contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the pre-apply check names the md5 run.mjs checks (0045's calendar_items)`, preSql.includes(`'${MD5_0045_CALENDAR}'`));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students: last name, date of birth, Address)', '0036_new_students_profile.sql'],
+    // live since 2026-11-05, before 0045: production's order
+    ['0041 (Star event end time)', '0041_star_end_time.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await adminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0045: 0 / false / 64 (no calendar_items yet, every column it reads is there)`,
+    ready.calendar_versions === 0 && ready.calendar_is_0045 === false && ready.needs_found === 64, JSON.stringify(ready));
+
+  // the tests that cover what 0045 reads, before it exists (they must not notice it)
+  const baseline = [['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0036_tests.sql', 'ALL 0036 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0045', baseline);
+
+  // apply 0045: NO other fingerprint file may move (it adds one function, in no other file's list)
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0041', '0045']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0045');
+  const before = await printsOf(db, others);
+  // everything 0045 reads and could write, as one md5
+  const snapSql = `select md5(concat_ws('|',
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_events x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_event_classes x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_private x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.star_events x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.star_candidates x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camps x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camp_days x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.bb_cycles x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.bb_cycle_days x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.forms x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.form_submissions x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.prospects x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.prospect_statuses x),
+       (select count(*)::text from public.change_log)))`;
+  const dataBefore = await one(db, snapSql);
+  if (!(await run(db, `${L}apply 0045_calendar_items.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const ITEM = 'calendar_items(p_from date, p_to date)';
+  const TAIL = ' definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE';
+  // 0008_fingerprints.sql lists every function named calendar_*, so it gains exactly two lines for
+  // calendar_items (its "function" line - the same md5, definer, settings, owner and rights as
+  // 0045's own file - and its "function-kind" line); nothing in it moves or goes
+  const parts = (line) => line.split('  ');
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (gone.length) wrong.push(`${n}: moved or gone ${JSON.stringify(gone)}`);
+    if (n === '0008') {
+      const fnLine = added.find((a) => parts(a)[0] === 'function' && parts(a)[1] === ITEM);
+      const kindLine = added.find((a) => parts(a)[0] === 'function-kind' && parts(a)[1] === ITEM);
+      if (added.length !== 2 || !fnLine || !kindLine || parts(fnLine)[2] !== MD5_0045_CALENDAR + TAIL
+          || parts(kindLine)[2] !== 'volatility=s returns=jsonb') {
+        wrong.push(`0008: added ${JSON.stringify(added)}`);
+      }
+    } else if (added.length) {
+      wrong.push(`${n}: added ${JSON.stringify(added)}`);
+    }
+  }
+  record(`${L}fingerprints: nothing moved; the only new lines are 0008's two for calendar_items (function: ${MD5_0045_CALENDAR.slice(0, 8)}, definer, search_path="", postgres, authenticated + postgres; function-kind: stable, jsonb); every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints45 = after['0045_fingerprints.sql'];
+  record(`${L}0045 fingerprints: calendar_items plpgsql, STABLE, security definer, search_path="", authenticated + postgres only (nothing for anon)`,
+    prints45.length === 1 && prints45[0] === `function  ${ITEM}  ${MD5_0045_CALENDAR} lang=plpgsql volatility=s returns=jsonb${TAIL}`,
+    prints45.join(' | '));
+  record(`${L}0045 wrote nothing (every table it reads, the statuses and the history unchanged)`, dataBefore === (await one(db, snapSql)));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0045: 1 / true / 64`,
+    applied.calendar_versions === 1 && applied.calendar_is_0045 === true && applied.needs_found === 64, JSON.stringify(applied));
+
+  // the tests, then the same baseline again
+  await tests('after 0045', [['0045_tests.sql', 'ALL 0045 TESTS PASSED'], ...baseline]);
+
+  // re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0045 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0045 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+
+  // Undo 0045, as SETUP.md 0045e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0045e\. Undo 0045/m);
+  const undoFile = 'manual/0045u_undo.sql';
+  const undoSql = read('manual', '0045u_undo.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0045] SETUP.md has "### 0045e. Undo 0045" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0045] paste ${undoFile}`, undoSql)) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0045] every fingerprint file equals the one before 0045`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    const gone45 = await fingerprints(db, '0045_fingerprints.sql');
+    record(`${L}[undo 0045] 0045_fingerprints.sql answers no row`, gone45.length === 0, gone45.join(' | '));
+    const undonePre = await pre();
+    record(`${L}[undo 0045] the pre-apply check answers as before 0045`, JSON.stringify(undonePre) === JSON.stringify(ready),
+      JSON.stringify(undonePre));
+    record(`${L}[undo 0045] no row or history changed`, dataAfter === (await one(db, snapSql)));
+    await tests('after the undo', baseline);
+    await run(db, `${L}[undo 0045] paste ${undoFile} a SECOND time`, undoSql);
+    const undoneAgain = await printsOf(db, others);
+    record(`${L}[undo 0045] a second undo changes nothing`,
+      others.every((n) => JSON.stringify(undone[`${n}_fingerprints.sql`]) === JSON.stringify(undoneAgain[`${n}_fingerprints.sql`])));
+    if (await run(db, `${L}[undo 0045] apply 0045 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0045_fingerprints.sql');
+      record(`${L}[undo 0045] after the redo the 0045 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints45));
+      await tests('after the redo', [['0045_tests.sql', 'ALL 0045 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints45;
 }
 
 // =====================================================================

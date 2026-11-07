@@ -3368,3 +3368,56 @@ Tested in PGlite on every run (`run.mjs` step0037, or `node run.mjs --only-step0
 - **A new migration, not an edit of 0026:** 0026 is live; replacing one function in a later file keeps the history clear.
 
 ---
+
+## Migration 0045: Calendar reader (calendar_items)
+
+**Status: built, not applied.** Built on `claude/prospect-form-system-cd893d` (rulebook v0.645: the Calendar shows every section's dated things; Jeffrey 2026-11-06: "B: one reader", "A: show them", "OK, build it"; contract `docs/Prospects/CONTRACT-0045.md`; plan `docs/Prospects/TKD-Calendar-AllEvents-Plan.md`). Apply it **before** the app version whose Calendar calls it. The app that is live today keeps working: it never calls the new name.
+
+**Production order:** it needs 0005, 0006, 0012, 0013, 0014, 0016, 0022, 0036 and 0041 (all live) and nothing else; it touches no other migration's function, so it may go before or after 0037–0044 (PGlite's step0045 applies the live ones first). Its guard checks every table and column the function reads (64 columns of 12 tables) and stops with "0045 needs migrations … first (missing: …)", changing nothing, if one is missing.
+
+**What it does** (`supabase/migrations/0045_calendar_items.sql`): adds **one** function, `public.calendar_items(p_from date, p_to date)`, and changes nothing else (no table, rule, other function, right or data). It is **read only**: declared `STABLE` (Postgres refuses any write inside it), no insert/update/other write in its code, no history row, no clean-up, no SQL built from text. It answers `{"status":"ok","items":[…]}` (one item per dated thing, sorted by date, then start with all-day first, then kind, then id; Massachusetts days), `{"status":"no_access"}` (not signed in, PIN-locked, no staff row — checked first) or `{"status":"invalid"}` (a missing or infinite date, an end before the start, or more than 63 days: `p_to - p_from > 62`). Every item has the same 13 keys (`kind`, `id`, `date`, `start`, `end`, `location_code`, `title`, `child`, `what`, `place`, `opens`, `ref_id`, `event_id`; null when one doesn't apply). The kinds: `colorbelt_event`, `colorbelt_private` (active only), `star_event`, `star_private` (a candidate with a private day, not withdrawn), `camp_day`, `bb_day`, `signup` (one per child) and `deadline` (`registration_closes`, `signup_opens`, `signup_closes`, `early_price_ends`, `applications_due`, `submissions_due`).
+- **Never returned:** dates of birth, ages, phone, email, address, form answers, notes, payments, last names, signatures, a child's full name, Finance. A child is only ever "Ava N." (first name + the first letter of the child's own last name; for a sign-up from before last names were asked, the first letter of the parent's last word; the first name alone when there is neither). The parent's name and the last names are read **inside** the function to make that one letter and never leave it.
+- Security definer, `search_path = ''`, fully qualified names, `has_data_access()` first (never `is_admin()`: staff and admins both may call it, like `prospects_list`); `EXECUTE` revoked from public, anon, authenticated and service_role, granted to `authenticated` only. **Nothing for anon.**
+- **The only new exposure:** the Calendar now shows, to staff, things that were each on another section's own screen already — but this one function lets any signed-in staff session list them for any dates: Star private tests and Color Belt private testings as "Ava N." (the Star and Color Belt screens show full names), and new sign-ups as "Ava N." with the form's name. No column that holds a date of birth, contact detail, answer, payment or note is selected.
+
+**Each step needs Jeffrey's OK.**
+
+### 0045a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0045_preapply_check.sql` must answer `calendar_versions = 0`, `calendar_is_0045 = false`, `needs_found = 64`. `needs_found` below 64 → an earlier migration (or a column of 0036 / 0041) is missing — stop and tell Claude.
+2. Claude runs `supabase/tests/0008_fingerprints.sql` (it lists every function whose name starts `calendar_`, so it will also list the new one) and keeps the result (the "before" record for 0045c and the undo).
+
+### 0045b. Apply 0045 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0045_calendar_items.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The file has none of the words the Supabase connection refuses, so it should not warn.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0045c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0045_fingerprints.sql` — the one line must match what `run.mjs` printed ("0045 fingerprints"): `calendar_items(p_from date, p_to date)` with `903a135a992584d3215447e1d2545495 lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0008_fingerprints.sql`: 0045a's record **plus exactly two lines** for `calendar_items(p_from date, p_to date)` — `function` (the same md5, `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`) and `function-kind` (`volatility=s returns=jsonb`). Nothing else in it changes, and every other fingerprint file is unchanged (`run.mjs` step0045 checks exactly that).
+3. `0045_preapply_check.sql` again: `1 / true / 64`.
+4. **Security advisor:** nothing new. (If it lists "security definer function executable by authenticated" for `calendar_items`, that is expected: the Calendar calls it, like the other staff readers.)
+
+### 0045d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0045_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0045 TESTS PASSED**. It first checks that March – mid April **2037** is empty, then seeds its own `zz test …` things dated in that window (Color Belt events and private testings, Star events and private tests, two camps, a Black Belt cycle with two days, two forms with three sign-ups) and checks who may call it (anon refused, the front desk allowed, a PIN-locked admin and no session → `no_access`), the range rules (incl. infinity), the whole answer (26 items, every key, the contract's order), what is left out (cancelled / withdrawn private tests, empty deadlines), the Massachusetts-day edges (11:30 pm sign-ups in summer and winter time), privacy (no last name, date of birth, email, phone or parent name in the answer's text), that it writes nothing (every table it reads and the history unchanged) and the function's rights and code (STABLE, no write, no dynamic SQL, schemas, `has_data_access()` first). It rolls everything back. Supabase may warn about destructive operations (the cancelled and withdrawn seeds are changed inside the rolled-back transaction) — confirm.
+2. For one line it switches the database's own triggers off (`session_replication_role`, to give three seeded sign-ups a time; inside the rolled-back test). If your SQL Editor role is not allowed to, the test stops at "TEST SETUP: could not set a sign-up's time" — tell Claude.
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0045e. Undo 0045 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version whose Calendar doesn't call `calendar_items` (with the function gone, the other sections' dates would show only "Couldn't load the other sections' dates.").
+2. Paste **the whole file** `supabase/manual/0045u_undo.sql` → **Run**. It removes the one function; Supabase warns about a destructive operation — that is the function, no data. Confirm.
+3. Claude checks `0008_fingerprints.sql` (must equal 0045a's record), `0045_fingerprints.sql` (no row) and `0045_preapply_check.sql` (`0 / false / 64`). To redo: paste 0045 again. Running the undo twice is safe.
+
+Tested in PGlite on every run (`run.mjs` step0045: the pre-apply check before, after and after the undo; only 0008's file gains two lines; 0045 writes nothing; 0045's tests and the Forms / Prospects tests (0007, 0009, 0012, 0036) before and after; re-run safety; the undo file exactly as named here, then the redo).
+
+**Why:**
+- **One reader, not one per section:** the Calendar makes one call per month or week; no section's own readers change, and the rules for what the Calendar may show are in one place.
+- **STABLE and no history:** a read must never write — not a clean-up, not a status row — so Postgres itself refuses it (unlike `prospects_list`, which tidies old rows).
+- **Initials made inside the database:** the last names never leave it, so the app can't show or log what it never receives.
+- **A 63-day cap:** the answer stays small whatever the app asks for.
+- **`"C"` collation on the sort:** PGlite and Supabase sort text differently; `kind` and `id` are compared byte by byte so the order is the same everywhere.
+
+---

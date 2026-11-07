@@ -9,6 +9,8 @@ import { randomUUID } from 'node:crypto';
 import { cleanNotes, datesProblem, eventTimesProblem, notesProblem, textProblem } from './rules.js';
 import { addMonths, buildDay, eventTimeOn, monthWeeks, recordMatches, versionInEffect, weekDates } from './days.js';
 import { createCalendarBackend } from '../mockCalendar.js';
+import { toItem } from './items.js';
+import * as T from '../../screens/calendar/text.js';
 import { KINDS, applyShow, hiddenKey, loadHidden, saveHidden, shownCount, toggleKind } from './showKinds.js';
 import { calendarFollowUps, childInitial, isDueToday, lastInitial, openFollowUpOn } from '../prospects/followUps.js';
 import { clearOpenProspect, requestOpenProspect, takeOpenProspect } from '../prospects/openRequest.js';
@@ -80,7 +82,7 @@ const school = {
   classNames: new Map([[W.white, 'White'], [W.a, 'Group A'], [W.b, 'Group B']]),
   colors: { [W.white]: 'gray', [W.a]: 'yellow' },
 };
-const ctx = (extra = {}) => ({ schools: [school], events: [], closures: [], closureClasses: new Map(), testingEvents: [], ...extra });
+const ctx = (extra = {}) => ({ schools: [school], events: [], closures: [], closureClasses: new Map(), items: [], ...extra });
 
 group('days: the schedule in effect on a date', () => {
   assert.equal(versionInEffect(school.versions, '2027-01-03').id, 'v-now');
@@ -289,7 +291,7 @@ group('Show menu: what each kind hides (v0.613 / v0.615)', () => {
   // nothing hidden: unchanged
   const all = applyShow(day, new Set());
   assert.equal(all.classCount, day.classCount);
-  assert.deepEqual(all.shows, { classes: true, closures: true, events: true, free: true, followUps: true });
+  assert.deepEqual(all.shows, Object.fromEntries(KINDS.map((k) => [k.key, true])));
   // Classes hidden: no classes, no counts, no "schedule starts"; the rest stays
   const noCls = applyShow(day, new Set(['classes']));
   assert.equal(noCls.classCount, 0);
@@ -318,7 +320,7 @@ group('Show menu: saved per person, hidden kinds only (v0.613)', () => {
   const store = new Map();
   const read = (k) => (store.has(k) ? store.get(k) : null);
   const write = (k, v) => store.set(k, v);
-  assert.deepEqual(KINDS.map((k) => k.key), ['classes', 'closures', 'events', 'free', 'followUps']);
+  assert.deepEqual(KINDS.map((k) => k.key), ['classes', 'closures', 'events', 'testing', 'blackBelt', 'camps', 'deadlines', 'free', 'followUps', 'signups']);
   assert.equal(loadHidden('u1', read).size, 0); // nothing saved → everything shown
   let h = toggleKind(new Set(), 'classes');
   h = toggleKind(h, 'nonsense'); // unknown kinds are ignored
@@ -327,7 +329,12 @@ group('Show menu: saved per person, hidden kinds only (v0.613)', () => {
   assert.equal(store.get(hiddenKey('u1')), '["classes"]');
   assert.deepEqual([...loadHidden('u1', read)], ['classes']);
   assert.equal(loadHidden('u2', read).size, 0); // another person on this device: their own choice
-  assert.deepEqual(shownCount(h), { shown: 4, total: 5 });
+  assert.deepEqual(shownCount(h), { shown: 9, total: 10 });
+  // a choice saved before the new kinds existed: only its old keys count, the new kinds start shown
+  store.set(hiddenKey('old'), '["classes","followUps"]');
+  const old = loadHidden('old', read);
+  assert.deepEqual([...old], ['classes', 'followUps']);
+  assert.ok(['testing', 'blackBelt', 'camps', 'deadlines', 'signups'].every((k) => !old.has(k)));
   assert.equal(shownCount(new Set()), null); // no badge while everything is shown
   assert.equal(toggleKind(h, 'classes').size, 0);
   store.set(hiddenKey('u3'), '{bad json');
@@ -335,6 +342,108 @@ group('Show menu: saved per person, hidden kinds only (v0.613)', () => {
   store.set(hiddenKey('u4'), '["events","gone-kind"]');
   assert.deepEqual([...loadHidden('u4', read)], ['events']);
   assert.equal(loadHidden('u5', () => { throw new Error('blocked'); }).size, 0); // storage blocked
+});
+
+// ----- Every other section's dates (v0.645, migration 0045) -----
+const I = (kind, id, extra = {}) => ({ kind, id, date: '2027-01-15', start: null, end: null, locationCode: 'worcester', title: 'T', child: null, what: null, place: null, opens: 'camp', refId: 'r', eventId: null, ...extra });
+const sampleItems = [
+  I('camp_day', 'camp:1', { start: 540, end: 900, locationCode: null, title: 'Fall camp' }),
+  I('colorbelt_event', 'cb1', { start: 750, end: 900, title: 'Fall testing', opens: 'colorbelt_event' }),
+  I('colorbelt_private', 'cp1', { start: 915, title: 'Private', child: 'Ava N.', opens: 'colorbelt_private' }),
+  I('star_event', 'se1', { locationCode: null, title: 'Star testing', opens: 'star_event' }),
+  I('star_private', 'sp1', { start: 900, title: 'Private', child: 'Leo N.', opens: 'star_private', eventId: 'se1' }),
+  I('bb_day', 'bb1', { start: 540, end: 720, title: 'Black Belt', what: 'Physical day', opens: 'bb_cycle' }),
+  I('deadline', 'x:early_price_ends', { what: 'early_price_ends', title: 'Fall camp', locationCode: null }),
+  I('signup', 'p1', { title: 'Free class', child: 'Liam P.', opens: 'prospect' }),
+  I('signup', 'p2', { title: 'Free class', child: 'Mia R.', opens: 'prospect' }),
+  I('signup', 'p3', { title: 'Free class', child: 'Zoe T.', locationCode: 'shrewsbury', opens: 'prospect' }),
+  I('camp_day', 'camp:2', { date: '2027-01-16', start: 540, end: 900 }),
+];
+
+group('days: other sections\' items (v0.645)', () => {
+  const day = buildDay('2027-01-15', ctx({ items: sampleItems }));
+  // all day first, then by time; deadlines and sign-ups kept apart
+  assert.deepEqual(day.items.map((i) => i.id), ['se1', 'bb1', 'camp:1', 'cb1', 'sp1', 'cp1']);
+  assert.deepEqual(day.deadlines.map((i) => i.id), ['x:early_price_ends']);
+  // Worcester shown: the Shrewsbury sign-up is left out, the two Worcester ones counted
+  assert.deepEqual(day.signups.map((i) => i.child), ['Liam P.', 'Mia R.']);
+  assert.equal(day.signupCount, 2);
+  assert.equal(buildDay('2027-01-17', ctx({ items: sampleItems })).items.length, 0); // other days
+  // an item with no school (camp, Star) shows on a Shrewsbury-only view too; a Worcester one doesn't
+  const shr = { ...school, code: 'shrewsbury', name: 'Shrewsbury' };
+  const shrDay = buildDay('2027-01-15', { ...ctx({ items: sampleItems }), schools: [shr] });
+  assert.deepEqual(shrDay.items.map((i) => i.id), ['se1', 'camp:1']);
+  assert.deepEqual(shrDay.signups.map((i) => i.child), ['Zoe T.']);
+  assert.equal(shrDay.deadlines.length, 1);
+  // Both: everything
+  const both = buildDay('2027-01-15', { ...ctx({ items: sampleItems }), schools: [school, shr] });
+  assert.equal(both.signupCount, 3);
+  assert.equal(both.items.length, 6);
+  assert.equal(buildDay('2027-01-15', ctx()).signupCount, 0); // none loaded → none
+});
+
+group('Show menu: the new kinds hide their items (v0.645)', () => {
+  const day = buildDay('2027-01-15', ctx({ items: sampleItems }));
+  const ids = (d) => d.items.map((i) => i.id);
+  assert.deepEqual(ids(applyShow(day, new Set())), ids(day));
+  assert.deepEqual(ids(applyShow(day, new Set(['testing']))), ['bb1', 'camp:1']); // Color belt + Star, events and private tests
+  assert.deepEqual(ids(applyShow(day, new Set(['blackBelt']))), ['se1', 'camp:1', 'cb1', 'sp1', 'cp1']);
+  assert.deepEqual(ids(applyShow(day, new Set(['camps']))), ['se1', 'bb1', 'cb1', 'sp1', 'cp1']);
+  assert.equal(applyShow(day, new Set(['deadlines'])).deadlines.length, 0);
+  const noSign = applyShow(day, new Set(['signups']));
+  assert.equal(noSign.signupCount, 0);
+  assert.equal(noSign.signups.length, 0);
+  assert.equal(noSign.items.length, 6); // hiding sign-ups hides nothing else
+  assert.equal(day.signupCount, 2); // the original day is never changed
+});
+
+group('words: the spoken day summary names the items and respects hiding (v0.645)', () => {
+  const day = buildDay('2027-01-15', ctx({ items: sampleItems }));
+  const said = T.dayLabel('2027-01-15', applyShow(day, new Set()), false);
+  for (const part of ['Fall camp', 'Private · Ava N.', 'Private Star · Leo N.', 'Black Belt · Physical day', 'Early price ends · Fall camp', '2 new sign-ups']) assert.ok(said.includes(part), part);
+  const quiet = T.dayLabel('2027-01-15', applyShow(day, new Set(['testing', 'blackBelt', 'camps', 'deadlines', 'signups'])), false);
+  for (const part of ['Fall camp', 'Private', 'Black Belt', 'sign-up']) assert.ok(!quiet.includes(part), part);
+  assert.equal(T.newSignups(1), '1 new sign-up');
+  assert.equal(T.openItem(sampleItems[0]), 'Open Fall camp in Camps');
+});
+group('mock calendar_items: the contract\'s shape and rules (CONTRACT-0045)', () => {
+  const store = { current: null };
+  const backend = createCalendarBackend({ loadStore: () => store.current, saveStore: (s) => { store.current = s; }, newId: randomUUID, getSchedule: () => ({ versions: [], slots: [] }), getClasses: () => [], today: () => '2026-11-06' });
+  const ctxOk = { signedIn: true, hasDataAccess: true, isAdmin: false, actorName: 'Staff' };
+  const call = (args, c = ctxOk) => backend.rpc('calendar_items', args, c);
+  const res = call({ p_from: '2026-11-01', p_to: '2026-11-30' });
+  assert.equal(res.data.status, 'ok'); // staff may read (no admin needed)
+  const keys = ['kind', 'id', 'date', 'start', 'end', 'location_code', 'title', 'child', 'what', 'place', 'opens', 'ref_id', 'event_id'];
+  for (const it of res.data.items) assert.deepEqual(Object.keys(it).sort(), [...keys].sort());
+  assert.ok(new Set(res.data.items.map((i) => i.id)).size === res.data.items.length); // ids unique in one answer
+  assert.ok(res.data.items.every((i) => i.date >= '2026-11-01' && i.date <= '2026-11-30'));
+  const sorted = [...res.data.items].sort((a, b) => (a.date + (a.start ?? '')) < (b.date + (b.start ?? '')) ? -1 : (a.date + (a.start ?? '')) > (b.date + (b.start ?? '')) ? 1 : 0);
+  assert.deepEqual(res.data.items.map((i) => i.date), sorted.map((i) => i.date));
+  assert.ok(res.data.items.every((i) => i.child === null || /^[A-Z][a-z]+( [A-Z]\.)?$/.test(i.child))); // "Ava N." only
+  assert.equal(call({ p_from: '2026-11-10', p_to: '2026-11-10' }).data.items.every((i) => i.date === '2026-11-10'), true);
+  assert.equal(call({ p_from: '2026-11-01', p_to: '2027-01-02' }).data.status, 'ok'); // 63 days
+  assert.equal(call({ p_from: '2026-11-01', p_to: '2027-01-03' }).data.status, 'invalid'); // 64 days
+  assert.equal(call({ p_from: '2026-11-05', p_to: '2026-11-01' }).data.status, 'invalid');
+  assert.equal(call({ p_from: '2026-11-01', p_to: '2026-11-30' }, { ...ctxOk, hasDataAccess: false }).data.status, 'no_access');
+  assert.ok(call({ p_from: '2026-11-01', p_to: '2026-11-30' }, { ...ctxOk, signedIn: false }).error); // signed out: refused
+  // an armed read failure hits only the read, once
+  backend.failNextItems();
+  assert.ok(call({ p_from: '2026-11-01', p_to: '2026-11-30' }).error);
+  assert.equal(call({ p_from: '2026-11-01', p_to: '2026-11-30' }).data.status, 'ok');
+  // reading writes nothing
+  assert.equal(store.current, null);
+});
+
+group('api: the database answer becomes camelCase items (v0.645)', () => {
+  const row = { kind: 'star_private', id: 'c1', date: '2026-11-06', start: '15:00', end: null, location_code: null, title: 'Private', child: 'Leo N.', what: null, place: null, opens: 'star_private', ref_id: 'c1', event_id: 'e1' };
+  assert.deepEqual(toItem(row), { kind: 'star_private', id: 'c1', date: '2026-11-06', start: 900, end: null, locationCode: null, title: 'Private', child: 'Leo N.', what: null, place: null, opens: 'star_private', refId: 'c1', eventId: 'e1' });
+  assert.equal(toItem({ ...row, start: null }).end, null);
+  assert.equal(toItem({ ...row, kind: 'something_new' }), null); // a kind from a later version: left out, never breaks
+  assert.equal(toItem({ ...row, start: 'nonsense' }), null);
+  assert.equal(toItem({ ...row, ref_id: null }), null);
+  // the app never builds a child's name: "Ava N." arrives made and is shown as it is
+  assert.equal(toItem({ ...row, child: 'Ava N.' }).child, 'Ava N.');
+  assert.equal(Object.keys(toItem(row)).some((k) => /dob|birth|last|phone|email/i.test(k)), false);
 });
 
 group('Calendar → Prospects hand-over: once, fresh, cleared at sign-out (v0.615)', () => {

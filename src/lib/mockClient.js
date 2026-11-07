@@ -54,6 +54,7 @@
 //   __tkdPreview.resetSchedule()                   back to the sample week
 // Calendar helpers (mockCalendar.js; setRole and setTestingDelay apply too):
 //   __tkdPreview.failNextCalendarSave()            the next Calendar save fails like a dropped connection
+//   __tkdPreview.failNextCalendarItems()           the next read of other sections' dates fails (gray line in the day panel)
 //   __tkdPreview.simulateOtherAdminEditCalendar()  "another admin" changes every event, closure and type
 //   __tkdPreview.clearCalendar()                   no events or closures (types stay)
 //   __tkdPreview.resetCalendar()                   back to the sample events and closures
@@ -1142,6 +1143,10 @@ export function createMockClient() {
     failNextCalendarSave() {
       calendar.failNextSave();
       return 'The next Calendar save will fail like a dropped connection and change nothing.';
+    },
+    failNextCalendarItems() {
+      calendar.failNextItems();
+      return "The next read of the other sections' dates will fail; the rest of the Calendar still shows.";
     },
     simulateOtherAdminEditCalendar() {
       calendar.simulateOtherAdminEdit();

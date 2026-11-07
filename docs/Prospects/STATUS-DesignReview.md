@@ -59,7 +59,7 @@ Fix list `docs/Design Review/Rolling check/Pass 1/Fix-NewStudents.md`, received 
 <br>- **Fill in's Sent screen** (also "+ Add prospect"): the Sent box and the steps are now two dialogs with their own keys (`FillInDialog.jsx`, Black Belt's pattern), so focus lands on Close; "Fill in another" lands on the first field.
 <br>- **Edit statuses and Event types:** back on the list, focus goes to the row you came from, "+ Add …" after Add, or the saved row after Save (`StatusesDialog.jsx`, `Prospects.jsx`, `EventTypesDialog.jsx`, `Calendar.jsx`).
 <br>- **Found on the way:** closing Edit statuses left focus on the page; it now goes back to the page's ⋯, as Event types does (`Prospects.jsx`).
-<br>- **Checked in the preview** (animation frames swapped for timers, since the pane was hidden): 1280, 820, 390 (Fill in, including the history entry on a phone) and 320. Both builds, the 6 check scripts and 174 function tests pass. **Code review: no must-fix.** Its one should-fix is applied: after deleting an event type, focus no longer goes to an old row (`from: null`, as Prospects already did). It confirmed the dialog history on phones is safe. **Waits on Jeffrey trying it, then his OK to commit** |
+<br>- **Checked in the preview** (animation frames swapped for timers, since the pane was hidden): 1280, 820, 390 (Fill in, including the history entry on a phone) and 320. Both builds, the 6 check scripts and 174 function tests pass. **Code review: no must-fix.** Its one should-fix is applied: after deleting an event type, focus no longer goes to an old row (`from: null`, as Prospects already did). It confirmed the dialog history on phones is safe. **Committed 8f4a04b** (2026-11-06, Jeffrey: "Yes, commit"). **Live 2026-11-06:** main 596c297, pushed (Jeffrey in Main: "merge and push"); merged back here (fast-forward). |
 | 2 | R2-01 Retry when a save or Undo fails (High) | Planned: mockup first |
 | 3 | R2-09 (✓ and full stops), R2-07 "Undone. The form is open again.", R2-08 Duplicate's Undo, "More actions for …", Forms' empty line | Planned: picture first; questions 1–2 |
 | 4 | R3-03 "Showing … only · Show all", R3-09 "Find a prospect" | Planned: mockup first |
@@ -103,7 +103,7 @@ Fix list `docs/Design Review/Rolling check/Pass 2/Fix-NewStudents.md`, relayed b
 <br>&nbsp;&nbsp;- Focus stays on the pressed button; nothing overflows.
 <br>&nbsp;&nbsp;- **Found on the way (older; for step B):** "Saving…" is wider than Save / Book, so Cancel slides left while saving. After a successful Delete prospect or Came, focus falls to the page.
 <br>- **Design re-check** (option A and the two fixes): no must-fix.
-<br>- Both builds, the 6 check scripts and 174 function tests pass. **Waits on Jeffrey's OK to commit.** |
+<br>- Both builds, the 6 check scripts and 174 function tests pass. **Committed 9ad2c35** (2026-11-06, Jeffrey: "Yes, commit"). **Live 2026-11-06:** main 596c297, pushed (Jeffrey in Main: "merge and push"); merged back here (fast-forward). |
 | B | M-05, P-05 (approved v1.055), P-03, U-02 + U-07, U-03, U-05, L-09 | Planned: pictures and words first |
 | with pass 1 | X-1 and U-04 go with step 2 (R2-01); L-10 goes with step 5 | Planned |
 | later | L-06, U-06, L-03 | Wait for Dashboard core's items on main |

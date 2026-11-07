@@ -64,7 +64,9 @@ export function dayLabel(date, info, isToday) {
   for (const c of info.closures) bits.push(closedChip(c.closure));
   for (const s of info.scheduleStarts) bits.push(scheduleStartsChip(s.name));
   for (const e of info.events) bits.push(e.event.title);
-  for (const t of info.testing) bits.push(t.title);
+  for (const i of info.items ?? []) bits.push(itemText(i));
+  for (const d of info.deadlines ?? []) bits.push(itemText(d));
+  if (info.signupCount) bits.push(newSignups(info.signupCount));
   if (info.classCount) {
     if (info.cancelledCount === info.classCount) bits.push(`${classCount(info.classCount)}, all cancelled`);
     else if (info.cancelledCount > 0) bits.push(`${info.cancelledCount} of ${classCount(info.classCount)} cancelled`);
@@ -131,7 +133,50 @@ export const orphanLine = (record) => `Cancelled class no longer on the schedule
 export const CANCELLED = 'cancelled';
 export const editThing = (what) => `Edit ${what}`;
 export const viewThing = (what) => `View ${what}`;
-export const TESTING_FROM = 'From Testing. Open Testing to change it.';
+
+// ----- Every other section's dates (v0.645): read-only, a click opens the item in its own section -----
+// The database already made the child's name "Ava N." (first name + initial); these words only
+// arrange it. A private test reads "Private · Ava N." (Star: "Private Star · Leo N.").
+export const DEADLINE_WHAT = {
+  registration_closes: 'Registration closes',
+  signup_opens: 'Sign-up opens',
+  signup_closes: 'Sign-up closes',
+  early_price_ends: 'Early price ends',
+  applications_due: 'Applications due',
+  submissions_due: 'Submissions due',
+};
+export function itemText(item) {
+  switch (item.kind) {
+    case 'colorbelt_private':
+      return item.child ? `Private · ${item.child}` : 'Private';
+    case 'star_private':
+      return item.child ? `Private Star · ${item.child}` : 'Private Star';
+    case 'bb_day':
+      return item.what ? `${item.title} · ${item.what}` : item.title;
+    case 'deadline':
+      return `${DEADLINE_WHAT[item.what] ?? 'Deadline'} · ${item.title}`;
+    case 'signup':
+      return item.child ? `${item.child} · ${item.title}` : item.title;
+    default:
+      return item.title;
+  }
+}
+export const SECTION_OF = {
+  colorbelt_event: 'Color belt testing',
+  colorbelt_private: 'Color belt testing',
+  star_event: 'Star testing',
+  star_private: 'Star testing',
+  camp: 'Camps',
+  bb_cycle: 'Black Belt testing',
+  prospect: 'Prospects',
+};
+export const openItem = (item) => `Open ${itemText(item)} in ${SECTION_OF[item.opens] ?? 'its section'}`;
+export const newSignups = (n) => (n === 1 ? '1 new sign-up' : `${n} new sign-ups`);
+export const NEW_SIGNUPS = 'New sign-ups';
+export const newSignupsOf = (school) => `New sign-ups · ${school}`;
+export const DEADLINES = 'Deadlines';
+export const OTHER_SECTIONS_FAILED = "Couldn't load the other sections' dates.";
+export const itemTime = (item) => (item.start === null ? ALL_DAY : formatTime(item.start, true));
 
 // ----- Week view -----
 export const ALL_DAY_ROW = 'All day';
