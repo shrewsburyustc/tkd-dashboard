@@ -64,6 +64,7 @@ import {
 } from './resultEmail.js';
 // BB8: the History line's grouping and words (pure; they import only the staff words and grading.js)
 import { groupHistory, describeEntry } from '../../blackBelt/staff/candidates/historyWords.js';
+import { editValuesToSave } from '../../blackBelt/staff/candidates/checks.js';
 
 let count = 0;
 function check(label, fn) {
@@ -4109,11 +4110,25 @@ check('BB8 words: grades, counts, batches, money, the candidate row (synthetic r
   const retUndo = r('bb_payments', 'insert', null, { id: 'p6', kind: 'reversal', amount_cents: 87000, method: 'check', paid_on: '2027-03-28', reverses_payment_id: 'p5' });
   assert.deepEqual(words([pay, ret, retUndo]).slice(0, 2), ['Returned check undone: $870', 'Check returned: $870']);
   assert.equal(one(r('bb_payments', 'insert', null, { kind: 'payment', amount_cents: 29050, method: 'cash', paid_on: '2027-03-20' })), 'Payment recorded: $290.50 cash, paid Mar 20');
-  // hidden: every money row is left out (counted for the gray line); plan and Kukkiwon lines stay
-  const hiddenCtx = { rubric, hidden: true, plans: [{ id: 'pl1', name: 'In full' }, { id: 'pl3', name: '3 payments' }] };
+  // hidden: every money row is left out (counted for the gray line), and so are the plan and
+  // Kukkiwon lines (PROPOSAL, step 1 mockup: v0.972 kept them; v1.036 hides the plan)
+  const plansCtx = { rubric, plans: [{ id: 'pl1', name: 'In full' }, { id: 'pl3', name: '3 payments' }] };
+  const hiddenCtx = { ...plansCtx, hidden: true };
+  const described = (row, ctx) => groupHistory([row]).map((e) => describeEntry(e, ctx))[0];
   assert.deepEqual(groupHistory([...edit].reverse()).map((e) => describeEntry(e, hiddenCtx)), [{ hiddenPayment: true }]);
-  assert.equal(one(r('bb_candidates', 'update', { cycle_plan_id: 'pl1' }, { cycle_plan_id: 'pl3' }), hiddenCtx), 'Plan: In full → 3 payments');
-  assert.equal(one(r('bb_candidates', 'update', { kukkiwon: false, kukkiwon_added_on: null }, { kukkiwon: true, kukkiwon_added_on: '2027-03-01' }), hiddenCtx), 'Kukkiwon certificate added');
+  const planRow = r('bb_candidates', 'update', { cycle_plan_id: 'pl1', version: 2 }, { cycle_plan_id: 'pl3', version: 3 });
+  const kukRow = r('bb_candidates', 'update', { kukkiwon: false, kukkiwon_added_on: null }, { kukkiwon: true, kukkiwon_added_on: '2027-03-01' });
+  assert.deepEqual(described(planRow, hiddenCtx), { hiddenPayment: true });
+  assert.deepEqual(described(kukRow, hiddenCtx), { hiddenPayment: true });
+  // switch off: the plan and Kukkiwon lines come back exactly as before
+  assert.equal(one(planRow, plansCtx), 'Plan: In full → 3 payments');
+  assert.equal(one(kukRow, plansCtx), 'Kukkiwon certificate added');
+  // one change that also changed something else keeps its other words, without the plan
+  const mixed = r('bb_candidates', 'update', { first_name: 'Mia', cycle_plan_id: 'pl1' }, { first_name: 'Mya', cycle_plan_id: 'pl3' });
+  assert.equal(one(mixed, hiddenCtx), 'First name: Mia → Mya');
+  assert.equal(one(mixed, plansCtx), 'First name: Mia → Mya; Plan: In full → 3 payments');
+  // other candidate lines still show while hidden
+  assert.equal(one(r('bb_candidates', 'update', { dan: 1 }, { dan: 2 }), hiddenCtx), 'Dan: 1st → 2nd Dan');
 
   // the candidate row: registered, edits joined with "; ", DOB and email only "changed", the purge, states
   const form = one(r('bb_candidates', 'insert', null, { source: 'form' }, { actorName: 'Family form' }), { rubric });
@@ -4142,6 +4157,42 @@ check('BB8 words: grades, counts, batches, money, the candidate row (synthetic r
   // rows of other shapes never break the list
   assert.deepEqual(groupHistory(null), []);
   assert.deepEqual(historyTexts([null, { tableName: 'bb_other', op: 'insert' }], {}), []);
+});
+
+// R4-04 (v1.037): Edit details while private details are hidden saves the STORED date of birth and
+// email (they can't be seen or changed), and staff's stored Dan; switch off: exactly as typed.
+check('R4-04 Edit details while hidden: what Save sends', () => {
+  const initial = { first: 'Mia', last: 'Chen', dob: '2012-03-04', email: 'mia@example.com', school: 'worcester', dan: 1 };
+  const typed = { first: 'Mya', last: 'Chen', dob: '2012-03-05', email: 'new@example.com', school: 'shrewsbury', dan: 2 };
+  // off: as typed (the same object — nothing changes when the switch is off)
+  assert.equal(editValuesToSave(typed, initial, { hidden: false, isAdmin: false }), typed);
+  assert.equal(editValuesToSave(typed, initial), typed);
+  // on, admin: the stored date of birth and email; the name, school and Dan as typed
+  assert.deepEqual(editValuesToSave(typed, initial, { hidden: true, isAdmin: true }), { ...typed, dob: initial.dob, email: initial.email });
+  // on, staff: also the stored Dan (grayed on every row)
+  assert.deepEqual(editValuesToSave(typed, initial, { hidden: true, isAdmin: false }), { ...typed, dob: initial.dob, email: initial.email, dan: 1 });
+  // nothing typed = the stored values
+  assert.deepEqual(editValuesToSave(initial, initial, { hidden: true }), initial);
+  // a REAL name-only change while hidden is still a change: the name is kept, dob and email stay stored
+  const nameOnly = editValuesToSave({ ...initial, first: 'Mya' }, initial, { hidden: true });
+  assert.equal(nameOnly.first, 'Mya');
+  assert.equal(nameOnly.dob, initial.dob);
+  assert.equal(nameOnly.email, initial.email);
+  assert.notDeepEqual(nameOnly, initial);
+  // a purged candidate (nothing stored for date of birth and email): stays as stored, never typed text
+  for (const blank of [null, '']) {
+    const purged = { ...initial, dob: blank, email: blank };
+    const sent = editValuesToSave({ ...purged, dob: '2012-03-05', email: 'x@example.com' }, purged, { hidden: true, isAdmin: true });
+    assert.equal(sent.dob, blank);
+    assert.equal(sent.email, blank);
+  }
+  // staff (not admin) gets the stored Dan back; an admin keeps the typed Dan
+  assert.equal(editValuesToSave({ ...initial, dan: 2 }, initial, { hidden: true, isAdmin: false }).dan, 1);
+  assert.equal(editValuesToSave({ ...initial, dan: 2 }, initial, { hidden: true, isAdmin: true }).dan, 2);
+  // cancelEdit's idea: for staff who changed only the Dan (and typed dob/email) while hidden, what
+  // Save WOULD send equals the stored values, so Cancel/Esc has no "unsaved changes" to warn about
+  const staffTyped = { ...initial, dan: 2, dob: '2012-03-05', email: 'new@example.com' };
+  assert.deepEqual(editValuesToSave(staffTyped, initial, { hidden: true, isAdmin: false }), initial);
 });
 
 check('BB8 words: the preview store end to end — grade changes name the subject, a Dan change and Add make-up are one line', () => {

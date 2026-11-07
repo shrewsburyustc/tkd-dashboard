@@ -7,6 +7,28 @@
 
 ---
 
+## 0. Design review: where things stand (updated 2026-11-06)
+
+**Sections 1–5 below are the 2026-10 design history; this section is current.** Black Belt is built and live (migrations 0016, 0024, 0025, 0026, 0032, 0034 applied). Plan for the design review's Part 2 and the rolling check's fixes: `TKD-BlackBelt-DesignReview-Plan.md` §5. Fix lists: `docs/Design Review/Rolling check/Pass 1/Fix-BlackBelt.md` and `Pass 2/Fix-BlackBelt.md`. Rulebook rows used so far: up to **v0.977** (next free **0.978**).
+
+### Done and live (main)
+BB13 time list (v0.972) · BB8 History (v0.971–v0.973, migration 0034) · "on this tablet" words (v0.974) · BB20 (v0.975).
+
+### Rolling check, pass 1
+- **Step 1 — privacy at the mat (R1-04, R4-01, R4-03 gray, R4-04): built in the preview, reviewed, committed on `black-belt` (not on main yet).** Pictures J, K, L, N in `images/step1/`; Jeffrey's answers in v0.976 and v0.977. Reviews: security (privacy), code and design at four sizes; their confirmed findings are fixed (dialogs open when the switch turns on now close; typed birthday/email goes back to the stored values; Cancel compares what Save would send; screen-reader labels on the locked Dan and the hidden boxes). Not browser-tested after the last fixes: the dialog-closing paths (a quick look in the preview before merging is worth it).
+- **Open question for Jeffrey:** the Parent-signature box and the "Possible duplicate" tag still show while private details are hidden (they imply an age / a matching birthday). Not decided.
+- R4-15's four "(See …)" notes: done (with v0.976).
+- **Next (plan §5):** Step 1b (the decided small fixes + M12's fold-in of Results' offline bar), Step 2 (R1-01 migration: payments count at the desk's school; S-1's order is a question), Step 3 (Part 2: shared parts), Step 4 (items waiting on Dashboard core / Star).
+
+### Rolling check, pass 2
+Planned (plan §5, Step 1b and Step 3): L-01, M-04, C-04, v0.638 ("Date signed" on the family form — no migration needed: every waiver row already stores `signed_at`), M-03, C-05, L-06 (after Dashboard core's L-06).
+
+### Checks recorded
+- Chooser check (Testing → Black Belt → Testing → Color belt testing opens Color Belt): passed in the checker's preview.
+- BB3's Finance check (Daily report after Edit payment and its Undo): **not tried yet.**
+- PGlite speed limits missed by 10–25% on Color Belt's busy-PC run (0024 `bb_rubric_is_valid`, 200 `bb_set_registration`, 0025 `bb_cycle_results`): likely load; watch for a repeat on a quiet run.
+
+
 ## 1. Where things stand
 
 **Design stage.** Jeffrey asked (2026-10-18) for Black Belt testing to be the last testing section, focusing on registration, grading and recording payments, built alongside Finance's Daily report.

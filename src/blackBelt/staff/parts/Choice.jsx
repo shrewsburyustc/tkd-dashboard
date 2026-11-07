@@ -12,9 +12,11 @@
 //   onChange   (key) => void
 //   readOnly   true while saving
 //   className  extra class for the group (e.g. 'bb-side' for the gray Upcoming / Past look)
+//   ariaDisabled  true → the group is announced as disabled (a locked choice, e.g. the Dan while
+//              private details are hidden); describedBy  id of a hint a screen reader reads with it
 import { useRef } from 'react';
 
-export default function Choice({ labelId, options, value, onChange, readOnly = false, className = '' }) {
+export default function Choice({ labelId, options, value, onChange, readOnly = false, className = '', ariaDisabled = false, describedBy }) {
   const buttonsRef = useRef([]);
   const current = options.findIndex((option) => option.key === value);
   const tabStop = current === -1 ? 0 : current;
@@ -38,7 +40,7 @@ export default function Choice({ labelId, options, value, onChange, readOnly = f
   }
 
   return (
-    <div className={`segmented bb-segmented ${className}`.trim()} role="radiogroup" aria-labelledby={labelId} onKeyDown={handleKeyDown}>
+    <div className={`segmented bb-segmented ${className}`.trim()} role="radiogroup" aria-labelledby={labelId} aria-disabled={ariaDisabled ? 'true' : undefined} aria-describedby={describedBy} onKeyDown={handleKeyDown}>
       {options.map((option, index) => {
         const checked = index === current;
         return (

@@ -81,11 +81,45 @@ Each step: build in preview mode, design reviewer (rulebook + the OK'd mockups, 
 **Screens:** J. Roster and both ⋯ with the switch on · K. Edit details with the switch on · L. Add candidate menu with the switch on.
 **Questions in them:** the desk lines' words (recommended: "Delete candidates at the desk." / "Change the plan at the desk."); the History's plan and Kukkiwon lines while hidden (v0.972 keeps them; recommended: hidden too).
 
+### Step 1b — The decided small fixes (screen only, no database; added 2026-11-05 after the fix list's v1.043–v1.051 update)
+
+Jeffrey answered every pass 1 question on 2026-11-04, so these are ready to build. All are Black Belt's own files.
+
+| Id | What changes | Picture? |
+|---|---|---|
+| R3-01 (v1.044) | Past-due "Not paid" tag amber (Late's look), not red; the red tag kind and `.bb-tag--red` go if unused. | Small picture |
+| R3-09 (v1.050) | Search box "Find a candidate"; the no-match line ends "· Clear search"; the box's ✕ becomes the shared `IconButton` (tooltip). | Mockup |
+| R3-02 (v1.046) | A "Possible duplicate" row offers no Record payment (PC row button, ⋯, detail) until the pair is resolved. | In the mockup |
+| R2-03 (v1.043) | Restoring a Duplicate copy: toast "[Name] restored" with no Undo (as Star). | No (words exist) |
+| Edit details (v1.047 (21)) | After Edit details saves, the detail closes to the roster, focus on the row; toast with Undo stays. | No |
+| R2-07 Results (v1.051 (1)) | Undo of Mark as sent says "Undone"; an Undo that reopens registration says "Undone. Registration is open again." | No (words decided) |
+| R4-13 (v1.045 (5)) | Staff: "… Ask an admin to open it." | No |
+| R4-14 | One sentence for a refused Undo (`T.candidateStale`). | No |
+| ⋯ names (v1.045 (6)) | Rubric ⋯ "More for …" → "More actions for …". | No |
+| R4-06 (v1.048) | 20 screen weights 600 → 500 (printed grading sheet keeps 600). | No |
+| R3-07 | Make-up icon → `ti-repeat`. | No |
+
+| M12 (v1.123, added 2026-11-05) | Results' own amber "You're offline" bar (`results/ResultsTab.jsx:728–734`, `.bbres-offline`) goes: Dashboard core's one offline bar (on main 201b75f) shows on every page instead. The grayed Email result, Mark as sent, Print results and Download CSV then say why with a gray line next to them (v1.004). Grading's grade-by-grade line stays. | Mockup (the gray line's words are new) |
+
+**Rolling check pass 2** (`docs/Design Review/Rolling check/Pass 2/Fix-BlackBelt.md`, added 2026-11-06; Jeffrey's answers v1.052, v1.053, v1.055):
+
+| Id | What changes | Picture? |
+|---|---|---|
+| L-01 | Delete our own half-strength rule on the grayed Delete day button (`blackBelt.css` `.bb-day-acts .tib[aria-disabled='true']`); the shared v1.120 gray, dark tooltip and blue ring take over. | No |
+| M-04 (v1.055 (c)) | View signature shows to admins while private details are hidden, as Star's (`CandidateDialog.jsx`, drop `!hidden`). | No |
+| C-04 (v1.055 (f)) | A withdrawn row's ⋯: Restore, a line, then the red Delete permanently. | No |
+| v0.638 (L-08) | The family form shows "Date signed" under the signature: the day the form is sent, gray, can't be changed — New students' box (`src/screens/forms/FormFields.jsx`, `.fsigned`). Wherever staff see the signature, its date signed shows with it. **No migration:** every waiver row already stores `signed_at` (`0016_black_belt.sql`, not null). The words move from `src/screens/forms/text.js` to `src/components/text.js` (a shared file): Jeffrey decides who moves them. | Mockup (four sizes) |
+
+With Step 3 (BB2 / BB15): M-03 (v1.055 (b): Print receipt on any row with a payment or refund that still stands, withdrawn included; never with nothing paid; never while hidden); C-05 (b) (v1.055 (g): each count card's empty line says what is true, drawn in the BB15 mockup); C-05 (a) (no cards on an empty roster, as Star's `hasAny`). After Dashboard core's L-06: our `parts/Grip.jsx` → the shared `Grip`.
+
+R3-05, R4-11 + S-2's Retry, R3-10 and the empty-roster line stay with Step 3 (they go with BB15's shared cards / Dashboard core's S-2).
+
 ### Step 2 — Payments count at the desk's school (R1-01, High; database)
 
 - One migration (number from Main): `bb_record_payment` and `bb_record_refund` take This device's school (blank = today's rule, so the live app keeps working); undo / edit / returned keep copying from the payment they correct (v0.903). Tests, fingerprints, SETUP "Migration 00NN", `step00NN`, security review; Jeffrey applies it before the app that uses it is pushed.
 - The app passes This device's school: `src/App.jsx` and `src/screens/Testing.jsx` (shared files) plus the preview store.
 - **No screen changes, so no mockup.** Check: a Worcester candidate's payment taken on a Shrewsbury device shows in Shrewsbury's Daily report.
+- **S-1 (v1.047 (19), Worcester before Shrewsbury on Both)** — a question for Jeffrey: sort on the screens, or put the new order in this same migration (replacing the roster, grading, results, make-up and CSV readers from 0025). Ask with a picture when Step 2 starts.
 
 ### Step 3 — Part 2: switch to the shared parts (BB15 with BB1, BB2, BB7, BB10, BB14, BB19)
 
@@ -105,7 +139,12 @@ Each step: build in preview mode, design reviewer (rulebook + the OK'd mockups, 
 
 ### Step 4 — after another session's fix lands
 
-R2-05 (Undo pressed during another save, after Dashboard core), R3-13 ("Past days can't be chosen.", after Dashboard core), R4-07's gray line in every hidden History (after Dashboard core), R4-08 (Email result's grayed look for screen readers, after Star). The "Waits on Jeffrey" items (R3-01, R2-03, R2-04, R1-06, R1-07, R2-07, R3-02, R3-06, R3-09, R3-10, R4-02, R4-06, R4-13 and two more) are asked by the Design Review session; answers reach Black Belt through Main.
+Each waits until Dashboard core's (or Star's) item is on main; Main says when.
+
+- After Dashboard core: R2-05 (an Undo pressed during another save is queued), R2-04 (remove our own toast rule), R3-13 ("Past days can't be chosen."), R1-06 (Undo payment words from the shared file), R1-07 (payment toast words "[Name] marked paid · $X [way]"), R2-07 (older refusal words from the shared file), R3-06 (the shared back link), S-2 ("… Check the connection, then retry." + Retry in five places, built with R4-11).
+- After Star: R4-08 (Email result's grayed look for screen readers).
+- **Done, check only:** R4-07 — the gray "Payment history is hidden" line shows in every hidden History (Dashboard core's v1.122, on main 7511656). Then fix the stale comment in `historyWords.js` (lines 33–34).
+- **Decided, nothing to build:** R4-02 (v1.049 (a)), S-9 (v1.047 (17)), the cards while hidden (v1.046 (9), comes with BB15), S-10 (the shared Select in the result-text box, next time that screen is touched).
 
 **Docs at the next rulebook edit:** R4-15's four "(See …)" notes. **Status-file checks:** the chooser check (passed in the checker's preview), BB3's Finance check after Edit payment + Undo (to run).
 
