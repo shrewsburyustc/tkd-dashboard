@@ -27,7 +27,7 @@ import {
   todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
-  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
@@ -2546,6 +2546,19 @@ check('eventRules: rosterCounts / inCardFilter — possible duplicates out of Pa
   assert.equal(shown(null), 'abcde'); // no card pressed: everyone, possible duplicates included
   assert.equal(shown('paid'), 'a');
   assert.equal(shown('notPaid'), 'be');
+});
+
+check('eventRules: dateSignedOf — the summary\'s "Date signed" row, only with a signature on file (rule v0.638, v0.430)', () => {
+  const form = { source: 'form', signedAt: '2026-10-29T21:45:00Z', signatureDeletedAt: null };
+  assert.equal(dateSignedOf(form), '2026-10-29T21:45:00Z');
+  assert.equal(dateSignedOf({ ...form, source: 'staff' }), null); // added at the desk: no signature, no row
+  assert.equal(dateSignedOf({ ...form, signatureDeletedAt: '2027-02-18T05:00:00Z' }), null); // deleted: that line already says the day
+  assert.equal(dateSignedOf({ ...form, signedAt: null }), null);
+  assert.equal(dateSignedOf(null), null);
+  assert.equal(dateSignedOf(undefined), null);
+  // The day is the school's: 10:45 PM on Oct 29 in Massachusetts is 02:45 UTC on Oct 30, and still reads Oct 29
+  assert.equal(CBT.stampDay('2026-10-30T02:45:00Z'), 'Oct 29');
+  assert.equal(CBT.stampDay('2026-10-29T21:45:00Z'), 'Oct 29');
 });
 
 check('words: the gray line while possible duplicates are left out of Paid / Not paid (pass 1 R3-02)', () => {

@@ -248,6 +248,16 @@ export function canPrintReceipt(row, hidden = false) {
   return hidden !== true && row?.paid === true && !row?.movedTo;
 }
 
+// The student summary's "Date signed" row (rule v0.638, v0.430): the moment the family form saved the
+// signature (signed_at), for a student who registered on the family form with the signature still on
+// file. A student added at the desk has no signature (no row); one whose signature was deleted 90 days
+// after testing keeps "Signed on the form, Oct 29 (the signature is deleted …)", which already says
+// the day. → the timestamp, or null for no row.
+export function dateSignedOf(row) {
+  if (!row || row.source !== 'form' || row.signatureDeletedAt || !row.signedAt) return null;
+  return row.signedAt;
+}
+
 // The event roster's count cards (CB9) and their filters. A row marked "Possible duplicate" stays out
 // of Paid and Not paid until the pair is resolved (pass 1 R3-02, rulebook v1.046 (8), as Black Belt's
 // rosterFilter); Students counts every active row. active: the event's active rows.
