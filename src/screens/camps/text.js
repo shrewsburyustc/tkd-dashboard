@@ -585,6 +585,10 @@ export const legendExtraMeaning = (shortName) => ` ${shortName.toLowerCase()}`;
 // rulebook v0.735), whose own words ("Paid by", "Mark paid $166", "They chose Cash on the form.")
 // are in components/text.js.
 export const tagOwes = (cents) => `Owes ${formatMoney(cents)}`;
+// The roster's Paid tag once a camper paid too much or got a refund (rulebook v0.745, Star's words,
+// screens/testing/star/candidates/text.js): "Paid $315", and in amber after it "$23 overpaid".
+export const paidAmount = (cents) => `Paid ${formatMoney(cents)}`;
+export const overpaidText = (cents) => `${formatMoney(cents)} overpaid`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
@@ -627,8 +631,9 @@ export const UNDO_PAYMENT_FAILED = "Couldn't undo. Check the connection, then tr
 
 // ----- Record refund (rulebook v0.743, picture 22; carries out v1.039 / v1.040 for Camps) -----
 // Star testing's words and box (Star's v0.166, v0.172, v0.508 (1): screens/testing/star/candidates/
-// text.js and lib/star/candidatesText.js), Camps' own copies — "registered" becomes "signed up", and
-// the row afterwards reads "Paid" (an overpaid camper's row already does; it stays "Paid").
+// text.js and lib/star/candidatesText.js), Camps' own copies — "registered" becomes "signed up". Since
+// v0.745 the roster's tag names the amount once a camper is overpaid or refunded, as Star's ("Paid $315
+// ⚠ $23 overpaid", then "Paid $292"), so the box says the row afterwards reads "Paid $292".
 export const RECORD_REFUND = 'Record refund'; // the ⋯ item / More button (ti-receipt-refund), admins, while overpaid
 export const RECORD_REFUND_TITLE = 'Record refund';
 export const UNDO_REFUND = 'Undo refund'; // the ⋯ item in Record refund's place while a refund stands, and the box's button
@@ -645,11 +650,16 @@ export const refundSub = (name, paidCents, overpaidCents) => `${name} · paid ${
 export const refundUpTo = (cents) => `Up to ${formatMoney(cents)}, the amount overpaid.`;
 // The gray line under the calendar's days: "Not before Mar 4 (signed up) or after today."
 export const refundDateHint = (signedUpIso) => `Not before ${monthDay(signedUpIso)} (signed up) or after today.`;
-// The note above the buttons. cents = the payments that stand, added up; count = how many there are.
+// The note above the buttons. cents = the payments that stand, added up; count = how many there are;
+// afterCents = what the camper has paid once everything overpaid is handed back — the roster's tag
+// then reads "Paid $292" (rulebook v0.745, Star's words; v0.743 said “Paid”).
 // One payment: the approved words. (not in the mockups) More than one: "The 2 payments ($315) stay …".
-export const refundAfter = (cents, count = 1) => (count > 1
-  ? `The ${count} payments (${formatMoney(cents)}) stay in the history. Afterwards the row reads “Paid”.`
-  : `The ${formatMoney(cents)} payment stays in the history. Afterwards the row reads “Paid”.`);
+export const refundAfter = (cents, count, afterCents) => {
+  const reads = `Afterwards the row reads “${paidAmount(afterCents)}”.`;
+  return count > 1
+    ? `The ${count} payments (${formatMoney(cents)}) stay in the history. ${reads}`
+    : `The ${formatMoney(cents)} payment stays in the history. ${reads}`;
+};
 // Too much, under Amount (the Save button grays) — and the database's refund_too_large while something is
 // still overpaid; when nothing is overpaid any more, the note under the buttons (Star's words). The most
 // that can go back is always what was overpaid, so this is also the words for a very large number.
@@ -944,6 +954,9 @@ export const FILL_IN_STEP_CHECK = 'Check and sign';
 export const FILL_IN_CLOSED_STAFF = 'Family sign-up is closed. Ask an admin to fill in for a family.';
 export const FILL_IN_PAST_CLOSING_STAFF = 'The closing date has passed. Ask an admin to fill in for a family.';
 export const FILL_IN_FINISHED = 'This camp is over.';
+// (not in the mockups) The camp page's amber bar when Hide private details closed the box during a
+// Send (v0.746) and the sign-up then didn't save, or its answer never came — it names nobody.
+export const FILL_IN_CLOSED_NOT_SAVED = "A Fill in sign-up may not have been saved. If the family isn't on the roster, fill it in again.";
 // While Hide private details is on (desk-only, as Forms' v0.616 — the same words)
 export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answers are hidden on this tablet.';
 // At the desk the parent signs on the screen in front of staff: New students' hint, not the family's

@@ -772,6 +772,33 @@
   cursor: pointer;
 }
 
+/* "Paid $315 ⚠ $23 overpaid" (rulebook v0.745, copied from Star's .st-paytag / .st-overpaid in
+   star.css): the green tag names what was paid; the overpaid part follows in amber with the
+   triangle, under the tag when the Paid column is narrow. */
+.cp-paytag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.cp-overpaid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* A phone card's tag sits at the right of the name: there the amber part always goes under the
+   tag, both lined up on the right, and the name (not the tag) gives up room on a narrow screen. */
+.cp-rcard-top .cp-paytag {
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
 /* One day of one child: came (user-check icon + time) · Check in · didn't come (user-x icon) · — */
 .cp-dc {
   position: relative;
@@ -884,11 +911,27 @@ button.cp-dc:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.cp-rcard-name .cp-name-link {
-  min-height: var(--tap-size);
+/* The tag and, with a mouse, the card's ⋯ at the card's right end */
+.cp-rcard-end {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
 }
 
-/* The day buttons of the week under the name: equal columns, 44px tall */
+/* The card whose ⋯ menu is open: the tint reaches 8px past the text on both sides, like a table row */
+.cp-rcard.is-selected {
+  background: var(--color-blue-tint);
+  box-shadow: -8px 0 0 var(--color-blue-tint), 8px 0 0 var(--color-blue-tint);
+}
+
+/* Cards are drawn for a phone or for a roster with too little room (L-02, v1.053): their buttons
+   follow the kind of screen, not the layout — mouse size here, 44px on touch (below). */
+.cp-rcard-name .cp-name-link {
+  min-height: 32px;
+}
+
+/* The day buttons of the week under the name: equal columns, 36px tall with a mouse, 44px on touch */
 .cp-rdays {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
@@ -903,7 +946,7 @@ button.cp-dc:focus-visible {
   justify-content: center;
   min-width: 0;
   height: auto;
-  min-height: var(--tap-size);
+  min-height: 36px;
   padding: 2px var(--space-4);
   overflow: hidden;
 }
@@ -1029,6 +1072,12 @@ button.cp-dc:focus-visible {
 
   .cp-cal-day {
     height: var(--tap-size);
+  }
+
+  /* The roster's cards on a touch screen: 44px targets (with a mouse they are smaller, above) */
+  .cp-rcard-name .cp-name-link,
+  .cp-rdays .cp-dc {
+    min-height: var(--tap-size);
   }
 
   .cp-daychip {

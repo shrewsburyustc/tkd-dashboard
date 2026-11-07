@@ -21,8 +21,8 @@
 //     (base, cleared, kept, edited, reversed).
 //
 //   describeEntry(entry, ctx) — the shared line's `describe` for one entry:
-//     { text, at, who } · { hiddenPayment: true } (a money change while Hide private details is
-//     on) · null (nothing worth a line, e.g. a payment that only moved the candidate's version).
+//     { text, at, who } · { hiddenPayment: true } (a money, plan or Kukkiwon change while Hide
+//     private details is on) · null (nothing worth a line, e.g. a payment that only moved the candidate's version).
 //     ctx = { hidden, rubric, plans }
 //       rubric  the cycle's rubric document (rubric.js), or null when it couldn't be read: then
 //               grade lines leave the subject out ("Grade changed: 28 → 32") — never an error
@@ -31,8 +31,10 @@
 // Privacy: the database already masks the date of birth and email ("on file" / "changed"), so the
 // History only ever says "Date of birth changed" / "Email for results changed" (v0.907); login
 // ids never arrive (bb_history_strip). With hidden on, every payment row (payments, refunds, undos,
-// returned checks) is left out and counted for the shared gray line; plan and Kukkiwon lines stay —
-// they have no amounts.
+// returned checks) is left out and counted for the shared gray line — and so are the plan and
+// Kukkiwon lines ("Plan: In full → 3 payments", "Kukkiwon certificate added"): the plan says how a
+// family pays, a payment detail (v1.036). Approved by Jeffrey 2026-11-06 (step 1): v0.972 kept them;
+// v1.036 hides the plan. A candidate change that also changed something else keeps its other words.
 import { formatMeasured, subjectIndex, trimScaleText } from '../../../lib/blackBelt/grading.js';
 import * as T from '../text.js';
 
@@ -216,7 +218,8 @@ function makeupSubjectWords(entry, rubric) {
 const CANDIDATE_SKIP = new Set(['version', 'withdrawn_reason', 'duplicate_of', 'kukkiwon_added_on', 'age_kept', 'source', 'reference',
   'cycle_id', 'makeup_of_cycle_name', 'id']);
 
-function candidateLines(entry, plans) {
+// hidePlan: leave out the plan and Kukkiwon lines (Hide private details on, v1.036)
+function candidateLines(entry, plans, hidePlan = false) {
   const before = entry.before ?? {};
   const after = entry.after ?? {};
   if (entry.op === 'insert') {
@@ -248,10 +251,10 @@ function candidateLines(entry, plans) {
         lines.push(T.historyDan(before.dan, after.dan, entry.cleared));
         break;
       case 'cycle_plan_id':
-        lines.push(T.historyField(T.ROW_PLAN, planName(before.cycle_plan_id), planName(after.cycle_plan_id)));
+        if (!hidePlan) lines.push(T.historyField(T.ROW_PLAN, planName(before.cycle_plan_id), planName(after.cycle_plan_id)));
         break;
       case 'kukkiwon':
-        lines.push(after.kukkiwon ? T.HISTORY_KUKKIWON_ADDED : T.HISTORY_KUKKIWON_REMOVED);
+        if (!hidePlan) lines.push(after.kukkiwon ? T.HISTORY_KUKKIWON_ADDED : T.HISTORY_KUKKIWON_REMOVED);
         break;
       case 'date_of_birth':
         if (!purged) lines.push(T.HISTORY_DOB_CHANGED);
@@ -312,10 +315,10 @@ function resultSendWords(entry) {
 }
 
 // The words of one entry (null = no line).
-export function entryText(entry, { rubric = null, plans = [] } = {}) {
+export function entryText(entry, { rubric = null, plans = [], hidePlan = false } = {}) {
   switch (entry?.tableName) {
     case CANDIDATE: {
-      const lines = candidateLines(entry, Array.isArray(plans) ? plans : []);
+      const lines = candidateLines(entry, Array.isArray(plans) ? plans : [], hidePlan);
       return lines.length > 0 ? lines.join('; ') : null;
     }
     case 'bb_candidate_waivers':
@@ -335,10 +338,19 @@ export function entryText(entry, { rubric = null, plans = [] } = {}) {
   }
 }
 
+// A change to the candidate row that changed the plan or the Kukkiwon certificate
+function changesPlan(entry) {
+  return entry?.tableName === CANDIDATE && entry.op === 'update' && (has(entry.after, 'cycle_plan_id') || has(entry.after, 'kukkiwon'));
+}
+
 // The shared line's `describe` (HistoryLine.jsx): { text, at, who } · { hiddenPayment } · null.
 export function describeEntry(entry, { hidden = false, rubric = null, plans = [] } = {}) {
   if (hidden && entry?.tableName === PAYMENT) return { hiddenPayment: true };
-  const text = entryText(entry, { rubric, plans });
+  const text = entryText(entry, { rubric, plans, hidePlan: hidden });
+  // (approved by Jeffrey 2026-11-06, step 1) v0.972 kept them; v1.036 hides the plan. A candidate change that was
+  // ONLY a plan or Kukkiwon change has no words left while hidden: it is counted like a money row
+  // (the shared gray line), so the History never shows an empty line or a gap without a reason.
+  if (!text && hidden && changesPlan(entry)) return { hiddenPayment: true };
   if (!text) return null;
   return { text, at: entry.occurredAt, who: entry.actorName || T.HISTORY_STAFF };
 }
