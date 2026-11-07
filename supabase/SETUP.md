@@ -2990,6 +2990,8 @@ Supabase dashboard → **Advisors → Security advisor** → refresh: nothing ne
 
 ### 0033f. Undo 0033 (only with Jeffrey's OK)
 
+**Not after 0039 — ask Claude first** (it would bring back Undo / Edit payment without the refund check).
+
 1. The app version that sends the way to pay or reads the history / `paying_by_on_form` must **not** be live.
 2. Paste **the whole file** `supabase/manual/0033u_undo_camps_design_review.sql` in the SQL Editor → **Run**. It removes `camp_camper_history`, `camp_history_strip`, the index, the trigger and its function, the view (made again right away exactly as 0013 made it, with its rights) and the two new columns **with their values** (each camper's form choice is still in their history; payments keep everything else); then it puts back 0013's 3-input `camp_mark_paid` and `camp_undo_payment` and 0022's `camp_edit_payment`, word for word. Paying by values changed by Mark paid / Edit payment stay. One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
 3. Claude checks: `0013_fingerprints.sql` and `0022_fingerprints.sql` match 0033a's record; the pre-apply check answers `true / false / 3 / 0 / false` again. Then run `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql`, `0027_tests.sql`.
@@ -3259,5 +3261,74 @@ Tested in PGlite on every run (`run.mjs` step0043: a family sign-up from before 
 - **No client key for the desk:** as Forms' staff Fill in (0009) — the desk is signed in, so the per-client limit (spam protection for the public form) doesn't apply, and no attempt row is written.
 - **`admin_only` decided in the database too:** v0.740 "C" — the app greys the button for staff, and the database refuses a staff call anyway.
 - **No read right on the new columns:** Camper detail and History are the only places the app needs them; staff can't pull them for every family straight from the table.
+
+---
+
+## Migration 0039: Camps Record refund
+
+**Status: not applied yet.** Built on `camps` (rulebook v1.039 = money handed back is its own refund row, on the day it goes out; v1.040 = it counts at the desk that hands it back; v0.743 = the screens and words, picture 22; plan `docs/Camps/TKD-Camps-Pass1-Plan.md` step 3; contract `docs/Camps/CONTRACT-0039.md`). Pasting it changes nothing on screen: the live app never calls the two new functions, its Undo payment / Edit payment calls keep their inputs and answers, and no refund row can exist until the app with Record refund is live. That app push waits for Finance's R1-05 (Finance lists camp refunds in its Refunds group).
+
+**Production order:** … 0036 → 0041 → 0042 → 0043 (all live) → **0039** → Finance's R1-05 → the app push. (0039's number was reserved before 0043's; it is pasted after it.) It needs 0013, 0022, 0027, 0033 and 0043 (Camps) — it stops with "0039 needs migration 00NN … first" if one is missing.
+
+**What it does** (`supabase/migrations/0039_camps_record_refund.sql`):
+- **The kind rule `camp_payments_kind_check`** (last set by 0022) gets a third kind, `refund`: a negative row of 1 cent … $10,000 (0022's limit, as for payments; the real limit is what the camper overpaid) that points at no other row. Payments keep 0022's 1 cent … $10,000; a reversal may now be positive (it undoes a refund): up to $10,000 either way, never 0. Replaced the way 0022 did it (`drop constraint if exists` + `add constraint`, same name, one transaction); the new rule only allows more, so every existing row passes it and nothing is rewritten. A refund is cash or check only — in the kind rule itself, as Star's table rule (0006), and the function checks it first (`invalid`); the column rule stays cash / check / card for payments.
+- **`camp_payments_guard()`** (0013) — a reversal may undo a payment **or a refund** (never a reversal) of the same camper, for exactly minus its amount, at its school; and, Star's rule (`star_payments_guard`, 0006), no new row may make the camper's rows add up to less than 0 (`camp_payments_net_check`). The functions never try to (a refund is at most what was overpaid; Undo / Edit payment wait for the refund's Undo), so it only stops a mistake made straight in the table. Everything else as 0013 (no change to a row, ever; no removal except inside Delete camper / Delete camp).
+- **New `camp_record_refund(p_camper_id, p_expected_version, p_method, p_amount_cents, p_refunded_on, p_school)`** (admins; copied from Star's `star_record_refund`): a refund of what the camper paid more than the total — its own negative row (`kind 'refund'`), cash or check, dated the day the money goes out (not before the sign-up, not after today), at **This device's** school (v1.040); the camper's version goes up; one history batch tagged `camp_record_refund`. Answers: `ok` (`payment_id`, `version`), `no_access`, `not_allowed`, `invalid` (also `{"field":"school"}` and `{"field":"date"}`), `not_found`, `stale`, `withdrawn`, `refund_too_large` (`overpaid_cents` = what is overpaid now, 0 when nothing is).
+- **New `camp_undo_refund(p_payment_id)`** (admins): a reversal of the refund (plus its amount, its way, dated today) at the **refund's** school (v1.040); version up; tagged `camp_undo_refund`. Answers: `ok` (`version`), `no_access`, `not_allowed`, `invalid` (no id, or a row that isn't a refund), `not_found`, `stale` (already undone), `withdrawn`.
+- **`camp_undo_payment` and `camp_edit_payment`** (0033's) — same inputs, rights and answers, plus `{"status":"refund_stands"}` while the camper has a refund that isn't undone ("Undo the refund first."), checked after their own checks and before writing (Star's rule: the money handed back can't also come out of a payment).
+- **The view `camp_roster`** (0033's) — the same columns in the same order plus one at the end: `refunded_cents` (the camper's refunds that stand, as a positive number; 0 = none). Camper detail's `camper` part is the roster row, so it has it too; its `payments` list already shows every row with its `kind` — `camp_camper_detail` is **not** changed, nor the sign-up core, Mark paid or the history reader (it already finds every payment row of the camper).
+- Every new or replaced app function: security definer, `search_path = ''`, `has_data_access()` first, revoked from public, anon, authenticated and service_role, granted to `authenticated` only. Nothing for anon or camps_registrar. **No Finance change:** Finance's functions already treat a camp `refund` row as a refund (its Refunds group, at the refund's own school and day; an undone refund shows as undone); Finance's R1-05 checks that with its own test.
+
+**Each step needs Jeffrey's OK.**
+
+### 0039a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0039_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `replaced_found 3`, `replaced_as_tested 5`, `applied_as_tested 0`, `new_functions 0`, `refunds 0`; `payments` = how many payment rows the new kind rule is checked against (information only). **`replaced_as_tested` below 5 → stop**: one of the five things 0039 replaces (0013's guard, 0033's Undo payment, Edit payment and roster, 0022's kind rule) changed since 0039 was built, and pasting would undo that change — 0039 must be rebuilt on the newer code first. `3 / 0 / 5 / 2 / …` = already applied.
+2. Claude runs `0013_fingerprints.sql`, `0022_fingerprints.sql`, `0033_fingerprints.sql` and `0039_fingerprints.sql` and keeps the results (the "before" record for 0039c).
+
+### 0039b. Apply 0039 (you, in the SQL Editor)
+
+1. **Paste at a quiet moment** (nobody taking money at the desk): from the kind rule's line until the paste commits, `camp_payments` is locked — reads and saves of payments wait (well under a second). The file makes the roster view again **before** that line, so it locks the view and then `camp_payments`, in the same order as a roster read, and can't deadlock with one.
+2. Copy **the whole file** `supabase/migrations/0039_camps_record_refund.sql`, **SQL Editor → New query**, paste, **Run**.
+3. Supabase **may** warn about destructive operations. The line it means is `alter table public.camp_payments drop constraint if exists camp_payments_kind_check` — an `alter table … drop constraint`: the kind rule, added again (wider) on the very next line in the same transaction. Other words it may flag are inside `camp_payments_guard` — its `DELETE` branch and the tags `camp_delete_camper` / `camp_delete_camp`, 0013's rule that **refuses** every other removal, unchanged — and in comments. No data is removed. Confirm.
+4. "Success. No rows returned." One transaction: if anything errors, nothing is kept and running it again is safe. Copy the error to Claude.
+5. **Running it again is safe** (tested: no fingerprint, row or history change). **0013 and 0033 can't be re-run cleanly after 0039** (their `camp_roster` has fewer columns, so their `create or replace view` fails and nothing of them is kept). **Re-running 0022 after 0039** would put back 0022's kind rule (refused — and nothing of 0022 kept — once a refund row exists) and 0022's Edit payment: re-run 0039 (and 0043, as its notes say) straight after it.
+
+### 0039c. Fingerprints (Claude, read-only through the connection)
+
+1. **Pre-apply check again:** `3 / 0 / 5 / 2 / 0 / …`.
+2. `supabase/tests/0039_fingerprints.sql` must match what `run.mjs` printed ("0039 fingerprints"), 7 rows:
+   - `constraint  camp_payments.camp_payments_kind_check  c CHECK ((((kind = 'payment'::text) AND ((amount_cents >= 1) AND (amount_cents <= 1000000)) AND (reverses_payment_id IS NULL)) OR ((kind = 'refund'::text) AND ((amount_cents >= '-1000000'::integer) AND (amount_cents <= '-1'::integer)) AND (reverses_payment_id IS NULL) AND (method = ANY (ARRAY['cash'::text, 'check'::text]))) OR ((kind = 'reversal'::text) AND ((amount_cents >= '-1000000'::integer) AND (amount_cents <= 1000000)) AND (amount_cents <> 0) AND (reverses_payment_id IS NOT NULL))))`
+   - `function  camp_edit_payment(p_payment_id uuid, p_method text, p_amount_cents integer, p_paid_on date, p_school text)  eaf25164913b1cd98c41b8dd2c3dce01 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  camp_payments_guard()  95e5d491f409166c72f1a6056083fc41 lang=plpgsql volatility=v returns=trigger definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`
+   - `function  camp_record_refund(p_camper_id uuid, p_expected_version integer, p_method text, p_amount_cents integer, p_refunded_on date, p_school text)  c97100f713a64738b107af042b1281b8 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  camp_undo_payment(p_payment_id uuid)  289e1efa6ebe9973eefe6b162b2f3dfc lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  camp_undo_refund(p_payment_id uuid)  268c9383c792e574024e30360c184cd5 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `view  camp_roster  7d5e502cb563a572b40cfc9fdd09e3fe options=security_invoker=true rights=authenticated:SELECT`
+
+   The file contains neither of the words the connection refuses.
+3. `0013_fingerprints.sql`, `0022_fingerprints.sql` and `0033_fingerprints.sql` differ from 0039a's record **only** in: `camp_payments_guard`, `camp_undo_payment` and `camp_edit_payment` (body md5 only — definer, settings, owner and rights the same), the `camp_roster` view line (its md5 only — options and rights the same) and, in 0022's list, the `camp_payments.camp_payments_kind_check` line (now the rule above). Every other migration's fingerprints: unchanged (`run.mjs` step0039 checks exactly that).
+
+### 0039d. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection): **nothing new** apart from the two new staff functions under the usual "signed-in can run a security definer function" warning. The view is still security invoker; every replaced function keeps `search_path = ''` and its rights.
+
+### 0039e. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0039_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0039 TESTS PASSED**. It makes its own `zz test …` camp (Mon–Wed of a week 15–21 days from now, six campers) and checks `no_access` (no session, a non-staff login, a PIN-locked desk); Record refund (the row, the version, one history batch, the roster); every refusal (the desk, bad input incl. a card refund and over $10,000, the school, an old version, a date before the sign-up or after today, 1 cent more than overpaid, a camper who owes or is paid exactly, a withdrawn camper); a second refund; a $2,000.01 refund accepted when that much is overpaid; `refund_stands` from Undo / Edit payment — also the desk's own toast Undo — with the net never below the total; Undo refund (at the refund's school; the desk refused; again → stale); Undo / Edit payment working again afterwards; the table rules (a reversal of a reversal, a positive reversal of a payment, a wrong amount / school / camper, a refund pointing at a row, a positive refund, a card refund, over $10,000, a row that would bring the camper's net below 0, a refund row can't be changed or removed); Camper detail; History; the rights. Everything is rolled back.
+2. Then `0013_tests.sql`, `0017_tests.sql`, `0018_tests.sql`, `0022_tests.sql`, `0026_tests.sql`, `0027_tests.sql`, `0033_tests.sql` and `0043_tests.sql` again — all must still pass (`0013_tests.sql` T16a knows 0039's two new functions; `0033_tests.sql` F1 knows the roster's new last column).
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+**No undo file:** 0039 only widens a rule, adds two functions and changes three functions and the roster. To go back, ask Claude (it would put back 0013's guard, 0033's Undo payment, Edit payment and roster, remove the two new functions, and — only if no refund row exists — 0022's kind rule).
+
+Tested in PGlite on every run (`run.mjs` step0039: a camper paid, then overpaid, before 0039; the pre-apply check before and after; exactly the planned fingerprint lines move; 0039 writes nothing; the camps tests pass before and after; the new functions run as role `authenticated` by argument name, anon and camps_registrar refused; re-run safety).
+
+**Why:**
+- **Its own refund row, not Edit payment:** the day the money was taken never changes (a closed day stays closed), and Finance shows the money going out on the day it goes out, in its Refunds group, like Star's and Black Belt's refunds (v1.039).
+- **The desk that hands it back:** each drawer's report matches what went in and out of that drawer; the Undo goes back to the same drawer (v1.040).
+- **No Edit / Undo payment while a refund stands:** otherwise the money handed back could also come out of a payment, and the net paid could fall below the total — or below 0 (Star's rule).
+- **Star's two table rules as well** (refunds cash or check only; a camper's rows never add up to less than 0): the functions already keep both, and the table refuses a mistake made straight in it too.
+- **`refunded_cents` on the roster:** the ⋯ menu picks Record refund or Undo refund, and grays Edit / Undo payment, from the roster row alone (no extra call).
+- **0022's $10,000 limit for every kind:** payments keep it (Mark paid and Edit payment work exactly as before), and a refund may be as large — a camper can pay up to $10,000, so what is overpaid can be more than $2,000, and the box's amount (filled in with the overpaid amount) is never refused for its size. The real limit on a refund is what was overpaid.
 
 ---

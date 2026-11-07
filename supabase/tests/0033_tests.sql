@@ -543,11 +543,16 @@ begin
   end if;
   v_cols := array(select a.attname::text from pg_attribute a
                    where a.attrelid = 'public.camp_roster'::regclass and a.attnum > 0 and not a.attisdropped order by a.attnum);
+  -- (changed by 0039, rulebook v1.039: after 0039 the roster has ONE more
+  -- column after paying_by_on_form - refunded_cents; the 34 before it are
+  -- unchanged)
   if v_cols is distinct from array['id', 'camp_id', 'signup_id', 'position', 'first_name', 'last_name', 'age', 'member',
        'paying_by', 'status', 'withdrawn_reason', 'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of',
        'version', 'created_at', 'signup_version', 'reference', 'price_kind', 'signed_up_on', 'signed',
        'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents', 'paid_on',
-       'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paying_by_on_form'] then
+       'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paying_by_on_form']
+                             || (case when to_regprocedure('public.camp_record_refund(uuid, integer, text, integer, date, text)') is not null
+                                      then array['refunded_cents'] else array[]::text[] end) then
     raise exception 'TEST FAILED: F1 camp_roster columns %', v_cols;
   end if;
   if (select r.paying_by_on_form from public.camp_roster r where r.id = v_kit) <> 'card' then

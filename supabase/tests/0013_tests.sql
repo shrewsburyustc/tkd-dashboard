@@ -2629,6 +2629,12 @@ begin
   if to_regprocedure('public.camp_staff_form(uuid)') is not null then
     v_staff_fns  := v_staff_fns || array['camp_staff_form', 'camp_staff_signup'];
   end if;
+  --       (changed by 0039, rulebook v1.039 / v1.040: after 0039 Record
+  --       refund and Undo refund are staff functions - admins only inside,
+  --       as Edit payment)
+  if to_regprocedure('public.camp_record_refund(uuid, integer, text, integer, date, text)') is not null then
+    v_staff_fns  := v_staff_fns || array['camp_record_refund', 'camp_undo_refund'];
+  end if;
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and (p.proname like 'camp\_%' or p.proname like 'camps\_%')

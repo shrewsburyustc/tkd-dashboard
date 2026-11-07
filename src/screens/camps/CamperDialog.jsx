@@ -2,9 +2,12 @@
 // Why it exists: the lists show as little as possible (privacy, rulebook §5: no phones or family
 // details in lists). Everything else about a camper is here, one tap away from any name:
 //   - age and membership, days, extras with their days, how the price was worked out, paying by
-//   - Payments: the status tag, the payments list (date, amount, method, who recorded it); when
-//     days or extras were taken off after paying: "Total now $315 · paid $390 · Paid $75 more than
-//     the total" (amber part) and the admin line about Edit payment
+//   - Payments: the status tag, the payments list (date, amount, method, who recorded it) — a
+//     refund is its own line, "Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg" (rulebook
+//     v0.743 (3)), and its Undo a "(reversed)" line like a payment's; when days or extras were taken
+//     off after paying: "Total now $315 · paid $390 · Paid $75 more than the total" (amber part) and,
+//     for everyone, "An admin records money handed back with ⋯ → Record refund." (v0.743 (6); on
+//     touch screens "… with More → …", where the item is); both go once paid equals the total
 //   - Check-in: the check-in time of each of the camper's days (v0.704)
 //   - Family: parent or guardian and emergency contact WITH phone numbers (the only place in the
 //     app that shows them — they come from camp_camper_detail, never from the lists)
@@ -25,10 +28,11 @@
 //
 // On touch screens the roster has no ⋯, so its items are listed here under "More" (CP5), in the
 // ⋯ menu's own order and groups (CamperRowMenu.jsx; rulebook v0.724, design review C8 / C9):
-// Change how they'll pay, Review possible duplicate — for admins Edit payment, Undo payment —
-// Withdraw / Restore, and for admins Delete permanently. Edit details is left out (it is the blue
-// button at the bottom). A thin full-width line starts each later group, like the menu's line;
-// there is no "Admin" label.
+// Change how they'll pay, Review possible duplicate — for admins Edit payment, Undo payment, Record
+// refund / Undo refund (v0.743) — Print receipt — Withdraw / Restore, and for admins Delete
+// permanently. Edit details is left out (it is the blue button at the bottom). A thin full-width line
+// starts each later group, like the menu's line; there is no "Admin" label. While a refund stands,
+// Edit payment and Undo payment are gray buttons with "Undo the refund first." under their words.
 // Pressing one does NOT close this dialog first: the camp page does that (CampPage.jsx). An item
 // with a dialog of its own (Delete permanently, Edit payment, …) takes this dialog's place in one
 // step, so the browser's Back step passes straight to it; closing first and opening the next
@@ -50,6 +54,7 @@
 // Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
 //        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones),
 //        familySize (how many campers are on this camper's sign-up — History's "(whole family)"), isPhone,
+//        isTouch (a touch screen — the camp page's own test; the overpaid hint then says "More"),
 //        hidden, detailsHidden, startInEdit, onClose(), onSaved(undo) (undo() = save the old details again — the toast's Undo, v0.726), onNoAccess, onRefreshProfile,
 //        onPrintReceipt(opener) (PC / tablet without touch only, else null — v0.734)
 import { Fragment, useEffect, useId, useState } from 'react';
@@ -147,7 +152,7 @@ function weekLines(b, myDayObjs, prices) {
   return weeks;
 }
 
-export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, familySize = 1, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile, onPrintReceipt = null }) {
+export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, familySize = 1, isPhone, isTouch = false, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile, onPrintReceipt = null }) {
   const idBase = useId();
   const [load, setLoad] = useState({ status: 'loading', detail: null });
   const [mode, setMode] = useState(startInEdit ? 'edit' : 'view');
@@ -290,7 +295,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
             {owes > 0 && paid > 0 && <span className="ev-sum-line">{T.owesLine(camper.totalCents, paid, owes)}</span>}
           </Row>
         </dl>
-        {owes < 0 && <p className="field-hint">{T.OVERPAID_ADMIN}</p>}
+        {/* For everyone (v0.743 (6)). Touch screens have no ⋯ — the item is under More below. */}
+        {owes < 0 && <p className="field-hint">{isTouch ? T.OVERPAID_ADMIN_TOUCH : T.OVERPAID_ADMIN}</p>}
         {/* PC / tablet without touch: Print receipt ends the Payments part (v0.734); it opens on top. */}
         {onPrintReceipt && canPrintReceipt(camper, detailsHidden) && (
           <button type="button" className="btn btn-sm cp-print-receipt" onClick={(event) => onPrintReceipt(event.currentTarget)}>
@@ -345,8 +351,10 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                     <button
                       type="button"
                       // Delete permanently: red words and outline, never a filled red button next to
-                      // the blue Edit details (review 8; red only for delete).
-                      className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
+                      // the blue Edit details (review 8; red only for delete). A grayed item (Edit
+                      // payment / Undo payment while a refund stands, v0.743 (4)) is the plain
+                      // button's gray with its reason under the words, as in the ⋯ menu.
+                      className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}${item.grayed ? ' is-unavailable' : ''}`}
                       aria-disabled={item.disabled ? 'true' : undefined}
                       // The page closes this dialog itself, or swaps it for the item's own dialog in
                       // one step (CampPage.jsx detailHandlers) — closing it here first would let the

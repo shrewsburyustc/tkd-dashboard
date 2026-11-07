@@ -616,6 +616,82 @@ export function payingByChoiceWhere(row) {
   return row.payingBy === row.payingByOnForm ? 'form' : 'desk';
 }
 
+// ----- Record refund (migration 0039, CONTRACT-0039; rulebook v0.743, v1.039, v1.040) -----
+// Money handed back to a family that paid more than the total is saved as its own REFUND row: a
+// minus amount (−$23), never an edit of the payment. Undo refund adds a reversal row with the
+// opposite amount (+$23). Paid (paidCents) is the sum of every row, so both count by themselves.
+
+// How much a camper paid over the total, in cents (0 when they don't): "Paid $23 more than the
+// total" = owes −$23 → 2300. row = a roster row or Camper detail's camper (owesCents).
+export function overpaidCents(row) {
+  const owes = Number.isInteger(row?.owesCents) ? row.owesCents : 0;
+  return owes < 0 ? -owes : 0;
+}
+
+// Does a refund stand right now? The roster's refunded_cents (0039) = the camper's refunds not
+// undone, as a plus number. A database from before 0039 sends none: then no refund stands.
+export function refundStands(row) {
+  return Number.isInteger(row?.refundedCents) && row.refundedCents > 0;
+}
+
+// Which refund items the camper's ⋯ (and Camper detail's More) shows, admins only, in this order
+// (v0.743 (1), (4) and v0.744 — Jeffrey chose A on picture 22y): 'record' while the camper paid
+// more than the total, and 'undo' while a refund stands. Usually only one of them shows (a full
+// refund leaves nothing overpaid); after a PARTIAL refund both show, so the rest can be handed back
+// in one step and the hint "⋯ → Record refund" stays true. [] = no refund item.
+export function refundMenuItems(row) {
+  const items = [];
+  if (overpaidCents(row) > 0) items.push('record');
+  if (refundStands(row)) items.push('undo');
+  return items;
+}
+
+// The refund Undo refund reverses: the NEWEST refund row that stands (no reversal points at it),
+// from Camper detail's payments (camelCase: id, kind, reversesPaymentId, recordedAt). null = none.
+export function newestStandingRefund(payments) {
+  const list = Array.isArray(payments) ? payments : [];
+  const reversed = new Set(list.filter((p) => p.kind === 'reversal' && p.reversesPaymentId).map((p) => p.reversesPaymentId));
+  const standing = list.filter((p) => p.kind === 'refund' && !reversed.has(p.id));
+  // Newest by when it was recorded (the list may come in any order).
+  standing.sort((a, b) => ((a.recordedAt ?? '') < (b.recordedAt ?? '') ? -1 : (a.recordedAt ?? '') > (b.recordedAt ?? '') ? 1 : 0));
+  return standing[standing.length - 1] ?? null;
+}
+
+// Is this payment row the Undo of a REFUND? A reversal is always exactly minus the row it undoes
+// (the database's camp_payments_guard), and a refund is a minus amount, so its reversal is a PLUS
+// amount; a payment's reversal is a minus one. (The History says "Refund undone" for it.)
+export function reversesRefund(p) {
+  return p?.kind === 'reversal' && Number.isInteger(p.amountCents) && p.amountCents > 0;
+}
+
+// The payments that stand — kind 'payment' that no reversal undid (Undo payment and Edit payment
+// both leave the old payment + its reversal behind) — from Camper detail's payments, in the order
+// given. Record refund's note counts them: "The 2 payments ($315) stay in the history."
+export function standingPayments(payments) {
+  const list = Array.isArray(payments) ? payments : [];
+  const reversed = new Set(list.filter((p) => p.kind === 'reversal' && p.reversesPaymentId).map((p) => p.reversesPaymentId));
+  return list.filter((p) => p.kind === 'payment' && !reversed.has(p.id));
+}
+
+// Reads the Record refund box's Amount in WHOLE dollars, like Camps' Edit payment and Star's refund
+// box (camp prices and payments are always whole dollars, so what is overpaid is too): "23",
+// "$1,023", "23.00". → { cents } · { problem: 'empty' } (nothing typed) · { problem: 'notWhole' }
+// (cents, e.g. "23.50") · { problem: 'notNumber' } (not an amount, e.g. "abc", "-5") ·
+// { problem: 'tooBig' } (so many digits it can't be an amount — always more than what was
+// overpaid). The most that may go back is what was overpaid: the box checks that.
+export function parseRefundAmount(text) {
+  let s = String(text ?? '').trim();
+  if (s.startsWith('$')) s = s.slice(1).trim(); // one leading $ is fine
+  s = s.replace(/,/g, ''); // "1,023" → "1023"
+  if (s === '') return { problem: 'empty' };
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(s); // dollars, then at most 2 decimals
+  if (!m) return { problem: 'notNumber' };
+  if (m[2] !== undefined && Number(m[2]) !== 0) return { problem: 'notWhole' }; // "23.50" — "23.00" is fine
+  const cents = Number(m[1]) * 100;
+  if (!Number.isSafeInteger(cents)) return { problem: 'tooBig' };
+  return { cents };
+}
+
 // ----- Check-in (§1.13 check-in day rule, v0.704) -----
 
 // May this person check a camper in (or undo it) on `day`? Owner decision 2026-10-19 (CP1):

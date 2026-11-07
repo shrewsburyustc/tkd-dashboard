@@ -992,6 +992,27 @@ button.cp-dc:focus-visible {
   color: var(--color-delete-text);
 }
 
+/* A gray button there: Edit payment / Undo payment while a refund stands (rulebook v0.743 (4),
+   picture 22 3e) — the plain button's approved gray (as Fill in's .cp-fill rule below and shared.css
+   .cfm-actions). Still focusable (aria-disabled); pressing it does nothing. */
+.cp-detail-actions .btn.is-unavailable,
+.cp-detail-actions .btn.is-unavailable:hover,
+.cp-detail-actions .btn.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* Its reason sits under the words, as in the ⋯ menu (.ev-menu-two, "Undo the refund first."), so
+   the button grows to fit both lines (6px top and bottom, as drawn in picture 22). */
+.cp-detail-actions .btn:has(.ev-menu-two) {
+  height: auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  text-align: left;
+}
+
 /* ===== Touch screens: 36px controls, 44px tap areas ===== */
 @media (pointer: coarse) {
   .cp-rtable .cp-name-link,
