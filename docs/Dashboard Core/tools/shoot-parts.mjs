@@ -3,8 +3,8 @@
 // Why: Dashboard core step 1's proof (plan §4): the parts are checked against mockups M1–M8 at
 // 1280×800, 820×1180 touch, 390×844 touch and 320×640 touch. The state ids are the mockups' own
 // (Mockups/shots/M#/states.json), so every built picture has a mockup picture with the same name.
-// A part with no mockup of its own (DP, the date picker opened from a button, v0.817) takes its
-// states from the parts page's list instead.
+// A part with no mockup of its own (DP, the date picker opened from a button, v0.817; L02, the room
+// beside the panel, v1.130) takes its states from the parts page's list instead.
 // How: a hidden Chrome (chrome.mjs) opens parts.html#M#/<state> fresh for every picture (a blank
 // page first, so nothing is left over), waits for the page's own scripted presses to finish, then
 //   - a dialog state:   the box with a margin of dimmed page around it (24 px above and below, 40 px
@@ -39,7 +39,7 @@ if (!base || !outArg) {
 }
 const outdir = resolve(outArg);
 const mockShots = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'Mockups', 'shots');
-const PARTS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'DP'].filter((id) => only.length === 0 || only.includes(id));
+const PARTS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'DP', 'L02'].filter((id) => only.length === 0 || only.includes(id));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const LETTER = { w: 816, h: 1056 }; // 8.5 × 11 in at 96 px per inch
 
@@ -83,7 +83,7 @@ const MEASURE = `(() => {
   return { kind, clip: { x: Math.max(0, Math.floor(r.x)), y: Math.max(0, Math.floor(r.y)), w: Math.ceil(r.w), h: Math.ceil(r.h) } };
 })()`;
 
-// A part with no mockup (DP): its states as the parts page lists them (not the extra ones).
+// A part with no mockup (DP, L02): its states as the parts page lists them (not the extra ones).
 async function pageStates(tab, part) {
   await tab.open('about:blank', 0);
   await tab.open(`${base}parts.html`, 1500);

@@ -17,6 +17,8 @@
 // Black Belt rows (migration 0026, rulebook v0.815, mockup B6): For "Black Belt · <cycle> ·
 // <what it's for>", Testing date empty (a cycle has several testing days), a returned check is
 // Kind "Returned check" with the Note "Handed in <yyyy-mm-dd>" (+ the usual undone note).
+// Private testings (migration 0037, design review pass 1): a row with is_private true says
+// "Star testing, private" / "Color belt testing, private" in the For cell, as the Daily report does.
 // It is PURE (no browser), so Node can test it.
 
 // The columns of the file, in order: [key in the export row, how the cell is written].
@@ -50,6 +52,8 @@ export const DEFAULT_CSV_HEADERS = {
 export const DEFAULT_CSV_LABELS = {
   school: { worcester: 'Worcester', shrewsbury: 'Shrewsbury' },
   what: { color_belt: 'Color belt testing', star: 'Star testing', camp: 'Camp', black_belt: 'Black Belt' }, // Camp: v0.707; Black Belt: v0.815
+  // A private testing's For cell (0037): the same words as the Daily report (screens/finance/text.js).
+  what_private: { color_belt: 'Color belt testing, private', star: 'Star testing, private' },
   kind: { payment: 'Payment', refund: 'Refund', returned: 'Returned check' },
   method: { cash: 'Cash', check: 'Check', card: 'Card' },
   state: { counted: 'Counted', undone: 'Undone', edited: 'Edited', moved_out: 'Moved out', moved_in: 'Moved in' },
@@ -108,6 +112,11 @@ function cellText(row, key, type, labels) {
   if (type === 'money') return centsToCsvNumber(value);
   if (type === 'plain') return quoteCell(String(value));
   let shown = type === 'code' ? (labels[key]?.[value] ?? String(value)) : String(value);
+  // A private testing (0037): "Star testing, private" / "Color belt testing, private". Only a real
+  // true counts, and only for the two testing sections (camps and Black Belt have no private kind).
+  if (key === 'what' && row.is_private === true && labels.what_private?.[value]) {
+    shown = labels.what_private[value];
+  }
   // A camp row's "For" cell names the camp: "Camp · April Vacation Camp" (v0.707). The camp name is
   // typed by staff, so the whole cell goes through the formula guard and quoting like any text.
   if (key === 'what' && value === 'camp' && typeof row.event_name === 'string' && row.event_name !== '') {
@@ -135,7 +144,7 @@ function noteOf(row, labels) {
 // The whole file: a byte-order mark, a header line, then one line per row, every line ending with CRLF.
 //   rows: finance_export's `rows` (snake_case, exactly as the database sends them)
 //   options.headers: { key: 'Header words' } to replace any default header
-//   options.labels:  { school | what | kind | method | state: { code: 'Words' } } to replace labels
+//   options.labels:  { school | what | what_private | kind | method | state: { code: 'Words' } } to replace labels
 // Summing the "Counted in total" column always gives the right total (counted_cents is 0 for
 // rows that don't add up: undone and moved-out lines).
 export function toCsv(rows, { headers = {}, labels = {} } = {}) {

@@ -67,6 +67,10 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
 
   // ----- The list -----
   if (state.step === 'list') {
+    // Where focus lands (Calendar's step effect focuses [data-autofocus]): the row the person came
+    // back from (state.from, a type id), "+ Add type" after Add, else the first row.
+    const backTo = types.some((t) => t.id === state.from) ? state.from : null;
+    const toAdd = !backTo && state.from === 'add' && types.length < MAX_TYPES;
     return (
       <Dialog title={T.EVENT_TYPES} size="detail" fullScreen={isPhone} onRequestClose={onRequestClose}>
         <p className="tdialog-sub">{T.TYPES_SUB}</p>
@@ -81,7 +85,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
                 drag.state && drag.state.gap === i && <li key="gap" className="ctypes-gap" aria-hidden="true" />,
                 <li key={t.id} className={`ctypes-item${lifted ? ' is-lifted' : ''}`} data-drag-group="types" data-drag-id={t.id}>
                   <Grip label={T.dragType(t.name)} gripProps={drag.gripProps('types', t.id)} />
-                  <button type="button" className="ctypes-row" data-type={t.id} data-autofocus={i === 0 ? true : undefined} aria-label={T.editTypeLabel(t.name)} onClick={() => onStep('edit', t)}>
+                  <button type="button" className="ctypes-row" data-type={t.id} data-autofocus={(backTo ? t.id === backTo : !toAdd && i === 0) ? true : undefined} aria-label={T.editTypeLabel(t.name)} onClick={() => onStep('edit', t)}>
                     <i className="cpanel-swatch" style={{ background: c.fill, borderColor: c.edge }} aria-hidden="true" />
                     <span className="ctypes-name">{t.name}</span>
                   </button>
@@ -101,7 +105,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
           </ul>
         )}
         {types.length < MAX_TYPES && (
-          <button type="button" className="btn ctypes-add" onClick={() => onStep('add')}>
+          <button type="button" className="btn ctypes-add" data-autofocus={toAdd ? true : undefined} onClick={() => onStep('add')}>
             <IconPlus size={16} aria-hidden="true" />
             {T.ADD_TYPE}
           </button>

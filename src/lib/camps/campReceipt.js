@@ -12,31 +12,37 @@
 //     call failed — Star's Q7 A).
 // Which payment lines show (v0.734): every payment that still stands, oldest first by the day paid.
 // A payment that Edit payment or Undo payment replaced, and the reversal row that undid it, are
-// both left out (Star's rule). Camps has no refunds, so there are no minus lines. Every line's
-// "For" reads "Camp fee": a payment row doesn't say which days or extras it paid for, and Edit
-// details re-prices the camper, so naming them would be a guess (Star's reason for "Testing fee").
+// both left out (Star's rule). A refund that stands (Record refund, migration 0039, rulebook v0.743
+// (5)) is its own line, "Refund", with a minus amount ("−$23", Star's receipt); an undone refund
+// and its reversal are left out too. A payment line's "For" reads "Camp fee": a payment row doesn't
+// say which days or extras it paid for, and Edit details re-prices the camper, so naming them would
+// be a guess (Star's reason for "Testing fee"). "Paid to date" is the camper's paid amount, which is
+// already net of refunds (the sum of every row).
 // It NEVER holds the age, date of birth, parent, phones, email, notes, signature or links — only
 // the facts listed in v0.734.
 // It is PURE (no React, no database), so checks.mjs can check it with plain Node.
 // (The words come from the Camps screens' word file, as checks.mjs already reads it.)
 import * as T from '../../screens/camps/text.js';
+import { refundStands } from './campRules.js';
 
 // Print receipt's one rule, the same for the ⋯ menu, Camper detail's button and "More" (v0.734):
-// an ACTIVE camper with money paid that still stands (paidCents is net of reversals), and never
-// while Hide private details is on (option A — the item is simply absent, as Star and Camps'
+// an ACTIVE camper with money paid that still stands (paidCents is net of reversals and refunds) —
+// or a refund that stands (Star's rule: a receipt can show money that was all handed back) — and
+// never while Hide private details is on (option A — the item is simply absent, as Star and Camps'
 // other money items).
 export function canPrintReceipt(row, detailsHidden) {
-  return Boolean(row) && row.status === 'active' && !detailsHidden && (row.paidCents ?? 0) > 0;
+  return Boolean(row) && row.status === 'active' && !detailsHidden && ((row.paidCents ?? 0) > 0 || refundStands(row));
 }
 
-// The payment lines that still stand: kind 'payment' with no reversal row pointing at it
-// (Edit payment and Undo payment both leave the old payment + its reversal behind). Oldest first
-// by the day paid; two on the same day in the order they were recorded.
+// The payment and refund lines that still stand: kind 'payment' or 'refund' with no reversal row
+// pointing at it (Edit payment, Undo payment and Undo refund all leave the old row + its reversal
+// behind). Oldest first by the day paid (a refund: the day the money went back); two on the same day
+// in the order they were recorded.
 export function receiptPayments(payments) {
   const list = payments ?? [];
   const reversed = new Set(list.filter((p) => p.kind === 'reversal' && p.reversesPaymentId).map((p) => p.reversesPaymentId));
   return list
-    .filter((p) => p.kind === 'payment' && !reversed.has(p.id))
+    .filter((p) => (p.kind === 'payment' || p.kind === 'refund') && !reversed.has(p.id))
     .sort((a, b) => {
       if (a.paidOn !== b.paidOn) return a.paidOn < b.paidOn ? -1 : 1;
       const ra = a.recordedAt ?? '';
@@ -82,9 +88,10 @@ export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [],
   if (c.reference) facts.push([T.RECEIPT_REFERENCE, c.reference]);
   const lines = receiptPayments(detail.payments).map((p) => ({
     date: p.paidOn,
-    forText: T.RECEIPT_FOR_FEE,
+    forText: p.kind === 'refund' ? T.RECEIPT_FOR_REFUND : T.RECEIPT_FOR_FEE,
     how: p.method,
-    amountCents: p.amountCents,
+    // a refund is stored as a minus amount already; written with a minus either way (Star's rule)
+    amountCents: p.kind === 'refund' ? -Math.abs(p.amountCents) : p.amountCents,
   }));
   return {
     kindLine: T.RECEIPT_KIND,

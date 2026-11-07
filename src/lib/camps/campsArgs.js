@@ -16,7 +16,11 @@ export const TEMPLATE_COLUMNS = 'id, name, location_code, both_schools, day_coun
 // The camp_roster view (one row per camper; no phones, no signature). paying_by_on_form (migration
 // 0033): the way the family chose on the form — the Mark paid box's hint says "on the form" while
 // Paying by still matches it, "at the desk" once staff changed it (rulebook v0.735).
-export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form';
+// refunded_cents (migration 0039, CONTRACT-0039): the camper's refunds that stand, as a plus number
+// (0 = none) — the ⋯ shows Undo refund and grays Edit payment / Undo payment while it is above 0
+// (rulebook v0.743 (4)), and the roster's Paid tag then names the amount, "Paid $292" (v0.745).
+// The view only has it once 0039 is pasted, which comes before this app.
+export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form, refunded_cents';
 
 // ----- Converting database rows to the §5.1 shapes -----
 
@@ -119,4 +123,65 @@ export function templateArgs(input = {}) {
     p_description: input.description ?? null,
     p_waiver_text: input.waiverText,
   };
+}
+
+// ----- Record refund (migration 0039, CONTRACT-0039, rulebook v0.743) -----
+
+// camp_record_refund's arguments: exactly the six the database function takes (the preview database
+// refuses any other name, as PostgREST does). input = { camperId, expectedVersion, method ('cash' |
+// 'check'), amountCents (a plus number: the money handed back), refundedOn 'YYYY-MM-DD', school
+// (This device's school, v1.040) }.
+export function recordRefundArgs({ camperId, expectedVersion, method, amountCents, refundedOn, school } = {}) {
+  return {
+    p_camper_id: camperId,
+    p_expected_version: expectedVersion,
+    p_method: method,
+    p_amount_cents: amountCents,
+    p_refunded_on: refundedOn,
+    p_school: school,
+  };
+}
+
+// ----- Fill in (migration 0043, CONTRACT-0043, rulebook v0.740 / v0.741) -----
+
+// camp_staff_signup's arguments from the family page's own POST body (src/camp/form.js buildBody):
+// the camp by id; the honeypot, timing and Turnstile fields are not sent (the staff path has none).
+export function staffSignupArgs(campId, body = {}) {
+  const parent = body.parent ?? {};
+  const emergency = body.emergency ?? {};
+  return {
+    p_camp_id: campId,
+    p_submission_id: body.submission_id,
+    p_children: body.children,
+    p_parent_name: parent.name,
+    p_parent_phone: parent.phone,
+    p_parent_relation: parent.relation,
+    p_emergency_name: emergency.name,
+    p_emergency_phone: emergency.phone,
+    p_emergency_relation: emergency.relation,
+    p_paying_by: body.paying_by,
+    p_acknowledged: body.acknowledged,
+    p_signature: body.signature,
+    p_ack_version: body.ack_version,
+    p_waiver_version: body.waiver_version,
+    p_expected_total_cents: body.expected_total_cents,
+  };
+}
+
+// Is a camelCase camp_staff_form ok answer usable? (0043: the family page's GET answer, flat, plus
+// fillIn / signupState / closesOn / closedByHand.)
+export const staffFormShapeOk = (d) => Boolean(d?.camp && Array.isArray(d.camp.days)
+  && ['open', 'admin_only', 'finished'].includes(d.fillIn) && typeof d.waiverVersion === 'string');
+
+// Is a camelCase camp_staff_signup ok answer usable? (the family form's ok answer)
+export const staffSignupShapeOk = (d) => typeof d?.reference === 'string' && d.reference !== ''
+  && Number.isInteger(d.familyTotalCents) && Array.isArray(d.children);
+
+// Where a camper's sign-up came from, from a camelCase camp_camper_detail ok answer (0043 adds
+// source and entered_by at the answer's top level): { source: 'form' | 'desk', enteredBy }. A
+// database from before 0043 sends neither → 'form' (every sign-up was the family form's then).
+export function signupSourceOf(detail) {
+  const source = detail?.source === 'desk' ? 'desk' : 'form';
+  const name = detail?.enteredBy;
+  return { source, enteredBy: source === 'desk' && typeof name === 'string' && name.trim() !== '' ? name : null };
 }

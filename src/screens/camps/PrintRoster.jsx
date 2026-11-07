@@ -19,6 +19,7 @@ import { byFirstName } from './CampRoster.jsx';
 import * as T from './text.js';
 
 // The Paid column as words (the screen's tag): Paid · $245 due · Owes $15 · Possible duplicate.
+// (The screen's "Paid $315 ⚠ $23 overpaid" / "Paid $292" of rulebook v0.745 stays plain "Paid" on paper.)
 function paidText(row) {
   const tag = payTag(row);
   if (tag === 'paid') return T.TAG_PAID;

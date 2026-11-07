@@ -445,3 +445,111 @@ body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
 .parts-dp-low {
   margin-top: calc(100vh - 220px);
 }
+
+/* ===== L02: the room beside the panel (lib/pageRoom.js; rulebook v1.053, v1.130) ===== */
+/* The Window and Panel choices above the sample window */
+.parts-room-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12) var(--space-24);
+  margin-bottom: var(--space-16);
+}
+
+.parts-room-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.parts-room-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* Under the choices, when the chosen window is wider than this screen can show */
+.parts-room-note {
+  margin: calc(-1 * var(--space-8)) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* A small "window": a gray strip for the left panel, and the page area beside it. The chosen width
+   is its inside (content-box: the 1px edge is drawn outside it), as a real window's. It is never
+   wider than the parts page, so on a narrow screen it takes what there is. */
+.parts-room-window {
+  display: flex;
+  box-sizing: content-box;
+  max-width: calc(100% - 2px);
+  min-height: 220px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.parts-room-rail {
+  flex: none;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* The page area: measured as Shell.jsx measures the real one. It has no padding of its own; the
+   roster inside it has the page's margins, so they count as room, as on a real page. */
+.parts-room-page {
+  flex: 1;
+  min-width: 0;
+}
+
+.parts-room-roster {
+  padding: var(--space-16);
+}
+
+.parts-room-readout {
+  margin-bottom: var(--space-12);
+  font-size: var(--text-13);
+}
+
+/* The tablet columns: they fit in a room of 640px (the sample's limit) */
+.parts-room-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.parts-room-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) 200px 80px 88px;
+  gap: var(--space-8);
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-12);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.parts-room-row.is-head {
+  border-top: none;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The phone layout: one card per student, as the sections' stacked rows */
+.parts-room-cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.parts-room-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  font-size: var(--text-13);
+}
+
+.parts-room-card + .parts-room-card {
+  margin-top: var(--space-8);
+}

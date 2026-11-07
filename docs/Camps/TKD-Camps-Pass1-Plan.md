@@ -50,6 +50,7 @@ One picture: **22-record-refund** (⋯ → Record refund, the box, the toast wit
   - Every refund is logged.
   - Undo reverses the refund row.
   - Every Camps reader that adds up a camper's payments gets checked so a refund counts.
+  - **Build on 0043's versions** of `camp_camper_detail` and `camp_public_signup_core` (Fill in), not 0022's, and update the pre-apply md5s.
   - Follows handoff §6: a SETUP section "## Migration 00NN", `step00NN` in the PGlite runner, a tests file and a fingerprints file. Security review before you paste.
 - **Fake store:** the same refund in `mockCamps.js`, so the preview check passes.
 - **App:**

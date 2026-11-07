@@ -4,8 +4,10 @@
 // "did they come?", booking from the panel with the shared limit, each school's statuses, deleting
 // and the 2-year clean-up — and like 0036: each child's last name and date of birth (the list
 // carries the last name only). Also the profile's small rules (child.js, followUps.js): "Ava N.",
-// the age from the date of birth, the address line, how long the signature picture is kept; and
-// how a long visitor sheet fits its paper (sheetPlan.js, v0.641).
+// the age from the date of birth, the address line, how long the signature picture is kept, the
+// free class's state (booked / class cancelled / booking cancelled, the same on the profile, the
+// List and the printed sheet: pass 2 P-01); and how a long visitor sheet fits its paper
+// (sheetPlan.js, v0.641).
 // Runs in Node without a browser:
 //   node src/lib/prospects/checks.mjs
 // Prints "ALL PROSPECTS LIB CHECKS PASSED", or stops at the first failed check.
@@ -13,7 +15,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { template } from '../forms/fields.js';
 import { createFormsBackend } from '../mockForms.js';
-import { addressFieldOf, addressLine, ageOn, answerFieldsOf, childAge, childFullName, isWideAnswer, questionLead, signatureKeptUntil, waiverFieldOf } from './child.js';
+import { addressFieldOf, addressLine, ageOn, answerFieldsOf, childAge, childFullName, freeClassState, isWideAnswer, questionLead, signatureKeptUntil, waiverFieldOf } from './child.js';
 import { childInitial } from './followUps.js';
 import { LIMIT_PX, answersThatFit, planSheet } from './sheetPlan.js';
 
@@ -271,6 +273,14 @@ group('the profile\'s small rules: "Ava N.", the age, the address line, how long
   assert.deepEqual(signatureKeptUntil(['2027-01-13', '2027-02-01'], '2027-01-10T15:00:00Z'), { until: '2027-05-02', afterClass: true });
   assert.deepEqual(signatureKeptUntil([], '2027-01-11T01:30:00Z'), { until: '2027-04-10', afterClass: false }); // signed Jan 10, 8:30 pm in Massachusetts
   assert.equal(signatureKeptUntil([], null), null);
+});
+
+group('the free class reads the same on the profile, the List and the printed sheet (pass 2 P-01)', () => {
+  assert.equal(freeClassState(null), 'none');
+  assert.equal(freeClassState({ status: 'booked', classRunning: true }), 'booked');
+  // booked, but a closure cancelled the class itself: the sheet must not print it as happening
+  assert.equal(freeClassState({ status: 'booked', classRunning: false }), 'class_gone');
+  assert.equal(freeClassState({ status: 'cancelled', classRunning: true }), 'booking_cancelled');
 });
 
 group('a long visitor sheet keeps the signature on its first page: one-line answers, then up to 10% smaller, then a next page (v0.641)', () => {
