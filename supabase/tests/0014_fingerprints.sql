@@ -28,6 +28,11 @@
 --   (0005_fingerprints.sql and 0010_fingerprints.sql then differ ONLY in
 --   the testing_restore_student line - expected; SETUP.md section 16b.)
 --
+-- AFTER 0035 the testing_private_mark_paid(...) line is missing on
+-- purpose: 0035 removed that function (the app uses 0030's
+-- testing_private_mark_paid_by, listed in 0030_fingerprints.sql). Every
+-- other line stays as it was.
+--
 -- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
 -- the words the Supabase connection refuses (the one function name that
 -- contains one is spelled in pieces, and removed columns are skipped by

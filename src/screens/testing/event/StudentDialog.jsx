@@ -3,7 +3,8 @@
 //           name, Class (tap buttons), Current belt (belt-picture buttons), the 3-stripes tick,
 //           Paying by Cash / Check / Card. Staff and admins (Star v0.110 / Q9).
 //   'view'  the student's read-only summary (R6, Star v0.112): class and time, testing for,
-//           3 stripes, registered, paying by, payment, signed by — with Close and Edit details
+//           3 stripes, registered, paying by, payment, signed by (and its "Date signed", rule v0.638 /
+//           v0.430, for a student whose signature is on file) — with Close and Edit details
 //   'edit'  Edit details (R6): names, class and current belt. Changing the belt or class shows
 //           the new "Testing for" and fee at once. Payment is NOT changed here.
 // PC and tablet: a centered dialog. Phone: a full screen with a back arrow.
@@ -35,7 +36,8 @@ import { loadRegistrationHistory } from '../../../lib/testing/eventsApi.js';
 import { historyDescriber, historyReader } from '../../../lib/testing/history.js';
 import Notice from '../../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
-import { classTimeLabel } from '../../../lib/testing/eventRules.js';
+import { classTimeLabel, dateSignedOf } from '../../../lib/testing/eventRules.js';
+import { DATE_SIGNED } from '../../../components/text.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { ResultTag } from './ResultButtons.jsx';
 import * as T from '../text.js';
@@ -156,6 +158,7 @@ function Summary({ row, cls, rank, event, today, hidden, onPrintReceipt }) {
   if (row.source !== 'form') signed = T.NOT_SIGNED_DESK;
   else if (row.signatureDeletedAt) signed = T.signatureDeleted(row.signedAt ?? row.registeredAt);
   else signed = T.SIGNED_FORM;
+  const dateSigned = dateSignedOf(row);
   return (
     <dl className="ev-sum">
       <SummaryRow label={T.DETAIL_CLASS_TIME}>{cls ? T.classLineTitle(cls.className, time) : ''}</SummaryRow>
@@ -200,6 +203,8 @@ function Summary({ row, cls, rank, event, today, hidden, onPrintReceipt }) {
         </>
       )}
       <SummaryRow label={T.DETAIL_SIGNED}>{signed}</SummaryRow>
+      {/* Rule v0.638 (v0.430): wherever staff see a signature, its date signed shows with it */}
+      {dateSigned && <SummaryRow label={DATE_SIGNED}>{T.stampDay(dateSigned)}</SummaryRow>}
       {row.graded && (
         // G8: "Not passed · Nov 20, 5:41 PM by Staff", then "Note: …"
         <SummaryRow label={T.DETAIL_RESULT}>

@@ -105,5 +105,6 @@ export const OFFLINE_BAR = 'You’re offline. Changes won’t save until the con
 
 // ----- Date signed (rulebook v0.522, v0.638): New students' and Star's family forms both show it -----
 // Moved here from src/screens/forms/text.js, which still re-exports them, so the two sections share one wording.
+// DateSigned.jsx (the shared "Date signed" box, rulebook v0.430) draws these same words for Color Belt's family form and student summary.
 export const DATE_SIGNED = 'Date signed';
 export const DATE_SIGNED_HINT = "Filled in automatically with today's date.";

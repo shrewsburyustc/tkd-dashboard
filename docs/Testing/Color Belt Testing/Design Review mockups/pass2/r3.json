@@ -1,0 +1,40 @@
+{
+  "title": "Pass 1 · R3-10 + R3-02 + R2-03 — the area above the event roster, and the restore toast",
+  "subtitle": "Three approved rules, drawn on the event roster. R3-10 (v1.047 (15)): one order above every roster, the possible-duplicate box first, then the count cards. R3-02 (v1.046 (8), as Black Belt): a row marked “Possible duplicate” stays out of Paid and Not paid until the pair is resolved; Students still counts it and Payments recorded keeps any money; one gray line under the cards says so (words to approve below). R2-03 (v1.043, Star’s G3): restoring a “Duplicate copy” says “Mia Lopez restored” with no Undo (an Undo would put the row back as a plain Removed with a history that says Withdrawn; to change it back an admin uses Review → Keep this one again). Every other restore keeps its 5-second Undo. The After column is drawn on top of the real preview page.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "r3-pc-today.png", "crop": [56, 225, 1224, 230], "scale": 0.62, "caption": "PC 1280: the cards first, then the box; the possible duplicate (the second Mia Lopez, not paid) is counted in Not paid (9).", "marks": [[672, 240, 286, 72], [76, 324, 1180, 46]] },
+        { "row": [
+          { "src": "r3-w820-today.png", "shotWidth": 820, "crop": [72, 260, 748, 250], "scale": 0.5, "caption": "Tablet 820 (touch).", "marks": [[96, 279, 700, 72], [96, 363, 700, 54]] },
+          { "src": "r3-w390-today.png", "shotWidth": 390, "crop": [0, 300, 390, 400], "scale": 0.55, "caption": "Phone 390.", "marks": [[16, 315, 358, 152], [16, 479, 358, 101]] },
+          { "src": "r3-w320-today.png", "shotWidth": 320, "crop": [0, 320, 320, 440], "scale": 0.55, "caption": "320 (shot 900 tall).", "marks": [[16, 333, 288, 188], [16, 533, 288, 101]] }
+        ] },
+        { "row": [
+          { "src": "r2-03-pc-today.png", "crop": [700, 690, 580, 110], "scale": 0.8, "caption": "R2-03, PC 1280: after Restore on a Duplicate copy, the toast offers Undo.", "marks": [[1052, 736, 204, 40]] },
+          { "src": "r2-03-w390-today.png", "shotWidth": 390, "crop": [0, 700, 390, 90], "scale": 0.8, "caption": "Phone 390.", "marks": [[120, 734, 170, 40]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "r3-pc-after.png", "crop": [56, 225, 1224, 230], "scale": 0.62, "caption": "PC 1280: the box first; Not paid 8; the gray line: “1 possible duplicate isn’t counted in Paid or Not paid until it’s resolved.”", "marks": [[76, 240, 1180, 46], [672, 298, 286, 72], [76, 382, 600, 20]] },
+        { "row": [
+          { "src": "r3-w820-after.png", "shotWidth": 820, "crop": [72, 260, 748, 250], "scale": 0.5, "caption": "Tablet 820 (touch).", "marks": [[96, 279, 700, 54], [96, 429, 700, 20]] },
+          { "src": "r3-w390-after.png", "shotWidth": 390, "crop": [0, 300, 390, 400], "scale": 0.55, "caption": "Phone 390.", "marks": [[16, 315, 358, 101], [16, 592, 358, 39]] },
+          { "src": "r3-w320-after.png", "shotWidth": 320, "crop": [0, 320, 320, 440], "scale": 0.55, "caption": "320 (shot 900 tall).", "marks": [[16, 333, 288, 101], [16, 646, 288, 39]] }
+        ] },
+        { "row": [
+          { "src": "r2-03-pc-after.png", "crop": [700, 690, 580, 110], "scale": 0.8, "caption": "R2-03, PC 1280: “Mia Lopez restored”, no Undo.", "marks": [[1128, 736, 130, 40]] },
+          { "src": "r2-03-w390-after.png", "shotWidth": 390, "crop": [0, 700, 390, 90], "scale": 0.8, "caption": "Phone 390.", "marks": [[130, 734, 130, 40]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "<b>Words to approve (R3-02):</b> “1 possible duplicate isn’t counted in Paid or Not paid until it’s resolved.” · with two or more: “2 possible duplicates aren’t counted in Paid or Not paid until they’re resolved.” (Black Belt’s sentence, naming Paid and Not paid because Students still counts the row.) The line shows only while a possible duplicate is on the list; with Hide private details on (only the Students card shows) it is left out. Tapping Not paid doesn’t list the possible duplicate either; Review → Keep this one makes the counts whole again and the line goes."
+}

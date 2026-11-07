@@ -1,0 +1,48 @@
+{
+  "title": "Pass 2 · M-06 — Print results goes from Color Belt's Grading tab",
+  "subtitle": "Rulebook v1.052 (you, 2026-11-05: “Childrens testing doesnt need to be printed.” … “Yes, remove it”). Color Belt testing has no printed results sheet any more. Download CSV (admins only, hidden while Hide private details is on) and Print grading sheet stay. Where nothing is left at the right of the class switch (staff, or admin with Hide private details on), nothing is drawn there: no empty space, and on phones no empty line under the switch. Star's and Black Belt's results sheets don't change. Screenshots: November Children Testing → Grading in preview mode; the After column is drawn on top of the real page.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "m06-pc-admin-today.png", "crop": [56, 230, 1224, 140], "scale": 0.62, "caption": "PC 1280, admin: Print results beside Download CSV.", "marks": [[979, 271, 126, 32]] },
+        { "src": "m06-pc-staff-today.png", "crop": [56, 230, 1224, 140], "scale": 0.62, "caption": "PC 1280, staff: Print results alone at the right.", "marks": [[1130, 271, 126, 32]] },
+        { "row": [
+          { "src": "m06-w820-admin-today.png", "shotWidth": 820, "crop": [90, 275, 715, 170], "scale": 0.52, "caption": "Tablet 820, admin.", "marks": [[519, 328, 126, 36]] },
+          { "src": "m06-w820-staff-today.png", "shotWidth": 820, "crop": [90, 275, 715, 170], "scale": 0.52, "caption": "Tablet 820, staff.", "marks": [[670, 311, 126, 36]] }
+        ] },
+        { "row": [
+          { "src": "m06-w390-admin-today.png", "shotWidth": 390, "crop": [0, 310, 390, 300], "scale": 0.7, "caption": "Phone 390, admin: two half-width buttons under the switch.", "marks": [[16, 449, 175, 34]] },
+          { "src": "m06-w390-staff-today.png", "shotWidth": 390, "crop": [0, 310, 390, 300], "scale": 0.7, "caption": "Phone 390, staff: one full-width button.", "marks": [[16, 449, 358, 34]] }
+        ] },
+        { "row": [
+          { "src": "m06-w320-admin-today.png", "shotWidth": 320, "crop": [0, 330, 320, 250], "scale": 0.8, "caption": "320, admin: two full-width lines.", "marks": [[16, 471, 288, 34]] },
+          { "src": "m06-w320-staff-today.png", "shotWidth": 320, "crop": [0, 330, 320, 250], "scale": 0.8, "caption": "320, staff.", "marks": [[16, 471, 288, 34]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "m06-pc-admin-after.png", "crop": [56, 230, 1224, 140], "scale": 0.62, "caption": "PC 1280, admin: only Download CSV at the right of the class switch.", "marks": [[1113, 271, 143, 32]] },
+        { "src": "m06-pc-staff-after.png", "crop": [56, 230, 1224, 140], "scale": 0.62, "caption": "PC 1280, staff: nothing at the right of the switch.", "marks": [[76, 271, 1180, 32]] },
+        { "row": [
+          { "src": "m06-w820-admin-after.png", "shotWidth": 820, "crop": [90, 275, 715, 170], "scale": 0.52, "caption": "Tablet 820, admin: Download CSV only.", "marks": [[653, 311, 143, 36]] },
+          { "src": "m06-w820-staff-after.png", "shotWidth": 820, "crop": [90, 275, 715, 170], "scale": 0.52, "caption": "Tablet 820, staff: nothing there.", "marks": [[96, 311, 700, 36]] }
+        ] },
+        { "row": [
+          { "src": "m06-w390-admin-after.png", "shotWidth": 390, "crop": [0, 310, 390, 300], "scale": 0.7, "caption": "Phone 390, admin: Download CSV on its own line, full width.", "marks": [[16, 449, 358, 34]] },
+          { "src": "m06-w390-staff-after.png", "shotWidth": 390, "crop": [0, 310, 390, 300], "scale": 0.7, "caption": "Phone 390, staff: no empty line; the class line moves up.", "marks": [[16, 448, 358, 30]] }
+        ] },
+        { "row": [
+          { "src": "m06-w320-admin-after.png", "shotWidth": 320, "crop": [0, 330, 320, 250], "scale": 0.8, "caption": "320, admin: Download CSV only.", "marks": [[16, 471, 288, 34]] },
+          { "src": "m06-w320-staff-after.png", "shotWidth": 320, "crop": [0, 330, 320, 250], "scale": 0.8, "caption": "320, staff: no empty line.", "marks": [[16, 468, 288, 30]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "Admin with Hide private details on looks like the staff pictures (Download CSV is hidden then too). Nothing else on the Grading tab changes."
+}

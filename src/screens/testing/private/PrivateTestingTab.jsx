@@ -12,8 +12,8 @@
 //   - Add private testing (all staff, the header button), Mark paid (its box, then a 5-second
 //     Undo), and the ⋯ menu: Edit details · Change day or time · Grade · Change how they'll pay
 //     (v1.011) | Edit payment · Undo payment (admins) · Print receipt (CB2) | Cancel private
-//     testing · Delete permanently (admins); a cancelled row: Restore · Delete permanently
-//     (admins only)
+//     testing · Delete permanently (admins); a cancelled row: Print receipt while a payment still
+//     stands (staff and admins, pass 2 M-03, v0.428) | Restore | Delete permanently (admins)
 //   - tapping a row opens its read-only summary (PrivateSummaryDialog.jsx, v1.009), with
 //     Close · Edit details
 //   - Undo for 5 seconds (v1.006, v0.413, v1.003) after Edit details ("Changes saved", not when the
@@ -943,7 +943,8 @@ export default function PrivateTestingTab({
   // called when it opens; a failed call just leaves the name out, as Star's v0.518 Q7 A). Built by
   // lib/testing/receipt.js, as the event roster's: Private testing (day and time), "Moved from ·
   // [event]" only for one moved from an event (v0.421 Q A), Class, School; each payment that still
-  // stands is its own "Testing fee" line; Total due = the private price.
+  // stands is its own "Testing fee" line; Total due = the private price (a cancelled one, v0.429:
+  // what was paid, never more than the price, and its line ends "· cancelled Nov 6").
   // From the summary's Print receipt (P3) it opens on top of the summary (onTop, Star's v0.518);
   // from ⋯ on its own.
   function openReceipt(row, opener, onTop = false) {
@@ -967,7 +968,13 @@ export default function PrivateTestingTab({
         lastName: row.lastName,
         rankName: row.rankName,
         testingForName: row.testingFor?.kind === 'rank' ? row.testingFor.name : null,
-        privateTesting: { privateOn: row.privateDate, privateTime: row.privateTime, movedFromEventName: row.movedFromEventName },
+        privateTesting: {
+          privateOn: row.privateDate,
+          privateTime: row.privateTime,
+          movedFromEventName: row.movedFromEventName,
+          // v0.429: a cancelled one owes nothing more (the receipt says so)
+          cancelledAt: row.status === 'cancelled' ? row.cancelledAt : null,
+        },
         className: row.className,
         locationCode: row.locationCode,
         reference: null, // a private testing has no reference number
@@ -1086,8 +1093,11 @@ export default function PrivateTestingTab({
     const anchor = menu.anchor;
     const can = privateMenu(row, { today, isAdmin, hidden }); // hidden: no payment items (v0.506)
     const name = T.studentLabel(row);
-    const groups = [[], [], []];
+    const groups = [[], [], [], []];
     if (row.status === 'cancelled') {
+      // pass 2 M-03 (v1.055 (b), v0.428): money first — Print receipt while a payment still stands,
+      // for staff and admins (staff's ⋯ holds only this item); then Restore, then Delete permanently.
+      if (can.printReceipt) groups[1].push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor) });
       if (can.restore) groups[2].push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doRestore(row) });
     } else {
       // Order (v1.011): Edit details · Change day or time · Grade · Change how they'll pay
@@ -1106,7 +1116,10 @@ export default function PrivateTestingTab({
       // ti-calendar-x = cancel the private testing (blue, not red: nothing is deleted)
       if (can.cancel) groups[2].push({ key: 'cancel', label: T.CANCEL_PRIVATE, Icon: IconCalendarX, onSelect: () => openCancel(row, anchor) });
     }
-    if (can.delete) groups[2].push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => openDelete(row, anchor) });
+    // On a cancelled row the red Delete permanently gets its own group under Restore (pass 2 C-04,
+    // v1.055 (f), as Star's); on an active row it stays in the last group with Cancel.
+    const deleteGroup = row.status === 'cancelled' ? 3 : 2;
+    if (can.delete) groups[deleteGroup].push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => openDelete(row, anchor) });
     // Dividers between the groups, never at the start (R8).
     const items = [];
     for (const group of groups) {
@@ -1284,6 +1297,7 @@ export default function PrivateTestingTab({
         <PrivateSummaryDialog
           key={dialog.key}
           record={record}
+          payments={payments}
           isPhone={isPhone}
           canEdit={Boolean(can.editDetails)}
           hidden={hidden}

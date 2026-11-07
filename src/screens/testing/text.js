@@ -299,6 +299,7 @@ export const TOAST_CLASS_ADDED = 'Class added';
 export const TOAST_RANK_ORDER = 'Rank order saved';
 export const TOAST_CLASS_ORDER = 'Class order saved';
 export const TOAST_UNDONE = 'Undone';
+export const TOAST_UNDONE_REOPENED = 'Undone. Registration is open again.'; // R2-07 (v1.051): an Undo that opens registration again (Star's words)
 export const deletedToast = (name) => `${name} deleted`;
 
 // =====================================================================================
@@ -394,7 +395,7 @@ export const ACTIONS_COL = 'Actions';
 export const NO_EVENTS_ADMIN = 'No color belt testing events yet.';
 export const NO_EVENTS_STAFF = 'No color belt testing events yet. An admin adds them.';
 export const NO_UPCOMING = 'No upcoming events.';
-export const NO_PAST = 'No past events.';
+export const NO_PAST = 'No past events yet.'; // pass 2 C-05 (c), v1.055 (g2)
 export const LOADING_EVENTS = 'Loading events';
 export const STAFF_EVENTS_LINE =
   'Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.';
@@ -430,7 +431,7 @@ export const CLOSE_REGISTRATION = 'Close registration';
 export const OPEN_REGISTRATION = 'Open registration';
 export const EDIT_EVENT = 'Edit event';
 export const DELETE_EVENT = 'Delete event';
-export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to reopen.';
+export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to open it.'; // R4-13 (v1.045 (5))
 export const eventMenuSub = (event) => shortDate(event.testingDate);
 
 export const TOAST_REGISTRATION_CLOSED = 'Registration closed';
@@ -443,7 +444,7 @@ export const COPY_FAILED = "Couldn't copy the link. Open Registration link on th
 export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection and try again.`;
 export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection and try again.`;
 export const REGISTRATION_FINISHED = 'This testing has finished, so registration can no longer change.';
-export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to reopen. Registration wasn't opened.";
+export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to open it. Registration wasn't opened."; // R4-13
 export const EVENTS_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const LOAD_EVENTS_FAILED = "Couldn't load events. Check the connection, then retry.";
 
@@ -600,7 +601,8 @@ export const TAG_REMOVED = 'Removed';
 export const TAG_DUPLICATE_COPY = 'Duplicate copy';
 export const NO_NEW_RANK = 'No new rank';
 export const MARK_PAID = 'Mark paid';
-export const markPaidLabel = (name) => `Mark ${name} paid`;
+// The visible words first, so the name contains "Mark paid" (WCAG 2.5.3; pass 2 C-02, Star's words).
+export const markPaidLabel = (name) => `Mark paid for ${name}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const paidOnPhone = (method, stamp) => `${payingByText(method)} · paid ${monthDay(stamp)}`;
 export const EMPTY_CLASS_ROSTER = 'No students in this class yet.';
@@ -617,6 +619,12 @@ export function duplicateBoxLine(count) {
   return count === 1 ? '1 possible duplicate' : `${count} possible duplicates`;
 }
 export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
+// The gray line under the count cards while possible duplicates are left out of Paid / Not paid
+// (pass 1 R3-02, v1.046 (8); Black Belt's sentence, naming the two cards; approved 2026-11-06)
+export const duplicatesLeftOut = (count) =>
+  count === 1
+    ? "1 possible duplicate isn't counted in Paid or Not paid until it's resolved."
+    : `${count} possible duplicates aren't counted in Paid or Not paid until they're resolved.`;
 
 // ⋯ menu on a student (R8, plan answers 6 and 8)
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';
@@ -647,7 +655,7 @@ export const ROSTER_STALE = "Someone else changed this just now. Your change was
 export const ROSTER_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const alreadyPaid = (name) => `${name} is already marked paid.`;
 export const isWithdrawn = (name) => `${name} was withdrawn. An admin can restore them first.`;
-export const markPaidFailed = (name) => `${name} wasn't marked paid. Check the connection and try again.`;
+export const markPaidFailed = (name) => `${name} wasn't marked paid. Check the connection, then retry.`; // pass 2 C-06 (a), v1.055 (j1); Camps re-exports it
 export const UNDO_PAYMENT_TOO_LATE = 'Too late to undo here. Ask an admin to undo the payment.';
 // Staff Undo of "keep this one" after the database's 10-second window (R7)
 export const UNDO_DUPLICATE_TOO_LATE = 'Too late to undo here. Ask an admin to restore the copy from Removed.';
@@ -664,7 +672,7 @@ export const undoPaymentBody = (cents, method, iso) =>
   `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to Not paid. Both stay in the history.`;
 export const KEEP_PAYMENT = 'Keep payment';
 export const UNDOING = 'Undoing…';
-export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // Star's Q2 B
+export const UNDO_BOX_FAILED = "Undo didn't save. Check the connection, then retry."; // pass 2 C-06 (b), v1.045 (4) / v1.055 (j2)
 // CB2, Print receipt (the receipt's own lines: src/lib/testing/receipt.js)
 export const PRINT_RECEIPT = 'Print receipt';
 export const THIS_STUDENT = 'This student'; // the receipt's not-found line when the row is gone too
@@ -674,6 +682,8 @@ export const RECEIPT_KIND = 'Color belt testing · payment receipt';
 export const RECEIPT_STUDENT = 'Student';
 export const RECEIPT_EVENT = 'Event';
 export const RECEIPT_PRIVATE = 'Private testing';
+// v0.429: a cancelled private testing's line ends "· cancelled Nov 6" (it owes nothing more)
+export const receiptCancelledOn = (stamp) => `cancelled ${stampDay(stamp)}`;
 export const RECEIPT_MOVED_FROM = 'Moved from'; // v0.421 Q A
 export const RECEIPT_CLASS = 'Class';
 export const RECEIPT_SCHOOL = 'School';
@@ -938,26 +948,6 @@ export const SHEET_COL_NOTE = 'Note';
 export const SHEET_ADDED_ON_DAY = 'Added on the day:';
 export const SHEET_FOOTER = 'Type the results into the Grading tab the same day.';
 
-// CB18 (v1.029, v0.416): Print results — the printed results sheet (event/ResultsSheet.jsx),
-// a page per class, only the students who passed.
-export const PRINT_RESULTS = 'Print results';
-export const resultsSheetTitle = (eventName) => `${eventName} — Results`;
-// "Friday, November 20, 2026 · Worcester school"
-export const resultsSheetSub = (dateIso, school) => `${longDate(dateIso)} · ${schoolName(school)}`;
-export const RESULTS_SHEET_CONTINUED = '(continued)';
-export const RESULTS_PASSED_HEADING = 'PASSED — CONGRATULATIONS!';
-export const RESULTS_NEW_BELT = 'New belt';
-export const RESULTS_PASSED_BOX = 'PASSED';
-// Printed only when no student in the whole event has passed yet (each class with nobody passed
-// is left off the sheet).
-export const RESULTS_NONE_PASSED = 'No passed results recorded yet.';
-// "November Children Testing — Results · printed Fri, Nov 20, 2026, 8:15 PM"
-export const resultsSheetFoot = (eventName, printedAt) =>
-  `${resultsSheetTitle(eventName)} · printed ${printedAt.toLocaleString('en-US', {
-    timeZone: SCHOOL_TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  })}`;
-export const resultsSheetPage = (page, pages) => `Page ${page} of ${pages}`;
-
 // CB18 (v0.416, v0.418 Q3): Download CSV — admins only, hidden while Hide private details is on,
 // the whole event (lib/testing/resultsCsv.js builds the rows). Star's words where they fit
 // (star/resultsText.js).
@@ -1056,7 +1046,7 @@ export const movedFromLine = (eventName) => `Moved from ${eventName}`;
 export const cancelledTag = (stamp) => `Cancelled ${stampDay(stamp)}`;
 export const NO_PRIVATE_TESTINGS = 'No private testings yet. Add one when a family asks to test privately.';
 export const NO_UPCOMING_PRIVATE = 'No upcoming private testings.'; // CP1
-export const NO_PAST_PRIVATE = 'No past private testings.'; // CP1
+export const NO_PAST_PRIVATE = 'No past private testings yet.'; // CP1; pass 2 C-05 (c)
 export const LOADING_PRIVATE = 'Loading private testings'; // screen readers only, while the list loads
 export const PRIVATE_SWITCH_LABEL = 'Upcoming or past private testings'; // screen readers only: the Upcoming / Past switch
 export const LOAD_PRIVATE_FAILED = 'Couldn’t load private testings. Check the connection, then retry.'; // CP1
@@ -1182,7 +1172,8 @@ export function movePaymentHint(payments, firstName, rankName) {
 export const moveClearsNoShow = (firstName, dateIso) => `${firstName} was marked No show on ${weekdayMonthDay(dateIso)}. Moving clears that result.`;
 export const movedToast = (name) => `${name} moved to private testing`;
 // The event's Removed row: tag "Moved to private testing, Tue, Dec 1", line "moved Nov 10 by Staff"
-export const movedTag = (dateIso) => `Moved to private testing, ${weekdayMonthDay(dateIso)}`;
+// The date's spaces are non-breaking, so a narrow cell wraps before the date, never inside it (pass 2 L-02).
+export const movedTag = (dateIso) => `Moved to private testing, ${weekdayMonthDay(dateIso).replace(/ /g, '\u00A0')}`;
 export const movedBy = (stamp, name) => (name ? `moved ${stampDay(stamp)} by ${name}` : `moved ${stampDay(stamp)}`);
 export const OPEN_PRIVATE = 'Open private testing';
 export const restoreMovedReason = (firstName) => `Not available: ${firstName} is on the Private testing tab with their payment.`;

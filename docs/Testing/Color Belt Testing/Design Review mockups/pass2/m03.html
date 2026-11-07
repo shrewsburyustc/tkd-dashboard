@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pass 2 · M-03 — Print receipt on a removed student or a cancelled private testing that has money</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2200px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Pass 2 · M-03 — Print receipt on a removed student or a cancelled private testing that has money</h1>
+<p class="sub">Rule v1.055 (b) (you approved A, “Print receipt whenever money still stands”): a removed student or a cancelled private testing with a payment that still stands gets Print receipt in its ⋯, first, in its own group above Restore (§8’s one order: money before taking someone off). Never with nothing paid (Leo Hart, withdrawn without paying, keeps today’s menu); never while Hide private details is on. The receipt itself is the one the active rows print, with that payment. Admin pictures below; the one open question (staff) is under them. <span style="color:#6B6B6B">(Preview screenshots, fake data; the After column is drawn on top of the real page.)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today (admin)</div>
+  <div class="row"><figure style="width:432px">
+    <div class="shot" style="width:432px;height:192px">
+      <img src="m03-pc-event-today.png" style="left:-592px;top:-400px;width:1024px">
+      <div class="mark" style="left:241.60000000000002px;top:74.4px;width:168px;height:74.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>PC 1280: Owen Reed (withdrawn after paying $65): no Print receipt.</figcaption>
+  </figure><figure style="width:432px">
+    <div class="shot" style="width:432px;height:192px">
+      <img src="m03-pc-private-today.png" style="left:-592px;top:-296px;width:1024px">
+      <div class="mark" style="left:241.60000000000002px;top:66.4px;width:168px;height:74.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>PC 1280: Emma Ross (cancelled, $85 paid).</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:198.4px">
+      <img src="m03-w820-event-today.png" style="left:-235.6px;top:-471.2px;width:508.4px">
+      <div class="mark" style="left:124.34px;top:68.54px;width:132px;height:74.34px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Tablet 820 (touch).</figcaption>
+  </figure><figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:176.08px">
+      <img src="m03-w390-event-today.png" style="left:0px;top:-347.2px;width:241.8px">
+      <div class="mark" style="left:-4px;top:79.08px;width:249.8px;height:101px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Phone 390.</figcaption>
+  </figure><figure style="width:224px">
+    <div class="shot" style="width:224px;height:217px">
+      <img src="m03-w320-event-today.png" style="left:0px;top:-230.99999999999997px;width:224px">
+      <div class="mark" style="left:-4px;top:108px;width:232px;height:113px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>320.</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After (admin)</div>
+  <div class="row"><figure style="width:432px">
+    <div class="shot" style="width:432px;height:192px">
+      <img src="m03-pc-event-admin.png" style="left:-592px;top:-400px;width:1024px">
+      <div class="mark" style="left:241.60000000000002px;top:74.4px;width:168px;height:107.2px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>PC 1280: Print receipt · line · Restore · line · Delete permanently.</figcaption>
+  </figure><figure style="width:432px">
+    <div class="shot" style="width:432px;height:192px">
+      <img src="m03-pc-private-admin.png" style="left:-592px;top:-296px;width:1024px">
+      <div class="mark" style="left:241.60000000000002px;top:66.4px;width:168px;height:107.2px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>PC 1280: the same on the cancelled private testing.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:198.4px">
+      <img src="m03-w820-event-admin.png" style="left:-235.6px;top:-471.2px;width:508.4px">
+      <div class="mark" style="left:124.34px;top:68.54px;width:132px;height:107.2px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Tablet 820 (touch).</figcaption>
+  </figure><figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:176.08px">
+      <img src="m03-w390-event-admin.png" style="left:0px;top:-347.2px;width:241.8px">
+      <div class="mark" style="left:-4px;top:46.22px;width:249.8px;height:133.86px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Phone 390.</figcaption>
+  </figure><figure style="width:224px">
+    <div class="shot" style="width:224px;height:217px">
+      <img src="m03-w320-event-admin.png" style="left:0px;top:-230.99999999999997px;width:224px">
+      <div class="mark" style="left:-4px;top:70.89999999999999px;width:232px;height:150.1px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>320.</figcaption>
+  </figure></div>
+  
+</div>
+</div>
+<div class="foot"><div style="margin:26px 0 8px"><div style="display:inline-block;background:#E6EBF4;color:#003595;font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-bottom:10px">To decide</div><h2 style="font-size:20px;margin:0 0 6px">Do staff get Print receipt on these rows too?</h2><p style="margin:0 0 14px;max-width:1700px">On an active row with money, staff and admins both get Print receipt (CB2, v0.420). On a removed student or a cancelled private testing, staff see no ⋯ at all today, because Restore and Delete permanently are for admins. Rule v1.055 (b) says the receipt is offered whenever money still stands, but not to whom. Star and Camps will meet the same question when they add it (their staff also see no ⋯ on removed rows).</p><div style="display:flex;gap:24px;align-items:flex-start"><div style="flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;background:#F3F6FD;border-color:#9DB2E6"><div style="font-weight:700;margin-bottom:10px">A · Staff too: a ⋯ with only Print receipt <span style="background:#1D4ED8;color:#fff;border-radius:5px;padding:2px 8px;font-size:13px;margin-left:6px">Recommended</span></div><figure style="width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0"><div class="shot" style="width:324px;height:144px"><img src="m03-pc-event-staffA.png" style="left:-444px;top:-300px;width:768px"><div class="mark" style="left:180.2px;top:54.8px;width:128px;height:33.2px;border-color:#1D4ED8"></div></div><figcaption>PC 1280, staff: Owen Reed (removed, paid $65).</figcaption></figure><figure style="width:234px;display:inline-block;vertical-align:top;margin:0 14px 10px 0"><div class="shot" style="width:234px;height:170.4px"><img src="m03-w390-event-staffA.png" style="left:0px;top:-336px;width:234px"><div class="mark" style="left:-4px;top:108.2px;width:242px;height:66.19999999999999px;border-color:#1D4ED8"></div></div><figcaption>Phone 390, staff.</figcaption></figure><figure style="width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0"><div class="shot" style="width:324px;height:144px"><img src="m03-pc-private-staffA.png" style="left:-444px;top:-222px;width:768px"><div class="mark" style="left:180.2px;top:48.8px;width:128px;height:33.2px;border-color:#1D4ED8"></div></div><figcaption>PC 1280, staff: Emma Ross (cancelled, paid $85).</figcaption></figure><p style="margin:8px 0 0"><b>What it does:</b> Staff get a ⋯ on a removed or cancelled row that has money, holding only Print receipt. Admins get Print receipt · line · Restore · line · Delete permanently. With nothing paid, staff still see no ⋯ there.</p><p style="margin:6px 0 0"><b>+</b> The person at the desk when a parent asks for a receipt is usually staff, and the same staff can already print one for the same family while the row is active. The same rule everywhere: whoever can print a receipt for a payment can print it for that payment.</p><p style="margin:6px 0 0"><b>−</b> Staff now see a ⋯ on some removed rows (the ones with money), so the Removed list looks a little busier for staff.</p></div><div style="flex:1;min-width:0;border:1px solid #D9D9D4;border-radius:10px;padding:14px 16px;"><div style="font-weight:700;margin-bottom:10px">B · Admins only</div><figure style="width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0"><div class="shot" style="width:324px;height:144px"><img src="m03-pc-event-staffB.png" style="left:-444px;top:-300px;width:768px"><div class="mark" style="left:260px;top:104px;width:53.6px;height:32px;border-color:#1D4ED8"></div></div><figcaption>PC 1280, staff: no ⋯ on Owen's row, as today.</figcaption></figure><figure style="width:234px;display:inline-block;vertical-align:top;margin:0 14px 10px 0"><div class="shot" style="width:234px;height:102px"><img src="m03-w390-event-staffB.png" style="left:0px;top:-198px;width:234px"><div class="mark" style="left:176px;top:21.2px;width:52.4px;height:32px;border-color:#1D4ED8"></div></div><figcaption>Phone 390, staff: as today.</figcaption></figure><figure style="width:324px;display:inline-block;vertical-align:top;margin:0 14px 10px 0"><div class="shot" style="width:324px;height:144px"><img src="m03-pc-private-staffB.png" style="left:-444px;top:-222px;width:768px"><div class="mark" style="left:260px;top:23px;width:53.6px;height:38px;border-color:#1D4ED8"></div></div><figcaption>PC 1280, staff: no ⋯ on Emma's row, as today.</figcaption></figure><p style="margin:8px 0 0"><b>What it does:</b> Only admins get Print receipt on removed or cancelled rows; staff see these rows as today.</p><p style="margin:6px 0 0"><b>+</b> Nothing changes for staff; the Removed list stays as it is.</p><p style="margin:6px 0 0"><b>−</b> A staff member at the desk has to find an admin to print a receipt for a withdrawn student's payment, though they could print it a day earlier while the student was active. Two rules for the same receipt.</p></div></div></div><p style="margin-top:18px"><b>Answer: A or B.</b></p></div>
+</body></html>

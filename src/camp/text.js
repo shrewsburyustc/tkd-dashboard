@@ -25,6 +25,8 @@ export const signUpByPart = (date) => `Sign up by ${date}`;
 // ----- Step 1 (C7a) -----
 export const STEP_1 = 'Step 1 of 2 · Details';
 export const childTitle = (n) => `Child ${n}`;
+// "Date signed" under the signature and its hint (rulebook v0.638): the shared words, as Star's and Black Belt's forms.
+export { DATE_SIGNED, DATE_SIGNED_HINT } from '../components/text.js';
 export const removeChildLabel = (n) => `Remove child ${n}`; // the trash icon button's tooltip and screen-reader name (v1.048 (22))
 export const FIRST_NAME = 'First name';
 export const LAST_NAME = 'Last name';
