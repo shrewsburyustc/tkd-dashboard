@@ -634,13 +634,16 @@ export function refundStands(row) {
   return Number.isInteger(row?.refundedCents) && row.refundedCents > 0;
 }
 
-// Which refund item the camper's ⋯ (and Camper detail's More) shows, admins only (v0.743 (1), (4);
-// Star's order, candidateMenu.js): 'undo' while a refund stands — it takes Record refund's place —
-// else 'record' while the camper paid more than the total, else null (no refund item).
-export function refundMenuItem(row) {
-  if (refundStands(row)) return 'undo';
-  if (overpaidCents(row) > 0) return 'record';
-  return null;
+// Which refund items the camper's ⋯ (and Camper detail's More) shows, admins only, in this order
+// (v0.743 (1), (4) and v0.744 — Jeffrey chose A on picture 22y): 'record' while the camper paid
+// more than the total, and 'undo' while a refund stands. Usually only one of them shows (a full
+// refund leaves nothing overpaid); after a PARTIAL refund both show, so the rest can be handed back
+// in one step and the hint "⋯ → Record refund" stays true. [] = no refund item.
+export function refundMenuItems(row) {
+  const items = [];
+  if (overpaidCents(row) > 0) items.push('record');
+  if (refundStands(row)) items.push('undo');
+  return items;
 }
 
 // The refund Undo refund reverses: the NEWEST refund row that stands (no reversal points at it),

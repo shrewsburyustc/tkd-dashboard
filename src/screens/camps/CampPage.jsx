@@ -510,11 +510,17 @@ export default function CampPage({
     }
     rowDone();
     const reloaded = reloadQuiet();
+    // Set when the toast's Undo is pressed: from then on the Undo's own bar decides where focus goes
+    // (useRevealRetryBar), so the step below must not take focus first — when Undo was pressed
+    // before the roster finished reloading, it did, and the bar stayed above the screen (Record
+    // refund's design review).
+    let undoPressed = false;
     // The "$X due" tag (where focus went back when the box closed) turns into a plain "Paid" with
     // the payment, so once the roster has reloaded focus moves to the row, as Star does: the tag if
     // the camper still owes ("Owes $X"), else the camper's name, else the row's ⋯. Only when focus
     // is still on that tag or fell to the page — never away from something else (e.g. the toast's Undo).
     reloaded.then(() => focusSoon(() => {
+      if (undoPressed) return null;
       const tag = document.querySelector(`[data-pay-tag="${row.id}"]`);
       const active = document.activeElement;
       if (active && active !== document.body && active.isConnected && active !== tag) return null;
@@ -527,7 +533,13 @@ export default function CampPage({
     showToast(text, {
       icon: false,
       // Staff may undo their own payment within 10 seconds (§1.14); after that it's an admin's job.
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE, money: true }) },
+      action: {
+        label: T.UNDO,
+        onAction: () => {
+          undoPressed = true;
+          runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE, money: true });
+        },
+      },
     });
   }
 
@@ -783,9 +795,11 @@ export default function CampPage({
   // ===== Record refund (admins, an overpaid camper; rulebook v0.743, v1.039, v1.040) =====
   // Camper detail is read first, as for Edit payment: the box shows what was paid and how much is
   // overpaid NOW, and the save sends this read's version (anyone changing the camper since → stale).
-  // Nothing overpaid any more, a refund already standing (someone else recorded it), or the camper
-  // gone: "Someone else changed this just now …" and the roster reloads. A failed read: the bar with
-  // Retry. From Camper detail (`from`) the box takes the detail's place in one update.
+  // Nothing overpaid any more (someone else handed it back, or changed the days), or the camper
+  // gone: "Someone else changed this just now …" and the roster reloads. A refund that already
+  // stands is fine: after a partial refund the rest is recorded as a second refund (v0.744). A
+  // failed read: the bar with Retry. From Camper detail (`from`) the box takes the detail's place in
+  // one update.
   async function startRecordRefund(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
     const result = await loadCamperDetail(row.id);
@@ -798,7 +812,7 @@ export default function CampPage({
     if (hiddenNowRef.current) return; // switched on while this loaded: the money dialog doesn't open
     const camper = result.status === 'ok' ? result.camper : null;
     const over = camper ? overpaidCents(camper) : 0;
-    if (!camper || camper.status !== 'active' || over <= 0 || refundStands(camper)) {
+    if (!camper || camper.status !== 'active' || over <= 0) {
       leaveDetail(from);
       camperReadProblem(result.status, () => startRecordRefund(row, opener), opener);
       return;

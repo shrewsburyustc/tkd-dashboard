@@ -20,7 +20,7 @@ import {
   comingCardDay, comesOnDay, campCardCounts, matchesCardFilter,
   getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
-  overpaidCents, refundStands, refundMenuItem, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
+  overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
@@ -2284,12 +2284,13 @@ check('Record refund: campRules helpers (overpaid, a refund that stands, the ⋯
   assert.equal(refundStands({ refundedCents: 2300 }), true);
   assert.equal(refundStands({ refundedCents: 0 }), false);
   assert.equal(refundStands({}), false); // a database from before 0039: no refunds
-  // The ⋯ item: Undo refund while one stands (it takes Record refund's place), else Record refund while overpaid.
-  assert.equal(refundMenuItem({ owesCents: -2300, refundedCents: 0 }), 'record');
-  assert.equal(refundMenuItem({ owesCents: 0, refundedCents: 2300 }), 'undo');
-  assert.equal(refundMenuItem({ owesCents: -1300, refundedCents: 1000 }), 'undo'); // part handed back, part still over
-  assert.equal(refundMenuItem({ owesCents: 0, refundedCents: 0 }), null);
-  assert.equal(refundMenuItem({ owesCents: 1500 }), null);
+  // The ⋯ items (v0.743, v0.744 = picture 22y A): Record refund while overpaid, Undo refund while one
+  // stands — after a partial refund both, Record refund first.
+  assert.deepEqual(refundMenuItems({ owesCents: -2300, refundedCents: 0 }), ['record']);
+  assert.deepEqual(refundMenuItems({ owesCents: 0, refundedCents: 2300 }), ['undo']);
+  assert.deepEqual(refundMenuItems({ owesCents: -1300, refundedCents: 1000 }), ['record', 'undo']); // part handed back, part still over
+  assert.deepEqual(refundMenuItems({ owesCents: 0, refundedCents: 0 }), []);
+  assert.deepEqual(refundMenuItems({ owesCents: 1500 }), []);
   // Undo refund reverses the NEWEST refund that stands (rows in any order).
   const pays = [
     { id: 'p1', kind: 'payment', amountCents: 31500, recordedAt: '2027-03-11T21:05:00Z' },
@@ -2438,7 +2439,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(c.totalCents, 31500);
   assert.equal(c.paidCents, 31500);
   assert.equal(c.refundedCents, 0);
-  assert.equal(refundMenuItem(c), null);
+  assert.deepEqual(refundMenuItems(c), []);
   const args = (over = {}) => recordRefundArgs({ camperId: c.id, expectedVersion: c.version, method: 'cash', amountCents: 2300, refundedOn: '2027-04-21', school: 'worcester', ...over });
   assert.deepEqual(Object.keys(args()).sort(), ['p_amount_cents', 'p_camper_id', 'p_expected_version', 'p_method', 'p_refunded_on', 'p_school']);
   assert.deepEqual(rpcOk(b, 'camp_record_refund', args()), { status: 'refund_too_large', overpaid_cents: 0 }); // nothing overpaid yet
@@ -2458,7 +2459,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(edited.owes_cents, -2300);
   c = chloe();
   assert.equal(overpaidCents(c), 2300);
-  assert.equal(refundMenuItem(c), 'record');
+  assert.deepEqual(refundMenuItems(c), ['record']);
 
   // The contract's refusals, in its order: staff first; then the inputs; then the camper.
   assert.equal(rpcOk(b, 'camp_record_refund', args(), STAFF).status, 'not_allowed');
@@ -2489,7 +2490,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(payTag(c), 'paid');
   assert.equal(c.paidOn, '2027-03-11'); // a refund never becomes "the last payment"
   assert.equal(c.paidMethod, 'check');
-  assert.equal(refundMenuItem(c), 'undo');
+  assert.deepEqual(refundMenuItems(c), ['undo']); // all of it handed back: only Undo refund
   // Camper detail (staff too): every row, the refund with its kind, school and date; its line.
   const d1 = detailOf(c.id, STAFF);
   assert.equal(d1.camper.refundedCents, 2300);
@@ -2525,7 +2526,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(c.version, undone.version);
   assert.equal(c.refundedCents, 0);
   assert.equal(c.owesCents, -2300); // overpaid again
-  assert.equal(refundMenuItem(c), 'record');
+  assert.deepEqual(refundMenuItems(c), ['record']);
   // The reversal: + the refund's amount, same way, today, at the REFUND's school (v1.040).
   const reversal = store().camp_payments.find((p) => p.reverses_payment_id === saved.payment_id);
   assert.deepEqual([reversal.kind, reversal.amount_cents, reversal.method, reversal.paid_on, reversal.school], ['reversal', 2300, 'cash', '2027-04-21', 'shrewsbury']);
@@ -2565,8 +2566,17 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   const liam2 = roster().find((r) => r.id === liam.id);
   assert.equal(liam2.refundedCents, 500);
   assert.equal(liam2.owesCents, -1000);
-  assert.equal(refundMenuItem(liam2), 'undo'); // a part handed back: Undo refund, even though some is still over
-  assert.equal(rpcOk(b, 'camp_withdraw_camper', { p_camper_id: liam2.id, p_expected_version: liam2.version }).status, 'ok');
+  // A part handed back, some still over: both items (v0.744, picture 22y A) — and the rest goes back
+  // as a SECOND refund, never more than what is still overpaid.
+  assert.deepEqual(refundMenuItems(liam2), ['record', 'undo']);
+  assert.equal(rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam2.id, expectedVersion: liam2.version, method: 'cash', amountCents: 1100, refundedOn: '2027-04-21', school: 'worcester' })).status, 'refund_too_large');
+  const rest = rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam2.id, expectedVersion: liam2.version, method: 'cash', amountCents: 1000, refundedOn: '2027-04-21', school: 'worcester' }));
+  assert.equal(rest.status, 'ok');
+  const liamBack = roster().find((r) => r.id === liam.id);
+  assert.equal(liamBack.refundedCents, 1500);
+  assert.equal(liamBack.owesCents, 0);
+  assert.deepEqual(refundMenuItems(liamBack), ['undo']);
+  assert.equal(rpcOk(b, 'camp_withdraw_camper', { p_camper_id: liamBack.id, p_expected_version: liamBack.version }).status, 'ok');
   assert.equal(rpcOk(b, 'camp_undo_refund', { p_payment_id: part.payment_id }).status, 'withdrawn');
   const liam3 = roster().find((r) => r.id === liam.id);
   assert.equal(rpcOk(b, 'camp_record_refund', recordRefundArgs({ camperId: liam3.id, expectedVersion: liam3.version, method: 'cash', amountCents: 100, refundedOn: '2027-04-21', school: 'worcester' })).status, 'withdrawn');

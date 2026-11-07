@@ -8,10 +8,12 @@
 // v0.172) with Camps' words:
 //   "Chloe Martin · paid $315 · $23 overpaid"
 //   Refunded by    Cash | Check (Cash first; no Card — money goes back in cash or by check)
-//   Amount         filled in with what is overpaid, "Up to $23, the amount overpaid." Cents are
-//                  fine ("23.50"). More than what is overpaid — however large — "Can’t be more than
-//                  the $23 overpaid." takes the hint's place and Save grays; $0 and anything that
-//                  isn't an amount have their own words (text.js).
+//   Amount         filled in with what is overpaid, "Up to $23, the amount overpaid." Whole
+//                  dollars, like Edit payment and Star's box ("23" or "23.00"; "23.50" gets "Enter an
+//                  amount in whole dollars, like 23."). More than what is overpaid — however large —
+//                  "Can’t be more than the $23 overpaid." takes the hint's place and Save grays; $0
+//                  and anything that isn't an amount have their own words (text.js).
+//   After a partial refund the box opens again for the rest (v0.744): "paid" is what stands now.
 //   Date refunded  today. The calendar allows the sign-up day … today; its gray line says so.
 //   "The $315 payment stays in the history. Afterwards the row reads “Paid”." ("The 2 payments
 //                  ($315) stay …" when more than one payment stands.)

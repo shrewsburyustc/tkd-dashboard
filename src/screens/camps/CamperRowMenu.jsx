@@ -7,9 +7,10 @@
 //   1. About the person — Edit details (always first), Change how they'll pay (ti-switch-horizontal,
 //      while they still owe), Review possible duplicate (when flagged)
 //   2. Money — admins, when something is paid: Edit payment, Undo payment (asks first, v0.730),
-//      then the refund item (rulebook v0.743, Star's place): Undo refund (ti-arrow-back-up, asks
-//      first) while a refund stands, else Record refund (ti-receipt-refund) while the camper paid
-//      more than the total; then Print receipt (ti-printer, design review C3, rulebook v0.734),
+//      then the refund items (rulebook v0.743, Star's place): Record refund (ti-receipt-refund)
+//      while the camper paid more than the total, and Undo refund (ti-arrow-back-up, asks first)
+//      while a refund stands — after a partial refund both show, Record refund first (v0.744,
+//      picture 22y, option A); then Print receipt (ti-printer, design review C3, rulebook v0.734),
 //      LAST in the group, for staff and admins on an active camper with money paid that still
 //      stands. Staff, who see no other money item, get a money group holding only Print receipt (as
 //      Star v0.518). While a refund stands, Edit payment and Undo payment stay in place but gray,
@@ -30,7 +31,7 @@ import {
   IconAlertTriangle, IconArrowBackUp, IconCashEdit, IconEdit, IconPrinter, IconReceiptRefund, IconSwitchHorizontal, IconTrash, IconUserMinus,
 } from '@tabler/icons-react';
 import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
-import { refundMenuItem, refundStands } from '../../lib/camps/campRules.js';
+import { refundMenuItems, refundStands } from '../../lib/camps/campRules.js';
 import * as T from './text.js';
 
 // A gray item's words with its reason under them (the shared .ev-menu-two look, as Camps' Fill in
@@ -85,12 +86,14 @@ export function camperMenuItems(row, { isAdmin, busy, anchor, h, detailsHidden =
         grayed: standing,
         onSelect: () => h.onUndoPayment(row, anchor),
       });
-      // Undo refund takes Record refund's place while a refund stands (v0.743 (4)); Record refund
-      // shows only while the camper paid more than the total (v0.743 (1)).
-      const refundItem = refundMenuItem(row);
-      // ti-arrow-back-up = undo (Undo payment's icon); ti-receipt-refund = record a refund (Star's)
-      if (refundItem === 'undo') items.push({ key: 'undorefund', label: T.UNDO_REFUND, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onUndoRefund(row, anchor) });
-      else if (refundItem === 'record') items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: IconReceiptRefund, disabled: busy, onSelect: () => h.onRecordRefund(row, anchor) });
+      // Record refund while the camper paid more than the total (v0.743 (1)); Undo refund while a
+      // refund stands (v0.743 (4)). After a partial refund both show, Record refund first, so the
+      // rest goes back in one step (v0.744, Jeffrey chose A on picture 22y).
+      // ti-receipt-refund = record a refund (Star's); ti-arrow-back-up = undo (Undo payment's icon)
+      for (const refundItem of refundMenuItems(row)) {
+        if (refundItem === 'record') items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: IconReceiptRefund, disabled: busy, onSelect: () => h.onRecordRefund(row, anchor) });
+        else items.push({ key: 'undorefund', label: T.UNDO_REFUND, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onUndoRefund(row, anchor) });
+      }
     }
     if (h.onPrintReceipt && canPrintReceipt(row, detailsHidden)) {
       // ti-printer = print
