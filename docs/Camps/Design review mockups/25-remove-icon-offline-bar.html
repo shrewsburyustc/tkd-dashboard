@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Two approved rules, now for Camps: the trash icon (R5-03) and the one offline bar (C19)</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1960px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  h2.sec { font-size: 18px; font-weight: 600; margin: 10px 0 12px; padding-top: 14px; border-top: 1px solid #E5E5E2; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Two approved rules, now for Camps: the trash icon (R5-03) and the one offline bar (C19)</h1>
+<p class="sub">Real preview screens of the built app with each change tried. <b>Nothing new is invented here:</b> both rules are already in the rulebook (v1.048 (22) and v0.626: every family page removes a child with the gray trash icon button; v1.005 and v1.123: one offline bar for the whole dashboard, and Camps' own refresh bar folds into it). This picture only shows how they look on Camps' two screens. <b>Amber = what differs.</b></p>
+<h2 class="sec">1 · The family sign-up page: removing child 2 or 3 (R5-03)</h2>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:530px">
+    <div class="shot" style="width:530px;height:120px">
+      <img src="shots/r503-before-1280.png" style="left:-376px;top:-70px;width:1280px">
+      <div class="mark" style="left:448px;top:18px;width:68px;height:30px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC:</b> “Remove” is a blue underlined word (never drawn in a mockup).</figcaption>
+  </figure><figure style="width:370px">
+    <div class="shot" style="width:370px;height:120px">
+      <img src="shots/r503-before-390.png" style="left:-10px;top:-70px;width:390px">
+      <div class="mark" style="left:284px;top:18px;width:64px;height:30px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone:</b> the same word.</figcaption>
+  </figure></div>
+  <div class="note">Forms' family page, the kiosk and Fill in already use the trash icon (v0.626).</div>
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <div class="row"><figure style="width:530px">
+    <div class="shot" style="width:530px;height:140px">
+      <img src="shots/r503-after-1280-hover.png" style="left:-376px;top:-50px;width:1280px">
+      <div class="mark" style="left:476px;top:38px;width:42px;height:40px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC:</b> the 28 px gray trash icon button; its name “Remove child 2” shows as a dark tooltip on hover and keyboard focus (shown here).</figcaption>
+  </figure><figure style="width:370px">
+    <div class="shot" style="width:370px;height:120px">
+      <img src="shots/r503-after-390.png" style="left:-10px;top:-70px;width:390px">
+      <div class="mark" style="left:306px;top:20px;width:40px;height:40px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Touch (820, 390, 320):</b> the same icon with a 44 px tap area. Removing works as before.</figcaption>
+  </figure></div>
+  <div class="note">The same card is Fill in's child card in the dashboard, which already has the shared icon button.</div>
+</div>
+</div>
+<h2 class="sec">2 · The camp page when the roster keeps failing to refresh (C19)</h2>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:884.16px">
+    <div class="shot" style="width:884.16px;height:108px">
+      <img src="shots/c19-before-1280.png" style="left:-37.44px;top:-54.72px;width:921.5999999999999px">
+      <div class="mark" style="left:13.280000000000001px;top:74.48px;width:857.6px;height:35.36px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, after two failed reloads (about 30 seconds):</b> two amber bars — the shared “You’re offline” bar on top and Camps' own “Couldn’t refresh the roster” bar with Retry.</figcaption>
+  </figure>
+<figure style="width:331.5px">
+    <div class="shot" style="width:331.5px;height:221px">
+      <img src="shots/c19-before-390.png" style="left:0px;top:-80.75px;width:331.5px">
+      <div class="mark" style="left:9.6px;top:154.95px;width:312.3px;height:52.199999999999996px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone:</b> the same two bars.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <figure style="width:884.16px">
+    <div class="shot" style="width:884.16px;height:108px">
+      <img src="shots/c19-after-1280.png" style="left:-37.44px;top:-54.72px;width:921.5999999999999px">
+      <div class="mark" style="left:13.280000000000001px;top:3.1999999999999993px;width:857.6px;height:33.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC:</b> only the shared bar. It has no button and goes away by itself when the connection is back.</figcaption>
+  </figure>
+<figure style="width:331.5px">
+    <div class="shot" style="width:331.5px;height:221px">
+      <img src="shots/c19-after-390.png" style="left:0px;top:-80.75px;width:331.5px">
+      <div class="mark" style="left:9.6px;top:3.6499999999999995px;width:312.3px;height:67.5px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone:</b> the same one bar; the page below starts higher.</figcaption>
+  </figure>
+  <div class="note">“Updated 12:00:07 AM” above the count cards stays (v1.014). The roster reloads by itself every 15 seconds and at once when the browser says it is back online.</div>
+</div>
+</div>
+<div class="foot"><b>What goes:</b> Camps' own bar and its Retry (v0.718's “Couldn’t refresh the roster. Check the connection, then retry.”), and the word “Remove” on the family page. <b>What stays:</b> every save's own amber bar (a failed Mark paid still has its Retry), the shared offline bar's words, and the roster's “Updated …” line. No database change.</div>
+</body></html>

@@ -1,0 +1,46 @@
+{
+  "title": "Two approved rules, now for Camps: the trash icon (R5-03) and the one offline bar (C19)",
+  "subtitle": "Real preview screens of the built app with each change tried. <b>Nothing new is invented here:</b> both rules are already in the rulebook (v1.048 (22) and v0.626: every family page removes a child with the gray trash icon button; v1.005 and v1.123: one offline bar for the whole dashboard, and Camps' own refresh bar folds into it). This picture only shows how they look on Camps' two screens. <b>Amber = what differs.</b>",
+  "width": 1960,
+  "sections": [
+    {
+      "heading": "1 · The family sign-up page: removing child 2 or 3 (R5-03)",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "row": [
+            { "src": "shots/r503-before-1280.png", "shotWidth": 1280, "crop": [376, 70, 530, 120], "scale": 1, "marks": [[828, 92, 60, 22]],
+              "caption": "<b>PC:</b> “Remove” is a blue underlined word (never drawn in a mockup)." },
+            { "src": "shots/r503-before-390.png", "shotWidth": 390, "crop": [10, 70, 370, 120], "scale": 1, "marks": [[298, 92, 56, 22]],
+              "caption": "<b>Phone:</b> the same word." }
+          ] }
+        ], "note": "Forms' family page, the kiosk and Fill in already use the trash icon (v0.626)." },
+        { "label": "After", "tone": "after", "items": [
+          { "row": [
+            { "src": "shots/r503-after-1280-hover.png", "shotWidth": 1280, "crop": [376, 50, 530, 140], "scale": 1, "marks": [[856, 92, 34, 32]],
+              "caption": "<b>PC:</b> the 28 px gray trash icon button; its name “Remove child 2” shows as a dark tooltip on hover and keyboard focus (shown here)." },
+            { "src": "shots/r503-after-390.png", "shotWidth": 390, "crop": [10, 70, 370, 120], "scale": 1, "marks": [[320, 94, 32, 32]],
+              "caption": "<b>Touch (820, 390, 320):</b> the same icon with a 44 px tap area. Removing works as before." }
+          ] }
+        ], "note": "The same card is Fill in's child card in the dashboard, which already has the shared icon button." }
+      ]
+    },
+    {
+      "heading": "2 · The camp page when the roster keeps failing to refresh (C19)",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/c19-before-1280.png", "shotWidth": 1280, "crop": [52, 76, 1228, 150], "scale": 0.72, "marks": [[76, 185, 1180, 38]],
+            "caption": "<b>PC, after two failed reloads (about 30 seconds):</b> two amber bars — the shared “You’re offline” bar on top and Camps' own “Couldn’t refresh the roster” bar with Retry." },
+          { "src": "shots/c19-before-390.png", "shotWidth": 390, "crop": [0, 95, 390, 260], "scale": 0.85, "marks": [[16, 282, 358, 52]],
+            "caption": "<b>Phone:</b> the same two bars." }
+        ] },
+        { "label": "After", "tone": "after", "items": [
+          { "src": "shots/c19-after-1280.png", "shotWidth": 1280, "crop": [52, 76, 1228, 150], "scale": 0.72, "marks": [[76, 86, 1180, 36]],
+            "caption": "<b>PC:</b> only the shared bar. It has no button and goes away by itself when the connection is back." },
+          { "src": "shots/c19-after-390.png", "shotWidth": 390, "crop": [0, 95, 390, 260], "scale": 0.85, "marks": [[16, 104, 358, 70]],
+            "caption": "<b>Phone:</b> the same one bar; the page below starts higher." }
+        ], "note": "“Updated 12:00:07 AM” above the count cards stays (v1.014). The roster reloads by itself every 15 seconds and at once when the browser says it is back online." }
+      ]
+    }
+  ],
+  "footer": "<b>What goes:</b> Camps' own bar and its Retry (v0.718's “Couldn’t refresh the roster. Check the connection, then retry.”), and the word “Remove” on the family page. <b>What stays:</b> every save's own amber bar (a failed Mark paid still has its Retry), the shared offline bar's words, and the roster's “Updated …” line. No database change."
+}

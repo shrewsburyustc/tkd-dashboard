@@ -25,8 +25,7 @@ export const signUpByPart = (date) => `Sign up by ${date}`;
 // ----- Step 1 (C7a) -----
 export const STEP_1 = 'Step 1 of 2 · Details';
 export const childTitle = (n) => `Child ${n}`;
-export const REMOVE_CHILD = 'Remove'; // removes child 2 or 3 from the form (not in the mockups)
-export const removeChildLabel = (n) => `Remove child ${n}`; // for screen readers (not in the mockups)
+export const removeChildLabel = (n) => `Remove child ${n}`; // the trash icon button's tooltip and screen-reader name (v1.048 (22))
 export const FIRST_NAME = 'First name';
 export const LAST_NAME = 'Last name';
 export const AGE = 'Age';

@@ -881,8 +881,7 @@ export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups)
 
 
 // ----- Live-test fixes (2026-10-21): the camp page's automatic reload -----
-// The amber bar when the 15-second reload failed twice in a row (CampPage.jsx). (not in the mockups)
-export const REFRESH_FAILED = 'Couldn’t refresh the roster. Check the connection, then retry.';
+// (The amber "Couldn't refresh the roster" bar that used to be here is the shell's one offline bar now: C19, v1.005.)
 // The quiet time at the end of the summary line, e.g. "Updated 2:41:07 PM" (CampRoster.jsx). (not in the mockups)
 export const updatedAtLine = (ms) => `Updated ${new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
 

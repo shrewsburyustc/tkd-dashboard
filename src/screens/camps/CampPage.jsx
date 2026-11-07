@@ -16,9 +16,11 @@
 // Every name opens Camper detail (CamperDialog.jsx; on touch screens it also holds the row's ⋯
 // actions). The page reloads quietly every 15 seconds (useLiveLoad), so family sign-ups and
 // check-ins on another device show up by themselves. If those quiet reloads keep failing (2 in a
-// row — e.g. the Wi-Fi dropped), an amber "Couldn't refresh the roster." bar with Retry appears
-// above the roster, so the page never just looks frozen (live test 2026-10-21); the roster
-// also says when it was last updated ("Updated …", above the count cards). Every change goes to the database
+// row — e.g. the Wi-Fi dropped), the one offline bar under the top bar says so (Shell.jsx, rulebook
+// v1.005 / v1.123, design review C19; useLiveLoad reports it by itself), so the page never just
+// looks frozen; the roster also says when it was last updated ("Updated …", above the count cards).
+// Camps used to draw its own "Couldn't refresh the roster" bar with Retry here (v0.718): it is gone,
+// the shared bar replaced it. Every change goes to the database
 // (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
 // toast — since rulebook v0.726 also Edit camp, Edit details and Edit payment ("Payment changed");
 // permanent ones ask first (rule 1.4), and so does Undo payment (rulebook v0.730). Staff and admins see different ⋯ items
@@ -183,7 +185,6 @@ export default function CampPage({
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByCamp.get(campId) ?? true);
   const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
   const busyRef = useRef(false);
-  const [refreshing, setRefreshing] = useState(false); // the "Couldn't refresh" bar's Retry is on its way
   // The receipt (C3, v0.734): { key, camperId, opener, onTop, data, failed, notFound } or null.
   // onTop = opened from Camper detail, drawn on top of it (Dialog onTop, v1.100); from ⋯ on its own.
   const [receipt, setReceipt] = useState(null);
@@ -1556,21 +1557,6 @@ export default function CampPage({
       <div className="cp-bar-slot" ref={barRef}>
         {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || actions.busy} onDismiss={() => setBanner(null)} />}
       </div>
-      {/* The automatic reload keeps failing: say so (same amber bar as every other problem). It
-          goes away by itself after the next good reload — automatic or this Retry. */}
-      {live.refreshFailing && (
-        <ErrorBanner
-          text={T.REFRESH_FAILED}
-          onRetry={async () => {
-            if (refreshing) return;
-            setRefreshing(true);
-            await liveRef.current.reload();
-            setRefreshing(false);
-          }}
-          retrying={refreshing}
-        />
-      )}
-
       <CampRoster
         days={days}
         weeks={weeks}

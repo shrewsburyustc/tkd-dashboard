@@ -21,12 +21,13 @@
 /* ---------- a child's card ---------- */
 .camp-child__head {
   display: flex;
-  align-items: baseline;
+  align-items: center; /* the trash icon button (R5-03) lines up with the title's middle */
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 12px; /* the title's own bottom margin moves here, so centering doesn't count it */
 }
-.camp-child__head .reg-link {
-  margin-top: -8px;
+.camp-child__head .reg-card__title {
+  margin-bottom: 0;
 }
 /* First and last name side by side, also on phones (C7a). */
 .camp-two {
