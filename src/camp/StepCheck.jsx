@@ -11,12 +11,15 @@
 // dialog frame. Then the "Step 2 of 2" heading, the Sign up button, "← Back to edit", the
 // Turnstile box and the privacy line are left out (the dialog has its own Back / Send), and
 // signatureHint replaces the family's "Can't sign here? …" hint ("Sign with a finger, pen or mouse.").
+// Under the signature a gray "Date signed" box shows today's date at the school (v0.638); both the
+// family page and Fill in pass `today`.
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from './parts.jsx';
 import { extraPriceLabel, priceFor } from './form.js';
 import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, monthDay, shortDate, weekdaysCompact } from './format.js';
 import { formatPhone, phoneDigits } from '../lib/camps/campRules.js';
 import { addDays } from '../lib/testing/eventRules.js';
+import { shortDate as shortDateWithYear } from '../lib/calendarDates.js'; // "Fri, Nov 6, 2026" (Date signed)
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
 
@@ -38,6 +41,7 @@ export default function StepCheck({
   headingRef,
   inDialog = false, // the dashboard's Fill in dialog (see the top of this file)
   signatureHint = T.SIGNATURE_HINT,
+  today, // today at the school, 'YYYY-MM-DD': the "Date signed" box shows it
 }) {
   const closed = banner?.code === 'closed'; // only the summary stays; nothing more can be sent
   const firstName = normalizeName(form.children[0]?.first);
@@ -151,6 +155,26 @@ export default function StepCheck({
               <FieldError id="camp-sign-err">{errors.signature}</FieldError>
               <div className="reg-hint" id="camp-sign-hint">
                 {signatureHint}
+              </div>
+            </div>
+
+            {/* Date signed (rulebook v0.638, as Star's v0.522 and Black Belt's form): today's date at the
+                school in a gray box that can't be changed, like New students' form. It is not one of the
+                answers sent: the database saves the day the sign-up is sent (camp_signups.signed_at). */}
+            <div className="reg-field reg-field--sign">
+              <label className="reg-label" htmlFor="camp-signed">
+                {T.DATE_SIGNED}
+              </label>
+              <input
+                id="camp-signed"
+                className="reg-input camp-signed-box"
+                type="text"
+                readOnly
+                value={shortDateWithYear(today)}
+                aria-describedby="camp-signed-hint"
+              />
+              <div className="reg-hint" id="camp-signed-hint">
+                {T.DATE_SIGNED_HINT}
               </div>
             </div>
           </section>

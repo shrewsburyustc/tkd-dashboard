@@ -458,7 +458,6 @@ const RPC_ARGS = {
   testing_add_student: [ID('p_event_id'), ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id'), ['p_stripes', 'bool'], ['p_paying_by', 'text']],
   testing_update_student: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id')],
   testing_change_paying_by: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
-  testing_mark_paid: [ID('p_registration_id'), ['p_expected_version', 'int']],
   testing_undo_payment: [ID('p_payment_id')],
   testing_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
   testing_resolve_duplicate: [ID('p_keep_id'), ['p_keep_version', 'int'], ID('p_other_id'), ['p_other_version', 'int'], ['p_keep_both', 'bool']],
@@ -476,7 +475,6 @@ const RPC_ARGS = {
   testing_private_update: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_first', 'text'], ['p_last', 'text'], ID('p_rank_id')],
   testing_private_change_day: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
   testing_private_change_paying_by: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
-  testing_private_mark_paid: [ID('p_private_id'), ['p_expected_version', 'int']],
   testing_private_undo_payment: [ID('p_payment_id')],
   testing_private_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
   testing_private_cancel: [ID('p_private_id'), ['p_expected_version', 'int']],
@@ -1298,23 +1296,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', version: row.version };
     },
 
-    // Mark paid: records what is owed (the price, or just the difference), by today's date.
-    testing_private_mark_paid(db, a, ctx) {
-      if (a.p_private_id === null || a.p_expected_version === null) return st('invalid');
-      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
-      if (refusal) return refusal;
-      const owed = privateAmountDue(db, row);
-      if (owed <= 0) return st('already_paid'); // also a $0 price: nothing is inserted (E10)
-      if (owed > MAX_PAYMENT_CENTS) return st('invalid'); // the payments table's own limit
-      const batchId = newId();
-      const payment = newPrivatePayment(db, { private_id: row.id, amount_cents: owed, method: row.paying_by, paid_on: today() }, ctx);
-      updatePrivate(row, {}, ctx, true); // a double click with the old version now gets 'stale'
-      logChange(db, batchId, 'private_mark_paid', 'testing_private_payments', 'insert', payment.id, ctx);
-      logChange(db, batchId, 'private_mark_paid', 'testing_private', 'update', row.id, ctx);
-      return { status: 'ok', payment_id: payment.id, amount_cents: owed, method: payment.method, version: row.version };
-    },
-
-    // 0030 (CB1): Mark paid with a way to pay. The same as testing_private_mark_paid, plus:
+    // 0030 (CB1): Mark paid with a way to pay. What the old one-click testing_private_mark_paid
+    // did (migration 0035 removes that one, so the preview has only this one, as live), plus:
     //   p_method         cash / check / card — the payment's way (Finance's totals read only this)
     //   p_expected_cents what the Mark paid box SHOWED. The amount is still worked out here (what
     //                    is owed: the price, or the rest after a part payment); if they differ,
@@ -1755,28 +1738,6 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', version: reg.version };
     },
 
-    testing_mark_paid(db, a, ctx) {
-      if (a.p_registration_id === null || a.p_expected_version === null) return st('invalid');
-      const reg = findReg(db, a.p_registration_id);
-      if (!reg) return st('not_found');
-      if (reg.version !== a.p_expected_version) return st('stale');
-      if (reg.status === 'withdrawn') return st('withdrawn');
-      if (paymentSummary(db, reg.id).paid) return st('already_paid');
-      const event = findEvent(db, reg.event_id);
-      const t = today();
-      // The database decides: early price before the testing day, testing-day price on it.
-      const amount = feeFor(rankRow(db, reg.event_rank_id), t, event.testing_date);
-      if (!(amount > 0 && amount <= MAX_PAYMENT_CENTS)) return st('invalid'); // a $0 rank can't be "paid"
-      const payment = {
-        id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: amount, method: reg.paying_by,
-        paid_on: t, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
-      };
-      db.payments.push(payment);
-      updateRow(reg, {}, ctx, true); // a double click with the old version now gets 'stale'
-      purgeOldSignatures(db); // the last step (§1.5)
-      return { status: 'ok', payment_id: payment.id, amount_cents: amount, method: payment.method, version: reg.version };
-    },
-
     testing_undo_payment(db, a, ctx) {
       if (a.p_payment_id === null) return st('invalid');
       const payment = db.payments.find((p) => p.id === a.p_payment_id);
@@ -1796,7 +1757,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', version: reg.version };
     },
 
-    // 0030 (CB1): Mark paid with a way to pay — testing_mark_paid plus p_method and
+    // 0030 (CB1): Mark paid with a way to pay — the old one-click testing_mark_paid (removed by
+    // migration 0035, so the preview has only this one, as live) plus p_method and
     // p_expected_cents, exactly as testing_private_mark_paid_by above. The amount is still worked
     // out here (the early price before the testing day, the testing-day price on and after it).
     // Refused in this order: (no_access in rpc) invalid → not_found → stale → withdrawn →

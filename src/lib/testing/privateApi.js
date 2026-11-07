@@ -329,8 +329,8 @@ export async function changePrivatePayingBy({ privateId, expectedVersion, paying
 //                   changed while the box was open) it saves nothing and answers 'price_changed'
 //                   with amountCents, so the page can name the new amount (v0.423).
 // A way that isn't the family's "Paying by" changes "Paying by" too (v0.418 Q2); Undo payment puts
-// the family's choice back. (It replaces the old one-click testing_private_mark_paid, which the
-// database keeps until a later small migration removes it; nothing in the app calls that one.)
+// the family's choice back. (It replaced the old one-click testing_private_mark_paid, which
+// migration 0035 removes from the database.)
 // → { status:'ok', paymentId, amountCents, method, paidOn, payingBy, version } · 'price_changed'
 //   (+ amountCents) · 'already_paid' (nothing owed — also a $0 price) · 'cancelled' · 'stale'
 //   (e.g. a double click) · 'not_found' · 'invalid' · 'no_access' · 'error'

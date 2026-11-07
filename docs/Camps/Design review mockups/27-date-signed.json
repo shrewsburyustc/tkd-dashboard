@@ -1,0 +1,31 @@
+{
+  "title": "Camps family form: “Date signed” under the signature (v0.638, pass 2 L-08)",
+  "subtitle": "The rule is already approved (v0.638, Jeffrey 2026-11-04, option B: every signature has its date signed). Star's and Black Belt's family forms already have the box (v0.522); this picture copies it for the camp family page (<code>/camp/&lt;code&gt;</code>) and for Fill in, which uses the same step. Real preview screens of the built page with the box tried (the preview set to Wed, Mar 10, 2027). <b>Amber = what differs.</b>",
+  "width": 1960,
+  "sections": [
+    {
+      "heading": "Step 2 · Check and sign",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "row": [
+            { "src": "shots/d638-before-1280.png", "shotWidth": 1280, "crop": [376, 230, 528, 570], "scale": 0.85,
+              "caption": "<b>PC:</b> the signature ends the form. Nothing says when it was signed." },
+            { "src": "shots/d638-before-390.png", "shotWidth": 390, "crop": [10, 520, 370, 230], "scale": 0.85,
+              "caption": "<b>Phone:</b> the same." }
+          ] }
+        ], "note": "Camps' staff screens never show the signature picture (Camper detail says “waiver signed on the form” with the sign-up day), so the staff part of v0.638 needs nothing here." },
+        { "label": "After", "tone": "after", "items": [
+          { "row": [
+            { "src": "shots/d638-after-1280.png", "shotWidth": 1280, "crop": [376, 230, 528, 570], "scale": 0.85, "marks": [[393, 688, 494, 76]],
+              "caption": "<b>PC:</b> a gray “Date signed” box under the signature hint, “Wed, Mar 10, 2027”, hint “Filled in automatically with today's date.”" },
+            { "src": "shots/d638-after-390.png", "shotWidth": 390, "crop": [10, 520, 370, 310], "scale": 0.85, "marks": [[16, 695, 358, 115]],
+              "caption": "<b>Phone (390 and 320):</b> the same box, 40 px tall like the form's other boxes." }
+          ] },
+          { "src": "shots/d638-after-fillin-1280.png", "shotWidth": 1280, "crop": [380, 420, 520, 280], "scale": 0.85, "marks": [[404, 606, 472, 82]],
+            "caption": "<b>Fill in (the dashboard's dialog, same step):</b> the same box, signed that day by the parent at the desk." }
+        ], "note": "The box is only shown: it can't be changed or sent. The database already saves the day the sign-up is sent (<code>camp_signups.signed_at</code>), so <b>no database change</b>." }
+      ]
+    }
+  ],
+  "footer": "<b>Words:</b> “Date signed” and “Filled in automatically with today's date.” are the shared ones already in <code>src/components/text.js</code> (Star's v0.522). <b>How it is built:</b> copied from Star's family form (its own small box and CSS on the camp page), not a new shared component. Color Belt's own version is not on main yet, so there is no shared component to use."
+}

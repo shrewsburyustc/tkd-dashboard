@@ -14,6 +14,7 @@
 //   upcoming   active and its day is today or later; past = its day is before today, or cancelled
 //   row        a private testing as privateApi.js returns it (camelCase)
 import { isIsoDate } from './eventRules.js';
+import { standingPayments } from './receipt.js';
 
 // ----- Day and time (contract 0014 §1.2) -----
 
@@ -73,6 +74,18 @@ export function amountDue({ privateCents, paidCents }) {
 // Paid, but still owes more (the amber "Paid $65 · $20 more to collect" line).
 export function owesMore(row) {
   return row?.paid === true && row.amountDueCents > 0;
+}
+
+// The summary's Payment lines (pass 2 C-03, rule v1.009 "the payment with its date"): one part per
+// payment that still stands, oldest first, each { cents, method, paidOn }. It is the receipt's own
+// list (receipt.standingPayments), so the summary and the receipt always agree. With no payment rows
+// to go on (they load together with the list, so this is only a safety net), the row's own summary
+// is the one part, as before.
+export function summaryPaymentParts(row, payments) {
+  const mine = (payments ?? []).filter((p) => p.privateId === row.id);
+  const standing = standingPayments(mine);
+  if (standing.length > 0) return standing.map((p) => ({ cents: p.amountCents, method: p.method, paidOn: p.paidOn }));
+  return [{ cents: row.paidCents, method: row.paidMethod, paidOn: row.paidOn }];
 }
 
 // Does the row show Mark paid? Active and something to collect (also next to a Paid tag while a
@@ -148,7 +161,8 @@ export function privateCards(rows) {
 //              changePayingBy the same AND canChangePayingBy · admins: editPayment / undoPayment
 //              when paid, delete · printReceipt (staff and admins) when paid — a payment that
 //              still stands (design review CB2, rulebook v0.420: it ends the money group)
-//   cancelled: admins only — restore while its day is today or later, delete
+//   cancelled: printReceipt (staff and admins) when a payment still stands (pass 2 M-03, v0.428) ·
+//              admins only — restore while its day is today or later, delete
 //   hidden:    "Hide private details" is on (v0.506) → no payment items: changePayingBy,
 //              editPayment, undoPayment and printReceipt are false (as Star's ⋯ menus, v0.508 G4;
 //              Print receipt: v0.518 Q8 B)
@@ -159,7 +173,7 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     undoPayment: false, printReceipt: false, cancel: false, restore: false, delete: false,
   };
   if (row?.status === 'cancelled') {
-    return { ...none, restore: admin && row.privateDate >= today, delete: admin };
+    return { ...none, printReceipt: canPrintPrivateReceipt(row, hidden), restore: admin && row.privateDate >= today, delete: admin };
   }
   if (row?.status !== 'active') return none;
   const result = row.result ?? null;
@@ -173,10 +187,18 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     grade: true,
     editPayment: money && admin && row.paid === true,
     undoPayment: money && admin && row.paid === true,
-    printReceipt: money && row.paid === true, // CB2: staff and admins
+    printReceipt: canPrintPrivateReceipt(row, hidden), // CB2: staff and admins
     cancel: open,
     delete: admin,
   };
+}
+
+// Print receipt's one rule for a private testing, shared by the row's ⋯ button, its ⋯ menu and the
+// summary (CB2, v0.420; pass 2 M-03, v1.055 (b) and v0.428): a payment that still stands (paid), on
+// an active OR a cancelled private testing, for staff and admins — staff's ⋯ on a cancelled one then
+// holds only this item; never while Hide private details is on.
+export function canPrintPrivateReceipt(row, hidden = false) {
+  return hidden !== true && row?.paid === true && (row.status === 'active' || row.status === 'cancelled');
 }
 
 // ----- Move to private testing (event page, P5) -----

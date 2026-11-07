@@ -56,6 +56,50 @@
 begin;
 
 -- ---------------------------------------------------------------------
+-- Test payments (migration 0035): 0035 removed the old one-click Mark paid
+-- (testing_mark_paid / testing_private_mark_paid, 2 arguments). The test
+-- payments below go through these helpers, which call the old function
+-- while it exists and otherwise 0030's *_by version the way the old one
+-- worked: the family's "Paying by" as the way and the worked-out amount
+-- (asked for with 0 cents expected first: that price_changed answer
+-- writes nothing). An ok answer keeps only the old keys (status,
+-- payment_id, amount_cents, method, version), so every check reads the
+-- same answer as before. They run with the caller's rights (as whoever
+-- t_call / "set local role" made the caller), like the call they stand in
+-- for. Temporary: they vanish with the session and the rollback.
+-- ---------------------------------------------------------------------
+
+create function pg_temp.t_private_mark_paid(p_private_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_private_mark_paid($1, $2)' into v_r using p_private_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_private x where x.id = p_private_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_private_mark_paid_by($1, $2, $3, 0)' into v_r using p_private_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_private_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_private_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+-- Callable by the logged-in role too: the test calls it inside "set local role authenticated", and
+-- production gives functions made by the SQL Editor's role no rights for anyone else.
+grant execute on function pg_temp.t_private_mark_paid(uuid, integer) to public;
+
+
+-- ---------------------------------------------------------------------
 -- Test helpers (temporary: they vanish with the session, and the
 -- rollback undoes them anyway)
 -- ---------------------------------------------------------------------
@@ -392,7 +436,7 @@ begin
     'shrewsbury', 'Fin18', 'Plain', v_rank_s, 'cash', v_today + 3, '17:00'));
   perform pg_temp.t_eq('P1 testing_private_add', v_r ->> 'status', 'ok');
   v_priv := (v_r ->> 'id')::uuid;
-  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_priv));
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_priv));
   perform pg_temp.t_eq('P1 testing_private_mark_paid', (v_r ->> 'status') || ':' || (v_r ->> 'amount_cents'), 'ok:9000');
   v_p := (v_r ->> 'payment_id')::uuid;
   v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'shrewsbury', v_today));
@@ -415,23 +459,23 @@ begin
   -- the desk's own Undo at once -> a mis-click, hidden
   v_priv := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
     'shrewsbury', 'Fin18', 'Hide', v_rank_s, 'cash', v_today + 3, '17:00')) ->> 'id')::uuid;
-  v_p := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_priv)) ->> 'payment_id')::uuid;
+  v_p := (pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_priv)) ->> 'payment_id')::uuid;
   perform pg_temp.t_eq('P2 own undo', pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_undo_payment(%L)', v_p)) ->> 'status', 'ok');
   -- the admin's Undo of the desk's payment -> undone
   v_priv := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
     'shrewsbury', 'Fin18', 'Undone', v_rank_s, 'check', v_today + 3, '17:00')) ->> 'id')::uuid;
-  v_p := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_priv)) ->> 'payment_id')::uuid;
+  v_p := (pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_priv)) ->> 'payment_id')::uuid;
   perform pg_temp.t_eq('P2 admin undo', pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_p)) ->> 'status', 'ok');
   -- the admin's Edit (method only) -> edited
   v_priv := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
     'shrewsbury', 'Fin18', 'Edit', v_rank_s, 'cash', v_today + 3, '17:00')) ->> 'id')::uuid;
-  v_p := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_priv)) ->> 'payment_id')::uuid;
+  v_p := (pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_priv)) ->> 'payment_id')::uuid;
   perform pg_temp.t_eq('P2 admin edit', pg_temp.t_call('authenticated', v_c_a1,
     format('public.testing_private_edit_payment(%L, %L, 9000, %L)', v_p, 'card', v_today)) ->> 'status', 'ok');
   -- paid, then cancelled -> still counts
   v_priv := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
     'shrewsbury', 'Fin18', 'Cancel', v_rank_s, 'cash', v_today + 3, '17:00')) ->> 'id')::uuid;
-  perform pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_priv));
+  perform pg_temp.t_call('authenticated', v_c_d1, format('pg_temp.t_private_mark_paid(%L, 1)', v_priv));
   select t.version into v_v from public.testing_private t where t.id = v_priv;
   perform pg_temp.t_eq('P2 cancel', pg_temp.t_call('authenticated', v_c_d1,
     format('public.testing_private_cancel(%L, %s)', v_priv, v_v)) ->> 'status', 'ok');
