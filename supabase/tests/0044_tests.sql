@@ -118,6 +118,9 @@ begin
   end if;
 end;
 $$;
+-- Callable by the logged-in role too: the test calls it inside "set local role authenticated", and
+-- production gives functions made by the SQL Editor's role no rights for anyone else.
+grant execute on function pg_temp.t_eq(text, text, text) to public;
 
 -- t_reg(event, event rank, first, last, paying by): one desk-added
 -- registration written straight into the table (as the SQL Editor)

@@ -677,6 +677,22 @@ async function runTestFile(db, label, file, passedText) {
   }
 }
 
+// Like runTestFile, but under the REAL project's rule for new functions. This runner's "hostile defaults"
+// (buildBase) give everybody EXECUTE on every new function; production does not: its default rights for
+// functions made by postgres, in any schema, are postgres only (pg_default_acl on tkd-dashboard,
+// {postgres=X/postgres}, checked 2026-11-07). So a test helper made in the temp schema (t_eq ...) can only be
+// called as postgres, never under "set local role authenticated". The first 0044_tests.sql called one there
+// (F1, F2, P2) and failed on production with "permission denied for function t_eq" while PGlite let it pass.
+// The 0035 and 0044 steps run their test files through this; other sections' steps still use runTestFile.
+async function runTestFileLive(db, label, file, passedText) {
+  await db.exec('alter default privileges for role postgres revoke execute on functions from public;');
+  try {
+    await runTestFile(db, label, file, passedText);
+  } finally {
+    await db.exec('alter default privileges for role postgres grant execute on functions to public;').catch(() => {});
+  }
+}
+
 // One number from a query (e.g. a count).
 async function one(db, sql) {
   const r = await db.query(sql);
@@ -8224,7 +8240,7 @@ async function step0035() {
 
   // c. the baseline tests
   const tests = async (label, files) => {
-    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+    for (const [file, ok] of files) await runTestFileLive(db, `${L}${file} (${label})`, file, ok);
   };
   const baseline = [['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
     ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
@@ -9856,7 +9872,7 @@ async function step0044() {
     ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED'],
     ['0030_tests.sql', 'ALL 0030 TESTS PASSED']];
   const tests = async (label, files) => {
-    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+    for (const [file, ok] of files) await runTestFileLive(db, `${L}${file} (${label})`, file, ok);
   };
   await tests('before 0044', baseline);
 
@@ -9890,7 +9906,7 @@ async function step0044() {
         await db.exec('rollback;').catch(() => {});
         continue;
       }
-      await runTestFile(db, `${L}${file} (with 0035 then 0044, rolled back)`, file, ok);
+      await runTestFileLive(db, `${L}${file} (with 0035 then 0044, rolled back)`, file, ok);
       await db.exec('rollback;').catch(() => {});
     }
     record(`${L}after the 0035 + 0044 tries nothing of them is kept (the 4-input Mark paid and the old 2-input one are still there)`,
@@ -9996,7 +10012,7 @@ async function step0044() {
     }
     if (applied35) {
       record(`${L}0035 after 0044 (rolled back) goes in: the old 2-input Mark paid functions are gone`, true);
-      await runTestFile(db, `${L}0035_tests.sql (with 0044 then 0035, rolled back)`, '0035_tests.sql', 'ALL 0035 TESTS PASSED');
+      await runTestFileLive(db, `${L}0035_tests.sql (with 0044 then 0035, rolled back)`, '0035_tests.sql', 'ALL 0035 TESTS PASSED');
       await db.exec('rollback;').catch(() => {});
     }
     record(`${L}after the 0044 + 0035 try nothing of 0035 is kept`,

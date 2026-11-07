@@ -123,6 +123,9 @@ begin
   return v_r;
 end;
 $t$;
+-- Callable by the logged-in role too: the test calls it inside "set local role authenticated", and
+-- production gives functions made by the SQL Editor's role no rights for anyone else.
+grant execute on function pg_temp.t_mark_paid(uuid, integer) to public;
 
 
 -- ---------------------------------------------------------------------
