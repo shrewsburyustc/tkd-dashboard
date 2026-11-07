@@ -3011,7 +3011,7 @@ Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as name
 
 ## Migration 0035: Color Belt — the old one-click Mark paid functions removed
 
-**Status: NOT APPLIED** (built on `color-belt` 2026-11-04; needs a security review and Jeffrey's OK first). The clean-up 0030 promised ("a later small migration removes them").
+**Status: APPLIED 2026-11-07** (built on `color-belt` 2026-11-04, security-reviewed; Jeffrey pasted it with 0044 on tkd-dashboard; the read-only after-checks were clean and `0035_tests.sql` and the other test files passed on production). The clean-up 0030 promised ("a later small migration removes them").
 
 **Production order:** … 0030 (live) → 0032 → 0033 → 0034 (live) → **0035**. It needs 0030 — it stops with "0035 needs migration 0030 (Color Belt: Mark paid with a way to pay) first" if `testing_mark_paid_by` or `testing_private_mark_paid_by` is missing. **Apply it only while the live app is main 801b757 or newer** (since then the app calls only the `*_by` functions; an older app's Mark paid button would fail).
 
@@ -3022,6 +3022,7 @@ Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as name
 1. **Pre-apply check:** Claude runs `supabase/tests/0035_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `old_event_is_0005 true`, `old_private_is_0014 true`, `old_versions 2`, `by_functions true`, `by_bodies_are_0030 true`, `other_users` empty (NULL). Anything else → **stop** (an old function changed since, 0030 isn't what was tested, or something still uses them). Answer on 2026-11-04: ready.
 2. Claude runs `supabase/tests/0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` and keeps the results (the "before" record for 0035c and the undo).
 3. Claude checks the live site is main 801b757 or newer (its Mark paid box calls `testing_mark_paid_by` / `testing_private_mark_paid_by`).
+4. **If 0044 is already applied** (it was, on 2026-11-07), `by_functions` and `by_bodies_are_0030` read false: 0044 replaced the two 4-input functions with 5-input ones. That is expected. Read 0044's own pre-apply check instead (`new_signatures 2`, `applied_as_tested 8`); the migration's guard accepts either.
 
 ### 0035b. Apply 0035 (you, in the SQL Editor)
 
@@ -3387,7 +3388,7 @@ Tested in PGlite on every run (`run.mjs` step0039: a camper paid, then overpaid,
 
 ## Migration 0044: Color Belt — the form's own Paying by, Edit event Undo in one call, each payment's school
 
-**Status: not applied yet.** Built on `color-belt` (rolling check step A, plan `docs/Testing/Color Belt Testing/TKD-ColorBelt-RollingCheck-Plan.md`: pass 2's **M-01 = C-01**, pass 1's **R2-02** and **R1-01** / rulebook v1.035). Needs a security review and Jeffrey's OK before it is pasted. Apply it **before** the app version that sends `p_school`, reads `paying_by_on_form` or calls `testing_undo_event_edit` is deployed. The live app keeps working after it (see "the live app" below).
+**Status: APPLIED 2026-11-07** (Jeffrey pasted it on tkd-dashboard: "Paste both now"; the read-only after-checks were clean, and `0044_tests.sql` and the eight other test files passed on production). Built on `color-belt` (rolling check step A, plan `docs/Testing/Color Belt Testing/TKD-ColorBelt-RollingCheck-Plan.md`: pass 2's **M-01 = C-01**, pass 1's **R2-02** and **R1-01** / rulebook v1.035). It was security-reviewed first. Apply it **before** the app version that sends `p_school`, reads `paying_by_on_form` or calls `testing_undo_event_edit` is deployed. The live app keeps working after it (see "the live app" below).
 
 **Production order:** … 0034 → 0036 → 0041 → 0042 → 0043 → 0039 (all live) → **0044**. It needs 0005, 0010, 0014, 0018 and 0030 — it stops with "0044 needs migration 00NN (…) first" if one is missing. It does **not** need 0035, and the two may be pasted **in either order**: 0035's guard (updated 2026-11-06) accepts the 4-input `testing_mark_paid_by` (0030) or 0044's 5-input one (tested both ways round, with 0035's and 0044's tests). No Finance function is touched: Finance keeps counting Color Belt money at the event's / private testing's school until its own later migration reads the new `school` column (order: 0044 → Finance's reader migration → the app push).
 
