@@ -1,0 +1,22 @@
+== pc
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "today: bar 1180px, content 1180px, scrolls=false, lastTabCut=false, tabs=37/103/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "A: bar 1180px, content 1180px, scrolls=false, lastTabCut=false, tabs=37/34/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "B: bar 1180px, content 1180px, scrolls=false, lastTabCut=false, tabs=37/105/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "C: bar 1180px, content 1180px, scrolls=false, lastTabCut=false, tabs=37/80/82"
+== w820
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "today: bar 700px, content 700px, scrolls=false, lastTabCut=false, tabs=37/103/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "A: bar 700px, content 700px, scrolls=false, lastTabCut=false, tabs=37/34/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "B: bar 700px, content 700px, scrolls=false, lastTabCut=false, tabs=37/105/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "C: bar 700px, content 700px, scrolls=false, lastTabCut=false, tabs=37/80/82"
+== w390
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "today: bar 358px, content 358px, scrolls=false, lastTabCut=false, tabs=37/103/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "A: bar 358px, content 358px, scrolls=false, lastTabCut=false, tabs=37/34/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "B: bar 358px, content 358px, scrolls=false, lastTabCut=false, tabs=37/105/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "C: bar 358px, content 358px, scrolls=false, lastTabCut=false, tabs=37/80/82"
+== w320
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "today: bar 288px, content 288px, scrolls=false, lastTabCut=false, tabs=37/103/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "A: bar 288px, content 288px, scrolls=false, lastTabCut=false, tabs=37/34/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "B: bar 288px, content 288px, scrolls=false, lastTabCut=false, tabs=37/105/82"
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "C: bar 288px, content 288px, scrolls=false, lastTabCut=false, tabs=37/80/82"
+== w390 staff
+../../Testing/Color Belt Testing/Design Review mockups/cb14/inject-q4.js "Astaff: bar 358px, content 358px, scrolls=false, lastTabCut=false, tabs=37/34/82"

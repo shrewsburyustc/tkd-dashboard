@@ -5,7 +5,8 @@
 //   name, then "Private testing · Tue, Dec 1 · 4:00 PM"
 //   Class · Testing for (the belts, as on the row) · Price · Added (when, plus "moved from
 //   <event>" for one moved from an event) · Paying by · Payment (the tag, "$65 cash · paid Oct 21"
-//   and "$20 more to collect" while money is still owed) · Result (when graded: the result tag,
+//   and "$20 more to collect" while money is still owed; paid in parts, one line per payment that
+//   still stands, pass 2 C-03) · Result (when graded: the result tag,
 //   when and by whom, and the note — as the roster's summary) · Status ("Cancelled Oct 27 by …",
 //   when cancelled; rulebook §8 lists every status in the detail view)
 //   buttons: Close · Edit details (Edit details only when the ⋯ menu offers it)
@@ -29,6 +30,7 @@ import HistoryLine from '../../../components/HistoryLine.jsx';
 import { formatMoney } from '../../../lib/money.js';
 import { loadPrivateHistory } from '../../../lib/testing/privateApi.js';
 import { describeHistoryRow, historyReader } from '../../../lib/testing/history.js';
+import { summaryPaymentParts } from '../../../lib/testing/privateRules.js';
 import { ResultTag } from '../event/ResultButtons.jsx';
 import { PrintReceiptButton, TestingForCell } from '../event/StudentDialog.jsx';
 import { rankViewOf } from './PrivateRows.jsx';
@@ -44,11 +46,13 @@ function SummaryRow({ label, children }) {
   );
 }
 
-// record: the private testing's row (privateApi.loadPrivateTestings) · canEdit: show Edit details ·
+// record: the private testing's row (privateApi.loadPrivateTestings) · payments: the tab's payment
+// rows (any private testing's; the summary picks this one's, C-03) · canEdit: show Edit details ·
 // canPrintReceipt: show Print receipt (the ⋯ menu's rule) · onPrintReceipt(opener): open the receipt ·
 // onNoAccess: the History reader's no_access (the lock screen)
 export default function PrivateSummaryDialog({
   record,
+  payments = [],
   isPhone,
   canEdit,
   hidden = false,
@@ -70,12 +74,26 @@ export default function PrivateSummaryDialog({
 
   // The payment line: "[Paid] · $65 cash · paid Oct 21 · $20 more to collect", or
   // "[Not paid] · $85" (what is still owed).
+  // Paid in parts (pass 2 C-03, v1.009): one line per payment that still stands, oldest first, each
+  // with its own way and day ("[Paid] · $65 cash · paid Oct 30", then "$20 card · paid Nov 6"), and
+  // "$X more to collect" on its own line under them. Paid once: today's one line, unchanged.
   let payment;
   if (record.paid) {
+    const parts = summaryPaymentParts(record, payments);
+    const lines = parts.map((p) => T.paidDetail(p.cents, p.method, p.paidOn));
+    const oneLine = lines.length === 1;
     payment = (
       <>
-        <span className="ttag ttag--ok">{T.TAG_PAID}</span> · {T.paidDetail(record.paidCents, record.paidMethod, record.paidOn)}
-        {record.owesMore && ` · ${T.moreToCollect(record.amountDueCents)}`}
+        <span className="ttag ttag--ok">{T.TAG_PAID}</span> · {lines[0]}
+        {lines.slice(1).map((line, index) => (
+          <span key={index} className="ev-sum-line">
+            {line}
+          </span>
+        ))}
+        {/* A cancelled one owes nothing more (v0.429), as its row already shows */}
+        {record.owesMore &&
+          record.status !== 'cancelled' &&
+          (oneLine ? ` · ${T.moreToCollect(record.amountDueCents)}` : <span className="ev-sum-line">{T.moreToCollect(record.amountDueCents)}</span>)}
         {canPrintReceipt && !hidden && onPrintReceipt && <PrintReceiptButton onPrint={onPrintReceipt} />}
       </>
     );

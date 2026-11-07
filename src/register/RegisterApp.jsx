@@ -343,6 +343,7 @@ export default function RegisterApp() {
         cls={cls}
         rank={rank}
         form={form}
+        today={today}
         onTestingDay={onTestingDay}
         ack={ack}
         setAck={onAckChange}

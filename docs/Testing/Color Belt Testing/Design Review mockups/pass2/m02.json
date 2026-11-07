@@ -1,0 +1,34 @@
+{
+  "title": "Pass 2 · M-02 — One save is one History entry",
+  "subtitle": "Rulebook v1.055 (a) (you approved A), as Camps does (v0.736): a Mark paid, Undo payment or Edit payment that also changes Paying by is ONE entry, money first, joined with “; ”. Today it shows as two entries and “History · N changes” counts both. The words themselves stay as today (they change later with Dashboard core's R1-07, which draws one set of payment and history words for every section). Example in preview: Ava Chen (Paying by Cash) marked paid $20 by card, then that payment undone. The After column is drawn on top of the real preview page.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "m02-pc-paid-today.png", "crop": [420, 460, 440, 250], "scale": 0.9, "caption": "PC 1280, after Mark paid by card: two entries for one save; “History · 3 changes”.", "marks": [[444, 516, 392, 110]] },
+        { "src": "m02-pc-undo-today.png", "crop": [420, 360, 440, 350], "scale": 0.9, "caption": "PC 1280, after its Undo payment too: four entries for two saves; “History · 5 changes”.", "marks": [[444, 407, 392, 220]] },
+        { "row": [
+          { "src": "m02-w820-undo-today.png", "shotWidth": 820, "crop": [190, 490, 440, 360], "scale": 0.62, "caption": "Tablet 820 (touch).", "marks": [[214, 546, 392, 220]] },
+          { "src": "m02-w390-undo-today.png", "shotWidth": 390, "crop": [0, 400, 390, 360], "scale": 0.7, "caption": "Phone 390.", "marks": [[16, 458, 358, 220]] },
+          { "src": "m02-w320-undo-today.png", "shotWidth": 320, "crop": [0, 210, 320, 360], "scale": 0.75, "caption": "320.", "marks": [[16, 267, 288, 220]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "m02-pc-paid-after.png", "crop": [420, 460, 440, 250], "scale": 0.9, "caption": "PC 1280: “Payment recorded: $20 card, paid Nov 6; Paying by changed: Cash → Card”; “History · 2 changes”.", "marks": [[444, 516, 392, 75]] },
+        { "src": "m02-pc-undo-after.png", "crop": [420, 450, 440, 260], "scale": 0.9, "caption": "PC 1280, after its Undo payment: “Payment undone: $20; Paying by changed: Card → Cash”, one entry; “History · 3 changes”.", "marks": [[444, 497, 392, 133]] },
+        { "row": [
+          { "src": "m02-w820-undo-after.png", "shotWidth": 820, "crop": [190, 490, 440, 360], "scale": 0.62, "caption": "Tablet 820 (touch).", "marks": [[214, 546, 392, 133]] },
+          { "src": "m02-w390-undo-after.png", "shotWidth": 390, "crop": [0, 400, 390, 360], "scale": 0.7, "caption": "Phone 390.", "marks": [[16, 458, 358, 133]] },
+          { "src": "m02-w320-undo-after.png", "shotWidth": 320, "crop": [0, 280, 320, 300], "scale": 0.75, "caption": "320.", "marks": [[16, 337, 288, 150]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "The same on the event roster's student summary (an event registration's Mark paid / Undo payment / Edit payment by another way). With Hide private details on, both parts are money, so the entry is left out as today and the gray “Payment history is hidden on this tablet.” line shows."
+}

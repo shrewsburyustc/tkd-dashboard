@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- v638-who.html: the one question after the v0.638 mockup — who builds the shared "Date signed" box
+     (New students' look) that every family form will use. A diagram, not a screen: the options differ
+     in who does the work and who waits, not in how the box looks (the look is approved: v638.png). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>v0.638 — who builds the shared Date signed box</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; width: 1840px; box-sizing: border-box; background: #fff; color: #1F1F1F; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 18px; max-width: 1700px; }
+  .tag { display: inline-block; background: #E6EBF4; color: #003595; font-weight: 700; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; }
+  h2 { font-size: 20px; margin: 0 0 6px; }
+  .opts { display: flex; gap: 22px; align-items: flex-start; margin-top: 14px; }
+  .opt { flex: 1; border: 1px solid #D9D9D4; border-radius: 10px; padding: 14px 16px; }
+  .opt.rec { background: #F3F6FD; border-color: #9DB2E6; }
+  .opt h3 { margin: 0 0 10px; font-size: 16px; }
+  .badge { background: #1D4ED8; color: #fff; border-radius: 5px; padding: 2px 8px; font-size: 13px; margin-left: 6px; }
+  .flow { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 12px; }
+  .step { border: 1px solid #CFCFCA; border-radius: 8px; padding: 6px 10px; background: #fff; }
+  .step b { font-weight: 600; }
+  .arrow { color: #6B6B6B; padding-left: 14px; }
+  .files { font-family: Consolas, monospace; font-size: 13px; color: #333; }
+  p { margin: 6px 0 0; }
+  .note { color: #4A4A4A; margin-top: 16px; }
+</style>
+</head>
+<body>
+  <h1>Rule v0.638 — who builds the shared “Date signed” box?</h1>
+  <p class="sub">The look is approved (v638.png: New students’ label, gray box and hint). Today that box lives only in New students’ own files (<span class="files">FormFields.jsx</span>, <span class="files">forms.css</span>, <span class="files">screens/forms/text.js</span>), which Color Belt’s family page doesn’t load. Every family form will need it (Color Belt, Star, Camps, Black Belt; v0.638), so it becomes one small shared part: a component, its own small stylesheet (the family pages load only <span class="files">tokens.css</span> + their own CSS, so not <span class="files">shared.css</span> — like the public forms’ <span class="files">icon-button-public.css</span>), and its two sentences in <span class="files">src/components/text.js</span>. The pass 2 fix file says a shared part is changed only after you choose who does it.</p>
+  <div class="tag">To decide</div>
+  <h2>Who builds the shared part?</h2>
+  <div class="opts">
+    <div class="opt rec">
+      <h3>A · Color Belt, in its branch now <span class="badge">Recommended</span></h3>
+      <div class="flow">
+        <div class="step"><b>Color Belt</b> adds the shared part (copied from New students’ box, same words and look) and uses it on its family form; lists the shared files it touched.</div>
+        <div class="arrow">↓ merged to main with Color Belt’s pass 2 work</div>
+        <div class="step"><b>New students</b> swaps its own copy for the shared part (a few lines); <b>Star, Camps, Black Belt</b> use it for their v0.638 forms.</div>
+      </div>
+      <p class="files">new: src/components/DateSigned.jsx · src/styles/date-signed-public.css · shared: src/components/text.js</p>
+      <p><b>+</b> No waiting: Color Belt goes first in pass 2 and the part is tiny (a label, a box, a hint). New students’ box is the model, so nothing new is designed.</p>
+      <p><b>−</b> Color Belt touches a shared file (<span class="files">components/text.js</span>, two lines) — a small merge-conflict risk; New students keeps its own copy until it switches.</p>
+    </div>
+    <div class="opt">
+      <h3>B · Dashboard core (owner of the shared parts)</h3>
+      <div class="flow">
+        <div class="step"><b>Dashboard core</b> builds the shared part on its branch.</div>
+        <div class="arrow">↓ merged to main</div>
+        <div class="step"><b>Color Belt</b>, then New students, Star, Camps, Black Belt use it.</div>
+      </div>
+      <p><b>+</b> The session that owns shared parts makes it; nobody else touches shared files.</p>
+      <p><b>−</b> Color Belt’s Date signed waits for Dashboard core’s queue (it already has L-02, L-06, R2-05, R1-07 …) and a hand-off through Main.</p>
+    </div>
+    <div class="opt">
+      <h3>C · New students (it owns the original)</h3>
+      <div class="flow">
+        <div class="step"><b>New students</b> moves its own box into the shared part and switches its forms to it.</div>
+        <div class="arrow">↓ merged to main</div>
+        <div class="step"><b>Color Belt</b>, Star, Camps, Black Belt use it.</div>
+      </div>
+      <p><b>+</b> The original’s owner moves it and switches its own forms in the same step.</p>
+      <p><b>−</b> Color Belt waits for New students (its own pass 2 work comes first), and a hand-off through Main.</p>
+    </div>
+  </div>
+  <p class="note">The look is the same in all three; only who builds it and who waits differ. Color Belt’s summary row (“Date signed: Oct 29”) is Color Belt’s own screen either way.</p>
+  <p style="margin-top:14px"><b>Answer: A, B or C.</b></p>
+</body>
+</html>
