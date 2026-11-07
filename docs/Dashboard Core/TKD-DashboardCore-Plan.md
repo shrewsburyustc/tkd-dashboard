@@ -893,6 +893,11 @@ Source: `docs/Design Review/Rolling check/Pass 1/Fix-DashboardCore.md`. Started 
   - confirmed on a long Forms list (Both, 1280): the last row's Share and ⋯ sat under the toast while focused (§4 check 3);
   - the toast's padding: at 320 wide, a toast with Undo and three lines of words (288×59) has its text touching its top and bottom edges. `.toast--action` (`app.css`) has no top or bottom padding. This goes into R2-04's mockup.
 - **A new small item, the shared ⋯ menu's focus after a choice.** Picking a `RowMenu` item with the keyboard (e.g. Forms → Copy to …, Duplicate, Close form) drops focus to the page. `RowMenu.jsx` runs the item's `onSelect` without giving focus back to the ⋯, so the toast's Undo is then about the 18th Tab stop while its 5 seconds run. The fix: give focus back to the ⋯ after a choice, as v1.119 did for Show all (Black Belt's own menus already do).
+- **On hold: the shared Dialog's focus when a dialog swaps steps** (New students, passed on by Main 2026-11-05; corrected by Main 2026-11-06).
+  - `Dialog.jsx` moves focus to `[data-autofocus]` only when it opens (its first effect). The worry was that when a section swaps steps inside one `<Dialog>` that React reuses, focus falls to the page and Esc does nothing (WCAG 2.4.3).
+  - The correction: New students' first test ran in a hidden browser pane, where animation frames don't run, so its result was wrong. In a visible window, Edit statuses and Event types keep focus. My own check on `main` beae745 agreed: Event types (row → Edit → Cancel) went back to the first row, and Esc closed the box.
+  - Their real cases are fixed in their own code, and no shared file changed: Fill in's Sent screen is now a second keyed dialog (Black Belt's pattern, `CyclePage.jsx:473`), and focus goes back to the row they came from.
+  - So nothing is built here unless a re-test in a visible window finds a case. If one does, the safety net would be: while a dialog is the one on top and focus falls to the page, Dialog moves it to the current step's `[data-autofocus]`, else the back arrow, else the box (Dialog's MutationObserver for the "Unsaved changes…" notes is the place). No look changes.
 - **A new small item, the shared tooltip.** It can't be hovered or dismissed with Esc (WCAG 1.4.13, content on hover or focus). This is a 2.1 AA rule, though not one of v1.033's six, and it affects every IconButton. The fix: the tooltip stays while the pointer moves onto it, and Esc hides it.
 - **For Jeffrey, later, one small picture:** §7's Delete row says trash icons turn red on hover, but none does. The shared button darkens to near-black, as in the approved pictures, so the row's words need settling.
 
@@ -1035,3 +1040,89 @@ When M12 is merged, Main is told so it can pass the word on.
 Then check-parts, check-panel, the 19 check files and both builds.
 
 **Reviews:** a design review at the four sizes, and a code review. There is no database change and nothing private is shown, so no security review.
+
+## 18. Fix list step 2, R2-05: the queued Undo (build plan)
+
+Jeffrey's answers, 2026-11-05, all option A (rulebook v1.125–v1.129; pictures in `Questions/R205-*`):
+- **v1.125:** an Undo pressed while another save runs waits its turn. Its toast says "Undoing…" in the busy look, and the Undo button is as wide as "Undoing…" from the start.
+- **v1.126:** a toast that comes meanwhile waits. When the Undo is done, the newest waiting toast shows with its full 5 seconds, and "Undone" is skipped.
+- **v1.127:** if the save it waited for fails, the Undo still runs. If it fails too, one bar says "Neither change saved. Check the connection, then retry.", and its Retry redoes both, in turn.
+- **v1.128:** every page's amber bar shows under the top bar, where the offline bar shows. A bar inside a box or side panel stays inside it.
+- **v1.129:** leaving the page while an Undo waits asks nothing, and the Undo still runs. If it fails after you left, the bar under the top bar names it: "Undo didn't save: “Zoe Park withdrawn” (Camps). Check the connection, then retry."
+
+**What Dashboard core builds** (shared parts only; no section screen is changed here):
+1. **The toast** (`Toast.jsx`, `App.jsx`'s toast):
+   - a busy state: "Undoing…" in the busy look (grayed words, the busy cursor, `aria-disabled`, still a Tab stop). The toast stays until the Undo is done, and a second press does nothing;
+   - the Undo button is as wide as "Undoing…" from the start. Both words sit in one place and the hidden one keeps the width, so it's CSS only, with no measuring;
+   - Undo no longer removes the toast first;
+   - a waiting slot for v1.126: a toast that comes during "Undoing…" waits, and only the newest one is kept.
+2. **The save line** (a new shared helper, `src/lib/saveLine.js`): one per page, as each page's busy flag is today.
+   - `begin()` / `end(status)` take the place of each page's own;
+   - `undo(…)` waits for the running save, even one that fails, then runs the Undo;
+   - it tells the page whether the save before it failed, so the page can show v1.127's one bar for both;
+   - an Undo that is waiting or running when the page closes is handed to the app, which shows v1.129's bar if it fails. Its Retry runs the Undo again.
+   - The checks an Undo does (the 10-second limits for staff, the "while hidden on arrival" money rule) run when the Undo actually runs, not when it's pressed. A wait on very slow Wi-Fi can pass a 10-second limit; the database then refuses, and the page's usual "Too late to undo here…" bar says so.
+3. **The bar's place** (`Shell.jsx`): a page-bar slot under the top bar, and `PageBar`, the shared amber bar drawn into that slot.
+   - Order when several show: the offline bar, Panel size's bar, a left page's Undo bar, then the page's own bar.
+   - The page stays still as each comes or goes (v1.124's code already covers that place).
+4. **Words** (`src/components/text.js`): "Undoing…" moves to the shared words, plus "Neither change saved. Check the connection, then retry." and the "Undo didn't save: “…” (…)" line.
+5. **A sample on the parts page:** a slow fake save with its toast. Undo pressed during it shows "Undoing…", then "Undone". A switch makes the save fail (v1.127's bar); another leaves the page while the Undo waits (v1.129's bar on Home).
+6. **Checks:**
+   - in `src/lib/shared/checks.mjs`: the line's order, Undo after a failed save, after leaving, and the toast slot;
+   - a new browser check file, `tools/check-undo.mjs`, at the four sizes: the busy look and focus, the width that doesn't change, the toast order, the bar under the top bar with the page staying still, and the bar on Home after leaving;
+   - each check is first made to fail on today's code;
+   - then both builds and every check file.
+
+**Dashboard core's own screens** switch to the line and `PageBar` in the same step: Settings, Staff accounts, Home and the sign-in screens, wherever they have page bars or Undo.
+
+**What each section does afterwards** (their matching items, passed on by Main once this is on `main`):
+- its Undo handlers use `saveLine` (26 groups in 8 areas);
+- its page bars become `PageBar`;
+- its own screens are checked with `setTestingDelay`.
+- That's Star, Camps, Black Belt, New students (Calendar, Schedule, Prospects, Forms), Color Belt and Finance. v1.128 adds the page bars to every section's item, Finance's included.
+
+**Reviews:** a code review and a design review at the four sizes, each by a fresh agent, then their fixes. Nothing private is shown and there's no database change, so no security review. Then Jeffrey's OK, a commit, and the report to Main.
+
+## 19. The design review's rolling check, pass 2: the fix list
+
+Source: `docs/Design Review/Rolling check/Pass 2/Fix-DashboardCore.md` (on `main` since 8382d9a). This branch moved to `main` 1751e82 on 2026-11-06. No item needs a migration.
+
+**Order.** Main, 2026-11-06: L-02 before the other pass 2 fixes, because Color Belt's, Star's and Camps' own L-02 items wait for it. The rest join §16's order where they fit:
+1. **L-02, rosters follow the room beside the panel** (v1.053): one question first (below), then the shared part, its checks and reviews, Jeffrey's OK, a commit and "merge-ready" to Main.
+2. **R2-05, the queued Undo** (§18): waits on Jeffrey's go.
+3. **L-05, Panel size's bar says "Check the connection, then retry."** (v1.055): with the shared words (§16 step 3).
+4. **L-03, touch tap areas 44 px, not 42** (`app.css`: `inset: -5px 0`), with R4-09's correction (`-2px 0`, not `-1px 0`): with R4-09 (§16 step 7). The three copies in New students' and Camps' stylesheets and Calendar's Month / Week go to their owners through Main, unless Jeffrey wants them changed here.
+5. **L-06, a turned-off drag handle looks turned off:** `useReorderDrag` passes its state to the shared `Grip`, which grays itself. It's a new state of a shared part, so one small picture first.
+6. **Smaller:** P-04, the receipt keeps its own page margins in print (one small shared `PrintPageRule`), and L-10, page tabs and sort headers 44 px wide on touch.
+7. **Corrections to pass 1:** R2-04 also covers full-screen dialog pages (New students' phone profile goes into its mockup and checks); R1-07's mockup includes the Paying by line; R4-09 uses `-2px 0`.
+
+### L-02 — what was found while planning (2026-11-06)
+
+- **The plan as written:** the page area (`.shell-content`) becomes a CSS "container", and each roster's styles ask its width with `@container page (…)`. A shared hook gives the roster's code the same width, because its phone rows and cards are drawn by React.
+- **The catch:** browsers changed how a container works in Chrome and Edge 129 (September 2024) and Safari 18.4 (iPadOS 18.4, March 2025). Before that, a container also made every `position: fixed` pop-up inside it measure from the container's corner instead of the window's ("layout containment"), and it started a new stacking layer.
+- **Shown on the real page** (`Questions/L02-measure-room.html` / `.png`): today's Chrome has the new rule, so the old one was copied in with `contain: layout`. On Star's Grading page at 820 × 1180 touch, Noah Chen's grade list then opens 72 px right of and 48 px below its cell (the panel's width and the top bar's height), under Breaking, a row lower. With the new rule it opens where it does today.
+- **What it would affect on such a device:** every pop-up drawn with `position: fixed` inside a page: Star's grade list (`.fa-list.stg-list`), Black Belt's grade list (`.bbg-list`) and measured-number box (`.bbg-editor`), and the "kept" notes (`.stg-keptpop`, `.bbg-keptpop`). That's the grading pages used at the mat.
+- **What it wouldn't affect:** everything drawn in a portal (dialogs, ⋯ menus and sheets, the date picker, the Mark paid box, receipts, Prospects' drag ghost), and everything outside the page area (the toast, the rail and its menu, the account menu, the bars under the top bar).
+
+**Jeffrey's answer, 2026-11-06: "B: shared code"** (rulebook v1.130; picture `Questions/L02-measure-room.html` / `.png`):
+- **B, chosen: no container query; the shared code measures the room.** It works the same on every device the app already runs on, each roster's limit is written once, and no pop-up can move. The three sections' fix files say `@container page`, so Main tells them to use the class instead (one line each).
+- A, rejected: the container query, switched on only where a start-up test shows a fixed pop-up stays put. An older iPad would keep today's overlapping roster, each roster would write its rules twice, and the school's iPads would need checking.
+
+**What gets built** (shared parts only; no section screen changes in this step):
+1. **`src/lib/pageRoom.js`** (new): the page area's width, and `usePageRoomBelow(px)`, true while the room beside the panel is narrower than `px`.
+   - The room is the page area's width (the window minus the panel), less a scrollbar's width on a device whose scrollbars take room, whether or not the page scrolls. So a roster switching layout can't change it (changed after the code review: measuring the page's real scrollbar let a layout switch flip the roster back).
+   - A roster only re-draws when the answer flips, not on every pixel.
+   - Where nothing measures it (the public forms, and the parts page's other samples) it answers false, as today. The parts page's L02 sample measures its own small page area.
+   - Its header says how a roster uses it: it picks its own limit (the narrowest room its tablet columns fit), draws its phone layout when the window is a phone's or the room is below that limit, and ties its phone-layout styles to the class it sets. The rest of the page, its dialogs and its ⋯ menus keep following the window, and with a mouse the roster's buttons keep their mouse size, so only the roster's own layout rules move onto the class.
+2. **`Shell.jsx`:** one ResizeObserver on the page area feeds it, measured first before the screen is painted. After the first measure, one small change of state makes React draw again before the first paint, so a roster drawn together with the frame already has the right look. Later changes of size are measured one frame later, as `ConfirmBox.jsx` does, so a roster switching layout never sets off the browser's "ResizeObserver loop" warning (both added after the code review).
+3. **A parts-page sample:** a small window with Window and Panel choices, and a sample roster that switches to stacked rows below its limit, with the room in px. A second state opens with a 683 px window and Largest, so its picture shows the stacked rows.
+4. **Checks:**
+   - `src/lib/shared/checks.mjs`: the answer flips at the limit, and is false outside the frame;
+   - a new browser check, `tools/check-room.mjs`: the room matches the page area at 683 mouse, 667 × 375 touch, 700 touch with Largest, 744 touch, 768 touch with Largest, 820 touch, 1024 mouse with Largest, 1280 and a 390 phone; a stand-in roster listening to the app's own store (its phone layout longer, then shorter) switches once each way as the window narrows by 10 px and widens back, with the same room both ways and no "ResizeObserver loop" warning; it updates when Panel size changes, without a reload; it survives the lock screen; no container sits around the page area and Star's grade list opens in the same place; the parts sample is exact and its first frame already shows the room;
+   - the app's 23 screens (`shoot-app.mjs`) are pixel-identical to today's at the four review sizes;
+   - it also reports, for the sections, roster cells and boxes wider than their room at 683 mouse, 768 touch with Largest and 1024 mouse with Largest (the panel takes 44 px more there than with Standard). Anything found goes to that section through Main.
+   - Each check is first made to fail on today's code where it can, then both builds and every check file pass.
+
+**Rulebook:** v1.130, written 2026-11-06, with a "(See v1.130 …)" note at the start of v1.053's row. No browser check is needed before it goes live. Next free in this block: **1.131**.
+
+**Reviews:** a code review and a design review (the four sizes must look as today), each by a fresh agent. Nothing private and no database, so no security review. Then Jeffrey's OK, a commit, and "merge-ready" to Main, naming who adopts it (Color Belt, Star, Camps) and who checks it (Black Belt: its roster already fits, so nothing to do).

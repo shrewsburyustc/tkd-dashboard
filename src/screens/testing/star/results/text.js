@@ -40,6 +40,9 @@ export const LOADING_RESULTS = 'Loading results…';
 export const emptyOneSchoolParts = (school, danLabel) => [`No ${school} ${danLabel} candidates. `, 'Show both schools', ' to see the rest.'];
 // The Undo toast's Undo after the 9-second cap went: the database decides (not_allowed wording).
 export const UNDO_CONFIRM_GO = 'Undo Mark as sent';
+// The id of the gray "Email result is off while private details are hidden" line, so a grayed Email
+// result button can point at it with aria-describedby (R4-08).
+export const EMAIL_OFF_ID = 'str-email-off';
 
 // ----- The printed results sheet (R9, proposals 34–38; approved Results print screen v0.143) -----
 export const sheetTitle = (eventName) => `${eventName} — Results`;

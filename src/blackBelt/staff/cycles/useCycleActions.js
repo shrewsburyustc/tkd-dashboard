@@ -97,7 +97,8 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
       a.setBanner((current) => (current?.kind === 'switch' ? null : current));
       a.reload();
       if (isUndo) {
-        a.showToast(T.TOAST_UNDONE, { icon: false });
+        // Undoing a close puts registration back to open and says so; undoing an opening closes it: plain "Undone" (R2-07)
+        a.showToast(open ? T.TOAST_UNDONE_OPEN_AGAIN : T.TOAST_UNDONE, { icon: false });
         return;
       }
       const removedDate = open && openNeedsAdmin(cycle, a.today);

@@ -509,12 +509,21 @@ export const CARD_CAME = 'Came';
 export const cardOfDays = (n) => `of ${n} ${n === 1 ? 'day' : 'days'}`;
 export const CARD_TO_COLLECT = 'To collect';
 export const ALL_PAID = 'All paid'; // under To collect when nobody owes
+// To collect's second line while it leaves out rows marked Possible duplicate (v0.742, picture 21 A)
+export const duplicatesNotCounted = (n) => `${n} possible ${n === 1 ? 'duplicate' : 'duplicates'} not counted`;
 export const CARD_PAYMENTS = 'Payments recorded';
+// Under Payments recorded while part of it was paid by removed campers (v0.742 / v1.038)
+export const includesFromRemoved = (cents) => `includes ${formatMoney(cents)} from removed campers`;
 // The gray line while a card filters the roster (the shared part adds " · Show all").
 export const SHOWING_COMING_TODAY = 'Showing coming today only';
 export const showingComingOn = (day) => `Showing coming ${dayLong(day)} only`;
 export const SHOWING_TO_COLLECT = 'Showing to collect only';
-export const NO_MATCH_FILTER = 'No campers match.'; // (not in the mockups) a card filter (with or without Find a camper) leaves nobody, as Star's "No candidates match."
+// A pressed card leaves nobody (no search text): each card says what is true, in Color Belt's pattern
+// ("Everyone in this class has paid."; design review C-05 (b), rulebook v1.055). (not in the mockups)
+export const cardEmptyLine = (filter, isToday, day) => {
+  if (filter === 'collect') return 'Every camper has paid.';
+  return isToday ? 'No campers are coming today.' : `No campers are coming on ${dayLong(day)}.`;
+};
 export const ROSTER_LABEL = 'Campers'; // (not in the mockups) screen readers: the roster table
 export const COL_PAID = 'Paid';
 export const dueTag = (cents) => `${formatMoney(cents)} due`;
@@ -532,7 +541,6 @@ export const undoCheckInDayLabel = (name, day, stamp, shortNames) => `${name} ch
 export const missedDayLabel = (name, day, shortNames) => `${name} didn’t come ${dayLong(day)}${extrasTail(shortNames)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
 export const notSignedUpLabel = (day) => `Not signed up ${dayLong(day)}`; // screen readers
 export const payTagLabel = (name, text) => `${name}: ${text}. Mark paid`; // screen readers on the $ due / Owes tag
-export const NO_MATCH_ROSTER = 'No camper with that name.'; // (not in the mockups)
 export const WEEK_SWITCH_LABEL = 'Week'; // (not in the mockups) screen readers
 // "Week 1 · Jul 6–10" (phones: "Week 1")
 export function weekLabel(index, week, short) {
@@ -554,6 +562,12 @@ export const rosterLegendParts = (touch) => ({
   rest: ' · — not signed up that day',
 });
 export const FIND_CAMPER = 'Find a camper';
+// Find a camper's ✕ (the shared icon button: label and tooltip) and the no-match line's link
+// (v0.742 / v1.050, picture 21 A — the same words as Prospects' box)
+export const CLEAR_SEARCH = 'Clear search';
+// Nothing found for the search text (search words win over a pressed card's; the screen adds
+// " · Clear search")
+export const noCampersMatch = (text) => `No campers match “${text}”.`;
 export const CHECK_IN = 'Check in';
 export const checkedInToast = (name, stamp) => `${name} checked in · ${clockTime(stamp)}`;
 export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (not in the mockups)
@@ -576,6 +590,10 @@ export const legendExtraMeaning = (shortName) => ` ${shortName.toLowerCase()}`;
 // rulebook v0.735), whose own words ("Paid by", "Mark paid $166", "They chose Cash on the form.")
 // are in components/text.js.
 export const tagOwes = (cents) => `Owes ${formatMoney(cents)}`;
+// The roster's Paid tag once a camper paid too much or got a refund (rulebook v0.745, Star's words,
+// screens/testing/star/candidates/text.js): "Paid $315", and in amber after it "$23 overpaid".
+export const paidAmount = (cents) => `Paid ${formatMoney(cents)}`;
+export const overpaidText = (cents) => `${formatMoney(cents)} overpaid`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
@@ -615,6 +633,58 @@ export function undoPaymentBody(p, owedAfterCents) {
 export const KEEP_PAYMENT = 'Keep payment';
 export const UNDOING = 'Undoing…';
 export const UNDO_PAYMENT_FAILED = "Couldn't undo. Check the connection, then try again.";
+
+// ----- Record refund (rulebook v0.743, picture 22; carries out v1.039 / v1.040 for Camps) -----
+// Star testing's words and box (Star's v0.166, v0.172, v0.508 (1): screens/testing/star/candidates/
+// text.js and lib/star/candidatesText.js), Camps' own copies — "registered" becomes "signed up". Since
+// v0.745 the roster's tag names the amount once a camper is overpaid or refunded, as Star's ("Paid $315
+// ⚠ $23 overpaid", then "Paid $292"), so the box says the row afterwards reads "Paid $292".
+export const RECORD_REFUND = 'Record refund'; // the ⋯ item / More button (ti-receipt-refund), admins, while overpaid
+export const RECORD_REFUND_TITLE = 'Record refund';
+export const UNDO_REFUND = 'Undo refund'; // the ⋯ item in Record refund's place while a refund stands, and the box's button
+// Under the grayed Edit payment / Undo payment while a refund stands (v0.743 (4)), and the answer
+// when the database refuses one because a refund stands (refund_stands — someone recorded one meanwhile).
+export const UNDO_REFUND_FIRST = 'Undo the refund first.';
+// (not in the mockups) The same answer for STAFF — the Mark paid toast's Undo refused because a refund
+// stands; staff can't undo refunds, so they're sent to an admin.
+export const UNDO_REFUND_STANDS_STAFF = "Couldn't undo: this camper has a refund. Ask an admin.";
+export const REFUNDED_BY = 'Refunded by';
+export const DATE_REFUNDED = 'Date refunded';
+// "Chloe Martin · paid $315 · $23 overpaid"
+export const refundSub = (name, paidCents, overpaidCents) => `${name} · paid ${formatMoney(paidCents)} · ${formatMoney(overpaidCents)} overpaid`;
+export const refundUpTo = (cents) => `Up to ${formatMoney(cents)}, the amount overpaid.`;
+// The gray line under the calendar's days: "Not before Mar 4 (signed up) or after today."
+export const refundDateHint = (signedUpIso) => `Not before ${monthDay(signedUpIso)} (signed up) or after today.`;
+// The note above the buttons. cents = the payments that stand, added up; count = how many there are;
+// afterCents = what the camper has paid once everything overpaid is handed back — the roster's tag
+// then reads "Paid $292" (rulebook v0.745, Star's words; v0.743 said “Paid”).
+// One payment: the approved words. (not in the mockups) More than one: "The 2 payments ($315) stay …".
+export const refundAfter = (cents, count, afterCents) => {
+  const reads = `Afterwards the row reads “${paidAmount(afterCents)}”.`;
+  return count > 1
+    ? `The ${count} payments (${formatMoney(cents)}) stay in the history. ${reads}`
+    : `The ${formatMoney(cents)} payment stays in the history. ${reads}`;
+};
+// Too much, under Amount (the Save button grays) — and the database's refund_too_large while something is
+// still overpaid; when nothing is overpaid any more, the note under the buttons (Star's words). The most
+// that can go back is always what was overpaid, so this is also the words for a very large number.
+export const refundTooLarge = (cents) => `Can’t be more than the ${formatMoney(cents)} overpaid.`;
+export const NOTHING_OVERPAID = 'Nothing is overpaid any more. Someone else changed this just now. Close this to see the latest.'; // (not in the mockups) Star's words
+// (not in the mockups) The box's other field messages: $0; anything that isn't a whole-dollar amount
+// (cents, letters, or blank once touched or after pressing Save — Edit payment's "Enter a price …"
+// words don't fit a refund); no date; and the database's { status:'invalid', field:'date' }.
+export const REFUND_AMOUNT_ZERO = 'Enter an amount more than $0.';
+export const REFUND_AMOUNT_PROBLEM = 'Enter an amount in whole dollars, like 23.';
+export const ENTER_DATE_REFUNDED = 'Enter the date refunded.';
+export const refundDateRange = (signedUpIso) => `Pick a day from ${monthDay(signedUpIso)} to today.`;
+export const TOAST_REFUND_RECORDED = 'Refund recorded'; // + Undo (5 seconds)
+export const TOAST_REFUND_UNDONE = 'Refund undone'; // (not in the mockups) after Undo refund's box, no Undo — Star's toast
+// Undo refund asks first (v0.743 (4); Star's words, with Camps' straight ' as undoPaymentTitle):
+// "Undo Chloe Martin's refund?" — "The $23 cash refund recorded on Apr 21 is reversed and …"
+export const undoRefundTitle = (name) => `Undo ${name}'s refund?`;
+export const undoRefundBody = (refund) =>
+  `The ${formatMoney(Math.abs(refund.amountCents))} ${payingByLower(refund.method)} refund recorded on ${monthDay(refund.paidOn)} is reversed and the amount shows as overpaid again. Both stay in the history.`;
+export const KEEP_REFUND = 'Keep refund';
 export const TOAST_KEPT_BOTH = 'Kept both sign-ups';
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
 
@@ -715,16 +785,39 @@ export function priceBreakdownLine(b, allDays, weekCount = 1) {
   }
   return `${parts.join(' + ')} = ${formatMoney(b.totalCents)}`;
 }
-// "Apr 19, 8:52 AM  $166  Cash  Staff"
-// "$166 cash · Shrewsbury · Mar 3 · Jeffrey" — with the school whose drawer has it (v0.707)
-export const paymentLine = (p) =>
-  [`${formatMoney(p.amountCents)} ${payingByLower(p.method)}${p.kind === 'reversal' ? ' (reversed)' : ''}`, schoolName(p.school), monthDay(p.paidOn), p.recordedByName].filter(Boolean).join(' · ');
+// Camper detail's payment lines — every row, oldest first, with the school whose drawer has it (v0.707):
+//   "$166 cash · Shrewsbury · Mar 3 · Jeffrey"                  a payment
+//   "−$335 card (reversed) · Worcester · Apr 19 · Jeffrey"       the row that undid (or edited) a payment
+//   "Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg"      a refund (v0.743 (3)), at the desk that
+//                                                                handed the money back (v1.040)
+//   "$23 cash (reversed) · Worcester · Apr 22 · Jeffrey Berg"    the row that undid a refund (Undo refund):
+//                                                                the same "(reversed)" line as a payment's,
+//                                                                with the reversal's own (plus) amount
+export function paymentLine(p) {
+  const how = payingByLower(p.method);
+  const what = p.kind === 'refund'
+    ? `Refunded ${formatMoney(Math.abs(p.amountCents))} ${how}`
+    : `${formatMoney(p.amountCents)} ${how}${p.kind === 'reversal' ? ' (reversed)' : ''}`;
+  return [what, schoolName(p.school), monthDay(p.paidOn), p.recordedByName].filter(Boolean).join(' · ');
+}
 export const overpaidLine = (total, paid) => `Total now ${formatMoney(total)} · paid ${formatMoney(paid)} · `;
 export const overpaidAmber = (cents) => `Paid ${formatMoney(cents)} more than the total`;
-export const OVERPAID_ADMIN = 'An admin can change the payment from the roster’s ⋯ → Edit payment if money is handed back.';
+// Under an overpaid camper's Payments, for staff and admins alike (v0.743 (6); was "… → Edit payment").
+// With a mouse the item is in the roster's ⋯; on touch screens Camper detail's "More" holds it.
+export const OVERPAID_ADMIN = 'An admin records money handed back with ⋯ → Record refund.';
+export const OVERPAID_ADMIN_TOUCH = 'An admin records money handed back with More → Record refund.'; // (not in the mockups)
 export const owesLine = (total, paid, owes) => `Total now ${formatMoney(total)} · paid ${formatMoney(paid)} · owes ${formatMoney(owes)}`; // (not in the mockups)
 export const contactLine = (name, relation, phone) => `${name} · ${relation} · ${phone}`;
-export function signupLine(row) {
+// Camper detail's Sign-up line. `from` = { source, enteredBy } from camp_camper_detail (migration
+// 0043): a desk sign-up (Fill in, v0.741) says "Signed up at the desk by Jeffrey Berg, Nov 5, 2026 ·
+// waiver signed on the screen · reference CP-4821"; a family one keeps its words. Left out (or a
+// desk sign-up without a name) → the family words.
+export function signupLine(row, from = null) {
+  const desk = from?.source === 'desk' && from.enteredBy;
+  if (desk) {
+    const signed = row.signatureDeletedAt ? 'signature deleted after 3 years' : 'waiver signed on the screen';
+    return `Signed up at the desk by ${from.enteredBy}, ${monthDayYear(row.signedUpOn)} · ${signed} · reference ${row.reference}`;
+  }
   const signed = row.signatureDeletedAt ? 'signature deleted after 3 years' : 'waiver signed on the form';
   return `Signed up on the family form, ${monthDayYear(row.signedUpOn)} · ${signed} · reference ${row.reference}`;
 }
@@ -746,6 +839,7 @@ export const RECEIPT_DAYS = 'Days';
 export const RECEIPT_EXTRAS = 'Extras';
 export const RECEIPT_REFERENCE = 'Reference';
 export const RECEIPT_FOR_FEE = 'Camp fee';
+export const RECEIPT_FOR_REFUND = 'Refund'; // a refund's line, with a minus amount (Star's receipt, v0.743 (5))
 // The gray line under the box's title: "Jack Rivera · Thanksgiving Camp"
 export const receiptSub = (name, campName) => `${name} · ${campName}`;
 // The camper was deleted on another device while the receipt opened (Star's and Black Belt's words)
@@ -792,8 +886,7 @@ export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups)
 
 
 // ----- Live-test fixes (2026-10-21): the camp page's automatic reload -----
-// The amber bar when the 15-second reload failed twice in a row (CampPage.jsx). (not in the mockups)
-export const REFRESH_FAILED = 'Couldn’t refresh the roster. Check the connection, then retry.';
+// (The amber "Couldn't refresh the roster" bar that used to be here is the shell's one offline bar now: C19, v1.005.)
 // The quiet time at the end of the summary line, e.g. "Updated 2:41:07 PM" (CampRoster.jsx). (not in the mockups)
 export const updatedAtLine = (ms) => `Updated ${new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
 
@@ -810,7 +903,10 @@ export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../lib/private
 // (screens/camps/camperHistoryWords.js puts them together).
 export const HISTORY_STAFF = 'Staff'; // the "who" when the log has no name (Star's word)
 export const HISTORY_JOIN = '; ';
-export const historySignedUp = (reference) => `Signed up on the family form${reference ? ` · ${reference}` : ''}`;
+// The sign-up save. A desk sign-up (Fill in, migration 0043, v0.741) names who filled it in:
+// "Signed up (entered by Jeffrey Berg) · CP-4821"; a family one keeps "Signed up on the family form · CP-4409".
+export const historySignedUp = (reference, enteredBy = null) =>
+  `${enteredBy ? `Signed up (entered by ${enteredBy})` : 'Signed up on the family form'}${reference ? ` · ${reference}` : ''}`;
 export const historyChange = (label, before, after) => `${label}: ${before} → ${after}`;
 export const HISTORY_EMPTY_VALUE = '—'; // a value that was blank (not in v0.736)
 export const HISTORY_DAYS = 'Days';
@@ -828,6 +924,11 @@ export const historyMarkedPaid = (cents, method) => `Marked paid ${formatMoney(c
 export const historyPaymentUndone = (cents, method) => `Payment undone: ${formatMoney(cents)} ${payingByLower(method)}`;
 export const historyPaymentChanged = (oldCents, oldMethod, newCents, newMethod) =>
   `Payment changed: ${formatMoney(oldCents)} ${payingByLower(oldMethod)} → ${formatMoney(newCents)} ${payingByLower(newMethod)}`;
+// Record refund (v0.743 (3), (4); Star's words): "Refund recorded: $23 cash, Apr 21" (the day the money
+// went back; drawn in picture 22) and "Refund undone: $23" ((not in the mockups) — named in the
+// rulebook's v0.743 (4), not drawn).
+export const historyRefund = (cents, method, iso) => `Refund recorded: ${formatMoney(cents)} ${payingByLower(method)}, ${monthDay(iso)}`;
+export const historyRefundUndone = (cents) => `Refund undone: ${formatMoney(cents)}`;
 export const HISTORY_WITHDRAWN = 'Withdrawn';
 export const HISTORY_RESTORED = 'Restored';
 export const HISTORY_DUPLICATE_FOUND = 'Possible duplicate found';
@@ -842,3 +943,50 @@ export const HISTORY_EMERGENCY_PHONE = 'Emergency contact phone';
 export const HISTORY_EMERGENCY_RELATION = 'Emergency contact relationship'; // (not in v0.736)
 export const HISTORY_SIGNATURE_DELETED = 'Signature deleted (3 years after the camp)';
 export const HISTORY_WHOLE_FAMILY = ' (whole family)';
+
+// ----- Fill in: staff sign up a walk-in family at the desk (rulebook v0.740 / v0.741, picture 23) -----
+// The frame and its words are New students' Fill in (src/screens/forms/text.js, v0.235 / v0.243 (5));
+// inside it is the camp's own family form (src/camp/), with the family page's own words.
+export const FILL_IN = 'Fill in'; // the PC / tablet header button
+export const FILL_IN_ITEM = 'Fill in for a family'; // the phone header ⋯ item (first)
+export const fillInTitle = (campName) => `Fill in · ${campName}`;
+export const FILL_IN_ENTERED_BY = 'You are filling this in for a family. It will be marked "Entered by" you.';
+export const fillInStep = (n, label) => `Step ${n} of 2 · ${label}`;
+export const FILL_IN_STEP_DETAILS = 'Details';
+export const FILL_IN_STEP_CHECK = 'Check and sign';
+// Why Fill in is gray (the button's tip, the ⋯ item's reason line, and the dialog's note when a Send is refused)
+export const FILL_IN_CLOSED_STAFF = 'Family sign-up is closed. Ask an admin to fill in for a family.';
+export const FILL_IN_PAST_CLOSING_STAFF = 'The closing date has passed. Ask an admin to fill in for a family.';
+export const FILL_IN_FINISHED = 'This camp is over.';
+// (not in the mockups) The camp page's amber bar when Hide private details closed the box during a
+// Send (v0.746) and the sign-up then didn't save, or its answer never came — it names nobody.
+export const FILL_IN_CLOSED_NOT_SAVED = "A Fill in sign-up may not have been saved. If the family isn't on the roster, fill it in again.";
+// While Hide private details is on (desk-only, as Forms' v0.616 — the same words)
+export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answers are hidden on this tablet.';
+// At the desk the parent signs on the screen in front of staff: New students' hint, not the family's
+// "Can't sign here? Please sign at the front desk."
+export const FILL_IN_SIGNATURE_HINT = 'Sign with a finger, pen or mouse.';
+export const FILL_IN_CANCEL = 'Cancel';
+export const FILL_IN_BACK = 'Back';
+export const FILL_IN_CONTINUE = 'Continue';
+export const FILL_IN_SEND = 'Send';
+export const FILL_IN_SENDING = 'Sending…';
+export const FILL_IN_CLOSE = 'Close';
+export const FILL_IN_LOADING = 'Loading…';
+// The Sent screen (New students' Sent with the family page's own reference and total words)
+export const FILL_IN_SENT_TITLE = 'Sent';
+export const fillInSentText = (parent) => `${parent}'s sign-up is saved.`;
+export const fillInReference = (reference) => `Reference ${reference}`;
+// "Total to pay $180 · Cash, at the front desk, before Wed, Nov 25"
+export const fillInTotal = (amount, way, firstDay) => `Total to pay ${amount} · ${way}, at the front desk, before ${firstDay}`;
+export const FILL_IN_ANOTHER = 'Fill in another';
+// The unsaved-changes guard (v0.627, New students' words); phones have no Cancel, so their note
+// points at its own "Discard changes" link
+export const FILL_IN_LEAVE = 'This sign-up isn\'t sent yet. Send it or press Cancel to throw it away.';
+export const FILL_IN_LEAVE_PHONE = 'This sign-up isn\'t sent yet. Send it or discard it.';
+export const FILL_IN_DISCARD = 'Discard changes';
+// When a Send or the first read fails (not in the mockups; New students' words where they exist)
+export const FILL_IN_SEND_FAILED = "It wasn't sent. Check the connection and press Send again (it won't be saved twice).";
+export const FILL_IN_SEND_INVALID = 'Some answers were refused. Check them and send again.';
+export const FILL_IN_LOAD_FAILED = "Couldn't load this camp's form. Check the connection, then retry."; // (not in the mockups)
+export const FILL_IN_CAMP_GONE = 'This camp was deleted, so nothing was saved.'; // (not in the mockups)

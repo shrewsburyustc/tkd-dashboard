@@ -17,6 +17,9 @@
 //   - how long the signature picture is kept: 90 days after the family's latest free class, or 90
 //     days after signing when no class was booked (the same rule as the database's
 //     forms_purge_old_signatures, migration 0009; v0.242).
+//   - the free class's state: booked, class cancelled (booked, but the class itself was cancelled,
+//     e.g. by a closure), booking cancelled, or none — the same for the profile, the List and the
+//     printed sheet (rolling check pass 2, P-01: the sheet used to miss a cancelled class).
 // Dates are 'YYYY-MM-DD' text (Massachusetts dates); timestamps are the database's ISO text.
 import { addDays, localDay } from '../schedule/versions.js';
 
@@ -31,6 +34,18 @@ export function ageOn(dob, day) {
   let years = Number(b[1]) - Number(a[1]);
   if (`${b[2]}-${b[3]}` < `${a[2]}-${a[3]}`) years -= 1; // the birthday hasn't come yet this year
   return years;
+}
+
+// The free class's state from the child's booking ({ status, classRunning, … } or null):
+//   'booked'            booked, and its class still runs
+//   'class_gone'        booked, but the class itself was cancelled (a closure): call the family
+//   'booking_cancelled' the booking was cancelled
+//   'none'              no booking
+export function freeClassState(booking) {
+  if (!booking) return 'none';
+  if (booking.status === 'booked') return booking.classRunning ? 'booked' : 'class_gone';
+  if (booking.status === 'cancelled') return 'booking_cancelled';
+  return 'none';
 }
 
 // The age to show: from the date of birth on `today`, else the age typed on the form (older sign-ups).

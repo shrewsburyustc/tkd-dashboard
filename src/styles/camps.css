@@ -443,6 +443,44 @@
   padding-left: 36px;
 }
 
+/* Find a camper's own ✕ (v0.742, picture 21 A): the browser's ✕ (Chrome's blue one) is hidden —
+   the shared icon button replaces it while the box has text, as in Prospects' box
+   (prospects.css .psearch-input). */
+.cp-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Room on the right for the ✕, so the words never run under it. */
+.cp-search.has-text .cp-search-input {
+  padding-right: 36px;
+}
+
+/* The shared icon button (.tib: 28px, 44px on touch), placed inside the box on the right,
+   centred on its height. position: absolute replaces .tib's own "relative" (its tooltip is still
+   placed from the button). */
+.cp-search .tib.cp-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+}
+
+@media (pointer: coarse) {
+  .cp-search.has-text .cp-search-input {
+    padding-right: 48px;
+  }
+
+  .cp-search .tib.cp-search-clear {
+    right: 0;
+  }
+}
+
+/* The "No campers match “zz”. · Clear search" line in the roster's place: the shared
+   .ev-filter-line pulls itself up toward the cards; here it sits under the search box instead. */
+.cp-nomatch.ev-filter-line {
+  margin-top: 0;
+}
+
 /* ===== C6 Camper detail / Edit details ===== */
 .cp-detail-head {
   margin: var(--space-16) 0 var(--space-4);
@@ -734,6 +772,33 @@
   cursor: pointer;
 }
 
+/* "Paid $315 ⚠ $23 overpaid" (rulebook v0.745, copied from Star's .st-paytag / .st-overpaid in
+   star.css): the green tag names what was paid; the overpaid part follows in amber with the
+   triangle, under the tag when the Paid column is narrow. */
+.cp-paytag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.cp-overpaid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* A phone card's tag sits at the right of the name: there the amber part always goes under the
+   tag, both lined up on the right, and the name (not the tag) gives up room on a narrow screen. */
+.cp-rcard-top .cp-paytag {
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
 /* One day of one child: came (user-check icon + time) · Check in · didn't come (user-x icon) · — */
 .cp-dc {
   position: relative;
@@ -846,11 +911,27 @@ button.cp-dc:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.cp-rcard-name .cp-name-link {
-  min-height: var(--tap-size);
+/* The tag and, with a mouse, the card's ⋯ at the card's right end */
+.cp-rcard-end {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
 }
 
-/* The day buttons of the week under the name: equal columns, 44px tall */
+/* The card whose ⋯ menu is open: the tint reaches 8px past the text on both sides, like a table row */
+.cp-rcard.is-selected {
+  background: var(--color-blue-tint);
+  box-shadow: -8px 0 0 var(--color-blue-tint), 8px 0 0 var(--color-blue-tint);
+}
+
+/* Cards are drawn for a phone or for a roster with too little room (L-02, v1.053): their buttons
+   follow the kind of screen, not the layout — mouse size here, 44px on touch (below). */
+.cp-rcard-name .cp-name-link {
+  min-height: 32px;
+}
+
+/* The day buttons of the week under the name: equal columns, 36px tall with a mouse, 44px on touch */
 .cp-rdays {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
@@ -865,7 +946,7 @@ button.cp-dc:focus-visible {
   justify-content: center;
   min-width: 0;
   height: auto;
-  min-height: var(--tap-size);
+  min-height: 36px;
   padding: 2px var(--space-4);
   overflow: hidden;
 }
@@ -954,6 +1035,27 @@ button.cp-dc:focus-visible {
   color: var(--color-delete-text);
 }
 
+/* A gray button there: Edit payment / Undo payment while a refund stands (rulebook v0.743 (4),
+   picture 22 3e) — the plain button's approved gray (as Fill in's .cp-fill rule below and shared.css
+   .cfm-actions). Still focusable (aria-disabled); pressing it does nothing. */
+.cp-detail-actions .btn.is-unavailable,
+.cp-detail-actions .btn.is-unavailable:hover,
+.cp-detail-actions .btn.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* Its reason sits under the words, as in the ⋯ menu (.ev-menu-two, "Undo the refund first."), so
+   the button grows to fit both lines (6px top and bottom, as drawn in picture 22). */
+.cp-detail-actions .btn:has(.ev-menu-two) {
+  height: auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  text-align: left;
+}
+
 /* ===== Touch screens: 36px controls, 44px tap areas ===== */
 @media (pointer: coarse) {
   .cp-rtable .cp-name-link,
@@ -970,6 +1072,12 @@ button.cp-dc:focus-visible {
 
   .cp-cal-day {
     height: var(--tap-size);
+  }
+
+  /* The roster's cards on a touch screen: 44px targets (with a mouse they are smaller, above) */
+  .cp-rcard-name .cp-name-link,
+  .cp-rdays .cp-dc {
+    min-height: var(--tap-size);
   }
 
   .cp-daychip {
@@ -1171,4 +1279,82 @@ button.cp-dc:focus-visible {
     margin-top: 8pt;
     font-size: 8pt;
   }
+}
+
+/* ===== Fill in (rulebook v0.740 / v0.741, picture 23) ===== */
+
+/* The header's plain "Fill in" button and its tip. The wrapper is the tip's anchor. */
+.cp-fill {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Gray when it can't be used: the plain button's approved gray (Forms' .flist-acts rule,
+   prospects.css; shared.css .cfm-actions). Still focusable (aria-disabled), pressing does nothing. */
+.cp-fill .btn.is-unavailable,
+.cp-fill .btn.is-unavailable:hover,
+.cp-fill .btn.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* The tip: the dashboard's dark tooltip bubble (shared.css .tib-tip), UNDER the button and lined
+   up on its right edge so it never runs off the page; it wraps (at most 250px wide). Shown on mouse
+   hover, on keyboard focus, and after a tap on touch screens (.is-tip-open). */
+.cp-fill-tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--space-8));
+  right: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 250px;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-tooltip-bg);
+  color: var(--color-on-blue);
+  font-size: var(--text-13);
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.cp-fill-tip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 24px;
+  border: 5px solid transparent;
+  border-bottom-color: var(--color-tooltip-bg);
+}
+
+.cp-fill .btn:focus-visible + .cp-fill-tip,
+.cp-fill.is-tip-open .cp-fill-tip {
+  display: block;
+}
+
+@media (hover: hover) {
+  .cp-fill:hover .cp-fill-tip {
+    display: block;
+  }
+}
+
+/* The camp's own family form inside the Fill in dialog (its look is register.css / camp.css,
+   added by FillInDialog.jsx). The family page's gray page background and outer spacing aren't
+   there; its white cards keep their borders. */
+.cfill-form .reg-step {
+  margin: 0;
+  padding: 0;
+}
+
+.cfill-form .reg-card:last-child {
+  margin-bottom: 0;
+}
+
+.cfill-loading {
+  margin: var(--space-16) 0;
+  color: var(--color-text-secondary);
 }

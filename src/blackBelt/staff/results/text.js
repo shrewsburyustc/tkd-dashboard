@@ -100,7 +100,11 @@ export const menuSubtitle = (dan, school) => `${danLabel(dan)} · ${school}`; //
 
 // ----- Lines above the list (proposals 32, 35, 36) -----
 export const NO_GRADES_YET = 'No grades yet. Results fill in as grades are entered on the Grading tab.';
-export const OFFLINE = 'You’re offline. These results may be out of date. Email result, Mark as sent, Print results and Download CSV need a connection.';
+// Offline: the page's one shared amber bar already says it, so the tab draws no bar of its own; two
+// gray "why" lines sit next to the grayed controls instead (approved by Jeffrey 2026-11-07, step 1b,
+// picture Q, rulebook v1.123).
+export const OFFLINE_WHY_BUTTONS = 'Print results and Download CSV are off while you’re offline. Try again when the connection is back.';
+export const OFFLINE_WHY_ROWS = 'Email result and Mark as sent are off while you’re offline. Try again when the connection is back.';
 export const EMAIL_OFF_HIDDEN = 'Email result is off while private details are hidden. Email results at the desk.'; // Star's words (v0.974)
 
 // ----- Loading and empty (proposals 31, 37) -----

@@ -14,7 +14,9 @@
 //   - The words and the batches (a Dan change, Add make-up, Edit payment = one line each) live in
 //     historyWords.js (plain JavaScript, checked by src/lib/blackBelt/checks.mjs).
 //   - Hide private details on (`hidden`): money changes are left out of the count and the list,
-//     with "Payment history is hidden on this tablet." (the shared line does that part).
+//     with "Payment history is hidden on this tablet." (the shared line does that part). Plan and
+//     Kukkiwon changes are left out the same way (approved by Jeffrey 2026-11-06, step 1: v0.972 kept them;
+//     v1.036 hides the plan — historyWords.js).
 // Login ids never reach the screen: the database leaves them out before the app gets the rows.
 //
 // Props: candidateId, cycle (the cycle page's cycle: id, plans [{ id, name }]), hidden, onNoAccess

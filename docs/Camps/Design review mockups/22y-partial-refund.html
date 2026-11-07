@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps — a partial refund: how does the admin hand back the rest?</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1900px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  h2.sec { font-size: 18px; font-weight: 600; margin: 10px 0 12px; padding-top: 14px; border-top: 1px solid #E5E5E2; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps — a partial refund: how does the admin hand back the rest?</h1>
+<p class="sub">The case picture 22 didn't cover: a refund of only part of what was overpaid. Real preview screens of the built Record refund (April Vacation Camp, the preview set to Wed, Apr 21, 2027): Emma Garcia paid $315 by card; Friday was taken off, so she paid $23 more than the total; an admin recorded a $10 cash refund. She is still <b>$13</b> overpaid and the hint still says “⋯ → Record refund”, but the ⋯ and More show Undo refund in Record refund's place (the approved rule v0.743 (4)). <b>Amber = what differs from the built screens.</b></p>
+
+<div class="cols">
+<div class="col after">
+  <div class="label">A · both items while still overpaid (recommended)</div>
+  <div class="row"><figure style="width:374px">
+    <div class="shot" style="width:374px;height:222.7px">
+      <img src="shots/x8-pc-detail.png" style="left:-357px;top:-344.25px;width:1088px">
+      
+    </div>
+    <figcaption><b>PC, Camper detail (as built):</b> still “Paid $13 more than the total”; the hint “… ⋯ → Record refund.” stays and is true.</figcaption>
+  </figure><figure style="width:306px">
+    <div class="shot" style="width:306px;height:310.25px">
+      <img src="shots/x8-pc-menu-A.png" style="left:-765px;top:-316.2px;width:1088px">
+      <div class="mark" style="left:121.8px;top:150.7px;width:176.29999999999998px;height:35.2px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>⋯:</b> Record refund, then Undo refund, after Undo payment; Edit payment and Undo payment stay gray.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:292.5px">
+    <div class="shot" style="width:292.5px;height:165px">
+      <img src="shots/x8-ph-A.png" style="left:0px;top:-255px;width:292.5px">
+      
+    </div>
+    <figcaption><b>Phone 390, touch:</b> the same hint (as built).</figcaption>
+  </figure><figure style="width:292.5px">
+    <div class="shot" style="width:292.5px;height:225px">
+      <img src="shots/x8-ph-A.png" style="left:0px;top:-720px;width:292.5px">
+      <div class="mark" style="left:8px;top:111.5px;width:106.25px;height:35px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>More:</b> Record refund and Undo refund.</figcaption>
+  </figure></div>
+  <div class="note">The admin records the other $13 directly. Undo refund undoes the newest refund. The database already allows a second refund up to what is still overpaid; only the menu changes.</div>
+</div>
+<div class="col after">
+  <div class="label">B · keep the approved menu, change the hint</div>
+  <div class="row"><figure style="width:374px">
+    <div class="shot" style="width:374px;height:238px">
+      <img src="shots/x8-pc-detail-B.png" style="left:-357px;top:-344.25px;width:1088px">
+      <div class="mark" style="left:13px;top:161.75px;width:348px;height:43.699999999999996px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, Camper detail:</b> while a refund stands and money is still overpaid, the hint reads “To hand back more, an admin first uses ⋯ → Undo refund, then records the whole amount.”</figcaption>
+  </figure><figure style="width:306px">
+    <div class="shot" style="width:306px;height:284.75px">
+      <img src="shots/x8-pc-menu-B.png" style="left:-765px;top:-316.2px;width:1088px">
+      
+    </div>
+    <figcaption><b>⋯ as built:</b> Undo refund only.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:292.5px">
+    <div class="shot" style="width:292.5px;height:180px">
+      <img src="shots/x8-ph-B.png" style="left:0px;top:-255px;width:292.5px">
+      <div class="mark" style="left:5px;top:137px;width:282.5px;height:39.5px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390, touch:</b> the same new hint.</figcaption>
+  </figure><figure style="width:292.5px">
+    <div class="shot" style="width:292.5px;height:195px">
+      <img src="shots/x8-ph-B.png" style="left:0px;top:-733.5px;width:292.5px">
+      
+    </div>
+    <figcaption><b>More as built:</b> Undo refund only.</figcaption>
+  </figure></div>
+  <div class="note">Two steps and two Finance lines for one hand-back.</div>
+</div>
+</div>
+<div class="foot"><b>How it was drawn:</b> <code>mock-x8-partial-refund.js</code> adds only what differs: in A a Record refund item cloned from the real Undo refund item (ti-receipt-refund icon), in B the hint's words; everything else is the built screen. <br><br><b>Recommendation: A — one step for the desk, and the hint stays true. Your choice: A or B?</b></div>
+</body></html>

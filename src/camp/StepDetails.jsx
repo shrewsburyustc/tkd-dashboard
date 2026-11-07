@@ -3,6 +3,12 @@
 // Why it exists: rulebook v0.232 / v0.703 and contract 0013 §4.1. Errors show when a field is
 // left and again for everything at Continue (the Color Belt form's rule, Star v0.107); Continue
 // then moves focus to the first problem.
+//
+// inDialog (default false = the family page, exactly as before): the dashboard's Fill in dialog
+// (src/screens/camps/FillInDialog.jsx, rulebook v0.741) draws this same step inside New students'
+// dialog frame. Then the camp card, the "Step 1 of 2" heading (the dialog has its own), the
+// honeypot and the big Continue button are left out (the dialog's Continue submits this form), and
+// the parent's name and phone are not offered for the browser to remember (a shared desk computer).
 import ChildCard from './ChildCard.jsx';
 import FamilyFields from './FamilyFields.jsx';
 import { CampCard, FieldError, PlusIcon, TopError } from './parts.jsx';
@@ -27,12 +33,15 @@ export default function StepDetails({
   headingRef,
   honeypot,
   setHoneypot,
+  inDialog = false, // the dashboard's Fill in dialog (see the top of this file)
+  formId, // inDialog: the form's id, so the dialog's own Continue button can submit it
 }) {
   const full = form.children.length >= MAX_CHILDREN;
   return (
     <>
-      <CampCard camp={camp} full priceKindToday={kind} />
+      {inDialog ? null : <CampCard camp={camp} full priceKindToday={kind} />}
       <form
+        id={formId}
         className="reg-step"
         noValidate
         onSubmit={(e) => {
@@ -40,17 +49,21 @@ export default function StepDetails({
           onContinue();
         }}
       >
-        <h2 className="reg-stepline" ref={headingRef} tabIndex={-1}>
-          {T.STEP_1}
-        </h2>
+        {inDialog ? null : (
+          <h2 className="reg-stepline" ref={headingRef} tabIndex={-1}>
+            {T.STEP_1}
+          </h2>
+        )}
         {banner === 'camp_changed' ? <TopError innerRef={bannerRef}>{T.CAMP_CHANGED}</TopError> : null}
 
         {/* Honeypot: hidden from people (and screen readers); bots fill in every field.
-            If anything is typed here the server refuses the sign-up. */}
-        <div className="reg-hp" aria-hidden="true">
-          <label htmlFor="camp-website">Website</label>
-          <input id="camp-website" type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
-        </div>
+            If anything is typed here the server refuses the sign-up. (Not at the desk.) */}
+        {inDialog ? null : (
+          <div className="reg-hp" aria-hidden="true">
+            <label htmlFor="camp-website">Website</label>
+            <input id="camp-website" type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+          </div>
+        )}
 
         {form.children.map((child, index) => (
           <ChildCard
@@ -77,7 +90,7 @@ export default function StepDetails({
           <div className="reg-hint camp-add__hint">{T.UP_TO_3}</div>
         </div>
 
-        <FamilyFields form={form} setPerson={setPerson} show={show} onLeave={onLeave} />
+        <FamilyFields form={form} setPerson={setPerson} show={show} onLeave={onLeave} noAutofill={inDialog} />
 
         {/* How you'll pay at the school: Cash / Check / Card (Card is Camps only, v0.709) */}
         <section className="reg-card">
@@ -107,9 +120,11 @@ export default function StepDetails({
           </fieldset>
         </section>
 
-        <button type="submit" className="reg-btn reg-btn--primary reg-btn--main">
-          {T.CONTINUE}
-        </button>
+        {inDialog ? null : (
+          <button type="submit" className="reg-btn reg-btn--primary reg-btn--main">
+            {T.CONTINUE}
+          </button>
+        )}
       </form>
     </>
   );

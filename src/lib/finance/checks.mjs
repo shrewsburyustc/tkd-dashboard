@@ -874,6 +874,21 @@ check('mock: camp payments — Daily report per desk school, edit / undo / mis-c
     assert.equal(toCsv([{ ...row, event_name: 'Something' }]), toCsv([row]));
   }
   assert.match(toCsv([cbRow]), /,Chen,Color belt testing,2026-10-29,/);
+  // Private testings (0037): the For cell says ", private", in the Daily report's own words.
+  assert.match(toCsv([{ ...cbRow, is_private: true }]), /,Chen,"Color belt testing, private",2026-10-29,/);
+  assert.match(toCsv([{ ...cbRow, what: 'star', is_private: true }]), /,Chen,"Star testing, private",2026-10-29,/);
+  assert.equal(toCsv([{ ...cbRow, is_private: false }]), toCsv([cbRow])); // false or missing → unchanged
+  assert.equal(toCsv([{ ...cbRow, is_private: 'true' }]), toCsv([cbRow])); // only a real true counts
+  for (const what of ['camp', 'black_belt']) {
+    assert.equal(toCsv([{ ...cbRow, what, is_private: true }]), toCsv([{ ...cbRow, what }])); // no private kind there
+  }
+  assert.equal(toCsv([{ ...cbRow, is_private: true }]).split('\r\n')[1].split(',').length, 15); // 14 columns (one quoted comma)
+  assert.match(toCsv([{ ...cbRow, is_private: true }], { labels: { what_private: { color_belt: 'CB private' } } }), /,Chen,CB private,/);
+  // The words match the screen's (screens/finance/text.js)
+  assert.match(toCsv([{ ...cbRow, is_private: true }]), new RegExp(`"${FT.WHAT_COLOR_BELT_PRIVATE}"`));
+  assert.match(toCsv([{ ...cbRow, what: 'star', is_private: true }]), new RegExp(`"${FT.WHAT_STAR_PRIVATE}"`));
+  // The fake database's export sends is_private on every row, as 0037 does.
+  assert.ok(exp.rows.length > 0 && exp.rows.every((r) => typeof r.is_private === 'boolean'));
   // Both schools view.
   const both = withCamps.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
   const bothPlain = without.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;

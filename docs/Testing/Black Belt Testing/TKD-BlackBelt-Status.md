@@ -7,6 +7,30 @@
 
 ---
 
+## 0. Design review: where things stand (updated 2026-11-06)
+
+**Sections 1–5 below are the 2026-10 design history; this section is current.** Black Belt is built and live (migrations 0016, 0024, 0025, 0026, 0032, 0034 applied). Plan for the design review's Part 2 and the rolling check's fixes: `TKD-BlackBelt-DesignReview-Plan.md` §5. Fix lists: `docs/Design Review/Rolling check/Pass 1/Fix-BlackBelt.md` and `Pass 2/Fix-BlackBelt.md`. Rulebook rows used so far: up to **v0.980** (next free **0.981**).
+
+### Done and live (main)
+BB13 time list (v0.972) · BB8 History (v0.971–v0.973, migration 0034) · "on this tablet" words (v0.974) · BB20 (v0.975).
+
+### Rolling check, pass 1
+- **Step 1 — privacy at the mat (R1-04, R4-01, R4-03 gray, R4-04): built, reviewed, and LIVE (merged to main 6a1b395b on 2026-11-06, Jeffrey: "Merge and push").** Pictures J, K, L, N in `images/step1/`; Jeffrey's answers in v0.976 and v0.977. Reviews: security (privacy), code and design at four sizes; their confirmed findings are fixed (dialogs open when the switch turns on now close; typed birthday/email goes back to the stored values; Cancel compares what Save would send; screen-reader labels on the locked Dan and the hidden boxes). A separate verifier then tried the dialog-closing fixes in the preview (signature, Add candidate, Delete confirm, Edit details, Change plan, the screen-reader labels): all passed. The switch was flipped through the same call the account-menu row makes, not by clicking the menu row while a dialog was open; a real-keyboard Escape check is still worth a minute in a real browser.
+- **Decided (v0.978, Jeffrey "A"):** the Parent-signature box and the "Possible duplicate" box and tags stay while private details are hidden (they show no stored value; staff need them at the mat). Picture `images/step1/O-age-hints.png`.
+- R4-15's four "(See …)" notes: done (with v0.976).
+- **Step 1b — the decided small fixes: built, reviewed (security, code, design at four sizes), committed on `black-belt` (not on main yet).** Pictures P, Q, R in `images/step1b/`; Jeffrey's answers in v0.979 (Results offline lines) and v0.980 (Date signed). Built: R3-01 amber Not paid; R3-09 "Find a candidate" + Clear search (focus returns to the box); R3-02 no Record payment on a possible duplicate; R2-03 restoring a Duplicate copy has no Undo; Edit details closes to the roster; R4-14 one refusal sentence; R3-07 repeat icon; C-04 line above Delete permanently (row ⋯ and detail ⋯); M-04 View signature for admins while hidden (v1.055 (c); the open-signature-closes-when-switch-turns-on rule from step 1 was dropped for it); M12 Results offline lines; R2-07 "Undone" words; R4-13 "open it"; "More actions for" ⋯ names; R4-06 weights 600→500; L-01 faded Delete day rule removed; v0.638 Date signed on the family form (no migration; shared words from `src/components/text.js`). **Not browser-checked after the last small fixes** (signature link, focus after Clear search, detail ⋯ line): the reviewers' earlier passes cover everything else.
+- **Left on purpose:** the grayed Mark as sent ⋯ item has no aria-describedby (the line above the rows covers it); a search that matches only a withdrawn candidate still shows the old empty text; old comments still say "reopen".
+- **Next (plan §5):** Step 1b (the decided small fixes + M12's fold-in of Results' offline bar), Step 2 (R1-01 migration: payments count at the desk's school; S-1's order is a question), Step 3 (Part 2: shared parts), Step 4 (items waiting on Dashboard core / Star).
+
+### Rolling check, pass 2
+L-01, M-04, C-04 and v0.638 are built with Step 1b (above). Still planned (plan §5, Step 3): M-03, C-05, L-06 (after Dashboard core's L-06). Earlier note: v0.638 ("Date signed" on the family form — no migration needed: every waiver row already stores `signed_at`), M-03, C-05, L-06 (after Dashboard core's L-06).
+
+### Checks recorded
+- Chooser check (Testing → Black Belt → Testing → Color belt testing opens Color Belt): passed in the checker's preview.
+- BB3's Finance check (Daily report after Edit payment and its Undo): **not tried yet.**
+- PGlite speed limits missed by 10–25% on Color Belt's busy-PC run (0024 `bb_rubric_is_valid`, 200 `bb_set_registration`, 0025 `bb_cycle_results`): likely load; watch for a repeat on a quiet run.
+
+
 ## 1. Where things stand
 
 **Design stage.** Jeffrey asked (2026-10-18) for Black Belt testing to be the last testing section, focusing on registration, grading and recording payments, built alongside Finance's Daily report.
@@ -253,3 +277,5 @@ All the items below were applied to the plan.
 **2026-11-04: BB20 answered — keep "Worcester and Shrewsbury" on the printed results sheet (rulebook v0.975, Jeffrey: "A").** No code change. Both Part 1 wording questions are now settled.
 
 **2026-11-04: BB8 live.** Main merged black-belt up to 79dc13c (main b428666) and pushed main 301e7f1 (Jeffrey: "Merge and deploy"); Cloudflare Pages success. Full PGlite on main: 1982 passed, 0 failed (the two 0024 speed misses on this branch's run were machine load). Not merged yet: 5fcac55 (live tests), 81db899 / bb8e063 (v0.974 "tablet"), 94eb15d (v0.975) — waiting for Jeffrey's OK.
+
+**2026-11-04: v0.974 "tablet" wording live** (main 392bc9e, Jeffrey: "Merge and deploy"; Cloudflare success). black-belt = main 392bc9e. Done from the design review's Part 1 and BB8/BB13; Part 2 (the switch to the shared parts: BB1, BB2, BB7, BB10, BB14, BB15, BB19) is next, when Jeffrey says go.

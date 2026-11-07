@@ -21,7 +21,9 @@
 //
 // Design review BB4 (v0.966): no problem is a toast any more — refusals and failures go in the
 // shared amber bar (report(): inside the open detail, else the Candidates tab's bar). BB5 (v0.967):
-// Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades).
+// Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades, and
+// not a restored "Duplicate copy", R2-03). A saved Edit details closes the detail back to the
+// roster, with focus on the candidate's row (v1.047 (21)); a refused save keeps it open.
 //
 // Privacy (§3.1): the detail's date of birth, email and the signature live only inside `dlg`,
 // which is emptied when the dialog closes. Nothing here writes them to storage, the console, a
@@ -48,7 +50,7 @@ import {
 import { amountInputText } from '../../../lib/blackBelt/money.js';
 import { defaultTicks, sumRemaining, trimSpaces } from '../../../lib/blackBelt/rules.js';
 import { normalizeName } from '../../../lib/testing/names.js';
-import { addProblems, anyProblem, detailsProblems, paymentProblems } from './checks.js';
+import { addProblems, anyProblem, detailsProblems, editValuesToSave, paymentProblems, restoreHasUndo } from './checks.js';
 import * as T from '../text.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -66,6 +68,23 @@ const focusSoon = (element) => {
       return;
     }
     element.focus();
+  };
+  window.requestAnimationFrame(() => window.requestAnimationFrame(attempt));
+};
+// Focus goes to a candidate's ROW on the roster (not to a button): used after Edit details saves
+// and closes. The row is looked up fresh on every frame, because the roster reloads after the save
+// and may redraw (or move) the row; it waits for the row to exist and for the page to stop being
+// inert, for about half a second at most.
+const focusRowSoon = (candidateId) => {
+  let frames = 0;
+  const attempt = () => {
+    const row = document.querySelector(`[data-nav-row="${CSS.escape(String(candidateId))}"]`);
+    if ((!row || row.closest('[inert]')) && frames < 30) {
+      frames += 1;
+      window.requestAnimationFrame(attempt);
+      return;
+    }
+    row?.focus();
   };
   window.requestAnimationFrame(() => window.requestAnimationFrame(attempt));
 };
@@ -262,16 +281,22 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
 
   // The device's Hide payments switch was just turned on (mat-side, OP-B7): nothing about money,
   // the date of birth or the email may stay on screen. Close every money dialog (Record / Edit /
-  // Undo payment, refund, returned check, receipt), leave Edit details (it shows the date of birth
-  // and email), close a payment line's ⋯ and clear a money toast. The detail itself redraws with
-  // "Hidden on this tablet"; Compare, Change plan and Add hide their money parts themselves.
-  const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt'];
+  // Undo payment, refund, returned check, receipt, and Change plan or Kukkiwon — the plan is a
+  // payment detail, v1.036), close a payment line's ⋯ and clear a money toast. Edit details STAYS
+  // open (R4-04, v1.037, as Star's): its date of birth and email turn into the gray "Hidden on this
+  // tablet" (CandidateDialog.jsx) and Save keeps their stored values (editValuesToSave). The
+  // detail itself redraws with "Hidden on this tablet"; Compare and Add hide their parts themselves.
+  const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt', 'plan'];
+  // Also closed when the switch turns on: Add candidate and the Delete confirm.
+  // (Not the signature: View signature now also shows for admins while hidden, M-04, v1.055 (c).)
+  const CLOSE_ON_HIDE = ['add', 'deleteConfirm'];
   function paymentsHiddenNow() {
     const d = dlgRef.current;
     latest.current.clearToast();
     if (!d) return;
     if (d.child && MONEY_CHILDREN.includes(d.child.kind)) {
       if (d.detail) {
+        // (back to the detail's view, as before; a money dialog never opens over Edit details)
         setDlg({ detail: { ...d.detail, mode: 'view', edit: null, menu: null }, child: null });
         refreshDetail();
       } else {
@@ -280,8 +305,20 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       }
       return;
     }
-    if (d.detail && (d.detail.mode === 'edit' || d.detail.menu?.kind === 'line')) {
-      patchDetail({ mode: 'view', edit: null, menu: null });
+    // The Add candidate form and the Delete permanently confirm must not stay on a mat tablet
+    // either (an admin's View signature may, M-04): they close the way any child
+    // closes (focus goes back to the button that opened them).
+    if (d.child && CLOSE_ON_HIDE.includes(d.child.kind)) {
+      closeChild();
+      return;
+    }
+    // A payment line's ⋯ closes.
+    if (d.detail && d.detail.menu?.kind === 'line') patchDetail({ menu: null });
+    // Edit details STAYS open, but its date of birth and email now read gray and can't change, so
+    // anything typed there goes back to the stored values — nothing is left looking pending.
+    if (d.detail?.edit && !d.detail.edit.saving) {
+      const e = d.detail.edit;
+      patchDetail({ edit: { ...e, values: { ...e.values, dob: e.initial.dob, email: e.initial.email } } });
     }
   }
 
@@ -660,7 +697,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
 
   // ===== Change plan or Kukkiwon (Candidates 6) =====
   function openChangePlan(candidateId, opener) {
+    // Hide private details on: the plan is desk-only (v1.036) — the ⋯ items are grayed, and this
+    // never opens (also when the switch turned on while the candidate was being read).
+    if (latest.current.paymentsHidden) return;
     const start = (data) =>
+      !latest.current.paymentsHidden &&
       openChild({ kind: 'plan', candidateId, data, version: data.candidate.version, values: { planId: data.candidate.cyclePlanId, kukkiwon: data.candidate.kukkiwon === true } }, opener);
     const from = dlgRef.current?.detail;
     if (from?.data && from.candidateId === candidateId) start(from.data);
@@ -688,7 +729,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
         undoAction(() =>
           runQuick(() => changePlan({ candidateId, expectedVersion: version, planId: old.planId, kukkiwon: old.kukkiwon }), {
             ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-            statuses: { stale: T.UNDO_STALE_CANDIDATE, not_allowed: T.PAYMENT_RECORDED_ASK_ADMIN, withdrawn: T.planWithdrawn(name) },
+            statuses: { stale: T.candidateStale(name), not_allowed: T.PAYMENT_RECORDED_ASK_ADMIN, withdrawn: T.planWithdrawn(name) },
           }),
         ),
       );
@@ -715,7 +756,8 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
 
   // ===== Add candidate (Candidates 7) =====
   function openAdd(opener, schoolCode) {
-    if (dlgRef.current) return;
+    // Hide private details on: New candidate waits for the desk (grayed in the Add candidate menu)
+    if (dlgRef.current || latest.current.paymentsHidden) return;
     const values = { school: schoolCode ?? null, first: '', last: '', dob: '', dan: null, kukkiwon: false, planId: null, email: '', paperWaiver: false };
     openChild({ kind: 'add', values, touched: {} }, opener);
   }
@@ -758,7 +800,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
               runQuick(() => deleteCandidate({ candidateId: id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
-                statuses: { stale: T.UNDO_STALE_CANDIDATE, has_payments: T.hasPaymentRecords(name), has_grades: T.hasGrades(name) },
+                statuses: { stale: T.candidateStale(name), has_payments: T.hasPaymentRecords(name), has_grades: T.hasGrades(name) },
               }),
             )
           : { icon: false },
@@ -782,7 +824,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // ===== Edit details (inside the detail, Star v0.112) =====
   function startEdit() {
     const d = dlgRef.current?.detail;
-    if (!d?.data || latest.current.paymentsHidden) return; // Hide payments on: Edit details at the desk
+    // Hide private details on (R4-04, v1.037): Edit details opens too; the date of birth and email
+    // read "Hidden on this tablet" and Save keeps their stored values (editValuesToSave).
+    if (!d?.data) return;
     const c = d.data.candidate;
     const values = { first: c.firstName, last: c.lastName, dob: c.dateOfBirth ?? '', email: c.emailForResults ?? '', school: c.locationCode, dan: c.dan };
     patchDetail({ mode: 'edit', menu: null, edit: { values, initial: values, triedSave: false, note: null, blocking: false, saving: false, failed: false, version: c.version } });
@@ -793,7 +837,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   function cancelEdit({ ask = false } = {}) {
     const d = dlgRef.current?.detail;
     if (!d?.edit || d.edit.saving) return;
-    if (ask && !same(d.edit.values, d.edit.initial) && !d.edit.blocking) {
+    // Compare what Save WOULD send (a locked Dan or a reset date of birth/email isn't a change).
+    const wouldSave = editValuesToSave(d.edit.values, d.edit.initial, { hidden: latest.current.paymentsHidden, isAdmin: latest.current.isAdmin });
+    if (ask && !same(wouldSave, d.edit.initial) && !d.edit.blocking) {
       patchDetail({ edit: { ...d.edit, note: T.UNSAVED, noteAt: Date.now() } });
       return;
     }
@@ -805,12 +851,18 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!e || e.saving || e.blocking) return;
     const c = d.data.candidate;
     const purged = c.dateOfBirth === null;
-    const problems = detailsProblems(e.values, { today: latest.current.today, purged });
+    // Hide private details on: the stored date of birth and email (and, for staff, the stored Dan)
+    // go back unchanged — the fields can't be seen or changed (editValuesToSave, checks.js).
+    const hiddenNow = latest.current.paymentsHidden;
+    const v = editValuesToSave(e.values, e.initial, { hidden: hiddenNow, isAdmin: latest.current.isAdmin });
+    // (while hidden the stored date of birth and email aren't checked here — no error can show
+    // under a field that can't be seen; the database still checks them)
+    const problems = detailsProblems(v, { today: latest.current.today, purged: purged || hiddenNow });
     if (anyProblem(problems)) {
       patchDetail({ edit: { ...e, triedSave: true } });
       return;
     }
-    if (same(e.values, e.initial)) {
+    if (same(v, e.initial)) {
       patchDetail({ mode: 'view', edit: null });
       return;
     }
@@ -820,12 +872,12 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const result = await updateCandidate({
       candidateId: c.id,
       expectedVersion: e.version,
-      first: e.values.first,
-      last: e.values.last,
-      dateOfBirth: purged ? null : e.values.dob,
-      email: purged ? null : trimSpaces(e.values.email),
-      locationCode: e.values.school,
-      dan: Number(e.values.dan),
+      first: v.first,
+      last: v.last,
+      dateOfBirth: purged ? null : v.dob,
+      email: purged ? null : trimSpaces(v.email),
+      locationCode: v.school,
+      dan: Number(v.dan),
     });
     endWrite();
     const setEdit = (changes) => patchDetail((x) => (x.edit ? { edit: { ...x.edit, ...changes } } : {}));
@@ -867,8 +919,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
           ),
         ),
       );
-      patchDetail({ mode: 'view', edit: null });
-      refreshDetail();
+      // A save that worked closes the detail back to the roster, as Star and Camps do (v1.047
+      // (21)); focus goes to the candidate's row, and the toast with its Undo stays. A refused
+      // save (below) keeps the detail open.
+      setDlg(null);
+      focusRowSoon(candidateId);
       return;
     }
     if (result.status === 'no_access') {
@@ -884,7 +939,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     // 0025 (Q-G4): the old Dan has grades — nothing was saved; ask first (DanChangeDialog).
     if (result.status === 'has_grades') {
       setEdit({ saving: false });
-      openDanChange(result);
+      openDanChange(result, v);
       return;
     }
     // 0025 (OI-4): a make-up of this candidate is already on a later cycle
@@ -911,12 +966,14 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // ===== The Dan-change dialog (0025 Q-G4, v0.955, mockup DC 1–5) =====
   // counts = { gradeCount, countCount, chosenCount } from the has_grades answer. It opens from Edit
   // details (which waits behind it with what was typed): Cancel goes back there, nothing saved.
-  function openDanChange(counts) {
+  // values = what Save sent (editValuesToSave: the stored date of birth and email while hidden).
+  function openDanChange(counts, values) {
     const d = dlgRef.current?.detail;
     if (!d?.edit) return;
     const shown = { gradeCount: counts.gradeCount ?? 0, countCount: counts.countCount ?? 0, chosenCount: counts.chosenCount ?? 0 };
     const opener = document.querySelector('[data-edit-save]');
-    openChild({ kind: 'danChange', candidate: d.data.candidate, editValues: d.edit.values, oldDan: d.edit.initial.dan, newDan: Number(d.edit.values.dan), counts: shown, values: null }, opener);
+    const sent = values ?? d.edit.values;
+    openChild({ kind: 'danChange', candidate: d.data.candidate, editValues: sent, oldDan: d.edit.initial.dan, newDan: Number(sent.dan), counts: shown, values: null }, opener);
   }
   async function confirmDanChange() {
     const c = dlgRef.current?.child;
@@ -945,8 +1002,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (result.status === 'ok') {
       afterWrite();
       latest.current.showToast(T.TOAST_CHANGES_SAVED, { icon: false });
-      setDlg((x) => (x?.detail ? { detail: { ...x.detail, mode: 'view', edit: null, focusKey: 'detail-more' }, child: null } : x));
-      refreshDetail();
+      // The Dan change is Edit details saved too: the detail closes back to the roster with focus
+      // on the candidate's row, as after a plain save (v1.047 (21)).
+      setDlg(null);
+      focusRowSoon(cand.id);
       return;
     }
     // DC 5: someone graded meanwhile — the question stays open with the NEW counts
@@ -1001,7 +1060,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
               runQuick(() => restoreCandidate({ candidateId: target.id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
-                statuses: { stale: T.UNDO_STALE_CANDIDATE, already_added: T.restoreAlreadyAdded(name) },
+                statuses: { stale: T.candidateStale(name), already_added: T.restoreAlreadyAdded(name) },
               }),
             )
           : { icon: false },
@@ -1034,11 +1093,13 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     report({ text: words }, { from: a, opener });
   }
   function openDelete(target, opener) {
+    if (latest.current.paymentsHidden) return; // Hide private details on: delete at the desk (grayed in every ⋯)
     openChild({ kind: 'deleteConfirm', target, values: null }, opener);
   }
   async function confirmDelete() {
     const c = dlgRef.current?.child;
     if (!c || c.saving || c.blocking) return;
+    if (latest.current.paymentsHidden) return; // Hide private details on: delete at the desk
     if (!beginWrite()) return;
     patchChild({ saving: true, failed: false, note: null });
     const t = c.target;
@@ -1076,7 +1137,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       ok: (result) =>
         latest.current.showToast(
           T.toastRestored(name),
-          undoAction(() =>
+          // A "Duplicate copy" restored: no Undo (R2-03, v1.043; restoreHasUndo in checks.js)
+          !restoreHasUndo(target)
+            ? { icon: false }
+            : undoAction(() =>
             runQuick(() => withdrawCandidate({ candidateId: target.id, expectedVersion: result.version }), {
               ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
               countChanged: true,
@@ -1152,7 +1216,8 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // ===== View signature (admins) and the receipt =====
   async function openSignature(opener) {
     const d = dlgRef.current?.detail;
-    if (!d?.data || latest.current.paymentsHidden) return;
+    // Admins may open View signature while private details are hidden, as Star's (v1.055 (c))
+    if (!d?.data) return;
     openChild({ kind: 'signature', candidateId: d.candidateId, status: 'loading', result: null, values: null }, opener);
     const result = await loadSignature({ candidateId: d.candidateId });
     if (dlgRef.current?.child?.kind !== 'signature') return; // closed meanwhile

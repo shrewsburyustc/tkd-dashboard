@@ -54,7 +54,7 @@
 
 .bbr-title {
   margin: 0;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbr-subtitle {
@@ -123,7 +123,7 @@
 .bbr-totals > .bbr-balance {
   margin-top: 4px;
   padding-top: 8px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* The Balance label is as dark as its amount (the other two labels are gray) */

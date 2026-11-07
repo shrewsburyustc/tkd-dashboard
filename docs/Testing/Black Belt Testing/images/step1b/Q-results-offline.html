@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Black Belt · Results tab while offline</title>
+<style>
+  body { margin: 0; padding: 20px 20px 24px; width: 1000px; box-sizing: border-box; background: #fff; color: #1F1F1F; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: #4A4A4A; margin: 0 0 14px; }
+  .label { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; margin: 6px 0 8px; background: #FDF0D9; color: #7A4A06; }
+  .label.after { background: #E8E8E4; color: #333; }
+  figure { margin: 0 0 12px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid #F59E0B; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 5px; font-size: 13px; color: #333; }
+  .foot { margin-top: 6px; padding-top: 10px; border-top: 1px solid #E5E5E2; font-size: 13.5px; line-height: 1.5; color: #2A2A2A; }
+  .foot p { margin: 0 0 7px; }
+  .flag { background: #FDF0D9; color: #7A4A06; border-radius: 4px; padding: 0 5px; font-weight: 600; }
+  .words { background: #F4F4F1; border-radius: 6px; padding: 6px 10px; margin: 0 0 7px; }
+</style></head><body>
+<h1>Black Belt · Results tab while offline</h1>
+<p class="sub">When the connection drops, the Results tab no longer draws its own amber bar. The one shared bar at the top of the page says it already. The four grayed controls each say why, in a gray line next to them.</p>
+
+<div class="label">Today</div>
+<figure style="width:960px"><div class="shot" style="width:960px;height:525px">
+    <img src="raw/q-pc-today.png" style="left:0px;top:-19.5px;width:960px"><div class="mark" style="left:53px;top:217.25px;width:893px;height:35px"></div></div>
+    <figcaption><b>PC 1280.</b> Two amber bars at once: the shared one at the top of the page, and the Results tab&rsquo;s own (outlined) above the Dan switch. Print results, Download CSV and Email result are grayed with no reason.</figcaption></figure>
+<div class="row"><figure style="width:475.59999999999997px"><div class="shot" style="width:475.59999999999997px;height:463.99999999999994px">
+    <img src="raw/q-tab-today.png" style="left:0px;top:-15.079999999999998px;width:475.59999999999997px"><div class="mark" style="left:51.67999999999999px;top:181.01999999999998px;width:414px;height:39.9px"></div></div>
+    <figcaption><b>Tablet 820 touch</b></figcaption></figure><figure style="width:226.2px"><div class="shot" style="width:226.2px;height:463.99999999999994px">
+    <img src="raw/q-phone-today.png" style="left:0px;top:-25.52px;width:226.2px"><div class="mark" style="left:5.279999999999999px;top:158.98px;width:215.64px;height:51.5px"></div></div>
+    <figcaption><b>Phone 390 touch</b></figcaption></figure><figure style="width:185.6px"><div class="shot" style="width:185.6px;height:463.99999999999994px">
+    <img src="raw/q-narrow-today.png" style="left:0px;top:-25.52px;width:185.6px"><div class="mark" style="left:5.279999999999999px;top:170.57999999999998px;width:175.04px;height:62.519999999999996px"></div></div>
+    <figcaption><b>320 wide</b></figcaption></figure></div>
+
+<div class="label after">After</div>
+<figure style="width:960px"><div class="shot" style="width:960px;height:525px">
+    <img src="raw/q-pc-after.png" style="left:0px;top:-19.5px;width:960px"><div class="mark" style="left:499.25px;top:247.25px;width:446.75px;height:23px"></div><div class="mark" style="left:53px;top:294.5px;width:436.25px;height:23px"></div></div>
+    <figcaption><b>PC 1280.</b> The tab&rsquo;s own bar is gone; the shared bar on top stays. Gray lines (outlined) say why: one right under Print results / Download CSV, one above the rows for Email result and Mark as sent.</figcaption></figure>
+<div class="row"><figure style="width:475.59999999999997px"><div class="shot" style="width:475.59999999999997px;height:463.99999999999994px">
+    <img src="raw/q-tab-after.png" style="left:0px;top:-15.079999999999998px;width:475.59999999999997px"><div class="mark" style="left:118.38px;top:206.54px;width:347.29999999999995px;height:19.6px"></div><div class="mark" style="left:51.67999999999999px;top:243.07999999999998px;width:339.17999999999995px;height:19.6px"></div></div>
+    <figcaption><b>Tablet 820 touch</b></figcaption></figure><figure style="width:226.2px"><div class="shot" style="width:226.2px;height:463.99999999999994px">
+    <img src="raw/q-phone-after.png" style="left:0px;top:-25.52px;width:226.2px"><div class="mark" style="left:5.279999999999999px;top:286.58px;width:215.64px;height:30.619999999999997px"></div><div class="mark" style="left:5.279999999999999px;top:334.71999999999997px;width:215.64px;height:30.619999999999997px"></div></div>
+    <figcaption><b>Phone 390 touch</b></figcaption></figure><figure style="width:185.6px"><div class="shot" style="width:185.6px;height:463.99999999999994px">
+    <img src="raw/q-narrow-after.png" style="left:0px;top:-25.52px;width:185.6px"><div class="mark" style="left:5.279999999999999px;top:298.18px;width:175.04px;height:42.22px"></div><div class="mark" style="left:5.279999999999999px;top:368.35999999999996px;width:175.04px;height:42.22px"></div></div>
+    <figcaption><b>320 wide</b></figcaption></figure></div>
+
+<div class="foot">
+<p><b>What changes:</b> the Results tab&rsquo;s own &ldquo;You&rsquo;re offline&hellip;&rdquo; bar is removed (rulebook v1.123, &ldquo;A, fold it in&rdquo;); the shared bar already shows on every page. Two gray lines are added, in the same look as the gray &ldquo;Email result is off while private details are hidden&rdquo; line that Results already has.</p>
+<p><b>What stays:</b> the controls are grayed exactly as now (they still do nothing while offline). Grading&rsquo;s grade-by-grade offline line and its &ldquo;couldn&rsquo;t load the grades&rdquo; bar are not touched. The last list stays on screen, and nothing is asked of the database while offline.</p>
+<div class="words"><b>Words <span class="flag">proposed &mdash; your OK needed</span></b><br>
+Under Print results / Download CSV: &ldquo;Print results and Download CSV are off while you&rsquo;re offline. Try again when the connection is back.&rdquo;<br>
+Above the rows: &ldquo;Email result and Mark as sent are off while you&rsquo;re offline. Try again when the connection is back.&rdquo;<br>
+Mark as sent also shows in the &#8943; menu and in a row after Email result; one line covers both.</div>
+<p><b>Where the words come from:</b> no other section has an offline reason line yet (Star&rsquo;s Results tab has none). The pattern is Star&rsquo;s own gray line on Results, &ldquo;Email result is off while private details are hidden. Email results at the desk.&rdquo; (&ldquo;X is off while Y.&rdquo;). The ending follows the shared bar&rsquo;s &ldquo;&hellip;until the connection is back.&rdquo; The small no-wifi icon is new, since the hidden-details line uses its own icon.</p>
+</div>
+</body></html>

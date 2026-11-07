@@ -499,10 +499,19 @@ export function payTag(row) {
   return 'not_paid';
 }
 
-// The Payments line's amount: what ACTIVE campers still owe, counting only positive amounts (an
-// overpaid camper never lowers it). Possible duplicates count — they are campers until resolved.
+// The To collect card's amount: what ACTIVE campers still owe, counting only positive amounts (an
+// overpaid camper never lowers it). A row marked "Possible duplicate" is left out until the pair
+// is reviewed (rulebook v0.742 / v1.046): its tag replaces "$X due" on the roster, so its money
+// would not add up with what the roster shows. (It still counts as a camper and as coming.)
 export function toCollectCents(rows) {
-  return (rows ?? []).filter((r) => r.status === 'active').reduce((sum, r) => sum + Math.max(0, r.owesCents ?? 0), 0);
+  return (rows ?? []).filter((r) => r.status === 'active' && countsToCollect(r)).reduce((sum, r) => sum + Math.max(0, r.owesCents ?? 0), 0);
+}
+
+// Is this row part of To collect? Only a camper who still owes and isn't marked Possible
+// duplicate (v0.742). The card's count, its amount and its filter all use this one test, so the
+// list a pressed To collect card shows is exactly what the card counts.
+export function countsToCollect(row) {
+  return row?.duplicateState !== 'possible' && stillOwes(row);
 }
 
 // ----- The camp page's count cards (design review C10, rulebook v0.737) -----
@@ -542,13 +551,17 @@ export function comesOnDay(row, dayId) {
 //   coming         active campers signed up on the card's day (0 after the camp)
 //   here           of those, checked in on that day (only shown when the day is today)
 //   came / cameOf  after the camp: days attended / days signed up, over the active campers
-//   toCollect      active campers who still owe money (owesCents above 0): "Owes", "$X due", and a
-//                  possible duplicate only while it owes (a paid one has nothing to collect; v0.737
-//                  says "campers who still owe")
+//   toCollect      active campers who still owe money (owesCents above 0): "Owes", "$X due" — NOT a
+//                  row marked Possible duplicate (v0.742: it stays out until the pair is reviewed)
 //   toCollectCents what those campers still owe (toCollectCents above)
+//   duplicatesNotCounted  how many possible duplicates To collect left out: only the ones that
+//                  still owe (a paid one would not have been counted anyway, so the card's
+//                  "N possible duplicates not counted" never names a row that changes nothing)
 //   recordedCents  every payment recorded for this camp, reversals taken off — the sum of every
 //                  roster row's paidCents, REMOVED campers included: money taken is money taken,
-//                  and Finance's Daily report counts a removed camper's payment too
+//                  and Finance's Daily report counts a removed camper's payment too (v1.038)
+//   removedPaidCents  the part of recordedCents that removed campers paid (Payments recorded says
+//                  "includes $X from removed campers" while it is above $0; v0.742, R5-04)
 export function campCardCounts(roster, days, today) {
   const rows = roster ?? [];
   const active = rows.filter((r) => r.status === 'active');
@@ -563,17 +576,23 @@ export function campCardCounts(roster, days, today) {
     here,
     came: active.reduce((n, r) => n + (r.days ?? []).filter((d) => d.checkedInAt).length, 0),
     cameOf: active.reduce((n, r) => n + (r.days ?? []).length, 0),
-    toCollect: active.filter(stillOwes).length,
+    toCollect: active.filter(countsToCollect).length,
     toCollectCents: toCollectCents(active),
-    recordedCents: rows.reduce((n, r) => n + (Number.isInteger(r.paidCents) ? r.paidCents : 0), 0),
+    duplicatesNotCounted: active.filter((r) => r.duplicateState === 'possible' && stillOwes(r)).length,
+    recordedCents: rows.reduce((n, r) => n + paidOf(r), 0),
+    removedPaidCents: rows.filter((r) => r.status !== 'active').reduce((n, r) => n + paidOf(r), 0),
   };
 }
 
+// A row's recorded money in cents (0 when the roster has none for it).
+const paidOf = (row) => (Number.isInteger(row?.paidCents) ? row.paidCents : 0);
+
 // Does a roster row stay on screen under a card's filter? filter = null | 'coming' | 'collect';
 // day = the Coming card's day (comingCardDay). 'coming' with no day (after the camp) keeps everyone.
+// 'collect' lists exactly the rows the To collect card counts (countsToCollect).
 export function matchesCardFilter(row, filter, day) {
   if (filter === 'coming') return !day || comesOnDay(row, day.dayId);
-  if (filter === 'collect') return stillOwes(row);
+  if (filter === 'collect') return countsToCollect(row);
   return true;
 }
 
@@ -595,6 +614,110 @@ export function paymentSchoolFor(deviceLocation) {
 export function payingByChoiceWhere(row) {
   if (row?.payingByOnForm === null || row?.payingByOnForm === undefined) return 'form';
   return row.payingBy === row.payingByOnForm ? 'form' : 'desk';
+}
+
+// ----- Record refund (migration 0039, CONTRACT-0039; rulebook v0.743, v1.039, v1.040) -----
+// Money handed back to a family that paid more than the total is saved as its own REFUND row: a
+// minus amount (−$23), never an edit of the payment. Undo refund adds a reversal row with the
+// opposite amount (+$23). Paid (paidCents) is the sum of every row, so both count by themselves.
+
+// How much a camper paid over the total, in cents (0 when they don't): "Paid $23 more than the
+// total" = owes −$23 → 2300. row = a roster row or Camper detail's camper (owesCents).
+export function overpaidCents(row) {
+  const owes = Number.isInteger(row?.owesCents) ? row.owesCents : 0;
+  return owes < 0 ? -owes : 0;
+}
+
+// Does a refund stand right now? The roster's refunded_cents (0039) = the camper's refunds not
+// undone, as a plus number. A database from before 0039 sends none: then no refund stands.
+export function refundStands(row) {
+  return Number.isInteger(row?.refundedCents) && row.refundedCents > 0;
+}
+
+// Which refund items the camper's ⋯ (and Camper detail's More) shows, admins only, in this order
+// (v0.743 (1), (4) and v0.744 — Jeffrey chose A on picture 22y): 'record' while the camper paid
+// more than the total, and 'undo' while a refund stands. Usually only one of them shows (a full
+// refund leaves nothing overpaid); after a PARTIAL refund both show, so the rest can be handed back
+// in one step and the hint "⋯ → Record refund" stays true. [] = no refund item.
+export function refundMenuItems(row) {
+  const items = [];
+  if (overpaidCents(row) > 0) items.push('record');
+  if (refundStands(row)) items.push('undo');
+  return items;
+}
+
+// The roster's Paid tag for a camper who owes nothing (rulebook v0.745 — copied from Star's Payment
+// column, v0.152 / v0.166, CandidateRows.jsx): while they paid more than the total, or while a
+// refund stands, the tag names what they paid ("Paid $315" / "Paid $292"), and while it is too much
+// an amber "⚠ $23 overpaid" follows. Otherwise the plain "Paid".
+// → { paidCents: what to name, or null for the plain "Paid"; overpaidCents: 0 = no amber part }
+export function paidTagParts(row) {
+  const over = overpaidCents(row);
+  const named = over > 0 || refundStands(row);
+  return { paidCents: named ? (Number.isInteger(row?.paidCents) ? row.paidCents : 0) : null, overpaidCents: over };
+}
+
+// ----- The roster's layout from the room beside the panel (rulebook v1.053, v1.130; L-02) -----
+// The roster's table needs room for its columns: the page's side margins (50 px), the Camper and Paid
+// columns (273 px, with the widest ordinary tag, "Possible duplicate"), one column per day of the
+// shown week (72 px each: a day column can't get narrower), and — with a mouse — the ⋯ column
+// (40 px). While someone is overpaid, the amber "Paid $315 ⚠ $23 overpaid" widens the Paid column by
+// another 42 px (27 px measured, 14 more for a four-digit amount). Measured on the built table by the
+// design review (a 5-day camp: 683 px of room with touch, 723 with a mouse; 7 days about 867 with a
+// mouse). When the page area beside the left panel is narrower than that, the roster draws its cards
+// instead (the phone layout), whatever the window's width. The shared hook `usePageRoomBelow(px)`
+// (src/lib/pageRoom.js) answers; this says the px for the shown week.
+export const ROSTER_ROOM = { margins: 50, fixed: 273, perDay: 72, more: 40, overpaid: 42 };
+export function rosterRoomNeeded(dayCount, withMore, anyOverpaid = false) {
+  const days = Number.isInteger(dayCount) && dayCount > 0 ? dayCount : 1;
+  return ROSTER_ROOM.margins + ROSTER_ROOM.fixed + ROSTER_ROOM.perDay * days
+    + (withMore ? ROSTER_ROOM.more : 0) + (anyOverpaid ? ROSTER_ROOM.overpaid : 0);
+}
+
+// The refund Undo refund reverses: the NEWEST refund row that stands (no reversal points at it),
+// from Camper detail's payments (camelCase: id, kind, reversesPaymentId, recordedAt). null = none.
+export function newestStandingRefund(payments) {
+  const list = Array.isArray(payments) ? payments : [];
+  const reversed = new Set(list.filter((p) => p.kind === 'reversal' && p.reversesPaymentId).map((p) => p.reversesPaymentId));
+  const standing = list.filter((p) => p.kind === 'refund' && !reversed.has(p.id));
+  // Newest by when it was recorded (the list may come in any order).
+  standing.sort((a, b) => ((a.recordedAt ?? '') < (b.recordedAt ?? '') ? -1 : (a.recordedAt ?? '') > (b.recordedAt ?? '') ? 1 : 0));
+  return standing[standing.length - 1] ?? null;
+}
+
+// Is this payment row the Undo of a REFUND? A reversal is always exactly minus the row it undoes
+// (the database's camp_payments_guard), and a refund is a minus amount, so its reversal is a PLUS
+// amount; a payment's reversal is a minus one. (The History says "Refund undone" for it.)
+export function reversesRefund(p) {
+  return p?.kind === 'reversal' && Number.isInteger(p.amountCents) && p.amountCents > 0;
+}
+
+// The payments that stand — kind 'payment' that no reversal undid (Undo payment and Edit payment
+// both leave the old payment + its reversal behind) — from Camper detail's payments, in the order
+// given. Record refund's note counts them: "The 2 payments ($315) stay in the history."
+export function standingPayments(payments) {
+  const list = Array.isArray(payments) ? payments : [];
+  const reversed = new Set(list.filter((p) => p.kind === 'reversal' && p.reversesPaymentId).map((p) => p.reversesPaymentId));
+  return list.filter((p) => p.kind === 'payment' && !reversed.has(p.id));
+}
+
+// Reads the Record refund box's Amount in WHOLE dollars, like Camps' Edit payment and Star's refund
+// box (camp prices and payments are always whole dollars, so what is overpaid is too): "23",
+// "$1,023", "23.00". → { cents } · { problem: 'empty' } (nothing typed) · { problem: 'notWhole' }
+// (cents, e.g. "23.50") · { problem: 'notNumber' } (not an amount, e.g. "abc", "-5") ·
+// { problem: 'tooBig' } (so many digits it can't be an amount — always more than what was
+// overpaid). The most that may go back is what was overpaid: the box checks that.
+export function parseRefundAmount(text) {
+  let s = String(text ?? '').trim();
+  if (s.startsWith('$')) s = s.slice(1).trim(); // one leading $ is fine
+  s = s.replace(/,/g, ''); // "1,023" → "1023"
+  if (s === '') return { problem: 'empty' };
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(s); // dollars, then at most 2 decimals
+  if (!m) return { problem: 'notNumber' };
+  if (m[2] !== undefined && Number(m[2]) !== 0) return { problem: 'notWhole' }; // "23.50" — "23.00" is fine
+  const cents = Number(m[1]) * 100;
+  if (!Number.isSafeInteger(cents)) return { problem: 'tooBig' };
+  return { cents };
 }
 
 // ----- Check-in (§1.13 check-in day rule, v0.704) -----

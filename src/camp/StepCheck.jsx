@@ -5,6 +5,12 @@
 // the camp's waiver text, the tick "I am <first child>'s parent or guardian…", the drawn signature
 // (Color Belt's SignaturePad, reused) and Sign up (full width on phones only).
 // Messages after a failed Sign up appear at the top, and nothing the family entered is lost.
+//
+// inDialog (default false = the family page, exactly as before): the dashboard's Fill in dialog
+// (src/screens/camps/FillInDialog.jsx, rulebook v0.741) draws this same step inside New students'
+// dialog frame. Then the "Step 2 of 2" heading, the Sign up button, "← Back to edit", the
+// Turnstile box and the privacy line are left out (the dialog has its own Back / Send), and
+// signatureHint replaces the family's "Can't sign here? …" hint ("Sign with a finger, pen or mouse.").
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from './parts.jsx';
 import { extraPriceLabel, priceFor } from './form.js';
@@ -30,6 +36,8 @@ export default function StepCheck({
   onBack,
   refs, // { ack, signature, turnstile, banner }
   headingRef,
+  inDialog = false, // the dashboard's Fill in dialog (see the top of this file)
+  signatureHint = T.SIGNATURE_HINT,
 }) {
   const closed = banner?.code === 'closed'; // only the summary stays; nothing more can be sent
   const firstName = normalizeName(form.children[0]?.first);
@@ -44,9 +52,11 @@ export default function StepCheck({
 
   return (
     <div className="reg-step">
-      <h2 className="reg-stepline" ref={headingRef} tabIndex={-1}>
-        {T.STEP_2}
-      </h2>
+      {inDialog ? null : (
+        <h2 className="reg-stepline" ref={headingRef} tabIndex={-1}>
+          {T.STEP_2}
+        </h2>
+      )}
       {banner ? <TopError innerRef={refs.banner}>{bannerText(banner)}</TopError> : <p className="reg-intro">{T.CHECK_INTRO}</p>}
 
       {/* The summary */}
@@ -140,32 +150,36 @@ export default function StepCheck({
               />
               <FieldError id="camp-sign-err">{errors.signature}</FieldError>
               <div className="reg-hint" id="camp-sign-hint">
-                {T.SIGNATURE_HINT}
+                {signatureHint}
               </div>
             </div>
           </section>
 
-          {/* Turnstile puts its "Verify you are human" box here, only when Cloudflare asks.
-              React never puts anything inside this box. */}
-          <div className="reg-turnstile" ref={refs.turnstile} />
+          {inDialog ? null : (
+            <>
+              {/* Turnstile puts its "Verify you are human" box here, only when Cloudflare asks.
+                  React never puts anything inside this box. */}
+              <div className="reg-turnstile" ref={refs.turnstile} />
 
-          <button
-            type="button"
-            className="reg-btn reg-btn--primary reg-btn--main"
-            onClick={onSend}
-            disabled={sending}
-            aria-busy={sending || undefined}
-          >
-            {sending ? T.SENDING : hasTried ? T.TRY_AGAIN : T.SIGN_UP}
-          </button>
-          <div className="reg-center">
-            <button type="button" className="reg-link" onClick={onBack} disabled={sending}>
-              {T.BACK_TO_EDIT}
-            </button>
-          </div>
+              <button
+                type="button"
+                className="reg-btn reg-btn--primary reg-btn--main"
+                onClick={onSend}
+                disabled={sending}
+                aria-busy={sending || undefined}
+              >
+                {sending ? T.SENDING : hasTried ? T.TRY_AGAIN : T.SIGN_UP}
+              </button>
+              <div className="reg-center">
+                <button type="button" className="reg-link" onClick={onBack} disabled={sending}>
+                  {T.BACK_TO_EDIT}
+                </button>
+              </div>
+            </>
+          )}
         </>
       )}
-      <p className="reg-privacy">{T.PRIVACY}</p>
+      {inDialog ? null : <p className="reg-privacy">{T.PRIVACY}</p>}
     </div>
   );
 }
