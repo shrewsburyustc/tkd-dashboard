@@ -20,8 +20,14 @@
 // shows the Dan as text, not a field (Q-G4: a make-up's Dan can't change). Delete permanently is
 // grayed while the candidate has grades (Q-G3, v0.950).
 // Privacy (§5): the date of birth and email appear only here, and with the device's Hide payments
-// switch on they read "Hidden on this tablet" (OP-B7, v0.974); so do the payments, Edit details is grayed
-// ("Edit details at the desk.") and View signature isn't offered. The data lives in
+// switch on they read the gray "Hidden on this tablet" (OP-B7, v0.974; gray .ev-hidden-value,
+// R4-03); so do the payments, and View signature isn't offered. Nothing in the ⋯ tells who has
+// paid (R1-04, R4-01 / v1.036): Change plan or Kukkiwon is grayed "Change the plan at the desk."
+// for everyone and Delete permanently "Delete candidates at the desk." on every candidate. Edit
+// details opens (R4-04, v1.037, as Star's): the date of birth and email are gray boxes reading
+// "Hidden on this tablet" with "Change the date of birth or email at the desk." under them (Save
+// keeps the stored values); for staff the Dan is grayed on every candidate with "Change the Dan at
+// the desk."; an admin's "$X is already paid" line is left out. The data lives in
 // useCandidateActions only while this dialog is open.
 // Focus: Edit details puts the cursor in First name; back from it, or from a dialog opened here,
 // focus returns to the button that opened it (its data-focus-key).
@@ -208,18 +214,34 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
 }
 
 // ----- Edit details -----
-function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
+// hidden = Hide private details on (R4-04, v1.037, Star's v0.507 Q1 / v0.508 (3)): the date of
+// birth and email are gray boxes reading "Hidden on this tablet" with Star's hint under them (Save
+// keeps the stored values, editValuesToSave); for staff the Dan is grayed on EVERY candidate with
+// "Change the Dan at the desk." and shows the stored Dan (never the paid-only lock, which would
+// tell who has paid); an admin's "$X is already paid" line is left out.
+function EditFields({ edit, data, isAdmin, hidden, today, isPhone, onChange }) {
   const id = useId();
   const v = edit.values;
   const c = data.candidate;
   const purged = c.dateOfBirth === null;
-  const problems = detailsProblems(v, { today, purged });
+  // (hidden: the date of birth and email can't be changed, so they aren't checked here)
+  const problems = detailsProblems(v, { today, purged: purged || hidden });
   const show = (field) => (edit.triedSave ? problems[field] : null);
   const paidLive = hasLivePayment(data.payments);
   const makeup = c.isMakeup === true;
-  const danLocked = paidLive && !isAdmin;
-  const danChangedAfterPay = paidLive && isAdmin && Number(v.dan) !== Number(edit.initial.dan);
+  const danAtDesk = hidden && !isAdmin; // the same look on every row (no paid / unpaid difference)
+  const danLocked = danAtDesk || (paidLive && !isAdmin);
+  const danValue = danAtDesk ? Number(edit.initial.dan) : Number(v.dan);
+  const danChangedAfterPay = !hidden && paidLive && isAdmin && Number(v.dan) !== Number(edit.initial.dan);
   const ro = edit.saving;
+  // A hidden value in the field's place: a gray box (Star's st-hidden-box), no input to change.
+  // Plain text, read in order after its label (and before the hint) by a screen reader.
+  // role="group" ties the box to its label and to the one desk hint under Email.
+  const hiddenBox = (fieldId, labelId) => (
+    <div id={fieldId} role="group" aria-labelledby={labelId} aria-describedby={`${id}-email-hint`} className="input bb-hidden-box ev-hidden-value">
+      {T.HIDDEN_ON_DEVICE}
+    </div>
+  );
   const err = (field) => `${id}-${field}-err`;
   const firstMsg = T.nameError(show('first'), T.ERR_FIRST);
   const lastMsg = T.nameError(show('last'), T.ERR_LAST);
@@ -239,7 +261,13 @@ function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
         {lastMsg ? <Notice id={err('last')}>{lastMsg}</Notice> : <p id={`${id}-last-hint`} className="field-hint">{T.LAST_NAME_HINT}</p>}
       </div>
       <div className="field">
-        {purged ? (
+        {hidden ? (
+          // Hidden: the gray box (Star's: no hint here; the one hint is under Email)
+          <>
+            <span id={`${id}-dob-label`} className="field-label">{T.DOB}</span>
+            {hiddenBox(`${id}-dob`, `${id}-dob-label`)}
+          </>
+        ) : purged ? (
           <>
             <label htmlFor={`${id}-dob`}>{T.DOB}</label>
             <p id={`${id}-dob`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
@@ -268,13 +296,24 @@ function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
         {dobMsg && <Notice id={err('dob')}>{dobMsg}</Notice>}
       </div>
       <div className="field">
-        <label htmlFor={`${id}-email`}>{T.EMAIL}</label>
-        {purged ? (
-          <p id={`${id}-email`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
+        {hidden ? (
+          // Hidden: the gray box with Star's hint under it ("Change the date of birth or email at the desk.")
+          <>
+            <span id={`${id}-email-label`} className="field-label">{T.EMAIL}</span>
+            {hiddenBox(`${id}-email`, `${id}-email-label`)}
+            <p id={`${id}-email-hint`} className="field-hint">{T.HIDDEN_EDIT_HINT}</p>
+          </>
         ) : (
-          <input id={`${id}-email`} className="input" type="email" autoComplete="off" readOnly={ro} value={v.email} aria-invalid={emailMsg ? 'true' : undefined} aria-describedby={emailMsg ? err('email') : undefined} onChange={(e) => onChange({ email: e.target.value })} />
+          <>
+            <label htmlFor={`${id}-email`}>{T.EMAIL}</label>
+            {purged ? (
+              <p id={`${id}-email`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
+            ) : (
+              <input id={`${id}-email`} className="input" type="email" autoComplete="off" readOnly={ro} value={v.email} aria-invalid={emailMsg ? 'true' : undefined} aria-describedby={emailMsg ? err('email') : undefined} onChange={(e) => onChange({ email: e.target.value })} />
+            )}
+            {emailMsg && <Notice id={err('email')}>{emailMsg}</Notice>}
+          </>
         )}
-        {emailMsg && <Notice id={err('email')}>{emailMsg}</Notice>}
       </div>
       <div className="field">
         <span id={`${id}-school`} className="field-label">
@@ -295,9 +334,10 @@ function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
             <p className="field-hint">{T.DAN_MAKEUP_HINT}</p>
           </>
         ) : (
-          <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${danLocked ? ' is-locked' : ''}`} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={Number(v.dan)} readOnly={ro || danLocked} onChange={(dan) => onChange({ dan })} />
+          <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${danLocked ? ' is-locked' : ''}`} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={danValue} readOnly={ro || danLocked} ariaDisabled={danAtDesk} describedBy={danAtDesk ? `${id}-dan-hint` : undefined} onChange={(dan) => onChange({ dan })} />
         )}
-        {danLocked && !makeup && <p className="field-hint">{T.DAN_LOCKED_STAFF}</p>}
+        {/* Staff while hidden: one look on every row (Star's v0.508 (3)); else the paid-only lock */}
+        {danLocked && !makeup && <p id={`${id}-dan-hint`} className="field-hint">{danAtDesk ? T.DAN_AT_DESK_HINT : T.DAN_LOCKED_STAFF}</p>}
         {danChangedAfterPay && (
           <p className="bb-amber-line">
             <ICONS.warn size={16} aria-hidden="true" />
@@ -422,21 +462,21 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
 
   // ----- The detail's ⋯ (Edit details · Change plan — Withdraw or Restore · Delete permanently) -----
   function detailItems() {
-    // Hide payments on (mat-side): Edit details would show the date of birth and email, so it is
-    // grayed with its reason, like Add candidate.
+    // Edit details opens also with Hide private details on (R4-04, v1.037): its date of birth and
+    // email then read the gray "Hidden on this tablet" (EditFields).
     const items = [
       {
         key: 'edit',
-        label: hidden ? <TwoLines label={T.EDIT_DETAILS} reason={T.EDIT_AT_DESK} /> : T.EDIT_DETAILS,
+        label: T.EDIT_DETAILS,
         Icon: ICONS.editDetails,
-        disabled: hidden,
         onSelect: () => actions.startEdit(),
       },
     ];
-    // A make-up has no plan, so no Change plan (G 27)
+    // A make-up has no plan, so no Change plan (G 27). Hidden (R1-04, R4-01 / v1.036): desk-only,
+    // grayed for admins and staff alike with a line that names no payment.
     if (!withdrawn && !c.isMakeup) {
-      const locked = !isAdmin && hasLivePayment(data.payments);
-      const reason = hidden || data.money.paidCents <= 0 ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(data.money.paidCents);
+      const locked = hidden || (!isAdmin && hasLivePayment(data.payments));
+      const reason = hidden ? T.CHANGE_PLAN_AT_DESK : data.money.paidCents <= 0 ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(data.money.paidCents);
       items.push({
         key: 'plan',
         label: locked ? <TwoLines label={T.CHANGE_PLAN} reason={reason} /> : T.CHANGE_PLAN,
@@ -451,11 +491,14 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
       // permanently — red and it asks first. The database refuses a delete while ANY payment row
       // exists (even an undone one); the detail only sees live lines, so it may offer Delete and
       // get has_payments back. …and (0025, Q-G3) while they have grades. An active candidate's
-      // reason says what to do instead (v0.904); a withdrawn one's only why.
+      // reason says what to do instead (v0.904); a withdrawn one's only why. Hidden (R1-04): the
+      // same desk line on every candidate, so it can't tell who has paid.
       const name = T.candidateName(c);
       if (withdrawn) items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target, moreButtonElement()) });
       else items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: ICONS.withdraw, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.withdraw(target, moreButtonElement()) });
-      const reason = data.payments.length > 0
+      const reason = hidden
+        ? T.DELETE_AT_DESK
+        : data.payments.length > 0
         ? (withdrawn ? T.hasPaymentRecordsShort(name) : T.hasPaymentRecords(name))
         : c.hasGrades ? (withdrawn ? T.hasGradesShort(name) : T.hasGrades(name)) : null;
       items.push({
@@ -585,7 +628,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
           }}
         >
           {e.failed && <ErrorBanner text={T.SAVE_FAILED} onRetry={() => actions.saveEdit()} retrying={e.saving} />}
-          <EditFields edit={e} data={data} isAdmin={isAdmin} today={today} isPhone={isPhone} onChange={actions.changeEdit} />
+          <EditFields edit={e} data={data} isAdmin={isAdmin} hidden={hidden} today={today} isPhone={isPhone} onChange={actions.changeEdit} />
           {isPhone ? (
             <>
               {note}
@@ -610,8 +653,10 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   // ----- The summary -----
   const w = data.waiver;
   const firstDay = cycle.state?.firstDay ?? cycle.days?.[0]?.date ?? null;
-  const dob = hidden ? T.HIDDEN_ON_DEVICE : c.dateOfBirth ? T.dobLine(c.dateOfBirth, c.ageOnFirstDay, firstDay) : T.DELETED_AFTER_KEEPING;
-  const email = hidden ? T.HIDDEN_ON_DEVICE : c.emailForResults ?? T.DELETED_AFTER_KEEPING;
+  // Hidden values keep their row and read gray (v0.507 Q2, R4-03: the shared .ev-hidden-value)
+  const hiddenValue = <span className="ev-hidden-value">{T.HIDDEN_ON_DEVICE}</span>;
+  const dob = hidden ? hiddenValue : c.dateOfBirth ? T.dobLine(c.dateOfBirth, c.ageOnFirstDay, firstDay) : T.DELETED_AFTER_KEEPING;
+  const email = hidden ? hiddenValue : c.emailForResults ?? T.DELETED_AFTER_KEEPING;
   const tag =
     withdrawn ? (
       <span className="ttag">{c.withdrawnReason === 'duplicate_copy' ? T.TAG_DUPLICATE_COPY : T.TAG_REMOVED}</span>

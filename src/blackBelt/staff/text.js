@@ -10,6 +10,7 @@
 // which would read the text as UTC midnight and could show the day before.
 
 import { formatCents } from '../../lib/blackBelt/money.js';
+import { HIDDEN_ON_THIS_TABLET } from '../../lib/privateDetails.js';
 
 // ===== Dates, times, money =====
 function parseDay(iso) {
@@ -491,7 +492,10 @@ export const itemsWithAmounts = (items) => `(${items.map((x) => `${itemLower(x.i
 
 // ----- Candidates 1 · the tab -----
 export const ADD_CANDIDATE = 'Add candidate';
-export const ADD_AT_DESK = 'Add new candidates at the desk.'; // Hide payments on (OP-B7)
+// Hide private details on (v1.037, Star's v0.507 Q1): the Add candidate menu opens; New candidate
+// is grayed inside it with Star's exact reason (Star's text.js NEW_CANDIDATE_HIDDEN). Make-up works.
+// (approved by Jeffrey 2026-11-06, step 1)
+export const NEW_CANDIDATE_HIDDEN = 'Add new candidates at the desk. Date of birth, email and payments are hidden on this tablet.';
 export const registrationClosedStaff = (date) => `Registration closed on ${weekdayMonthDay(date)}. Ask an admin to reopen it.`;
 export const LOADING_CANDIDATES = 'Loading the candidates'; // screen readers only (not in the mockups)
 export const showingSchoolOnly = (school) => `Showing ${school} candidates only`;
@@ -531,6 +535,8 @@ export const COL_BALANCE = 'Balance';
 export const registeredOnShort = (iso) => `Registered ${monthDay(iso)}`;
 export const danSchool = (dan, code) => `${DAN_LABELS[dan] ?? ''} · ${schoolName(code)}`;
 export const planCell = (planName, kukkiwon) => (kukkiwon ? `${planName} · Kukkiwon` : planName);
+// (Hide private details on, v1.036: the Plan column and the phone line's plan words read the gray
+// HIDDEN_ON_DEVICE instead — RosterRows.jsx; the ⋯ menu's subtitle is then danSchool alone.)
 export const phoneSubline = (row) => `${danSchool(row.dan, row.locationCode)} · ${planCell(row.planName, row.kukkiwon)}`;
 export const NO_CANDIDATES = "No candidates yet. Families register with the cycle's links, or add one here."; // (not in the mockups)
 export const noMatch = (text) => `No candidates match "${text}".`; // (not in the mockups)
@@ -566,12 +572,14 @@ export const balanceText = (m) => (m ? money(m.balanceCents) : '');
 // Row ⋯ items
 export const RECORD_PAYMENT = 'Record payment';
 export const EDIT_DETAILS = 'Edit details';
-// Hide payments on (the mat-side switch): Edit details shows the date of birth and email, so it
-// is grayed with this reason, like Add candidate's (not in the mockups)
-export const EDIT_AT_DESK = 'Edit details at the desk.';
 export const CHANGE_PLAN = 'Change plan or Kukkiwon';
 export const alreadyPaidAskAdmin = (cents) => `${money(cents)} is already paid. Ask an admin.`;
 export const PAYMENT_RECORDED_ASK_ADMIN = 'A payment is recorded. Ask an admin.';
+// Hide private details on (R1-04, R4-01 / v1.036): Change plan or Kukkiwon and Delete permanently
+// read the same on EVERY row, grayed with a desk line that names no payment (so a parent beside the
+// mat tablet can't tell who has paid). Approved by Jeffrey 2026-11-06 (step 1).
+export const CHANGE_PLAN_AT_DESK = 'Change the plan at the desk.'; // approved by Jeffrey 2026-11-06 (step 1)
+export const DELETE_AT_DESK = 'Delete candidates at the desk.'; // approved by Jeffrey 2026-11-06 (step 1)
 export const RECORD_REFUND = 'Record refund';
 export const recordRefundOverpaid = (cents) => `Record refund · ${money(cents)} overpaid`;
 // The same item in two parts, so the row ⋯ can keep "· $50 overpaid" together when it wraps
@@ -616,7 +624,9 @@ export const detailSub = (cycleName, dan, code) => `${cycleName} · ${DAN_LABELS
 export const editDetailsSub = (name, cycleName, dan, code) => `${name} · ${detailSub(cycleName, dan, code)}`;
 export const dobLine = (dob, age, firstDay) => (age === null || age === undefined || !firstDay ? monthDayYear(dob) : `${monthDayYear(dob)} (${age} on ${monthDayYear(firstDay)})`);
 export const DELETED_AFTER_KEEPING = 'Deleted after the keeping time';
-export const HIDDEN_ON_DEVICE = 'Hidden on this tablet'; // Hide private details on (OP-B7; "tablet" as every section, v0.507 / v0.974)
+// Hide private details on (OP-B7; "tablet" as every section, v0.507 / v0.974): the shared words
+// "Hidden on this tablet" (src/lib/privateDetails.js), drawn gray (.ev-hidden-value)
+export const HIDDEN_ON_DEVICE = HIDDEN_ON_THIS_TABLET;
 export const PAYMENTS_HIDDEN = 'Payments are hidden on this tablet.'; // (OP-B7; v0.974)
 export const registeredLine = (registeredOn, source, code) =>
   source === 'desk' ? `${shortDate(registeredOn)} · at the desk` : `${shortDate(registeredOn)} · family form (${schoolName(code)} link)`;
@@ -720,6 +730,12 @@ export const FIRST_NAME = 'First name';
 export const LAST_NAME = 'Last name';
 export const LAST_NAME_HINT = 'Spell it exactly as it should be printed on the black belt and certificate.';
 export const DAN_LOCKED_STAFF = 'A payment is recorded. Ask an admin to change the Dan.';
+// Hide private details on (R4-04, v1.037 — Star's v0.507 Q1 / v0.508 (3), Star's exact words):
+// Edit details opens; the date of birth and email read the gray "Hidden on this tablet" with this
+// hint, and for staff the Dan is grayed on EVERY row with DAN_AT_DESK_HINT (never the paid-only
+// DAN_LOCKED_STAFF, which would tell who has paid). Approved by Jeffrey 2026-11-06 (step 1).
+export const HIDDEN_EDIT_HINT = 'Change the date of birth or email at the desk.'; // approved by Jeffrey 2026-11-06 (step 1)
+export const DAN_AT_DESK_HINT = 'Change the Dan at the desk.'; // approved by Jeffrey 2026-11-06 (step 1)
 export const alreadyPaidAdmin = (cents) => `${money(cents)} is already paid. Recorded payments stay as they are; the balance is worked out again.`;
 // Field errors: the family form's wording (B1 Form 4), plus the desk's own two (not in the mockups)
 export const ERR_FIRST = 'Enter the candidate’s first name.';

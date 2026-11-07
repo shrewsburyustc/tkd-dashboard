@@ -2953,6 +2953,23 @@
   transform: translateX(calc(200px - 100%));
 }
 
+/* R4-04 (v1.037): with Hide private details on, New candidate carries Star's long reason under it.
+   "As wide as its words" would make that one long line, so the menu gets a fixed width and the
+   reason wraps (still right-aligned under the button). Phones use the bottom sheet, not .tmenu. */
+.tmenu:has(.bb-add-menu-item .ev-menu-two) {
+  width: 288px;
+}
+
+/* R4-04 (v1.037): Edit details' date of birth and email while private details are hidden — a gray
+   box in the field's place, reading "Hidden on this tablet" (Star's .st-hidden-box, copied: this
+   page can't count on star.css being loaded) */
+.input.bb-hidden-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  color: var(--color-text-secondary); /* the shared hidden-value gray (.ev-hidden-value) */
+}
+
 /* ----- G 25: the make-up picker ----- */
 .bb-mk-search {
   position: relative;

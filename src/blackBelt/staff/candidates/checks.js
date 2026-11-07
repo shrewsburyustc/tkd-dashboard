@@ -3,6 +3,8 @@
 // Edit details and Add candidate check their fields the same way the database does, so a mistake
 // shows under the field before anything is sent. The database still checks everything again (it
 // decides); these checks only save a round trip. Pure functions: no React, no browser.
+// It also holds editValuesToSave: what Edit details SENDS while Hide private details is on (the
+// stored date of birth and email, and for staff the stored Dan, go back unchanged).
 import { nameProblem } from '../../../lib/testing/names.js';
 import { parseAmount } from '../../../lib/blackBelt/money.js';
 import { DANS, METHODS, NOTE_MAX, SCHOOL_CODES, emailIsValid, trimSpaces } from '../../../lib/blackBelt/rules.js';
@@ -54,6 +56,18 @@ export function detailsProblems(values, { today, purged = false }) {
     school: SCHOOL_CODES.includes(values.school) ? null : 'missing',
     dan: DANS.includes(Number(values.dan)) ? null : 'missing',
   };
+}
+
+// Edit details with Hide private details on (R4-04, v1.037, as Star's Save): the date of birth and
+// email read "Hidden on this tablet" and can't be changed, so Save sends the STORED values
+// (`initial`) for them — even if something was typed before the switch turned on. For staff the
+// Dan is grayed on every row, so theirs goes back to the stored Dan too (what is shown is what is
+// saved). With the switch off the values go as typed.
+export function editValuesToSave(values, initial, { hidden = false, isAdmin = false } = {}) {
+  if (!hidden) return values;
+  const out = { ...values, dob: initial.dob, email: initial.email };
+  if (!isAdmin) out.dan = initial.dan;
+  return out;
 }
 
 // Add candidate (the family form's fields + School + "Waiver signed on paper").
