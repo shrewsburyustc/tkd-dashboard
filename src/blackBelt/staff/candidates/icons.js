@@ -16,11 +16,11 @@ import {
   IconClock, // ti-clock — Paying on schedule card
   IconDots, // ti-dots — More actions (⋯)
   IconEdit, // ti-edit — Edit details
-  IconHistory, // ti-history — Make-up from an earlier cycle… (0025, G 24)
   IconPlus, // ti-plus — Add candidate
   IconPrinter, // ti-printer — Print receipt
   IconReceiptRefund, // ti-receipt-refund — Record refund
-  IconSearch, // ti-search — Search candidates
+  IconRepeat, // ti-repeat — Make-up from an earlier cycle… (R3-07, the §2.4 map, as Star; not History)
+  IconSearch, // ti-search — Find a candidate
   IconSwitchHorizontal, // ti-switch-horizontal — Change plan or Kukkiwon
   IconTrash, // ti-trash — Delete permanently
   IconUserMinus, // ti-user-minus — Withdraw
@@ -51,5 +51,5 @@ export const ICONS = {
   cardLate: IconAlertTriangle,
   cardNotPaid: IconCircleX,
   newCandidate: IconUserPlus,
-  makeup: IconHistory,
+  makeup: IconRepeat,
 };

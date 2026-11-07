@@ -101,6 +101,7 @@ export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connec
 
 // ----- Mark as sent (20–24) -----
 export const markedAsSent = (name) => `Marked as sent · ${name}`; // the toast, with Undo
+export const TOAST_UNDONE = 'Undone'; // after the toast's Undo (R2-07, v1.051)
 // Refusals of Mark as sent: banner with ✕ only (the connection one has Retry). name: "Noah Chen"
 export function markSentRefusal(status, name) {
   switch (status) {

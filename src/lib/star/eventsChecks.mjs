@@ -921,9 +921,17 @@ await check('words: every status of every action has a message (ok and no_access
   assert.deepEqual(statusMessage('add', 'duplicate_name', { name: 'Fall 2026 Star Testing' }), {
     field: 'name', text: "There's already an event called Fall 2026 Star Testing. Try another name.",
   });
-  assert.equal(statusMessage('open', 'not_allowed').text, "The closing date has passed. Ask an admin to reopen. Registration wasn't opened.");
+  assert.equal(statusMessage('open', 'not_allowed').text, "The closing date has passed. Ask an admin to open it. Registration wasn't opened.");
   assert.equal(statusMessage('edit', 'stale', { phone: true }).text.includes('Discard changes'), true);
   assert.equal(statusMessage('close', 'error', { name: 'Fall 2026 Star Testing' }).text, "Registration for Fall 2026 Star Testing wasn't closed. Check the connection and try again.");
+});
+
+// R2-07 (v1.051) and R4-13: the words after an Undo that opens registration again, and the admin line.
+await check('R2-07 / R4-13 words: Undo that reopens says so; the staff reopen line says "open it"', async () => {
+  const text = await import('./eventsText.js');
+  assert.equal(text.TOAST_UNDONE_REGISTRATION_OPEN, 'Undone. Registration is open again.');
+  assert.equal(text.REOPEN_NEEDS_ADMIN, 'The closing date has passed. Ask an admin to open it.');
+  assert.equal(text.REGISTRATION_NEEDS_ADMIN.includes('reopen'), false);
 });
 
 console.log(`ALL STAR EVENT CHECKS PASSED (${count} checks)`);

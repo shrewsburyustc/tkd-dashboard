@@ -38,7 +38,7 @@
 //     it opened); the screen never works out a fee. A different amount: an admin's Edit payment.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconCircleX, IconSum, IconEdit, IconPlus, IconPrinter, IconReceiptRefund,
+  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCalendarEvent, IconCashEdit, IconCheck, IconCircleX, IconSum, IconEdit, IconPlus, IconPrinter, IconReceiptRefund,
   IconRepeat, IconSchool, IconSwitchHorizontal, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
 } from '@tabler/icons-react';
 import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
@@ -59,6 +59,7 @@ import {
   loadMakeupList, recordPayment, recordRefund, resolveDuplicate, restoreCandidate, setPrivate, undoPayment, updateCandidate,
   viewSignature, withdrawCandidate,
 } from '../../../../lib/star/candidatesApi.js';
+import { usePageRoomBelow } from '../../../../lib/pageRoom.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
 import CandidateDialog, { checkCandidateForm, isCandidateDirty } from './CandidateDialog.jsx';
@@ -74,6 +75,12 @@ import * as T from './text.js';
 // Kept while the page is open: the chosen Dan and the Removed group's open state, per event.
 const danByEvent = new Map();
 const removedOpenByEvent = new Map();
+
+// The narrowest room beside the left panel (px) in which the roster's tablet columns still fit (v0.523,
+// Jeffrey chose 696). Below it the roster is stacked like a phone's. Why 696: the columns first look
+// like the approved 820 px tablet from 696 px of room; text stops overlapping at 617 and stops
+// sticking out at 636, measured in Chrome on Windows. Re-measure on an iPad's font before final.
+const ROSTER_ROOM = 696;
 
 const PAYMENT_DIALOGS = ['editPayment', 'refund', 'payingBy', 'undoPayment', 'undoRefund'];
 const BLOCKING = ['stale', 'not_found', 'not_allowed', 'withdrawn', 'finished'];
@@ -111,7 +118,11 @@ export default function CandidatesTab({
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
-  const layout = { isPhone, isTouch, isWide };
+  // The roster alone follows the room beside the left panel (pass 2 L-02, rulebook v0.523 / v1.053):
+  // below ROSTER_ROOM it draws the phone's stacked rows, even in a tablet-wide window. The dialogs,
+  // ⋯ menus and toolbar keep following the window (isPhone above).
+  const narrowRoom = usePageRoomBelow(ROSTER_ROOM);
+  const layout = { isPhone: isPhone || narrowRoom, isTouch, isWide };
 
   const dans = copy?.dans ?? [];
   const [danSel, setDanSelState] = useState(() => danByEvent.get(eventId) ?? dans[0]?.dan ?? 1);
@@ -849,7 +860,25 @@ export default function CandidatesTab({
     }
     closeDialog(d);
     reload();
-    showToast(T.TOAST_PRIVATE_SET, { icon: false });
+    // R2-08: a 5-second Undo, like every other change here. It puts the old private day and time back
+    // (Change), or clears a new one (Set), with the version this save returned.
+    const old = { day: row.privateOn, time: row.privateTime };
+    const wasSet = Boolean(old.day);
+    showToast(T.TOAST_PRIVATE_SET, {
+      icon: false,
+      action: {
+        label: T.UNDO,
+        onAction: () =>
+          runUndo(
+            () => (wasSet
+              ? setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time })
+              : clearPrivate({ candidateId: row.id, expectedVersion: result.version })),
+            { find: () => rowEl(row.id) },
+            'undo_private',
+            row,
+          ),
+      },
+    });
   }
   async function backToTestingDay(row) {
     if (!beginWrite()) return;
@@ -866,7 +895,7 @@ export default function CandidatesTab({
       icon: false,
       action: {
         label: T.UNDO,
-        onAction: () => runUndo(() => setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time }), { find: () => rowEl(row.id) }, 'private', row),
+        onAction: () => runUndo(() => setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time }), { find: () => rowEl(row.id) }, 'undo_private', row),
       },
     });
   }
@@ -1050,10 +1079,26 @@ export default function CandidatesTab({
     endWrite(result.status);
     const name = `${row.firstName} ${row.lastName}`;
     if (result.status === 'ok') {
-      setDialog((current) => (current ? { ...current, saving: false, added: { ...current.added, [row.candidateId]: 'already_added' } } : current));
+      // R2-08 (mockup A3b): the picker CLOSES after an add (as Black Belt's does), so its "Already
+      // added" marks go with it - the next time it opens, the list is read again. Keyboard focus goes
+      // to the Add candidate button. The toast keeps today's words; ADMINS get a 5-second Undo (it
+      // deletes the new row: staff can't delete a candidate, v0.110, so staff's toast has none).
+      setDialog(null);
       if (row.dan !== danSel) setDan(row.dan);
-      reload();
-      showToast(T.makeupAddedToast(name), { icon: false });
+      const reloaded = reload();
+      const newId = result.id;
+      const newVersion = result.version;
+      showToast(T.makeupAddedToast(name), {
+        icon: false,
+        action: isAdmin
+          ? {
+              label: T.UNDO,
+              onAction: () =>
+                runUndo(() => deleteCandidate({ candidateId: newId, expectedVersion: newVersion, expectedPaymentIds: [] }), { find: addEl }, 'undo_makeup'),
+            }
+          : undefined,
+      });
+      focusLater(addEl, null, reloaded);
       return;
     }
     if (result.status === 'no_access') {
@@ -1143,8 +1188,8 @@ export default function CandidatesTab({
       // the read-only summary.
       edit: { label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) },
       setPrivate: { label: T.SET_PRIVATE, Icon: IconCalendar, onSelect: () => openPrivate(row, anchor) },
-      changePrivate: { label: T.CHANGE_PRIVATE, Icon: IconEdit, onSelect: () => openPrivate(row, anchor) },
-      backToDay: { label: T.backToDay(event.testingDate), Icon: IconArrowBackUp, onSelect: () => backToTestingDay(row) },
+      changePrivate: { label: T.CHANGE_PRIVATE, Icon: IconCalendar, onSelect: () => openPrivate(row, anchor) },
+      backToDay: { label: T.backToDay(event.testingDate), Icon: IconCalendarEvent, onSelect: () => backToTestingDay(row) },
       // Phase 5 (H5, proposal 18). ti-school = grade a private testing (§2.4 icon map, this one meaning)
       gradePrivate: { label: T.GRADE_PRIVATE, Icon: IconSchool, onSelect: () => onGradePrivate(row, anchor) },
       // ti-switch-horizontal = change how they'll pay (S9; ti-repeat now means only Make-up)
@@ -1342,7 +1387,6 @@ export default function CandidatesTab({
             heads={[T.FIRST_REGISTRATION, T.SECOND_REGISTRATION]}
             rows={rows}
             note={hidden ? `${T.COMPARE_HIDDEN_NOTE} ${T.COMPARE_NOTE_STAR}` : T.COMPARE_NOTE_STAR}
-            keepLabel={T.keepThisOneLabel}
             loading={!dialog.details && !dialog.loadFailed}
             loadError={dialog.loadFailed ? T.LOAD_DETAIL_FAILED : null}
             onRetry={() => {

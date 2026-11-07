@@ -64,6 +64,8 @@ import {
 } from './resultEmail.js';
 // BB8: the History line's grouping and words (pure; they import only the staff words and grading.js)
 import { groupHistory, describeEntry } from '../../blackBelt/staff/candidates/historyWords.js';
+import { editValuesToSave, canRecordPayment, restoreHasUndo } from '../../blackBelt/staff/candidates/checks.js';
+import * as StaffWords from '../../blackBelt/staff/text.js'; // the Candidates words (R3-01, R3-09, R4-14 checks)
 
 let count = 0;
 function check(label, fn) {
@@ -4109,11 +4111,25 @@ check('BB8 words: grades, counts, batches, money, the candidate row (synthetic r
   const retUndo = r('bb_payments', 'insert', null, { id: 'p6', kind: 'reversal', amount_cents: 87000, method: 'check', paid_on: '2027-03-28', reverses_payment_id: 'p5' });
   assert.deepEqual(words([pay, ret, retUndo]).slice(0, 2), ['Returned check undone: $870', 'Check returned: $870']);
   assert.equal(one(r('bb_payments', 'insert', null, { kind: 'payment', amount_cents: 29050, method: 'cash', paid_on: '2027-03-20' })), 'Payment recorded: $290.50 cash, paid Mar 20');
-  // hidden: every money row is left out (counted for the gray line); plan and Kukkiwon lines stay
-  const hiddenCtx = { rubric, hidden: true, plans: [{ id: 'pl1', name: 'In full' }, { id: 'pl3', name: '3 payments' }] };
+  // hidden: every money row is left out (counted for the gray line), and so are the plan and
+  // Kukkiwon lines (PROPOSAL, step 1 mockup: v0.972 kept them; v1.036 hides the plan)
+  const plansCtx = { rubric, plans: [{ id: 'pl1', name: 'In full' }, { id: 'pl3', name: '3 payments' }] };
+  const hiddenCtx = { ...plansCtx, hidden: true };
+  const described = (row, ctx) => groupHistory([row]).map((e) => describeEntry(e, ctx))[0];
   assert.deepEqual(groupHistory([...edit].reverse()).map((e) => describeEntry(e, hiddenCtx)), [{ hiddenPayment: true }]);
-  assert.equal(one(r('bb_candidates', 'update', { cycle_plan_id: 'pl1' }, { cycle_plan_id: 'pl3' }), hiddenCtx), 'Plan: In full → 3 payments');
-  assert.equal(one(r('bb_candidates', 'update', { kukkiwon: false, kukkiwon_added_on: null }, { kukkiwon: true, kukkiwon_added_on: '2027-03-01' }), hiddenCtx), 'Kukkiwon certificate added');
+  const planRow = r('bb_candidates', 'update', { cycle_plan_id: 'pl1', version: 2 }, { cycle_plan_id: 'pl3', version: 3 });
+  const kukRow = r('bb_candidates', 'update', { kukkiwon: false, kukkiwon_added_on: null }, { kukkiwon: true, kukkiwon_added_on: '2027-03-01' });
+  assert.deepEqual(described(planRow, hiddenCtx), { hiddenPayment: true });
+  assert.deepEqual(described(kukRow, hiddenCtx), { hiddenPayment: true });
+  // switch off: the plan and Kukkiwon lines come back exactly as before
+  assert.equal(one(planRow, plansCtx), 'Plan: In full → 3 payments');
+  assert.equal(one(kukRow, plansCtx), 'Kukkiwon certificate added');
+  // one change that also changed something else keeps its other words, without the plan
+  const mixed = r('bb_candidates', 'update', { first_name: 'Mia', cycle_plan_id: 'pl1' }, { first_name: 'Mya', cycle_plan_id: 'pl3' });
+  assert.equal(one(mixed, hiddenCtx), 'First name: Mia → Mya');
+  assert.equal(one(mixed, plansCtx), 'First name: Mia → Mya; Plan: In full → 3 payments');
+  // other candidate lines still show while hidden
+  assert.equal(one(r('bb_candidates', 'update', { dan: 1 }, { dan: 2 }), hiddenCtx), 'Dan: 1st → 2nd Dan');
 
   // the candidate row: registered, edits joined with "; ", DOB and email only "changed", the purge, states
   const form = one(r('bb_candidates', 'insert', null, { source: 'form' }, { actorName: 'Family form' }), { rubric });
@@ -4142,6 +4158,73 @@ check('BB8 words: grades, counts, batches, money, the candidate row (synthetic r
   // rows of other shapes never break the list
   assert.deepEqual(groupHistory(null), []);
   assert.deepEqual(historyTexts([null, { tableName: 'bb_other', op: 'insert' }], {}), []);
+});
+
+// R4-04 (v1.037): Edit details while private details are hidden saves the STORED date of birth and
+// email (they can't be seen or changed), and staff's stored Dan; switch off: exactly as typed.
+check('R4-04 Edit details while hidden: what Save sends', () => {
+  const initial = { first: 'Mia', last: 'Chen', dob: '2012-03-04', email: 'mia@example.com', school: 'worcester', dan: 1 };
+  const typed = { first: 'Mya', last: 'Chen', dob: '2012-03-05', email: 'new@example.com', school: 'shrewsbury', dan: 2 };
+  // off: as typed (the same object — nothing changes when the switch is off)
+  assert.equal(editValuesToSave(typed, initial, { hidden: false, isAdmin: false }), typed);
+  assert.equal(editValuesToSave(typed, initial), typed);
+  // on, admin: the stored date of birth and email; the name, school and Dan as typed
+  assert.deepEqual(editValuesToSave(typed, initial, { hidden: true, isAdmin: true }), { ...typed, dob: initial.dob, email: initial.email });
+  // on, staff: also the stored Dan (grayed on every row)
+  assert.deepEqual(editValuesToSave(typed, initial, { hidden: true, isAdmin: false }), { ...typed, dob: initial.dob, email: initial.email, dan: 1 });
+  // nothing typed = the stored values
+  assert.deepEqual(editValuesToSave(initial, initial, { hidden: true }), initial);
+  // a REAL name-only change while hidden is still a change: the name is kept, dob and email stay stored
+  const nameOnly = editValuesToSave({ ...initial, first: 'Mya' }, initial, { hidden: true });
+  assert.equal(nameOnly.first, 'Mya');
+  assert.equal(nameOnly.dob, initial.dob);
+  assert.equal(nameOnly.email, initial.email);
+  assert.notDeepEqual(nameOnly, initial);
+  // a purged candidate (nothing stored for date of birth and email): stays as stored, never typed text
+  for (const blank of [null, '']) {
+    const purged = { ...initial, dob: blank, email: blank };
+    const sent = editValuesToSave({ ...purged, dob: '2012-03-05', email: 'x@example.com' }, purged, { hidden: true, isAdmin: true });
+    assert.equal(sent.dob, blank);
+    assert.equal(sent.email, blank);
+  }
+  // staff (not admin) gets the stored Dan back; an admin keeps the typed Dan
+  assert.equal(editValuesToSave({ ...initial, dan: 2 }, initial, { hidden: true, isAdmin: false }).dan, 1);
+  assert.equal(editValuesToSave({ ...initial, dan: 2 }, initial, { hidden: true, isAdmin: true }).dan, 2);
+  // cancelEdit's idea: for staff who changed only the Dan (and typed dob/email) while hidden, what
+  // Save WOULD send equals the stored values, so Cancel/Esc has no "unsaved changes" to warn about
+  const staffTyped = { ...initial, dan: 2, dob: '2012-03-05', email: 'new@example.com' };
+  assert.deepEqual(editValuesToSave(staffTyped, initial, { hidden: true, isAdmin: false }), initial);
+});
+
+// Design review, rolling check, Black Belt Candidates small fixes (v1.043, v1.044, v1.046 (8), v1.050)
+check('rolling check: Not paid is amber, Find a candidate, Record payment and Restore rules, one stale sentence', () => {
+  // R3-01 (v1.044): the past-due "Not paid" is amber, the same kind as Late; nothing is red any more
+  assert.deepEqual(StaffWords.moneyTag({ tag: 'not_paid' }), { kind: 'warn', text: 'Not paid' });
+  assert.equal(StaffWords.moneyTag({ tag: 'late', lateCents: 5000, lateSince: '2027-03-01' }).kind, 'warn');
+  for (const m of [{ tag: 'not_paid' }, { tag: 'late', lateCents: 5000, lateSince: '2027-03-01' }, { tag: 'paid_in_full' }, { tag: 'next', nextCents: 100, nextOn: '2027-03-01' }, null]) {
+    assert.notEqual(StaffWords.moneyTag(m).kind, 'red');
+  }
+  // R3-09 (v1.050): the box reads "Find a candidate"; the no-match words are unchanged
+  assert.equal(StaffWords.FIND_CANDIDATE, 'Find a candidate');
+  assert.equal(StaffWords.SEARCH_CANDIDATES, undefined);
+  assert.equal(StaffWords.noMatch('zz'), 'No candidates match "zz".');
+  assert.equal(StaffWords.CLEAR_SEARCH, 'Clear search');
+  // R3-02 (v1.046 (8)): a possible duplicate offers no Record payment; a removed row or a make-up never did
+  assert.equal(canRecordPayment({ duplicateState: 'possible' }), false);
+  assert.equal(canRecordPayment({ duplicateState: null }), true);
+  assert.equal(canRecordPayment({ duplicateState: 'resolved' }), true);
+  assert.equal(canRecordPayment({ withdrawn: true }), false);
+  assert.equal(canRecordPayment({ isMakeup: true }), false);
+  assert.equal(canRecordPayment({}), true);
+  // R2-03 (v1.043): restoring a Duplicate copy has no Undo; other restores keep theirs
+  assert.equal(restoreHasUndo({ withdrawnReason: 'duplicate_copy' }), false);
+  assert.equal(restoreHasUndo({ withdrawnReason: 'manual' }), true);
+  assert.equal(restoreHasUndo({ withdrawnReason: null }), true);
+  assert.equal(restoreHasUndo({}), true);
+  assert.equal(StaffWords.toastRestored('Noah Silva'), 'Noah Silva restored');
+  // R4-14: one sentence for a refused Undo; the old one is retired
+  assert.equal(StaffWords.UNDO_STALE_CANDIDATE, undefined);
+  assert.equal(StaffWords.candidateStale('Sam Lee'), 'Someone else changed Sam Lee just now, so nothing was done. Their change is shown.');
 });
 
 check('BB8 words: the preview store end to end — grade changes name the subject, a Dan change and Add make-up are one line', () => {
@@ -4370,6 +4453,43 @@ await (async () => {
     assert.match(helpers.setToday('nope'), /Use a date/);
     // no canvas in Node: the PNG download resolves to null instead of failing
     assert.equal(await qrPngBlob(code), null);
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+// Step 1b words and the family form's "Date signed" (rulebook v0.638, v1.045, v1.051, v1.123).
+await (async () => {
+  const label = 'step 1b: Date signed day, Undo toast words, staff words, offline lines';
+  try {
+    const { signedDayLabel } = await import('../../blackBelt/form/format.js');
+    assert.equal(signedDayLabel('2027-03-10'), 'Mar 10, 2027'); // month day, year, no weekday
+    assert.equal(signedDayLabel('2027-12-01'), 'Dec 1, 2027');
+    const formText = await import('../../blackBelt/form/text.js');
+    assert.equal(formText.DATE_SIGNED, 'Date signed');
+    assert.equal(formText.DATE_SIGNED_HINT, "Filled in automatically with today's date."); // the shared words
+    // R2-07: the Undo that puts registration back to open says so; the plain one stays plain
+    const staffText = await import('../../blackBelt/staff/text.js');
+    assert.equal(staffText.TOAST_UNDONE, 'Undone');
+    assert.equal(staffText.TOAST_UNDONE_OPEN_AGAIN, 'Undone. Registration is open again.');
+    // R4-13: "open it", never "reopen", in the staff's words
+    assert.equal(staffText.REOPEN_NEEDS_ADMIN, 'The application date has passed. Ask an admin to open it.');
+    assert.equal(staffText.registrationClosedStaff('2027-03-27'), 'Registration closed on Sat, Mar 27. Ask an admin to open it.');
+    for (const [name, value] of Object.entries(staffText)) {
+      if (typeof value === 'string') assert.ok(!/reopen/i.test(value), `"reopen" in ${name}`);
+    }
+    // Pass 1b: the ⋯ names start with "More actions for"
+    assert.equal(staffText.subjectMore('Sparring'), 'More actions for Sparring');
+    assert.equal(staffText.subjectMore(''), 'More actions for subject');
+    assert.equal(staffText.itemMore(''), 'More actions for item');
+    assert.equal(staffText.bracketMore('18–24'), 'More actions for 18–24');
+    // M12: the Results tab's two gray offline lines
+    const resultsText = await import('../../blackBelt/staff/results/text.js');
+    assert.equal(resultsText.OFFLINE_WHY_BUTTONS, 'Print results and Download CSV are off while you’re offline. Try again when the connection is back.');
+    assert.equal(resultsText.OFFLINE_WHY_ROWS, 'Email result and Mark as sent are off while you’re offline. Try again when the connection is back.');
+    assert.equal(resultsText.OFFLINE, undefined); // the tab's own amber bar is gone
     count += 1;
   } catch (error) {
     console.error(`FAILED: ${label}`);

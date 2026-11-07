@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Star · R4-08 — the grayed Email result (Hide private details on)</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1920px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Star · R4-08 — the grayed Email result (Hide private details on)</h1>
+<p class="sub">Results tab with the account menu’s Hide private details switch on. The grayed Email result takes the approved “unavailable” look (v1.103, as Prospects’ grayed Email): a stronger border (--color-border-strong, rgb 207 207 202, was the hairline --color-border, rgb 229 229 226) and the not-allowed mouse pointer (a circle with a line through it) instead of the plain arrow. It stays focusable, and screen readers now hear the line above the list after the button’s name (aria-describedby points the button at that line). The “Email result is off …” line itself doesn’t change; it is outlined because the button now points at it.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:871.1999999999999px">
+    <div class="shot" style="width:871.1999999999999px;height:165.6px">
+      <img src="shots/A2-today-pc.png" style="left:-43.199999999999996px;top:-216px;width:921.5999999999999px">
+      <div class="mark" style="left:744.0799999999999px;top:126.32px;width:91.52px;height:28.16px;border-color:#F59E0B"></div><div class="mark" style="left:24.799999999999997px;top:3.92px;width:319.03999999999996px;height:22.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> Hairline border; the pointer is a plain arrow; a screen reader hears only “Email result for Noah Chen, dimmed” — the line (outlined) isn’t linked to the button.</figcaption>
+  </figure>
+<div class="row"><figure style="width:348.40000000000003px">
+    <div class="shot" style="width:348.40000000000003px;height:109.2px">
+      <img src="shots/A2-today-pc.png" style="left:-2834px;top:-1232.4px;width:3328px">
+      
+    </div>
+    <figcaption><b>PC, zoomed 2.6×</b> (no outline, so the border shows). Border rgb(229, 229, 226).</figcaption>
+  </figure><figure style="width:432px">
+    <div class="shot" style="width:432px;height:144px">
+      <img src="shots/A2-today-tab.png" style="left:-51.6px;top:-198px;width:492px">
+      <div class="mark" style="left:318.2px;top:100.39999999999999px;width:77.6px;height:29.599999999999998px;border-color:#F59E0B"></div><div class="mark" style="left:16.4px;top:1.3999999999999995px;width:267.2px;height:20px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet 820×1180, touch.</b></figcaption>
+  </figure></div>
+<div class="row"><figure style="width:390px">
+    <div class="shot" style="width:390px;height:250px">
+      <img src="shots/A2-today-ph.png" style="left:0px;top:-190px;width:390px">
+      <div class="mark" style="left:25px;top:190px;width:124px;height:44px;border-color:#F59E0B"></div><div class="mark" style="left:12px;top:8px;width:366px;height:47px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390×844, touch.</b></figcaption>
+  </figure><figure style="width:320px">
+    <div class="shot" style="width:320px;height:250px">
+      <img src="shots/A2-today-p320.png" style="left:0px;top:-190px;width:320px">
+      <div class="mark" style="left:25px;top:189px;width:124px;height:44px;border-color:#F59E0B"></div><div class="mark" style="left:12px;top:8px;width:296px;height:47px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>320 wide, touch.</b></figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <figure style="width:871.1999999999999px">
+    <div class="shot" style="width:871.1999999999999px;height:165.6px">
+      <img src="shots/A2-after-pc.png" style="left:-43.199999999999996px;top:-216px;width:921.5999999999999px">
+      <div class="mark" style="left:744.0799999999999px;top:126.32px;width:91.52px;height:28.16px;border-color:#3B8F2A"></div><div class="mark" style="left:24.799999999999997px;top:3.92px;width:319.03999999999996px;height:22.4px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> Stronger gray border, not-allowed pointer on hover; the button is now described by the line “Email result is off while private details are hidden. Email results at the desk.” (the line looks the same as today).</figcaption>
+  </figure>
+<div class="row"><figure style="width:348.40000000000003px">
+    <div class="shot" style="width:348.40000000000003px;height:109.2px">
+      <img src="shots/A2-after-pc.png" style="left:-2834px;top:-1232.4px;width:3328px">
+      
+    </div>
+    <figcaption><b>PC, zoomed 2.6×.</b> Border rgb(207, 207, 202): a clearer edge.</figcaption>
+  </figure><figure style="width:432px">
+    <div class="shot" style="width:432px;height:144px">
+      <img src="shots/A2-after-tab.png" style="left:-51.6px;top:-198px;width:492px">
+      <div class="mark" style="left:318.2px;top:100.39999999999999px;width:77.6px;height:29.599999999999998px;border-color:#3B8F2A"></div><div class="mark" style="left:16.4px;top:1.3999999999999995px;width:267.2px;height:20px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Tablet 820×1180, touch.</b> (No pointer on touch; the border and the description still apply.)</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:390px">
+    <div class="shot" style="width:390px;height:250px">
+      <img src="shots/A2-after-ph.png" style="left:0px;top:-190px;width:390px">
+      <div class="mark" style="left:25px;top:190px;width:124px;height:44px;border-color:#3B8F2A"></div><div class="mark" style="left:12px;top:8px;width:366px;height:47px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Phone 390×844, touch.</b></figcaption>
+  </figure><figure style="width:320px">
+    <div class="shot" style="width:320px;height:250px">
+      <img src="shots/A2-after-p320.png" style="left:0px;top:-190px;width:320px">
+      <div class="mark" style="left:25px;top:189px;width:124px;height:44px;border-color:#3B8F2A"></div><div class="mark" style="left:12px;top:8px;width:296px;height:47px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>320 wide, touch.</b></figcaption>
+  </figure></div>
+  <div class="note">A screenshot can’t show the mouse pointer or what a screen reader says; both were checked on the drawn page: cursor “not-allowed”, aria-describedby → the line. <b>In the build, aria-describedby points at the line only while private details are hidden</b> — not while the button is only busy (reading the family’s address), because the line isn’t on the page then. With the switch off, Email result looks and works as today. Black Belt copies this in its own Part 2.</div>
+</div>
+</div>
+<div class="foot">Star testing · rolling check pass 1, Step A (plan OK’d 2026-11-06). Preview screenshots (fake database, admin, Fall Star Testing). The “After” column is drawn over the real page by a small script (mock-stepA.js) — nothing in the app was changed. Amber = what changes; green = the change.</div>
+</body></html>

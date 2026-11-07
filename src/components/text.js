@@ -102,3 +102,8 @@ export const CHOOSE_A_TIME = 'Choose a time'; // nothing chosen yet (gray)
 // ----- M12: the one offline bar (OfflineBar.jsx; rulebook v1.005, v1.123) -----
 // Adapted from Star's approved offline line (v0.513), as drawn in picture 05b.
 export const OFFLINE_BAR = 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.';
+
+// ----- Date signed (rulebook v0.522, v0.638): New students' and Star's family forms both show it -----
+// Moved here from src/screens/forms/text.js, which still re-exports them, so the two sections share one wording.
+export const DATE_SIGNED = 'Date signed';
+export const DATE_SIGNED_HINT = "Filled in automatically with today's date.";

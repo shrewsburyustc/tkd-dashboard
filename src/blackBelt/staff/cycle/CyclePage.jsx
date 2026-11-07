@@ -6,9 +6,11 @@
 //   - a ⋯ menu opposite the title: Edit cycle (admins) · Registration links · Close / Open
 //     registration (staff: Open grayed after the application date, with the reason)
 //   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
-//     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason while the device's
-//     Hide payments switch is on ("Add new candidates at the desk.", OP-B7) or the cycle is past;
-//     the reason is one gray line under the page title (v0.966, BB4), and pressing it does nothing.
+//     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason only when the cycle
+//     is past ("This cycle is finished, so candidates can't be added."); the reason is one gray line
+//     under the page title (v0.966, BB4), and pressing it does nothing. With Hide private details
+//     on it stays usable and opens its menu (R4-04, v1.037, Star's v0.507 Q1): New candidate is
+//     grayed inside the menu, Make-up keeps working (CandidatesTab.jsx).
 //   - ONE amber bar for the page (v0.966): the ⋯ actions', Edit cycle's, the Candidates tab's and
 //     the Rubric tab's problems; switching tabs clears it.
 //   - the tabs (v0.946): Candidates (candidates/CandidatesTab.jsx, phase B2) · Grading
@@ -26,11 +28,11 @@
 //     first opens…" (admins), "View only…" (staff), and the lock line with "Go to the default
 //     rubric" once registration has opened.
 //   - for staff, once registration has closed by its date: the gray line "Registration closed on
-//     Sat, Mar 27. Ask an admin to reopen it." under the tabs (approved on Candidates 2).
+//     Sat, Mar 27. Ask an admin to open it." under the tabs (approved on Candidates 2).
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowLeft, IconCurrencyDollarOff, IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
+import { IconArrowLeft, IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
@@ -38,7 +40,6 @@ import RowMenu from '../../../components/RowMenu.jsx';
 import { loadCycle, schoolToday } from '../../../lib/blackBelt/api.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
-import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
 import CandidatesTab from '../candidates/CandidatesTab.jsx';
 import GradingTab from '../grading/GradingTab.jsx';
 import { useBbGrading } from '../grading/useBbGrading.js';
@@ -206,11 +207,12 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   const candidatesRef = useRef(null);
   const addRef = useRef(null);
   const [candidatesModal, setCandidatesModal] = useState(false);
-  const [paymentsHidden] = usePaymentsHidden();
   const cyclePast = cycle ? cycle.state?.state === 'past' || cycle.state?.past === true : false;
   // Why Add candidate is grayed (null = it can be used). The reason is the gray line under the
-  // page title (v0.966, BB4); pressing the grayed button (or N) does nothing — no toast.
-  const addBlocked = paymentsHidden ? T.ADD_AT_DESK : cyclePast ? T.CANDIDATE_FINISHED : null;
+  // page title (v0.966, BB4); pressing the grayed button (or N) does nothing — no toast. Only a
+  // finished cycle grays it (v0.966 (3)); Hide private details grays New candidate inside the
+  // menu instead (R4-04, v1.037).
+  const addBlocked = cyclePast ? T.CANDIDATE_FINISHED : null;
   function pressAdd() {
     if (addBlocked) return;
     candidatesRef.current?.openAdd(addRef.current);
@@ -275,13 +277,10 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     </>
   );
   // Why it is grayed: one gray line under the page title, Prospects' place and look (v0.616 /
-  // v0.966 option A) — on phones between the summary line and the full-width button. With Hide
-  // private details on it carries the top bar's "private details hidden" icon. The button points
-  // at it (aria-describedby), so a screen reader reads the reason with the button.
+  // v0.966 option A) — on phones between the summary line and the full-width button. The button
+  // points at it (aria-describedby), so a screen reader reads the reason with the button.
   const addReasonLine = addBlocked && (
     <p className="phidden-line pdesk-line bb-add-reason" id={`bb-add-reason-${cycle.id}`}>
-      {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
-      {paymentsHidden && <IconCurrencyDollarOff size={16} aria-hidden="true" />}
       {addBlocked}
     </p>
   );

@@ -21,7 +21,7 @@ import {
   getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
   overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
-  paidTagParts,
+  paidTagParts, rosterRoomNeeded, ROSTER_ROOM,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
@@ -1622,16 +1622,41 @@ check('Camps writes money with the shared formatMoney: whole dollars as before, 
     assert.equal(build({ printedByName: '  Dana Ross ' }).printedByName, 'Dana Ross');
   });
 
-  check('receipt: when Print receipt shows (active, money that still stands, not hidden)', () => {
+  check('receipt: when Print receipt shows (money that still stands, not hidden; removed campers too — M-03, v1.055 (b))', () => {
     assert.equal(canPrintReceipt({ status: 'active', paidCents: 100 }, false), true);
     assert.equal(canPrintReceipt({ status: 'active', paidCents: 0 }, false), false); // nothing paid / undone
     assert.equal(canPrintReceipt({ status: 'active' }, false), false);
-    assert.equal(canPrintReceipt({ status: 'withdrawn', paidCents: 100 }, false), false); // removed
+    // A removed camper (withdrawn, or a duplicate copy) whose money still stands gets one; nothing paid, none.
+    assert.equal(canPrintReceipt({ status: 'withdrawn', paidCents: 100 }, false), true);
+    assert.equal(canPrintReceipt({ status: 'withdrawn', withdrawnReason: 'duplicate_copy', paidCents: 100 }, false), true);
+    assert.equal(canPrintReceipt({ status: 'withdrawn', paidCents: 0 }, false), false);
+    assert.equal(canPrintReceipt({ status: 'withdrawn', paidCents: 100 }, true), false); // Hide private details
     assert.equal(canPrintReceipt({ status: 'active', paidCents: 100 }, true), false); // Hide private details
     assert.equal(canPrintReceipt(null, false), false);
     assert.equal(CampText.PRINT_RECEIPT, 'Print receipt');
     assert.equal(CampText.receiptSub('Jack Rivera', 'Thanksgiving Camp'), 'Jack Rivera · Thanksgiving Camp');
     assert.equal(CampText.receiptNotFound(CampText.THIS_CAMPER), 'This camper was deleted on another device, so there is no receipt.');
+  });
+
+  check('receipt: a removed camper owes nothing more (v0.748, copied from Color Belt\'s v0.429)', () => {
+    const gone = (over) => ({ ...detail, camper: { ...camper, status: 'withdrawn', withdrawnAt: '2026-11-07T15:00:00Z', ...over } });
+    // Paid part of the price, then removed: Total due is what was paid, so the Balance is $0.
+    let r = build({ detail: gone({ totalCents: 31500, paidCents: 10000 }) });
+    assert.equal(r.totalDueCents, 10000);
+    assert.equal(r.paidCents, 10000);
+    // Paid the whole price: unchanged. Paid more than the price: Total due stays the price (the overpayment shows).
+    assert.equal(build({ detail: gone({ totalCents: 31500, paidCents: 31500 }) }).totalDueCents, 31500);
+    assert.equal(build({ detail: gone({ totalCents: 31500, paidCents: 40000 }) }).totalDueCents, 31500);
+    // A refund that stands and nothing else paid: nothing owed, never a negative total.
+    assert.equal(build({ detail: gone({ totalCents: 31500, paidCents: 0 }) }).totalDueCents, 0);
+    // The Camp line names the removal (no staff name on a family's document).
+    assert.ok(r.facts.find(([label]) => label === CampText.RECEIPT_CAMP)[1].endsWith(' · removed Nov 7')); // (non-breaking spaces: it never wraps in the middle)
+    // The payments themselves stay as recorded.
+    assert.deepEqual(r.lines, build().lines);
+    // An active camper prints as before: the price is the total, no removal words.
+    const active = build({ detail: { ...detail, camper: { ...camper, totalCents: 31500, paidCents: 10000 } } });
+    assert.equal(active.totalDueCents, 31500);
+    assert.ok(!active.facts.find(([label]) => label === CampText.RECEIPT_CAMP)[1].includes('removed'));
   });
 
   check('receipt: Edit payment keeps the replacement, drops the old payment and its reversal', () => {
@@ -2349,6 +2374,36 @@ check('the roster\'s Paid tag names the amount once overpaid or refunded (v0.745
   assert.equal(CampText.paidAmount(31500), 'Paid $315');
   assert.equal(CampText.paidAmount(102350), 'Paid $1,023.50');
   assert.equal(CampText.overpaidText(2300), '$23 overpaid');
+});
+
+check('the roster\'s room limit per week (L-02, v0.747, picture 24)', () => {
+  // The numbers of picture 24's footer: touch / mouse, by days in the shown week.
+  const table = { 1: [395, 435], 2: [467, 507], 3: [539, 579], 4: [611, 651], 5: [683, 723], 6: [755, 795], 7: [827, 867] };
+  for (const [days, [touch, mouse]] of Object.entries(table)) {
+    assert.equal(rosterRoomNeeded(Number(days), false), touch, `${days} days, touch`);
+    assert.equal(rosterRoomNeeded(Number(days), true), mouse, `${days} days, mouse`);
+    // While someone is overpaid, the amber words widen the Paid column: 42 px more, mouse or touch.
+    assert.equal(rosterRoomNeeded(Number(days), false, true), touch + 42);
+    assert.equal(rosterRoomNeeded(Number(days), true, true), mouse + 42);
+  }
+  // Measured on the built table by the design review (a 5-day camp, widest ordinary tag): 633 / 673 px of
+  // table + 50 px of margins; a day column can't be narrower than 72 px, so fewer days save 72 px each.
+  assert.equal(rosterRoomNeeded(5, false), 633 + ROSTER_ROOM.margins);
+  assert.equal(rosterRoomNeeded(5, true), 673 + ROSTER_ROOM.margins);
+  assert.equal(rosterRoomNeeded(4, true) - rosterRoomNeeded(5, true), -72);
+  // A week with no days, or something that isn't a number, counts as one day (never NaN, never a smaller limit).
+  for (const odd of [0, -2, null, undefined, 2.5, '5']) assert.equal(rosterRoomNeeded(odd, false), rosterRoomNeeded(1, false), String(odd));
+  // More days always need more room; a mouse always needs more than touch.
+  for (let d = 1; d < 7; d += 1) assert.ok(rosterRoomNeeded(d + 1, false) > rosterRoomNeeded(d, false));
+  for (let d = 1; d <= 7; d += 1) assert.ok(rosterRoomNeeded(d, true) > rosterRoomNeeded(d, false));
+});
+
+check('a pressed count card that leaves nobody says what is true (C-05 (b), v1.055)', () => {
+  // Color Belt's pattern ("Everyone in this class has paid."), one line for each card that is a filter.
+  assert.equal(CampText.cardEmptyLine('collect', false, '2027-04-19'), 'Every camper has paid.');
+  assert.equal(CampText.cardEmptyLine('coming', true, '2027-04-21'), 'No campers are coming today.');
+  assert.equal(CampText.cardEmptyLine('coming', false, '2027-04-19'), 'No campers are coming on Mon, Apr 19.');
+  assert.equal(CampText.NO_MATCH_FILTER, undefined); // the old "No campers match." filter line is gone
 });
 
 check('Fill in closed by Hide private details: the camp page\'s words (v0.746)', () => {

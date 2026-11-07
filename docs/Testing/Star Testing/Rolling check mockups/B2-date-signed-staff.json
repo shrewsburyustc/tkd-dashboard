@@ -1,0 +1,425 @@
+{
+ "title": "Date signed · B2 — staff: candidate detail (a choice: option a or b)",
+ "subtitle": "Opened from a Star candidate row (Testing → Star testing → event → candidate). The date the family signed must show with the signature — also after the drawing is deleted 90 days after testing (v0.635, as Color Belt, Black Belt and Prospects do). Two ways to show it; each drawn at PC, phone and 320, for a signature on file (Noah Chen) and a removed one (Morgan Hale). Amber = the row today; green = what changes. Tablet is left out: there the detail is the same centred dialog as on PC and looks the same.",
+ "width": 1840,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/b2-on-today-pc.png",
+     "crop": [
+      420,
+      355,
+      440,
+      230
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800 · signature on file.</b> “Ticked and signed · View signature” — no date.",
+     "marks": [
+      [
+       444,
+       467,
+       392,
+       37
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/b2-rm-today-pc.png",
+     "crop": [
+      420,
+      335,
+      440,
+      250
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800 · signature removed</b> (90 days after testing). “Ticked and signed · signature removed Oct 31, 2026 (deleted 90 days after the testing day)” — the date signed is gone.",
+     "marks": [
+      [
+       444,
+       447,
+       392,
+       56
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b2-on-today-ph.png",
+       "crop": [
+        0,
+        300,
+        390,
+        230
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         16,
+         408,
+         358,
+         37
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b2-on-today-p320.png",
+       "crop": [
+        0,
+        238,
+        320,
+        240
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 wide, touch.</b> Already wraps, leaving “·” at the end of line 1.",
+       "marks": [
+        [
+         16,
+         346,
+         288,
+         56
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b2-rm-today-ph.png",
+       "crop": [
+        0,
+        300,
+        390,
+        250
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone · removed.</b>",
+       "marks": [
+        [
+         16,
+         408,
+         358,
+         76
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b2-rm-today-p320.png",
+       "crop": [
+        0,
+        228,
+        320,
+        270
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 · removed.</b> ",
+       "marks": [
+        [
+         16,
+         336,
+         288,
+         76
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/b-staff-sigdialog-pc.png",
+     "crop": [
+      420,
+      80,
+      440,
+      367
+     ],
+     "scale": 0.9,
+     "caption": "<b>“View signature” — no change in either option.</b> It already says “Signed Sat, Oct 31, 2026, 1:19 PM on the family form, after ticking the acknowledgment.”",
+     "marks": [],
+     "shotWidth": 1280
+    }
+   ]
+  },
+  {
+   "label": "Option (a) — recommended",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/b2-on-a-pc.png",
+     "crop": [
+      420,
+      355,
+      440,
+      230
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800 · signature on file.</b> New row “Date signed · Sat, Oct 31, 2026” under Acknowledgment, which stays “Ticked and signed · View signature”.",
+     "marks": [
+      [
+       444,
+       504,
+       392,
+       37
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/b2-rm-a-pc.png",
+     "crop": [
+      420,
+      335,
+      440,
+      250
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800 · signature removed</b> (90 days after testing). The Date signed row stays; Acknowledgment keeps its “signature removed …” text.",
+     "marks": [
+      [
+       444,
+       503,
+       392,
+       37
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b2-on-a-ph.png",
+       "crop": [
+        0,
+        300,
+        390,
+        230
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         16,
+         445,
+         358,
+         37
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b2-on-a-p320.png",
+       "crop": [
+        0,
+        238,
+        320,
+        240
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 wide, touch.</b> ",
+       "marks": [
+        [
+         16,
+         402,
+         288,
+         37
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b2-rm-a-ph.png",
+       "crop": [
+        0,
+        300,
+        390,
+        250
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone · removed.</b>",
+       "marks": [
+        [
+         16,
+         484,
+         358,
+         37
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b2-rm-a-p320.png",
+       "crop": [
+        0,
+        228,
+        320,
+        270
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 · removed.</b> ",
+       "marks": [
+        [
+         16,
+         412,
+         288,
+         37
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "<b>Pros:</b> copies Prospects’ approved “Date signed” row and the family form’s box word for word; the date has the weekday like the Registered row; the Acknowledgment line doesn’t change or wrap more than today. <b>Cons:</b> one more row in the dialog."
+  },
+  {
+   "label": "Option (b)",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/b2-on-b-pc.png",
+     "crop": [
+      420,
+      355,
+      440,
+      230
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800 · signature on file.</b> “Ticked and signed Sat, Oct 31, 2026” then “· View signature” kept together on line 2.",
+     "marks": [
+      [
+       444,
+       467,
+       392,
+       56
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/b2-rm-b-pc.png",
+     "crop": [
+      420,
+      335,
+      440,
+      250
+     ],
+     "scale": 1.2,
+     "caption": "<b>PC 1280×800 · signature removed</b> (90 days after testing). “Ticked and signed Sat, Jul 4, 2026 · signature removed Oct 31, 2026 (…)”: three lines.",
+     "marks": [
+      [
+       444,
+       447,
+       392,
+       76
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b2-on-b-ph.png",
+       "crop": [
+        0,
+        300,
+        390,
+        230
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         16,
+         408,
+         358,
+         56
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b2-on-b-p320.png",
+       "crop": [
+        0,
+        238,
+        320,
+        240
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 wide, touch.</b> The date itself breaks: “Sat, Oct 31, / 2026 · View signature”.",
+       "marks": [
+        [
+         16,
+         346,
+         288,
+         56
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "shots/b2-rm-b-ph.png",
+       "crop": [
+        0,
+        300,
+        390,
+        250
+       ],
+       "scale": 0.75,
+       "caption": "<b>Phone · removed.</b>",
+       "marks": [
+        [
+         16,
+         408,
+         358,
+         76
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/b2-rm-b-p320.png",
+       "crop": [
+        0,
+        228,
+        320,
+        270
+       ],
+       "scale": 0.75,
+       "caption": "<b>320 · removed.</b> The date breaks too: “Sat, Jul 4, / 2026 · signature removed …”, 4 lines.",
+       "marks": [
+        [
+         16,
+         336,
+         288,
+         95
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "<b>Pros:</b> no new row; the date sits right next to the signature it belongs to. <b>Cons:</b> the line wraps at every size (2 lines with the link, 3 when removed); at 320 the date signed itself breaks across lines (“Sat, Oct 31, / 2026”), unless the build also keeps the date in one piece; and two dates sit in one line in the removed state, which is harder to read."
+  }
+ ],
+ "footer": "Rulebook v0.638 (Jeffrey, 2026-11-04): every family form shows “Date signed” under the signature, filled in automatically with the day the form is sent, gray, can’t be changed; wherever staff see a signature, its date signed shows with it. Preview screenshots (fake database, today = Fri, Nov 6, 2026). The “After” column is drawn over the real page by a small script (mock-dates.js) — nothing in the app was changed. No database change: the day the form is sent is already saved (star_candidate_signatures.signed_at). For a family-form registration the date signed is the same day as “Registered” (the signature is saved when the form is sent) — by design; v0.638 still asks for it."
+}

@@ -145,6 +145,8 @@ function EmailButton({ row, ctx }) {
       className="btn btn-sm str-tap str-email"
       aria-label={T.emailResultLabel(nameOf(row))}
       aria-disabled={off ? 'true' : undefined}
+      // R4-08: while private details are hidden the button says why it is off (the line above the list)
+      aria-describedby={ctx.hidden ? T.EMAIL_OFF_ID : undefined}
       tabIndex={ctx.nav.itemTabIndex(row.id)}
       data-str-email={row.id}
       onClick={(event) => {

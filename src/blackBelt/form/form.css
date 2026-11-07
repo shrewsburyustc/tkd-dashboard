@@ -440,7 +440,7 @@ h2:focus,
   border-bottom: 1px solid var(--color-border-strong);
 }
 .bbf-totalbox__total b {
-  font-weight: 600;
+  font-weight: 500;
 }
 .bbf-totalbox__lines {
   list-style: none;
@@ -681,6 +681,19 @@ section.bbf-card .bbf-review {
 }
 .bbf-field--sign {
   margin: 0;
+}
+/* Date signed (v0.638): the same look as New students' .fsigned-box — a read-only box with a light
+   gray fill and a darker gray border, 12px under the signature hint. It is an <output>, not an input. */
+.bbf-field--signed {
+  margin: 12px 0 0;
+}
+.bbf-input--signed {
+  display: flex;
+  align-items: center;
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: default;
 }
 .bbf-sigpad {
   height: 120px;
@@ -990,7 +1003,7 @@ section.bbf-card .bbf-review {
   font-size: var(--text-14);
 }
 .bbf-pass b {
-  font-weight: 600;
+  font-weight: 500;
 }
 .bbf-subj__row {
   display: flex;

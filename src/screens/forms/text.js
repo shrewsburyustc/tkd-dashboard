@@ -306,8 +306,8 @@ export const AGREE = 'I have read and agree to the waiver';
 export const SIGN_HERE = 'Signature';
 export const SIGN_HINT = 'Sign with a finger, pen or mouse.';
 // under the signature: today's date, filled in by itself (v0.635); the day saved is the day it's sent
-export const DATE_SIGNED = 'Date signed';
-export const DATE_SIGNED_HINT = "Filled in automatically with today's date.";
+// (the two words now live in the shared file, so Star's form says exactly the same; re-exported here)
+export { DATE_SIGNED, DATE_SIGNED_HINT } from '../../components/text.js';
 export const CLEAR = 'Clear';
 export const SEND = 'Send';
 export const SUBMITTING = 'Sending…';

@@ -12,15 +12,17 @@
 //      while a refund stands — after a partial refund both show, Record refund first (v0.744,
 //      picture 22y, option A); then Print receipt (ti-printer, design review C3, rulebook v0.734),
 //      LAST in the group, for staff and admins on an active camper with money paid that still
-//      stands. Staff, who see no other money item, get a money group holding only Print receipt (as
+//      stands (a REMOVED camper's Print receipt comes first on its own row, below; v0.748). Staff, who see no other money item, get a money group holding only Print receipt (as
 //      Star v0.518). While a refund stands, Edit payment and Undo payment stay in place but gray,
 //      with "Undo the refund first." under their words (v0.743 (4), as Star's) — pressing them does
 //      nothing (`grayed`: Camper detail's More draws them gray too).
 //   3. Taking someone off — Withdraw (ti-user-minus, instant with Undo), then for admins Delete
 //      permanently (red, asks first, always last)
-//   Removed camper — Restore (ti-arrow-back-up, C16; staff and admins for an ordinary withdrawal,
-//     a "Duplicate copy" only for admins — staff get the 5-second Undo right after Keep this one),
-//     then for admins Delete permanently, after a line.
+//   Removed camper — Print receipt first (ti-printer; staff and admins, while money still stands and
+//     Hide private details is off — rulebook v0.748, design review M-03), then after a line Restore
+//     (ti-arrow-back-up, C16; staff and admins for an ordinary withdrawal, a "Duplicate copy" only for
+//     admins — staff get the 5-second Undo right after Keep this one), then for admins Delete
+//     permanently, after a line. A staff member on a duplicate copy that paid sees just Print receipt.
 // No "Admin" heading (v1.012, C9): staff simply don't see the admin-only items; admins see them
 // all in this same order. Items that don't apply are left out; the rest never move.
 // While "Hide private details" is on (detailsHidden, rulebook v0.722 / design review C1): the
@@ -103,8 +105,13 @@ export function camperMenuItems(row, { isAdmin, busy, anchor, h, detailsHidden =
     items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: IconUserMinus, separatorBefore: groupStart(), disabled: busy, onSelect: () => h.onWithdraw(row) });
     if (isAdmin) items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => h.onDelete(row, anchor) });
   } else {
+    // Print receipt first, in its own group (money before taking someone off, §8; M-03, v1.055 (b)):
+    // for staff and admins, only while money still stands and Hide private details is off.
+    if (h.onPrintReceipt && canPrintReceipt(row, detailsHidden)) {
+      items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: (opener) => h.onPrintReceipt(row, opener ?? anchor) });
+    }
     const canRestore = row.withdrawnReason !== 'duplicate_copy' || isAdmin;
-    if (canRestore) items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onRestore(row) });
+    if (canRestore) items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, separatorBefore: groupStart(), disabled: busy, onSelect: () => h.onRestore(row) });
     if (isAdmin) items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: groupStart(), disabled: busy, onSelect: () => h.onDelete(row, anchor) });
   }
   return items;

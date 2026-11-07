@@ -929,18 +929,17 @@
   display: none; /* our own ✕ button instead */
 }
 
-.bb-search-clear {
+/* The ✕ is the shared icon button (.tib: 28px, 44px on touch, tooltip "Clear search"; R3-09, as
+   Prospects' and Camps' boxes), sitting inside the box on the right. */
+.bb-search .tib.bb-search-clear {
   position: absolute;
   right: 2px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: var(--radius-control);
-  background: none;
-  color: var(--color-text-secondary);
+}
+
+/* The "No candidates match “zz”. · Clear search" line sits right under the search box (the shared
+   .ev-filter-line pulls itself up toward the cards otherwise; same fix as Camps' .cp-nomatch). */
+.bb-nomatch.ev-filter-line {
+  margin-top: 0;
 }
 
 .bb-caption {
@@ -1019,13 +1018,6 @@
 
 .bb-balance.is-over {
   color: var(--color-warning-text);
-}
-
-/* Red "Not paid" — only once a due date has passed (v0.224). Words AND color. */
-.bb-tag--red {
-  border-color: #f0c8c8;
-  background: var(--color-delete-bg);
-  color: var(--color-delete-text);
 }
 
 .bb-record {
@@ -1518,13 +1510,12 @@
 @media (pointer: coarse) {
   .bb-search-input {
     height: var(--control-height-touch);
+    padding-right: 48px; /* room for the 44px ✕ */
     font-size: var(--text-16);
   }
 
-  .bb-search-clear {
-    width: var(--tap-size);
-    height: var(--tap-size);
-    right: -4px;
+  .bb-search .tib.bb-search-clear {
+    right: 0;
   }
 
   .bb-check-item {
@@ -1703,7 +1694,7 @@
 
 .bbr-part-name {
   font-size: var(--text-13);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbr-part-meta {
@@ -1878,7 +1869,7 @@
 .bbr-way-head {
   margin: var(--space-4) 0;
   font-size: var(--text-12);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbr-cuts {
@@ -2019,7 +2010,7 @@
 }
 
 .bbe-bar-title {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbe-bar-sub {
@@ -2090,7 +2081,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* The "Can't save" lines, numbered 1., 2., ... (mockup R8). The number is drawn by the list
@@ -2152,7 +2143,7 @@
 
 .bbe-card-title {
   font-size: var(--text-13);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbe-card-meta {
@@ -2523,7 +2514,7 @@
 }
 
 .bbe-bcard-title {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bbe-bcard .bbe-num,
@@ -2953,6 +2944,23 @@
   transform: translateX(calc(200px - 100%));
 }
 
+/* R4-04 (v1.037): with Hide private details on, New candidate carries Star's long reason under it.
+   "As wide as its words" would make that one long line, so the menu gets a fixed width and the
+   reason wraps (still right-aligned under the button). Phones use the bottom sheet, not .tmenu. */
+.tmenu:has(.bb-add-menu-item .ev-menu-two) {
+  width: 288px;
+}
+
+/* R4-04 (v1.037): Edit details' date of birth and email while private details are hidden — a gray
+   box in the field's place, reading "Hidden on this tablet" (Star's .st-hidden-box, copied: this
+   page can't count on star.css being loaded) */
+.input.bb-hidden-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  color: var(--color-text-secondary); /* the shared hidden-value gray (.ev-hidden-value) */
+}
+
 /* ----- G 25: the make-up picker ----- */
 .bb-mk-search {
   position: relative;
@@ -3052,12 +3060,6 @@
 /* ----- S2: a testing day that grading locks (Edit cycle) ----- */
 .bb-day-locked {
   margin: 2px 0 0;
-}
-
-.bb-day-acts .tib[aria-disabled='true'] {
-  color: var(--color-disabled-text);
-  opacity: 0.5;
-  cursor: default;
 }
 
 /* Touch: 44px tap areas (rule 2.5) */

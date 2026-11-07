@@ -8,7 +8,8 @@
 // Top to bottom:
 //   one banner: Email result's, Mark as sent's / Undo's, Print's and the CSV's refusals
 //   "Showing Worcester candidates only · Show both schools" on a one-school device (proposal 30)
-//   offline: the amber bar (proposal 35) — the last list stays on screen
+//   offline: no bar of its own (the page's shared amber bar says it); two gray "why" lines sit next to
+//     the grayed controls (M12, rulebook v1.123) — the last list stays on screen
 //   the Dan switch with counts (all four Dans, the device's school) · Print results · Download CSV
 //     (admins; hidden while Hide payments is on) — phones: the buttons under the switch (proposal 2)
 //   the summary line "1st Dan · 5 candidates · 1 passed · 3 make-ups · 1 not finished" (proposal 3)
@@ -45,9 +46,9 @@
 //   onRefreshProfile, showToast, clearToast, onModalOpenChange, onOpenGrades({ dan, dayKey, candidateId })
 // The tab panel's ids: bb-cycle-results-<cycleId> (the panel) and bb-cycle-tab-results-<cycleId>
 // (the tab button CyclePage draws).
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconArrowBackUp, IconCurrencyDollarOff, IconDownload, IconMailCheck, IconPrinter, IconSchool,
+  IconArrowBackUp, IconCurrencyDollarOff, IconDownload, IconMailCheck, IconPrinter, IconSchool, IconWifiOff,
 } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
@@ -137,6 +138,7 @@ export default function ResultsTab({
   const id = cycleId ?? cycle?.id;
   const panelId = `bb-cycle-results-${id}`;
   const tabId = `bb-cycle-tab-results-${id}`;
+  const whyId = useId(); // the gray offline lines, tied to the grayed buttons with aria-describedby
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
@@ -384,7 +386,9 @@ export default function ResultsTab({
       onNoAccess();
       return;
     }
-    if (answer.status !== 'ok') {
+    if (answer.status === 'ok') {
+      showToast(T.TOAST_UNDONE, { icon: false }); // R2-07: the Undo worked
+    } else {
       const retry = answer.status === 'error' ? () => undoFromToast(sentId) : undefined;
       setBanner({ text: T.undoSentRefusal(answer.status), retry });
       if (answer.status === 'not_allowed') onRefreshProfile?.();
@@ -600,6 +604,7 @@ export default function ResultsTab({
         type="button"
         className="btn bbres-print"
         aria-disabled={!online || printBusy ? 'true' : undefined}
+        aria-describedby={!online && data ? `${whyId}-buttons` : undefined}
         onClick={(event) => printResults(event.currentTarget)}
       >
         {/* ti-printer = print */}
@@ -607,7 +612,13 @@ export default function ResultsTab({
         {T.PRINT_RESULTS}
       </button>
       {isAdmin && !hidden && (
-        <button type="button" className="btn bbres-csv" aria-disabled={!online || csvBusy ? 'true' : undefined} onClick={download}>
+        <button
+          type="button"
+          className="btn bbres-csv"
+          aria-disabled={!online || csvBusy ? 'true' : undefined}
+          aria-describedby={!online && data ? `${whyId}-buttons` : undefined}
+          onClick={download}
+        >
           {/* ti-download = download a file */}
           <IconDownload size={16} aria-hidden="true" />
           {T.DOWNLOAD_CSV}
@@ -622,6 +633,7 @@ export default function ResultsTab({
     isAdmin,
     emailOff,
     markOff: !online,
+    whyId: !online ? `${whyId}-rows` : undefined, // aria-describedby for Email result / Mark as sent while offline
     today,
     danObj,
     submissionsDue,
@@ -668,6 +680,13 @@ export default function ResultsTab({
           {danSwitch}
           {buttons}
         </div>
+        {!online && (
+          <p id={`${whyId}-buttons`} className="bbres-note bbres-note--buttons">
+            {/* ti-wifi-off = no connection */}
+            <IconWifiOff size={16} aria-hidden="true" />
+            {T.OFFLINE_WHY_BUTTONS}
+          </p>
+        )}
         <p className="bbres-summary">
           <span className="bbres-summary-dan">{T.danLabel(danSel)}</span>
           {T.summaryRest(counts) /* " · 5 candidates · 1 passed …" after the Dan in medium weight */}
@@ -688,6 +707,13 @@ export default function ResultsTab({
           </p>
         ) : (
           <>
+            {!online && (
+              <p id={`${whyId}-rows`} className="bbres-note">
+                {/* ti-wifi-off = no connection */}
+                <IconWifiOff size={16} aria-hidden="true" />
+                {T.OFFLINE_WHY_ROWS}
+              </p>
+            )}
             {rows.every((r) => nothingYet(r.result)) && <p className="bbres-note">{T.NO_GRADES_YET}</p>}
             {hidden && (
               <p className="bbres-note">
@@ -723,13 +749,6 @@ export default function ResultsTab({
             <button type="button" className="link-button bbres-inline-link" onClick={() => onLocationChange('Both')}>
               {T.SHOW_BOTH_SCHOOLS}
             </button>
-          </p>
-        )}
-        {!online && (
-          <p className="bbres-offline" role="status">
-            {/* ti-alert-triangle = a warning (§7) */}
-            <IconAlertTriangle size={16} aria-hidden="true" />
-            <span>{T.OFFLINE}</span>
           </p>
         )}
         {body}

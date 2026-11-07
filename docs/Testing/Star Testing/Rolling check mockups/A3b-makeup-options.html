@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Star · R2-08 (2 of 2) — Undo after adding a make-up: which way? (choice for Jeffrey)</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1960px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Star · R2-08 (2 of 2) — Undo after adding a make-up: which way? (choice for Jeffrey)</h1>
+<p class="sub">Today Star’s Add a make-up list stays open after Add, and the “Drew Park added” toast shows outside it. A dialog keeps the keyboard (Tab) inside itself, so a toast Undo there could be reached by mouse only — not by keyboard until the list is closed, and by then the 5 seconds are usually over. Three ways out. Undo (admins only; staff can’t delete a candidate, v0.110, so staff get no Undo in any option) deletes the new make-up row, as Add candidate’s Undo does, then says “Undone”. Both toast texts (“Private testing set”, “Drew Park added”) are still marked PROPOSAL in the code: these pictures are the first time they are shown for approval, and an OK here removes the PROPOSAL tags. Possible wording, Black Belt’s form: “Drew Park added · make-up from Summer” (“… added · make-up from &lt;earlier testing&gt;”), so it doesn’t read like Add candidate’s toast.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:417.59999999999997px">
+    <div class="shot" style="width:417.59999999999997px;height:355.2px">
+      <img src="shots/A3m-today-pc.png" style="left:-192px;top:-28.799999999999997px;width:614.4px">
+      <div class="mark" style="left:348.32px;top:322.88px;width:66.56px;height:25.28px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> Add on Drew Park: the list stays open (“Already added”), toast “Drew Park added”, no Undo.</figcaption>
+  </figure>
+<figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:523.28px">
+      <img src="shots/A3m-today-ph.png" style="left:0px;top:0px;width:241.8px">
+      <div class="mark" style="left:79.08px;top:455.42px;width:83.64px;height:30.32px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390×844, touch</b> (full-screen list).</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">(a) Recommended — close the list after Add</div>
+  <figure style="width:417.45px">
+    <div class="shot" style="width:417.45px;height:244.95px">
+      <img src="shots/A3b-a-pc.png" style="left:-20.7px;top:-31.049999999999997px;width:441.59999999999997px">
+      <div class="mark" style="left:342.72499999999997px;top:218.86999999999998px;width:73.895px;height:21.799999999999997px;border-color:#3B8F2A"></div><div class="mark" style="left:1.8649999999999993px;top:137.105px;width:414.40999999999997px;height:24.56px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>PC.</b> The list closes (as Black Belt’s does), focus goes back to Add candidate, and “Drew Park added · ↶ Undo” shows over the event page, where Drew’s row is now first. <b>After Undo,</b> focus goes back to Add candidate.</figcaption>
+  </figure>
+<figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:523.28px">
+      <img src="shots/A3b-a-ph.png" style="left:0px;top:0px;width:241.8px">
+      <div class="mark" style="left:57.38px;top:449.84px;width:126.42px;height:35.28px;border-color:#3B8F2A"></div><div class="mark" style="left:6.539999999999999px;top:419.46px;width:228.72px;height:65.03999999999999px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Phone.</b> Same: list closed, toast above the bottom bar.</figcaption>
+  </figure>
+  <div class="note"><b>Pros:</b> Undo works by keyboard like every other toast; copies Black Belt (useMakeupPicker), so both sections behave the same. <b>Cons:</b> adding a second make-up means opening Add candidate → Make-up again.</div>
+</div>
+<div class="col after">
+  <div class="label">(b) Keep the list open, Undo in the row</div>
+  <figure style="width:417.59999999999997px">
+    <div class="shot" style="width:417.59999999999997px;height:355.2px">
+      <img src="shots/A3b-b-pc.png" style="left:-192px;top:-28.799999999999997px;width:614.4px">
+      <div class="mark" style="left:139.04px;top:80.47999999999999px;width:68px;height:21.439999999999998px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>PC.</b> Drew’s row says “Added” with an Undo button where “Already added” was; the toast stays “Drew Park added” without Undo. <b>After Undo,</b> focus stays on Drew’s row, whose button turns back into “Add”.</figcaption>
+  </figure>
+<figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:523.28px">
+      <img src="shots/A3b-b-ph.png" style="left:0px;top:0px;width:241.8px">
+      <div class="mark" style="left:142.32px;top:84.04px;width:85.5px;height:30.32px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>Phone.</b></figcaption>
+  </figure>
+  <div class="note"><b>Pros:</b> several make-ups in a row without reopening; Undo is inside the dialog, so the keyboard reaches it, with no 5-second timer. <b>Cons:</b> a new look no other section has (Undo as a row button); how long the row Undo stays offered (until the list closes?) needs deciding.</div>
+</div>
+<div class="col today">
+  <div class="label">(c) Keep it as it is today</div>
+  <figure style="width:417.59999999999997px">
+    <div class="shot" style="width:417.59999999999997px;height:355.2px">
+      <img src="shots/A3m-after-pc.png" style="left:-192px;top:-28.799999999999997px;width:614.4px">
+      <div class="mark" style="left:315.2px;top:320.47999999999996px;width:99.67999999999999px;height:27.2px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC.</b> “Drew Park added · ↶ Undo” over the open list (as first drawn).</figcaption>
+  </figure>
+<figure style="width:241.8px">
+    <div class="shot" style="width:241.8px;height:523.28px">
+      <img src="shots/A3m-after-ph.png" style="left:0px;top:0px;width:241.8px">
+      <div class="mark" style="left:57.38px;top:449.84px;width:126.42px;height:35.28px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone.</b></figcaption>
+  </figure>
+  <div class="note"><b>Pros:</b> smallest change; the list stays open. <b>Cons: breaks the rulebook’s keyboard-only rule</b> (§4 “Everything works with keyboard only”, WCAG 2.1.1): while the list is open, Undo can be clicked with a mouse but not reached with Tab.</div>
+</div>
+</div>
+<div class="foot">Star testing · rolling check pass 1, Step A (plan OK’d 2026-11-06). Preview screenshots (fake database, admin, Fall Star Testing). The “After” column is drawn over the real page by a small script (mock-stepA.js) — nothing in the app was changed. Amber = what changes; green = the change. Tablet and 320 look like PC and phone here, so they aren’t repeated (A3 shows the toast at all four sizes).</div>
+</body></html>

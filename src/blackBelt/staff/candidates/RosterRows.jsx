@@ -11,8 +11,14 @@
 //   Phone:                  name; "1st Dan · Shrewsbury · 3 payments · Kukkiwon"; the tag and the
 //                           balance; ⋯ on the right; no row button
 // With the device's Hide payments switch on (v0.215, OP-B7) the Payments and Balance columns and
-// the Record payment button aren't drawn at all.
+// the Record payment button aren't drawn at all, and the plan — how a family pays, a payment
+// detail (R4-01, v1.036, as Camps' Paying by, v0.722) — reads the gray "Hidden on this tablet":
+// in the Plan column, and in place of the plan words on the phone line ("1st Dan · Shrewsbury ·
+// Hidden on this tablet"). A make-up's "No fee" is hidden the same way, so every row reads alike.
 // One tag per row (§8): "⚠ Possible duplicate" (amber; opens the compare) outranks the money tag.
+// The money tag has three looks: gray, green (paid in full) and amber (Late, and the past-due
+// Not paid, R3-01); red is only for "gone for good". A possible duplicate has no Record payment
+// button (R3-02; canRecordPayment in checks.js).
 // Withdrawn candidates sit in a collapsed "Removed (N)" group at the bottom, with a gray Removed /
 // Duplicate copy tag and their balance (Star v0.113, OP-B10).
 // A make-up from an earlier cycle (contract 0025 §14.5, mockup G06, proposal 27): Plan "No fee",
@@ -24,6 +30,7 @@
 import { Fragment } from 'react';
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
+import { canRecordPayment } from './checks.js';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
@@ -58,7 +65,7 @@ export function RowTag({ row, onReview }) {
 export function MoneyTag({ money }) {
   const tag = T.moneyTag(money);
   if (!tag.text) return null;
-  const kind = { ok: ' ttag--ok', warn: ' ttag--warn', red: ' bb-tag--red', gray: '' }[tag.kind];
+  const kind = { ok: ' ttag--ok', warn: ' ttag--warn', gray: '' }[tag.kind];
   return <span className={`ttag${kind}`}>{tag.text}</span>;
 }
 
@@ -75,8 +82,11 @@ function CandidateRow({ row, ctx }) {
   const removed = row.status === 'withdrawn';
   const open = ctx.menuFor === row.id;
   const makeup = row.isMakeup === true;
-  const showRecord = !hidden && !removed && !makeup && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
-  const plan = makeup ? T.PLAN_NO_FEE : T.planCell(row.planName, row.kukkiwon);
+  // A possible duplicate offers no Record payment until the pair is resolved (R3-02, v1.046 (8))
+  const showRecord = !hidden && canRecordPayment({ withdrawn: removed, isMakeup: makeup, duplicateState: row.duplicateState }) && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
+  // The plan words, or (hidden, v1.036) the gray "Hidden on this tablet" (.ev-hidden-value)
+  const hiddenPlan = <span className="ev-hidden-value">{T.HIDDEN_ON_DEVICE}</span>;
+  const plan = hidden ? hiddenPlan : makeup ? T.PLAN_NO_FEE : T.planCell(row.planName, row.kukkiwon);
   // The make-up's gray line (G 27)
   const makeupText = makeup ? <span className="bb-cline bb-makeup-line">{T.makeupLine(row.makeupOfCycleName, row.retestNames)}</span> : null;
   const RecordIcon = ICONS.recordPayment;
@@ -128,7 +138,17 @@ function CandidateRow({ row, ctx }) {
         <span className="ev-srow-main" role="cell">
           <span className="ev-sname">{name}</span>
           {makeupText}
-          <span className="bb-cline">{makeup ? `${T.danSchool(row.dan, row.locationCode)} · ${T.PLAN_NO_FEE}` : T.phoneSubline(row)}</span>
+          <span className="bb-cline">
+            {hidden ? (
+              <>
+                {T.danSchool(row.dan, row.locationCode)} · {hiddenPlan}
+              </>
+            ) : makeup ? (
+              `${T.danSchool(row.dan, row.locationCode)} · ${T.PLAN_NO_FEE}`
+            ) : (
+              T.phoneSubline(row)
+            )}
+          </span>
           {(tag || !hidden) && (
             <span className="ev-sline-tag bb-ctagline">
               {tag}

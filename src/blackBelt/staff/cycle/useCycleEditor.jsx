@@ -403,7 +403,8 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     if (status === 'ok') {
       a.endWrite('ok');
       a.reload?.();
-      a.showToast(T.TOAST_UNDONE, { icon: false });
+      // When this Undo put registration back to open (the save had closed it), the toast says so (R2-07)
+      a.showToast(u.switched && u.oldOpen === true ? T.TOAST_UNDONE_OPEN_AGAIN : T.TOAST_UNDONE, { icon: false });
       return undefined;
     }
     if (status === 'no_access') {

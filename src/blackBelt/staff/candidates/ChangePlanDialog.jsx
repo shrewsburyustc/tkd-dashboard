@@ -13,6 +13,11 @@
 // they are; the balance is worked out again." Staff can't (the ⋯ item is grayed; the database
 // refuses too). Save is blue only when something changed.
 //
+// With the device's Hide private details switch on this dialog can't open (Change plan is grayed
+// with "Change the plan at the desk.") and it closes if the switch turns on while it is open
+// (useCandidateActions.paymentsHiddenNow). The `hidden` branches below (no amounts, no total, no
+// fee, no amber warning) are only a safety net for the one render before it closes.
+//
 // PlanCards is also used by Add candidate ("How they'll pay").
 import { useId, useRef } from 'react';
 import Dialog from '../../../components/Dialog.jsx';

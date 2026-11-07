@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Black Belt: Date signed (review picture)</title>
+<!-- R-date-signed.html: review picture for rulebook v0.638 (Date signed under every signature), Black Belt part.
+     Real preview screenshots in raw/ (r-*.png); the "after" ones have the new line drawn on with JavaScript
+     (the app's code is unchanged). Amber outline = new. Green outline = already there / the look to copy. -->
+<style>
+  body { margin: 0; padding: 16px; background: #fff; color: #1f1f1f; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; width: 968px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #555; margin: 0 0 10px; }
+  .legend { display: flex; gap: 18px; margin: 0 0 8px; font-size: 12px; }
+  .legend span::before { content: ""; display: inline-block; width: 22px; height: 11px; border: 3px solid; border-radius: 3px; margin-right: 6px; vertical-align: -3px; }
+  .legend .a::before { border-color: #F59E0B; } .legend .g::before { border-color: #3B8F2A; }
+  h2 { font-size: 15px; margin: 18px 0 6px; padding-top: 10px; border-top: 2px solid #ddd; }
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { font-size: 12px; margin-top: 4px; color: #333; }
+  figcaption b { display: block; font-size: 12px; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #ccc; background: #f7f7f6; }
+  .shot img { position: absolute; display: block; }
+  .mark { position: absolute; border: 3px solid; border-radius: 4px; box-sizing: border-box; }
+  .amber { border-color: #F59E0B; } .green { border-color: #3B8F2A; }
+  .words { width: 475px; background: #f7f7f6; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; font-size: 12.5px; box-sizing: border-box; }
+  .words p { margin: 0 0 6px; } .words code { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 3px; }
+  .foot { margin-top: 16px; padding: 10px 12px; background: #fff7e6; border: 1px solid #F59E0B; border-radius: 6px; font-size: 12.5px; }
+  .foot p { margin: 0 0 5px; } .foot p:last-child { margin: 0; }
+</style></head><body>
+<h1>Date signed on the Black Belt form and for staff</h1>
+<p class="sub">Rulebook v0.638 (Jeffrey, 2026-11-04): every signature has its date signed. Real screenshots of the preview app (fake data).</p>
+<div class="legend"><span class="a">New: drawn on, code unchanged</span><span class="g">Already there / the look to copy</span></div>
+
+<h2>1. Black Belt family form, step 2 (check, sign, send) on a PC (1280 wide)</h2>
+<div class="row">
+  <figure>
+    <div class="shot" style="width:475px;height:306px"><img src="raw/r-bb-today-1280.png" style="left:-338.4px;top:-306px;width:1152px"></div>
+    <figcaption><b>Today</b>The signature box ends the card. The family never sees a date.</figcaption>
+  </figure>
+  <figure>
+    <div class="shot" style="width:475px;height:405px"><img src="raw/r-bb-after-1280.png" style="left:-338.4px;top:-207px;width:1152px">
+      <div class="mark amber" style="left:11px;top:254px;width:453px;height:76px"></div></div>
+    <figcaption><b>After</b>"Date signed" under the signature: today's date, gray, can't be changed, with the hint "Filled in automatically with today's date." The card grows by one line.</figcaption>
+  </figure>
+</div>
+
+<h2>The look it copies: New students' form (real screenshot of the box that exists today)</h2>
+<div class="row">
+  <figure>
+    <div class="shot" style="width:475px;height:257px"><img src="raw/r-ns-form-1280.png" style="left:-338.4px;top:-346.5px;width:1152px">
+      <div class="mark green" style="left:11px;top:177px;width:453px;height:76px"></div></div>
+    <figcaption><b>New students (Forms, Free class)</b>Same label, same gray read-only box, same hint.</figcaption>
+  </figure>
+  <div class="words">
+    <p><b>Words, copied exactly</b> (src/screens/forms/text.js):</p>
+    <p>Label: <code>Date signed</code><br>Hint: <code>Filled in automatically with today's date.</code></p>
+    <p><b>Look</b> (the <code>.fsigned</code> box): a normal text box, read-only, with the page's light-gray fill and a darker gray border, default cursor, 12 px above it. The Black Belt page has its own box styles, so the picture draws the same look with Black Belt's own box and spacing.</p>
+    <p><b>One difference to decide:</b> New students prints the day with the weekday ("Sat, Nov 7, 2026"). Every other Black Belt date on this page is written without it, so the Black Belt picture says "Mar 10, 2027". Say if you want the weekday too.</p>
+    <p><b>The day</b> is the school's day (Massachusetts time), not the phone's clock.</p>
+  </div>
+</div>
+
+<h2>Same step on a phone (390 touch) and a small phone (320 wide)</h2>
+<div class="row">
+  <figure>
+    <div class="shot" style="width:242px;height:242px"><img src="raw/r-bb-today-390.png" style="left:0;top:-204.6px;width:242px"></div>
+    <figcaption><b>Today, 390</b></figcaption>
+  </figure>
+  <figure>
+    <div class="shot" style="width:242px;height:313px"><img src="raw/r-bb-after-390.png" style="left:0;top:-133.3px;width:242px">
+      <div class="mark amber" style="left:16px;top:196px;width:209px;height:61px"></div></div>
+    <figcaption><b>After, 390</b></figcaption>
+  </figure>
+  <figure>
+    <div class="shot" style="width:200px;height:313px"><img src="raw/r-bb-after-320.png" style="left:0;top:0;width:200px">
+      <div class="mark amber" style="left:17px;top:193px;width:167px;height:62px"></div></div>
+    <figcaption><b>After, 320 wide</b>Nothing wraps or scrolls sideways.</figcaption>
+  </figure>
+</div>
+
+<h2>2. Staff: where the signature shows (candidate detail, admins), already with its date</h2>
+<div class="row">
+  <div>
+    <figure>
+      <div class="shot" style="width:476px;height:33px"><img src="raw/r-staff-detail-1280.png" style="left:-229px;top:-398px;width:1062px">
+        <div class="mark green" style="left:232px;top:4px;width:42px;height:22px"></div></div>
+      <figcaption><b>Detail, Waiver row</b>"Signed by Mia Chen · Mar 4 · version 2027-1 · on file · View signature". Date is there; no year.</figcaption>
+    </figure>
+    <figure style="margin-top:12px">
+      <div class="shot" style="width:475px;height:143px"><img src="raw/r-staff-history-1280.png" style="left:-262px;top:-518px;width:1216px">
+        <div class="mark green" style="left:5px;top:68px;width:111px;height:21px"></div></div>
+      <figcaption><b>Detail, History</b>"Waiver signed on the family form" with its day under it. (The preview's seeded history says Nov 6, the day the sample was made; real rows show the day the form was sent.)</figcaption>
+    </figure>
+  </div>
+  <figure>
+    <div class="shot" style="width:475px;height:284px"><img src="raw/r-staff-sigdialog-1280.png" style="left:-453.6px;top:-86.4px;width:1382px">
+      <div class="mark green" style="left:156px;top:170px;width:84px;height:24px"></div></div>
+    <figcaption><b>View signature (admins)</b>"Signed by Mia Chen · Mar 4, 2027". Full date with the year.</figcaption>
+  </figure>
+</div>
+
+<div class="foot">
+  <p><b>Staff already see the date signed everywhere they see the signature: the Waiver row, the View signature box and the History line.</b> Nothing is missing, so no "after" is drawn for staff. Other screens don't show a signature at all: the printed receipt is payments only, the duplicate-compare box has no waiver, and on a mat-side tablet (Hide payments) the signature stays at the desk.</p>
+  <p>Only wording differs: staff see the date without the label "Date signed", and the Waiver row leaves out the year ("Mar 4"). Not changed in this picture.</p>
+</div>
+</body></html>

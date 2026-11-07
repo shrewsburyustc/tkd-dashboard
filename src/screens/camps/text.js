@@ -518,7 +518,12 @@ export const includesFromRemoved = (cents) => `includes ${formatMoney(cents)} fr
 export const SHOWING_COMING_TODAY = 'Showing coming today only';
 export const showingComingOn = (day) => `Showing coming ${dayLong(day)} only`;
 export const SHOWING_TO_COLLECT = 'Showing to collect only';
-export const NO_MATCH_FILTER = 'No campers match.'; // (not in the mockups) a card filter leaves nobody (no search text), as Star's "No candidates match."
+// A pressed card leaves nobody (no search text): each card says what is true, in Color Belt's pattern
+// ("Everyone in this class has paid."; design review C-05 (b), rulebook v1.055). (not in the mockups)
+export const cardEmptyLine = (filter, isToday, day) => {
+  if (filter === 'collect') return 'Every camper has paid.';
+  return isToday ? 'No campers are coming today.' : `No campers are coming on ${dayLong(day)}.`;
+};
 export const ROSTER_LABEL = 'Campers'; // (not in the mockups) screen readers: the roster table
 export const COL_PAID = 'Paid';
 export const dueTag = (cents) => `${formatMoney(cents)} due`;
@@ -881,8 +886,7 @@ export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups)
 
 
 // ----- Live-test fixes (2026-10-21): the camp page's automatic reload -----
-// The amber bar when the 15-second reload failed twice in a row (CampPage.jsx). (not in the mockups)
-export const REFRESH_FAILED = 'Couldn’t refresh the roster. Check the connection, then retry.';
+// (The amber "Couldn't refresh the roster" bar that used to be here is the shell's one offline bar now: C19, v1.005.)
 // The quiet time at the end of the summary line, e.g. "Updated 2:41:07 PM" (CampRoster.jsx). (not in the mockups)
 export const updatedAtLine = (ms) => `Updated ${new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
 

@@ -10,7 +10,9 @@
 //   Close                             nothing changes
 // PC / tablet: two columns; phone: a full screen with the two one after the other.
 // The two registrations are read with loadCandidate (the only read that has the date of birth and
-// email); with the device's Hide payments switch on those two and Paid read "Hidden on this tablet".
+// email); with the device's Hide payments switch on those two, Plan (a payment detail, R4-01 /
+// v1.036, as Camps' v0.722) and Paid read the gray "Hidden on this tablet" (.ev-hidden-value,
+// R4-03) — the same words on both sides, so a hidden line is never marked different.
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { formatCents } from '../../../lib/blackBelt/money.js';
@@ -31,7 +33,7 @@ export default function CompareDialog({ state, isPhone, hidden, onKeep, onKeepBo
       email: hidden ? T.HIDDEN_ON_DEVICE : c.emailForResults ?? T.DELETED_AFTER_KEEPING,
       dan: T.DAN_LABELS[c.dan] ?? '',
       school: T.schoolName(c.locationCode),
-      plan: T.planCell(c.plan?.name ?? '', c.kukkiwon),
+      plan: hidden ? T.HIDDEN_ON_DEVICE : T.planCell(c.plan?.name ?? '', c.kukkiwon),
       paid: hidden ? T.HIDDEN_ON_DEVICE : formatCents(d.money?.paidCents ?? 0),
     };
   };
@@ -48,12 +50,15 @@ export default function CompareDialog({ state, isPhone, hidden, onKeep, onKeepBo
     { key: 'plan', label: T.CMP_PLAN },
     { key: 'paid', label: T.CMP_PAID },
   ];
-  // The time and the reference always differ, so they are never highlighted.
-  const differs = (line) => !line.plain && a[line.key] !== b[line.key];
+  // The lines that read "Hidden on this tablet" while the switch is on
+  const HIDDEN_KEYS = ['dob', 'email', 'plan', 'paid'];
+  const isHidden = (key) => hidden && HIDDEN_KEYS.includes(key);
+  // The time and the reference always differ, so they are never highlighted; nor is a hidden line.
+  const differs = (line) => !line.plain && !isHidden(line.key) && a[line.key] !== b[line.key];
   const Warn = ICONS.warn;
-  const value = (text, highlight) => (
+  const value = (text, highlight, key) => (
     <>
-      {text}
+      {isHidden(key) ? <span className="ev-hidden-value">{text}</span> : text}
       {highlight && (
         <span className="bb-diff-mark">
           <Warn size={12} aria-hidden="true" />
@@ -82,7 +87,7 @@ export default function CompareDialog({ state, isPhone, hidden, onKeep, onKeepBo
               {lines.map((line) => (
                 <div key={line.key} className={`ev-sum-row${differs(line) ? ' is-diff' : ''}`}>
                   <dt>{line.label}</dt>
-                  <dd>{value(f[line.key], differs(line))}</dd>
+                  <dd>{value(f[line.key], differs(line), line.key)}</dd>
                 </div>
               ))}
             </dl>
@@ -102,8 +107,8 @@ export default function CompareDialog({ state, isPhone, hidden, onKeep, onKeepBo
             {lines.map((line) => (
               <tr key={line.key}>
                 <th scope="row">{line.label}</th>
-                <td className={differs(line) ? 'is-diff' : ''}>{value(a[line.key], differs(line))}</td>
-                <td className={differs(line) ? 'is-diff' : ''}>{value(b[line.key], differs(line))}</td>
+                <td className={differs(line) ? 'is-diff' : ''}>{value(a[line.key], differs(line), line.key)}</td>
+                <td className={differs(line) ? 'is-diff' : ''}>{value(b[line.key], differs(line), line.key)}</td>
               </tr>
             ))}
             <tr className="ev-cmp-keep">

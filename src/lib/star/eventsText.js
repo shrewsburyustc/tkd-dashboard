@@ -79,6 +79,8 @@ export const TOAST_LINK_COPIED = 'Link copied';
 export const TOAST_REGISTRATION_CLOSED = 'Registration closed';
 export const TOAST_REGISTRATION_OPEN = 'Registration open';
 export const TOAST_REGISTRATION_OPEN_DATE_REMOVED = 'Registration open. The automatic closing date was removed.';
+// R2-07 (v1.051): what an Undo says when it put registration back to Open (instead of just "Undone")
+export const TOAST_UNDONE_REGISTRATION_OPEN = 'Undone. Registration is open again.';
 
 // ----- Field messages (amber, under the field) -----
 export const duplicateEventName = (name) => `There's already an event called ${name}. Try another name.`;
@@ -96,8 +98,8 @@ export const STALE_DIALOG_PHONE = "Someone else changed this just now. Your chan
 export const EVENTS_NOT_ALLOWED = "Only an admin can add or change events. Your change wasn't saved.";
 export const INVALID_DIALOG = "That didn't save. Check the fields and try again.";
 export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
-export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to reopen.';
-export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to reopen. Registration wasn't opened.";
+export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to open it.';
+export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to open it. Registration wasn't opened.";
 // Not drawn in the mockups: Color Belt's live wording.
 export const REGISTRATION_FINISHED = 'This testing has finished, so registration can no longer change.';
 export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection and try again.`;

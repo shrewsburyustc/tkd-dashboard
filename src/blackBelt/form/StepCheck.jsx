@@ -4,12 +4,12 @@
 // what to pay when), the school's waiver (first lines, Read all, its version), the "I have read
 // and agree" tick, the name of the person signing (a parent or guardian for a candidate under 18
 // on the first testing day; otherwise filled in with the candidate's name), the drawn signature,
-// then Send registration. Banners after a Send that didn't work appear at the top; nothing the
+// then "Date signed" (today's date in a gray read-only box, v0.638), then Send registration. Banners after a Send that didn't work appear at the top; nothing the
 // family entered is lost. When registration closed (or the waiver changed) meanwhile, only the
 // summary stays and nothing more can be sent.
 import SignaturePad from './SignaturePad.jsx';
 import { FieldError, Icon, Row, TickBox, TopError } from './parts.jsx';
-import { dobLabel, dueLabel, formatDollars, monthDay, shortDay } from './format.js';
+import { dobLabel, dueLabel, formatDollars, monthDay, shortDay, signedDayLabel } from './format.js';
 import { normalizeName } from '../../lib/testing/names.js';
 import * as T from './text.js';
 
@@ -169,6 +169,20 @@ export default function StepCheck({
               <FieldError id="bbf-sign-err">{errors.signature}</FieldError>
               <div className="bbf-hint" id="bbf-sign-hint">
                 {T.SIGNATURE_HINT}
+              </div>
+            </div>
+
+            {/* Date signed (v0.638): today's date, in the school's day, in a gray box nobody can change.
+                It is only shown: the database saves the day the form is sent (signed_at = now()). */}
+            <div className="bbf-field bbf-field--signed">
+              <label className="bbf-label" htmlFor="bbf-signed">
+                {T.DATE_SIGNED}
+              </label>
+              <output id="bbf-signed" className="bbf-input bbf-input--signed" aria-describedby="bbf-signed-hint">
+                {signedDayLabel(today)}
+              </output>
+              <div className="bbf-hint" id="bbf-signed-hint">
+                {T.DATE_SIGNED_HINT}
               </div>
             </div>
           </div>
