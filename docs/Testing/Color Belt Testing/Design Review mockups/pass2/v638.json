@@ -1,0 +1,46 @@
+{
+  "title": "Rulebook v0.638 (pass 2 L-08) — “Date signed” on Color Belt’s family form and in the student summary",
+  "subtitle": "Your rule v0.638 (“for signatures it should require date signed always”): every family form shows “Date signed” under the signature, filled in automatically with the day the form is sent, gray, and it can’t be changed; wherever staff see a signature, its date signed shows with it. The family form (/register/&lt;code&gt;, step 2) gets New students’ box (the same label, gray box and hint as their forms). Staff never see the drawn signature in Color Belt; they see “Signed by: Parent or guardian, on the form” in the student summary, so a “Date signed” row goes right under it (as Prospects shows it). No database change: the form already saves the day it was sent (signed_at), and the roster already reads it. A student added at the desk has no signature, so no row; one whose signature was deleted after 90 days keeps today’s line, which already gives the day. The After column is drawn on top of the real preview pages.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "row": [
+          { "src": "v638-pc-form-today.png", "crop": [376, 380, 528, 360], "scale": 0.62, "caption": "Family form, PC 1280: nothing under the signature.", "marks": [[393, 600, 494, 24]] },
+          { "src": "v638-pc-summary-today.png", "crop": [420, 80, 440, 540], "scale": 0.62, "caption": "Student summary, PC 1280: “Signed by” with no day.", "marks": [[444, 414, 392, 28]] }
+        ] },
+        { "row": [
+          { "src": "v638-w820-form-today.png", "shotWidth": 820, "crop": [146, 477, 528, 371], "scale": 0.5, "caption": "Tablet 820.", "marks": [[163, 700, 494, 24]] },
+          { "src": "v638-w390-form-today.png", "shotWidth": 390, "crop": [16, 355, 358, 410], "scale": 0.55, "caption": "Phone 390.", "marks": [[33, 600, 324, 40]] },
+          { "src": "v638-w320-form-today.png", "shotWidth": 320, "crop": [16, 372, 288, 448], "scale": 0.55, "caption": "320.", "marks": [[33, 650, 254, 40]] }
+        ] },
+        { "row": [
+          { "src": "v638-w390-summary-today.png", "shotWidth": 390, "crop": [0, 0, 390, 470], "scale": 0.55, "caption": "Summary, phone 390.", "marks": [[16, 342, 358, 28]] },
+          { "src": "v638-w320-summary-today.png", "shotWidth": 320, "crop": [0, 0, 320, 520], "scale": 0.55, "caption": "Summary, 320.", "marks": [[16, 384, 288, 42]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "row": [
+          { "src": "v638-pc-form-after.png", "crop": [376, 380, 528, 360], "scale": 0.62, "caption": "Family form, PC 1280: “Date signed” · Fri, Nov 6, 2026 (gray, can’t be changed) · “Filled in automatically with today’s date.”", "marks": [[393, 638, 494, 76]] },
+          { "src": "v638-pc-summary-after.png", "crop": [420, 80, 440, 540], "scale": 0.62, "caption": "Student summary, PC 1280: “Date signed: Oct 29” under “Signed by”.", "marks": [[444, 452, 392, 26]] }
+        ] },
+        { "row": [
+          { "src": "v638-w820-form-after.png", "shotWidth": 820, "crop": [146, 477, 528, 371], "scale": 0.5, "caption": "Tablet 820.", "marks": [[163, 734, 494, 86]] },
+          { "src": "v638-w390-form-after.png", "shotWidth": 390, "crop": [16, 355, 358, 410], "scale": 0.55, "caption": "Phone 390.", "marks": [[33, 648, 324, 90]] },
+          { "src": "v638-w320-form-after.png", "shotWidth": 320, "crop": [16, 372, 288, 448], "scale": 0.55, "caption": "320.", "marks": [[33, 706, 254, 86]] }
+        ] },
+        { "row": [
+          { "src": "v638-w390-summary-after.png", "shotWidth": 390, "crop": [0, 0, 390, 470], "scale": 0.55, "caption": "Summary, phone 390.", "marks": [[16, 380, 358, 26]] },
+          { "src": "v638-w320-summary-after.png", "shotWidth": 320, "crop": [0, 0, 320, 520], "scale": 0.55, "caption": "Summary, 320.", "marks": [[16, 436, 288, 30]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "The words are New students’: “Date signed” and “Filled in automatically with today’s date.” The date on the form is the day it’s sent (as New students’ “Fri, Nov 6, 2026”); in the summary, the day the database saved with the signature (“Oct 29”, as the summary’s other days). Next, one question: who moves New students’ box and words into the shared files so every family form uses the same one."
+}

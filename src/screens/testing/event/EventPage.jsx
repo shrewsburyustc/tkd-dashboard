@@ -11,7 +11,8 @@
 //     ("Fri, Nov 20, 2026 · Worcester school · 14 students · registration open until Nov 13")
 //   - header buttons: Add student (blue, N on the PC) and Registration link (outline)
 //   - the one tab, Students
-//   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115);
+//   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115), drawn
+//     only once someone is registered, active or removed (pass 2 C-05 (a));
 //     Paid / Not paid filter the roster, Students clears the filter
 //   - the amber "possible duplicate" box with Review (Star v0.114), when there is one
 //   - the class switch (classes in this event, with counts) and the class line (time + gear);
@@ -34,6 +35,8 @@
 // testing, Tue, Dec 1") and their payment moves with them to the Private testing tab. A moved
 // Removed row has no ⋯ for staff; admins get Open private testing and a grayed Restore (with the
 // reason) — no Delete permanently. Everything else on this page is phase 3 exactly.
+// (Pass 2 M-03, v0.428: any other removed row whose payment still stands gets Print receipt first in
+// its ⋯, for staff and admins — staff's ⋯ there holds only it; eventRules.canPrintReceipt.)
 //
 // The design review's part 2 (rulebook v0.420 / v0.421, mockups P1 and P3; Star's v0.518 copied):
 //   - CB1: Mark paid opens the shared Mark paid box (amount worked out by the database, Paid by
@@ -88,7 +91,7 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { classTimeLabel, feeFor } from '../../../lib/testing/eventRules.js';
+import { ROSTER_ROOM, canPrintReceipt, classTimeLabel, feeFor, inCardFilter, rosterCounts, rosterLayoutFor } from '../../../lib/testing/eventRules.js';
 import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
@@ -117,6 +120,7 @@ import {
   testingGroups,
 } from '../../../lib/testing/gradingRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
+import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
@@ -211,6 +215,12 @@ export default function EventPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  // Only the Students roster follows the room beside the left panel (pass 2 L-02, rulebook v1.053,
+  // v1.130; lib/pageRoom.js): narrower than ROSTER_ROOM its tablet columns would run text into text,
+  // so it draws its phone rows. Dialogs, ⋯ menus, the Grading tab and the rest of the page keep
+  // following the window (isPhone).
+  const narrowRoom = usePageRoomBelow(ROSTER_ROOM);
+  const rosterLayout = rosterLayoutFor(layout, narrowRoom);
   const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
 
   // ----- State -----
@@ -429,12 +439,39 @@ export default function EventPage({
     if (markPaidGone) setMarkPaidBox(null);
   }, [markPaidGone]);
 
+  // The roster draws its rows again when its layout flips (a window resized, a tablet turned, Panel
+  // size changed: pass 2 L-02): a row's ⋯ and Mark paid buttons are then new buttons in other places,
+  // so an open ⋯ menu or Mark paid box would point at a button that is gone. Both close, and also when
+  // the window itself becomes a phone (the ⋯ popover turns into the bottom sheet there, which would stay
+  // open with no key to close it). Nothing is lost: the Mark paid box only asks how they paid.
+  const rosterIsPhone = rosterLayout.isPhone;
+  useEffect(() => {
+    setMenu(null);
+    setMarkPaidBox(null);
+  }, [rosterIsPhone, isPhone]);
+
   // ===== Derived data =====
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
   const classById = new Map(classes.map((c) => [c.id, c]));
   const active = roster.filter((r) => r.status === 'active');
   const removed = roster.filter((r) => r.status !== 'active');
-  const paidCount = active.filter((r) => r.paid).length;
+  // Anyone registered at all, active or removed? Until then the count cards would only read 0, so
+  // they aren't drawn (pass 2 C-05 (a), v1.028; as the Private testing tab, Star and Camps' hasCampers).
+  const hasRegistrations = roster.length > 0;
+  // The last registration went (deleted permanently): a Paid / Not paid filter left on would come
+  // back by itself with the cards when a family registers again, hiding the new student, so it is
+  // turned off here (Add student already turns it off).
+  const noOneRegistered = data != null && !hasRegistrations;
+  useEffect(() => {
+    if (noOneRegistered) setFilter(null);
+  }, [noOneRegistered]);
+  // A row marked "Possible duplicate" stays out of Paid and Not paid (the cards and their filters)
+  // until the pair is resolved (pass 1 R3-02, v1.046 (8); eventRules.rosterCounts / inCardFilter);
+  // Students still counts it, and Payments recorded keeps any money it paid. One gray line under the
+  // cards says so.
+  const counts = rosterCounts(active);
+  const paidCount = counts.paid;
+  const notPaidCount = counts.notPaid;
   // Payments recorded = every recorded payment of this event, net of reversals (incl. withdrawn
   // students, whose payment stays on record; a deleted student's payment is gone).
   const paymentsTotal = data?.paymentTotalCents ?? payments.reduce((sum, p) => sum + p.amountCents, 0);
@@ -458,10 +495,11 @@ export default function EventPage({
   const groupOrder = (a, b) => (classPos.get(a.eventClassId) ?? 0) - (classPos.get(b.eventClassId) ?? 0) || order(a, b);
   let rows = active.filter(inGroup).sort(groupOrder);
   // (No Paid / Not paid filter while private details are hidden, even for the one drawing before
-  // the switch-on effect above clears it.)
-  const shownFilter = hidden ? null : filter;
-  if (shownFilter === 'paid') rows = rows.filter((r) => r.paid);
-  if (shownFilter === 'notPaid') rows = rows.filter((r) => !r.paid);
+  // the switch-on effect above clears it; nor while nobody is registered, when there are no cards
+  // to turn it off with.)
+  const shownFilter = hidden || !hasRegistrations ? null : filter;
+  // (A possible duplicate is in neither filter until it's resolved, R3-02.)
+  rows = rows.filter((r) => inCardFilter(r, shownFilter));
   // Removed students of the whole group, in one Removed group after the classes.
   const removedRows = group && shownFilter === null ? removed.filter(inGroup).sort(groupOrder) : [];
   // v0.195: a small heading per class when classes test together ("Group B · 3 students");
@@ -1303,6 +1341,14 @@ export default function EventPage({
     const name = T.studentLabel(row);
     const newVersion = result.version;
     const undoCall = restore ? withdrawStudent : restoreStudent;
+    // Restoring a "Duplicate copy": no Undo (pass 1 R2-03, v1.043, Star's G3) — an Undo would put the
+    // row back as a plain Removed with a history that says Withdrawn; to change it back an admin
+    // uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
+    if (restore && row.withdrawnReason === 'duplicate_copy') {
+      showToast(T.restoredToast(name), { icon: false });
+      focusLater(() => rowEl(row.id), addStudentEl, reloaded);
+      return;
+    }
     showToast(restore ? T.restoredToast(name) : T.withdrawnToast(name), {
       icon: false,
       action: {
@@ -1571,10 +1617,15 @@ export default function EventPage({
       // CB2 (v0.420): Print receipt ends the money group, for staff and admins, on a row with a
       // payment that still stands; hidden while Hide private details is on (v0.518 Q8 B). Staff's
       // money group holds only this item.
-      if (moneyShown && row.paid) {
+      if (canPrintReceipt(row, hidden)) {
         const startsGroup = !isAdmin; // admins: it follows Undo payment in the same group
         items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, separatorBefore: startsGroup && groupStart(), onSelect: () => openReceipt(row, anchor) });
       }
+    } else if (canPrintReceipt(row, hidden)) {
+      // pass 2 M-03 (v1.055 (b), v0.428): a removed student whose payment still stands — Print
+      // receipt first, for staff and admins (staff's ⋯ holds only this item); Restore and Delete
+      // permanently follow in their own groups (admins).
+      items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor) });
     }
     if (isAdmin) {
       if (row.status === 'active') {
@@ -1583,8 +1634,13 @@ export default function EventPage({
         // ti-arrow-back-up = bring back (v1.024)
         items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
       }
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
+      // On a removed row, the red Delete permanently starts its own group under Restore (pass 2
+      // C-04, v1.055 (f), as Star's); on an active row it stays with Withdraw.
+      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: row.status !== 'active', disabled: busy, onSelect: () => startDelete(row, anchor) });
     }
+    // Nothing left to offer (say staff's ⋯ on a removed row, after Hide private details was switched
+    // on or the payment was undone on another device): no menu, as the Private testing tab.
+    if (items.length === 0) return null;
     const rank = rankById.get(row.eventRankId);
     const subtitle = rank ? `${rank.name} → ${rank.testingFor?.name ?? T.NO_NEW_RANK}` : '';
     return { title: name, subtitle, label: T.moreForStudent(name), items };
@@ -1668,7 +1724,7 @@ export default function EventPage({
   const allCards = [
     { key: 'all', label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length, kind: 'all' },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount, kind: 'filter' },
-    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: active.length - paidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
+    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: notPaidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
     {
       key: 'money',
       label: T.CARD_PAYMENTS,
@@ -1685,7 +1741,7 @@ export default function EventPage({
   const showStatusCol = !hidden || [...rows, ...(removedOpen ? removedRows : [])].some((r) => hasStatusTag(r, notSavedId));
 
   const ctx = {
-    layout,
+    layout: rosterLayout, // the room beside the panel decides the roster's own layout (L-02)
     nav,
     rankById,
     busy,
@@ -1725,9 +1781,10 @@ export default function EventPage({
           today={today}
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
-          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — an active student
-          // with a payment that still stands, money shown; staff and admins.
-          canPrintReceipt={record?.status === 'active' && record?.paid === true && !hidden}
+          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — a student (active, or
+          // removed since pass 2 M-03, v0.428) with a payment that still stands, money shown; staff
+          // and admins.
+          canPrintReceipt={canPrintReceipt(record, hidden)}
           onPrintReceipt={(opener) => record && openReceipt(record, opener, true)}
           onNoAccess={onNoAccess}
           graded={dialog.graded ?? null}
@@ -1992,17 +2049,8 @@ export default function EventPage({
         />
       ) : (
         <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
-          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
-              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
-              recorded is a plain total. Hide private details: the Students card alone. */}
-          <CountCards
-            cards={cards}
-            selected={shownFilter}
-            onSelect={setFilter}
-            showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
-            showAllLabel={T.SHOW_ALL}
-          />
-
+          {/* One order above every roster (pass 1 R3-10, v1.047 (15)): the duplicate box first, then
+              the count cards and their lines, then the class switch. */}
           {/* Possible duplicates (Star v0.114) in the shared duplicate box (v1.102, v0.422): the
               count on the first line only (its own line on phones), then one line per pair, each
               with Review; Review passes itself, so focus returns to it when the compare closes. */}
@@ -2014,6 +2062,23 @@ export default function EventPage({
               onReview: (opener) => openCompare(pair, opener),
             }))}
           />
+
+          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
+              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
+              recorded is a plain total. Hide private details: the Students card alone. Nobody
+              registered yet (active or removed): no cards, only the empty line (C-05 (a)). A
+              possible duplicate is out of Paid / Not paid, and the gray line under the cards says
+              so (R3-02; not while hidden, when only Students shows). */}
+          {hasRegistrations && (
+            <CountCards
+              cards={cards}
+              selected={shownFilter}
+              onSelect={setFilter}
+              showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
+              showAllLabel={T.SHOW_ALL}
+              note={!hidden && counts.flagged > 0 ? T.duplicatesLeftOut(counts.flagged) : null}
+            />
+          )}
 
           {classes.length === 0 ? (
             <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>

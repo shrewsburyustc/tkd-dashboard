@@ -136,13 +136,18 @@ begin
      or to_regprocedure('public.testing_lock_payment(uuid)') is null
      or to_regprocedure('public.testing_purge_old_signatures()') is null
      or to_regprocedure('public.testing_rank_testing_for(uuid)') is null
-     or to_regprocedure('public.testing_mark_paid(uuid, integer)') is null
+     -- the old one-click Mark paid, OR (after 0035 removed it) this file's own
+     -- replacement: a re-run after 0035 is accepted (0035 needs 0030, so
+     -- the replacement is there exactly then)
+     or (to_regprocedure('public.testing_mark_paid(uuid, integer)') is null
+         and to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is null)
      or to_regprocedure('public.testing_undo_payment(uuid)') is null
      or to_regprocedure('public.testing_edit_payment(uuid, text, integer, date)') is null
      or to_regprocedure('public.testing_private_lock(uuid)') is null
      or to_regprocedure('public.testing_private_lock_payment(uuid)') is null
      or to_regprocedure('public.testing_private_amount_due(uuid)') is null
-     or to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is null
+     or (to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is null
+         and to_regprocedure('public.testing_private_mark_paid_by(uuid, integer, text, integer)') is null)
      or to_regprocedure('public.testing_private_undo_payment(uuid)') is null
      or to_regprocedure('public.testing_private_edit_payment(uuid, text, integer, date)') is null
      or to_regprocedure('public.testing_move_to_private(uuid, integer, date, time)') is null

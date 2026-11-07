@@ -1,0 +1,38 @@
+{
+  "title": "Pass 2 · L-02 — the event roster follows the room beside the panel",
+  "subtitle": "Rulebook v1.053 (you chose “A: room beside panel”) and v1.130 (“B: shared code”). Today the roster picks its columns from the window's width, but the left panel takes 72 px (Standard) or 96 px (Largest) of it, so in a narrow tablet window the columns get less room than they were drawn for and text lands on text (“Cash” printed over “LT White →”). Dashboard core's shared code now measures the room beside the panel. The roster asks whether the room is under its own limit — I measured it: <b>648 px</b> (with the sample event's longest names, the columns first collide at 636 px with a mouse and at 611 px with touch) — and below it draws the same stacked rows phones already show. Pictures: 683 wide with a mouse and 700 wide on touch, each with the Standard and the Largest panel. Dialogs, ⋯ menus and everything outside the roster keep following the window. Real screenshots of the preview (fake data); the After column is the real code, not a drawing.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "row": [
+          { "src": "l02-683m-std-today.png", "shotWidth": 683, "crop": [72, 290, 611, 420], "scale": 0.7, "caption": "683 wide, mouse, Standard panel (room 611): “Cash”, “Check” printed over the belts.", "marks": [[185, 410, 140, 270]] },
+          { "src": "l02-683m-lg-today.png", "shotWidth": 683, "crop": [72, 270, 611, 440], "scale": 0.7, "caption": "683 wide, mouse, Largest panel (room 587).", "marks": [[195, 370, 130, 190]] }
+        ] },
+        { "row": [
+          { "src": "l02-700t-std-today.png", "shotWidth": 700, "crop": [72, 440, 628, 400], "scale": 0.7, "caption": "700 wide, touch, Standard (room 628): the columns touch.", "marks": [[195, 545, 150, 175]] },
+          { "src": "l02-700t-lg-today.png", "shotWidth": 700, "crop": [72, 440, 628, 400], "scale": 0.7, "caption": "700 wide, touch, Largest (room 604).", "marks": [[207, 545, 150, 175]] }
+        ] },
+        { "src": "l02-820t-ga-today.png", "shotWidth": 820, "crop": [96, 840, 700, 130], "scale": 0.9, "caption": "820 wide, touch, Standard (room 748, enough room): the “Moved to private testing, Tue, Dec 1” tag runs over “Orange” — text on text even here.", "marks": [[108, 925, 215, 30]] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "row": [
+          { "src": "l02-683m-std-after.png", "shotWidth": 683, "crop": [72, 120, 611, 520], "scale": 0.7, "caption": "683, mouse, Standard (room 611 is under 648): the stacked rows phones show.", "marks": [[98, 178, 558, 92]] },
+          { "src": "l02-683m-lg-after.png", "shotWidth": 683, "crop": [72, 120, 611, 520], "scale": 0.7, "caption": "683, mouse, Largest (room 587): the same.", "marks": [[122, 178, 536, 92]] }
+        ] },
+        { "row": [
+          { "src": "l02-700t-std-after.png", "shotWidth": 700, "crop": [72, 270, 628, 540], "scale": 0.7, "caption": "700, touch, Standard (room 628 is under 648): stacked rows.", "marks": [[97, 330, 580, 105]] },
+          { "src": "l02-700t-lg-after.png", "shotWidth": 700, "crop": [72, 270, 628, 540], "scale": 0.7, "caption": "700, touch, Largest (room 604).", "marks": [[121, 330, 556, 105]] }
+        ] },
+        { "src": "l02-820t-ga-after.png", "shotWidth": 820, "crop": [96, 840, 700, 140], "scale": 0.9, "caption": "820, touch, Standard (room 748 is enough, so the tablet columns stay): the tag wraps inside the Student column.", "marks": [[108, 929, 140, 42]] }
+      ]
+    }
+  ],
+  "footer": "<b>One small addition you didn't ask for:</b> measuring found that the “Moved to private testing, Tue, Dec 1” tag (a removed student who moved to private testing) ran over the next column at every tablet width, even 820. In the After it wraps inside its own column; a rank name too long for its column (a long rank like “Bo Dan - 1 Big Stripe”) wraps beside its belt too. Nothing else changes: 1280, 820 with enough room, 390 and 320 look as today. The limit (648 px) is a number in the code that is easy to change if the names grow."
+}

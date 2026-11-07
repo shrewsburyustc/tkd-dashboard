@@ -29,6 +29,7 @@ import {
   RECEIPT_SCHOOL,
   RECEIPT_REFERENCE,
   RECEIPT_FOR_FEE,
+  receiptCancelledOn,
   monthDayYear,
   weekdayMonthDay,
   timeLabel,
@@ -70,8 +71,11 @@ function studentValue(firstName, lastName, fromName, toName) {
 //   firstName, lastName       the student
 //   rankName, testingForName  "White", "Yellow" (testingForName null = no new rank)
 //   event                     { name, testingDate } — an event registration
-//   privateTesting            { privateOn 'YYYY-MM-DD', privateTime 'HH:MM', movedFromEventName|null }
-//                             — a private testing (give event OR privateTesting)
+//   privateTesting            { privateOn 'YYYY-MM-DD', privateTime 'HH:MM', movedFromEventName|null,
+//                               cancelledAt: timestamp|null } — a private testing (give event OR
+//                             privateTesting). Cancelled (v0.429): it owes nothing more, so Total due
+//                             is what was paid (Balance "$0 · paid in full") and its line ends
+//                             "· cancelled Nov 6".
 //   className                 "White"; classStart / classEnd 'HH:MM' add the time (event only)
 //   locationCode              'worcester' | 'shrewsbury'
 //   reference                 'CB-3104', or null (left out)
@@ -99,9 +103,10 @@ export function buildColorBeltReceipt({
   printedByName = null,
 }) {
   const facts = [[RECEIPT_STUDENT, studentValue(firstName, lastName, rankName, testingForName)]];
+  const cancelled = Boolean(privateTesting?.cancelledAt);
   if (privateTesting) {
     const when = [weekdayMonthDay(privateTesting.privateOn), timeLabel(privateTesting.privateTime)].filter(Boolean).join(', ');
-    facts.push([RECEIPT_PRIVATE, when]);
+    facts.push([RECEIPT_PRIVATE, cancelled ? `${when} · ${receiptCancelledOn(privateTesting.cancelledAt)}` : when]);
     // v0.421 Q A: a private testing moved from an event names the event (explains a payment dated
     // before the private testing existed). One added at the desk has no such line.
     if (privateTesting.movedFromEventName) facts.push([RECEIPT_MOVED_FROM, privateTesting.movedFromEventName]);
@@ -115,12 +120,15 @@ export function buildColorBeltReceipt({
 
   const standing = standingPayments(payments);
   const lines = standing.map((p) => ({ date: p.paidOn, forText: RECEIPT_FOR_FEE, how: p.method, amountCents: p.amountCents }));
+  const paidCents = standing.reduce((sum, p) => sum + p.amountCents, 0);
   return {
     kindLine: RECEIPT_KIND,
     facts,
     lines,
-    totalDueCents: totalDueCents ?? 0,
-    paidCents: standing.reduce((sum, p) => sum + p.amountCents, 0),
+    // A cancelled private testing owes nothing more (v0.429): Total due = what was paid — never more
+    // than the price, so one paid above its price still shows the overpayment, as before.
+    totalDueCents: cancelled ? Math.min(totalDueCents ?? 0, paidCents) : (totalDueCents ?? 0),
+    paidCents,
     balanceNote: null,
     schools: (schools ?? []).map((s) => ({ name: s.name, street: s.address?.street ?? '', phone: s.phone ?? '' })),
     printedOn,

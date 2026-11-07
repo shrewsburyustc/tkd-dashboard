@@ -1,0 +1,32 @@
+{
+  "title": "Pass 1 · R4-06 — the family pages’ bold amounts go from weight 600 to 500",
+  "subtitle": "Rule v1.051 (4) (you: “Yes approved go ahead”): §7 allows text weights 400 and 500 on screen; three rules in Color Belt’s family-page stylesheet (register.css) still use 600 — the fee amount, the bold start of the late-price warning, and the total. Three family pages load that stylesheet: Color Belt’s (fee and warning on the details step; the total after sending), Camps’ (its family total on the check step) and Star’s (none of the three today, so nothing changes there). Before building, the rule asks for this picture of the pages before and after, at 1280 and 390. Close-ups (enlarged) so the weight can be seen; the After is drawn on top of the real preview pages.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today (600)",
+      "tone": "today",
+      "items": [
+        { "src": "r406-pc-cb-today.png", "crop": [392, 494, 500, 120], "scale": 1.4, "caption": "Color Belt, PC 1280: “$65” and “$75 if paid on the testing day.”", "marks": [[404, 530, 46, 34], [428, 584, 180, 18]] },
+        { "src": "r406-pc-camp-today.png", "crop": [380, 376, 520, 54], "scale": 1.4, "caption": "Camps, PC 1280: the family total “$140”.", "marks": [[833, 388, 56, 32]] },
+        { "row": [
+          { "src": "r406-w390-cb-today.png", "shotWidth": 390, "crop": [30, 476, 330, 168], "scale": 1.1, "caption": "Color Belt, phone 390.", "marks": [[44, 512, 48, 32], [68, 596, 180, 18]] },
+          { "src": "r406-w390-camp-today.png", "shotWidth": 390, "crop": [24, 400, 342, 50], "scale": 1.1, "caption": "Camps, phone 390.", "marks": [[302, 410, 58, 32]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After (500)",
+      "tone": "after",
+      "items": [
+        { "src": "r406-pc-cb-after.png", "crop": [392, 494, 500, 120], "scale": 1.4, "caption": "Color Belt, PC 1280: the same words at weight 500.", "marks": [[404, 530, 46, 34], [428, 584, 180, 18]] },
+        { "src": "r406-pc-camp-after.png", "crop": [380, 376, 520, 54], "scale": 1.4, "caption": "Camps, PC 1280.", "marks": [[833, 388, 56, 32]] },
+        { "row": [
+          { "src": "r406-w390-cb-after.png", "shotWidth": 390, "crop": [30, 476, 330, 168], "scale": 1.1, "caption": "Color Belt, phone 390.", "marks": [[44, 512, 48, 32], [68, 596, 180, 18]] },
+          { "src": "r406-w390-camp-after.png", "shotWidth": 390, "crop": [24, 400, 342, 50], "scale": 1.1, "caption": "Camps, phone 390.", "marks": [[302, 410, 58, 32]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "Only these three rules change (register.css). Sizes, colors and everything else on the pages stay as they are. Color Belt’s total after sending (“Registered” page) uses the same rule as Camps’ total, so it changes the same way. Camps changes nothing of its own for this (its own R4-06 changes only camp.css)."
+}

@@ -17,6 +17,8 @@ import * as SHARED from '../../components/text.js';
 import * as TESTING from '../../screens/testing/text.js';
 import * as STAFF from '../../screens/staff/text.js';
 import * as SETTINGS from '../../screens/settings/text.js';
+import * as FORMS from '../../screens/forms/text.js';
+import { shortDate } from '../calendarDates.js';
 import * as LIVE_NEW from '../useLiveLoad.js';
 import * as LIVE_OLD from '../../screens/testing/events/useLiveLoad.js';
 import * as CONNECTION from '../connection.js';
@@ -145,6 +147,15 @@ await check('Date signed words (v0.522): the shared file has them, New students\
   const FORMS = await import('../../screens/forms/text.js');
   assert.equal(FORMS.DATE_SIGNED, SHARED.DATE_SIGNED);
   assert.equal(FORMS.DATE_SIGNED_HINT, SHARED.DATE_SIGNED_HINT);
+});
+
+// ======================= L-08 — "Date signed" under a signature (rulebook v0.638, v0.430) =======================
+
+await check('L-08 day: the box shows the school day as "Fri, Nov 6, 2026" (what DateSigned.jsx draws)', () => {
+  assert.equal(shortDate('2026-11-06'), 'Fri, Nov 6, 2026');
+  assert.equal(shortDate('2027-01-01'), 'Fri, Jan 1, 2027');
+  assert.equal(shortDate('2026-12-31'), 'Thu, Dec 31, 2026');
+  assert.equal(shortDate(''), ''); // nothing yet: an empty box, never "undefined"
 });
 
 // ======================= M10 — the moved helpers =======================
