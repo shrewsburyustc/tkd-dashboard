@@ -420,10 +420,7 @@
 //       on its own database in the production order (0025's order, then
 //       0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041,
 //       0042, 0043, 0039, 0037, then Color Belt's 0035 and 0044 and Star's
-//       0038 - the real files when they are on this branch; Star's 0038 may
-//       also come from the file the environment variable TKD_MIGRATION_0038
-//       names (a copy taken with git show from Star's branch); with neither,
-//       the stand-in fixtures/0047_standin_star_school.sql): the five functions are
+//       0038, the real files): the five functions are
 //       the live text before; the guard refuses a changed function; only
 //       those five functions' fingerprint lines move in every fingerprints
 //       file; 0047's tests and the Finance / camps tests after it; re-run
@@ -666,6 +663,7 @@ const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStep0044 = process.argv.includes('--only-step0044');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
 const onlyStep0037 = process.argv.includes('--only-step0037');
+const onlyStep0038 = process.argv.includes('--only-step0038');
 const onlyStep0047 = process.argv.includes('--only-step0047');
 
 // Fixed ids for the two pretend logins (any uuid works).
@@ -1016,6 +1014,15 @@ async function main() {
     }
     return finish();
   }
+  // --only-step0038: just Star's design-review database step (0038)
+  if (onlyStep0038) {
+    const prints38 = await step0038();
+    if (prints38) {
+      console.log('\n0038 fingerprints (kind  item  detail):');
+      for (const line of prints38) console.log('  ' + line);
+    }
+    return finish();
+  }
   // --only-stepFinanceCampRefunds: just Finance's camp refund check (R1-05)
   if (onlyStepFinanceCampRefunds) {
     await stepFinanceCampRefunds();
@@ -1325,6 +1332,13 @@ async function main() {
   if (after37) {
     console.log('\n0037 fingerprints (kind  item  detail):');
     for (const line of after37) console.log('  ' + line);
+  }
+  // step0038: Star design-review database fixes (its own database, production order: pasted after 0037)
+  console.log('\nMigration 0038 (Star: one-step Edit event Undo, payments at the desk school, the form\'s own Paying by, belt order):');
+  const after38 = after5 ? await step0038() : null;
+  if (after38) {
+    console.log('\n0038 fingerprints (kind  item  detail):');
+    for (const line of after38) console.log('  ' + line);
   }
   // step0047: Finance Batch A - the stored payment school + was_school (its own database, production order: pasted after 0038 and 0044)
   console.log('\nMigration 0047 (Finance: payment lines count at the school stored on the payment, was_school):');
@@ -9079,6 +9093,370 @@ async function step0041() {
 }
 
 // =====================================================================
+// step0038: Star design-review database fixes (0038, rulebook v1.035 /
+// v1.040 R1-01, R1-02, R2-02, S-1 v1.047)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034, 0036, 0041, 0042, 0043, 0039 and 0037 - the
+// order they were pasted; each only if its file is on this branch):
+//   a. 0038_fingerprints.sql and 0038_preapply_check.sql are
+//      connector-safe (no "delete" / "drop"); data made BEFORE 0038 the
+//      live app's way (5-input Record payment and Record refund by name):
+//        - a form sign-up whose Paying by was later changed at the desk
+//          (its history insert row names the form's own choice),
+//        - a form sign-up with NO history insert row,
+//        - a desk candidate (has an insert row, but is not a form sign-up),
+//        - payments (one undone, one refund) at the candidate's school
+//      The pre-apply check (SETUP 0038a) answers 0 / 2 / 0 / 7 / 7 / 0 / 0 / 0
+//   b. the Star and Finance tests pass BEFORE 0038 (the baseline)
+//   c. apply 0038: in every other fingerprint file ONLY the planned lines
+//      move; the backfill: the first form sign-up gets its insert row's
+//      choice, the other two stay empty (never today's Paying by), every
+//      payment takes its candidate's school; nothing else about any row
+//      changed and no history row or version moved. The pre-apply check
+//      answers 3 / 0 / 3 / 7 / 0 / 9 / 0 / 0
+//   d. 0038_tests.sql, then the baseline tests again (Finance's too: they
+//      insert star payments directly, which the guard now fills in)
+//   e. 0038 applied a SECOND time: no fingerprint, row or history change
+//   f. the Undo of SETUP.md 0038f (supabase/manual/0038u_undo_star_design_review.sql):
+//        - with a payment at another school than its candidate's planted
+//          (a transaction rolled back afterwards) - and again with a
+//          payment that changed a Paying by - the pre-apply check counts it
+//          and the undo refuses, changing nothing
+//        - on the clean database: every fingerprint file equals the one
+//          before 0038; the pre-apply check answers as before; the data is
+//          as before; the baseline tests pass; a second undo changes
+//          nothing; then 0038 again -> the tested fingerprints,
+//          0038_tests.sql passes
+// Run only this step with   node run.mjs --only-step0038
+// =====================================================================
+async function step0038() {
+  const L = '[0038] ';
+  const preSql = read('tests', '0038_preapply_check.sql');
+  const migration = read('migrations', '0038_star_design_review.sql');
+  const unsafe = [['tests', '0038_fingerprints.sql'], ['tests', '0038_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0038_fingerprints.sql and 0038_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  const order = [['0027', '0027_camps_edit_guard.sql'], ['0026', '0026_finance_black_belt.sql'], ['0028', '0028_star_start_times.sql'],
+    ['0029', '0029_finance_reminder_5min.sql'], ['0031', '0031_class_ages.sql'], ['0030', '0030_color_belt_review.sql'],
+    ['0032', '0032_black_belt_review.sql'], ['0033', '0033_camps_design_review.sql'], ['0034', '0034_black_belt_history_ids.sql'],
+    ['0036', '0036_new_students_profile.sql'], ['0041', '0041_star_end_time.sql'], ['0042', '0042_forms_copy_to_school.sql'],
+    ['0043', '0043_camps_fill_in.sql'], ['0039', '0039_camps_record_refund.sql'], ['0037', '0037_finance_export_private.sql']];
+  const applied = [];
+  for (const [n, file] of order) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${n}`, read('migrations', file)))) return null;
+    applied.push(n);
+  }
+
+  // One block of plpgsql as a pretend signed-in user (a fresh unlocked session); `body` runs as role authenticated
+  const asUser38 = (uid, body) => `
+    do $$
+    declare
+      v_s uuid := gen_random_uuid();
+      v_r jsonb;
+      v_today date := public.testing_today();   -- read as postgres, before the role switch
+    begin
+      insert into auth.sessions (id, user_id) values (v_s, '${uid}');
+      insert into public.session_unlock (session_id, staff_id, unlocked_until) values (v_s, '${uid}', now() + interval '30 minutes');
+      perform set_config('request.jwt.claims', jsonb_build_object('sub', '${uid}', 'role', 'authenticated', 'session_id', v_s,
+        'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60)))::text, true);
+      set local role authenticated;
+      ${body}
+      reset role;
+      perform set_config('request.jwt.claims', '', true);
+    end
+    $$;`;
+
+  // a. data made BEFORE 0038, the live app's way
+  const seed38 = `
+    ${asUser38(ADMIN_UID, `
+      v_r := public.star_add_event(p_name => 'zz before 0038', p_testing_date => v_today + 20, p_start_time => '10:00',
+                                   p_where_code => 'worcester', p_registration_open => false, p_auto_close_on => null, p_note => null);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'event before 0038: %', v_r; end if;`)}
+@@SPLIT@@    ${asUser38(DESK_UID, `
+      v_r := public.star_add_candidate((select e.id from public.star_events e where e.name = 'zz before 0038'),
+                                       'Dina', 'Desk', null, 'd@example.com', 'worcester', 1, 0, 'cash');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'desk candidate: %', v_r; end if;
+      v_r := public.star_add_candidate((select e.id from public.star_events e where e.name = 'zz before 0038'),
+                                       'Sue', 'Shrews', null, 's@example.com', 'shrewsbury', 1, 0, 'card');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'desk candidate 2: %', v_r; end if;
+      v_r := public.star_add_candidate((select e.id from public.star_events e where e.name = 'zz before 0038'),
+                                       'Rae', 'Refund', null, 'r@example.com', 'worcester', 1, 0, 'cash');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'desk candidate 3: %', v_r; end if;`)}
+@@SPLIT@@    -- form sign-ups, as star_public_register_core writes them (straight into the table, as postgres): one with its
+    -- history insert row, one with the history trigger off (so no insert row exists)
+    insert into public.star_candidates (event_id, first_name, last_name, location_code, dan, stars_from, paying_by, source, reference,
+                                        created_by_name, updated_by_name)
+      select e.id, 'Fay', 'Formone', 'worcester', 1, 0, 'cash', 'form', 'ST-' || nextval('public.star_candidate_ref_seq'), '', ''
+        from public.star_events e where e.name = 'zz before 0038';
+    alter table public.star_candidates disable trigger star_candidates_log;
+    insert into public.star_candidates (event_id, first_name, last_name, location_code, dan, stars_from, paying_by, source, reference,
+                                        created_by_name, updated_by_name)
+      select e.id, 'Flo', 'Formtwo', 'shrewsbury', 1, 0, 'check', 'form', 'ST-' || nextval('public.star_candidate_ref_seq'), '', ''
+        from public.star_events e where e.name = 'zz before 0038';
+    alter table public.star_candidates enable trigger star_candidates_log;
+@@SPLIT@@    ${asUser38(DESK_UID, `
+      -- Fay changes how she'll pay at the desk (cash -> card), then pays by card; Sue pays, is undone, pays again; Rae overpays
+      v_r := public.star_change_paying_by((select c.id from public.star_candidates c where c.last_name = 'Formone'),
+                                          (select c.version from public.star_candidates c where c.last_name = 'Formone'), 'card');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'change paying by: %', v_r; end if;
+      v_r := public.star_record_payment(p_candidate_id => (select c.id from public.star_candidates c where c.last_name = 'Formone'),
+                                        p_expected_version => (select c.version from public.star_candidates c where c.last_name = 'Formone'),
+                                        p_method => 'card', p_amount_cents => 14000, p_paid_on => v_today);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'pay Fay: %', v_r; end if;
+      v_r := public.star_record_payment(p_candidate_id => (select c.id from public.star_candidates c where c.last_name = 'Shrews'),
+                                        p_expected_version => (select c.version from public.star_candidates c where c.last_name = 'Shrews'),
+                                        p_method => 'card', p_amount_cents => 14000, p_paid_on => v_today);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'pay Sue: %', v_r; end if;
+      v_r := public.star_undo_payment((select p.id from public.star_payments p
+                                         join public.star_candidates c on c.id = p.candidate_id where c.last_name = 'Shrews'));
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'undo Sue: %', v_r; end if;
+      v_r := public.star_record_payment((select c.id from public.star_candidates c where c.last_name = 'Shrews'),
+                                        (select c.version from public.star_candidates c where c.last_name = 'Shrews'),
+                                        'cash', 14000, v_today);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'pay Sue again: %', v_r; end if;
+      v_r := public.star_record_payment((select c.id from public.star_candidates c where c.last_name = 'Refund'),
+                                        (select c.version from public.star_candidates c where c.last_name = 'Refund'),
+                                        'cash', 20000, v_today);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'overpay Rae: %', v_r; end if;`)}
+@@SPLIT@@    ${asUser38(ADMIN_UID, `
+      v_r := public.star_record_refund(p_candidate_id => (select c.id from public.star_candidates c where c.last_name = 'Refund'),
+                                       p_expected_version => (select c.version from public.star_candidates c where c.last_name = 'Refund'),
+                                       p_method => 'cash', p_amount_cents => 1000, p_refunded_on => v_today);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'refund Rae: %', v_r; end if;`)}
+  `;
+  let seedN = 0;
+  for (const piece of seed38.split('@@SPLIT@@')) {
+    seedN += 1;
+    if (!(await run(db, `${L}data before 0038, part ${seedN} (the live app's calls: 5-input Record payment and refund by name)`, piece))) return null;
+  }
+  // the data as one md5 WITHOUT the new columns (so it compares across 0038 and its undo), and the history size
+  const dataSql = `select md5(
+       coalesce((select string_agg((to_jsonb(c) - 'paying_by_on_form')::text, ',' order by c.id) from public.star_candidates c), '')
+    || coalesce((select string_agg((to_jsonb(p) - 'school' - 'paying_by_before')::text, ',' order by p.id) from public.star_payments p), '')
+    || coalesce((select string_agg(to_jsonb(e)::text, ',' order by e.id) from public.star_events e), '')
+    || (select count(*) from public.change_log)::text)`;
+  // everything including the new columns (for the re-run)
+  const dataAllSql = `select md5(
+       coalesce((select string_agg(to_jsonb(c)::text, ',' order by c.id) from public.star_candidates c), '')
+    || coalesce((select string_agg(to_jsonb(p)::text, ',' order by p.id) from public.star_payments p), '')
+    || (select count(*) from public.change_log)::text)`;
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const answer = (r) => r ? [r.new_columns, r.old_signatures, r.new_signatures, r.replaced_found, r.replaced_as_tested,
+    r.applied_as_tested, r.payments_elsewhere, r.payments_with_way].join(' / ') : 'none';
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0038: 0 / 2 / 0 / 7 / 7 / 0 / 0 / 0 (nothing of 0038, the seven functions as tested)`,
+    answer(ready) === '0 / 2 / 0 / 7 / 7 / 0 / 0 / 0', answer(ready));
+
+  // b. the baseline tests (Star's, and Finance's, which insert Star payments directly)
+  const baseline = [['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0023_tests.sql', 'ALL 0023 TESTS PASSED'],
+    ['0028_tests.sql', 'ALL 0028 TESTS PASSED'], ['0041_tests.sql', 'ALL 0041 TESTS PASSED'],
+    ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+    ['0026_tests.sql', 'ALL 0026 TESTS PASSED']]
+    .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file)));
+  const tests = async (label, files) => {
+    // under production's rule for new functions (see runTestFileLive): a test helper must be granted to be called as authenticated
+    for (const [file, ok] of files) await runTestFileLive(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0038', baseline);
+
+  // c. apply 0038: only the planned lines move
+  const numbers = [...NUMBERS_0025, ...applied, '0038']
+    .filter((n, i, all) => all.indexOf(n) === i && existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0038');
+  const before = await printsOf(db, numbers);
+  const dataBefore = await one(db, dataSql);
+  const rowsBefore = await db.query(`select (select count(*) from public.star_candidates)::int as c, (select count(*) from public.star_payments)::int as p`);
+  if (!(await run(db, `${L}apply 0038_star_design_review.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  // DEBUG: show what moved (replaced by the planned-line check below once it is known)
+  const diffs = {};
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (gone.length || added.length) diffs[n] = { gone, added };
+  }
+  if (process.env.TKD_DEBUG_0038) console.log(JSON.stringify(diffs, null, 1));
+  step0038Moves(diffs, record, L);
+
+  const prints38 = after['0038_fingerprints.sql'];
+  record(`${L}0038 fingerprints: ${prints38.length} rows`, prints38.length === 9 + 3 + 3 + 1 + 1, String(prints38.length));
+  const applied1 = await pre();
+  record(`${L}[pre-apply check] after 0038: 3 / 0 / 3 / 7 / 0 / 9 / 0 / 0`, answer(applied1) === '3 / 0 / 3 / 7 / 0 / 9 / 0 / 0', answer(applied1));
+
+  // the backfill
+  const eqs = await db.query(`select c.last_name, c.paying_by, c.paying_by_on_form, c.source from public.star_candidates c
+                               where c.event_id = (select e.id from public.star_events e where e.name = 'zz before 0038')
+                               order by c.last_name collate "C"`);
+  const eqText = eqs.rows.map((r) => `${r.last_name}:${r.source}:${r.paying_by}/${r.paying_by_on_form ?? '-'}`).join(' ');
+  record(`${L}backfill: the form sign-up whose Paying by was changed gets its insert row's choice (cash); the one with no insert row, and every desk candidate, stay empty`,
+    eqText === 'Desk:desk:cash/- Formone:form:card/cash Formtwo:form:check/- Refund:desk:cash/- Shrews:desk:card/-', eqText);
+  const bad = await one(db, `select count(*)::int from public.star_payments p join public.star_candidates c on c.id = p.candidate_id
+                              where p.school is distinct from c.location_code`);
+  const pays = await one(db, 'select count(*)::int from public.star_payments');
+  record(`${L}backfill: every payment (${pays}, reversals and the refund included) took its candidate's school; none empty`,
+    bad === 0 && pays >= 5, `${bad} differ of ${pays}`);
+  const rowsAfter = await db.query(`select (select count(*) from public.star_candidates)::int as c, (select count(*) from public.star_payments)::int as p`);
+  record(`${L}0038 wrote nothing else: the same candidates and payments, the data identical apart from the new columns, no history row, no version moved`,
+    dataBefore === (await one(db, dataSql)) && JSON.stringify(rowsBefore.rows) === JSON.stringify(rowsAfter.rows));
+  record(`${L}the triggers the backfill switched off are on again (guard, log, before_write, rules)`,
+    (await one(db, `select count(*)::int from pg_trigger t where t.tgname in ('star_payments_guard', 'star_payments_log', 'star_candidates_before_write',
+        'star_candidates_rules', 'star_candidates_log', 'star_candidates_before_form_choice') and t.tgenabled = 'O'`)) === 6);
+
+  // d. the tests; the live app's calls (by name, without p_school) still work
+  await tests('after 0038', [['0038_tests.sql', 'ALL 0038 TESTS PASSED'], ...baseline]);
+
+  // e. re-run safety
+  const dataAfter = await one(db, dataAllSql);
+  await run(db, `${L}apply 0038 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0038 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, dataAllSql)) === dataAfter, movedAgain.join(', '));
+
+  // f. Undo 0038, as SETUP.md 0038f has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0038f\. Undo 0038/m);
+  const undoFile = 'manual/0038u_undo_star_design_review.sql';
+  const undoSql = read('manual', '0038u_undo_star_design_review.sql');
+  if (at < 0 || !setup.slice(at, at + 2500).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0038] SETUP.md has "### 0038f. Undo 0038" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else {
+    // f1. a payment that blocks the undo; the undo file runs without its own begin / commit inside a transaction that is rolled back
+    const inner = undoSql.replace(/\r\n/g, '\n').replace(/^begin;$/m, '').replace(/^commit;$/m, '');
+    const plants = [
+      ['a payment at another school than its candidate\'s', `insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_by_name, school)
+         select c.id, 'payment', 100, 'cash', public.testing_today(), 'plant', 'shrewsbury' from public.star_candidates c where c.last_name = 'Desk'`,
+        { payments_elsewhere: 1, payments_with_way: 0 }, '1 payment(s) were taken at another school'],
+      ['a payment that also changed a Paying by', `insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_by_name, school, paying_by_before)
+         select c.id, 'payment', 100, 'card', public.testing_today(), 'plant', 'worcester', 'cash' from public.star_candidates c where c.last_name = 'Desk'`,
+        { payments_elsewhere: 0, payments_with_way: 1 }, '1 payment(s) also changed a Paying by'],
+    ];
+    for (const [what, plantSql, expect, message] of plants) {
+      let counted = null;
+      let refusal = '';
+      try {
+        await db.exec('begin;');
+        await db.exec(plantSql);
+        counted = await pre();
+        try {
+          await db.exec(inner);
+        } catch (error) {
+          refusal = error.message;
+        }
+      } catch (error) {
+        counted = { error: error.message };
+      } finally {
+        await db.exec('rollback;').catch(() => {});
+      }
+      record(`${L}[undo 0038] ${what}: the pre-apply check counts it`,
+        counted?.payments_elsewhere === expect.payments_elsewhere && counted?.payments_with_way === expect.payments_with_way, JSON.stringify(counted));
+      record(`${L}[undo 0038] ... and the undo file refuses ("0038 undo refused: ${message}")`,
+        refusal.includes('0038 undo refused:') && refusal.includes(message), refusal || 'no error');
+    }
+    const rolledBack = await pre();
+    record(`${L}[undo 0038] the planted payments were rolled back, 0038 is still applied`,
+      answer(rolledBack) === answer(applied1), answer(rolledBack));
+
+    // f2. the undo on the clean database
+    if (await run(db, `${L}[undo 0038] paste ${undoFile}`, undoSql)) {
+      const undone = await printsOf(db, numbers);
+      const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+      record(`${L}[undo 0038] every fingerprint file equals the one before 0038 (0038's own file lists the older functions again)`,
+        back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+      const undonePre = await pre();
+      record(`${L}[undo 0038] the pre-apply check answers as before 0038 (0 / 2 / 0 / 7 / 7 / 0 / 0 / 0)`,
+        answer(undonePre) === answer(ready), answer(undonePre));
+      record(`${L}[undo 0038] none of the three columns, the rules or the trigger is left; the data and the history are as before 0038`,
+        (await one(db, `select count(*)::int from pg_attribute a where ((a.attrelid = 'public.star_payments'::regclass and a.attname in ('school', 'paying_by_before'))
+              or (a.attrelid = 'public.star_candidates'::regclass and a.attname = 'paying_by_on_form')) and not a.attisdropped`)) === 0
+          && (await one(db, `select count(*)::int from pg_constraint c where c.conname in ('star_payments_school_fk', 'star_payments_paying_by_before_check',
+              'star_candidates_paying_by_on_form_check')`)) === 0
+          && (await one(db, `select count(*)::int from pg_trigger t where t.tgname = 'star_candidates_before_form_choice'`)) === 0
+          && dataBefore === (await one(db, dataSql)));
+      await tests('after the undo', baseline);
+      await run(db, `${L}[undo 0038] paste ${undoFile} a SECOND time`, undoSql);
+      const undoneAgain = await printsOf(db, numbers);
+      record(`${L}[undo 0038] a second undo changes nothing`,
+        numbers.every((n) => JSON.stringify(undone[`${n}_fingerprints.sql`]) === JSON.stringify(undoneAgain[`${n}_fingerprints.sql`])));
+      if (await run(db, `${L}[undo 0038] apply 0038 again (redo)`, migration)) {
+        const redo = await fingerprints(db, '0038_fingerprints.sql');
+        record(`${L}[undo 0038] after the redo the 0038 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints38));
+        record(`${L}[undo 0038] after the redo the backfill gives the same answer (Formone card/cash, the others empty)`,
+          (await db.query(`select string_agg(c.last_name || ':' || coalesce(c.paying_by_on_form, '-'), ' ' order by c.last_name collate "C") as t
+                             from public.star_candidates c where c.event_id = (select e.id from public.star_events e where e.name = 'zz before 0038')`)).rows[0].t
+            === 'Desk:- Formone:cash Formtwo:- Refund:- Shrews:-');
+        await tests('after the redo', [['0038_tests.sql', 'ALL 0038 TESTS PASSED']]);
+      }
+    }
+  }
+  await db.close().catch(() => {});
+  return prints38;
+}
+
+// The planned moves in the OTHER fingerprint files (0006's and 0023's):
+// each gone line is matched with its twin; anything else is a failure.
+function step0038Moves(diffs, record, L) {
+  const parts = (line) => line.split('  ');
+  const fnName = (item) => item.slice(0, item.indexOf('('));
+  const bodyOnly = ['star_undo_payment', 'star_edit_payment', 'star_event_results', 'star_results_csv', 'star_payments_guard'];
+  const newInput = ['star_record_payment', 'star_record_refund'];
+  const wrong = [];
+  const moved = {};
+  for (const [n, { gone, added }] of Object.entries(diffs)) {
+    const matched = new Set();
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      let twin = null;
+      let note = null;
+      if (kind === 'function' && bodyOnly.includes(fnName(item))) {
+        twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+        // same line apart from the 32-character code md5
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) note = fnName(item);
+      } else if (kind === 'function' && newInput.includes(fnName(item))) {
+        twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item.replace(/\)$/, ', p_school text)'));
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) note = fnName(item);
+      } else if (kind === 'view' && item === 'star_roster') {
+        twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) note = 'star_roster';
+      } else if (kind === 'table' && (item === 'star_candidates' || item === 'star_payments')) {
+        // the table line with ONE more column right (the new column, read by signed-in staff); nothing else
+        const col = item === 'star_candidates' ? 'paying_by_on_form' : 'school';
+        const without = (d) => d.replace(/ columns=(.*)$/, (whole, cols) =>
+          ' columns=' + cols.split(',').filter((c) => c !== `${col}>authenticated:SELECT`).join(','));
+        twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+        if (twin && parts(twin)[2].includes(`${col}>authenticated:SELECT`) && !detail.includes(`${col}>`)
+            && without(parts(twin)[2]) === detail) note = item;
+      }
+      if (note) { matched.add(twin); (moved[n] ??= []).push(note); } else wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+    }
+    for (const a of added) {
+      // the one new trigger on star_candidates is listed in 0006's file
+      if (!matched.has(a) && parts(a)[0] === 'trigger' && parts(a)[1] === 'star_candidates.star_candidates_before_form_choice'
+          && parts(a)[2].endsWith('enabled=O')) { (moved[n] ??= []).push('trigger star_candidates_before_form_choice'); continue; }
+      if (!matched.has(a)) wrong.push(`${n}: added ${a}`);
+    }
+  }
+  const expected = { '0006': ['star_edit_payment', 'star_event_results', 'star_payments_guard', 'star_record_payment', 'star_record_refund',
+    'star_results_csv', 'star_undo_payment', 'star_roster', 'star_candidates', 'star_payments', 'trigger star_candidates_before_form_choice'],
+    '0023': ['star_results_csv'] };
+  for (const [n, items] of Object.entries(expected)) {
+    const got = moved[n] ?? [];
+    if (got.length !== items.length || !items.every((x) => got.includes(x))) wrong.push(`${n}: planned ${items.join(', ')} - moved ${got.join(', ') || 'nothing'}`);
+  }
+  for (const n of Object.keys(moved)) if (!expected[n]) wrong.push(`${n}: moved ${moved[n].join(', ')}`);
+  record(`${L}fingerprints: exactly the planned lines moved (0006: seven functions' code, the two new inputs, star_roster, the star_candidates and star_payments column rights, the new trigger; 0023: star_results_csv); everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || Object.keys(diffs).join(', '));
+}
+
+// =====================================================================
 const MD5_0031_DUPLICATE = '0643ad3576c681daed5e3175f41284bb';   // forms_duplicate, 0031 section 11 (the pre-apply check names it)
 const MD5_0042_COPY = '72c5c12845b75462313c8364237a403b';        // forms_copy_to_school, 0042
 
@@ -10312,8 +10690,7 @@ async function step0037() {
 // then 0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041,
 // 0042, 0043, 0039 and 0037 - each only if its file is on this branch),
 // then the school column on each payment table: Color Belt's 0035 and
-// 0044 (on main) and Star's 0038 when its file is in supabase/migrations/
-// (after that branch merges), else the stand-in fixtures/0047_standin_star_school.sql:
+// 0044 and Star's 0038 (the real files, all on main):
 //   a. 0047_fingerprints.sql is connector-safe (no "delete" / "drop")
 //   b. before 0047 the five functions are the live text (the md5s the
 //      migration's guard names)
@@ -10363,28 +10740,12 @@ async function step0047() {
     if (!(await run(db, `${L}apply ${n}`, read('migrations', file)))) return null;
     applied.push(n);
   }
-  // the school column on each payment table: Color Belt's real 0035 + 0044 (on main since 2026-11-07), then Star's
-  // real 0038 when it is on this branch, else the stand-in that adds star_payments.school
+  // the school column on each payment table: Color Belt's real 0035 and 0044 and Star's real 0038 (all on main)
   const real = (n) => readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith(`${n}_`) && f.endsWith('.sql'));
-  for (const n of ['0035', '0044']) {
-    if (!real(n)) continue;
+  for (const n of ['0035', '0044', '0038']) {
+    if (!real(n)) { record(`${L}the real ${n} file is in supabase/migrations/`, false, 'missing'); return null; }
     if (!(await run(db, `${L}apply ${n} (the real file)`, read('migrations', real(n))))) return null;
     applied.push(n);
-  }
-  // Star's 0038: from supabase/migrations/ when it is on this branch; before that from the file the environment
-  // variable TKD_MIGRATION_0038 names (a copy taken with   git show star-testing:supabase/migrations/0038_star_design_review.sql );
-  // with neither, the stand-in that adds star_payments.school. A name given but no file there is a mistake (a failure).
-  const fromEnv38 = process.env.TKD_MIGRATION_0038 || '';
-  const file38 = real('0038') ? path.join(supabaseDir, 'migrations', real('0038')) : (fromEnv38 && existsSync(fromEnv38) ? fromEnv38 : null);
-  if (fromEnv38 && !real('0038') && !file38) record(`${L}TKD_MIGRATION_0038 names a file that exists`, false, fromEnv38);
-  if (file38) {
-    console.log(`${L}0038 read from ${real('0038') ? 'this branch' : file38}`);
-    if (!(await run(db, `${L}apply 0038 (the real file)`, readFileSync(file38, 'utf8')))) return null;
-    applied.push('0038');
-  } else {
-    console.log(`${L}0038 is not on this branch and TKD_MIGRATION_0038 is not set: the stand-in fixture adds star_payments.school`);
-    if (!(await run(db, `${L}apply the stand-in for 0038 (school column on star_payments)`,
-      read('tests', 'pglite', 'fixtures', '0047_standin_star_school.sql')))) return null;
   }
   const migration = read('migrations', '0047_finance_stored_school.sql');
   const sigs = {
