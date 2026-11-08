@@ -49,6 +49,8 @@ function SamplePage({ settingsRef, toasts }) {
     let result = { status: 'error' };
     try {
       result = await fakeSave(saveMs, saveFails);
+    } catch {
+      // a save that throws counts as not reached: result stays { status: 'error' }, and the bar below says so
     } finally {
       line.end(result.status, { retry: () => withdraw(camper), token });
     }
