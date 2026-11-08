@@ -20,6 +20,8 @@ import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from
 import { addDays } from '../testing/eventRules.js';
 import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
 import * as FT from '../../screens/finance/text.js';
+import * as SHARED from '../../components/text.js';
+import { someoneElseChanged } from '../../components/text.js';
 import { parseMoney, money } from '../../screens/finance/format.js';
 
 let count = 0;
@@ -1421,6 +1423,21 @@ check('Batch A (mock): was_school on Star lines edited at another school; null w
   const exp = b.rpc('finance_export', { p_location_code: 'shrewsbury', p_from: T, p_to: T }, ADMIN_CTX).data.rows.filter((r) => r.what === 'star');
   assert.equal(exp.length, 1);
   assert.equal(exp[0].was_school, 'worcester');
+});
+
+// ======================= The shared sentences and back link (Batch B: R2-07, R3-06) =======================
+// Finance says a refused change and a failed Undo in the shared words (src/components/text.js, rulebook v1.045 (4),
+// v1.051 (2)), naming what changed; it keeps no copy of them.
+check('shared sentences: a refused change names what changed; a failed Undo is the shared sentence', () => {
+  assert.equal(FT.STALE_DAY, 'Someone else changed the day just now, so nothing was done. Their change is shown.');
+  assert.equal(FT.STALE_SETTING, 'Someone else changed the setting just now, so nothing was done. Their change is shown.');
+  assert.equal(FT.STALE_DAY, someoneElseChanged('the day'));
+  assert.equal(FT.UNDO_FAILED, "Undo didn't save. Check the connection, then retry.");
+  assert.equal(FT.UNDO_FAILED, SHARED.UNDO_DIDNT_SAVE);
+  assert.equal(FT.STALE, undefined); // the old Finance-only sentence is gone
+  // the words after an Undo that worked and "too late" stay Finance's own
+  assert.equal(FT.TOO_LATE_UNDO, 'Too late to undo here. Ask an admin to reopen the day.');
+  assert.equal(FT.CLOSE_UNDONE, 'Undone. The day is open again.');
 });
 
 console.log(`${count} groups of checks ran.`);
