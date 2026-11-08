@@ -7,7 +7,8 @@
 // After step 1, DP: the shared date picker opened from a section's own button (rulebook v0.817,
 // Finance's Daily report), which has no mockup of its own (Finance's F1 picture draws it). And L02:
 // the room beside the panel (lib/pageRoom.js, rulebook v1.053 and v1.130), a hook with no look of
-// its own, shown working in a sample window.
+// its own, shown working in a sample window. And R205: the queued Undo (lib/saveLine.js,
+// lib/toastLine.js, rulebook v1.125–v1.129) on a small sample page with fake saves.
 // Addresses: parts.html            → the list of every part and state (links)
 //            parts.html#M2/busy    → that one state on its own (dialogs open as real dialogs)
 // The state ids are the mockups' own (Mockups/shots/M#/states.json). A few extra states exist only
@@ -25,8 +26,10 @@ import { PART as M7 } from './M7.jsx';
 import { PART as M8 } from './M8.jsx';
 import { PART as DP } from './DP.jsx';
 import { PART as L02 } from './L02.jsx';
+import { PART as R205 } from './R205.jsx';
+import { PART as SH } from './SH.jsx';
 
-const PARTS = [M1, M2, M3, M4, M5, M6, M7, M8, DP, L02];
+const PARTS = [M1, M2, M3, M4, M5, M6, M7, M8, DP, L02, R205, SH];
 
 // "#M2/busy" → { part, state } (either may be missing)
 function readAddress() {
@@ -42,8 +45,8 @@ function Index() {
       <h1 className="parts-h1">Shared parts</h1>
       <p className="parts-intro">
         Dashboard core step 1: the eight shared parts approved as mockups M1–M8 (rulebook v1.102–v1.109), each in every state, with sample data. Then DP: the date
-        picker opened from a section's own button (v0.817), and L02: the room beside the panel that a roster's layout follows (v1.053, v1.130). Preview only;
-        nothing here reads or saves anything. Each link opens one state on its own.
+        picker opened from a section's own button (v0.817), L02: the room beside the panel that a roster's layout follows (v1.053, v1.130), and R205: the queued
+        Undo (v1.125–v1.129). Preview only; nothing here reads or saves anything. Each link opens one state on its own.
       </p>
       {PARTS.map((part) => (
         <section key={part.id} className="parts-part">

@@ -52,6 +52,7 @@ import { IconPrinter } from '@tabler/icons-react';
 import Dialog from './Dialog.jsx';
 import ErrorBanner from './ErrorBanner.jsx';
 import Notice from './Notice.jsx';
+import PrintPageRule from './PrintPageRule.jsx';
 import { formatMoney } from '../lib/money.js';
 import { PAYMENT_DETAILS_HIDDEN } from '../lib/privateDetails.js';
 import {
@@ -166,10 +167,13 @@ export function ReceiptSheet({ receipt, screen = false }) {
   );
 }
 
-// The printed copy: the page straight into <body>, shown only when printing (shared.css).
+// The printed copy: the page straight into <body>, shown only when printing (shared.css). It draws
+// its own unnamed @page rule (PrintPageRule), so Finance's and Testing's print margins can't change
+// it (pass 2 P-04): 0.6in top and bottom, 0.7in at the sides, as shared.css's named page says.
 export function ReceiptPrint({ receipt }) {
   return createPortal(
     <div className="rcpt-print">
+      <PrintPageRule margin="0.6in 0.7in" />
       <ReceiptSheet receipt={receipt} />
     </div>,
     document.body,

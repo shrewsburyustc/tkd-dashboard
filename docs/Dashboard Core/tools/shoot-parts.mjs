@@ -39,7 +39,7 @@ if (!base || !outArg) {
 }
 const outdir = resolve(outArg);
 const mockShots = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'Mockups', 'shots');
-const PARTS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'DP', 'L02'].filter((id) => only.length === 0 || only.includes(id));
+const PARTS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'DP', 'L02', 'R205', 'SH'].filter((id) => only.length === 0 || only.includes(id));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const LETTER = { w: 816, h: 1056 }; // 8.5 × 11 in at 96 px per inch
 

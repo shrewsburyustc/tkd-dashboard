@@ -193,8 +193,13 @@ export function useReorderDrag({ enabled, onDrop }) {
   // Leaving the page in the middle of a drag: clean up.
   useEffect(() => stop, [stop]);
 
+  // While dragging is off (a save runs, the screen is locked, the person is view-only) the grip says
+  // so: aria-disabled="true" (screen readers hear "dimmed"; it stays focusable, so its tooltip still
+  // shows), and the shared .grip[aria-disabled='true'] style grays it (pass 2 L-06, rulebook v1.116
+  // and v1.120). Every section gets this through the props, with no per-screen prop.
   const gripProps = useCallback(
     (group, id) => ({
+      ...(enabled ? {} : { 'aria-disabled': 'true' }),
       onPointerDown: (event) => {
         // Mouse (left button), finger or pen — and only when dragging is allowed right now.
         if (!enabled || event.button !== 0 || !event.isPrimary) return;
