@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Color belt testing, batch 3: three questions</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1560px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Color belt testing, batch 3: three questions</h1>
+<p class="sub">Real preview screenshots (fake data). <b>Amber</b> = the problem as it is today. The wording-only questions (Q2) are in the message, not drawn.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Q1 - Private testing list at 683 px wide with a mouse (a laptop window snapped to half the screen)</div>
+  <div class="row"><figure style="width:378.82px">
+    <div class="shot" style="width:378.82px;height:186px">
+      <img src="private-past-683.png" style="left:-44.64px;top:-235.6px;width:423.46px">
+      <div class="mark" style="left:18.32px;top:58px;width:73.1px;height:25.36px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Today at 683:</b> the gray "Cancelled Nov 6" tag runs under the belt picture (same bug the roster had; Largest panel size makes it worse).</figcaption>
+  </figure><figure style="width:312px">
+    <div class="shot" style="width:312px;height:216px">
+      <img src="private-past-390.png" style="left:0px;top:-364px;width:312px">
+      
+    </div>
+    <figcaption><b>Option A would look like this</b> (the phone layout, which already exists): one stacked row, name and tag on line 1.</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col today">
+  <div class="label">Q3 - Add student while Hide private details is on</div>
+  <figure style="width:442px">
+    <div class="shot" style="width:442px;height:510px">
+      <img src="add-student-hidden.png" style="left:-323px;top:-68px;width:1088px">
+      <div class="mark" style="left:16.4px;top:344.5px;width:152.5px;height:101.5px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Today:</b> the dialog still asks "Paying by: Cash / Check / Card" with details hidden. It asks no birthday or email.</figcaption>
+  </figure>
+  
+</div>
+</div>
+
+</body></html>

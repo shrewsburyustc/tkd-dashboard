@@ -499,7 +499,9 @@ export default function EventPage({
   // the switch-on effect above clears it; nor while nobody is registered, when there are no cards
   // to turn it off with.)
   const shownFilter = hidden || !hasRegistrations ? null : filter;
-  // (A possible duplicate is in neither filter until it's resolved, R3-02.)
+  // (A possible duplicate is in neither filter until it's resolved, R3-02.) Remember if one of them is
+  // an unpaid row here, so an empty Not paid can say so (batch 3 Q2 c).
+  const unpaidDuplicateHere = rows.some((r) => r.duplicateState === 'possible' && r.paid !== true);
   rows = rows.filter((r) => inCardFilter(r, shownFilter));
   // Removed students of the whole group, in one Removed group after the classes.
   const removedRows = group && shownFilter === null ? removed.filter(inGroup).sort(groupOrder) : [];
@@ -1767,7 +1769,7 @@ export default function EventPage({
 
   let emptyText = T.EMPTY_CLASS_ROSTER;
   if (shownFilter === 'paid') emptyText = T.NO_STUDENTS_FILTERED_PAID;
-  if (shownFilter === 'notPaid') emptyText = T.NO_STUDENTS_FILTERED_NOT_PAID;
+  if (shownFilter === 'notPaid') emptyText = unpaidDuplicateHere ? T.NO_STUDENTS_FILTERED_NOT_PAID_DUPLICATE : T.NO_STUDENTS_FILTERED_NOT_PAID;
 
   // ----- The open dialog (never while locked: it comes back after unlocking) -----
   let dialogElement = null;
@@ -2080,7 +2082,7 @@ export default function EventPage({
               onSelect={setFilter}
               showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
               showAllLabel={T.SHOW_ALL}
-              note={!hidden && counts.flagged > 0 ? T.duplicatesLeftOut(counts.flagged) : null}
+              note={!hidden && counts.flagged > 0 ? T.duplicatesLeftOut(counts.flagged, pairs.length) : null}
             />
           )}
 

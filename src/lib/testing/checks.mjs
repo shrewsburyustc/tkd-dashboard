@@ -2565,9 +2565,56 @@ check('eventRules: dateSignedOf — the summary\'s "Date signed" row, only with 
   assert.equal(CBT.stampDay('2026-10-29T21:45:00Z'), 'Oct 29');
 });
 
-check('words: the gray line while possible duplicates are left out of Paid / Not paid (pass 1 R3-02)', () => {
-  assert.equal(CBT.duplicatesLeftOut(1), "1 possible duplicate isn't counted in Paid or Not paid until it's resolved.");
+check('words: the gray line while possible duplicates are left out of Paid / Not paid (pass 1 R3-02; batch 3 Q2 b: the box\'s unit, pairs)', () => {
+  // one pair = 2 students; the box above says "1 possible duplicate", so the line counts the same unit
+  assert.equal(CBT.duplicatesLeftOut(2, 1), "1 possible duplicate (2 students) isn't counted in Paid or Not paid until it's resolved.");
+  assert.equal(CBT.duplicatesLeftOut(4, 2), "2 possible duplicates (4 students) aren't counted in Paid or Not paid until they're resolved.");
+  // a pair with one flagged row (the usual case) reads as it always did: the number in the box and the line agree
+  assert.equal(CBT.duplicatesLeftOut(1, 1), "1 possible duplicate isn't counted in Paid or Not paid until it's resolved.");
+  assert.equal(CBT.duplicatesLeftOut(2, 2), "2 possible duplicates aren't counted in Paid or Not paid until they're resolved.");
+  assert.equal(CBT.duplicatesLeftOut(3, 0), "1 possible duplicate (3 students) isn't counted in Paid or Not paid until it's resolved."); // never "0 possible duplicates"
+  assert.equal(CBT.duplicatesLeftOut(1), "1 possible duplicate isn't counted in Paid or Not paid until it's resolved."); // no pair count given: one per row
   assert.equal(CBT.duplicatesLeftOut(2), "2 possible duplicates aren't counted in Paid or Not paid until they're resolved.");
+  assert.equal(CBT.duplicateBoxLine(1), '1 possible duplicate'); // the box's own words, unchanged
+});
+
+check('words: batch 3 Q2 a and c, and the wiring of Q1 / Q2 / Q3 (Jeffrey: A to all)', () => {
+  assert.equal(CBT.NO_STUDENTS_FILTERED_NOT_PAID_DUPLICATE, "No unpaid students in this class. A possible duplicate isn't counted.");
+  assert.equal(CBT.NO_STUDENTS_FILTERED_NOT_PAID, 'Everyone in this class has paid.'); // still the line when nothing is unpaid
+  assert.equal(`${CBT.TAG_CANCELLED} · ${CBT.CANCELLED_NOTHING_PAID}`, 'Cancelled · nothing was paid');
+  const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+  // Q2 a: only a cancelled record that was never paid gets the new line; the paid branch and the plain Not paid line stay
+  const summary = read('../../screens/testing/private/PrivateSummaryDialog.jsx');
+  assert.match(summary, /if \(record\.paid\) \{[\s\S]*?\} else if \(record\.status === 'cancelled'\) \{\s+\/\/[^\n]*\n\s+payment = \(\s+<>\s+<span className="ttag">\{T\.TAG_CANCELLED\}<\/span> · \{T\.CANCELLED_NOTHING_PAID\}[\s\S]*?\} else \{\s+payment = \(\s+<>\s+<span className="ttag">\{T\.TAG_NOT_PAID\}/); // paid first, then cancelled-unpaid, then plain unpaid
+  // Q2 b + c: the event page passes pairs to the gray line and picks the empty text from an unpaid possible duplicate
+  const page = read('../../screens/testing/event/EventPage.jsx');
+  assert.match(page, /T\.duplicatesLeftOut\(counts\.flagged, pairs\.length\)/);
+  assert.match(page, /const unpaidDuplicateHere = rows\.some\(\(r\) => r\.duplicateState === 'possible' && r\.paid !== true\);\s+rows = rows\.filter/);
+  assert.match(page, /shownFilter === 'notPaid'\) emptyText = unpaidDuplicateHere \? T\.NO_STUDENTS_FILTERED_NOT_PAID_DUPLICATE : T\.NO_STUDENTS_FILTERED_NOT_PAID/);
+  // Q3: Paying by is drawn only when details are not hidden (Add student); its default 'cash' still goes with the save
+  const student = read('../../screens/testing/event/StudentDialog.jsx');
+  assert.match(student, /\{isAdd && !hidden && \(\s+<div className="field">\s+<span id=\{`\$\{idBase\}-pay-label`\}/);
+  assert.match(page, /payingBy: 'cash' \};/); // Add student starts as Cash …
+  assert.match(student, /stripes: values\.stripes, payingBy: values\.payingBy \}/); // … and the saved value is still sent, hidden or not
+});
+
+check('privateRules: PRIVATE_ROOM — the room below which the Private testing list draws its phone rows (batch 3 Q1 A)', () => {
+  // Measured 2026-11-07 with the sample list: first text-on-text overlap at 608 px of room (mouse) and 592 (touch),
+  // clean from 616 in both.
+  assert.equal(PR.PRIVATE_ROOM, 632);
+  assert.ok(PR.PRIVATE_ROOM >= 616 + 12, 'keeps a few px above the first clean room');
+  for (const [width, panel] of [[683, 72], [683, 96], [700, 96], [712, 96]]) {
+    assert.ok(width - panel < PR.PRIVATE_ROOM, `${width} wide with a ${panel} px panel draws phone rows`);
+  }
+  assert.ok(820 - 72 >= PR.PRIVATE_ROOM, '820 wide with the Standard panel keeps the tablet columns');
+  const tab = readFileSync(new URL('../../screens/testing/private/PrivateTestingTab.jsx', import.meta.url), 'utf8');
+  assert.match(tab, /const narrowRoom = usePageRoomBelow\(PRIVATE_ROOM\);\s+const listLayout = rosterLayoutFor\(layout, narrowRoom\);/);
+  assert.match(tab, /layout: listLayout,/); // the rows get the room's layout …
+  assert.doesNotMatch(tab, /isPhone[=:]\s*\{?\s*listLayout|\.\.\.listLayout/); // … the dialogs and the ⋯ menu keep the window's
+  // A layout flip closes an open ⋯ menu or Mark paid box (their button is gone), as the event roster does
+  assert.match(tab, /const listIsPhone = listLayout\.isPhone;\s+useEffect\(\(\) => \{\s+setMenu\(null\);\s+setMarkPaidBox\(null\);\s+\}, \[listIsPhone, isPhone\]\);/);
+  assert.match(tab, /isSheet=\{isPhone\}/);
+  assert.doesNotMatch(tab, /\b(?:const|let|var) PRIVATE_ROOM\b/); // no copy of the number
 });
 
 check('eventRules: canPrintReceipt — a payment that still stands, active or removed, never hidden (CB2; pass 2 M-03)', () => {
