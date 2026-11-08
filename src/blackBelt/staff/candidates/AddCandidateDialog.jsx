@@ -22,7 +22,7 @@ import { useId } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { ageOn, scheduleFor } from '../../../lib/blackBelt/rules.js';
-import Choice from '../parts/Choice.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import DateField from '../parts/DateField.jsx';
 import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
 import { addProblems, dobProblem } from './checks.js';
@@ -78,9 +78,10 @@ export default function AddCandidateDialog({ state, cycle, isPhone, hidden = fal
           <span id={`${id}-school`} className="field-label">
             {T.SCHOOL}
           </span>
-          <Choice
+          <ChoiceGroup
             labelId={`${id}-school`}
-            className={`bb-segmented--fill${messages.school ? ' is-invalid' : ''}`}
+            fill
+            invalid={Boolean(messages.school)}
             options={[
               { key: 'worcester', label: T.schoolName('worcester') },
               { key: 'shrewsbury', label: T.schoolName('shrewsbury') },
@@ -129,16 +130,16 @@ export default function AddCandidateDialog({ state, cycle, isPhone, hidden = fal
           <span id={`${id}-dan`} className="field-label">
             {T.TESTING_FOR}
           </span>
-          <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${messages.dan ? ' is-invalid' : ''}`} options={DANS.map((d) => ({ key: d, label: T.DAN_LABELS[d] }))} value={dan} readOnly={ro} onChange={(d) => onChange({ dan: d })} />
+          <ChoiceGroup labelId={`${id}-dan`} fill invalid={Boolean(messages.dan)} options={DANS.map((d) => ({ key: d, label: T.DAN_LABELS[d] }))} value={dan} readOnly={ro} onChange={(d) => onChange({ dan: d })} />
           {messages.dan && <Notice>{messages.dan}</Notice>}
         </div>
         <div className="field">
           <span id={`${id}-kuk`} className="field-label">
             {T.KUKKIWON_DAN_CERT}
           </span>
-          <Choice
+          <ChoiceGroup
             labelId={`${id}-kuk`}
-            className="bb-segmented--fill"
+            fill
             options={[
               { key: 'no', label: T.KUKKIWON_NO },
               { key: 'yes', label: T.kukkiwonYes(hidden ? null : fee) },

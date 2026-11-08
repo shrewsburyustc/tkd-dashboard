@@ -26,7 +26,7 @@
 // (historyWords.js) on made-up rows and on the preview store's own history.
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { parsePrice, priceIsValid, PRICE_MAX_CENTS, PRICE_MIN_CENTS, parseAmount, formatCents, amountInputText } from './money.js';
 import {
   cycleState, cycleTag, timeIsValid, TIME_OPTIONS, timeLabel, timeRangeLabel, dayProblems, partsWithoutDay, cycleFormProblems,
@@ -68,6 +68,9 @@ import {
 import { groupHistory, describeEntry } from '../../blackBelt/staff/candidates/historyWords.js';
 import { editValuesToSave, canRecordPayment, restoreHasUndo } from '../../blackBelt/staff/candidates/checks.js';
 import * as StaffWords from '../../blackBelt/staff/text.js'; // the Candidates words (R3-01, R3-09, R4-14 checks)
+import * as ResultsWords from '../../blackBelt/staff/results/text.js'; // the Cycles / Rubric / Results checks (pass 1 shared parts)
+import * as GradingWords from '../../blackBelt/staff/grading/text.js';
+import * as SharedWords from '../../components/text.js';
 
 let count = 0;
 function check(label, fn) {
@@ -4411,6 +4414,55 @@ check('rolling check: Not paid is amber, Find a candidate, Record payment and Re
   assert.equal(StaffWords.candidateStale('Sam Lee'), 'Someone else changed Sam Lee just now, so nothing was done. Their change is shown.');
 });
 
+await checkAsync('Candidates shared-parts switch (pass 1): shared words, queued Undo, shared Choice and Paid by — no leftover copies', async () => {
+  const Shared = await import('../../components/text.js');
+  // R2-07: the three sentences are the shared file's own (an alias, never a second copy of the words)
+  assert.equal(StaffWords.candidateStale, Shared.someoneElseChanged);
+  assert.equal(StaffWords.UNDO_FAILED, Shared.UNDO_DIDNT_SAVE);
+  assert.equal(StaffWords.TOAST_UNDONE, Shared.UNDONE);
+  assert.equal(StaffWords.LOAD_FAILED, Shared.LOAD_FAILED);
+  assert.equal(StaffWords.LOAD_FAILED, "Couldn't load. Check the connection, then retry."); // S-2
+  // a refused Undo with its own reason: "Couldn't undo: [reason]." (one closing period, from the shared helper)
+  assert.equal(StaffWords.undoWhy.paymentGone, "Couldn't undo: this payment was already undone or changed.");
+  assert.equal(StaffWords.undoWhy.hasGrades('Sam Lee'), "Couldn't undo: Sam Lee has grades, so they can't be deleted. Withdraw them instead.");
+  for (const value of Object.values(StaffWords.undoWhy)) {
+    const text = typeof value === 'function' ? value('Sam Lee') : value;
+    assert.match(text, /^Couldn't undo: .+[^.]\.$/, `"${text}" must be "Couldn't undo: reason."`);
+  }
+  // R1-07: the toasts after Record payment / Undo payment are the shared set
+  assert.equal(StaffWords.toastPaymentRecorded(33000, 'cash', 'Sam Lee'), 'Sam Lee marked paid · $330 cash');
+  assert.equal(StaffWords.toastPaymentRecorded(29050, 'card', 'Mia Chen'), 'Mia Chen marked paid · $290.50 card');
+  assert.equal(StaffWords.toastPaymentUndone('Sam Lee'), 'Payment undone for Sam Lee');
+  // R1-06: the Undo payment box reads as before, its title and "Paid on" built from the shared words
+  assert.equal(StaffWords.undoPaymentTitle('Sam Lee', 33000, 'cash'), 'Undo Sam Lee’s $330 cash payment?');
+  assert.equal(StaffWords.undoPaymentBody('2027-03-20', 'payments 1 and 2'), 'Paid on Mar 20 for payments 1 and 2. It comes off the balance; the history keeps it.');
+  assert.equal(StaffWords.undoPaymentBody('2027-03-20', ''), 'Paid on Mar 20. It comes off the balance; the history keeps it.');
+
+  // No leftover copies in the Candidates files (each source is read as text)
+  const read = (name) => readFileSync(new URL(`../../blackBelt/staff/candidates/${name}`, import.meta.url), 'utf8');
+  const files = ['AddCandidateDialog.jsx', 'CandidateDialog.jsx', 'ChangePlanDialog.jsx', 'CandidatesTab.jsx', 'MakeupPickerDialog.jsx', 'RefundDialog.jsx', 'SignatureDialog.jsx', 'UndoPaymentDialog.jsx', 'dialogParts.jsx', 'useCandidateActions.js', 'useMakeupPicker.js'];
+  for (const name of files) {
+    const source = read(name);
+    assert.ok(!/<Choice[\s\n]/.test(source) && !source.includes("parts/Choice.jsx"), `${name}: still uses Black Belt's own Choice`);
+    assert.ok(!source.includes('RefundedByBox'), `${name}: the local Refunded by copy is back`);
+    assert.ok(!source.includes('LOAD_FAILED_NO_RETRY'), `${name}: a load failure without a Retry`);
+    assert.ok(!source.includes('UNDO_STALE_CANDIDATE'), `${name}: the retired Undo sentence`);
+    assert.ok(!/Someone else changed|Couldn't undo|Couldn’t undo|Undo didn't save/.test(source.replace(/^\s*\/\/.*$/gm, '')), `${name}: a refusal sentence typed here instead of from the shared words`);
+  }
+  // R2-05: every toast Undo goes through the save line (no early-return guard, no direct onAction)
+  const actions = read('useCandidateActions.js');
+  const picker = read('useMakeupPicker.js');
+  assert.ok(actions.includes('useSaveLine') && actions.includes('saveLine.undoAction'), 'the Candidates actions use the queued Undo');
+  assert.ok(!/undoAction\(\(\) =>/.test(actions) && !actions.includes('busyRef'), 'the old Undo helper or busy flag is back');
+  assert.ok(!/label: T\.UNDO,\s*onAction/.test(actions + picker), 'a toast Undo that skips the save line');
+  assert.ok(picker.includes('saveLine.undoAction') && !picker.includes('undoBusy'), 'the make-up picker Undo uses the save line');
+  // the shared Choice and Paid by: Dan locked, School / Dan / Kukkiwon filled, Refunded by through the shared field
+  const detail = read('CandidateDialog.jsx');
+  assert.ok(/<ChoiceGroup[^>]*fill locked=\{danLocked\}/.test(detail), 'the locked Dan uses the shared locked look');
+  assert.ok(read('RefundDialog.jsx').includes('label={T.REFUNDED_BY}'), 'Record refund says "Refunded by" through the shared field');
+  assert.ok(read('dialogParts.jsx').includes('<PaidByField') && read('dialogParts.jsx').includes('label={label}'), 'the Paid by box passes its label to the shared field');
+});
+
 check('BB8 words: the preview store end to end — grade changes name the subject, a Dan change and Add make-up are one line', () => {
   loadCast();
   const spring = springCycle();
@@ -4839,7 +4891,7 @@ await (async () => {
 
     // the words (BB1, BB7, BB15, S-2)
     assert.equal(W.LOAD_FAILED, "Couldn't load. Check the connection, then retry.");
-    assert.equal(W.LOAD_FAILED_NO_RETRY, "Couldn't load. Check the connection, then try again.", 'C1: no Retry button, so no retry word');
+    assert.equal(W.LOAD_FAILED_NO_RETRY, undefined, 'S-2: every failed read has a Retry, so the no-Retry sentence is gone');
     assert.equal(W.REFUNDED_BY, 'Refunded by');
     assert.equal(W.METHOD, undefined, '"Method" is gone');
     assert.deepEqual([W.KEEP_PAYMENT, W.KEEP_REFUND, W.KEEP_MARK], ['Keep payment', 'Keep refund', 'Keep mark']);
@@ -4855,6 +4907,139 @@ await (async () => {
     throw error;
   }
 })();
+
+// ======================= Cycles, Cycle page, Rubric, Results: the shared parts (pass 1) =======================
+// R2-05 (queued Undo), R2-07 (shared refusal words), S-2 (load sentence + Retry), R3-06 (BackLink), R3-13 (past days),
+// L-06 (shared Grip), choice swap (shared ChoiceGroup), S-10 (shared Select), R4-08 (Email result's unavailable look).
+// Pure text checks on the sources and the words: no browser.
+check('Cycles, Rubric, Results: shared words, shared parts, no leftover copies', () => {
+  const root = (rel) => new URL(`../../blackBelt/staff/${rel}`, import.meta.url);
+  const source = (rel) => readFileSync(root(rel), 'utf8');
+  // the code without its comments, so a comment may still name the old thing
+  const code = (rel) => source(rel).replace(/^\s*\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+  const mine = [
+    'BlackBeltTesting.jsx',
+    'cycle/CycleDialog.jsx', 'cycle/CyclePage.jsx', 'cycle/DayDialog.jsx', 'cycle/PricesSection.jsx', 'cycle/useCycleEditor.jsx',
+    'cycles/CyclesTab.jsx', 'cycles/useCycleActions.js',
+    'grading/GradingTab.jsx',
+    'results/ResultRows.jsx', 'results/ResultsTab.jsx',
+    'rubric/ResultEmailsBlock.jsx', 'rubric/ResultTextDialog.jsx', 'rubric/RubricCard.jsx', 'rubric/RubricEditor.jsx', 'rubric/RubricTab.jsx', 'rubric/SubjectDialog.jsx',
+  ];
+
+  // the parts Black Belt used to carry itself are gone, and no file still imports them
+  assert.ok(!existsSync(root('parts/Choice.jsx')), 'parts/Choice.jsx is back');
+  assert.ok(!existsSync(root('parts/Grip.jsx')), 'parts/Grip.jsx is back');
+  for (const rel of mine) {
+    const text = code(rel);
+    assert.ok(!text.includes('parts/Choice.jsx') && !/<Choice[\s\n]/.test(text), `${rel}: still uses Black Belt's own Choice`);
+    assert.ok(!text.includes('parts/Grip.jsx'), `${rel}: still uses Black Belt's own Grip`);
+    assert.ok(!text.includes('screens/testing/events/ChoiceGroup.jsx'), `${rel}: the shared ChoiceGroup is taken from components/`);
+    assert.ok(!text.includes('LOAD_FAILED_NO_RETRY'), `${rel}: a load failure without a Retry`);
+    assert.ok(!text.includes('PAST_DATES_HINT'), `${rel}: the old "dates" hint`);
+    assert.ok(!/label: T\.UNDO,\s*onAction/.test(text), `${rel}: a toast Undo that skips the save line`);
+    assert.ok(!/<select[\s>]/.test(text), `${rel}: a browser dropdown instead of the shared Select`);
+    assert.ok(!/Someone else changed|Couldn't undo|Couldn’t undo|Undo didn't save|Undo didn’t save/.test(text), `${rel}: a refusal sentence typed here instead of from the shared words`);
+  }
+  assert.ok(!/\.bb-back(?![\w-])/.test(code('blackBelt.css')) && !code('blackBelt.css').includes('.bb-segmented'), 'blackBelt.css: .bb-back (our own back link) / .bb-segmented are unused');
+
+  // R3-06: both back links are the shared one
+  assert.ok(code('BlackBeltTesting.jsx').includes('<BackLink') && !/bb-back(?![\w-])/.test(code('BlackBeltTesting.jsx')), 'the page back link is the shared BackLink (class bb-back-link only sizes it)');
+  assert.ok(code('cycle/CyclePage.jsx').includes('<BackLink') && !/bb-back(?![\w-])/.test(code('cycle/CyclePage.jsx')), 'the cycle page back link is the shared BackLink (class bb-back-link only sizes it)');
+
+  // L-06: both grips are the shared Grip (gray while a save runs)
+  for (const rel of ['cycle/PricesSection.jsx', 'rubric/RubricEditor.jsx']) assert.ok(code(rel).includes("components/Grip.jsx"), `${rel}: the shared Grip`);
+  assert.ok(code('rubric/RubricEditor.jsx').includes('disabled={saving}'), 'the rubric grips go gray while a save runs');
+
+  // R2-05: every toast Undo of these screens goes through a save line; the old early-return guards are gone
+  const lineUsers = ['candidates/useCandidateActions.js', 'cycle/CyclePage.jsx', 'cycles/CyclesTab.jsx', 'results/ResultsTab.jsx', 'rubric/ResultEmailsBlock.jsx', 'rubric/RubricCard.jsx', 'rubric/RubricTab.jsx'];
+  for (const rel of lineUsers) assert.ok(code(rel).includes('useSaveLine('), `${rel}: has a save line`);
+  assert.ok(code('cycle/useCycleEditor.jsx').includes('undoAction(') && code('cycles/useCycleActions.js').includes('undoAction('), 'the editor and the quick actions take the line\'s undoAction');
+  assert.ok(!/undoBusy|busyRef/.test(code('rubric/RubricTab.jsx') + code('rubric/ResultEmailsBlock.jsx') + code('results/ResultsTab.jsx') + code('cycles/CyclesTab.jsx') + code('cycle/CyclePage.jsx')), 'an old busy flag is back');
+  // the Undo run functions answer the line's shape, never show "Undone" themselves
+  for (const rel of ['cycle/useCycleEditor.jsx', 'cycles/useCycleActions.js', 'results/ResultsTab.jsx', 'rubric/RubricCard.jsx', 'rubric/ResultEmailsBlock.jsx', 'rubric/RubricTab.jsx']) {
+    assert.ok(!/showToast\((T\.)?TOAST_UNDONE/.test(code(rel)), `${rel}: shows "Undone" itself (the line does)`);
+  }
+
+  // R2-07: the shared sentences, typed once
+  assert.equal(StaffWords.candidateStale('Spring 2027'), SharedWords.someoneElseChanged('Spring 2027'));
+  assert.equal(StaffWords.someoneElseChanged('this cycle'), 'Someone else changed this cycle just now, so nothing was done. Their change is shown.');
+  assert.equal(StaffWords.UNDO_FAILED, SharedWords.UNDO_DIDNT_SAVE);
+  assert.equal(ResultsWords.undoSentRefusal('error'), SharedWords.UNDO_DIDNT_SAVE, 'a failed Undo Mark as sent says the shared sentence');
+  assert.equal(StaffWords.switchProblem('stale'), 'Someone else changed this cycle just now, so nothing was done. Their change is shown.');
+  for (const gone of ['SWITCH_STALE', 'DELETE_STALE', 'UNDO_STALE', 'UNDO_RUBRIC_STALE', 'RUBRIC_UNDO_FAILED']) assert.equal(StaffWords[gone], undefined, `StaffWords.${gone} is gone`);
+  for (const gone of ['UNDO_STALE', 'UNDO_FAILED', 'TOAST_UNDONE']) assert.equal(ResultsWords[gone], undefined, `ResultsWords.${gone} is gone`);
+  assert.equal(StaffWords.UNDO_SECTION, 'Black Belt');
+
+  // S-2: every load sentence ends "then retry." (and each has a Retry button on its screen)
+  assert.equal(StaffWords.LOAD_FAILED, SharedWords.LOAD_FAILED);
+  for (const [name, text] of Object.entries({
+    results: ResultsWords.LOAD_FAILED,
+    print: ResultsWords.PRINT_FAILED,
+    texts: ResultsWords.TEXTS_LOAD_FAILED,
+    address: ResultsWords.addressFailed('Mia Chen'),
+    grades: GradingWords.LOAD_GRADES_FAILED,
+    rubric: StaffWords.RUBRIC_LOAD_FAILED,
+  })) assert.match(text, /Check the connection, then retry\.$/, `${name}: "${text}" must end "Check the connection, then retry."`);
+  assert.equal(ResultsWords.LOAD_FAILED, "Couldn't load the results. Check the connection, then retry.");
+  // the two reads that showed no Retry now have one: opening Edit cycle and the read before Delete cycle
+  assert.ok(/handleLoadProblem\(result\.status, \(\) => openEdit\(/.test(code('cycle/useCycleEditor.jsx')), 'Edit cycle: a failed read repeats itself');
+  assert.ok(/handleLoadProblem\(result\.status, \(\) => openAdd\(/.test(code('cycle/useCycleEditor.jsx')), 'Add cycle: a failed read repeats itself');
+  assert.ok(/startDelete\(cycle, anchor\)/.test(code('cycles/CyclesTab.jsx').split('async function confirmDelete')[0].split('async function startDelete')[1] ?? ''), 'Delete cycle: the failed read repeats itself');
+
+  // R3-13: the staff calendars say "days" (the shared words)
+  assert.equal(StaffWords.PAST_DAYS_HINT, "Past days can't be chosen.");
+  assert.ok(code('cycle/DayDialog.jsx').includes('T.PAST_DAYS_HINT') && code('cycle/PricesSection.jsx').includes('T.PAST_DAYS_HINT'), 'both staff calendars use the shared hint');
+
+  // S-10: the browser dropdown of the result-text box is the shared Select
+  assert.ok(code('rubric/ResultTextDialog.jsx').includes("components/Select.jsx") && code('rubric/ResultTextDialog.jsx').includes('<Select'), 'Preview with is the shared Select');
+
+  // R4-08: Email result's unavailable look and its description (both ids when both lines show)
+  const css = source('results/results.css');
+  const block = css.slice(css.indexOf(".bbres-panel .bbres-email[aria-disabled='true']"));
+  assert.ok(block.includes('var(--color-border-strong)') && block.slice(0, block.indexOf('}')).includes('cursor: not-allowed'), 'Email result: the v1.103 gray look');
+  assert.ok(code('results/ResultRows.jsx').includes('aria-describedby={ctx.emailWhyId}'), 'Email result points at its why lines');
+  assert.ok(/emailWhyId:[^\n]*-hidden[^\n]*-rows/.test(code('results/ResultsTab.jsx')), 'emailWhyId lists the hidden-details line and the offline line');
+  assert.ok(code('results/ResultsTab.jsx').includes('id={`${whyId}-hidden`}'), 'the hidden-details line has the id Email result points at');
+
+  // ----- Review of batch 4 (privacy and the queued Undo) -----
+  // C5: all six lines name the section the same way (the bar after the person left says "(Black Belt)")
+  for (const rel of [...lineUsers]) assert.ok(!/section: T\.PAGE_TITLE/.test(code(rel)), `${rel}: the line's section is UNDO_SECTION, not the page title`);
+  assert.ok(/section: T\.UNDO_SECTION/.test(code('candidates/useCandidateActions.js')), 'the Candidates line names the section "Black Belt"');
+  // C1 / C8: a save always ends the line in a finally with its real status — no end() without a status in the cycle side
+  // and Results (the one read, Email result's address, is the only bare end()), and no end() that forgets the retry
+  const resultsCode = code('results/ResultsTab.jsx');
+  assert.equal((resultsCode.match(/\bend\(\)/g) ?? []).length, 1, 'Results: only the address read ends without a status');
+  assert.ok(/end\(answer\.status, \(\) => markAsSent\(/.test(resultsCode) && /end\(answer\.status, \(\) => confirmUndo\(/.test(resultsCode), 'Results: Mark as sent and its Undo end with the real status and a retry');
+  assert.ok(!/line\.end\(status\);/.test(resultsCode + code('cycles/CyclesTab.jsx') + code('cycle/CyclePage.jsx')), 'a save ends the line with a retry and its token');
+  for (const rel of ['cycles/CyclesTab.jsx', 'cycle/CyclePage.jsx']) assert.ok(/line\.end\(status, \{ retry, token: tokenRef\.current \}\)/.test(code(rel)), `${rel}: endWrite(status, retry) with the save's token`);
+  const editorCode = code('cycle/useCycleEditor.jsx');
+  assert.ok(editorCode.includes('const finish = (status)') && !/\bendWrite\('ok'\)/.test(editorCode) && !/endWrite\(result\.status\);\n\s*const status/.test(editorCode), 'Edit cycle: save() frees the line once, through finish()');
+  assert.ok(/finally \{[^}]*a\.endWrite\(again\.status, \(\) => retrySwitch\(/.test(editorCode), 'the registration switch Retry ends the line in a finally with a retry');
+  assert.ok(/finally \{[\s\S]{0,160}a\.endWrite\(result\.status, \(\) => switchRegistration\(/.test(code('cycles/useCycleActions.js')), 'Close / Open registration ends the line in a finally with a retry');
+  assert.ok(/saveCall\(/.test(code('candidates/useCandidateActions.js')) && !/\n\s*endWrite\(result\.status, \(\) =>/.test(code('candidates/useCandidateActions.js')), 'Candidates: every save goes through saveCall (always ended)');
+  // C2: the seven bars the save line can fill are LineBar (they take the focus the line asks for)
+  for (const rel of ['cycles/CyclesTab.jsx', 'cycle/CyclePage.jsx', 'rubric/RubricTab.jsx', 'rubric/RubricCard.jsx', 'rubric/ResultEmailsBlock.jsx', 'results/ResultsTab.jsx', 'candidates/CandidateDialog.jsx']) {
+    assert.ok(/<LineBar[\s\S]{0,120}takeFocus=\{banner\.takeFocus === true\}/.test(code(rel)), `${rel}: its line bar is a LineBar`);
+  }
+  assert.ok(code('parts/LineBar.jsx').includes('.errbar-retry') && code('parts/LineBar.jsx').includes('.errbar-dismiss'), 'LineBar moves focus to Retry, else ×');
+  // C3: Results' Email result / Mark as sent are unavailable while the line is busy
+  assert.ok(/ctx\.lineBusy/.test(code('results/ResultRows.jsx')) && /lineBusy: line\.busy/.test(resultsCode), 'Results rows go gray while the save line is busy');
+  // C4: the locked Dan is described by its hint whoever is locked out
+  assert.ok(/describedBy=\{danLocked \?/.test(code('candidates/CandidateDialog.jsx')), 'the locked Dan points at its hint');
+  // S3: while Hide private details is on, an Undo's refusal is one neutral sentence — no payment words
+  assert.equal(StaffWords.UNDO_AT_DESK, "Couldn't undo. Do it at the desk.");
+  assert.ok(!/pay|paid|\$|grade/i.test(StaffWords.UNDO_AT_DESK), 'the neutral Undo sentence says nothing about money');
+  assert.ok(/paymentsHidden\s*\?\s*T\.UNDO_AT_DESK/.test(code('candidates/useCandidateActions.js')), 'undoRun: neutral refusal while hidden');
+  assert.ok(/a\.paymentsHidden\s*\?\s*T\.UNDO_AT_DESK/.test(code('candidates/useMakeupPicker.js')), 'undoAdd: neutral refusal while hidden');
+  // S2: a money Undo's bar is marked, and the switch removes it
+  assert.ok(/moneyUndo/.test(code('candidates/useCandidateActions.js')) && /current\?\.moneyUndo \? null/.test(code('candidates/useCandidateActions.js')), 'paymentsHiddenNow removes the bar of a money Undo');
+  // S4: the words a money Undo gives the line (shown on any page after the person left) never hold an amount
+  for (const fn of ['paymentUndoWords', 'refundUndoWords', 'returnedUndoWords', 'planUndoWords']) {
+    const words = StaffWords[fn]('Sam Lee');
+    assert.ok(words.includes('Sam Lee') && !/[$\d]/.test(words), `${fn}: "${words}" names who and what, never an amount`);
+  }
+  assert.ok(!/undoToast\(words, \(\) => undoPayment/.test(code('candidates/useCandidateActions.js')), 'no money Undo gives the line the toast words (they hold the amount)');
+});
 
 console.log(`${count} groups of checks ran.`);
 console.log('ALL BLACK BELT LIB CHECKS PASSED');

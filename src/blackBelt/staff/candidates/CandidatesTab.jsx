@@ -188,7 +188,7 @@ export default function CandidatesTab({
     setFlashId(id);
     flashTimer.current = window.setTimeout(() => setFlashId(null), FLASH_MS);
   }, []);
-  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash, setBanner });
+  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash, setBanner, saveLine: actions.saveLine, paymentsHidden: hidden });
 
   // The page header's "+ Add candidate" (and N) open the Add candidate menu (G 24) through this.
   const schoolCode = SCHOOL_CODE[location] ?? null;
@@ -684,7 +684,7 @@ function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, onNoAccess }
         );
       }
       case 'signature':
-        return <SignatureDialog {...common} />;
+        return <SignatureDialog {...common} onRetry={actions.retrySignature} />;
       case 'receipt':
         return (
           <CandidateReceipt

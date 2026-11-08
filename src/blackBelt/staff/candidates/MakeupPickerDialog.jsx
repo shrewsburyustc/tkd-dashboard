@@ -149,6 +149,9 @@ export default function MakeupPickerDialog({ state, cycle, isAdmin, isPhone, onS
           onChange={(event) => onSearch(event.target.value)}
         />
       </div>
+      {/* S-2: Choose subjects couldn't read the earlier cycle's results — the shared sentence, with a Retry
+          that repeats that read for the same row */}
+      {state.chooseFailed && <ErrorBanner text={T.LOAD_FAILED} onRetry={() => onChoose(state.chooseFailed)} retrying={state.saving} />}
       {body}
       {state.note && (
         <div className="tdialog-note">
