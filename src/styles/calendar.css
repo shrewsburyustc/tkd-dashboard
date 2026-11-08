@@ -236,8 +236,8 @@ button.cseg-item:focus-visible {
 .cchip-letters {
   flex: none;
   margin-right: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px; /* §7's minimum (design review R4-06) */
+  font-weight: 500; /* §7: only 400 and 500 */
 }
 
 .cchip--event,
@@ -436,7 +436,7 @@ button.cchip--btn:focus-visible {
   border-radius: var(--radius-tag);
   background: var(--color-warning-bg);
   color: var(--color-warning-text);
-  font-size: 11px;
+  font-size: var(--text-12); /* §7's 12 px minimum (was 11 px; design review, batch 3) */
 }
 
 .cpanel-empty {
@@ -674,6 +674,12 @@ button.cchip--btn:focus-visible {
   flex: 1;
 }
 
+/* The shared dropdown fills the rest of the row next to the color swatch (S-10) */
+.ctype-row .fa-select {
+  flex: 1;
+  min-width: 0;
+}
+
 .ctimes {
   display: flex;
   flex-direction: column;
@@ -856,7 +862,7 @@ button.cchip--btn:focus-visible {
     margin-bottom: 0;
   }
 
-  .ctimes-row > input[type='time'] {
+  .ctimes-row > .fa-select {
     grid-column: 2;
   }
 
@@ -984,7 +990,7 @@ button.cchip--btn:focus-visible {
   gap: 2px;
   margin-left: var(--space-4);
   font-size: var(--text-12);
-  font-weight: 600;
+  font-weight: 500; /* §7: only 400 and 500 (R4-06) */
 }
 
 /* ----- Prospects' follow-ups (v0.612 / v0.615): amber when due today or overdue, blue ahead ----- */
@@ -1098,5 +1104,5 @@ button.cchip--btn:focus-visible {
   min-height: 44px;
   justify-content: center;
   color: var(--color-blue);
-  font-weight: 600;
+  font-weight: 500; /* §7: only 400 and 500 (R4-06) */
 }

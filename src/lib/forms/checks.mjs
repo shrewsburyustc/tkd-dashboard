@@ -180,7 +180,7 @@ group('address: street, city, state, ZIP code (0036, v0.634)', () => {
   // every wrong box at once, in one line (design review)
   const wrong = addressPartProblems({ street: '', city: 'Worcester', state: 'MA', zip: '1602' });
   assert.deepEqual(wrong, { street: 'address', zip: 'zip' });
-  assert.equal(addressProblemLine(Object.values(wrong)), 'Enter the whole address: street, city, state and ZIP code. Enter a 5-digit ZIP code.');
+  assert.equal(addressProblemLine(Object.values(wrong)), 'Enter the whole address: street, city, state and ZIP code. Enter a 5-digit ZIP code, like 01604.'); // L-09: the ZIP line is Settings → Schools' words
   // not required: blank is fine, a half-typed one isn't
   const optional = walkIn.map((f) => (f.type === 'address' ? { ...f, required: false } : f));
   assert.equal(code(undefined, optional), undefined);

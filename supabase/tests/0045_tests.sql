@@ -162,6 +162,10 @@ begin
                                 'opens', opens, 'ref_id', ref, 'event_id', ev);
     $b$;
   $f$;
+  -- On Supabase, a function made by postgres gives nobody else the right to run it, and these are
+  -- called inside `set local role …` blocks too: so each helper is opened to everyone, like a
+  -- helper made in PGlite's "hostile defaults" (Color Belt's 0044 run found this on production).
+  execute 'grant execute on function pg_temp.zzx(text, text, text, text, text, text, text, text, text, text, text, text, text) to public';
   execute $f$
     create function pg_temp.zzsnap() returns text
     language sql as $b$
@@ -183,6 +187,7 @@ begin
         (select count(*) || ':' || coalesce(max(l.id), 0) from public.change_log l)));
     $b$;
   $f$;
+  execute 'grant execute on function pg_temp.zzsnap() to public'; -- (as above)
 
   -- The window must be empty (the seeds below are the only things dated March 2037)
   set local role authenticated;

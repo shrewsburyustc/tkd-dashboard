@@ -48,7 +48,7 @@ function Card({ p, status, name, today, selected, dragging, props, onOpen }) {
   );
 }
 
-export default function Board({ code, label, headingLevel = 2, stages, items, statusById, initials, today, selectedId, isPhone, isTouch, column, onColumn, drag, searchNote, onOpen }) {
+export default function Board({ code, label, headingLevel = 2, stages, items, statusById, initials, today, selectedId, isPhone, isTouch, column, onColumn, drag, searchNote, noMatch = null, onOpen }) {
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
   const swipe = useRef(null);
   const byStage = new Map(stages.map((s) => [s.id, []]));
@@ -94,8 +94,9 @@ export default function Board({ code, label, headingLevel = 2, stages, items, st
     );
   };
 
-  // while searching, say how many of the school's children are shown (the bar counts everyone)
-  const note = searchNote && (
+  // while searching, say how many of the school's children are shown (the bar counts everyone); a
+  // search that finds nobody shows the page's "No prospects match … · Clear search" line instead (R3-09)
+  const note = noMatch || searchNote && (
     <p className="pboard-note">
       {T.searchShowing(searchNote.shown, searchNote.total, searchNote.text)}{' '}
       <button type="button" className="link-button" onClick={searchNote.onClear}>

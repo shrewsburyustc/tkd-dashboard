@@ -688,13 +688,6 @@ export default function Calendar({
   const buttons =
     isAdmin && ready ? (
       <div className="sactions">
-        <IconButton
-          label={T.MORE_ACTIONS}
-          aria-haspopup="menu"
-          aria-expanded={menu?.kind === 'more' ? 'true' : 'false'}
-          onClick={(e) => setMenu(menu ? null : { kind: 'more', anchor: e.currentTarget })}
-          Icon={IconDots}
-        />
         <button
           type="button"
           className="btn btn-primary"
@@ -706,6 +699,14 @@ export default function Calendar({
           <IconPlus size={16} aria-hidden="true" />
           {T.ADD}
         </button>
+        {/* The page's ⋯ comes last, right of the blue button (R3-11, v1.047 (16)) */}
+        <IconButton
+          label={T.MORE_ACTIONS}
+          aria-haspopup="menu"
+          aria-expanded={menu?.kind === 'more' ? 'true' : 'false'}
+          onClick={(e) => setMenu(menu ? null : { kind: 'more', anchor: e.currentTarget })}
+          Icon={IconDots}
+        />
       </div>
     ) : null;
 

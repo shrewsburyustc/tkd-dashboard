@@ -497,16 +497,6 @@ export default function ScheduleSchool({
             {T.PLAN_A_CHANGE}
           </button>
         )}
-        {hasAnything && isPhone && (
-          // Phone: Plan a change lives under ⋯ next to "+ Add" (mockup screen 1).
-          <IconButton
-            label={T.MORE_ACTIONS}
-            aria-haspopup="menu"
-            aria-expanded={menu?.kind === 'page' ? 'true' : 'false'}
-            onClick={(e) => setMenu(menu ? null : { kind: 'page', anchor: e.currentTarget })}
-            Icon={IconDots}
-          />
-        )}
         {editable && (
           <button
             type="button"
@@ -517,6 +507,17 @@ export default function ScheduleSchool({
             <IconPlus size={16} aria-hidden="true" />
             {isPhone ? T.ADD_SHORT : T.ADD_TIME_SLOT}
           </button>
+        )}
+        {hasAnything && isPhone && (
+          // Phone: Plan a change lives under ⋯, which comes last, right of "+ Add" (mockup screen 1;
+          // R3-11, v1.047 (16)).
+          <IconButton
+            label={T.MORE_ACTIONS}
+            aria-haspopup="menu"
+            aria-expanded={menu?.kind === 'page' ? 'true' : 'false'}
+            onClick={(e) => setMenu(menu ? null : { kind: 'page', anchor: e.currentTarget })}
+            Icon={IconDots}
+          />
         )}
       </div>
     ) : null;
