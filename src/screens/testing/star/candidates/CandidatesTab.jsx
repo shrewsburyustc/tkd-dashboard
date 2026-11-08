@@ -72,6 +72,8 @@ import MakeupPickerDialog from './MakeupPickerDialog.jsx';
 import PrivateDialog, { checkPrivate, isPrivateDirty } from './PrivateDialog.jsx';
 import { takeSnapshot, writeArgs } from '../../../../lib/star/dialogSnapshot.js';
 import { candidateMenuKeys } from '../../../../lib/star/candidateMenu.js';
+import { deskSchoolFor } from '../../../../lib/star/deskSchool.js';
+import { payingByWhere } from '../../../../lib/star/payingByWhere.js';
 import { candidateCardNumbers, emptyLineKind, filterRows } from '../../../../lib/star/candidateCards.js';
 import SignatureDialog from './SignatureDialog.jsx';
 import { checkRecordPayment, EditPaymentDialog, isRecordDirty, PayingByDialog, RefundDialog } from './StarPaymentDialogs.jsx';
@@ -105,6 +107,7 @@ export default function CandidatesTab({
   isAdmin,
   hidden, // Hide private details (v0.506)
   location, // the top-bar switcher: 'Worcester' | 'Shrewsbury' | 'Both'
+  deviceLocation = null, // This device's school (account menu): the desk whose Daily report a payment counts in (R1-01)
   onLocationChange,
   panelId,
   tabId,
@@ -614,7 +617,8 @@ export default function CandidatesTab({
   async function saveMarkPaid(rowId, snap, method) {
     const row = rowOf(rowId);
     if (!row || !beginWrite()) return;
-    const result = await recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today }));
+    // The money counts at the desk that takes it: This device's school (R1-01, v1.035).
+    const result = await recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today, school: deskSchoolFor(deviceLocation) }));
     endWrite(result.status);
     if (result.status !== 'ok') {
       rowProblem('mark_paid', result, row, () => saveMarkPaid(rowId, snap, method));
@@ -762,7 +766,8 @@ export default function CandidatesTab({
       return;
     }
     // Record refund
-    const result = await recordRefund(writeArgs('refund', d.snap, p));
+    // A refund counts at the desk that hands the money back: This device's school (R1-01, v1.040).
+    const result = await recordRefund(writeArgs('refund', d.snap, { ...p, school: deskSchoolFor(deviceLocation) }));
     endWrite(result.status);
     if (result.status === 'refund_too_large') {
       const msg = T.statusMessage('refund', 'refund_too_large', { overpaidCents: result.overpaidCents ?? 0 });
@@ -1500,7 +1505,7 @@ export default function CandidatesTab({
         name={T.candidateName(markPaidRow)}
         amountCents={snap.expectedFeeCents}
         familyChoice={markPaidRow.payingBy}
-        choiceWhere={markPaidRow.source === 'form' ? 'form' : 'desk'}
+        choiceWhere={payingByWhere(markPaidRow)}
         onMarkPaid={(method) => saveMarkPaid(rowId, snap, method)}
         onClose={(restoreFocus) => {
           setMarkPaid(null);

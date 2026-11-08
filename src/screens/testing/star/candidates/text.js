@@ -272,7 +272,8 @@ export const NOT_SIGNED_HERE = 'Not signed here (added at the desk)';
 export { DATE_SIGNED } from '../../../../components/text.js';
 export const dateSignedDetail = (stamp) => shortDate(stampDay(stamp));
 export const PAYING_BY = 'Paying by';
-export const payingByDetail = (method, source) => `${payingByText(method)} (chosen ${source === 'form' ? 'on the form' : 'at the desk'})`;
+// where = 'form' | 'desk' from payingByWhere.js (R1-02): where the CURRENT Paying by was chosen.
+export const payingByDetail = (method, where) => `${payingByText(method)} (chosen ${where === 'form' ? 'on the form' : 'at the desk'})`;
 export const PAYMENT = 'Payment';
 export const notPaidDetail = (standardCents, sameDayCents) => `Not paid · ${dollars(standardCents)} before the testing day, ${dollars(sameDayCents)} on it`;
 export const notPaidPrivate = (privateCents) => `Not paid · private fee ${dollars(privateCents)}`; // PROPOSAL

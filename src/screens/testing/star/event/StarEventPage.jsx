@@ -148,6 +148,7 @@ export default function StarEventPage({
   showToast,
   clearToast,
   onModalOpenChange,
+  deviceLocation = null, // This device's school: Record payment / Record refund count at it (R1-01)
 }) {
   const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEventPage, refreshMs: LIVE_REFRESH_MS });
   const event = live.data?.event ?? null;
@@ -915,6 +916,7 @@ export default function StarEventPage({
           isAdmin={isAdmin}
           hidden={hidden}
           location={location}
+          deviceLocation={deviceLocation}
           onLocationChange={onLocationChange}
           panelId={panelId}
           tabId={tabId}

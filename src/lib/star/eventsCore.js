@@ -328,6 +328,31 @@ export function createStarEventsApi(getClient, getToday) {
     return callRpc('star_set_registration', args, readSwitch);
   }
 
+  // Edit event's Undo in ONE database step (migration 0038, R2-02; admin): the old details and, when
+  // the Edit changed the Registration switch, the old switch position go back together, or nothing
+  // changes at all. expectedVersion = the version the Edit's save returned. open = true / false to
+  // put the switch back, or null when the Edit didn't change it. All ten inputs are always sent.
+  //   → { status:'ok', version }, or the refusal exactly as the database gave it (stale, invalid,
+  //     duplicate_name, finished, not_allowed, not_found …) — and then nothing was undone.
+  async function undoStarEventEdit({ eventId, expectedVersion, name, testingDate, startTime, endTime = null, whereCode, autoCloseOn = null, note = null, open = null } = {}) {
+    const args = {
+      p_event_id: asText(eventId),
+      p_expected_version: asInteger(expectedVersion),
+      p_name: asText(name),
+      p_testing_date: asDate(testingDate),
+      p_start_time: asTime(startTime),
+      p_where_code: asText(whereCode),
+      p_auto_close_on: asDate(autoCloseOn),
+      p_note: asText(note),
+      p_end_time: asTime(endTime),
+      p_open: asBoolean(open), // null = "the switch was not changed"
+    };
+    // p_open may be null (that is a good value: "switch not changed"); nothing may be a bad one.
+    if (isBad(Object.values(args))) return { status: 'invalid' };
+    if (args.p_event_id !== null && !isUuidText(args.p_event_id)) return { status: 'not_found' };
+    return callRpc('star_undo_event_edit', args, readVersion);
+  }
+
   // The whole Edit event Save: the details first, then — only when the switch was changed in the
   // dialog — the Registration switch with the NEW version (contract §11 item 7, as Color Belt).
   //
@@ -400,6 +425,6 @@ export function createStarEventsApi(getClient, getToday) {
   }
 
   return {
-    loadStarEvents, loadStarEvent, addStarEvent, updateStarEvent, setStarRegistration, saveStarEventEdit, deleteStarEvent,
+    loadStarEvents, loadStarEvent, addStarEvent, updateStarEvent, setStarRegistration, undoStarEventEdit, saveStarEventEdit, deleteStarEvent,
   };
 }

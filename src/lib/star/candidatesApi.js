@@ -86,7 +86,7 @@
 //   deleteCandidate({ candidateId, expectedVersion, expectedPaymentIds })   A
 //     expectedPaymentIds = loadCandidateDetail(…).payments.map((p) => p.id) (every row, reversals too)
 //     → { status:'ok' } · stale (version or payments changed)
-//   recordPayment({ candidateId, expectedVersion, method:'cash'|'check'|'card', amountCents, paidOn })   S
+//   recordPayment({ candidateId, expectedVersion, method:'cash'|'check'|'card', amountCents, paidOn, school })   S  (school = This device's school, 0038 R1-01; blank = the candidate's)
 //     amountCents pre-filled from candidate.expectedFeeCents (1–100 000; staff may type another amount)
 //     → { status:'ok', paymentId, version }   · invalid (date in the future / before registration) ·
 //       withdrawn · no_fee · already_paid · stale (double click)
@@ -96,7 +96,7 @@
 //       stands: "Undo the refund first.") · stale (already undone)
 //   editPayment({ paymentId, method, amountCents, paidOn })   A   → { paymentId (the new one), version }
 //     · invalid (while a refund stands, or a bad date) · stale (already undone)
-//   recordRefund({ candidateId, expectedVersion, method:'cash'|'check', amountCents, refundedOn })   A (S7)
+//   recordRefund({ candidateId, expectedVersion, method:'cash'|'check', amountCents, refundedOn, school })   A (S7)  (school as for recordPayment)
 //     → { status:'ok', paymentId, version }   · { status:'refund_too_large', overpaidCents } · withdrawn
 //
 // Pure helpers (no database): sortBeltOrder(candidates) · danChangeNeedsAdmin(candidate, isAdmin) ·
