@@ -19,7 +19,7 @@
 // onNoAccess (the database refused data because this sign-in is locked: lock the screen).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
-import ErrorBanner from '../components/ErrorBanner.jsx';
+import PageBar from '../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
 import IconButton from '../components/IconButton.jsx';
 import { loadSchools, updateSchoolContact } from '../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -161,11 +161,11 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
       </div>
     );
   } else if (load.state === 'error') {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />;
   } else {
     body = (
       <>
-        {load.failed && <ErrorBanner text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />}
+        {load.failed && <PageBar text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />}
         <div className="clist st-list" role="list" aria-label={T.SCHOOLS} {...nav.containerProps}>
           {schools.map((school) => {
             const name = T.schoolName(school.name);

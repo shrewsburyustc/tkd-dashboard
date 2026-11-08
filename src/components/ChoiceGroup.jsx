@@ -21,20 +21,28 @@
 //   onChange   (key) => void
 //   variant    'segmented' | 'chips'
 //   readOnly   true while saving
-//   invalid    true to tell screen readers the group has a problem
-//   describedBy  id of a message under the group
+//   invalid    true to tell screen readers the group has a problem; the joined buttons also get the
+//              amber border (the section shows its message under the group)
+//   describedBy  id of a message under the group (e.g. the reason a locked group is locked)
 //   autoFocus  true: a dialog opening puts keyboard focus on the chosen button (Dialog.jsx data-autofocus)
 //   disabled   true: shown but can't be used (phase 3: Edit details of a graded student, staff after
 //              the testing day) — screen readers hear "dimmed", Tab skips it, clicks and keys do nothing
+// Black Belt's choice-button looks (pass 1, its Q2 "What you recommend", 2026-11-07), 'segmented' only:
+//   fill       true: the group fills its row's width and each button takes an equal part
+//              (School, Testing for, Kukkiwon)
+//   compact    true: only as wide as its words, not stretched in a column (Method: Cash · Check · Card)
+//   locked     true: the locked look — gray words, "not allowed" cursor — and nothing can be chosen,
+//              but it stays one Tab stop so a screen reader reads the reason (give it describedBy, and
+//              show the reason in words under the group). Unlike `disabled`, Tab does not skip it.
 import { useRef } from 'react';
 
-export default function ChoiceGroup({ labelId, options, value, onChange, variant = 'segmented', readOnly = false, invalid = false, describedBy, autoFocus = false, disabled = false }) {
+export default function ChoiceGroup({ labelId, options, value, onChange, variant = 'segmented', readOnly = false, invalid = false, describedBy, autoFocus = false, disabled = false, fill = false, compact = false, locked = false }) {
   const buttonsRef = useRef([]);
   const current = options.findIndex((option) => option.key === value);
   const tabStop = current === -1 ? 0 : current;
 
   function choose(index) {
-    if (readOnly || disabled) return;
+    if (readOnly || disabled || locked) return;
     const option = options[index];
     if (option && option.key !== value) onChange(option.key);
   }
@@ -54,7 +62,11 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
 
   return (
     <div
-      className={variant === 'chips' ? 'ev-chips' : 'segmented ev-segmented'}
+      className={
+        variant === 'chips'
+          ? 'ev-chips'
+          : `segmented ev-segmented${fill ? ' segmented--fill' : ''}${compact ? ' segmented--compact' : ''}${locked ? ' is-locked' : ''}${invalid ? ' is-invalid' : ''}`
+      }
       role="radiogroup"
       aria-labelledby={labelId}
       aria-invalid={invalid ? 'true' : undefined}

@@ -1168,6 +1168,9 @@
   - Before committing, `main` had moved to 495f1b1 (Camps' Record refund, v0.743 and v0.744). It was merged in the same way: only the header and the two row places conflicted, and the added lines match the backup exactly. Both builds and all 19 check files pass on it. The room check last ran on d985896; main's later commits touch only Camps' refund files and the rulebook.
   - The commit also holds R2-05's decided rows (v1.125–v1.129) and their question pictures, which waited uncommitted until now.
   - Next: tell Main it's ready to merge, naming who adopts it (Color Belt, Star and Camps, whose L-02 items now use `usePageRoomBelow` and a class instead of `@container page`) and who has nothing to do (Black Belt).
+- **2026-11-06 — L-02 is live.** Committed as c769eb1. Main merged it into `main` as 51ca85c and pushed it on Jeffrey's "Merge and push"; Cloudflare deployed it (Main's report: both builds, the dist scan, all checks and the 174 function tests passed). Main told Color Belt, Star and Camps to start their own L-02.
+  - This branch moved to 51ca85c (`git merge --ff-only main`; checked: `origin/main` is 51ca85c too).
+  - R2-05's build still waits on Jeffrey's go.
 
 ## 4. Next
 
@@ -1244,10 +1247,20 @@
 
 Fix file: `docs/Design Review/Rolling check/Pass 2/Fix-DashboardCore.md`. Plan: plan §19. No migration.
 
-- **L-02**, rosters follow the room beside the panel (v1.053): Jeffrey chose B, the shared code measures the room (v1.130). Built, reviewed (code and design, with a code re-check) and committed on `dashboard-core`, 2026-11-06; ready to merge. Color Belt, Star and Camps then switch their rosters (their own L-02 items).
+- **L-02**, rosters follow the room beside the panel (v1.053): Jeffrey chose B, the shared code measures the room (v1.130). Built, reviewed (code and design, with a code re-check) and committed as c769eb1; merged into `main` as 51ca85c and live since 2026-11-06. Color Belt, Star and Camps now switch their rosters (their own L-02 items; Main told them).
 - **L-03**, touch tap areas 44 px, not 42, with R4-09's correction (`-2px 0`): planned, with R4-09.
 - **L-05**, Panel size's bar ends "Check the connection, then retry." (v1.055): planned, with the shared words.
 - **L-06**, a turned-off drag handle looks turned off: planned. One small picture first.
 - **Smaller:** P-04, the receipt's own page margins in print (item 13's second note), and L-10, page tabs and sort headers 44 px wide on touch: planned.
 - **C-04 and C-06:** decided in v1.055. Nothing to build here.
 - **Corrections to pass 1:** R2-04 also covers full-screen dialog pages, R1-07's mockup includes the Paying by line, and R4-09 uses `-2px 0`. Each goes into its item's plan.
+
+### The shared-parts batch (2026-11-07, under P8)
+
+Main relayed Jeffrey's "Yes to your question" (one batch of every shared part the sections wait on). **Built, reviewed, not committed; rulebook v1.131.**
+- **Built:** R2-05 (toast line, save line, "Undoing…", PageBar under the top bar; Settings and Staff accounts switched); R1-08 (page-wide unavailable gray); R4-09, L-03, L-10 (sizes); L-06 (grips: the hook marks them); R3-06 (`BackLink`); P-04 (`PrintPageRule` in the receipt); the shared words (R2-07, S-2 with my four lines and the sign-in Retry, R3-13, R1-07 toasts, R1-06, R2-09); Color Belt's two L-02 findings (page area positioned; Mark paid box kept inside the page area).
+- **Added from Black Belt (via Main):** `PaidByField` takes a `label` (default "Paid by"), so Record refund's "Refunded by" needs no local copy. Black Belt's question to Jeffrey about the shared Date signed's forced weekday is open; Main will pass on his answer.
+- **Added from Black Belt (via Main), 2026-11-07:** the shared `ChoiceGroup` takes `fill`, `compact`, `locked` and an amber border for `invalid` (Black Belt's Q2, Jeffrey: "What you recommend"); no existing caller passes `invalid`, so nothing changes on a screen. Date signed: Jeffrey accepted the shared weekday for Black Belt ("Yes what you recommend"): nothing to build. Black Belt switches its own `Choice` and Refunded-by copy after this merges.
+- **Not built:** R1-07's payment line and History words (needs Jeffrey's pick from a picture of the four versions: one question for the next message to him); P-02 is New students' own line; R4-08 is Star's own (it uses the new gray); R3-12 and R2-04 are not in this batch.
+- **Proof:** checks `check-undo` 11, `check-batch` 6, `check-room` 19, `check-offline` 31 (updated for `.shell-bars`), `check-panel` 38, shared checks 35 groups, 19 check files, both builds. The 92 app pictures against a clean copy of main differ only in the camp page's live clock and the touch tab widths (L-10, intended).
+- **Reviews:** code (no must-fix; fixed: a left page's Undo bar kept after the session ended, a 30-second give-up on "Undoing…", a stale sign-in notice, a Retry that could stay unavailable) and design (nothing serious). Not changed, for the sections: Black Belt's price plan grip turns gray with one plan (it draws the grip with nothing to drag); grips go gray while a ⋯ menu is open (the section's `enabled` includes it); busy buttons should set `aria-busy` to keep the busy cursor; the delete button, ErrorBanner's Retry and Camps' Fill in Cancel/Send turn gray while busy (v1.103).

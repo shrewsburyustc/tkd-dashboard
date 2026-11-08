@@ -198,7 +198,9 @@ await withChrome(async (tab) => {
     const content = main.querySelector('.shell-content');
     const top = main.querySelector('.topbar').getBoundingClientRect();
     const c = content.getBoundingClientRect();
-    const slots = [...main.querySelectorAll(':scope > .shell-errbar')];
+    // (Since R2-05 the frame's bars sit in one box, .shell-bars, under the top bar; the page's own
+    // bars are drawn into .shell-pagebars inside it, so only the frame's own slots are looked at.)
+    const slots = [...main.querySelectorAll(':scope > .shell-bars > .shell-errbar')];
     const offline = slots.map((s) => s.querySelector('.errbar')).filter((b) => b && b.textContent.trim() === ${JSON.stringify(WORDS)});
     const b = offline[0] ?? null;
     const r = b ? b.getBoundingClientRect() : null;

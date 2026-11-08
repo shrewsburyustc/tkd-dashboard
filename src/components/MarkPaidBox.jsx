@@ -52,13 +52,15 @@ const isMethod = (value) => METHOD_KEYS.includes(value);
 //   value / onChange     the chosen way ('cash' | 'check' | 'card' | null)
 //   familyChoice, choiceWhere   as MarkPaidBox
 //   readOnly             true while the section saves
-export function PaidByField({ value, onChange, familyChoice = null, choiceWhere = 'form', readOnly = false }) {
+//   label                the field's words, default "Paid by"; Black Belt's Record refund says
+//                        "Refunded by" (so it needs no local copy of this look)
+export function PaidByField({ value, onChange, familyChoice = null, choiceWhere = 'form', readOnly = false, label = PAID_BY }) {
   const labelId = useId();
   return (
     <>
       <div className="mpb-field">
         <span id={labelId} className="field-label">
-          {PAID_BY}
+          {label}
         </span>
         <ChoiceGroup labelId={labelId} options={METHOD_OPTIONS} value={value} onChange={onChange} variant="segmented" readOnly={readOnly} />
       </div>
@@ -80,7 +82,7 @@ export default function MarkPaidBox({ anchor, name, amountCents, familyChoice = 
     onCloseRef.current = onClose;
   });
 
-  // Under the opener, right edges lined up, kept 8px inside the screen; above it when there's no
+  // Under the opener, right edges lined up, kept 8px inside the page area; above it when there's no
   // room below. Placed again when the page scrolls or the window changes size.
   useLayoutEffect(() => {
     function place() {
@@ -90,7 +92,9 @@ export default function MarkPaidBox({ anchor, name, amountCents, familyChoice = 
       const height = boxRef.current.offsetHeight;
       let top = rect.bottom + 4;
       if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - 4 - height);
-      const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+      // Kept 8px inside the page area (never over the left panel), and 8px inside the window's right.
+      const pageLeft = document.querySelector('.shell-content')?.getBoundingClientRect().left ?? 0;
+      const left = Math.max(pageLeft + 8, Math.min(rect.right - width, window.innerWidth - width - 8));
       setPosition({ top, left });
     }
     place();
