@@ -102,15 +102,7 @@ export default function Schedule({ location, isAdmin, onModalOpenChange, ...rest
   if (both) {
     const buttons = isAdmin ? (
       <div className="sactions">
-        {isPhone ? (
-          <IconButton
-            label={T.MORE_ACTIONS}
-            aria-haspopup="menu"
-            aria-expanded={menuAnchor ? 'true' : 'false'}
-            onClick={(e) => setMenuAnchor(menuAnchor ? null : e.currentTarget)}
-            Icon={IconDots}
-          />
-        ) : (
+        {!isPhone && (
           <button type="button" className="btn" onClick={(e) => ask('plan', e.currentTarget)}>
             <IconCalendarPlus size={16} aria-hidden="true" />
             {T.PLAN_A_CHANGE}
@@ -120,6 +112,16 @@ export default function Schedule({ location, isAdmin, onModalOpenChange, ...rest
           <IconPlus size={16} aria-hidden="true" />
           {isPhone ? T.ADD_SHORT : T.ADD_TIME_SLOT}
         </button>
+        {/* Phone: the page's ⋯ comes last, right of the blue button (R3-11, v1.047 (16)) */}
+        {isPhone && (
+          <IconButton
+            label={T.MORE_ACTIONS}
+            aria-haspopup="menu"
+            aria-expanded={menuAnchor ? 'true' : 'false'}
+            onClick={(e) => setMenuAnchor(menuAnchor ? null : e.currentTarget)}
+            Icon={IconDots}
+          />
+        )}
       </div>
     ) : null;
 

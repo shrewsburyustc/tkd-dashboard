@@ -73,10 +73,13 @@ const send = (children, bookings = []) => call('forms_staff_submit', {
   p_children: children, p_bookings: bookings, p_signature: SIG,
 });
 
+// Since 0040 a child is sent as { first_name, last_name, dob } only; kid() makes one aged `age` on the mock's today (2027-01-11)
+const kid = (first, age) => ({ first_name: first, last_name: 'Zzcheck', dob: `${2027 - age}-01-01` });
+
 let ava;
 let max;
 group('a sign-up makes one prospect per child (Booked / New)', () => {
-  const r = send([{ first_name: 'Ava', age: 10 }, { first_name: 'Max', age: 7 }], [{ child: 0, class_id: white, date: '2027-01-13', starts_at: '16:00' }]);
+  const r = send([kid('Ava', 10), kid('Max', 7)], [{ child: 0, class_id: white, date: '2027-01-13', starts_at: '16:00' }]);
   assert.equal(r.status, 'ok');
   ava = store.prospects.find((p) => p.child_first_name === 'Ava');
   max = store.prospects.find((p) => p.child_first_name === 'Max');
@@ -90,9 +93,9 @@ group('the list has list columns only; search; badge per person', () => {
   assert.equal(l.status, 'ok');
   assert.equal(l.prospects.length, 2);
   assert.ok(!JSON.stringify(l.prospects).includes('555-7731') && !JSON.stringify(l.prospects).includes('kim@'));
-  // never an age or a date of birth in the list (v0.245, rule 5); an older child has no last name
+  // never an age or a date of birth in the list (v0.245, rule 5); each child has the last name sent (0040: always)
   assert.ok(l.prospects.every((p) => !('child_age' in p) && !('child_dob' in p)));
-  assert.ok(l.prospects.every((p) => p.child_last_name === null));
+  assert.ok(l.prospects.every((p) => p.child_last_name === 'Zzcheck'));
   assert.deepEqual(call('prospects_search', { p_location_code: 'worcester', p_text: '7731' }).ids.sort(), [ava.id, max.id].sort());
   assert.deepEqual(call('prospects_search', { p_location_code: 'worcester', p_text: '77' }).ids, []);
   assert.equal(call('prospects_search', { p_location_code: 'worcester', p_text: 'x' }).status, 'invalid');
@@ -123,7 +126,7 @@ group('free classes from the panel share the limit', () => {
   assert.equal(t.times[0].spots_left, 1);
   assert.equal(call('prospects_book_time', { p_prospect_id: max.id, p_expected_version: ver(max.id), p_form_id: formId, p_class_id: white, p_date: '2027-01-13', p_starts_at: '16:00' }).status, 'ok');
   assert.equal(store.prospects.find((p) => p.id === max.id).status_id, store.statuses.find((s) => s.name === 'Contacted' && s.location_code === 'worcester').id);
-  send([{ first_name: 'Zoe', age: 8 }]);
+  send([kid('Zoe', 8)]);
   const zoe = store.prospects.find((p) => p.child_first_name === 'Zoe');
   assert.equal(call('prospects_book_time', { p_prospect_id: zoe.id, p_expected_version: ver(zoe.id), p_form_id: formId, p_class_id: white, p_date: '2027-01-13', p_starts_at: '16:00' }).status, 'time_taken');
   const c = call('prospects_cancel_time', { p_prospect_id: ava.id, p_expected_version: ver(ava.id) });
@@ -190,10 +193,10 @@ group('Not interested families go after 6 months (migration 0021, rulebook v0.61
   };
   const sevenMonths = '2026-06-01T00:00:00.000Z'; // NOW is 2027-01-11
   const fiveMonths = '2026-08-15T00:00:00.000Z';
-  const niOld = send([{ first_name: 'Nina', age: 8 }]);
-  const niRecent = send([{ first_name: 'Remy', age: 7 }]);
-  const mixed = send([{ first_name: 'Mona', age: 9 }, { first_name: 'Milo', age: 6 }]);
-  const newMid = send([{ first_name: 'Nate', age: 8 }]);
+  const niOld = send([kid('Nina', 8)]);
+  const niRecent = send([kid('Remy', 7)]);
+  const mixed = send([kid('Mona', 9), kid('Milo', 6)]);
+  const newMid = send([kid('Nate', 8)]);
   quiet(niOld, sevenMonths, 'not_interested');
   quiet(niRecent, fiveMonths, 'not_interested');
   quiet(mixed, sevenMonths, 'not_interested', 0);
@@ -230,13 +233,10 @@ group("each child's last name and date of birth (migration 0036, rulebook v0.634
   assert.equal(g.child_dob, '2019-03-04');
   assert.deepEqual(g.siblings.map((s) => [s.child_last_name, s.child_dob]), [['Chen-Ortiz', '2016-01-20']]);
   assert.equal(childAge({ childDob: g.siblings[0].child_dob, childAge: g.siblings[0].child_age }, '2027-01-20'), 11); // his birthday
-  // a child sent the old way (first name and age, an old page on a kiosk) has neither
-  assert.equal(send([{ first_name: 'Olga', age: 9 }]).status, 'ok');
-  const olga = store.prospects.find((p) => p.child_first_name === 'Olga');
-  const go = call('prospects_get', { p_prospect_id: olga.id }).prospect;
-  assert.equal(go.child_last_name, null);
-  assert.equal(go.child_dob, null);
-  assert.equal(go.child_age, 9);
+  // a child sent the old way (first name and age, an old page on a kiosk) is refused since 0040: nothing saved
+  const countBefore = store.prospects.length;
+  assert.equal(send([{ first_name: 'Olga', age: 9 }]).status, 'invalid');
+  assert.equal(store.prospects.length, countBefore);
 });
 
 group('the profile\'s small rules: "Ava N.", the age, the address line, how long the signature is kept', () => {

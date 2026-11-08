@@ -3301,7 +3301,7 @@ Tested in PGlite on every run (`run.mjs` step0041: an event from before 0041 kep
 
 **Status: applied 2026-11-05** (pasted by Jeffrey in the SQL Editor: "pass"; 0042a pre-check 0 / false / true / 2 before, 1 / true / true / 2 after; 0042c: `0042_fingerprints.sql` equals the PGlite line, `0009_fingerprints.sql` is 0042a's 196 lines unchanged plus exactly the two new lines, the security advisor adds only the expected "security definer function executable by authenticated" for `forms_copy_to_school`; the 0042d tests file waits for his UIDs). Built on `claude/prospect-form-system-cd893d` (rulebook v0.642 and v0.644: "Copy to Worcester / Shrewsbury" in a form's ⋯ menu on the Forms list).
 
-**Production order:** … 0034 → 0036 → Star's 0041 → **0042** (all live; 0042 since 2026-11-05). 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (those not live yet go after it): 0037–0039 and 0041 are other sections' (of these only Star's 0041 is live, checked 2026-11-05; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is — like 0040's once written — it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
+**Production order:** … 0034 → 0036 → Star's 0041 → **0042** (all live; 0042 since 2026-11-05). 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (those not live yet go after it): 0037–0039 and 0041 are other sections' (of these only Star's 0041 is live, checked 2026-11-05; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. 0040 is **not** in step0042's list: the Forms tests that step runs (0009, 0012, 0015, 0021, 0031, 0036) send the old child shape on purpose, and 0040 refuses it. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
 
 **What it does** (`supabase/migrations/0042_forms_copy_to_school.sql`): adds **one** function, `public.forms_copy_to_school(p_form_id uuid, p_location_code text)`, admins only, and changes nothing else (no table, rule, other function, right or data). It makes a **Draft copy of a form at the other school**:
 - the same kind, draft (questions + waiver) and settings (thank-you words, the family's confirmation email, add to calendar), **but no alert email** (v0.644: the new-sign-up alert address is the first school's; the copy starts without one);
@@ -3349,6 +3349,55 @@ Tested in PGlite on every run (`run.mjs` step0042: the pre-apply check; only 000
 - **The same name unless taken:** a straight copy reads exactly like the original at the other school; "Copy of" only when that school already has a form called that, so the copy doesn't take the name of a form that school already has (a third copy gets a second "Copy of …", as Duplicate does).
 - **No alert email on the copy (v0.644):** the alert address belongs to the first school's front desk; copied, the other school's sign-up alerts (a family's name, phone and email) would go to it once emails are on. The rest of the settings is copied.
 - **A new function, not an argument on `forms_duplicate`:** Duplicate's call stays exactly as the live app uses it (an argument with a default would make the web API's choice between two versions ambiguous).
+
+---
+
+## Migration 0040: New students — the old child shape and the plain-text Address removed
+
+**Status: APPLIED 2026-11-08** (pasted by Jeffrey in the SQL Editor: "success no rows returned"; 0040a pre-check true / false / true / false / true, 0 old-shape sign-ups saved; 0040c: `0040_fingerprints.sql` on production equals the PGlite output exactly (both functions security invoker, `search_path=""`, `postgres:EXECUTE` only), pre-apply check after: false / true / false / true; the security advisor mentions neither function; 0040d: Jeffrey ran `0040_tests.sql` with the admin and desk UIDs: "pass" = ALL 0040 TESTS PASSED). Written and tested in PGlite 2026-11-07; security-reviewed, no findings. Built on `claude/prospect-form-system-cd893d` (rulebook v0.640; the clean-up 0036 promised: "a later small migration removes both old ways, at least 12 hours after the new app is pushed" — the new app went live 2026-11-04, main a5d0e1d).
+
+**Production order:** … 0036 → 0041 → 0042 → … → **0040** (it needs only 0036, 0031 and 0009; nothing after 0036 replaced the two functions it replaces — checked 2026-11-07). It stops with "0040 needs migration 0036 … first" otherwise.
+
+**What it does** (`supabase/migrations/0040_forms_old_shapes_removed.sql`): replaces **two internal functions** and nothing else (no table, column, rule, grant or other function; nothing for anon):
+- `forms_check_answers` (0036's version): a child must be exactly `{ first_name, last_name, dob }`; an Address answer must be the object `{ street, city, state, zip }`. The old child shape `{ first_name, age }` and an Address sent as one plain text are refused (`invalid`). Every other rule is word for word as in 0036.
+- `forms_submit_core` (0036's version): every child has a date of birth now, so the "if it has one" branches go; each child is saved as `{ first_name, last_name, dob, age }`.
+Same arguments, owner, security invoker, `search_path = ''`, rights for nobody (the revokes are restated). **No data is read or written:** sign-ups already saved with the old shape (and their prospects) stay as they are (0009's trigger refuses any change to a sign-up).
+
+**Who it affects:** only a page that is still open from before 2026-11-04 (a kiosk tablet or a family's phone left open for days). Its Send is answered `invalid` and the page shows its normal "try again / reload" message; a reload gets the new page. Staff Fill in, the public page and the kiosk all go through the same core.
+
+**Each step needs Jeffrey's OK.**
+
+### 0040a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0040_preapply_check.sql` must answer `check_is_0036 = true`, `check_is_0040 = false`, `submit_is_0036 = true`, `submit_is_0040 = false`, `profile_in = true` (and `old_shape_signups`, which may be above 0 — they are history). Any other answer before 0040 → a function changed since 0036 was tested: stop and tell Claude (0040 would silently undo that change).
+2. Claude runs `supabase/tests/0036_fingerprints.sql` and `0009_fingerprints.sql` and keeps the result (the "before" record for 0040c and the undo).
+
+### 0040b. Apply 0040 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0040_forms_old_shapes_removed.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The word "dropdown" appears inside a function (a question type), so Supabase may show a warning — nothing is removed; confirm.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0040c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0040_fingerprints.sql` — four lines that must match what `run.mjs` printed ("0040 fingerprints"): `forms_check_answers` (`9f091ef38f440d9d812d8bce7f3fd4dc`) and `forms_submit_core` (`36f2025c9c15c5473f64ad498dd1e99b`), both `definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`, plus their `function-kind` lines.
+2. `0009_fingerprints.sql`, `0031_fingerprints.sql` and `0036_fingerprints.sql`: **only** those functions' body md5 moved (to the two above); everything else in them, and every other fingerprint file, is byte-identical (`run.mjs` step0040 checks exactly that).
+3. `0040_preapply_check.sql` again: `false / true / false / true / true`.
+4. **Security advisor:** nothing new.
+
+### 0040d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0040_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0040 TESTS PASSED**. It makes its own `zz test …` Walk-in form, checks that only the new child shape and the object Address are accepted (and that 0036's other rules still hold), that families sent the old way are refused with nothing saved (public page and staff Fill in), ages 2–99, and the two functions' rights. It rolls everything back.
+2. **Do not** run `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0021_tests.sql`, `0031_tests.sql` or `0036_tests.sql` after 0040: they send the old child shape on purpose and now fail by design. `0007_tests.sql` and `0019_tests.sql` still pass. Put the placeholders back afterwards.
+
+### 0040e. Undo 0040 (only with Jeffrey's OK)
+
+1. There is no separate undo file: **paste `supabase/migrations/0036_new_students_profile.sql` again** (it is safe to re-run; it puts back the two functions that accept both old ways). Claude checks `0036_fingerprints.sql` and `0009_fingerprints.sql` equal 0040a's record and `0040_preapply_check.sql` answers `true / false / true / false / true`. Then the six Forms tests above pass again. To redo: paste 0040 again.
+
+Tested in PGlite on every run (`run.mjs` step0040: the pre-apply check; only the two functions' body md5 moves in 0009's, 0031's and 0036's files; 0040 writes nothing — an old-shape sign-up made before it is unchanged; 0040's tests; re-run safety; the undo exactly as named here, then the redo).
+
+**Why:**
+- **Why now:** 0036 had to take both ways during the switch (a kiosk page stays open up to 12 hours). The new app has been live for days, so the old ways are only a way to put data without a date of birth in.
+- **Why no undo file:** the undo is "put 0036 back", which already exists and is tested as safe to re-run.
 
 ---
 
@@ -3594,6 +3643,56 @@ Tested in PGlite on every run (`run.mjs` step0037, or `node run.mjs --only-step0
 
 ---
 
+## Migration 0045: Calendar reader (calendar_items)
+
+**Status: APPLIED 2026-11-08** (pasted by Jeffrey in the SQL Editor: "success no rows returned"; 0045a pre-check 0 / false / 64 before; 0045c: the function's fingerprint equals the PGlite line exactly, the rest of the Calendar fingerprint record is unchanged (99 rows, md5 `4d556f0966618491c5f3256300471671` before and after), pre-apply check after: 1 / true; the security advisor adds only the expected "security definer function executable by authenticated" for `calendar_items`; 0045d: Jeffrey ran `0045_tests.sql` with the admin and desk UIDs: "tests pass" = ALL 0045 TESTS PASSED). Built on `claude/prospect-form-system-cd893d` (rulebook v0.645: the Calendar shows every section's dated things; Jeffrey 2026-11-06: "B: one reader", "A: show them", "OK, build it"; contract `docs/Prospects/CONTRACT-0045.md`; plan `docs/Prospects/TKD-Calendar-AllEvents-Plan.md`). Apply it **before** the app version whose Calendar calls it. The app that is live today keeps working: it never calls the new name.
+
+**Production order:** it needs 0005, 0006, 0012, 0013, 0014, 0016, 0022, 0036 and 0041 (all live) and nothing else; it touches no other migration's function, so it may go before or after 0037–0044 (PGlite's step0045 applies the live ones first). Its guard checks every table and column the function reads (64 columns of 12 tables) and stops with "0045 needs migrations … first (missing: …)", changing nothing, if one is missing.
+
+**What it does** (`supabase/migrations/0045_calendar_items.sql`): adds **one** function, `public.calendar_items(p_from date, p_to date)`, and changes nothing else (no table, rule, other function, right or data). It is **read only**: declared `STABLE` (Postgres refuses any write inside it), no insert/update/other write in its code, no history row, no clean-up, no SQL built from text. It answers `{"status":"ok","items":[…]}` (one item per dated thing, sorted by date, then start with all-day first, then kind, then id; Massachusetts days), `{"status":"no_access"}` (not signed in, PIN-locked, no staff row — checked first) or `{"status":"invalid"}` (a missing or infinite date, an end before the start, or more than 63 days: `p_to - p_from > 62`). Every item has the same 13 keys (`kind`, `id`, `date`, `start`, `end`, `location_code`, `title`, `child`, `what`, `place`, `opens`, `ref_id`, `event_id`; null when one doesn't apply). The kinds: `colorbelt_event`, `colorbelt_private` (active only), `star_event`, `star_private` (a candidate with a private day, not withdrawn), `camp_day`, `bb_day`, `signup` (one per child) and `deadline` (`registration_closes`, `signup_opens`, `signup_closes`, `early_price_ends`, `applications_due`, `submissions_due`).
+- **Never returned:** dates of birth, ages, phone, email, address, form answers, notes, payments, last names, signatures, a child's full name, Finance. A child is only ever "Ava N." (first name + the first letter of the child's own last name; for a sign-up from before last names were asked, the first letter of the parent's last word; the first name alone when there is neither). The parent's name and the last names are read **inside** the function to make that one letter and never leave it.
+- Security definer, `search_path = ''`, fully qualified names, `has_data_access()` first (never `is_admin()`: staff and admins both may call it, like `prospects_list`); `EXECUTE` revoked from public, anon, authenticated and service_role, granted to `authenticated` only. **Nothing for anon.**
+- **The only new exposure:** the Calendar now shows, to staff, things that were each on another section's own screen already — but this one function lets any signed-in staff session list them for any dates: Star private tests and Color Belt private testings as "Ava N." (the Star and Color Belt screens show full names), and new sign-ups as "Ava N." with the form's name. No column that holds a date of birth, contact detail, answer, payment or note is selected.
+
+**Each step needs Jeffrey's OK.**
+
+### 0045a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0045_preapply_check.sql` must answer `calendar_versions = 0`, `calendar_is_0045 = false`, `needs_found = 64`. `needs_found` below 64 → an earlier migration (or a column of 0036 / 0041) is missing — stop and tell Claude.
+2. Claude runs `supabase/tests/0008_fingerprints.sql` (it lists every function whose name starts `calendar_`, so it will also list the new one) and keeps the result (the "before" record for 0045c and the undo).
+
+### 0045b. Apply 0045 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0045_calendar_items.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The file has none of the words the Supabase connection refuses, so it should not warn.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0045c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0045_fingerprints.sql` — the one line must match what `run.mjs` printed ("0045 fingerprints"): `calendar_items(p_from date, p_to date)` with `903a135a992584d3215447e1d2545495 lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0008_fingerprints.sql`: 0045a's record **plus exactly two lines** for `calendar_items(p_from date, p_to date)` — `function` (the same md5, `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`) and `function-kind` (`volatility=s returns=jsonb`). Nothing else in it changes, and every other fingerprint file is unchanged (`run.mjs` step0045 checks exactly that).
+3. `0045_preapply_check.sql` again: `1 / true / 64`.
+4. **Security advisor:** nothing new. (If it lists "security definer function executable by authenticated" for `calendar_items`, that is expected: the Calendar calls it, like the other staff readers.)
+
+### 0045d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0045_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0045 TESTS PASSED**. It first checks that March – mid April **2037** is empty, then seeds its own `zz test …` things dated in that window (Color Belt events and private testings, Star events and private tests, two camps, a Black Belt cycle with two days, two forms with three sign-ups) and checks who may call it (anon refused, the front desk allowed, a PIN-locked admin and no session → `no_access`), the range rules (incl. infinity), the whole answer (26 items, every key, the contract's order), what is left out (cancelled / withdrawn private tests, empty deadlines), the Massachusetts-day edges (11:30 pm sign-ups in summer and winter time), privacy (no last name, date of birth, email, phone or parent name in the answer's text), that it writes nothing (every table it reads and the history unchanged) and the function's rights and code (STABLE, no write, no dynamic SQL, schemas, `has_data_access()` first). It rolls everything back. Supabase may warn about destructive operations (the cancelled and withdrawn seeds are changed inside the rolled-back transaction) — confirm.
+2. For one line it switches the database's own triggers off (`session_replication_role`, to give three seeded sign-ups a time; inside the rolled-back test). If your SQL Editor role is not allowed to, the test stops at "TEST SETUP: could not set a sign-up's time" — tell Claude.
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0045e. Undo 0045 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version whose Calendar doesn't call `calendar_items` (with the function gone, the other sections' dates would show only "Couldn't load the other sections' dates.").
+2. Paste **the whole file** `supabase/manual/0045u_undo.sql` → **Run**. It removes the one function; Supabase warns about a destructive operation — that is the function, no data. Confirm.
+3. Claude checks `0008_fingerprints.sql` (must equal 0045a's record), `0045_fingerprints.sql` (no row) and `0045_preapply_check.sql` (`0 / false / 64`). To redo: paste 0045 again. Running the undo twice is safe.
+
+Tested in PGlite on every run (`run.mjs` step0045: the pre-apply check before, after and after the undo; only 0008's file gains two lines; 0045 writes nothing; 0045's tests and the Forms / Prospects tests (0007, 0009, 0012, 0036) before and after; re-run safety; the undo file exactly as named here, then the redo).
+
+**Why:**
+- **One reader, not one per section:** the Calendar makes one call per month or week; no section's own readers change, and the rules for what the Calendar may show are in one place.
+- **STABLE and no history:** a read must never write — not a clean-up, not a status row — so Postgres itself refuses it (unlike `prospects_list`, which tidies old rows).
+- **Initials made inside the database:** the last names never leave it, so the app can't show or log what it never receives.
+- **A 63-day cap:** the answer stays small whatever the app asks for.
+- **`"C"` collation on the sort:** PGlite and Supabase sort text differently; `kind` and `id` are compared byte by byte so the order is the same everywhere.
 ## Migration 0038: Star design-review database fixes
 
 **Status: applied 2026-11-07** (pasted by Jeffrey; 0038a pre-apply check `0 / 2 / 0 / 7 / 7 / 0 / 0 / 0`; after: `3 / 0 / 3 / 7 / 0 / 9 / 0 / 0`; 0038c all 9 function body md5s equal the tested ones, rights `authenticated:EXECUTE,postgres:EXECUTE` (trigger functions `postgres:EXECUTE`), `search_path=""`, the trigger enabled, `star_roster` security_invoker; 0038d security advisor: only the usual "security definer function executable by authenticated" warnings for the six callable functions; 0038e Jeffrey ran `0038_tests` and the older Star tests: both pass). Was: not applied yet. Written on `star-testing` 2026-11-07 (rulebook v1.035 / v1.040 = R1-01, R1-02, R2-02, S-1 v1.047 / v0.519; plan `docs/Testing/Star Testing/TKD-StarTesting-Pass1-Plan.md`, Step C). Needs a **security review** and Jeffrey's OK before it is pasted. Apply it **before** the app that sends `p_school`, shows the form's own choice, or calls `star_undo_event_edit` is deployed; the live app keeps working after it (see "the old app" below). **Order:** 0038 live → Finance's R1-01 migration live → the Star app push.

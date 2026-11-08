@@ -1,7 +1,8 @@
 // mockCalendar.js — the PREVIEW (fake) database for the Calendar (migration 0008).
 // Why it exists: preview mode runs without Supabase. This file pretends to be the four calendar
 // tables and the ten calendar_* functions, with the SAME rules and answers as the real database
-// (same check order, same statuses). mockClient.js plugs it in; calendar/checks.mjs tests it in
+// (same check order, same statuses), plus calendar_items (v0.645): made-up sample dates of every
+// other section, shaped exactly like CONTRACT-0045. mockClient.js plugs it in; calendar/checks.mjs tests it in
 // Node with a plain in-memory store.
 //
 //   const backend = createCalendarBackend({ loadStore, saveStore, now, newId, getSchedule, getClasses, today });
@@ -42,7 +43,10 @@ const RPC_ARGS = {
   calendar_update_type: [['p_type_id', 'uuid'], ['p_expected_version', 'int'], ['p_name', 'text'], ['p_color', 'text']],
   calendar_reorder_types: [['p_expected_ids', 'uuid[]'], ['p_new_ids', 'uuid[]']],
   calendar_delete_type: [['p_type_id', 'uuid'], ['p_expected_version', 'int'], ['p_expected_event_count', 'int'], ['p_move_to_type_id', 'uuid']],
+  // v0.645, migration 0045: read-only, staff and admins both (contract docs/Prospects/CONTRACT-0045.md)
+  calendar_items: [['p_from', 'date'], ['p_to', 'date']],
 };
+const READ_ONLY_RPCS = new Set(['calendar_items']);
 export const CALENDAR_RPC_NAMES = Object.keys(RPC_ARGS);
 
 class DbError extends Error {
@@ -148,6 +152,49 @@ export function defaultCalendarData({ today, newId, stamp, schedule, classes, ac
   return db;
 }
 
+// ----- calendar_items: made-up samples of every other section's dates (v0.645) -----
+// Not stored: worked out from "today" each time, in the month that holds today, so the preview
+// always has something to show. Same shape as the real function (CONTRACT-0045): every key present,
+// times 'HH:MM', children only as "Ava N.", sorted by date, start (all day first), kind, id.
+const ITEM_KEYS = ['kind', 'id', 'date', 'start', 'end', 'location_code', 'title', 'child', 'what', 'place', 'opens', 'ref_id', 'event_id'];
+const KIND_ORDER = ['colorbelt_event', 'colorbelt_private', 'star_event', 'star_private', 'camp_day', 'bb_day', 'signup', 'deadline'];
+
+export function previewCalendarItems(todayDate, from, to) {
+  const month = todayDate.slice(0, 7);
+  const last = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate(); // days in the month
+  const day = (n) => `${month}-${String(Math.min(n, last)).padStart(2, '0')}`;
+  const out = [];
+  const add = (row) => out.push({ ...Object.fromEntries(ITEM_KEYS.map((k) => [k, null])), ...row });
+  const REF = { cbEvent: 'cb-event-1', camp: 'camp-1', star: 'star-event-1', cycle: 'bb-cycle-1' };
+  const deadline = (n, what, title, opens, ref, location = null) =>
+    add({ kind: 'deadline', id: `${ref}:${what}`, date: day(n), location_code: location, title, what, opens, ref_id: ref });
+  const signup = (n, id, child, form, location) =>
+    add({ kind: 'signup', id, date: day(n), location_code: location, title: form, child, opens: 'prospect', ref_id: id });
+
+  signup(3, 'p-liam', 'Liam P.', 'Free class — Instagram', 'worcester');
+  signup(3, 'p-mia', 'Mia R.', 'Free class — Instagram', 'worcester');
+  signup(6, 'p-noah', 'Noah K.', 'Free class — Instagram', 'worcester');
+  signup(6, 'p-zoe', 'Zoe T.', 'Free class — Flyer', 'shrewsbury');
+  add({ kind: 'star_private', id: 'cand-leo', date: day(6), start: '15:00', location_code: 'worcester', title: 'Private', child: 'Leo N.', opens: 'star_private', ref_id: 'cand-leo', event_id: REF.star });
+  deadline(6, 'early_price_ends', 'Fall break camp', 'camp', REF.camp);
+  add({ kind: 'colorbelt_private', id: 'cb-priv-2', date: day(9), start: '16:30', location_code: 'shrewsbury', title: 'Private', child: 'Eli S.', opens: 'colorbelt_private', ref_id: 'cb-priv-2' });
+  deadline(10, 'registration_closes', 'Fall color belt testing', 'colorbelt_event', REF.cbEvent, 'worcester');
+  deadline(13, 'signup_closes', 'Fall break camp', 'camp', REF.camp);
+  add({ kind: 'colorbelt_event', id: REF.cbEvent, date: day(14), start: '12:30', end: '15:00', location_code: 'worcester', title: 'Fall color belt testing', opens: 'colorbelt_event', ref_id: REF.cbEvent });
+  for (const n of [16, 17, 18]) {
+    add({ kind: 'camp_day', id: `${REF.camp}:${day(n)}`, date: day(n), start: '09:00', end: '15:00', title: 'Fall break camp', opens: 'camp', ref_id: REF.camp });
+  }
+  add({ kind: 'colorbelt_private', id: 'cb-priv-1', date: day(17), start: '15:15', location_code: 'worcester', title: 'Private', child: 'Ava N.', opens: 'colorbelt_private', ref_id: 'cb-priv-1' });
+  deadline(19, 'registration_closes', 'Star testing', 'star_event', REF.star);
+  deadline(20, 'applications_due', 'Black Belt', 'bb_cycle', REF.cycle);
+  add({ kind: 'star_event', id: REF.star, date: day(21), start: '12:30', end: '14:30', title: 'Star testing', opens: 'star_event', ref_id: REF.star });
+  add({ kind: 'bb_day', id: 'bb-day-1', date: day(22), start: '09:00', end: '12:00', location_code: 'worcester', title: 'Black Belt', what: 'Physical day', opens: 'bb_cycle', ref_id: REF.cycle });
+  deadline(27, 'submissions_due', 'Black Belt', 'bb_cycle', REF.cycle);
+
+  const key = (i) => [i.date, i.start ?? '', String(KIND_ORDER.indexOf(i.kind)).padStart(2, '0'), i.id].join('|');
+  return out.filter((i) => i.date >= from && i.date <= to).sort((a, b) => (key(a) < key(b) ? -1 : 1));
+}
+
 function isUsableStore(store) {
   return Boolean(store) && store.schema === CALENDAR_STORE_SCHEMA
     && ['types', 'events', 'closures', 'closureClasses'].every((key) => Array.isArray(store[key]));
@@ -157,6 +204,7 @@ function isUsableStore(store) {
 
 export function createCalendarBackend({ loadStore, saveStore, now = () => Date.now(), newId, getSchedule, getClasses, today }) {
   let failNext = false;
+  let failNextItems = false;
   const stamp = () => new Date(now()).toISOString();
 
   function read() {
@@ -433,10 +481,13 @@ export function createCalendarBackend({ loadStore, saveStore, now = () => Date.n
   }
 
   function rpc(name, args = {}, ctx = {}) {
-    if (!(name in handlers)) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
-    if (failNext) {
-      failNext = false;
-      return { data: null, error: { message: 'Failed to fetch (preview: failNextCalendarSave)' }, count: null, status: 0, statusText: '' };
+    const readOnly = READ_ONLY_RPCS.has(name);
+    if (!(name in handlers) && !readOnly) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
+    // each armed failure only hits its own kind of call: a failed save never hits the read, and back
+    if (readOnly ? failNextItems : failNext) {
+      if (readOnly) failNextItems = false;
+      else failNext = false;
+      return { data: null, error: { message: `Failed to fetch (preview: ${readOnly ? 'failNextCalendarItems' : 'failNextCalendarSave'})` }, count: null, status: 0, statusText: '' };
     }
     if (!ctx.signedIn) return denied(`function ${name}`);
     let parsed;
@@ -447,6 +498,12 @@ export function createCalendarBackend({ loadStore, saveStore, now = () => Date.n
       throw error;
     }
     if (!ctx.hasDataAccess) return ok(st('no_access'));
+    if (name === 'calendar_items') {
+      // access → range (a missing date, to before from, or more than 63 days: 'invalid') → items
+      const days = parsed.p_from && parsed.p_to ? Math.round((new Date(`${parsed.p_to}T12:00:00Z`) - new Date(`${parsed.p_from}T12:00:00Z`)) / 86400000) : NaN;
+      if (!(days >= 0 && days <= 62)) return ok(st('invalid'));
+      return ok({ status: 'ok', items: previewCalendarItems(today(), parsed.p_from, parsed.p_to) });
+    }
     if (!ctx.isAdmin) return ok(st('not_allowed'));
     const db = read(); // a private copy = a transaction: only an 'ok' is saved
     const answer = handlers[name](db, parsed, { actorName: ctx.actorName ?? 'Database admin' });
@@ -457,6 +514,9 @@ export function createCalendarBackend({ loadStore, saveStore, now = () => Date.n
   // ----- Test helpers -----
   function failNextSave() {
     failNext = true;
+  }
+  function failNextItemsRead() {
+    failNextItems = true;
   }
   function simulateOtherAdminEdit() {
     const db = read();
@@ -477,5 +537,5 @@ export function createCalendarBackend({ loadStore, saveStore, now = () => Date.n
     write(defaultCalendarData({ today: today(), newId, stamp: stamp(), schedule: getSchedule(), classes: getClasses() }));
   }
 
-  return { select, rpc, failNextSave, simulateOtherAdminEdit, clear, reset, snapshot: read };
+  return { select, rpc, failNextSave, failNextItems: failNextItemsRead, simulateOtherAdminEdit, clear, reset, snapshot: read };
 }

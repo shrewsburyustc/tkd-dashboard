@@ -17,6 +17,7 @@ import Dialog from '../../components/Dialog.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
+import Select from '../../components/Select.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
@@ -172,15 +173,19 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
         </p>
         {count > 0 && !blockedLast && (
           <div className="field">
-            <label htmlFor={`${idBase}-move`}>{T.MOVE_TO}</label>
-            <select id={`${idBase}-move`} className="input sdialog-select" value={state.moveTo ?? ''} disabled={state.saving} onChange={(e) => onChange({ moveTo: e.target.value || null }, 'delete')}>
-              <option value="">{T.CHOOSE_TYPE}</option>
-              {others.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <span id={`${idBase}-move-label`} className="field-label">
+              {T.MOVE_TO}
+            </span>
+            {/* The shared dropdown (S-10, v1.048 (20)) */}
+            <Select
+              id={`${idBase}-move`}
+              labelId={`${idBase}-move-label`}
+              value={state.moveTo ?? null}
+              options={others.map((t) => ({ value: t.id, label: t.name }))}
+              placeholder={T.CHOOSE_TYPE}
+              readOnly={state.saving}
+              onChange={(moveTo) => onChange({ moveTo: moveTo || null }, 'delete')}
+            />
           </div>
         )}
         <ConfirmButtons

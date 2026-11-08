@@ -5,22 +5,27 @@
 // phone's "day view" — the phone has no Week view (v0.234).
 // Follow-ups (v0.612 / v0.615) are a HOLLOW ring, so they aren't mistaken for an event or closure
 // dot: amber when due today or overdue, blue when still ahead. The ring always keeps one of the
-// three places. What the Show menu hides is already gone from `info` (showKinds.js applyShow).
+// three places. Other sections' dates (v0.645) are a dot in the item's color (a deadline: gray);
+// new sign-ups have no dot. What the Show menu hides is already gone from `info` (showKinds.js applyShow).
 //
 // Props: weeks, month, today, selected, infoFor, typeColor, onPick — as MonthGrid.
-import { colorOf } from '../../lib/schedule/colors.js';
+import { itemColor } from './MonthGrid.jsx';
 import * as T from './text.js';
 
 const AMBER = '#EF9F27';
+const DEADLINE_GRAY = '#858580'; // a little darker than the mockup's #9C9C96: a dot needs 3:1 on white (design review)
 const RING_AMBER = '#BA7517'; // darker: a thin ring needs 3:1 on white (design review)
 
 function dotsFor(info, typeColor, due) {
   const dots = [];
   if (info.closures.length) dots.push({ key: 'closed', color: AMBER });
   for (const e of info.events) dots.push({ key: e.event.id, color: typeColor(e.event.typeId).edge });
-  for (const t of info.testing) dots.push({ key: t.id, color: colorOf('purple').edge });
+  // other sections' dates (v0.645): the item's color — Testing / Black Belt purple, camp teal
+  for (const i of info.items) dots.push({ key: i.id, color: itemColor(i).edge });
   // free classes booked through Forms (amber when one is on a cancelled class)
   if (info.bookingCount) dots.push({ key: 'free', color: info.bookingProblems ? AMBER : 'var(--color-blue)' });
+  // deadlines: gray, last (real items come first). New sign-ups get no dot — the day panel lists them.
+  for (const d of info.deadlines) dots.push({ key: d.id, color: DEADLINE_GRAY });
   if (!info.followUpCount) return dots.slice(0, 3);
   return [...dots.slice(0, 2), { key: 'follow', color: due ? RING_AMBER : 'var(--color-blue)', ring: true }];
 }

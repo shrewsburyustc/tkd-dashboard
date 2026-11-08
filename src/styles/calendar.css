@@ -6,6 +6,8 @@
   grid reuses schedule.css (sgrid / sslot). Colors come from tokens.css, except the 8 class /
   event-type colors, which each chip receives as --chip-fill / --chip-edge / --chip-text
   (the same recorded exception as the Schedule, v0.233). Closures are amber (a warning).
+  Other sections' dates (v0.645): Testing / Black Belt chips use the Testing purple, camps the Camp
+  teal (same --chip-* variables), deadlines the dashed gray look, new sign-ups the blue follow-up look.
 */
 
 /* The page: same padding as the Schedule (bottom: room for the toast). */
@@ -234,12 +236,13 @@ button.cseg-item:focus-visible {
 .cchip-letters {
   flex: none;
   margin-right: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px; /* §7's minimum (design review R4-06) */
+  font-weight: 500; /* §7: only 400 and 500 */
 }
 
 .cchip--event,
-.cchip--testing {
+.cchip--testing,
+.cchip--camp {
   border-left: 3px solid var(--chip-edge);
   background: var(--chip-fill);
   color: var(--chip-text);
@@ -250,9 +253,17 @@ button.cseg-item:focus-visible {
   color: var(--color-warning-text);
 }
 
-.cchip--sched {
+/* A planned schedule's first day, and (v0.645) a deadline: dashed gray. */
+.cchip--sched,
+.cchip--deadline {
   border: 1px dashed var(--color-border-control);
   color: var(--color-text-secondary);
+}
+
+/* A deadline has its own white fill, so its gray text keeps 4.5:1 on today's tinted cell too
+   (design review, 2026-11-06). */
+.cchip--deadline {
+  background: var(--color-bg);
 }
 
 .cchip--cls {
@@ -281,6 +292,23 @@ button.cchip--btn {
 
 button.cchip--closed {
   border-left: 0;
+}
+
+/* The section's icon in front of a Week view block's name (v0.645). */
+.cweek-grid .sslot-name > svg {
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+/* A deadline that can be clicked (Week view): keep the whole dashed edge. */
+button.cchip--deadline {
+  border: 1px dashed var(--color-border-control);
+  background: var(--color-bg);
+}
+
+/* Week view: the gray line when the other sections' dates couldn't load (v0.645), above the grid. */
+.cweek-failed {
+  margin: 0 0 var(--space-8);
 }
 
 button.cchip--btn:focus-visible {
@@ -408,7 +436,7 @@ button.cchip--btn:focus-visible {
   border-radius: var(--radius-tag);
   background: var(--color-warning-bg);
   color: var(--color-warning-text);
-  font-size: 11px;
+  font-size: var(--text-12); /* §7's 12 px minimum (was 11 px; design review, batch 3) */
 }
 
 .cpanel-empty {
@@ -646,6 +674,12 @@ button.cchip--btn:focus-visible {
   flex: 1;
 }
 
+/* The shared dropdown fills the rest of the row next to the color swatch (S-10) */
+.ctype-row .fa-select {
+  flex: 1;
+  min-width: 0;
+}
+
 .ctimes {
   display: flex;
   flex-direction: column;
@@ -828,7 +862,7 @@ button.cchip--btn:focus-visible {
     margin-bottom: 0;
   }
 
-  .ctimes-row > input[type='time'] {
+  .ctimes-row > .fa-select {
     grid-column: 2;
   }
 
@@ -956,7 +990,7 @@ button.cchip--btn:focus-visible {
   gap: 2px;
   margin-left: var(--space-4);
   font-size: var(--text-12);
-  font-weight: 600;
+  font-weight: 500; /* §7: only 400 and 500 (R4-06) */
 }
 
 /* ----- Prospects' follow-ups (v0.612 / v0.615): amber when due today or overdue, blue ahead ----- */
@@ -1070,5 +1104,5 @@ button.cchip--btn:focus-visible {
   min-height: 44px;
   justify-content: center;
   color: var(--color-blue);
-  font-weight: 600;
+  font-weight: 500; /* §7: only 400 and 500 (R4-06) */
 }
