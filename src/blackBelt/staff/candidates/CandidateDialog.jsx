@@ -35,13 +35,14 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import LineBar from '../parts/LineBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { HISTORY } from '../../../components/text.js'; // the History section's name for screen readers
 import { formatCents } from '../../../lib/blackBelt/money.js';
 import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
-import Choice from '../parts/Choice.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import DateField from '../parts/DateField.jsx';
 import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
 import { canRecordPayment, detailsProblems, printReceiptOffered } from './checks.js';
@@ -320,7 +321,7 @@ function EditFields({ edit, data, isAdmin, hidden, today, isPhone, onChange }) {
         <span id={`${id}-school`} className="field-label">
           {T.SCHOOL}
         </span>
-        <Choice labelId={`${id}-school`} className="bb-segmented--fill" options={[{ key: 'worcester', label: T.schoolName('worcester') }, { key: 'shrewsbury', label: T.schoolName('shrewsbury') }]} value={v.school} readOnly={ro} onChange={(school) => onChange({ school })} />
+        <ChoiceGroup labelId={`${id}-school`} fill options={[{ key: 'worcester', label: T.schoolName('worcester') }, { key: 'shrewsbury', label: T.schoolName('shrewsbury') }]} value={v.school} readOnly={ro} onChange={(school) => onChange({ school })} />
       </div>
       <div className="field">
         <span id={`${id}-dan`} className="field-label">
@@ -335,7 +336,7 @@ function EditFields({ edit, data, isAdmin, hidden, today, isPhone, onChange }) {
             <p className="field-hint">{T.DAN_MAKEUP_HINT}</p>
           </>
         ) : (
-          <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${danLocked ? ' is-locked' : ''}`} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={danValue} readOnly={ro || danLocked} ariaDisabled={danAtDesk} describedBy={danAtDesk ? `${id}-dan-hint` : undefined} onChange={(dan) => onChange({ dan })} />
+          <ChoiceGroup labelId={`${id}-dan`} fill locked={danLocked} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={danValue} readOnly={ro} describedBy={danLocked ? `${id}-dan-hint` : undefined} onChange={(dan) => onChange({ dan })} />
         )}
         {/* Staff while hidden: one look on every row (Star's v0.508 (3)); else the paid-only lock */}
         {danLocked && !makeup && <p id={`${id}-dan-hint`} className="field-hint">{danAtDesk ? T.DAN_AT_DESK_HINT : T.DAN_LOCKED_STAFF}</p>}
@@ -376,7 +377,9 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   }, [banner]);
   const bannerElement = banner && (
     <div ref={bannerRef}>
-      <ErrorBanner
+      <LineBar
+      takeFocus={banner.takeFocus === true}
+      focusKey={banner}
       text={banner.text}
       onRetry={
         banner.retry
