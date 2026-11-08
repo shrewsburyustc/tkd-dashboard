@@ -2677,6 +2677,73 @@ check('EventPage: only the roster follows the room — rosterLayoutFor feeds ctx
   assert.match(page, /useEffect\(\(\) => \{\s+setMenu\(null\);\s+setMarkPaidBox\(null\);\s+\}, \[rosterIsPhone, isPhone\]\);/);
 });
 
+check('batch 2: every Color Belt page lines its saves up with the shared save line, draws its bars with PageBar and no longer shows "Undone" itself (R2-05)', () => {
+  const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+  const pages = {
+    'Classes and ranks': '../../screens/testing/ClassesRanksTab.jsx',
+    'Events tab': '../../screens/testing/events/EventsTab.jsx',
+    'event page': '../../screens/testing/event/EventPage.jsx',
+    'Private testing tab': '../../screens/testing/private/PrivateTestingTab.jsx',
+    'private grading page': '../../screens/testing/private/PrivateGradingPage.jsx',
+  };
+  for (const [name, path] of Object.entries(pages)) {
+    const full = read(path);
+    const src = full.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''); // code only: a comment can't satisfy a check
+    if (name !== 'private grading page') {
+      assert.match(src, /useSaveLine\(\{/, `${name} uses the save line`);
+      assert.match(src, /line\.undoAction\(|undoAction\(/, `${name} makes its Undo toasts with line.undoAction`);
+      assert.match(src, /undoBar/, `${name} gives the line its bar`);
+      assert.doesNotMatch(src, /\b(?:beginWrite|endWrite|busyRef)\b/, `${name} has no flag of its own any more`);
+      // every begin() has its end(): the same number of each, and each end() gets its token
+      assert.equal((src.match(/line\.begin\(\)/g) || []).length > 0, true, `${name} takes the line`);
+      assert.doesNotMatch(src, /line\.end\((?![^;]*token)[^;]*\);/, `${name}: every line.end() is given its token`);
+    }
+    assert.match(src, /<PageBar\b/, `${name} draws its bars with PageBar`);
+    assert.doesNotMatch(src, /<ErrorBanner\b/, `${name} has no page-level ErrorBanner (a dialog's own bar is drawn inside the dialog's file)`);
+    assert.doesNotMatch(src, /showToast\(T\.TOAST_UNDONE\b/, `${name} leaves "Undone" to the line`);
+  }
+  // Undos that reopen registration say so (R2-07, v1.051); an Undo that closes it stays plain "Undone"
+  const events = read(pages['Events tab']);
+  assert.match(events, /doneText: T\.TOAST_UNDONE_REOPENED/);
+  assert.equal(CBT.TOAST_UNDONE_REOPENED, 'Undone. Registration is open again.');
+});
+
+check('batch 2: the back links are the shared BackLink (R3-06); .tc-back is gone', () => {
+  const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+  for (const path of ['../../screens/testing/event/EventPage.jsx', '../../screens/testing/private/PrivateGradingPage.jsx']) {
+    const src = read(path);
+    assert.match(src, /import BackLink from '\.\.\/\.\.\/\.\.\/components\/BackLink\.jsx'/);
+    assert.match(src, /<BackLink\b/);
+    assert.doesNotMatch(src, /className="link-button ev-back"/);
+  }
+  const chooserBack = read('../../screens/testing/chooser/BackToTesting.jsx');
+  assert.match(chooserBack, /<BackLink\b/);
+  assert.doesNotMatch(chooserBack.replace(/\/\/[^\n]*/g, ''), /tc-back/); // (its header comment says where the old class went)
+  assert.doesNotMatch(read('../../screens/testing/chooser/chooser.css').replace(/\/\*[\s\S]*?\*\//g, ''), /\.tc-back/); // no rule left (only the comment that says it went)
+  // Testing's focus helper finds the shared link; its Black Belt link keeps the .ev-back look, so that rule stays
+  assert.match(read('../../screens/Testing.jsx'), /querySelector\('\.back-link, /);
+  assert.match(read('../../styles/testing-events.css'), /\.ev-back \{/);
+});
+
+check('batch 2: the Undo payment box, the Mark paid toasts and the row buttons (R1-06, R1-07, R1-08)', () => {
+  const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+  const event = read('../../screens/testing/event/EventPage.jsx');
+  const priv = read('../../screens/testing/private/PrivateTestingTab.jsx');
+  for (const [name, src] of [['event page', event], ['Private testing tab', priv]]) {
+    assert.match(src, /T\.undoPaymentTitle\(T\.studentLabel\(dialog\.snapshot\), dialog\.payment\.amountCents, dialog\.payment\.method\)/, `${name}: the Undo payment box title carries the amount and the way`);
+    assert.match(src, /T\.markedPaidToastHidden\(/, `${name}: a Mark paid toast while details are hidden names no amount`);
+    assert.match(src, /T\.markedPaidToast\(/);
+  }
+  const code = (path) => read(path).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(code('../../screens/testing/event/RosterRows.jsx'), /is-unavailable/);
+  assert.match(code('../../screens/testing/private/PrivateRows.jsx'), /is-unavailable/);
+  // A bar that can be shown after the person left the page never carries money while details are hidden:
+  // the event page's Mark paid and Edit payment Undos hand the line general words
+  assert.match(code('../../screens/testing/event/EventPage.jsx'), /\{ words: T\.markedPaidToastHidden\(name\) \}/);
+  assert.match(code('../../screens/testing/event/EventPage.jsx'), /\{ words: \`\$\{T\.TOAST_CHANGES_SAVED\} for \$\{T\.studentLabel\(d\.snapshot\)\}\` \}/);
+  assert.match(code('../../screens/testing/private/PrivateTestingTab.jsx'), /\{ words: \`\$\{T\.TOAST_CHANGES_SAVED\} for \$\{name\}\` \}/);
+});
+
 check('privateRules: Upcoming / Past order and the cards (P1, E11)', () => {
   const r = (firstName, lastName, privateDate, privateTime, over = {}) => ({
     firstName, lastName, privateDate, privateTime, status: 'active', paid: false, paidCents: 0, amountDueCents: 8500, ...over,
@@ -4387,17 +4454,34 @@ check('text: the private Undo payment box names the latest payment and what the 
   // A top-up undone: back to "Paid $65 · $20 more to collect".
   assert.equal(
     CBT.privateUndoPaymentBody(2000, 'cash', '2026-11-03', { paidCents: 6500, dueCents: 2000 }),
-    'The $20 cash payment recorded on Nov 3 is reversed and the row goes back to Paid $65 · $20 more to collect. Both stay in the history.',
+    'Paid on Nov 3. The row goes back to Paid $65 · $20 more to collect. Both stay in the history.',
   );
   // The only payment undone: back to Not paid (as the event roster's words).
   assert.equal(
     CBT.privateUndoPaymentBody(8500, 'card', '2026-11-03', { paidCents: 0, dueCents: 8500 }),
-    'The $85 card payment recorded on Nov 3 is reversed and the row goes back to Not paid. Both stay in the history.',
+    'Paid on Nov 3. The row goes back to Not paid. Both stay in the history.',
   );
   // Still paid in full after the undo (paid more than the price before): back to Paid.
   assert.match(CBT.privateUndoPaymentBody(1000, 'check', '2026-11-03', { paidCents: 9000, dueCents: 0 }), /goes back to Paid\. Both/);
   assert.match(CBT.privateUndoPaymentBody(1000, 'check', '2026-11-03', null), /goes back to Not paid\./);
   assert.equal(CBT.privatePriceChangedNote('Ava Chen', 2000), 'The amount owed for Ava Chen is now $20. Nothing was saved. Tap Mark paid again.');
+});
+
+check('words: batch 2 — the shared sentences reach Color Belt unchanged (R1-06, R1-07, R2-07, R3-13)', () => {
+  assert.equal(CBT.undoPaymentTitle('Ava Chen', 6500, 'cash'), 'Undo Ava Chen’s $65 cash payment?'); // R1-06
+  assert.equal(CBT.undoPaymentBody(6500, 'cash', '2026-11-03'), 'Paid on Nov 3. The row goes back to Not paid. Both stay in the history.');
+  assert.equal(CBT.markedPaidToast('Ava Chen', 6500, 'cash'), 'Ava Chen marked paid · $65 cash'); // R1-07
+  assert.equal(CBT.markedPaidToastHidden('Ava Chen'), 'Ava Chen marked paid');
+  assert.equal(CBT.paymentUndoneToast('Ava Chen'), 'Payment undone for Ava Chen');
+  assert.equal(CBT.someoneElseChanged('Ava Chen'), 'Someone else changed Ava Chen just now, so nothing was done. Their change is shown.'); // R2-07
+  assert.equal(CBT.couldntUndo('a result was recorded just now'), "Couldn't undo: a result was recorded just now.");
+  assert.equal(CBT.UNDO_DIDNT_SAVE, "Undo didn't save. Check the connection, then retry.");
+  assert.equal(CBT.UNDO_FAILED, CBT.UNDO_DIDNT_SAVE); // the old name says the same thing
+  assert.equal(CBT.PAST_DATES_HINT, "Past days can't be chosen."); // R3-13
+  // Camps re-exports these old names from this file until it has switched: they must still exist as words
+  for (const name of ['STALE', 'UNDO_STALE', 'UNDO_FAILED', 'ROSTER_STALE', 'markPaidFailed', 'paymentUndoneToast']) {
+    assert.ok(CBT[name] !== undefined, `${name} is still exported (Camps re-exports it)`);
+  }
 });
 
 // ======================= history.js (CB7, migration 0030 §5, rulebook v0.421, mockup P3) =======================

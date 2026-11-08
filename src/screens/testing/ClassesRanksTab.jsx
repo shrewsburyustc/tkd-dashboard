@@ -16,12 +16,18 @@
 //   - decides which dialog, menu or banner is showing
 //   - sends every change to the database (src/lib/testing/api.js) and reacts to the answer
 //   - offers Undo for reversible changes (edit, add, reorder) — never for delete (v0.41)
+// Batch 2 (design review R2-05 / R2-07, rulebook v1.125–v1.131): the saves and the Undos go through
+// the shared save line (src/lib/saveLine.js) instead of this file's own "one change at a time" flag:
+// an Undo pressed while a save runs now waits its turn ("Undoing…") instead of being dropped, the
+// page's one amber bar is a PageBar under the top bar, and a refused save or Undo names the rank or
+// class ("Someone else changed Yellow just now, …" / "Couldn't undo: …").
 // The drawing is done by smaller files: ClassBlock / RankRows (the list), RankDialog,
-// ClassDialog, FinalAwardSelect, and the shared Dialog / RowMenu / ErrorBanner / ConfirmBox (the
+// ClassDialog, FinalAwardSelect, and the shared Dialog / RowMenu / PageBar / ConfirmBox (the
 // delete question: "Keep rank · Delete rank" / "Keep class · Delete class", v1.008, v0.422).
 //
 // Rules worth knowing (contract 0003 §8):
-//   - ONE change at a time: while a save is on its way, other changes are ignored.
+//   - ONE change at a time (the save line): while a save is on its way, other changes are ignored;
+//     an Undo waits for it.
 //   - Dialog saves WAIT for the database. Only reordering is "optimistic" (shown at once).
 //   - The dialog's typed values live HERE, not in the dialog. If the screen locks while a
 //     dialog is open, the dialog disappears with the lock and comes back after unlocking with
@@ -31,9 +37,10 @@
 //   - Admin vs staff only changes what is SHOWN here — the database enforces who may change what.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowDown, IconArrowUp, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
-import ErrorBanner from '../../components/ErrorBanner.jsx';
+import PageBar from '../../components/PageBar.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../lib/device.js';
+import { useSaveLine } from '../../lib/saveLine.js';
 import { centsToInputText } from '../../lib/money.js';
 import {
   addClass,
@@ -81,6 +88,13 @@ const openClassesBySchool = new Map();
 
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
+
+// batch 2 words — the reasons inside "Couldn't undo: …" (T.couldntUndo adds the start and the full
+// stop). The owner of text.js moves them there later.
+const someoneElseChangedReason = (name) => `someone else changed ${name} just now`;
+const UNDO_NOT_ALLOWED_REASON = 'only an admin can change classes, ranks and prices';
+const classHasRanksReason = (className) => `${className} has ranks now. Use ⋯ → Delete class instead`;
+const rankIsFinalAwardReason = (rankName, className) => `${rankName} is now ${className}'s final award. Use ⋯ → Delete rank instead`;
 
 // Finding things on the page (for putting keyboard focus back after a dialog closes).
 const find = (selector) => document.querySelector(selector);
@@ -150,28 +164,33 @@ export default function ClassesRanksTab({
   const openIds = openBySchool[locationCode] ?? [];
   const [dialog, setDialog] = useState(null); // the open dialog and its form (see open* below)
   const [menu, setMenu] = useState(null); // { kind: 'rank' | 'class', id, anchor }
-  const [banner, setBanner] = useState(null); // { text, retry?, kind? }
-  const [busy, setBusy] = useState(false); // a change is on its way to the database
+  // The page's ONE amber bar: { text, retry?, kind?, retrying?, takeFocus? }. kind 'undo' is the bar
+  // the save line shows for an Undo (undoBar below); 'reorder' is a failed first reorder's.
+  const [banner, setBanner] = useState(null);
   const [failedReorder, setFailedReorder] = useState(null); // { kind, classId, newIds, movedId }
 
-  const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
   });
 
-  // ----- One change at a time -----
-  function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
-    return true;
+  // ----- One change at a time: the save line (lib/saveLine.js) -----
+  // line.begin() → false while a save or an Undo runs, else a token; line.end(status, { token }) is
+  // called exactly once per begin(), from a finally; line.busy is true while anything runs; an Undo
+  // pressed meanwhile waits its turn (line.undoAction).
+  // undoBar: how the line puts its bar (a failed or refused Undo) into this page's one bar; null
+  // clears it, but only if it is the line's.
+  function undoBar(next) {
+    setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current));
   }
+  const line = useSaveLine({ section: part === 'settings' ? 'Settings' : 'Color belt testing', showToast, undoBar });
   // status: the database's answer. Anything but "ok" also removes a visible Undo toast — an
   // Undo offered for an earlier change shouldn't sit next to a change that just failed.
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  // retry: how to redo this save (only when the page's own bar has a Retry that does exactly that).
+  // (retry only for a plain failure: for a refused save, a waiting Undo's "Neither change saved … check the
+  // connection" bar would be wrong and its Retry would only repeat a refusal)
+  function endSave(token, status, retry = null) {
+    line.end(status, { retry: status === 'error' ? retry : null, token });
     if (status && status !== 'ok') clearToast();
   }
 
@@ -440,31 +459,40 @@ export default function ClassesRanksTab({
       focusAfterCancel(d);
       return;
     }
-    if (!beginWrite()) return;
+    const token = line.begin();
+    if (!token) return;
     patchDialog({ saving: true, note: null });
     const p = check.payload;
-    const result =
-      d.mode === 'add'
-        ? await addRank({
-            classId: d.classId,
-            name: p.name,
-            earlyCents: p.earlyCents,
-            dayCents: p.dayCents,
-            privateCents: p.privateCents,
-            sparringGear: p.sparringGear,
-            ...beltOf(p),
-          })
-        : await updateRank({
-            rankId: d.rankId,
-            expectedVersion: record.version,
-            name: p.name,
-            earlyCents: p.earlyCents,
-            dayCents: p.dayCents,
-            privateCents: p.privateCents,
-            sparringGear: p.sparringGear,
-            ...beltOf(p),
-          });
-    endWrite(result.status);
+    // A save that throws counts as "didn't reach the database" (Save stays available in the dialog).
+    // No retry for the line: the dialog's own Save is how this save is redone.
+    let result = { status: 'error' };
+    try {
+      result =
+        d.mode === 'add'
+          ? await addRank({
+              classId: d.classId,
+              name: p.name,
+              earlyCents: p.earlyCents,
+              dayCents: p.dayCents,
+              privateCents: p.privateCents,
+              sparringGear: p.sparringGear,
+              ...beltOf(p),
+            })
+          : await updateRank({
+              rankId: d.rankId,
+              expectedVersion: record.version,
+              name: p.name,
+              earlyCents: p.earlyCents,
+              dayCents: p.dayCents,
+              privateCents: p.privateCents,
+              sparringGear: p.sparringGear,
+              ...beltOf(p),
+            });
+    } catch {
+      result = { status: 'error' };
+    } finally {
+      endSave(token, result.status);
+    }
     if (result.status !== 'ok') {
       handleDialogProblem(result.status, p.name);
       return;
@@ -473,7 +501,10 @@ export default function ClassesRanksTab({
     const reloaded = reloadQuiet();
     if (d.mode === 'add') {
       const newId = result.id;
-      showToast(T.TOAST_RANK_ADDED, { icon: false, action: { label: T.UNDO, onAction: () => undoAddRank(newId) } });
+      showToast(T.TOAST_RANK_ADDED, {
+        icon: false,
+        action: line.undoAction(() => undoAddRank(newId, p.name, d.classId), { words: T.TOAST_RANK_ADDED }),
+      });
       // Focus the new rank's row once it's on screen; else the Add rank button.
       focusLater(() => rowEl(newId), () => addRankEl(d.classId), reloaded, true);
     } else {
@@ -486,16 +517,17 @@ export default function ClassesRanksTab({
         ...beltOf(record), // Undo puts the old belt back too
       };
       const savedVersion = result.version;
-      showToast(isPrices ? T.TOAST_PRICES_SAVED : T.TOAST_RANK_SAVED, {
+      const words = isPrices ? T.TOAST_PRICES_SAVED : T.TOAST_RANK_SAVED;
+      showToast(words, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () =>
-            runUndo(() => updateRank({ rankId: d.rankId, expectedVersion: savedVersion, ...previous }), '', {
-              find: () => rowEl(d.rankId),
-              fallback: () => addRankEl(d.classId),
+        action: line.undoAction(
+          () =>
+            runUndo(() => updateRank({ rankId: d.rankId, expectedVersion: savedVersion, ...previous }), {
+              name: p.name,
+              focus: { find: () => rowEl(d.rankId), fallback: () => addRankEl(d.classId) },
             }),
-        },
+          { words },
+        ),
       });
       focusLater(() => d.opener, () => rowEl(d.rankId));
     }
@@ -513,14 +545,21 @@ export default function ClassesRanksTab({
       focusAfterCancel(d);
       return;
     }
-    if (!beginWrite()) return;
+    const token = line.begin();
+    if (!token) return;
     patchDialog({ saving: true, note: null });
     const p = check.payload;
-    const result =
-      d.mode === 'add'
-        ? await addClass({ locationCode, name: p.name, ...finalAwardArgs(p.choice) })
-        : await updateClass({ classId: d.classId, expectedVersion: record.version, name: p.name, ...finalAwardArgs(p.choice) });
-    endWrite(result.status);
+    let result = { status: 'error' }; // a save that throws counts as "didn't reach the database"
+    try {
+      result =
+        d.mode === 'add'
+          ? await addClass({ locationCode, name: p.name, ...finalAwardArgs(p.choice) })
+          : await updateClass({ classId: d.classId, expectedVersion: record.version, name: p.name, ...finalAwardArgs(p.choice) });
+    } catch {
+      result = { status: 'error' };
+    } finally {
+      endSave(token, result.status);
+    }
     if (result.status !== 'ok') {
       handleDialogProblem(result.status, p.name);
       return;
@@ -530,120 +569,144 @@ export default function ClassesRanksTab({
     if (d.mode === 'add') {
       const newId = result.id;
       setOpen(newId, true); // a newly added class opens, ready for its first rank
-      showToast(T.TOAST_CLASS_ADDED, { icon: false, action: { label: T.UNDO, onAction: () => undoAddClass(newId) } });
+      showToast(T.TOAST_CLASS_ADDED, {
+        icon: false,
+        action: line.undoAction(() => undoAddClass(newId, p.name), { words: T.TOAST_CLASS_ADDED }),
+      });
       focusLater(() => toggleEl(newId), addClassEl, reloaded, true);
     } else {
       // Both final-award values always go along (v0.62), so Undo puts None / Not set / a rank back.
       const previous = { name: record.name, ...finalAwardArgs(finalAwardChoiceOf(record)) };
       const savedVersion = result.version;
-      showToast(isPrices ? T.TOAST_AWARD_SAVED : T.TOAST_CLASS_SAVED, {
+      const words = isPrices ? T.TOAST_AWARD_SAVED : T.TOAST_CLASS_SAVED;
+      showToast(words, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () =>
-            runUndo(() => updateClass({ classId: d.classId, expectedVersion: savedVersion, ...previous }), '', {
-              find: () => toggleEl(d.classId),
-              fallback: addClassEl,
+        action: line.undoAction(
+          () =>
+            runUndo(() => updateClass({ classId: d.classId, expectedVersion: savedVersion, ...previous }), {
+              name: p.name,
+              focus: { find: () => toggleEl(d.classId), fallback: addClassEl },
             }),
-        },
+          { words },
+        ),
       });
       focusLater(() => d.opener, () => toggleEl(d.classId));
     }
   }
 
   // ===== Undo (contract §8.4) =====
+  // Every toast's Undo button comes from line.undoAction(run, { words }): the save line runs `run`
+  // as soon as no save is running (an Undo pressed during a save waits, and its toast says
+  // "Undoing…"), shows "Undone" itself, and shows a failed or refused Undo in the page's bar. So each
+  // run() below does the Undo, reloads and moves the keyboard focus itself, and answers the way the
+  // line wants: { status: 'ok' }, { status: 'error' } (it never reached the database: the bar says so,
+  // with Retry), { status: 'no_access' } (the screen locks), or a refusal { status, reason } where
+  // reason is the sentence for the bar ("Couldn't undo: …", no Retry).
+
+  // Turns the database's answer to an Undo into that answer.
+  // name: the rank or class concerned (for "someone else changed …"); notEmptyName: the class that
+  // "Undo add class" found with ranks in it.
+  function undoAnswer(status, { name, notEmptyName = name }) {
+    if (status === 'ok') return { status };
+    if (status === 'no_access') {
+      onNoAccess();
+      return { status };
+    }
+    if (status === 'not_allowed') {
+      onRefreshProfile();
+      return { status, reason: T.couldntUndo(UNDO_NOT_ALLOWED_REASON) };
+    }
+    if (status === 'not_empty') return { status, reason: T.couldntUndo(classHasRanksReason(notEmptyName)) };
+    if (['stale', 'not_found', 'duplicate_name', 'invalid'].includes(status)) {
+      reloadQuiet(); // show what the other person did
+      return { status, reason: T.couldntUndo(someoneElseChangedReason(name)) };
+    }
+    return { status: 'error' }; // network etc.: the bar's Retry sends the same undo again
+  }
+
   // Sends the undo call and reacts to the answer (contract §8.3, last column).
-  // notEmptyName: for "Undo add class", the class name used if the database says it has ranks.
   // focus: { find, fallback } — where keyboard focus goes after it worked: the row the Undo
   // changed, or (if that row is gone) the next sensible place, e.g. its class's Add rank button.
-  async function runUndo(call, notEmptyName = '', focus = null) {
-    if (!beginWrite()) return;
+  async function runUndo(call, { name, notEmptyName = name, focus = null }) {
     const result = await call();
-    endWrite(result.status);
-    const status = result.status;
-    if (status === 'ok') {
-      setBanner((current) => (current?.kind === 'undo' ? null : current)); // a Retry that worked
-      showToast(T.TOAST_UNDONE, { icon: false });
+    const answer = undoAnswer(result.status, { name, notEmptyName });
+    if (answer.status === 'ok') {
       const reloaded = reloadQuiet();
       if (focus) focusLater(focus.find, focus.fallback, reloaded);
-    } else if (status === 'no_access') {
-      onNoAccess();
-    } else if (status === 'not_allowed') {
-      setBanner({ text: T.NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (status === 'not_empty') {
-      setBanner({ text: T.undoNotEmpty(notEmptyName) });
-    } else if (['stale', 'not_found', 'duplicate_name', 'invalid'].includes(status)) {
-      setBanner({ text: T.UNDO_STALE });
-      reloadQuiet();
-    } else {
-      // Network etc.: Retry sends the same undo again.
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, notEmptyName, focus) });
     }
+    return answer;
   }
 
-  function undoAddRank(rankId) {
-    if (busyRef.current) return;
+  // "Undo" on "Rank added" deletes the new rank again — if nothing has touched it since.
+  function undoAddRank(rankId, rankName, classId) {
     const check = checkUndoAddRank(classesRef.current, rankId);
     if (!check.ok) {
-      if (check.reason === 'isFinalAward') setBanner({ text: T.undoAward(check.rankName, check.className) });
-      else {
-        setBanner({ text: T.UNDO_STALE });
-        reloadQuiet();
+      if (check.reason === 'isFinalAward') {
+        return { status: 'is_final_award', reason: T.couldntUndo(rankIsFinalAwardReason(check.rankName, check.className)) };
       }
-      return;
+      reloadQuiet();
+      return { status: 'stale', reason: T.couldntUndo(someoneElseChangedReason(check.rankName ?? rankName)) };
     }
-    const classId = classesRef.current.find((c) => c.ranks.some((r) => r.id === rankId))?.id;
-    runUndo(() => deleteRank(check.rpcArgs), '', { find: () => rowEl(rankId), fallback: () => addRankEl(classId) });
+    return runUndo(() => deleteRank(check.rpcArgs), {
+      name: rankName,
+      focus: { find: () => rowEl(rankId), fallback: () => addRankEl(classId) },
+    });
   }
 
-  function undoAddClass(classId) {
-    if (busyRef.current) return;
+  // "Undo" on "Class added" deletes the new class again — only while it has no ranks.
+  function undoAddClass(classId, className) {
     const cls = classesRef.current.find((c) => c.id === classId);
+    const name = cls?.name ?? className;
     if (cls && cls.ranks.length > 0) {
-      setBanner({ text: T.undoNotEmpty(cls.name) });
-      return;
+      return { status: 'not_empty', reason: T.couldntUndo(classHasRanksReason(cls.name)) };
     }
-    runUndo(
+    return runUndo(
       () => deleteClass({ classId, expectedVersion: 1, expectedRankIds: [], expectedLostAwardClassIds: [], onlyIfEmpty: true }),
-      cls?.name ?? '',
-      { find: () => toggleEl(classId), fallback: addClassEl },
+      { name, focus: { find: () => toggleEl(classId), fallback: addClassEl } },
     );
   }
 
   // ===== Reordering (optimistic: shown at once, saved right after) =====
   // kind 'ranks' (within classId) or 'classes'. movedId gets the "Not saved" tag if it fails.
-  async function doReorder({ kind, classId = null, expectedIds, newIds, movedId, isUndo = false }) {
-    if (!beginWrite()) return;
-    dataRef.current.setLocalClasses((raw) =>
-      kind === 'ranks' ? reorderRanksLocal(raw, classId, newIds) : reorderClassesLocal(raw, newIds),
-    );
-    const result =
-      kind === 'ranks'
-        ? await reorderRanks({ classId, expectedIds, newIds })
-        : await reorderClasses({ locationCode, expectedIds, newIds });
-    endWrite(result.status);
-    const args = { kind, classId, expectedIds, newIds, movedId, isUndo };
+  // The Undo of an order change is a toast action too (undoReorder): it saves the old order first and
+  // shows it once the database has said yes (the line's bar reports a failed Undo, not this page).
+  const saveOrder = (kind, classId, expectedIds, newIds) =>
+    kind === 'ranks' ? reorderRanks({ classId, expectedIds, newIds }) : reorderClasses({ locationCode, expectedIds, newIds });
+  const showOrder = (kind, classId, ids) =>
+    dataRef.current.setLocalClasses((raw) => (kind === 'ranks' ? reorderRanksLocal(raw, classId, ids) : reorderClassesLocal(raw, ids)));
+  // The moved rank's or class's name, for "Someone else changed … just now".
+  function movedNameOf(kind, classId, movedId) {
+    const list = classesRef.current;
+    if (kind === 'ranks') return list.find((c) => c.id === classId)?.ranks.find((r) => r.id === movedId)?.name ?? 'this rank';
+    return list.find((c) => c.id === movedId)?.name ?? 'this class';
+  }
+
+  async function doReorder({ kind, classId = null, expectedIds, newIds, movedId }) {
+    const movedName = movedNameOf(kind, classId, movedId); // (read before the line is taken: nothing may throw between begin() and the try)
+    const args = { kind, classId, expectedIds, newIds, movedId };
+    const token = line.begin();
+    if (!token) return;
+    let result = { status: 'error' };
+    try {
+      showOrder(kind, classId, newIds);
+      result = await saveOrder(kind, classId, expectedIds, newIds);
+    } catch {
+      result = { status: 'error' };
+    } finally {
+      endSave(token, result.status, () => doReorder(args));
+    }
     const status = result.status;
     if (status === 'ok') {
       setFailedReorder(null);
       setBanner((current) => (current?.kind === 'reorder' ? null : current));
-      if (isUndo) {
-        showToast(T.TOAST_UNDONE, { icon: false });
-        // Focus the row that moved back (if its class is open), else its class line.
-        focusLater(
-          () => (kind === 'ranks' ? rowEl(movedId) : toggleEl(movedId)),
-          () => (kind === 'ranks' ? toggleEl(classId) : addClassEl()),
-        );
-      } else {
-        showToast(kind === 'ranks' ? T.TOAST_RANK_ORDER : T.TOAST_CLASS_ORDER, {
-          icon: false,
-          action: {
-            label: T.UNDO,
-            onAction: () => doReorder({ kind, classId, expectedIds: newIds, newIds: expectedIds, movedId, isUndo: true }),
-          },
-        });
-      }
+      const words = kind === 'ranks' ? T.TOAST_RANK_ORDER : T.TOAST_CLASS_ORDER;
+      showToast(words, {
+        icon: false,
+        action: line.undoAction(
+          () => undoReorder({ kind, classId, expectedIds: newIds, newIds: expectedIds, movedId, movedName }),
+          { words },
+        ),
+      });
       reloadQuiet();
     } else if (status === 'no_access') {
       onNoAccess(); // the list reloads by itself after unlocking
@@ -652,15 +715,30 @@ export default function ClassesRanksTab({
       reloadQuiet();
       onRefreshProfile();
     } else if (['stale', 'not_found', 'invalid'].includes(status)) {
-      setBanner({ text: isUndo ? T.UNDO_STALE : T.STALE });
+      setBanner({ text: T.someoneElseChanged(movedName) });
       reloadQuiet();
     } else {
       // Didn't reach the database: keep the new order on screen, mark the row, offer Retry.
       setFailedReorder({ kind, classId, newIds, movedId });
-      let text = isUndo ? T.UNDO_FAILED : T.RANK_ORDER_FAILED;
-      if (!isUndo && kind === 'classes') text = T.CLASS_ORDER_FAILED;
-      setBanner({ kind: 'reorder', text, retry: () => doReorder(args) });
+      setBanner({ kind: 'reorder', text: kind === 'classes' ? T.CLASS_ORDER_FAILED : T.RANK_ORDER_FAILED, retry: () => doReorder(args) });
     }
+  }
+
+  // The Undo of an order change (a toast action; expectedIds = the order saved now, newIds = the old one).
+  async function undoReorder({ kind, classId, expectedIds, newIds, movedId, movedName }) {
+    const result = await saveOrder(kind, classId, expectedIds, newIds);
+    const answer = undoAnswer(result.status, { name: movedName });
+    if (answer.status !== 'ok') return answer;
+    setFailedReorder(null);
+    setBanner((current) => (current?.kind === 'reorder' ? null : current));
+    showOrder(kind, classId, newIds); // the old order, at once; the reload below confirms it
+    // Focus the row that moved back (if its class is open), else its class line.
+    focusLater(
+      () => (kind === 'ranks' ? rowEl(movedId) : toggleEl(movedId)),
+      () => (kind === 'ranks' ? toggleEl(classId) : addClassEl()),
+    );
+    reloadQuiet();
+    return answer;
   }
 
   function moveRank(rank, delta) {
@@ -683,7 +761,9 @@ export default function ClassesRanksTab({
 
   // Drag and drop (PC). group = 'classes' or a class id (its ranks).
   const drag = useReorderDrag({
-    enabled: isAdmin && layout.hasGrip && !busy && !screenLocked && dialog === null && data.status === 'ready',
+    // Off while a save or an Undo runs (line.busy): the hook then marks every grip aria-disabled and
+    // the shared Grip style grays it (L-06), so nothing is changed here per grip.
+    enabled: isAdmin && layout.hasGrip && !line.busy && !screenLocked && dialog === null && data.status === 'ready',
     onDrop: (group, id, toIndex) => {
       if (group === 'classes') {
         const ids = classOrderIds(classesRef.current);
@@ -696,11 +776,27 @@ export default function ClassesRanksTab({
   });
 
   // ===== Delete (permanent, with a confirmation built from freshly re-read data) =====
+  // The name of a rank or class as the screen shows it now (for "Someone else changed … just now").
+  function nameOfItem(kind, id) {
+    const list = classesRef.current;
+    if (kind === 'rank') return list.flatMap((c) => c.ranks).find((r) => r.id === id)?.name ?? 'this rank';
+    return list.find((c) => c.id === id)?.name ?? 'this class';
+  }
+
   async function startDelete(kind, id, anchor) {
-    if (!beginWrite()) return;
+    const token = line.begin();
+    if (!token) return;
+    // The name for "Someone else changed … just now", read before the fresh list replaces the screen's.
+    const askedName = nameOfItem(kind, id);
     // Re-read first, so the confirmation states what is true right now (contract §8.6).
-    const fresh = await loadClassesAndRanks(locationCode);
-    endWrite(fresh.status);
+    let fresh = { status: 'error' };
+    try {
+      fresh = await loadClassesAndRanks(locationCode);
+    } catch {
+      fresh = { status: 'error' };
+    } finally {
+      endSave(token, fresh.status); // a read, not a save: nothing for the line to redo
+    }
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
@@ -712,7 +808,7 @@ export default function ClassesRanksTab({
     dataRef.current.setLocalClasses(() => fresh.classes); // show what was just read
     const description = kind === 'rank' ? describeRankDelete(fresh.classes, id) : describeClassDelete(fresh.classes, id);
     if (!description) {
-      setBanner({ text: T.STALE }); // it's already gone
+      setBanner({ text: T.someoneElseChanged(askedName) }); // it's already gone
       return;
     }
     // A class's schedule time slots go with it (Schedule, decision Q1), so the confirmation
@@ -749,11 +845,18 @@ export default function ClassesRanksTab({
   async function confirmDelete() {
     const d = dialogRef.current;
     if (!d || d.saving) return;
-    if (!beginWrite()) return;
+    const token = line.begin();
+    if (!token) return;
     patchDialog({ saving: true, failed: false });
     const args = d.description.rpcArgs;
-    const result = d.kind === 'rank' ? await deleteRank(args) : await deleteClass(args);
-    endWrite(result.status);
+    let result = { status: 'error' }; // a delete that throws counts as "didn't reach the database"
+    try {
+      result = d.kind === 'rank' ? await deleteRank(args) : await deleteClass(args);
+    } catch {
+      result = { status: 'error' };
+    } finally {
+      endSave(token, result.status); // no retry for the line: the dialog's Delete is how it is redone
+    }
     const status = result.status;
     if (status === 'ok') {
       setDialog(null);
@@ -793,7 +896,7 @@ export default function ClassesRanksTab({
       focusLater(() => moreEl(d.id));
     } else if (['stale', 'not_found', 'invalid'].includes(status)) {
       setDialog(null);
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.someoneElseChanged(d.name) });
       reloadQuiet();
       focusLater(() => moreEl(d.id));
     } else {
@@ -827,9 +930,9 @@ export default function ClassesRanksTab({
         items: [
           // Under 360px the row has no pencil (v0.68), so Edit is offered here instead (v0.69).
           ...(isNarrowPhone ? [{ key: 'edit', label: T.EDIT_RANK, Icon: IconEdit, onSelect: () => openRank(rank, menu.anchor) }] : []),
-          { key: 'up', label: T.MOVE_UP, Icon: IconArrowUp, disabled: busy || index === 0, onSelect: () => moveRank(rank, -1) },
-          { key: 'down', label: T.MOVE_DOWN, Icon: IconArrowDown, disabled: busy || index === cls.ranks.length - 1, onSelect: () => moveRank(rank, 1) },
-          { key: 'delete', label: T.DELETE_RANK, Icon: IconTrash, danger: true, separatorBefore: true, disabled: busy, onSelect: () => startDelete('rank', rank.id, menu.anchor) },
+          { key: 'up', label: T.MOVE_UP, Icon: IconArrowUp, disabled: line.busy || index === 0, onSelect: () => moveRank(rank, -1) },
+          { key: 'down', label: T.MOVE_DOWN, Icon: IconArrowDown, disabled: line.busy || index === cls.ranks.length - 1, onSelect: () => moveRank(rank, 1) },
+          { key: 'delete', label: T.DELETE_RANK, Icon: IconTrash, danger: true, separatorBefore: true, disabled: line.busy, onSelect: () => startDelete('rank', rank.id, menu.anchor) },
         ],
       };
     }
@@ -841,9 +944,9 @@ export default function ClassesRanksTab({
       subtitle: T.rankCount(cls.rankCount),
       label: T.moreFor(cls.name),
       items: [
-        { key: 'up', label: T.MOVE_UP, Icon: IconArrowUp, disabled: busy || index === 0, onSelect: () => moveClass(cls, -1) },
-        { key: 'down', label: T.MOVE_DOWN, Icon: IconArrowDown, disabled: busy || index === classes.length - 1, onSelect: () => moveClass(cls, 1) },
-        { key: 'delete', label: T.DELETE_CLASS, Icon: IconTrash, danger: true, separatorBefore: true, disabled: busy, onSelect: () => startDelete('class', cls.id, menu.anchor) },
+        { key: 'up', label: T.MOVE_UP, Icon: IconArrowUp, disabled: line.busy || index === 0, onSelect: () => moveClass(cls, -1) },
+        { key: 'down', label: T.MOVE_DOWN, Icon: IconArrowDown, disabled: line.busy || index === classes.length - 1, onSelect: () => moveClass(cls, 1) },
+        { key: 'delete', label: T.DELETE_CLASS, Icon: IconTrash, danger: true, separatorBefore: true, disabled: line.busy, onSelect: () => startDelete('class', cls.id, menu.anchor) },
       ],
     };
   }
@@ -861,7 +964,7 @@ export default function ClassesRanksTab({
 
   const addClassShown = isAdmin && !isPrices && data.status === 'ready';
   useShortcutN({
-    enabled: addClassShown && dialog === null && menu === null && !screenLocked && !busy && drag.state === null,
+    enabled: addClassShown && dialog === null && menu === null && !screenLocked && !line.busy && drag.state === null,
     onPress: () => openAddClass(addClassEl()),
   });
 
@@ -903,8 +1006,8 @@ export default function ClassesRanksTab({
   if (data.status === 'loading' || data.status === 'idle') {
     body = <TestingSkeleton />;
   } else if (data.status === 'error') {
-    // The first load failed: nothing to show, so the banner takes the list's place.
-    body = <ErrorBanner text={loadFailedText} onRetry={() => dataRef.current.reload()} />;
+    // The first load failed: nothing to show. The bar shows under the top bar (PageBar).
+    body = <PageBar text={loadFailedText} onRetry={() => dataRef.current.reload()} />;
   } else if (data.status === 'noAccess') {
     body = null; // the screen is about to lock
   } else if (classes.length === 0) {
@@ -1004,10 +1107,13 @@ export default function ClassesRanksTab({
       {/* On the Prices tab this is the tab's panel; in Settings it is just a part of the page. */}
       <div {...(isPrices ? { role: 'tabpanel', id: panelId, 'aria-labelledby': tabId } : {})} className="tpanel">
         {banner && (
-          <ErrorBanner
+          // The line's bar (kind 'undo') says itself when its Retry is on its way; the page's own bars
+          // (a failed reorder, a failed load) are "retrying" while anything runs.
+          <PageBar
             text={banner.text}
             onRetry={banner.retry ? () => banner.retry() : undefined}
-            retrying={busy}
+            retrying={banner.kind === 'undo' ? banner.retrying : line.busy}
+            takeFocus={banner.takeFocus}
             onDismiss={() => setBanner(null)}
           />
         )}

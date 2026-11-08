@@ -20,12 +20,16 @@
 // banner and retries by itself every 10 seconds and when the connection comes back. While a result
 // is Not saved, leaving asks first (the leave guard, as on the event page) and closing the browser
 // tab shows the browser's own question.
+// Batch 2: the page has no Undo and no one-change-at-a-time flag of its own (the saves belong to
+// useGradingSaves), so only its bars changed: they are PageBars (drawn under the top bar), and the
+// back link is the shared BackLink (R3-06).
 // The page reloads every 15 seconds (v0.157). Deleted → "This private testing was deleted, or the
 // link is wrong." A private testing of the other school closes the page, like the event page does.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconAlertTriangle, IconArrowLeft, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
+import { IconAlertTriangle, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
+import BackLink from '../../../components/BackLink.jsx';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import { placeTip } from '../../../components/IconButton.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { canChangeResults, gradingWindow } from '../../../lib/testing/gradingRules.js';
@@ -266,13 +270,8 @@ export default function PrivateGradingPage({
   }, [printing]);
 
   // ===== Drawing =====
-  const backLink = (
-    <button type="button" className="link-button ev-back" onClick={() => onClosePrivate()}>
-      {/* ti-arrow-left = back to the Private testing tab */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {T.BACK_TO_PRIVATE}
-    </button>
-  );
+  // The shared back link (R3-06): same words and same move; Testing.jsx finds it by ".back-link".
+  const backLink = <BackLink label={T.BACK_TO_PRIVATE} onClick={() => onClosePrivate()} />;
 
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'noAccess' || wrongSchool) {
     return (
@@ -301,7 +300,7 @@ export default function PrivateGradingPage({
     return (
       <>
         {backLink}
-        <ErrorBanner text={T.LOAD_PRIVATE_FAILED} onRetry={() => liveRef.current.reload()} />
+        <PageBar text={T.LOAD_PRIVATE_FAILED} onRetry={() => liveRef.current.reload()} />
       </>
     );
   }
@@ -394,8 +393,9 @@ export default function PrivateGradingPage({
       </div>
 
       {/* The engine's banner, in this page's own words (one student, no class list) */}
-      {grading.banner && <ErrorBanner text={T.privateSaveFailed(name)} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} onDismiss={() => setBanner(null)} />}
+      {/* Both are page bars (R2-05): drawn under the top bar, not in the page */}
+      {grading.banner && <PageBar text={T.privateSaveFailed(name)} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />}
+      {banner && <PageBar text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} onDismiss={() => setBanner(null)} />}
 
       {lockLine && (
         <p className="gr-lockline pg-lockline">
