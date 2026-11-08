@@ -87,7 +87,9 @@ import {
 } from './mockStarResults.js';
 
 // Raised whenever the stored shape of the candidates part changes (older data → the seed).
-export const STAR_CANDIDATES_SCHEMA = 1;
+// 2 (migration 0038): payments carry the desk's school (and paying_by_before), candidates carry
+// paying_by_on_form. A store saved before that is replaced by the seed.
+export const STAR_CANDIDATES_SCHEMA = 2;
 const UNDO_WINDOW_MS = 10 * 1000; // staff's own payment / "keep one" Undo (§6.3, §6.4)
 const SIGNATURE_KEEP_DAYS = 90; // signatures are removed 90 days after the testing day (§5.7)
 const ACK_VERSION = STAR_ACK_VERSION; // the acknowledgment wording's label (OPEN-3, starEventRules.js)
@@ -111,6 +113,7 @@ const ROSTER_COLUMNS = [
   'testing_date', 'dan_label', 'star_limit', 'standard_cents', 'same_day_cents', 'private_cents',
   'paid_cents', 'paid', 'last_payment_id', 'paid_on', 'paid_method', 'last_payment_recorded_at',
   'last_payment_recorded_by_name', 'refunded_cents', 'fee_kind', 'expected_fee_cents', 'overpaid_cents',
+  'paying_by_on_form', // 0038: the family form's own choice (the view's last column)
 ];
 // /*#__PURE__*/ (() => …)(): "this has no side effects", so the live build (which never makes the fake
 // client) can drop these lines — the same trick as mockStarTesting.js.
@@ -156,13 +159,16 @@ const RPC_ARGS = /*#__PURE__*/ (() => ({
   star_withdraw_candidate: [['p_candidate_id', 'uuid'], ['p_expected_version', 'int']],
   star_restore_candidate: [['p_candidate_id', 'uuid'], ['p_expected_version', 'int']],
   star_delete_candidate: [['p_candidate_id', 'uuid'], ['p_expected_version', 'int'], ['p_expected_payment_ids', 'uuid[]']],
+  // 0038: p_school has a default (the third entry 'optional'), so the live app's call without it works.
   star_record_payment: [
     ['p_candidate_id', 'uuid'], ['p_expected_version', 'int'], ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date'],
+    ['p_school', 'text', 'optional'],
   ],
   star_undo_payment: [['p_payment_id', 'uuid']],
   star_edit_payment: [['p_payment_id', 'uuid'], ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
   star_record_refund: [
     ['p_candidate_id', 'uuid'], ['p_expected_version', 'int'], ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_refunded_on', 'date'],
+    ['p_school', 'text', 'optional'], // 0038
   ],
   star_candidate_detail: [['p_candidate_id', 'uuid']],
   star_candidate_history: [['p_candidate_id', 'uuid']],
@@ -251,10 +257,11 @@ function readArgs(name, args) {
   const spec = RPC_ARGS[name];
   const sent = Object.keys(args ?? {}).filter((key) => args[key] !== undefined); // JSON drops undefined
   const known = new Set(spec.map(([key]) => key));
-  if (spec.some(([key]) => !sent.includes(key)) || sent.some((key) => !known.has(key))) {
+  // 'optional' = the input has a default in the database (0038's p_school): it may be left out.
+  if (spec.some(([key, , optional]) => !optional && !sent.includes(key)) || sent.some((key) => !known.has(key))) {
     throw new DbError('PGRST202', `Could not find the function public.${name}(${[...sent].sort().join(', ')}) in the schema cache`, 404);
   }
-  return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key], type)]));
+  return Object.fromEntries(spec.map(([key, type, optional]) => [key, optional && args[key] === undefined ? null : toDbType(args[key], type)]));
 }
 
 // ----- Small helpers -----
@@ -348,6 +355,15 @@ function insertRow(db, env, table, row, meta) {
       created_by_name: meta.actor, updated_by_name: meta.actor,
     }
     : { ...row };
+  // star_candidates_keep_form_choice (0038): a FORM sign-up remembers the way chosen on the form; a
+  // candidate added at the desk has none. Whatever the caller sent is overwritten, as the trigger does.
+  if (table === 'star_candidates') full.paying_by_on_form = full.source === 'form' ? full.paying_by : null;
+  // star_payments_guard (0038): a payment without a school gets the candidate's; a reversal takes the
+  // school of the row it reverses.
+  if (table === 'star_payments' && !full.school) {
+    const reversed = full.kind === 'reversal' ? db.payments.find((p) => p.id === full.reverses_payment_id) : null;
+    full.school = reversed ? reversed.school : (findCandidate(db, full.candidate_id)?.location_code ?? null);
+  }
   if (table === 'star_payments') checkPaymentInsert(db, full);
   db[LISTS[table]].push(full);
   checkTableRules(db, table, full);
@@ -499,6 +515,7 @@ function rosterRow(db, env, c) {
     last_payment_id: s.lastPayment?.id ?? null, paid_on: s.lastPayment?.paid_on ?? null, paid_method: s.lastPayment?.method ?? null,
     last_payment_recorded_at: s.lastPayment?.recorded_at ?? null, last_payment_recorded_by_name: s.lastPayment?.recorded_by_name ?? null,
     refunded_cents: s.refundedCents, fee_kind: s.feeKind, expected_fee_cents: s.expectedFeeCents, overpaid_cents: s.overpaidCents,
+    paying_by_on_form: c.paying_by_on_form ?? null, // 0038
   });
 }
 
@@ -509,7 +526,7 @@ function candidateRow(fields) {
     dan: null, stars_from: null, paying_by: null, source: 'desk', reference: null, registered_at: null, status: 'active',
     withdrawn_reason: null, withdrawn_at: null, withdrawn_by_name: null, withdrawn_by: null, duplicate_state: 'none',
     duplicate_of: null, is_makeup: false, makeup_of_candidate_id: null, makeup_of_event_name: null, private_on: null,
-    private_time: null, classes_attended: null, assistant_classes: null, ...fields,
+    private_time: null, classes_attended: null, assistant_classes: null, paying_by_on_form: null, ...fields,
   };
 }
 
@@ -774,6 +791,8 @@ const HANDLERS = {
   star_record_payment(db, a, { ctx, env }) {
     if (a.p_candidate_id === null || a.p_expected_version === null || !METHODS.includes(a.p_method)
       || !between(a.p_amount_cents, 1, 100000) || a.p_paid_on === null || a.p_paid_on > env.today()) return st('invalid');
+    // 0038 (R1-01): the desk's school, if one was sent (a school of the schools table)
+    if (a.p_school !== null && !SCHOOLS.includes(a.p_school)) return { status: 'invalid', field: 'school' };
     const c = findCandidate(db, a.p_candidate_id);
     if (!c) return st('not_found');
     if (c.version !== a.p_expected_version) return st('stale');
@@ -782,8 +801,14 @@ const HANDLERS = {
     if (netPaidCents(paymentsOf(db, c.id)) > 0) return st('already_paid');
     if (a.p_paid_on < schoolDateOf(c.registered_at)) return st('invalid'); // v0.175
     const meta = newMeta(env, ctx, 'star_record_payment');
-    const p = addPayment(db, env, c, { kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on }, meta);
-    bumpCandidate(db, env, c, meta);
+    // 0038: no school sent = the candidate's; a way other than Paying by remembers the old Paying by
+    // (paying_by_before, for Undo payment) and also becomes Paying by, in the same save.
+    const before = a.p_method !== c.paying_by ? c.paying_by : null;
+    const p = addPayment(db, env, c, {
+      kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on,
+      school: a.p_school ?? c.location_code, paying_by_before: before,
+    }, meta);
+    updateRow(db, env, 'star_candidates', c, { paying_by: a.p_method }, meta, { bump: true });
     purgeOldSignatures(db, env, ctx);
     return { status: 'ok', payment_id: p.id, version: c.version };
   },
@@ -799,10 +824,14 @@ const HANDLERS = {
     if (p.kind === 'payment' && unreversedRefund(db, p.candidate_id)) return st('invalid'); // undo the refund first
     const c = findCandidate(db, p.candidate_id);
     const meta = newMeta(env, ctx, 'star_undo_payment');
+    // 0038: the reversal carries the school of the payment it undoes; the old Paying by comes back if
+    // this payment changed it and nobody changed it since (an older payment has no paying_by_before).
     addPayment(db, env, c, {
       kind: 'reversal', amount_cents: -p.amount_cents, method: p.method, paid_on: env.today(), reverses_payment_id: p.id,
+      school: p.school ?? c.location_code,
     }, meta);
-    bumpCandidate(db, env, c, meta);
+    const putBack = p.paying_by_before && c.paying_by === p.method ? { paying_by: p.paying_by_before } : {};
+    updateRow(db, env, 'star_candidates', c, putBack, meta, { bump: true });
     return { status: 'ok', version: c.version };
   },
 
@@ -817,17 +846,28 @@ const HANDLERS = {
     const c = findCandidate(db, p.candidate_id);
     if (a.p_paid_on < schoolDateOf(c.registered_at)) return st('invalid');
     const meta = newMeta(env, ctx, 'star_edit_payment');
+    // 0038 (R1-01): BOTH new rows carry the school of the payment being edited (an Edit never moves
+    // money to another desk). (R1-02) Paying by follows the edit, as the SQL says: the family's choice
+    // is what Undo payment of the old payment would leave; a changed way becomes Paying by; the new
+    // payment remembers the choice only when Paying by equals its way and the choice is another way.
+    const school = p.school ?? c.location_code;
+    const choice = p.paying_by_before && c.paying_by === p.method ? p.paying_by_before : c.paying_by;
+    const after = a.p_method !== p.method ? a.p_method : c.paying_by;
+    const before = after === a.p_method && choice !== a.p_method ? choice : null;
     addPayment(db, env, c, {
-      kind: 'reversal', amount_cents: -p.amount_cents, method: p.method, paid_on: env.today(), reverses_payment_id: p.id,
+      kind: 'reversal', amount_cents: -p.amount_cents, method: p.method, paid_on: env.today(), reverses_payment_id: p.id, school,
     }, meta);
-    const fresh = addPayment(db, env, c, { kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on }, meta);
-    bumpCandidate(db, env, c, meta);
+    const fresh = addPayment(db, env, c, {
+      kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, school, paying_by_before: before,
+    }, meta);
+    updateRow(db, env, 'star_candidates', c, { paying_by: after }, meta, { bump: true });
     return { status: 'ok', payment_id: fresh.id, version: c.version };
   },
 
   star_record_refund(db, a, { ctx, env }) {
     if (a.p_candidate_id === null || a.p_expected_version === null || !REFUND_METHODS.includes(a.p_method)
       || !between(a.p_amount_cents, 1, 100000) || a.p_refunded_on === null || a.p_refunded_on > env.today()) return st('invalid');
+    if (a.p_school !== null && !SCHOOLS.includes(a.p_school)) return { status: 'invalid', field: 'school' }; // 0038
     const c = findCandidate(db, a.p_candidate_id);
     if (!c) return st('not_found');
     if (c.version !== a.p_expected_version) return st('stale');
@@ -836,7 +876,10 @@ const HANDLERS = {
     const { overpaidCents } = summaryOf(db, env, c);
     if (overpaidCents === 0 || a.p_amount_cents > overpaidCents) return { status: 'refund_too_large', overpaid_cents: overpaidCents }; // S7
     const meta = newMeta(env, ctx, 'star_record_refund');
-    const p = addPayment(db, env, c, { kind: 'refund', amount_cents: -a.p_amount_cents, method: a.p_method, paid_on: a.p_refunded_on }, meta);
+    // 0038 (v1.040): a refund counts at the desk that hands the money back (blank = the candidate's school)
+    const p = addPayment(db, env, c, {
+      kind: 'refund', amount_cents: -a.p_amount_cents, method: a.p_method, paid_on: a.p_refunded_on, school: a.p_school ?? c.location_code,
+    }, meta);
     bumpCandidate(db, env, c, meta);
     return { status: 'ok', payment_id: p.id, version: c.version };
   },
@@ -854,6 +897,9 @@ const HANDLERS = {
     const sum = summaryOf(db, env, c);
     const candidate = { ...c };
     for (const key of ['created_by', 'updated_by', 'withdrawn_by']) delete candidate[key];
+    // (0038 did not change star_candidate_detail: it does not carry paying_by_on_form. The app takes
+    // that from the roster row, which is what the real database gives it.)
+    delete candidate.paying_by_on_form;
     const categoryOf = (id) => db.event_categories.find((k) => k.id === id);
     return {
       status: 'ok',

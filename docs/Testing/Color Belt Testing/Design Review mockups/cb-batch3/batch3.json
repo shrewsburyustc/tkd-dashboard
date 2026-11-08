@@ -1,0 +1,25 @@
+{
+  "title": "Color belt testing, batch 3: three questions",
+  "subtitle": "Real preview screenshots (fake data). <b>Amber</b> = the problem as it is today. The wording-only questions (Q2) are in the message, not drawn.",
+  "width": 1560,
+  "columns": [
+    {
+      "label": "Q1 - Private testing list at 683 px wide with a mouse (a laptop window snapped to half the screen)",
+      "tone": "today",
+      "items": [
+        { "row": [
+          { "src": "private-past-683.png", "shotWidth": 683, "crop": [72, 380, 611, 300], "scale": 0.62, "marks": [[108, 480, 105, 28]], "caption": "<b>Today at 683:</b> the gray \"Cancelled Nov 6\" tag runs under the belt picture (same bug the roster had; Largest panel size makes it worse)." },
+          { "src": "private-past-390.png", "shotWidth": 390, "crop": [0, 455, 390, 270], "scale": 0.8, "caption": "<b>Option A would look like this</b> (the phone layout, which already exists): one stacked row, name and tag on line 1." }
+        ] }
+      ]
+    },
+    {
+      "label": "Q3 - Add student while Hide private details is on",
+      "tone": "today",
+      "items": [
+        { "src": "add-student-hidden.png", "shotWidth": 1280, "crop": [380, 80, 520, 600], "scale": 0.85, "marks": [[404, 490, 170, 110]], "caption": "<b>Today:</b> the dialog still asks \"Paying by: Cash / Check / Card\" with details hidden. It asks no birthday or email." }
+      ]
+    }
+  ],
+  "footer": ""
+}

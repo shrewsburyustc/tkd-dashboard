@@ -32,8 +32,10 @@ import DatePicker from '../../../../components/DatePicker.jsx';
 import { nameProblem, normalizeName } from '../../../../lib/testing/names.js';
 import { isIsoDate } from '../../../../lib/testing/eventRules.js';
 import { starEmailIsValid, trimEmail } from '../../../../lib/star/candidatesApi.js';
-// Print receipt's one rule, the same as the ⋯ menu's (withdrawn rows, make-ups and hidden: none)
+// Print receipt's one rule, the same as the ⋯ menu's (nothing paid, make-ups and hidden: none; a
+// withdrawn row only when money still stands, M-03)
 import { canPrintReceipt } from '../../../../lib/star/candidateMenu.js';
+import { payingByWhere } from '../../../../lib/star/payingByWhere.js';
 import { yearRange } from '../../../../lib/star/eventDateRules.js';
 import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
 import Select from '../../../../components/Select.jsx';
@@ -190,7 +192,7 @@ function PaymentPart({ detail, row, hidden, onPrintReceipt = null }) {
         <p className="st-hidden-line">{T.MAKEUP_NO_FEE_DETAIL}</p>
       ) : (
         <dl className="ev-sum">
-          {!row.isMakeup && row.payingBy && <Row label={T.PAYING_BY}>{T.payingByDetail(row.payingBy, row.source)}</Row>}
+          {!row.isMakeup && row.payingBy && <Row label={T.PAYING_BY}>{T.payingByDetail(row.payingBy, payingByWhere(row))}</Row>}
           <Row label={T.PAYMENT}>{paymentText(detail, row)}</Row>
         </dl>
       )}

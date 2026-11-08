@@ -37,7 +37,9 @@ import {
   candidateItems, candidateMoney, liveLines, hasLivePayment, cycleCandidateItems, predictMoney, dueNowItems, nextItems, defaultTicks,
   sumRemaining, rosterCards, rosterFilter, searchMatches, duplicatePairs, pairReturnedLines,
 } from './rules.js';
-import { blackBeltLink, qrSvgDataUrl, qrFileName, qrPngBlob } from './qr.js';
+import { blackBeltLink, qrSvgDataUrl } from './qr.js';
+import { qrFileName, qrPngBlob, qrSvgDataUrl as sharedQrSvgDataUrl } from '../qr.js'; // the shared QR helper (BB10)
+import { formatDollars, formatMoney } from '../money.js';
 import { timeOptions } from '../times.js'; // the shared time list's choices (BB13)
 import {
   STARTING_POINT_SCHEDULE, STARTING_POINT_REQUIREMENTS, STARTING_POINT_NAME, SEED_WAIVER_BODY, SEED_WAIVER_VERSION_NAME,
@@ -52,7 +54,7 @@ import {
 } from './rubric.js';
 import { DEFAULT_RUBRIC } from './rubricDefault.js';
 import { cycleDateYears, dobYears, dueKey, formDobYears, lastTestingDay, notBeforeToday, pastHint, savedDueDates, testingDayMin, yearRange } from './dateLimits.js';
-import { canOpenRegistration } from './rules.js';
+import { canOpenRegistration, deskSchoolCode, deskSchoolArg, compareDanSchoolName, sortWorcesterFirst, sortMakeupPicker } from './rules.js';
 import {
   gradeResult, keptMatch, ageGroups, ageGroupOf, measuredLetter, extraPoints, resultKey, resultKeyInput, trimScaleText, WITHDRAWN_RESULT_KEY,
   RESULT_KEYS, RESULT_SUBJECT_KEYS, danSubjects, subjectNames, minutesFromText, minutesText, parseMeasured, formatMeasured, feetAndInches,
@@ -544,8 +546,87 @@ check('qr: links, QR picture, file name', () => {
   assert.ok(svg.startsWith('data:image/svg+xml;charset=utf-8,'));
   assert.ok(decodeURIComponent(svg).includes('<svg'));
   assert.equal(qrSvgDataUrl('p4w9tdk'), '');
-  assert.equal(qrFileName('Spring 2027', 'Shrewsbury'), 'Black Belt Spring 2027 - Shrewsbury QR.png');
-  assert.equal(qrFileName('Spring/Fall: 2027?', 'Worcester'), 'Black Belt SpringFall 2027 - Worcester QR.png');
+  // BB10: the file is named by the shared helper now — "[cycle] - [school] QR code.png" (v1.106)
+  assert.equal(qrFileName('Spring 2027', 'Shrewsbury'), 'Spring 2027 - Shrewsbury QR code.png');
+  assert.equal(qrFileName('Spring/Fall: 2027?', 'Worcester'), 'SpringFall 2027 - Worcester QR code.png');
+  // …and the shared picture is the same picture the old Black Belt one drew
+  assert.equal(sharedQrSvgDataUrl(blackBeltLink('p4w9tdkm')), svg);
+  assert.equal(sharedQrSvgDataUrl(blackBeltLink('bad')), '');
+});
+
+// ======================= BB10 / BB7 / BB14 (design review part 2, cycle side) =======================
+
+// check() for a function that waits (it imports a file): the next line runs after it finished.
+async function checkAsync(label, fn) {
+  try {
+    await fn();
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+}
+
+await checkAsync('BB10: the Registration link button and box words', async () => {
+  const text = await import('../../blackBelt/staff/text.js');
+  assert.equal(text.REGISTRATION_LINK, 'Registration link'); // the header button: Star's word
+  assert.equal(text.REGISTRATION_LINKS, 'Registration links'); // the box's title
+  // the Cycles list's failure words name the new button, not the old ⋯ item
+  assert.ok(text.COPY_FAILED.includes('Open Registration link on the cycle page'));
+  assert.ok(!text.COPY_FAILED.includes('Registration links'));
+  // the box's own words come from the shared parts: Black Belt no longer keeps copies
+  for (const name of ['copySchoolLink', 'schoolTitle', 'DOWNLOAD_QR', 'qrAlt', 'QR_FAILED']) assert.equal(text[name], undefined, name);
+  assert.equal(text.TOAST_LINK_COPIED, 'Link copied');
+  assert.equal(text.TOAST_QR_DOWNLOADED, 'QR code downloaded');
+});
+
+await checkAsync('BB7: the confirm boxes\' words (one constant each; the "Keep …" words wait for Jeffrey, Q1)', async () => {
+  const text = await import('../../blackBelt/staff/text.js');
+  const results = await import('../../blackBelt/staff/results/text.js');
+  assert.equal(text.KEEP_CYCLE, 'Keep cycle'); // Delete cycle's left button (decided)
+  assert.equal(text.DELETE_CYCLE, 'Delete cycle');
+  assert.equal(text.DELETING, 'Deleting…');
+  assert.equal(text.KEEP_EDITING, 'Keep editing'); // Discard changes: Keep editing left, Discard right
+  assert.equal(text.DISCARD, 'Discard');
+  assert.equal(text.DISCARD_CHANGES, 'Discard changes'); // the phones' note keeps v0.56's words
+  assert.equal(text.SAVE_AND_DELETE, 'Save and delete');
+  assert.equal(results.UNDO_CONFIRM_GO, 'Undo Mark as sent');
+  assert.equal(results.UNDO_CONFIRM_BUSY, 'Undoing…');
+  // Jeffrey has not answered the "Keep …" question: both safe buttons still say "Cancel", each
+  // from ONE constant, so the answer is a one-line change
+  assert.equal(text.KEEP_CONFIRM_KEEP, 'Keep details');
+  assert.equal(results.UNDO_CONFIRM_KEEP, 'Keep send record');
+  // the leave warning's words come from Star's shared grading words
+  const gradingText = await import('../../blackBelt/staff/grading/text.js');
+  assert.equal(gradingText.S.STAY_ON_PAGE, 'Stay on this page');
+  assert.equal(gradingText.S.LEAVE_ANYWAY, 'Leave anyway');
+});
+
+await checkAsync('BB14: one money helper — the staff screens say what they said, except a typed 12.5', async () => {
+  const { formatCents } = await import('./money.js');
+  const { dollarsText } = await import('../../blackBelt/staff/cycle/formValues.js');
+  // formatCents (the old name) and formatMoney give the same text for every amount a screen shows
+  for (const cents of [0, 1, 99, 100, 5005, 29000, 29050, 87000, 112000, 270000, 500000, 2200000000, -1, -29000, -5005, null, undefined, 290.5, '29000', NaN]) {
+    assert.equal(formatCents(cents), formatMoney(cents), String(cents));
+  }
+  // staff/text.js's sentences use formatMoney
+  const text = await import('../../blackBelt/staff/text.js');
+  assert.equal(text.historyPayment(29050, 'cash', '2027-03-04'), 'Payment recorded: $290.50 cash, paid Mar 4');
+  assert.equal(text.historyRefund(5000, 'cash', '2027-03-04'), 'Refund recorded: $50 cash, Mar 4');
+  assert.equal(text.historyCheckReturned(29000), 'Check returned: $290');
+  // Whole-dollar prices read exactly as before (the old formatDollars)
+  for (const dollars of ['870', '$870', '2,700', '1', '5000', '290.00']) {
+    const cents = Number(dollars.replace(/[$,]/g, '')) * 100;
+    assert.equal(dollarsText(dollars), formatDollars(cents), dollars);
+  }
+  assert.equal(dollarsText('870'), '$870');
+  assert.equal(dollarsText('2,700'), '$2,700');
+  // The ONE difference: the Add cycle grid's preview of a typed "12.5" ("$13" before)
+  assert.equal(formatDollars(1250), '$13');
+  assert.equal(dollarsText('12.5'), '$12.50');
+  assert.equal(dollarsText('12.07'), '$12.07'); // 12.07 * 100 is 1207.0000000000002: rounded first
+  assert.equal(dollarsText(''), ''); // nothing typed: an empty spot, never "$0" or "$NaN"
+  assert.equal(dollarsText('abc'), '');
 });
 
 // ======================= the preview database =======================
@@ -1583,8 +1664,8 @@ check('B2 store: the roster = 16c (Candidates 1 sample, order, money, no persona
   assert.equal(answer.status, 'ok');
   assert.equal(answer.state.registration, 'closed_by_date');
   assert.deepEqual(answer.rows.map((r) => `${r.dan} ${r.location_code} ${r.last_name}`), [
-    '1 shrewsbury Kim', '1 worcester Chen', '1 worcester Patel', '2 shrewsbury Brooks', '2 worcester Lee', '2 worcester Silva',
-    '2 worcester Silva', '3 shrewsbury Nguyen', '4 shrewsbury Garcia',
+    '1 worcester Chen', '1 worcester Patel', '1 shrewsbury Kim', '2 worcester Lee', '2 worcester Silva',
+    '2 worcester Silva', '2 shrewsbury Brooks', '3 shrewsbury Nguyen', '4 shrewsbury Garcia',
   ]);
   assert.deepEqual(Object.keys(answer.rows[0]).sort(), ['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon',
     'last_name', 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status', 'version', 'withdrawn_reason',
@@ -1971,6 +2052,57 @@ check('B2 store: Edit payment (15q, T7d) — exactly two rows, same recorded_at,
   assert.deepEqual(w('bb_edit_payment', { p_payment_id: kp.payment_id, p_amount_cents: 100, p_method: 'cash', p_for_items: ['p1'], p_note: null, p_reason: 'x' }), { status: 'withdrawn' });
   assert.deepEqual(w('bb_edit_payment', { p_payment_id: randomUUID(), p_amount_cents: 100, p_method: 'cash', p_for_items: ['p1'], p_note: null, p_reason: 'x' }), { status: 'not_found' });
   setDay('2027-04-26');
+});
+
+// R1-01 (0046, rulebook v1.035): a payment or refund counts at the DESK's school (This device), not the candidate's.
+check('R1-01: the desk school helper — known schools become codes, anything else sends nothing', () => {
+  assert.equal(deskSchoolCode('Worcester'), 'worcester');
+  assert.equal(deskSchoolCode('Shrewsbury'), 'shrewsbury');
+  assert.equal(deskSchoolCode('shrewsbury'), 'shrewsbury');
+  for (const bad of [undefined, null, '', 'Both', 'Boston', 7, {}]) assert.equal(deskSchoolCode(bad), null, String(bad));
+  assert.deepEqual(deskSchoolArg('Shrewsbury'), { p_school: 'shrewsbury' });
+  assert.deepEqual(deskSchoolArg('Both'), {}); // no p_school key at all: the old call
+  assert.deepEqual(deskSchoolArg(undefined), {});
+});
+
+check('R1-01 store: payment and refund count at the desk school; blank = the old rule; undo and edit keep it', () => {
+  fresh();
+  const sam = addDesk('Sam'); // a Worcester candidate
+  // Recorded at a Shrewsbury desk: the payment's school is shrewsbury, not worcester
+  const p = w('bb_record_payment', { ...payArgs(sam, 29000, 'cash', ['p1']), ...deskSchoolArg('Shrewsbury') }, STAFF);
+  assert.equal(p.status, 'ok');
+  assert.equal(db().bb_payments.find((x) => x.id === p.payment_id).location_code, 'shrewsbury');
+  // No device school: the candidate's own school (the old rule)
+  const q = w('bb_record_payment', { ...payArgs(sam, 100, 'cash', ['p2']), ...deskSchoolArg('Both') }, STAFF);
+  assert.equal(db().bb_payments.find((x) => x.id === q.payment_id).location_code, 'worcester');
+  // A school that isn't one of ours is refused, nothing stored
+  const n = db().bb_payments.length;
+  assert.deepEqual(w('bb_record_payment', { ...payArgs(sam, 100, 'cash', ['p3']), p_school: 'boston' }, STAFF), { status: 'invalid' });
+  assert.equal(db().bb_payments.length, n);
+  // Edit payment (admin) and Undo copy the school of the payment they correct, whatever the desk
+  const e = w('bb_edit_payment', { p_payment_id: p.payment_id, p_amount_cents: 29000, p_method: 'card', p_for_items: ['p1'], p_note: null, p_reason: 'was card' });
+  assert.equal(e.status, 'ok');
+  assert.equal(db().bb_payments.find((x) => x.id === e.payment_id).location_code, 'shrewsbury');
+  assert.equal(db().bb_payments.find((x) => x.reverses_payment_id === p.payment_id).location_code, 'shrewsbury');
+  const u = w('bb_undo_payment', { p_payment_id: e.payment_id });
+  assert.equal(u.status, 'ok');
+  assert.equal(db().bb_payments.find((x) => x.reverses_payment_id === e.payment_id).location_code, 'shrewsbury');
+  // A refund at a Shrewsbury desk counts at shrewsbury; without a device school it takes the latest live payment's school
+  const sue = addDesk('Sue');
+  w('bb_record_payment', payArgs(sue, 29000, 'cash', ['p1']), STAFF); // worcester
+  const r1 = w('bb_record_refund', { p_candidate_id: sue, p_expected_version: version(sue), p_amount_cents: 1000, p_method: 'cash', p_note: null, ...deskSchoolArg('Shrewsbury') });
+  assert.equal(db().bb_payments.find((x) => x.id === r1.payment_id).location_code, 'shrewsbury');
+  const r2 = w('bb_record_refund', { p_candidate_id: sue, p_expected_version: version(sue), p_amount_cents: 1000, p_method: 'cash', p_note: null });
+  assert.equal(db().bb_payments.find((x) => x.id === r2.payment_id).location_code, 'worcester');
+  // Undo of the Shrewsbury refund keeps its school
+  const ru = w('bb_undo_payment', { p_payment_id: r1.payment_id });
+  assert.equal(db().bb_payments.find((x) => x.id !== r1.payment_id && x.reverses_payment_id === r1.payment_id).location_code, 'shrewsbury');
+  // A returned check keeps the check's school
+  const cs = addDesk('Cy');
+  const ck = w('bb_record_payment', { ...payArgs(cs, 29000, 'check', ['p1']), ...deskSchoolArg('Shrewsbury') }, STAFF);
+  const ret = w('bb_mark_check_returned', { p_payment_id: ck.payment_id, p_note: null });
+  assert.equal(db().bb_payments.find((x) => x.id === ret.payment_id).location_code, 'shrewsbury');
+  assert.equal(ru.status, 'ok');
 });
 
 check('B2 store: Refund (15r, T7e) — up to the net paid, refund_too_large, its Undo, the net floor', () => {
@@ -3524,7 +3656,7 @@ check('grading store: the cast sample = the cast (grid, Results, the Fall make-u
     }
   }
   const g1 = castCall('bb_grading_grid', { p_cycle_id: spring.id, p_dan: 1 }, STAFF);
-  assert.deepEqual(g1.rows.map((r) => r.last_name), ['Kim', 'Martin', 'Chen', 'Ferreira', 'Patel']); // Shrewsbury, then Worcester, last name
+  assert.deepEqual(g1.rows.map((r) => r.last_name), ['Chen', 'Ferreira', 'Patel', 'Kim', 'Martin']); // Worcester, then Shrewsbury, last name (S-1)
   assert.deepEqual(g1.dan_counts, [{ dan: 1, location_code: 'shrewsbury', count: 2 }, { dan: 1, location_code: 'worcester', count: 3 },
     { dan: 2, location_code: 'shrewsbury', count: 1 }, { dan: 2, location_code: 'worcester', count: 2 }, { dan: 3, location_code: 'shrewsbury', count: 1 },
     { dan: 4, location_code: 'shrewsbury', count: 1 }]);
@@ -3702,6 +3834,58 @@ check('grading store: Choose subjects (A) — stale, already_added, invalid; cho
   assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: zoe.id }, STAFF), { status: 'finished' });
 });
 
+check('S-1: Worcester before Shrewsbury inside each Dan (roster, Grading, Results, make-up picker, fake CSV); the other keys stay', () => {
+  const row = (id, dan, locationCode, lastName, firstName, extra = {}) => ({ id, dan, locationCode, lastName, firstName, ...extra });
+  const rows = [
+    row('a', 2, 'shrewsbury', 'Brooks', 'Ava'), row('b', 1, 'shrewsbury', 'Kim', 'Alex'), row('c', 1, 'worcester', 'patel', 'Rina'),
+    row('d', 1, 'worcester', 'Chen', 'Mia'), row('e', 2, 'worcester', 'Silva', 'Zed'), row('f', 2, 'worcester', 'silva', 'Amy'),
+    row('g', 1, 'worcester', 'Chen', 'Al'), row('h', 3, 'shrewsbury', 'Nguyen', 'Li'),
+  ];
+  const ids = (list) => list.map((r) => r.id).join('');
+  // Dan, then Worcester before Shrewsbury, then last name (capitals ignored), first name
+  assert.equal(ids(sortWorcesterFirst(rows)), 'gdcbfeah');
+  assert.equal(ids(rows), 'abcdefgh', 'the input is not changed');
+  // same everything but id → by id
+  assert.equal(ids(sortWorcesterFirst([row('z', 1, 'worcester', 'Chen', 'Mia'), row('y', 1, 'worcester', 'Chen', 'Mia')])), 'yz');
+  // one school: nothing but last / first name decides, exactly as before
+  const shrewsbury = rows.filter((r) => r.locationCode === 'shrewsbury');
+  assert.equal(ids(sortWorcesterFirst(shrewsbury)), 'bah');
+  assert.equal(compareDanSchoolName(row('w', 1, 'worcester', 'Z', 'Z'), row('s', 1, 'shrewsbury', 'A', 'A')) < 0, true);
+  // Grading grid: make-ups stay last, each group in the new order
+  const grid = [
+    row('m1', 1, 'worcester', 'Aaa', 'A', { isMakeup: true }), row('s1', 1, 'shrewsbury', 'Kim', 'K'), row('w1', 1, 'worcester', 'Zee', 'Z'),
+    row('m2', 1, 'shrewsbury', 'Bbb', 'B', { isMakeup: true }), row('w2', 1, 'worcester', 'Chen', 'C'),
+  ];
+  assert.equal(ids(sortWorcesterFirst(grid, { makeupsLast: true })), 'w2w1s1m1m2');
+  // the make-up picker: newest earlier cycle first, then Dan, Worcester, names
+  const picker = [
+    row('p1', 1, 'shrewsbury', 'Kim', 'K', { cycleFirstDay: '2026-10-03' }), row('p2', 1, 'worcester', 'Chen', 'C', { cycleFirstDay: '2026-10-03' }),
+    row('p3', 2, 'shrewsbury', 'Lee', 'L', { cycleFirstDay: '2027-04-03' }), row('p4', 1, 'worcester', 'Zee', 'Z', { cycleFirstDay: '2027-04-03' }),
+  ];
+  assert.equal(ids(sortMakeupPicker(picker)), 'p4p3p2p1');
+  // two earlier cycles that start the same day stay apart (the database keeps each cycle's rows together)
+  const sameDay = [
+    row('b1', 1, 'worcester', 'Aaa', 'A', { cycleFirstDay: '2026-10-03', cycleId: 'cyc-b' }),
+    row('a2', 2, 'worcester', 'Bbb', 'B', { cycleFirstDay: '2026-10-03', cycleId: 'cyc-a' }),
+    row('a1', 1, 'shrewsbury', 'Ccc', 'C', { cycleFirstDay: '2026-10-03', cycleId: 'cyc-a' }),
+  ];
+  assert.equal(ids(sortMakeupPicker(sameDay)), 'a1a2b1');
+  // the fake stores the preview and these checks run on send the same order, the CSV included
+  loadCast();
+  const spring = springCycle();
+  const order = (list) => list.map((r) => `${r.dan} ${r.location_code}`);
+  const results = castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: null }, STAFF).rows;
+  for (const rowsOf of [results, castCall('bb_results_csv', { p_cycle_id: spring.id }).rows]) {
+    const list = order(rowsOf);
+    for (let i = 1; i < list.length; i += 1) {
+      const [dA, sA] = list[i - 1].split(' ');
+      const [dB, sB] = list[i].split(' ');
+      assert.ok(Number(dA) < Number(dB) || (dA === dB && !(sA === 'shrewsbury' && sB === 'worcester')), `${list[i - 1]} then ${list[i]}`);
+    }
+  }
+  assert.ok(results.some((r) => r.location_code === 'worcester') && results.some((r) => r.location_code === 'shrewsbury'));
+});
+
 check('grading store: Mark as sent / Undo (10 s own, admins later), Email result, no_email, not_finished, the CSV (A, logged first)', () => {
   loadCast();
   const spring = springCycle();
@@ -3756,7 +3940,7 @@ check('grading store: Mark as sent / Undo (10 s own, admins later), Email result
   setDay('2030-06-06');
   const after = castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: 1 }, STAFF);
   const rinaRow = after.rows.find((r) => r.first_name === 'Rina');
-  assert.deepEqual(after.rows.map((r) => [r.first_name, r.has_email]), [['Alex', true], ['Zoe', true], ['Mia', true], ['Lucas', true], ['Rina', false]]);
+  assert.deepEqual(after.rows.map((r) => [r.first_name, r.has_email]), [['Mia', true], ['Lucas', true], ['Rina', false], ['Alex', true], ['Zoe', true]]); // Worcester first (S-1)
   assert.deepEqual(castCall('bb_result_email', { p_candidate_id: rinaRow.id }, STAFF), { status: 'no_email' });
   assert.deepEqual(castCall('bb_mark_result_sent', { p_candidate_id: rinaRow.id, p_expected_result_key: rinaRow.result.result_key }, STAFF), { status: 'no_email' });
   // the CSV: admins only; the log row first; DOB and email null from the purge day on
@@ -4452,7 +4636,7 @@ await (async () => {
     assert.equal((await previewApi.getCycle(code)).status, 'ok');
     assert.match(helpers.setToday('nope'), /Use a date/);
     // no canvas in Node: the PNG download resolves to null instead of failing
-    assert.equal(await qrPngBlob(code), null);
+    assert.equal(await qrPngBlob(blackBeltLink(code)), null);
     count += 1;
   } catch (error) {
     console.error(`FAILED: ${label}`);
@@ -4464,12 +4648,18 @@ await (async () => {
 await (async () => {
   const label = 'step 1b: Date signed day, Undo toast words, staff words, offline lines';
   try {
-    const { signedDayLabel } = await import('../../blackBelt/form/format.js');
-    assert.equal(signedDayLabel('2027-03-10'), 'Mar 10, 2027'); // month day, year, no weekday
-    assert.equal(signedDayLabel('2027-12-01'), 'Dec 1, 2027');
-    const formText = await import('../../blackBelt/form/text.js');
-    assert.equal(formText.DATE_SIGNED, 'Date signed');
-    assert.equal(formText.DATE_SIGNED_HINT, "Filled in automatically with today's date."); // the shared words
+    // The family form draws the shared DateSigned part (no Black Belt box of its own any more):
+    // the day shows with its weekday, and the words are the shared ones.
+    const formFormat = await import('../../blackBelt/form/format.js');
+    assert.equal(formFormat.signedDayLabel, undefined);
+    const { shortDate } = await import('../calendarDates.js');
+    assert.equal(shortDate('2027-03-10'), 'Wed, Mar 10, 2027');
+    const sharedText = await import('../../components/text.js');
+    assert.equal(sharedText.DATE_SIGNED, 'Date signed');
+    assert.equal(sharedText.DATE_SIGNED_HINT, "Filled in automatically with today's date."); // the shared words
+    const stepCheckSource = (await import('node:fs')).readFileSync(new URL('../../blackBelt/form/StepCheck.jsx', import.meta.url), 'utf8');
+    assert.ok(stepCheckSource.includes('<DateSigned id="bbf-signed" day={today} />'));
+    assert.ok(!stepCheckSource.includes('bbf-field--signed'));
     // R2-07: the Undo that puts registration back to open says so; the plain one stays plain
     const staffText = await import('../../blackBelt/staff/text.js');
     assert.equal(staffText.TOAST_UNDONE, 'Undone');
@@ -4490,6 +4680,175 @@ await (async () => {
     assert.equal(resultsText.OFFLINE_WHY_BUTTONS, 'Print results and Download CSV are off while you’re offline. Try again when the connection is back.');
     assert.equal(resultsText.OFFLINE_WHY_ROWS, 'Email result and Mark as sent are off while you’re offline. Try again when the connection is back.');
     assert.equal(resultsText.OFFLINE, undefined); // the tab's own amber bar is gone
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
+
+// ----- Candidates page, BB15 / BB1 / BB2 / BB7 / R4-11 / C-05 / M-03 (design review, rulebook v1.008 ... v1.105) -----
+await (async () => {
+  const label = 'Candidates page: Print receipt rule, count cards, empty lines, compare rows, receipt, failed reads, words';
+  try {
+    const checksJs = await import('../../blackBelt/staff/candidates/checks.js');
+    const { printReceiptOffered, rosterCardList, rosterEmptyText, isMoneyChild, MONEY_CHILD_KINDS } = checksJs;
+    // P1: which child dialogs are money dialogs (none may be drawn or opened while Hide private details is on)
+    for (const kind of ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt', 'plan']) assert.equal(isMoneyChild(kind), true, kind);
+    for (const kind of ['add', 'deleteConfirm', 'danChange', 'compare', 'signature', undefined]) assert.equal(isMoneyChild(kind), false, String(kind));
+    assert.equal(MONEY_CHILD_KINDS.length, 7);
+    const { compareRows } = await import('../../blackBelt/staff/candidates/compareRows.js');
+    const { buildBlackBeltReceipt } = await import('../../blackBelt/staff/receipt/buildReceipt.js');
+    const W = await import('../../blackBelt/staff/text.js');
+
+    // M-03 / BB2: Print receipt only with a payment or refund that still stands, active or withdrawn
+    const live = (...kinds) => kinds.map((kind) => ({ kind }));
+    assert.equal(printReceiptOffered({ lines: [] }), false, 'nothing paid: none');
+    assert.equal(printReceiptOffered({ lines: live('payment') }), true);
+    assert.equal(printReceiptOffered({ lines: live('payment', 'refund') }), true);
+    assert.equal(printReceiptOffered({ lines: live('refund') }), true, 'a refund that stands is enough');
+    assert.equal(printReceiptOffered({ lines: live('returned') }), false, 'a returned mark alone is no money');
+    assert.equal(printReceiptOffered({ lines: live('payment'), hidden: true }), false, 'never while hidden');
+    assert.equal(printReceiptOffered({ lines: live('payment'), isMakeup: true }), false, 'a make-up has no fee');
+    // from the roster row alone (a withdrawn row keeps it when it has money)
+    assert.equal(printReceiptOffered({ paidCents: 29000, hasPaymentRows: true, tag: 'next' }), true);
+    assert.equal(printReceiptOffered({ paidCents: 0, hasPaymentRows: false, tag: 'not_paid' }), false);
+    assert.equal(printReceiptOffered({ paidCents: 0, hasPaymentRows: false, tag: 'next' }), false, 'no payment row at all');
+    assert.equal(printReceiptOffered({ paidCents: 0, hasPaymentRows: true, tag: 'not_paid' }), false, 'all undone and overdue');
+    assert.equal(printReceiptOffered({ paidCents: 0, hasPaymentRows: true, tag: 'late' }), false, 'net 0 and no lines loaded: the only payment may have been undone (M-03)');
+    assert.equal(printReceiptOffered({ paidCents: 0, hasPaymentRows: true, tag: 'next' }), false, 'net 0, any tag: not offered from the row alone');
+    assert.equal(printReceiptOffered({ lines: live('payment', 'refund'), paidCents: 0 }), true, 'loaded lines decide: paid then refunded to zero still stands');
+    assert.equal(printReceiptOffered({ paidCents: 29000, hasPaymentRows: true, tag: 'next', hidden: true }), false);
+
+    // BB15 / C-05 (a) / v1.046 (9): the count cards as data
+    const counts = { paidInFull: 2, onSchedule: 3, late: 1, notPaid: 0, duplicatesLeftOut: 2 };
+    const four = rosterCardList({ counts, total: 9, hidden: false, hasAny: true });
+    assert.deepEqual(four.cards.map((c) => [c.key, c.label, c.value, c.kind]), [
+      ['paidInFull', 'Paid in full', 2, 'filter'], ['onSchedule', 'Paying on schedule', 3, 'filter'], ['late', 'Late', 1, 'filter'], ['notPaid', 'Not paid', 0, 'filter'],
+    ]);
+    assert.equal(four.note, W.duplicatesLeftOut(2), 'the gray note names the duplicates left out');
+    assert.equal(rosterCardList({ counts: { ...counts, duplicatesLeftOut: 0 }, total: 9 }).note, null);
+    const one = rosterCardList({ counts, total: 9, hidden: true, hasAny: true });
+    assert.deepEqual(one.cards, [{ key: 'all', label: 'Candidates', value: 9, kind: 'total' }], 'hidden: ONE Candidates card (plain, not a button), no money cards');
+    assert.equal(one.note, null);
+    assert.deepEqual(rosterCardList({ counts, total: 0, hidden: false, hasAny: false }), { cards: [], note: null }, 'empty roster: no cards');
+    assert.deepEqual(rosterCardList({ counts, total: 0, hidden: true, hasAny: false }), { cards: [], note: null }, 'empty and hidden: no cards either');
+    assert.ok(four.cards.length <= 4, '§8: at most four in a row');
+
+    // C-05 (b) and the empty roster line
+    assert.equal(rosterEmptyText({ searchText: 'zz' }), 'No candidates match "zz".');
+    assert.equal(rosterEmptyText({ searchText: 'zz', card: 'late' }), 'No candidates match "zz".', 'a search outranks a card');
+    const lines = ['paidInFull', 'onSchedule', 'late', 'notPaid'].map((card) => rosterEmptyText({ card }));
+    assert.equal(new Set(lines).size, 4, 'each card says its own thing');
+    for (const line of lines) assert.ok(line !== W.NO_FILTER_MATCH && line !== W.NO_CANDIDATES, line);
+    assert.deepEqual(lines, ['No one has paid in full yet.', 'No one is paying on schedule right now.', 'No one is late.', 'No one is overdue with nothing paid.']);
+    assert.equal(rosterEmptyText({}), W.NO_CANDIDATES);
+    assert.ok(W.NO_CANDIDATES.includes('Add candidate'), 'the empty roster line names the button (v1.028)');
+
+    // BB15: the compare's rows; hidden lines carry no value and are never marked
+    const reg = (id, ref, dob, email, paid) => ({
+      candidate: { id, registeredAt: '2027-03-25T14:14:00Z', reference: ref, source: 'form', dateOfBirth: dob, emailForResults: email, dan: 1, locationCode: 'worcester', plan: { name: 'In full' }, kukkiwon: true },
+      money: { paidCents: paid },
+    });
+    const a = reg('a', 'BB-5001', '2012-03-04', 'a@example.com', 0);
+    const b = reg('b', 'BB-5002', '2012-03-04', 'a@example.com', 39000);
+    const open = compareRows(a, b, { hidden: false });
+    assert.deepEqual(open.map((r) => r.key), ['registered', 'reference', 'source', 'dob', 'email', 'dan', 'school', 'plan', 'paid']);
+    assert.deepEqual(open.filter((r) => r.plain).map((r) => r.key), ['registered', 'reference']);
+    assert.equal(open.find((r) => r.key === 'dob').first, 'Mar 4, 2012');
+    assert.equal(open.find((r) => r.key === 'paid').first, '$0');
+    assert.equal(open.find((r) => r.key === 'paid').second, '$390');
+    const masked = compareRows(a, b, { hidden: true });
+    assert.deepEqual(masked.filter((r) => r.hidden).map((r) => r.key), ['dob', 'email', 'plan', 'paid']);
+    for (const row of masked.filter((r) => r.hidden)) assert.deepEqual([row.first, row.second], ['', ''], `${row.key} carries no value while hidden`);
+    assert.ok(!JSON.stringify(masked).includes('a@example.com') && !JSON.stringify(masked).includes('2012-03-04') && !JSON.stringify(masked).includes('Mar 4, 2012'));
+    assert.equal(masked.find((r) => r.key === 'dan').first, '1st Dan', 'the other lines stay');
+
+    // BB2: the plain receipt the shared box draws
+    const plainReceipt = buildBlackBeltReceipt({
+      candidate: { firstName: 'Alex', lastName: 'Kim', dan: 1, reference: 'BB-5001', locationCode: 'worcester' },
+      cycleName: 'Spring 2027',
+      planName: 'In full',
+      kukkiwon: false,
+      lines: [
+        { paidOn: '2027-03-27', forItems: ['p1'], kind: 'payment', method: 'check', amountCents: 87000, returned: true },
+        { paidOn: '2027-04-02', forItems: null, kind: 'returned', method: 'check', amountCents: -87000, returned: false },
+        { paidOn: '2027-04-05', forItems: ['p1'], kind: 'payment', method: 'card', amountCents: 87000, returned: false },
+        { paidOn: '2027-04-06', forItems: null, kind: 'refund', method: 'cash', amountCents: -5000, returned: false },
+      ],
+      money: { totalDueCents: 87000, paidCents: 82000, balanceCents: 5000, nextOn: null, nextCents: null },
+      schools: [{ code: 'worcester', name: 'Worcester', address: { street: '1141 Main St' }, phone: '(508) 767-1717' }, { code: 'shrewsbury', name: 'Shrewsbury', address: null, phone: null }],
+      printedOn: '2027-04-26',
+      printedByName: ' Jeffrey Berg ',
+    }, { plans: [], state: { firstDay: '2027-04-03' } });
+    assert.equal(plainReceipt.kindLine, 'Black Belt testing · payment receipt');
+    assert.deepEqual(plainReceipt.facts.map(([k]) => k), ['Candidate', 'Cycle', 'Reference', 'School', 'Plan']);
+    assert.equal(plainReceipt.facts[0][1], 'Alex Kim · 1st Dan');
+    assert.equal(plainReceipt.facts[3][1], 'Worcester');
+    assert.deepEqual(plainReceipt.lines.map((l) => [l.date, l.forText, l.how, l.amountCents]), [
+      ['2027-03-27', 'Payment 1', 'check', 87000], // (no plan in this cycle: the item's own name)
+      ['2027-04-02', 'Payment 1 · check returned', '—', -87000], // paired with the bounced check; no money moved that day
+      ['2027-04-05', 'Payment 1', 'card', 87000],
+      ['2027-04-06', 'Refund', 'cash', -5000],
+    ]);
+    assert.equal(plainReceipt.totalDueCents, 87000);
+    assert.equal(plainReceipt.paidCents, 82000);
+    assert.equal(plainReceipt.balanceNote, 'overdue');
+    assert.deepEqual(plainReceipt.schools, [{ name: 'Worcester', street: '1141 Main St', phone: '(508) 767-1717' }, { name: 'Shrewsbury', street: '', phone: '' }]);
+    assert.equal(plainReceipt.printedByName, 'Jeffrey Berg');
+    assert.ok(!JSON.stringify(plainReceipt).match(/dateOfBirth|email|"note"|"reason"|signature/i),'never a date of birth, email, note or signature');
+
+    // R4-11 / S-2: a failed READ in the preview store (failNextSave never fails one)
+    const pending = [];
+    let stored = null;
+    const store = createBlackBeltBackend({
+      loadStore: () => stored,
+      saveStore: (s) => { stored = JSON.parse(JSON.stringify(s)); },
+      now: () => nowMs,
+      today: () => todayIso,
+      newId: randomUUID,
+      defer: (fn) => pending.push(fn),
+    });
+    setDay('2027-02-15');
+    store.loadSample();
+    const candidateId = store.snapshot().bb_candidates[0].id;
+    const read = (name, args = {}) => store.rpc(name, args, ADMIN);
+    const detail = () => read('bb_candidate_detail', { p_candidate_id: candidateId });
+    assert.equal(detail().error, null);
+    store.failNextRead();
+    assert.match(detail().error.message, /Failed to fetch/, 'the next read fails');
+    assert.match(read('bb_receipt', { p_candidate_id: candidateId }).error.message, /Failed to fetch/, 'every read in the same moment fails too');
+    assert.equal(read('bb_cycle_roster', { p_cycle_id: store.snapshot().bb_cycles[0].id }).error, null, 'the lists that refresh by themselves are skipped with no name');
+    assert.equal(pending.length, 1, 'one moment, armed once');
+    pending.shift()(); // the moment ends
+    assert.equal(detail().error, null, 'then reads work again');
+    store.failNextRead('bb_view_signature');
+    assert.equal(detail().error, null, 'a named read leaves the others alone');
+    assert.match(read('bb_view_signature', { p_candidate_id: candidateId }).error.message, /Failed to fetch/);
+    pending.shift()();
+    store.failNextRead('bb_cycle_roster');
+    assert.match(read('bb_cycle_roster', { p_cycle_id: store.snapshot().bb_cycles[0].id }).error.message, /Failed to fetch/, 'a name can target the roster');
+    pending.shift()();
+    store.failNextRead();
+    const withdrawn = store.rpc('bb_withdraw_candidate', { p_candidate_id: candidateId, p_expected_version: store.snapshot().bb_candidates[0].version }, ADMIN);
+    assert.equal(withdrawn.error, null, 'a write is not a read: failNextRead leaves it alone');
+    assert.match(read('bb_receipt', { p_candidate_id: candidateId }).error.message, /Failed to fetch/, '(the armed read failure was still waiting)');
+    pending.shift()();
+    store.failNextSave();
+    assert.equal(read('bb_receipt', { p_candidate_id: candidateId }).error, null, 'failNextSave leaves reads alone');
+
+    // the words (BB1, BB7, BB15, S-2)
+    assert.equal(W.LOAD_FAILED, "Couldn't load. Check the connection, then retry.");
+    assert.equal(W.LOAD_FAILED_NO_RETRY, "Couldn't load. Check the connection, then try again.", 'C1: no Retry button, so no retry word');
+    assert.equal(W.REFUNDED_BY, 'Refunded by');
+    assert.equal(W.METHOD, undefined, '"Method" is gone');
+    assert.deepEqual([W.KEEP_PAYMENT, W.KEEP_REFUND, W.KEEP_MARK], ['Keep payment', 'Keep refund', 'Keep mark']);
+    assert.equal(W.UNDO_RETURNED_CONFIRM, W.UNDO_RETURNED, 'the action repeats the menu: Undo returned mark');
+    assert.equal(W.UNDO_RETURNED_CONFIRM, 'Undo returned mark');
+    assert.deepEqual([W.UNDOING, W.DELETING, W.CHANGING], ['Undoing…', 'Deleting…', 'Changing…']);
+    assert.equal(W.keepDan(1), 'Keep 1st Dan');
+    assert.equal(W.keepDan(3), 'Keep 3rd Dan');
+    assert.equal(W.duplicatesLeftOutPhone, undefined, 'phones use the shared cards and the same note');
     count += 1;
   } catch (error) {
     console.error(`FAILED: ${label}`);

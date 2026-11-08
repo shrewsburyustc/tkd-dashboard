@@ -12,6 +12,7 @@ import * as CB from '../../text.js';
 import { fullDate, shortDate, weekdayMonthDay } from '../../../../lib/calendarDates.js';
 import { startTimeLabel } from '../../../../lib/star/starEventRules.js';
 import { dollars } from '../../../../lib/star/candidatesText.js';
+import { formatMoney } from '../../../../lib/money.js';
 
 export * from '../../../../lib/star/candidatesText.js';
 export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../../../lib/privateDetails.js';
@@ -109,7 +110,19 @@ export const removedGroup = (n) => `Removed · ${n}`;
 export const NOT_IN_GRADING = 'Not in Grading or the counts';
 export const NO_CANDIDATES = 'No candidates yet. Families register with the registration links, or staff add them with Add candidate.';
 export const NO_CANDIDATES_DAN = 'No candidates for this Dan.'; // PROPOSAL (other Dans have candidates)
-export const NO_MATCHES = 'No candidates match.'; // PROPOSAL (a card filter with nothing to show)
+// C-05 (b), v1.055: each count card says what is true when its filter leaves nobody in the Dan being
+// looked at (Color Belt's pattern). If the Dan has no candidates at all, NO_CANDIDATES_DAN wins, so
+// "Every candidate ... has paid" is never said about an empty Dan.
+export const NO_PAID_DAN = 'No paid candidates in this Dan.';
+export const EVERY_PAID_DAN = 'Every candidate in this Dan has paid.';
+// R5-05 (v1.038): the gray line under Payments recorded when removed candidates' money is in it.
+export const includesRemoved = (cents) => `includes ${formatMoney(cents)} from removed candidates`;
+// R3-02 (v1.055): the gray line under the cards while possible-duplicate rows are left out of the
+// Paid and Not paid counts. It counts pairs, like the orange box above (curly apostrophes, as Camps).
+export const dupNotCounted = (n) =>
+  n === 1
+    ? '1 possible duplicate isn’t counted in Paid or Not paid until it’s reviewed.'
+    : `${n} possible duplicates aren’t counted in Paid or Not paid until they’re reviewed.`;
 export const LOADING_CANDIDATES = 'Loading candidates';
 export const TAB_CANDIDATES = 'Candidates';
 
@@ -259,7 +272,8 @@ export const NOT_SIGNED_HERE = 'Not signed here (added at the desk)';
 export { DATE_SIGNED } from '../../../../components/text.js';
 export const dateSignedDetail = (stamp) => shortDate(stampDay(stamp));
 export const PAYING_BY = 'Paying by';
-export const payingByDetail = (method, source) => `${payingByText(method)} (chosen ${source === 'form' ? 'on the form' : 'at the desk'})`;
+// where = 'form' | 'desk' from payingByWhere.js (R1-02): where the CURRENT Paying by was chosen.
+export const payingByDetail = (method, where) => `${payingByText(method)} (chosen ${where === 'form' ? 'on the form' : 'at the desk'})`;
 export const PAYMENT = 'Payment';
 export const notPaidDetail = (standardCents, sameDayCents) => `Not paid · ${dollars(standardCents)} before the testing day, ${dollars(sameDayCents)} on it`;
 export const notPaidPrivate = (privateCents) => `Not paid · private fee ${dollars(privateCents)}`; // PROPOSAL

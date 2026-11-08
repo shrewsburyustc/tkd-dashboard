@@ -280,9 +280,13 @@ await check('star_event_results / loadGrading: belt order, private candidates le
   const rig = makeRig();
   const g = await grid(rig);
   const first = g.dans[1].rows;
-  // belt order: stars, Shrewsbury before Worcester, last name, first name
+  // belt order: stars, WORCESTER before Shrewsbury (0038, S-1: Mia Patel and Chris Kim are the Shrewsbury
+  // ones, so each now comes after the Worcester candidates of the same star level), last name, first name
   assert.deepEqual(first.map((r) => `${r.firstName} ${r.lastName}`), [
-    'Mia Patel', 'Noah Chen', 'Ava Reed', 'Ava Reed', 'Chris Kim', 'Lily Brooks', 'Sam Ortiz', 'Sofia Reyes', 'Grace Liu', 'Ethan Lopez',
+    'Noah Chen', 'Ava Reed', 'Ava Reed', 'Mia Patel', 'Lily Brooks', 'Sam Ortiz', 'Sofia Reyes', 'Chris Kim', 'Grace Liu', 'Ethan Lopez',
+  ]);
+  assert.deepEqual(first.map((r) => `${r.starsFrom} ${r.locationCode}`), [
+    '0 worcester', '0 worcester', '0 worcester', '0 shrewsbury', '1 worcester', '1 worcester', '1 worcester', '1 shrewsbury', '2 worcester', '2 worcester',
   ]);
   assert.equal(first.some((r) => r.firstName === 'Alex'), false); // testing privately: own page (v0.151)
   assert.equal(g.dans[3].rows.length, 0); // Ruby Diaz is private too

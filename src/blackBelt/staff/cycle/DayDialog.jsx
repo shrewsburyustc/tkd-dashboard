@@ -1,4 +1,5 @@
-// DayDialog.jsx — "Add testing day" / "Edit testing day", on top of Add / Edit cycle.
+// DayDialog.jsx — "Add testing day" / "Edit testing day", on top of Add / Edit cycle (the shared
+// Dialog with onTop; Place is the shared Select, the times the shared TimeList).
 // Why it exists: approved mockup Cycles 5 (rulebook v0.918 and its four details). The fields:
 //   - Name (shown to families), Date, Start time, End time (the shared time list, design review
 //     BB13 / v1.019 / v1.109: 6:00 AM–10:00 PM in 5-minute steps, opening with the chosen time in
@@ -19,13 +20,13 @@
 // rule refuses (before today, before the first day once grading started), so they can't be picked.
 import { useId } from 'react';
 import { IconCheck } from '@tabler/icons-react';
+import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
+import Select from '../../../components/Select.jsx';
 import TimeList from '../../../components/TimeList.jsx';
 import { FIRST_TIME, LAST_TIME, TIME_STEP_MINUTES, dayProblems, hasProblems, partsAlsoOnOtherDays } from '../../../lib/blackBelt/rules.js';
 import { cycleDateYears, pastHint, testingDayMin } from '../../../lib/blackBelt/dateLimits.js';
 import DateField from '../parts/DateField.jsx';
-import InnerDialog from '../parts/InnerDialog.jsx';
-import SelectField from '../parts/SelectField.jsx';
 import { valuesToDay } from './formValues.js';
 import * as T from '../text.js';
 
@@ -121,7 +122,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
         <span id={`${id}-${kindField}-label`} className="field-label">
           {label}
         </span>
-        <SelectField
+        <Select
           id={`${id}-${kindField}`}
           labelId={`${id}-${kindField}-label`}
           value={v[kindField]}
@@ -160,7 +161,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
   const subtitle = isAdd ? T.addDaySub(cycleName, dayCount + 1) : T.editDaySub(cycleName, state.index + 1, dayCount);
 
   return (
-    <InnerDialog title={isAdd ? T.ADD_DAY_TITLE : T.EDIT_DAY_TITLE} size="medium" fullScreen={isPhone} onRequestClose={onRequestClose}>
+    <Dialog title={isAdd ? T.ADD_DAY_TITLE : T.EDIT_DAY_TITLE} size="medium" fullScreen={isPhone} onTop onRequestClose={onRequestClose}>
       <p className="tdialog-sub">{subtitle}</p>
       <form
         noValidate
@@ -296,6 +297,6 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
           </div>
         )}
       </form>
-    </InnerDialog>
+    </Dialog>
   );
 }

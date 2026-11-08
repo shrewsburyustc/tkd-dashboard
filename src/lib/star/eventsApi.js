@@ -50,6 +50,13 @@
 //     → { status:'ok', version, state }
 //     refusals: invalid · not_found · stale · finished · not_allowed (staff reopening after the
 //               closing date passed; an admin reopening then also removes the date, v0.85/v0.86)
+//   undoStarEventEdit({ eventId, expectedVersion, name, testingDate, startTime, endTime, whereCode,
+//                       autoCloseOn, note, open })   admin   (migration 0038, R2-02)
+//     Edit event's Undo in ONE step: the old details AND (open = true/false, or null when the Edit
+//     didn't change the switch) the old Registration switch go back together, or nothing changes.
+//     expectedVersion = the version the Edit's save returned.
+//     → { status:'ok', version } or the database's refusal as it is (stale · invalid · duplicate_name ·
+//       finished · not_allowed · not_found) — a refusal means nothing was undone.
 //   saveStarEventEdit({ …updateStarEvent's fields, registrationOpen, previousRegistrationOpen })   admin
 //     The Edit event Save: updateStarEvent, then setStarRegistration with the new version ONLY when
 //     registrationOpen !== previousRegistrationOpen (contract §11 item 7).
@@ -90,5 +97,6 @@ export const loadStarEvent = api.loadStarEvent;
 export const addStarEvent = api.addStarEvent;
 export const updateStarEvent = api.updateStarEvent;
 export const setStarRegistration = api.setStarRegistration;
+export const undoStarEventEdit = api.undoStarEventEdit;
 export const saveStarEventEdit = api.saveStarEventEdit;
 export const deleteStarEvent = api.deleteStarEvent;

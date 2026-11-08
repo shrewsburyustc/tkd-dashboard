@@ -54,7 +54,7 @@ const EVENT_RANK_COLUMNS = `id, event_class_id, rank_id, name, position, ${BELT}
 // The roster view: registration columns (no signature, no submission id) + payment summary.
 // The class is worked out here from the event copy (event_rank_id → its class), so this list
 // only uses columns the contract names exactly.
-const ROSTER_COLUMNS = 'id, event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source, reference, signed, signed_at, signature_deleted_at, ack_version, registered_at, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, created_by_name, updated_at, updated_by_name, paid, paid_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at';
+const ROSTER_COLUMNS = 'id, event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source, reference, signed, signed_at, signature_deleted_at, ack_version, registered_at, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, created_by_name, updated_at, updated_by_name, paid, paid_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form';
 const PAYMENT_COLUMNS = 'id, registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name, reverses_payment_id';
 // A student's grading result (phase 3). Never updated_by (the login id isn't given to the app)
 // and never '*' (the database refuses it).
@@ -168,6 +168,9 @@ function toRosterRow(row, classOfRank, resultRow) {
     firstName: row.first_name,
     lastName: row.last_name,
     payingBy: row.paying_by,
+    // The way the family chose ON THE FORM (migration 0044, M-01); null = added at the desk. The
+    // Mark paid box's hint compares it with payingBy (markPaidChoiceWhere in eventRules.js).
+    payingByOnForm: row.paying_by_on_form ?? null,
     stripesConfirmed: row.stripes_confirmed === true,
     source: row.source, // 'form' | 'staff'
     reference: row.reference, // 'CB-3112'
@@ -469,6 +472,29 @@ export async function setRegistration({ eventId, expectedVersion, open } = {}) {
   );
 }
 
+// Edit event's Undo in ONE database call (migration 0044, R2-02; model: Black Belt's
+// bb_undo_cycle_edit): the old details and — when `open` is true or false — the old Open / Closed
+// switch go back together or not at all, so the Undo can never stop halfway. `open: null` leaves
+// the switch alone. Admins only. → { status:'ok', version, state } · whatever testing_update_event
+// or testing_set_registration would answer ('stale', 'not_empty', 'has_results', 'not_allowed',
+// 'finished' …), with nothing saved.
+export async function undoEventEdit({ eventId, expectedVersion, name, testingDate, classes, autoCloseOn = null, note = null, open = null } = {}) {
+  return callRpc(
+    'testing_undo_event_edit',
+    {
+      p_event_id: eventId,
+      p_expected_version: expectedVersion,
+      p_name: name,
+      p_testing_date: testingDate,
+      p_classes: classesArg(classes),
+      p_auto_close_on: autoCloseOn,
+      p_note: note,
+      p_open: open,
+    },
+    (d) => (isInt(d.version) && isText(d.state) ? { version: d.version, state: d.state } : null),
+  );
+}
+
 // Delete event (admin). The two numbers are what the confirmation showed: ALL registrations
 // (incl. withdrawn) and the NET payment total; 'stale' if either has changed since.
 export async function deleteEvent({ eventId, expectedVersion, expectedRegistrationCount, expectedPaymentTotalCents } = {}) {
@@ -552,10 +578,13 @@ export async function changePayingBy({ registrationId, expectedVersion, payingBy
 // → { status:'ok', paymentId, amountCents, method, paidOn, payingBy, version } · 'price_changed'
 //   (+ amountCents) · 'already_paid' · 'withdrawn' · 'stale' (e.g. a double click) · 'not_found' ·
 //   'invalid' · 'no_access' · 'error'
-export async function markPaidBy({ registrationId, expectedVersion, method, expectedCents } = {}) {
+//   school          This device's school code ('worcester' | 'shrewsbury'), or null when the device
+//                   has none — the database then uses the event's school (migration 0044, R1-01,
+//                   rulebook v1.035: a payment counts at the desk that took it).
+export async function markPaidBy({ registrationId, expectedVersion, method, expectedCents, school = null } = {}) {
   return callRpc(
     'testing_mark_paid_by',
-    { p_registration_id: registrationId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents },
+    { p_registration_id: registrationId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents, p_school: school ?? null },
     (d) =>
       isText(d.payment_id) && isInt(d.amount_cents) && isText(d.method) && isInt(d.version)
         ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, paidOn: d.paid_on ?? null, payingBy: d.paying_by ?? d.method, version: d.version }

@@ -247,6 +247,19 @@ export function isPaid(paidCents) {
   return typeof paidCents === 'number' && paidCents > 0;
 }
 
+// Where the family chose today's "Paying by", for the Mark paid box's hint (M-01 = C-01, migration
+// 0044; rulebook v0.418, v0.420): 'form' ("They chose Cash on the form.") only while Paying by is
+// still the family form's own choice (payingByOnForm); 'desk' ("… at the desk.") once staff
+// changed it (Change how they'll pay, Mark paid or Edit payment by another way) — and ALSO when
+// there is no form choice (null or missing: added at the desk). That last part is the difference
+// from Camps' payingByChoiceWhere (campRules.js), where a missing choice means "a database from
+// before 0033" and says 'form'. Used by the event roster and the Private testing tab alike.
+export function markPaidChoiceWhere(row) {
+  const onForm = row?.payingByOnForm;
+  if (typeof onForm !== 'string' || onForm === '') return 'desk';
+  return row.payingBy === onForm ? 'form' : 'desk';
+}
+
 // Print receipt's one rule for an event registration, shared by the row's ⋯ button, its ⋯ menu and
 // the summary's Payment row (CB2, rulebook v0.420; pass 2 M-03, v1.055 (b) and v0.428): a payment
 // that still stands (paid), on an active OR a removed row (withdrawn, or a duplicate copy), for staff

@@ -125,6 +125,38 @@
   color: var(--color-text-secondary);
 }
 
+/* The Prices tab's line under a class: "Final award: LT Black" (CB14). Lines up under the class name:
+   mouse 44px (8 + 28 chevron + 8), touch 48px, phone 16px (no chevron box before the name). */
+.cfinal {
+  margin: -6px 0 var(--space-8) 44px;
+  padding-right: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.cfinal .tfwarn {
+  align-items: center;
+}
+
+@media (pointer: coarse) {
+  .cfinal {
+    margin-left: 48px;
+  }
+}
+
+@media (max-width: 639.98px) {
+  /* Phone: a long class name wraps onto a second line, so no pulling up under it (design review M1) */
+  .cfinal {
+    margin: 0 0 var(--space-8) var(--space-16);
+  }
+}
+
+/* View only (staff on the Prices tab): rows do nothing, so the pointer stays an arrow */
+.clist.is-staff .rrow,
+.clist.is-staff .prow {
+  cursor: default;
+}
+
 /* ----- Belt pictures (Belt.jsx, v0.64) ----- */
 .belt {
   display: inline-block;

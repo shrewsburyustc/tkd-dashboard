@@ -119,7 +119,7 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     } else if (status === 'not_found') {
       setBanner({ text: T.CYCLE_DELETED });
       onGone?.();
-    } else setBanner({ text: T.LOAD_FAILED });
+    } else setBanner({ text: T.LOAD_FAILED_NO_RETRY });
   }
 
   function open(next) {

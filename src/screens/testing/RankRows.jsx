@@ -1,9 +1,11 @@
 // RankRows.jsx — the ranks of ONE open class.
-// Why it exists: approved mockup screen 1. The ranks are shown in belt order:
-//   - PC and tablet: a dense table — Rank · Testing for · Early · Testing day · Private ·
-//     Sparring gear · actions. Tablets (640–1023px wide) leave out Private and Sparring gear;
-//     those are in the rank dialog (guidelines 1.3: dropped columns stay reachable).
-//   - Phone: each rank is a two-line row: "Blue → High Blue" on top, the three prices under it.
+// Why it exists: approved mockup screen 1. The ranks are shown in belt order. Since CB14 (rulebook
+// v0.427) the list is drawn in two parts, chosen by ctx.part:
+//   - 'settings' (Settings → Classes and ranks): the names. PC and tablet: Rank · Testing for ·
+//     actions. Phone: one line, "Blue → High Blue". No prices at all.
+//   - 'prices' (Color belt testing → Prices): the money. PC and tablet: Rank · Early · Testing day ·
+//     Private · Sparring gear · pencil, all four on every size (there is no "Testing for" column to
+//     share the room with). Phone: "Blue" on top, the prices under it. No grips, no ⋯ menu, no tags.
 // "Testing for" is never typed: it's the next rank, and for the last rank the class's final
 // award (worked out by src/lib/testing/rankOrder.js).
 //
@@ -11,15 +13,16 @@
 // (v0.64; phone: "[belt] Yellow → [belt] Orange"). The names are always written too.
 //
 // Row actions (guidelines 8 + v0.43, v0.63):
-//   - admin, every device: the grip (drag to reorder) on the left — a 16px icon with a 44×44
+//   - Settings (admins only): the grip (drag to reorder) on the left — a 16px icon with a 44×44
 //     touch area on touch screens — and Edit + ⋯ on the right
-//   - phones under 360px wide: ⋯ only, no Edit pencil (v0.68) — long names like
+//   - Settings, phones under 360px wide: ⋯ only, no Edit pencil (v0.68) — long names like
 //     "Bo Dan - 1 Big Stripe" need the room; tapping the row opens Edit, and the ⋯ menu
 //     starts with "Edit rank" at that width (v0.69, so screen readers can find it)
-//   - touch: Edit + ⋯ are 28px icons with a 44px tap area
-//   - staff on touch: an outline "View" button; staff with a mouse: none (click the row)
-// Clicking anywhere else on a row opens it, too. One tag per row at most, in this order:
-// "Not saved" (amber) > "Final award" / "No new rank" > "Sparring gear" (phone only).
+//   - Prices, admins: one pencil (Edit prices), on every width (there is no ⋯ menu to hold it)
+//   - Prices, staff: nothing to press — the list is view only (v0.427), so no dialog either
+//   - touch: the icons are 28px with a 44px tap area
+// Clicking anywhere else on a row opens it, too (admins). One tag per row at most, in this order:
+// "Not saved" (amber) > "Final award" / "No new rank" (Settings only).
 // "No new rank" (v0.62) marks the last rank of a class whose final award is None: it doesn't
 // promote, on purpose — so it's a neutral gray tag, never the amber reminder.
 //
@@ -38,17 +41,19 @@ import IconButton from '../../components/IconButton.jsx';
 import { formatMoney } from '../../lib/money.js';
 import * as T from './text.js';
 
-// The table's columns (CSS grid), depending on the device and on who is looking.
-export function rankGridColumns({ hasGrip, isWide, isTouch, isAdmin }) {
+// The table's columns (CSS grid), depending on the part, the device and on who is looking.
+export function rankGridColumns({ hasGrip, isWide, isTouch, isAdmin, part = 'settings' }) {
   const columns = [];
   if (hasGrip) columns.push(isTouch ? '44px' : '24px'); // the grip (44px touch area on touch screens)
-  // Rank, Testing for. Tablets give the two name columns (each with a belt picture) equal room
-  // and keep Early / Testing day narrow, so most names fit on one line.
+  if (part === 'prices') {
+    // Rank, then Early / Testing day / Private / Sparring gear — all four on every size.
+    columns.push('minmax(0, 1fr)', '72px', '96px', '72px', '112px');
+    if (isAdmin) columns.push(isTouch ? '48px' : '36px'); // the one pencil
+    return columns.join(' ');
+  }
+  // Rank, Testing for. Tablets give the two name columns (each with a belt picture) equal room.
   columns.push('minmax(0, 1fr)', isWide ? 'minmax(0, 1.6fr)' : 'minmax(0, 1fr)');
-  columns.push(isWide ? '64px' : '56px', isWide ? '88px' : '76px'); // Early, Testing day
-  if (isWide) columns.push('64px', '104px'); // Private, Sparring gear
   if (isAdmin) columns.push(isTouch ? '88px' : '64px'); // Edit + ⋯
-  else if (isTouch) columns.push('72px'); // View
   return columns.join(' ');
 }
 
@@ -62,7 +67,7 @@ export function Tag({ kind }) {
       </span>
     );
   }
-  const text = { finalAward: T.TAG_FINAL_AWARD, noNewRank: T.TAG_NO_NEW_RANK, sparring: T.TAG_SPARRING }[kind];
+  const text = { finalAward: T.TAG_FINAL_AWARD, noNewRank: T.TAG_NO_NEW_RANK }[kind];
   return <span className="ttag">{text}</span>;
 }
 
@@ -113,20 +118,21 @@ function rowTag(rank, notSaved) {
   return null;
 }
 
-// The right-hand actions of a row. tabIndex: 0 only on the active row (see the top of the file).
-// showEdit: false on phones under 360px wide (v0.68).
-function RowActions({ rank, isAdmin, isTouch, menuOpen, tabIndex, onEdit, onMore, onView, showEdit = true }) {
-  if (isAdmin) {
-    return (
-      <span className="acts">
-        {showEdit && (
-          <IconButton
-            label={T.editRankLabel(rank.name)}
-            Icon={IconEdit}
-            tabIndex={tabIndex}
-            onClick={(event) => onEdit(rank, event.currentTarget)}
-          />
-        )}
+// The right-hand actions of a row (admins only). tabIndex: 0 only on the active row (see the top).
+// Settings: Edit rank + ⋯ (showEdit false on phones under 360px, v0.68). Prices: just Edit prices.
+function RowActions({ rank, part, menuOpen, tabIndex, onEdit, onMore, showEdit = true }) {
+  const isPrices = part === 'prices';
+  return (
+    <span className="acts">
+      {showEdit && (
+        <IconButton
+          label={isPrices ? T.editPricesLabel(rank.name) : T.editRankLabel(rank.name)}
+          Icon={IconEdit}
+          tabIndex={tabIndex}
+          onClick={(event) => onEdit(rank, event.currentTarget)}
+        />
+      )}
+      {!isPrices && (
         <IconButton
           label={T.moreFor(rank.name)}
           Icon={IconDots}
@@ -136,34 +142,17 @@ function RowActions({ rank, isAdmin, isTouch, menuOpen, tabIndex, onEdit, onMore
           data-more-for={rank.id}
           onClick={(event) => onMore(rank, event.currentTarget)}
         />
-      </span>
-    );
-  }
-  if (isTouch) {
-    return (
-      <span className="acts">
-        <span className="tapbox">
-          <button
-            type="button"
-            className="btn btn-view"
-            aria-label={T.viewRankLabel(rank.name)}
-            tabIndex={tabIndex}
-            onClick={(event) => onView(rank, event.currentTarget)}
-          >
-            {T.VIEW}
-          </button>
-        </span>
-      </span>
-    );
-  }
-  return null;
+      )}
+    </span>
+  );
 }
 
 // One table row (PC / tablet). `lifted` = the gray copy shown at the landing spot during a drag.
 function TableRow({ rank, cls, ctx, lifted = false }) {
   const { isAdmin, layout, notSavedId, drag, gripProps, nav, menuFor, handlers } = ctx;
+  const isPrices = ctx.part === 'prices';
   const notSaved = notSavedId === rank.id;
-  const tag = rowTag(rank, notSaved);
+  const tag = isPrices ? null : rowTag(rank, notSaved);
   const beingDragged = !lifted && drag?.id === rank.id;
   // Dragged to a new spot: the original row fades. Not moved yet: it lifts right where it is.
   const isOrigin = beingDragged && drag.toIndex !== drag.fromIndex;
@@ -177,10 +166,13 @@ function TableRow({ rank, cls, ctx, lifted = false }) {
         role: 'row',
         'data-drag-group': cls.id,
         'data-drag-id': rank.id,
-        onClick: (event) => {
-          if (event.target.closest('button')) return; // the buttons do their own thing
-          handlers.onOpenRank(rank, event.currentTarget);
-        },
+        // Staff on the Prices tab: nothing opens (view only).
+        onClick: isAdmin
+          ? (event) => {
+              if (event.target.closest('button')) return; // the buttons do their own thing
+              handlers.onOpenRank(rank, event.currentTarget);
+            }
+          : undefined,
       };
   return (
     <div
@@ -200,29 +192,31 @@ function TableRow({ rank, cls, ctx, lifted = false }) {
         </span>
         {tag === 'notSaved' && <Tag kind="notSaved" />}
       </span>
-      <span role="cell" className="rcell rk">
-        {rank.isLast && rank.finalAwardState === 'notSet' && <AwardReminder isAdmin={isAdmin} />}
-        {rank.isLast && rank.finalAwardState === 'none' &&
-          // The tag, or (if this row's one tag is "Not saved") the same words as plain gray text.
-          (tag === 'noNewRank' ? <Tag kind="noNewRank" /> : <span className="ro-muted">{T.TAG_NO_NEW_RANK}</span>)}
-        {!(rank.isLast && (rank.finalAwardState === 'notSet' || rank.finalAwardState === 'none')) && (
-          <>
-            <span className="rk-belt-name">
-              <Belt belt={nextBeltOf(rank, ctx)} />
-              <span className="rk-name">{rank.testingFor?.name}</span>
-            </span>
-            {tag === 'finalAward' && <Tag kind="finalAward" />}
-          </>
-        )}
-      </span>
-      <span role="cell" className="rcell num">
-        {formatMoney(rank.earlyCents)}
-      </span>
-      <span role="cell" className="rcell num">
-        {formatMoney(rank.dayCents)}
-      </span>
-      {layout.isWide && (
+      {!isPrices && (
+        <span role="cell" className="rcell rk">
+          {rank.isLast && rank.finalAwardState === 'notSet' && <AwardReminder isAdmin={isAdmin} />}
+          {rank.isLast && rank.finalAwardState === 'none' &&
+            // The tag, or (if this row's one tag is "Not saved") the same words as plain gray text.
+            (tag === 'noNewRank' ? <Tag kind="noNewRank" /> : <span className="ro-muted">{T.TAG_NO_NEW_RANK}</span>)}
+          {!(rank.isLast && (rank.finalAwardState === 'notSet' || rank.finalAwardState === 'none')) && (
+            <>
+              <span className="rk-belt-name">
+                <Belt belt={nextBeltOf(rank, ctx)} />
+                <span className="rk-name">{rank.testingFor?.name}</span>
+              </span>
+              {tag === 'finalAward' && <Tag kind="finalAward" />}
+            </>
+          )}
+        </span>
+      )}
+      {isPrices && (
         <>
+          <span role="cell" className="rcell num">
+            {formatMoney(rank.earlyCents)}
+          </span>
+          <span role="cell" className="rcell num">
+            {formatMoney(rank.dayCents)}
+          </span>
           <span role="cell" className="rcell num">
             {formatMoney(rank.privateCents)}
           </span>
@@ -231,17 +225,15 @@ function TableRow({ rank, cls, ctx, lifted = false }) {
           </span>
         </>
       )}
-      {(isAdmin || layout.isTouch) && (
+      {isAdmin && (
         <span role="cell" className="rcell rcell-acts">
           <RowActions
             rank={rank}
-            isAdmin={isAdmin}
-            isTouch={layout.isTouch}
+            part={ctx.part}
             menuOpen={menuFor === rank.id}
             tabIndex={tabIndex}
             onEdit={handlers.onEditRank}
             onMore={handlers.onMoreRank}
-            onView={handlers.onOpenRank}
           />
         </span>
       )}
@@ -252,16 +244,17 @@ function TableRow({ rank, cls, ctx, lifted = false }) {
 // One stacked row (phone). `lifted` = the gray copy shown at the landing spot during a drag.
 function PhoneRow({ rank, cls, ctx, lifted = false }) {
   const { isAdmin, layout, notSavedId, nav, menuFor, handlers, drag, gripProps } = ctx;
+  const isPrices = ctx.part === 'prices';
   const selected = !lifted && ctx.selectedRankId === rank.id;
   const beingDragged = !lifted && drag?.id === rank.id;
   const isOrigin = beingDragged && drag.toIndex !== drag.fromIndex;
   const liftedHere = beingDragged && !isOrigin;
   const tabIndex = lifted ? -1 : nav.itemTabIndex(rank.id);
-  const tag = rowTag(rank, notSavedId === rank.id);
-  const awardMissing = rank.isLast && rank.finalAwardState === 'notSet';
-  const noNewRank = rank.isLast && rank.finalAwardState === 'none'; // None: just the rank's name + tag
-  // Sparring gear as text on line 2 when the row's one tag is already used by something else.
-  const sparringText = rank.sparringGear; // always as text on the price line (phone)
+  const tag = isPrices ? null : rowTag(rank, notSavedId === rank.id);
+  const awardMissing = !isPrices && rank.isLast && rank.finalAwardState === 'notSet';
+  const noNewRank = !isPrices && rank.isLast && rank.finalAwardState === 'none'; // None: just the rank's name + tag
+  // Settings: line 2 exists only for the "No new rank" words when the row's one tag is "Not saved".
+  const noNewRankText = noNewRank && tag !== 'noNewRank';
   return (
     <div
       className={`prow${selected ? ' is-selected' : ''}${lifted || liftedHere ? ' is-lifted' : ''}${isOrigin ? ' is-drag-origin' : ''}`}
@@ -272,10 +265,12 @@ function PhoneRow({ rank, cls, ctx, lifted = false }) {
             ...nav.rowProps(rank.id),
             'data-drag-group': cls.id,
             'data-drag-id': rank.id,
-            onClick: (event) => {
-              if (event.target.closest('button')) return;
-              handlers.onOpenRank(rank, event.currentTarget);
-            },
+            onClick: isAdmin
+              ? (event) => {
+                  if (event.target.closest('button')) return;
+                  handlers.onOpenRank(rank, event.currentTarget);
+                }
+              : undefined,
           })}
     >
       {layout.hasGrip && (
@@ -285,11 +280,11 @@ function PhoneRow({ rank, cls, ctx, lifted = false }) {
       )}
       <div role="cell" className="prow-main">
         <div className="l1">
-          {/* "[belt] Yellow → [belt] Orange". Each belt stays glued to its name; a long pair
-              wraps between the two halves. */}
+          {/* Settings: "[belt] Yellow → [belt] Orange". Each belt stays glued to its name; a long
+              pair wraps between the two halves. Prices: just "[belt] Yellow". */}
           <span className="l1-names">
             <BeltName belt={rank} name={rank.name} />
-            {!(awardMissing || noNewRank) && (
+            {!isPrices && !(awardMissing || noNewRank) && (
               <>
                 {' '}
                 <BeltName belt={nextBeltOf(rank, ctx)} name={rank.testingFor?.name ?? ''} prefix="→ " />
@@ -303,39 +298,38 @@ function PhoneRow({ rank, cls, ctx, lifted = false }) {
             <AwardReminder isAdmin={isAdmin} />
           </div>
         )}
-        {/* Each price never breaks inside itself, and the "·" travels with the price after it,
-            so a narrow phone never shows a line ending in a lonely dot. */}
-        <div className="l2">
-          <span>{T.PHONE_EARLY(formatMoney(rank.earlyCents))}</span> <span>· {T.PHONE_DAY(formatMoney(rank.dayCents))}</span>{' '}
-          <span>· {T.PHONE_PRIVATE(formatMoney(rank.privateCents))}</span>
-          {sparringText && (
-            <>
-              {' '}
-              <span>· {T.PHONE_SPARRING_TEXT}</span>
-            </>
-          )}
-          {/* None class, but the row's one tag is "Not saved": the words move here as gray text
-              (the same fallback as the PC's Testing for column). */}
-          {noNewRank && tag !== 'noNewRank' && (
-            <>
-              {' '}
-              <span>· {T.TAG_NO_NEW_RANK}</span>
-            </>
-          )}
-        </div>
+        {/* Prices: each price never breaks inside itself, and the "·" travels with the price after
+            it, so a narrow phone never shows a line ending in a lonely dot. */}
+        {isPrices && (
+          <div className="l2">
+            <span>{T.PHONE_EARLY(formatMoney(rank.earlyCents))}</span> <span>· {T.PHONE_DAY(formatMoney(rank.dayCents))}</span>{' '}
+            <span>· {T.PHONE_PRIVATE(formatMoney(rank.privateCents))}</span>
+            {rank.sparringGear && (
+              <>
+                {' '}
+                <span>· {T.PHONE_SPARRING_TEXT}</span>
+              </>
+            )}
+          </div>
+        )}
+        {/* None class, but the row's one tag is "Not saved": the words move here as gray text
+            (the same fallback as the PC's Testing for column). */}
+        {noNewRankText && (
+          <div className="l2">
+            <span>{T.TAG_NO_NEW_RANK}</span>
+          </div>
+        )}
       </div>
-      {(isAdmin || layout.isTouch) && (
+      {isAdmin && (
         <span role="cell" className="rcell-acts">
           <RowActions
             rank={rank}
-            isAdmin={isAdmin}
-            isTouch={layout.isTouch}
-            showEdit={!layout.isNarrowPhone}
+            part={ctx.part}
+            showEdit={isPrices || !layout.isNarrowPhone}
             menuOpen={menuFor === rank.id}
             tabIndex={tabIndex}
             onEdit={handlers.onEditRank}
             onMore={handlers.onMoreRank}
-            onView={handlers.onOpenRank}
           />
         </span>
       )}
@@ -350,6 +344,7 @@ function DropLine() {
 
 export default function RankRows({ cls, ctx }) {
   const { layout, drag } = ctx;
+  const isPrices = ctx.part === 'prices';
   // A rank of THIS class is being dragged to a new spot: show the line + lifted copy there.
   const moving = drag && drag.group === cls.id && drag.toIndex !== drag.fromIndex;
   const lifted = moving ? cls.ranks.find((rank) => rank.id === drag.id) : null;
@@ -382,17 +377,14 @@ export default function RankRows({ cls, ctx }) {
         <span role="columnheader" className="rcell">
           {T.COL_RANK}
         </span>
-        <span role="columnheader" className="rcell">
-          {T.COL_TESTING_FOR}
-        </span>
-        <span role="columnheader" className="rcell num">
-          {T.COL_EARLY}
-        </span>
-        <span role="columnheader" className="rcell num">
-          {T.COL_TESTING_DAY}
-        </span>
-        {layout.isWide && (
+        {isPrices ? (
           <>
+            <span role="columnheader" className="rcell num">
+              {T.COL_EARLY}
+            </span>
+            <span role="columnheader" className="rcell num">
+              {T.COL_TESTING_DAY}
+            </span>
             <span role="columnheader" className="rcell num">
               {T.COL_PRIVATE}
             </span>
@@ -400,8 +392,12 @@ export default function RankRows({ cls, ctx }) {
               {T.COL_SPARRING}
             </span>
           </>
+        ) : (
+          <span role="columnheader" className="rcell">
+            {T.COL_TESTING_FOR}
+          </span>
         )}
-        {(ctx.isAdmin || layout.isTouch) && <span role="columnheader" className="rcell" aria-hidden="true" />}
+        {ctx.isAdmin && <span role="columnheader" className="rcell" aria-hidden="true" />}
       </div>
       {cls.ranks.map((rank, index) => (
         <Fragment key={rank.id}>

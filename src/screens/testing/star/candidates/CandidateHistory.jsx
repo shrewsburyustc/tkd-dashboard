@@ -5,7 +5,9 @@
 // opens the list in place — what changed, then the date only and who:
 //   "Email for results: kim.family@example.com → alex.kim.home@example.com"
 //   "Oct 20 · Dana Ross"
-// An edit of several fields is ONE entry, its changes joined with "; " (DR2-P5, choice A). Family-form
+// An edit of several fields is ONE entry, its changes joined with "; " (DR2-P5, choice A); so is
+// everything one save wrote (pass 2 M-02): a payment that also changed Paying by reads
+// "Payment recorded: $140 check, paid Oct 20; Paying by: Cash → Check", money first. Family-form
 // entries name the actor "Family form" (the data layer's actor name). Login ids never reach the
 // screen: the database strips them (star_history_strip) before the reader gets the rows.
 // The reader THROWS when the answer isn't ok, so a failed read shows the shared amber bar with Retry
@@ -17,25 +19,21 @@
 // form" / "Added at the desk" line stays (it shows no money; Q4 A, v0.518).
 // The words for each kind of change are PROPOSALS where the mockups drew no example.
 import HistoryLine from '../../../../components/HistoryLine.jsx';
-import { historyPrivacy, loadCandidateHistory } from '../../../../lib/star/candidatesApi.js';
-import { linesFor } from '../../../../lib/star/candidateHistoryLines.js';
-import * as T from './text.js';
+import { loadCandidateHistory } from '../../../../lib/star/candidatesApi.js';
+import { describeHistoryEntry, groupHistoryRows } from '../../../../lib/star/candidateHistoryLines.js';
 
-// The shared line's words for one row (HistoryLine's `describe`): { text, at, who }, or
-// { hiddenPayment: true } for a money row while details are hidden, or null (nothing to show).
-export function describeHistoryRow(row, { hidden }) {
-  if (hidden && historyPrivacy(row).payment) return { hiddenPayment: true };
-  const lines = linesFor(row, hidden);
-  if (lines.length === 0) return null;
-  return { text: lines.join('; '), at: row.occurredAt, who: row.actorName || T.HISTORY_STAFF };
-}
+// The shared line's words for one ENTRY (HistoryLine's `describe`): { text, at, who }, or
+// { hiddenPayment: true } for a money entry while details are hidden, or null (nothing to show).
+// An entry is the change-log rows of ONE save (candidateHistoryLines.js: pass 2 M-02).
+export const describeHistoryRow = describeHistoryEntry;
 
-// The reader: the candidate's history rows, or a thrown error (HistoryLine then shows its amber bar
-// with Retry). no_access takes the house path (the lock screen) as well.
+// The reader: the candidate's history as entries (the rows of one save joined, newest first), or a
+// thrown error (HistoryLine then shows its amber bar with Retry). no_access takes the house path
+// (the lock screen) as well.
 export function historyReader(candidateId, onNoAccess) {
   return async () => {
     const answer = await loadCandidateHistory(candidateId);
-    if (answer.status === 'ok') return answer.rows;
+    if (answer.status === 'ok') return groupHistoryRows(answer.rows);
     if (answer.status === 'no_access') onNoAccess?.();
     throw new Error(`star_candidate_history: ${answer.status}`);
   };

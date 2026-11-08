@@ -21,6 +21,7 @@
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
@@ -32,7 +33,6 @@ import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import Choice from '../parts/Choice.jsx';
-import ConfirmDialog from '../parts/ConfirmDialog.jsx';
 import { useCycleEditor } from '../cycle/useCycleEditor.jsx';
 import { useCycleActions } from './useCycleActions.js';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
@@ -236,7 +236,7 @@ export default function CyclesTab({
       return;
     }
     if (fresh.status !== 'ok') {
-      setBanner({ text: T.LOAD_FAILED });
+      setBanner({ text: T.LOAD_FAILED_NO_RETRY });
       return;
     }
     // 0025 (Q-G3): real grades block deleting (unreadable grading state → the database decides)
@@ -563,24 +563,30 @@ export default function CyclesTab({
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {!screenLocked && editor.element}
       {confirm && !screenLocked && (
-        <ConfirmDialog
+        // The shared ConfirmBox (BB7, v1.008 / v1.103): "Keep cycle" on the left and focused first,
+        // the red "Delete cycle" on the right ("Deleting…" while it works, both buttons gray and the
+        // box stays open until it's done). A failed delete shows its amber note under the buttons.
+        <ConfirmBox
           key={confirm.key}
           title={confirm.title}
-          body={confirm.body}
-          cancelLabel={T.CANCEL}
-          confirmLabel={T.DELETE_CYCLE}
-          danger
+          keepLabel={T.KEEP_CYCLE}
+          actionLabel={T.DELETE_CYCLE}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
           failed={confirm.failed ? T.DELETE_FAILED : null}
           busy={confirm.saving}
           onConfirm={confirmDelete}
-          onCancel={() => {
+          onKeep={() => {
             if (confirm.saving) return;
             const opener = confirm.opener;
             const id = confirm.id;
             setConfirm(null);
             focusLater(() => moreEl(id), () => opener);
           }}
-        />
+        >
+          {confirm.body}
+        </ConfirmBox>
       )}
     </>
   );

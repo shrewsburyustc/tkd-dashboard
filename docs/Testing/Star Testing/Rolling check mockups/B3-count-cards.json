@@ -1,0 +1,787 @@
+{
+ "width": 1920,
+ "title": "Star · Step B — the count cards: removed candidates’ money, possible duplicates, school order, and what an empty card says",
+ "subtitle": "Candidates tab of an event (Fall Star Testing). <b>R5-05 (v1.038):</b> Payments recorded also counts the money of removed candidates (same school filter), with a gray line “includes $X from removed candidates” when some of it is theirs. <b>R3-02 (v1.046):</b> a possible-duplicate row is left out of Paid and Not paid, and of their lists, until it is reviewed; it offers no Mark paid; one gray line under the cards says so. <b>S-1 (v1.047):</b> on Both, the Candidates card lists Worcester, then Shrewsbury. <b>C-05 (b) (v1.055):</b> when a card’s list is empty, the line says what is true, in Color Belt’s pattern.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/d-B3m-today-pc.png",
+     "crop": [
+      60,
+      230,
+      1210,
+      430
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC 1280×800, Both schools.</b> Candidates lists Shrewsbury first. Not paid says 4: it counts both Ava Reed rows (the possible duplicate). Payments recorded says $790: Noah Chen’s $140 dropped out when he was removed. The flagged Ava Reed rows offer Mark paid.",
+     "marks": [
+      [
+       76,
+       294,
+       286,
+       116
+      ],
+      [
+       672,
+       294,
+       286,
+       116
+      ],
+      [
+       970,
+       294,
+       286,
+       116
+      ],
+      [
+       1107,
+       545,
+       108,
+       28
+      ],
+      [
+       1107,
+       585,
+       108,
+       28
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B3m-today-tab.png",
+       "crop": [
+        90,
+        315,
+        710,
+        470
+       ],
+       "scale": 0.55,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         96,
+         325,
+         169,
+         116
+        ],
+        [
+         450,
+         325,
+         169,
+         116
+        ],
+        [
+         627,
+         325,
+         169,
+         116
+        ],
+        [
+         631,
+         619,
+         108,
+         36
+        ],
+        [
+         631,
+         686,
+         108,
+         36
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B3m-today-ph.png",
+       "crop": [
+        0,
+        415,
+        390,
+        330
+       ],
+       "scale": 0.62,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         16,
+         426,
+         175,
+         116
+        ],
+        [
+         16,
+         550,
+         175,
+         72
+        ],
+        [
+         199,
+         550,
+         175,
+         72
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B3m-today-p320.png",
+       "crop": [
+        0,
+        480,
+        320,
+        340
+       ],
+       "scale": 0.62,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         16,
+         490,
+         140,
+         116
+        ],
+        [
+         16,
+         614,
+         140,
+         90
+        ],
+        [
+         164,
+         614,
+         140,
+         90
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B3f-today-pc.png",
+     "crop": [
+      60,
+      285,
+      1210,
+      420
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC, Not paid card on.</b> The list holds 4: both Ava Reed rows, Sam Ortiz and Ethan Lopez — the card says 4, so card and list agree, but the flagged rows are in both.",
+     "marks": [
+      [
+       672,
+       294,
+       286,
+       116
+      ],
+      [
+       1107,
+       532,
+       108,
+       28
+      ],
+      [
+       1107,
+       573,
+       108,
+       28
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/d-B3p-today-pc.png",
+     "crop": [
+      60,
+      285,
+      1210,
+      360
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC, Worcester only, Paid card on, 1st Dan.</b> Nobody at Worcester has paid (Noah Chen is removed): the line says “No candidates match.” The cards also show Payments recorded $0, though $140 is on record.",
+     "marks": [
+      [
+       77,
+       532,
+       1178,
+       68
+      ],
+      [
+       970,
+       294,
+       286,
+       94
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B3p-today-tab.png",
+       "crop": [
+        90,
+        315,
+        710,
+        400
+       ],
+       "scale": 0.55,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         97,
+         587,
+         698,
+         68
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B3p-today-ph.png",
+       "crop": [
+        0,
+        415,
+        390,
+        490
+       ],
+       "scale": 0.55,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         17,
+         732,
+         356,
+         68
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B3p-today-p320.png",
+       "crop": [
+        0,
+        480,
+        320,
+        525
+       ],
+       "scale": 0.55,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         17,
+         833,
+         286,
+         68
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B3n-today-pc.png",
+     "crop": [
+      60,
+      285,
+      1210,
+      360
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC, Both schools, Not paid card on, 2nd Dan.</b> Everyone in this Dan has paid, so the list is empty: “No candidates match.”",
+     "marks": [
+      [
+       77,
+       526,
+       1178,
+       68
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B3n-today-tab.png",
+       "crop": [
+        90,
+        315,
+        710,
+        385
+       ],
+       "scale": 0.55,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         97,
+         582,
+         698,
+         68
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B3n-today-ph.png",
+       "crop": [
+        0,
+        415,
+        390,
+        485
+       ],
+       "scale": 0.55,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         17,
+         727,
+         356,
+         68
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B3n-today-p320.png",
+       "crop": [
+        0,
+        480,
+        320,
+        500
+       ],
+       "scale": 0.55,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         17,
+         808,
+         286,
+         68
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/d-B3m-after-pc.png",
+     "crop": [
+      60,
+      230,
+      1210,
+      430
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC 1280×800, Both schools.</b> Candidates lists Worcester, then Shrewsbury. Not paid says 2: the flagged Ava Reed rows are left out until they are reviewed, and say so in one gray line under the cards; they no longer offer Mark paid (their ⋯ keeps Review possible duplicate). Payments recorded says $930, with “includes $140 from removed candidates” (Noah Chen’s money counts again).",
+     "marks": [
+      [
+       76,
+       294,
+       286,
+       116
+      ],
+      [
+       672,
+       294,
+       286,
+       116
+      ],
+      [
+       970,
+       294,
+       286,
+       116
+      ],
+      [
+       76,
+       422,
+       1180,
+       20
+      ],
+      [
+       1105,
+       570,
+       150,
+       40
+      ],
+      [
+       1105,
+       610,
+       150,
+       40
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B3m-after-tab.png",
+       "crop": [
+        90,
+        315,
+        710,
+        470
+       ],
+       "scale": 0.55,
+       "caption": "<b>Tablet 820×1180, touch.</b> Same changes.",
+       "marks": [
+        [
+         96,
+         325,
+         169,
+         116
+        ],
+        [
+         450,
+         325,
+         169,
+         116
+        ],
+        [
+         627,
+         325,
+         169,
+         116
+        ],
+        [
+         96,
+         453,
+         700,
+         20
+        ],
+        [
+         645,
+         635,
+         150,
+         67
+        ],
+        [
+         645,
+         702,
+         150,
+         67
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B3m-after-ph.png",
+       "crop": [
+        0,
+        415,
+        390,
+        330
+       ],
+       "scale": 0.62,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         16,
+         426,
+         175,
+         116
+        ],
+        [
+         16,
+         550,
+         175,
+         112
+        ],
+        [
+         199,
+         550,
+         175,
+         112
+        ],
+        [
+         16,
+         674,
+         358,
+         39
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B3m-after-p320.png",
+       "crop": [
+        0,
+        480,
+        320,
+        340
+       ],
+       "scale": 0.62,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         16,
+         490,
+         140,
+         116
+        ],
+        [
+         16,
+         614,
+         140,
+         130
+        ],
+        [
+         164,
+         614,
+         140,
+         130
+        ],
+        [
+         16,
+         756,
+         288,
+         39
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B3f-after-pc.png",
+     "crop": [
+      60,
+      285,
+      1210,
+      420
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC, Not paid card on.</b> The list holds exactly what the card counts: Sam Ortiz and Ethan Lopez (2). The gray duplicate line sits above “Showing not paid only · Show all”. The Paid filter works the same way.",
+     "marks": [
+      [
+       672,
+       294,
+       286,
+       116
+      ],
+      [
+       76,
+       422,
+       1180,
+       20
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "src": "shots/d-B3p-after-pc.png",
+     "crop": [
+      60,
+      285,
+      1210,
+      360
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC, Worcester only, Paid card on, 1st Dan.</b> The empty line says what is true: “No paid candidates in this Dan.” Payments recorded shows $140 with “includes $140 from removed candidates” (R5-05).",
+     "marks": [
+      [
+       77,
+       563,
+       1178,
+       68
+      ],
+      [
+       970,
+       294,
+       286,
+       94
+      ],
+      [
+       76,
+       400,
+       1180,
+       20
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B3p-after-tab.png",
+       "crop": [
+        90,
+        315,
+        710,
+        400
+       ],
+       "scale": 0.55,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         97,
+         637,
+         698,
+         68
+        ],
+        [
+         96,
+         449,
+         700,
+         20
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B3p-after-ph.png",
+       "crop": [
+        0,
+        415,
+        390,
+        490
+       ],
+       "scale": 0.55,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         17,
+         823,
+         356,
+         68
+        ],
+        [
+         16,
+         652,
+         358,
+         39
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B3p-after-p320.png",
+       "crop": [
+        0,
+        480,
+        320,
+        525
+       ],
+       "scale": 0.55,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         17,
+         924,
+         286,
+         68
+        ],
+        [
+         16,
+         734,
+         288,
+         39
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B3n-after-pc.png",
+     "crop": [
+      60,
+      285,
+      1210,
+      360
+     ],
+     "scale": 0.72,
+     "caption": "<b>PC, Both schools, Not paid card on, 2nd Dan.</b> “Every candidate in this Dan has paid.”",
+     "marks": [
+      [
+       77,
+       558,
+       1178,
+       68
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B3n-after-tab.png",
+       "crop": [
+        90,
+        315,
+        710,
+        385
+       ],
+       "scale": 0.55,
+       "caption": "<b>Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         97,
+         613,
+         698,
+         68
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B3n-after-ph.png",
+       "crop": [
+        0,
+        415,
+        390,
+        485
+       ],
+       "scale": 0.55,
+       "caption": "<b>Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         17,
+         818,
+         356,
+         68
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B3n-after-p320.png",
+       "crop": [
+        0,
+        480,
+        320,
+        500
+       ],
+       "scale": 0.55,
+       "caption": "<b>320 wide, touch.</b>",
+       "marks": [
+        [
+         17,
+         899,
+         286,
+         68
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ],
+   "note": "<b>The words drawn (new text is a proposal until you OK it):</b><br>• Payments recorded, gray line under the number: “includes $140 from removed candidates” (Color Belt’s line with “students” → “candidates”); no line when nothing is theirs.<br>• Possible duplicate, one gray line under the cards: “1 possible duplicate isn’t counted in Paid or Not paid until it’s reviewed.” Plural: “2 possible duplicates aren’t counted in Paid or Not paid until they’re reviewed.” It counts pairs, like the orange box above (“1 possible duplicate”), but each pair leaves <b>both</b> of its rows out. Same words at every size (it wraps on a phone).<br>• Empty line by card: <b>Paid</b> → “No paid candidates in this Dan.” · <b>Not paid</b> → “Every candidate in this Dan has paid.” · <b>Candidates</b> (not a filter) → unchanged: “No candidates for this Dan.” / “No candidates yet. Families register with the registration links, or staff add them with Add candidate.” · <b>Payments recorded</b> is a total, not a filter, so it has no empty line · “No past events yet.” stays.<br>• Why “in this Dan”: the list below the cards is one Dan at a time (the cards count the whole event), as Color Belt says “in this class”. When the chosen Dan has no candidates at all, “No candidates for this Dan.” wins even with a card on (so “Every candidate … has paid” is never said about an empty Dan)."
+  }
+ ],
+ "footer": "Star testing · rolling check pass 1 Step B (R5-05, R3-02, S-1 cards part) and pass 2 (C-05 (b)). Preview screenshots (fake database, admin, Fall Star Testing, with Noah Chen — who paid $140 — removed, and the Ava Reed duplicate pair flagged; “Both” schools unless a caption says Worcester). The “After” column is the real page with the changes DRAWN OVER it by a small script (mock-cards.js: card numbers, gray lines, empty-line words, Mark paid removed from the flagged rows) — nothing in the app was changed, and the numbers in the After are the ones the new rules would give. On phone and 320 the window was made taller so the whole list fits in one picture; the widths are the real sizes. Amber = what changes; green = the change."
+}

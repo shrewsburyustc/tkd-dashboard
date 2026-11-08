@@ -1,0 +1,35 @@
+{
+  "title": "CB14 — the dialogs after the split (PC and tablet)",
+  "subtitle": "Rulebook v0.427 moves <b>Classes and ranks</b> to Settings and gives Color belt testing a <b>Prices</b> tab. Each field now lives in one place, so the dialogs split. These are the app's own dialogs with the fields taken out (real preview screenshots, fake data). <b>Amber</b> = what leaves a dialog today, <b>green</b> = what is new. One thing is undecided: <b>what Add rank does about prices</b> (bottom of this page).",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "edit-rank-today-pc.png", "shotWidth": 1280, "crop": [256, 76, 768, 544], "scale": 0.72, "caption": "<b>Edit rank</b> today: name, belt and all the prices in one dialog. The amber box moves to the Prices tab." },
+        { "src": "edit-class-today-pc.png", "shotWidth": 1280, "crop": [456, 76, 368, 322], "scale": 0.9, "caption": "<b>Edit class</b> today: name and Final award. The amber box moves to the Prices tab." },
+        { "src": "add-rank-A-pc.png", "shotWidth": 1280, "crop": [256, 76, 768, 525], "scale": 0.72, "caption": "<b>Add rank</b> today (this is <b>Option A</b>): the three prices are pre-filled from the rank above (\"Copied from LT Black. Change if needed.\") and can be changed right here." }
+      ]
+    },
+    {
+      "label": "After — Settings → Classes and ranks",
+      "tone": "after",
+      "items": [
+        { "src": "edit-rank-after-pc.png", "shotWidth": 1280, "crop": [256, 76, 768, 544], "scale": 0.72, "caption": "<b>Edit rank</b>: name, belt and the read-only \"Testing for\". No prices." },
+        { "src": "edit-class-after-pc.png", "shotWidth": 1280, "crop": [456, 76, 368, 222], "scale": 0.9, "caption": "<b>Edit class</b> (and Add class): the name only." },
+        { "src": "add-rank-B-pc.png", "shotWidth": 1280, "crop": [256, 76, 768, 525], "scale": 0.72, "caption": "<b>Add rank, Option B</b>: no price fields. The new rank starts with the prices of the rank above and says so; the toast after Save says it too." }
+      ]
+    },
+    {
+      "label": "After — Color belt testing → Prices (new dialogs)",
+      "tone": "after",
+      "items": [
+        { "src": "edit-prices-after-pc.png", "shotWidth": 1280, "crop": [392, 72, 496, 334], "scale": 1.0, "caption": "<b>Edit prices</b> (the pencil on a rank): Early, Testing day, Private testing and Sparring gear. New." },
+        { "src": "final-award-after-pc.png", "shotWidth": 1280, "crop": [452, 72, 376, 270], "scale": 1.0, "caption": "<b>Final award</b> (the pencil on a class): the rank students get after the class's last rank. New." }
+      ],
+      "note": "Staff see the Prices list read-only: no pencils, so no dialogs. The tab shows each rank's Early, Testing day, Private and Sparring gear, and each class's final award on the class line."
+    }
+  ],
+  "footer": "<b>The question: where does a new rank get its prices?</b> The database needs all three prices when a rank is made. <b>A (recommended):</b> Add rank, which stays in Settings, keeps the price fields and Sparring gear, pre-filled from the rank above as today: one dialog, everything set at once, and nothing is guessed for you. <b>B:</b> Add rank has no prices; the new rank copies the rank above's prices and the toast says so (\"LT Brown added with LT Black's prices. Change them in Prices.\"): a shorter dialog and the structure stays separate from the money, but a rank can go live with prices nobody looked at, and <b>B has a hole</b>: the first rank of a new class has no rank above to copy from, so the dialog would still need price fields there (or the rank would start at $0, which makes its testing free until someone notices). Either way the prices of an existing rank are only ever edited on the Prices tab."
+}

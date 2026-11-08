@@ -18,6 +18,9 @@
 //   Prospects       tkd-dashboard.pages.dev/#prospects
 //   Staff accounts  tkd-dashboard.pages.dev/#staff-accounts
 //   Settings        tkd-dashboard.pages.dev/#settings          (admins, v0.135)
+//                   tkd-dashboard.pages.dev/#settings/classes-and-ranks   the same page, scrolled to its
+//                                                              Classes and ranks part, focus on its heading
+//                                                              (CB14, rulebook v0.427; staff get what #settings gives them)
 //   Finance         tkd-dashboard.pages.dev/#finance           the Daily report (contract 0011 §4)
 //                   tkd-dashboard.pages.dev/#finance/history   History   (admins: App.jsx sends staff
 //                   tkd-dashboard.pages.dev/#finance/settings  Settings   to #finance; with "Hide
@@ -71,7 +74,8 @@
 //               'candidates' | 'grading' | 'results' | 'rubric' (a cycle's page, 0025); on Finance its view 'report' | 'history' | 'settings'
 //               (a different Finance view is a different page); on the Camps list 'camps' |
 //               'templates', on a camp's page 'default' | 'checkin' | 'payments' | 'attendance'
-//               ('default' = Check in during camp week, else Payments — CampPage decides); otherwise
+//               ('default' = Check in during camp week, else Payments — CampPage decides); on Settings
+//               'classes-and-ranks' (its second part) or 'students' (= no part asked for); otherwise
 //               always 'students' — see routeTab,
 //     privateId: the open private testing's id (its grading page, Color Belt phase 4 — always on
 //                the Color Belt page, never together with an event), or null }
@@ -103,6 +107,9 @@ const OLD_PRIVATE_HASH = new RegExp(`^#testing/private/${ID}$`);
 const COLOR_BELT_PRIVATE_HASH = new RegExp(`^#testing/color-belt/private/${ID}$`);
 const GRADING_SUFFIX = '/grading';
 const STAR_HASH = '#testing/star';
+// Settings' second part (CB14): the same page as #settings, asking for Classes and ranks.
+export const SETTINGS_CLASSES_PART = 'classes-and-ranks';
+const SETTINGS_CLASSES_HASH = '#settings/classes-and-ranks';
 // Finance (contract 0011 §4): #finance, #finance/history, #finance/settings.
 const FINANCE_HASH = /^#finance(?:\/(history|settings))?$/;
 export const FINANCE_VIEWS = ['report', 'history', 'settings'];
@@ -153,6 +160,7 @@ export function normalEventTab(testingPage, eventId, tab) {
 // on Camps, a camp's tab ('default' unless 'checkin' | 'payments' | 'attendance' was asked for) or,
 // on the list, 'templates' when asked, otherwise 'camps'; otherwise normalEventTab's answer.
 export function routeTab(section, testingPage, eventId, tab) {
+  if (section === 'settings') return tab === SETTINGS_CLASSES_PART ? SETTINGS_CLASSES_PART : 'students';
   if (section === 'finance') return FINANCE_VIEWS.includes(tab) ? tab : 'report';
   if (section === 'camps') {
     if (eventId) return CAMP_TABS.includes(tab) ? tab : 'default';
@@ -201,6 +209,8 @@ function readHash(hash) {
     if (camp[1]) return { route: route('camps', null, camp[1], camp[2] ?? 'default'), known: true };
     return { route: route('camps', null, null, hash === CAMPS_TEMPLATES_HASH ? 'templates' : 'camps'), known: true };
   }
+  // Settings asked to open on its Classes and ranks part.
+  if (hash === SETTINGS_CLASSES_HASH) return { route: route('settings', null, null, SETTINGS_CLASSES_PART), known: true };
   // The other pages.
   if (hash in PAGE_BY_HASH) return { route: route(PAGE_BY_HASH[hash]), known: true };
   return { route: route('home'), known: false };
@@ -223,6 +233,7 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
     if (eventId) return `#camps/camp/${eventId}${CAMP_TABS.includes(eventTab) ? `/${eventTab}` : ''}`;
     return eventTab === 'templates' ? CAMPS_TEMPLATES_HASH : HASH_BY_PAGE.camps;
   }
+  if (section === 'settings') return eventTab === SETTINGS_CLASSES_PART ? SETTINGS_CLASSES_HASH : HASH_BY_PAGE.settings;
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
   if (testingPage === 'blackBelt') {
     // Cycles / Candidates have no ending. Grading and Results exist only on a cycle's page, so
@@ -285,6 +296,7 @@ export function samePage(a, b) {
 export function sameRoute(a, b) {
   if (!samePage(a, b)) return false;
   if (a.section === 'camps') return routeTab('camps', null, a.eventId, a.eventTab) === routeTab('camps', null, b.eventId, b.eventTab);
+  if (a.section === 'settings') return routeTab('settings', null, null, a.eventTab) === routeTab('settings', null, null, b.eventTab);
   if (!a.eventId && a.testingPage !== 'star' && a.testingPage !== 'blackBelt') return true;
   return normalEventTab(a.testingPage, a.eventId, a.eventTab) === normalEventTab(b.testingPage, b.eventId, b.eventTab);
 }
@@ -292,6 +304,6 @@ export function sameRoute(a, b) {
 // true when a route's page has tabs that live in the address (a Color Belt or Star event page, Star's
 // home, and every Camps page: the list's Camps | Templates and a camp's Check in | Payments | Attendance).
 export function hasAddressTabs(r) {
-  if (r.section === 'camps') return true;
+  if (r.section === 'camps' || r.section === 'settings') return true; // Settings: its Classes and ranks part (CB14)
   return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star' || r.testingPage === 'blackBelt');
 }

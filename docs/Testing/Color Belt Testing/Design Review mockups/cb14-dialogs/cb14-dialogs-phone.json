@@ -1,0 +1,23 @@
+{
+  "title": "CB14 — the same dialogs on a phone (390 wide)",
+  "subtitle": "On a phone every dialog is a full page with a back arrow and one full-width Save, as today (shown here in a tall window so the whole page is visible). Same fields as the PC sheet: the dialogs split the same way. Real preview screenshots; <b>amber</b> = what leaves a dialog.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Phone, 390 wide: Settings, then the Prices tab, then the Add rank question",
+      "tone": "after",
+      "items": [
+        { "row": [
+          { "src": "edit-rank-today-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 1140], "scale": 0.6, "caption": "<b>Edit rank</b> today (amber = moves to Prices)" },
+          { "src": "edit-rank-after-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 815], "scale": 0.6, "caption": "<b>Edit rank</b> after (Settings): no prices" },
+          { "src": "edit-class-after-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 228], "scale": 0.6, "caption": "<b>Edit class</b> after (Settings): the name only" },
+          { "src": "edit-prices-after-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 480], "scale": 0.6, "caption": "<b>Edit prices</b> (new, Prices tab)" },
+          { "src": "final-award-after-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 255], "scale": 0.6, "caption": "<b>Final award</b> (new, Prices tab)" },
+          { "src": "add-rank-A-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 1152], "scale": 0.6, "caption": "<b>Add rank, Option A</b> (as today): prices pre-filled and editable" },
+          { "src": "add-rank-B-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 848], "scale": 0.6, "caption": "<b>Add rank, Option B</b>: no prices; the note says where they come from" }
+        ] }
+      ]
+    }
+  ],
+  "footer": "The question about Add rank (A or B) and the reasons are on the PC sheet; the choice looks the same on a phone."
+}
