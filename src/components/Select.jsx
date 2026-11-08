@@ -61,6 +61,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
   const baseId = useId();
   const listId = `${baseId}-list`;
   const optionId = (index) => `${baseId}-o${index}`;
+  const headingId = (index) => `${baseId}-g${index}`; // the heading row above a group's first choice
   const fieldRef = useRef(null);
   const listRef = useRef(null);
 
@@ -152,7 +153,11 @@ export default function Select({ id, labelId, describedBy, value, options, place
   function moveTo(index) {
     const next = Math.min(Math.max(index, 0), options.length - 1);
     setActive(next);
-    window.requestAnimationFrame(() => document.getElementById(optionId(next))?.scrollIntoView({ block: 'nearest' }));
+    window.requestAnimationFrame(() => {
+      // A group's first choice keeps its heading in view too (the heading first, then the choice).
+      document.getElementById(headingId(next))?.scrollIntoView({ block: 'nearest' });
+      document.getElementById(optionId(next))?.scrollIntoView({ block: 'nearest' });
+    });
   }
 
   // Type-ahead: the next choice (after the active one, wrapping) starting with what was typed.
@@ -284,7 +289,15 @@ export default function Select({ id, labelId, describedBy, value, options, place
             {/* A group heading ("Current", "Planned") above the first choice of each group: plain text,
                 never a choice, never reached by the arrow keys (they move by choice). */}
             {option.group && option.group !== options[index - 1]?.group && (
-              <li role="presentation" className="fa-group-label">
+              <li
+                role="presentation"
+                id={headingId(index)}
+                // Seen, not heard: each choice in the group already says its group (aria-label below).
+                aria-hidden="true"
+                className="fa-group-label"
+                // a click on the heading must not take the focus off the field
+                onMouseDown={(event) => event.preventDefault()}
+              >
                 {option.group}
               </li>
             )}

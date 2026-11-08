@@ -1035,6 +1035,18 @@ button.cp-dc:focus-visible {
   color: var(--color-delete-text);
 }
 
+/* …and while it can't be pressed (a busy save: aria-disabled), the shared unavailable gray wins over
+   the red, fully, hover included — this sheet loads after shared.css at the same specificity, so
+   without this the busy button was red words on a gray fill (independent re-check of the shared batch) */
+.btn.cp-btn-danger[aria-disabled='true'],
+.btn.cp-btn-danger[aria-disabled='true']:hover,
+.btn.cp-btn-danger[aria-disabled='true']:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
 /* A gray button there: Edit payment / Undo payment while a refund stands (rulebook v0.743 (4),
    picture 22 3e) — the plain button's approved gray (as Fill in's .cp-fill rule below and shared.css
    .cfm-actions). Still focusable (aria-disabled); pressing it does nothing. */
