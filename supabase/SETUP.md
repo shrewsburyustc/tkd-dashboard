@@ -2957,7 +2957,7 @@ Tested in PGlite on every run (`run.mjs` step0046: a payment made before 0046 ke
 
 ## Migration 0048: Black Belt: the results CSV lists Worcester before Shrewsbury
 
-**Status: built and tested in PGlite, NOT applied** (reserved 2026-11-07). Built on `black-belt`, rulebook v1.047 (19) (Jeffrey 2026-11-04, "Approve all", and his "C" on 2026-11-07): wherever both schools are listed, Worcester comes before Shrewsbury, as the school switcher does. Apply it any time after 0025; the app does not depend on it (the CSV is downloaded as the database sends it, and the CSV's own sort is the only thing that changes). It is independent of 0046.
+**Status: APPLIED to production 2026-11-07 and verified** (Jeffrey pasted it: "success no rows returned"; after-paste checks: the function fingerprint equals the tested one (0a0e6884e67191fbd7379ca7fc40905a), pre-apply check false / true / 1, security advisor nothing new; `0048_tests.sql` passed on production, "pass") (reserved 2026-11-07). Built on `black-belt`, rulebook v1.047 (19) (Jeffrey 2026-11-04, "Approve all", and his "C" on 2026-11-07): wherever both schools are listed, Worcester comes before Shrewsbury, as the school switcher does. Apply it any time after 0025; the app does not depend on it (the CSV is downloaded as the database sends it, and the CSV's own sort is the only thing that changes). It is independent of 0046.
 
 **Production order:** … 0016 → 0024 → 0025 → 0026 → 0032 → 0034 (live) → 0046 (independent) → **0048**. It needs 0025 (it stops with "0048 needs migration 0025 … first" otherwise).
 
