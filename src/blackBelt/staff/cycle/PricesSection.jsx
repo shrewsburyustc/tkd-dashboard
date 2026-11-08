@@ -28,7 +28,7 @@ import { effectiveDueOn, planTotals } from '../../../lib/blackBelt/rules.js';
 import { useReorderDrag } from '../../../lib/useReorderDrag.js';
 import { cycleDateYears, pastHint } from '../../../lib/blackBelt/dateLimits.js';
 import DateField from '../parts/DateField.jsx';
-import Grip from '../parts/Grip.jsx';
+import Grip from '../../../components/Grip.jsx';
 import { DANS, dollarsText, priceTextProblem } from './formValues.js';
 import * as T from '../text.js';
 
@@ -110,7 +110,7 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
           today={today}
           min={min}
           years={cycleDateYears(today, { min, value: dueOf(pay) })}
-          hint={pastHint(today, min, T.PAST_DATES_HINT)}
+          hint={pastHint(today, min, T.PAST_DAYS_HINT)}
           isPhone={isPhone}
           disabled={readOnly}
           invalid={Boolean(dueShown[i])}

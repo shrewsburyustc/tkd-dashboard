@@ -15,8 +15,12 @@
 //     puts the cycle back to "never opened" (its rubric editable again). If a family registered in
 //     those seconds the database refuses: "Can't undo: a family has already registered."
 //   - ONE change at a time: beginWrite() / endWrite() come from the screen.
+//   - Both toasts' Undo go through the screen's shared save line (lib/saveLine.js, R2-05):
+//     `undoAction` is that line's undoAction. An Undo pressed while another save runs waits its turn
+//     ("Undoing…"); its answer is { status, reason?, doneText? } and the line shows "Undone", or the
+//     bar ("Undo didn't save…" with Retry, or the reason).
 //
-//   const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, setBanner,
+//   const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, undoAction, reload, setBanner,
 //                                      showToast, clearToast, onNoAccess, onRefreshProfile });
 //   actions.canOpen(cycle)      → may this person open it now?
 //   actions.openBlockedReason(cycle) → why not (the gray words under the item), or null
@@ -40,10 +44,10 @@ export function neverOpened(cycle) {
   return cycle?.state?.registration === 'not_open_yet';
 }
 
-export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, setBanner, showToast, onNoAccess, onRefreshProfile }) {
+export function useCycleActions({ isAdmin, today, beginWrite, endWrite, undoAction, reload, setBanner, showToast, onNoAccess, onRefreshProfile }) {
   // The newest callbacks for a toast's Undo, which runs seconds later.
   const latest = useRef({});
-  latest.current = { isAdmin, today, beginWrite, endWrite, reload, setBanner, showToast, onNoAccess, onRefreshProfile };
+  latest.current = { isAdmin, today, beginWrite, endWrite, undoAction, reload, setBanner, showToast, onNoAccess, onRefreshProfile };
 
   // Why this person can't open the cycle now (null = they can). The first opening is admin-only
   // (it locks the rubric, v0.930); after the application date only admins reopen (v0.210).
@@ -61,46 +65,65 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
   }
 
   // Undo of a FIRST opening (the toast's Undo): back to never opened, rubric editable again.
-  async function undoFirstOpening(cycle, expectedVersion) {
+  // Runs inside the save line; answers { status, reason? } (see the header).
+  async function runUndoFirstOpening(cycle, expectedVersion) {
     const a = latest.current;
-    if (!a.beginWrite()) return;
     const result = await undoFirstOpen({ cycleId: cycle.id, expectedVersion });
-    a.endWrite(result.status);
     const status = result.status;
     if (status === 'ok') {
-      a.reload();
-      a.showToast(T.TOAST_UNDONE, { icon: false });
-    } else if (status === 'no_access') {
-      a.onNoAccess();
-    } else if (status === 'has_registrations') {
-      a.setBanner({ text: T.CANT_UNDO_REGISTERED });
-      a.reload();
-    } else if (status === 'not_allowed') {
-      a.setBanner({ text: T.NOT_ALLOWED });
-      a.onRefreshProfile();
-      a.reload();
-    } else if (status === 'stale' || status === 'not_found' || status === 'invalid') {
-      a.setBanner({ text: T.UNDO_OPEN_TOO_LATE });
-      a.reload();
-    } else {
-      a.setBanner({ kind: 'switch', text: T.UNDO_FAILED, retry: () => undoFirstOpening(cycle, expectedVersion) });
+      await a.reload();
+      return { status: 'ok' };
     }
+    if (status === 'no_access') {
+      a.onNoAccess();
+      return { status };
+    }
+    if (status === 'error') return { status };
+    // The database refused it: read the cycle again (so "Their change is shown" is true), then say why.
+    if (status === 'not_allowed') a.onRefreshProfile();
+    await a.reload();
+    if (status === 'has_registrations') return { status, reason: T.CANT_UNDO_REGISTERED };
+    if (status === 'not_allowed') return { status, reason: T.NOT_ALLOWED };
+    return { status, reason: T.UNDO_OPEN_TOO_LATE }; // stale, not_found, invalid
   }
 
-  async function switchRegistration(cycle, open, { isUndo = false, expectedVersion = cycle.version } = {}) {
+  // The toast's Undo of Close / Open registration: the opposite switch, with the version the first
+  // change returned (OP-17: after a reopen, Undo closes again; the automatic close stays off).
+  async function runUndoSwitch(cycle, open, expectedVersion) {
+    const a = latest.current;
+    const result = await setRegistration({ cycleId: cycle.id, expectedVersion, open });
+    const status = result.status;
+    if (status === 'ok') {
+      await a.reload();
+      // Undoing a close puts registration back to open and says so; undoing an opening closes it: plain "Undone" (R2-07)
+      return { status: 'ok', doneText: open ? T.TOAST_UNDONE_OPEN_AGAIN : null };
+    }
+    if (status === 'no_access') {
+      a.onNoAccess();
+      return { status };
+    }
+    if (status === 'error') return { status };
+    if (status === 'not_allowed') a.onRefreshProfile();
+    await a.reload();
+    if (status === 'not_allowed') return { status, reason: T.NOT_ALLOWED };
+    if (status === 'waiver_needed' || status === 'finished') return { status, reason: T.switchProblem(status) };
+    return { status, reason: T.someoneElseChanged(cycle.name) }; // stale, not_found, invalid
+  }
+
+  async function switchRegistration(cycle, open, { expectedVersion = cycle.version } = {}) {
     const a = latest.current;
     if (!a.beginWrite()) return;
-    const result = await setRegistration({ cycleId: cycle.id, expectedVersion, open });
-    a.endWrite(result.status);
+    let result = { status: 'error' };
+    try {
+      result = await setRegistration({ cycleId: cycle.id, expectedVersion, open });
+    } finally {
+      // Always ended (C8), with the real status and how to do it again (C1)
+      a.endWrite(result.status, () => switchRegistration(cycle, open, { expectedVersion }));
+    }
     const status = result.status;
     if (status === 'ok') {
       a.setBanner((current) => (current?.kind === 'switch' ? null : current));
       a.reload();
-      if (isUndo) {
-        // Undoing a close puts registration back to open and says so; undoing an opening closes it: plain "Undone" (R2-07)
-        a.showToast(open ? T.TOAST_UNDONE_OPEN_AGAIN : T.TOAST_UNDONE, { icon: false });
-        return;
-      }
       const removedDate = open && openNeedsAdmin(cycle, a.today);
       const newVersion = result.version;
       const firstOpen = open && result.firstOpen === true;
@@ -108,12 +131,12 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
       // a later reopen keeps "Registration open".
       const openText = firstOpen ? T.TOAST_REG_OPENED_FIRST : T.TOAST_REG_OPEN;
       const text = open ? (removedDate ? T.TOAST_REG_OPEN_DATE_REMOVED : openText) : T.TOAST_REG_CLOSED;
+      const words = `${text} · ${cycle.name}`;
       a.showToast(text, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () => (firstOpen ? undoFirstOpening(cycle, newVersion) : switchRegistration(cycle, !open, { isUndo: true, expectedVersion: newVersion })),
-        },
+        action: firstOpen
+          ? a.undoAction(() => runUndoFirstOpening(cycle, newVersion), { words })
+          : a.undoAction(() => runUndoSwitch(cycle, !open, newVersion), { words }),
       });
     } else if (status === 'no_access') {
       a.onNoAccess();
@@ -125,14 +148,14 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
       a.setBanner({ text: T.switchProblem(status) });
       a.reload();
     } else if (status === 'stale' || status === 'not_found' || status === 'invalid') {
-      a.setBanner({ text: isUndo ? T.UNDO_STALE : T.SWITCH_STALE });
+      a.setBanner({ text: T.someoneElseChanged(cycle.name) });
       a.reload();
     } else {
       // Didn't reach the database: the banner offers Retry (never closes by itself, rule 3.5).
       a.setBanner({
         kind: 'switch',
-        text: isUndo ? T.UNDO_FAILED : T.SAVE_FAILED,
-        retry: () => switchRegistration(cycle, open, { isUndo, expectedVersion }),
+        text: T.SAVE_FAILED,
+        retry: () => switchRegistration(cycle, open, { expectedVersion }),
       });
     }
   }

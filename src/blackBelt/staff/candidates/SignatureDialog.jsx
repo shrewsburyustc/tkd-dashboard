@@ -4,13 +4,14 @@
 // white background with "Signed by Jordan Kim · Mar 10, 2027". A paper waiver has no picture
 // ("Signed on paper. There is no signature picture."); after the keeping time the picture and the
 // signer's name are gone ("… were deleted on [date] after the keeping time.").
+// A picture that can't be read says "Couldn't load. Check the connection, then retry." with Retry (S-2).
 // Privacy: the picture lives only in this dialog's state and is dropped when it closes; it is never
 // stored, logged or put in an address. Opening it isn't logged (S20).
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import * as T from '../text.js';
 
-export default function SignatureDialog({ state, isPhone, onCancel }) {
+export default function SignatureDialog({ state, isPhone, onCancel, onRetry }) {
   const r = state.result;
   let body;
   if (state.status === 'loading') {
@@ -25,7 +26,8 @@ export default function SignatureDialog({ state, isPhone, onCancel }) {
   } else if (state.status === 'not_allowed') {
     body = <p className="tdialog-sub">{T.NOT_ALLOWED}</p>;
   } else if (state.status !== 'ready' || !r) {
-    body = <ErrorBanner text={T.LOAD_FAILED_NO_RETRY} />;
+    // S-2 (v1.051 (2)): the shared sentence, with a Retry that reads the signature again
+    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={onRetry} />;
   } else if (r.removedAt) {
     body = <p className="tdialog-sub">{T.signatureDeleted(r.removedAt)}</p>;
   } else if (!r.signature) {

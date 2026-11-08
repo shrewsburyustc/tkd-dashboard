@@ -29,9 +29,13 @@ import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import { loadResultTexts, setResultText } from '../../../lib/blackBelt/gradingApi.js';
 import { RESULT_KINDS, RESULT_SUBJECT, resultTextProblem } from '../../../lib/blackBelt/resultEmail.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import ResultTextDialog from './ResultTextDialog.jsx';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
+import { UNDO_SECTION, someoneElseChanged } from '../text.js';
 import * as T from '../results/text.js';
 import '../results/results.css';
 
@@ -55,7 +59,8 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
     dialogRef.current = dialog;
   });
   const [banner, setBanner] = useState(null); // an Undo that didn't work: { text, retry? }
-  const busyRef = useRef(false);
+  // Save and the toast's Undo share one line (R2-05): an Undo pressed during a save waits its turn.
+  const line = useSaveLine({ section: UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
 
   useEffect(() => {
     if (live.status === 'noAccess') onNoAccess();
@@ -118,18 +123,22 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
       close(); // nothing changed: no call, no toast
       return;
     }
-    if (busyRef.current) return;
-    busyRef.current = true;
+    const token = line.begin(); // false while an Undo runs: Save shows "Saving…" then (below)
+    if (!token) return;
     patch({ saving: true, note: null });
-    const answer = await setResultText({ kind: d.kind, expectedVersion: d.snapshot.version, body: d.body });
-    busyRef.current = false;
+    let answer;
+    try {
+      answer = await setResultText({ kind: d.kind, expectedVersion: d.snapshot.version, body: d.body });
+    } finally {
+      line.end(answer?.status ?? 'error', { token });
+    }
     if (answer.status === 'ok') {
       const opened = d.snapshot;
       close();
       liveRef.current.reload();
       showToast(T.RESULT_TEXT_SAVED, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => undo(d.kind, answer.version, opened.body) },
+        action: line.undoAction(() => runUndo(d.kind, answer.version, opened.body), { words: T.RESULT_TEXT_SAVED }),
       });
       return;
     }
@@ -150,26 +159,26 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
     }
   }
 
-  // The toast's Undo: the old text back, with the version the save answered.
-  async function undo(kind, version, body) {
-    if (busyRef.current) return;
-    busyRef.current = true;
+  // The toast's Undo: the old text back, with the version the save answered. Runs inside the save
+  // line: answers { status, reason? } and the line shows "Undone", or the bar.
+  async function runUndo(kind, version, body) {
     const answer = await setResultText({ kind, expectedVersion: version, body });
-    busyRef.current = false;
     if (answer.status === 'ok') {
-      setBanner(null);
-      showToast(T.TOAST_UNDONE, { icon: false });
-    } else if (answer.status === 'no_access') {
-      onNoAccess();
-    } else if (answer.status === 'not_allowed') {
-      setBanner({ text: T.TEXT_NOT_ALLOWED });
-      onRefreshProfile?.();
-    } else if (['stale', 'not_found', 'invalid'].includes(answer.status)) {
-      setBanner({ text: T.UNDO_STALE });
-    } else {
-      setBanner({ text: T.UNDO_FAILED, retry: () => undo(kind, version, body) });
+      await liveRef.current.reload();
+      return { status: 'ok' };
     }
-    liveRef.current.reload();
+    if (answer.status === 'no_access') {
+      onNoAccess();
+      return { status: 'no_access' };
+    }
+    if (answer.status === 'error') return { status: 'error' };
+    if (answer.status === 'not_allowed') {
+      onRefreshProfile?.();
+      await liveRef.current.reload();
+      return { status: answer.status, reason: T.TEXT_NOT_ALLOWED };
+    }
+    await liveRef.current.reload(); // stale, not_found, invalid: read it again so "Their change is shown" is true
+    return { status: answer.status, reason: someoneElseChanged('this email text') };
   }
 
   // ----- Drawing -----
@@ -229,7 +238,7 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
         </h2>
       </div>
       <p className="bbrem-sub">{T.RESULT_EMAILS_SUB}</p>
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} onDismiss={() => setBanner(null)} />}
+      {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying === true} onDismiss={() => setBanner(null)} />}
       {/* The subject line: fixed in the app, never stored */}
       <div className={rowClass()}>
         {isPhone ? (
@@ -258,7 +267,7 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
       {dialog && !screenLocked && (
         <ResultTextDialog
           key={dialog.key}
-          state={dialog}
+          state={line.busy && !dialog.saving ? { ...dialog, saving: true } : dialog}
           record={texts?.[dialog.kind] ?? dialog.snapshot}
           isPhone={isPhone}
           isTouch={isTouch}

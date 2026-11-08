@@ -47,7 +47,7 @@ import { LOCATION_CODE, LOCATION_NAME } from '../../../lib/device.js';
 import { NARROW_PHONE_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { RUBRIC_DANS } from '../../../lib/blackBelt/rubric.js';
 import { danLabel as danLabelOf } from '../../../lib/blackBelt/resultEmail.js';
-import ChoiceGroup from '../../../screens/testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { placeText, shortDate, timeRange, weekdayMonthDay } from '../text.js';
 import GradeCard from './GradeCard.jsx';
 import GradeGrid from './GradeGrid.jsx';
