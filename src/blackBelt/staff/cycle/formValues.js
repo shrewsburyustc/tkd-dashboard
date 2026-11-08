@@ -8,8 +8,10 @@
 //                         (an empty price → null, a price that isn't a valid one → -1, so the
 //                         rules report 'missing' / 'invalid')
 //   dayToValues / valuesToDay   one testing day ↔ the testing-day dialog's fields
+//   dollarsText(text)     a typed price as a read-only cell shows it ("$870", "$12.50"; BB14)
 // It is plain JavaScript (no React), so it is easy to read and test.
 import { parsePrice } from '../../../lib/blackBelt/money.js';
+import { formatMoney } from '../../../lib/money.js';
 
 export const DANS = [1, 2, 3, 4];
 
@@ -25,6 +27,14 @@ function textToCents(text) {
   const parsed = parsePrice(text);
   if (parsed.cents !== undefined) return parsed.cents;
   return parsed.problem === 'empty' ? null : -1;
+}
+
+// The text a read-only price cell shows: "$870", or '' for a missing price. It is the dashboard's
+// one money helper (formatMoney, BB14): a typed "12.5" reads "$12.50" (it used to round to "$13").
+// Math.round turns the typed dollars into whole cents first (12.07 * 100 is 1207.0000000000002).
+export function dollarsText(text) {
+  const cents = Math.round(Number(String(text).replace(/[$,]/g, '')) * 100);
+  return Number.isFinite(cents) && String(text).trim() !== '' ? formatMoney(cents) : '';
 }
 
 // What's wrong with one typed price → null | 'missing' | 'invalid'.

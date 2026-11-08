@@ -25,7 +25,7 @@ export default function SignatureDialog({ state, isPhone, onCancel }) {
   } else if (state.status === 'not_allowed') {
     body = <p className="tdialog-sub">{T.NOT_ALLOWED}</p>;
   } else if (state.status !== 'ready' || !r) {
-    body = <ErrorBanner text={T.LOAD_FAILED} />;
+    body = <ErrorBanner text={T.LOAD_FAILED_NO_RETRY} />;
   } else if (r.removedAt) {
     body = <p className="tdialog-sub">{T.signatureDeleted(r.removedAt)}</p>;
   } else if (!r.signature) {
