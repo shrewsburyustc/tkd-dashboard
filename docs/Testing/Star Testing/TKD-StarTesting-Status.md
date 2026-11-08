@@ -32,6 +32,8 @@ Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into mai
 
 - **Batch 1 built 2026-11-07 (process rule P8, v0.309: batches, no mockup for decided fixes):** Candidates page: R5-05, R3-02, S-1 (card order), C-05 (b), M-03 with staff too (staff get Print receipt only on a withdrawn candidate who paid). Pictures B3/B4 were drawn first; built from them with the reviewer's notes (counts pairs; "in this Dan" empty lines; empty Dan wins; flagged pairs from the whole event). Reviewed (design + code, no must-fix), committed on star-testing, not pushed. Remaining batches: 2 = migration 0038 (**written 2026-11-07 with its tests, fingerprints, pre-apply check, undo file and SETUP section; PGlite step0038 passes; not applied, awaiting security review and Jeffrey's OK**), 3 = 0038's app side (waits for 0038 and Finance's 0047 live), 4 = Step D (waits for Dashboard core's shared batch).
 
+- **Migration 0038 applied on production 2026-11-07** (Jeffrey pasted it; pre-apply check, post-apply check `3 / 0 / 3 / 7 / 0 / 9 / 0 / 0`, all 9 function md5s and rights match, advisor nothing new, his tests passed). Next: Main tells Finance (their R1-01 migration 0047 can be written now); then batch 3 (0038's app side) builds, and merges only after Finance's 0047 is live.
+
 ---
 
 ## 1. Where things stand (one paragraph)
