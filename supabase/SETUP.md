@@ -3196,7 +3196,7 @@ Tested in PGlite on every run (`run.mjs` step0041: an event from before 0041 kep
 
 **Status: applied 2026-11-05** (pasted by Jeffrey in the SQL Editor: "pass"; 0042a pre-check 0 / false / true / 2 before, 1 / true / true / 2 after; 0042c: `0042_fingerprints.sql` equals the PGlite line, `0009_fingerprints.sql` is 0042a's 196 lines unchanged plus exactly the two new lines, the security advisor adds only the expected "security definer function executable by authenticated" for `forms_copy_to_school`; the 0042d tests file waits for his UIDs). Built on `claude/prospect-form-system-cd893d` (rulebook v0.642 and v0.644: "Copy to Worcester / Shrewsbury" in a form's ⋯ menu on the Forms list).
 
-**Production order:** … 0034 → 0036 → Star's 0041 → **0042** (all live; 0042 since 2026-11-05). 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (those not live yet go after it): 0037–0039 and 0041 are other sections' (of these only Star's 0041 is live, checked 2026-11-05; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is — like 0040's once written — it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
+**Production order:** … 0034 → 0036 → Star's 0041 → **0042** (all live; 0042 since 2026-11-05). 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (those not live yet go after it): 0037–0039 and 0041 are other sections' (of these only Star's 0041 is live, checked 2026-11-05; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. 0040 is **not** in step0042's list: the Forms tests that step runs (0009, 0012, 0015, 0021, 0031, 0036) send the old child shape on purpose, and 0040 refuses it. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
 
 **What it does** (`supabase/migrations/0042_forms_copy_to_school.sql`): adds **one** function, `public.forms_copy_to_school(p_form_id uuid, p_location_code text)`, admins only, and changes nothing else (no table, rule, other function, right or data). It makes a **Draft copy of a form at the other school**:
 - the same kind, draft (questions + waiver) and settings (thank-you words, the family's confirmation email, add to calendar), **but no alert email** (v0.644: the new-sign-up alert address is the first school's; the copy starts without one);
@@ -3244,6 +3244,55 @@ Tested in PGlite on every run (`run.mjs` step0042: the pre-apply check; only 000
 - **The same name unless taken:** a straight copy reads exactly like the original at the other school; "Copy of" only when that school already has a form called that, so the copy doesn't take the name of a form that school already has (a third copy gets a second "Copy of …", as Duplicate does).
 - **No alert email on the copy (v0.644):** the alert address belongs to the first school's front desk; copied, the other school's sign-up alerts (a family's name, phone and email) would go to it once emails are on. The rest of the settings is copied.
 - **A new function, not an argument on `forms_duplicate`:** Duplicate's call stays exactly as the live app uses it (an argument with a default would make the web API's choice between two versions ambiguous).
+
+---
+
+## Migration 0040: New students — the old child shape and the plain-text Address removed
+
+**Status: written and tested in PGlite 2026-11-07; NOT applied** (needs a security review and Jeffrey's OK before he pastes it). Built on `claude/prospect-form-system-cd893d` (rulebook v0.640; the clean-up 0036 promised: "a later small migration removes both old ways, at least 12 hours after the new app is pushed" — the new app went live 2026-11-04, main a5d0e1d).
+
+**Production order:** … 0036 → 0041 → 0042 → … → **0040** (it needs only 0036, 0031 and 0009; nothing after 0036 replaced the two functions it replaces — checked 2026-11-07). It stops with "0040 needs migration 0036 … first" otherwise.
+
+**What it does** (`supabase/migrations/0040_forms_old_shapes_removed.sql`): replaces **two internal functions** and nothing else (no table, column, rule, grant or other function; nothing for anon):
+- `forms_check_answers` (0036's version): a child must be exactly `{ first_name, last_name, dob }`; an Address answer must be the object `{ street, city, state, zip }`. The old child shape `{ first_name, age }` and an Address sent as one plain text are refused (`invalid`). Every other rule is word for word as in 0036.
+- `forms_submit_core` (0036's version): every child has a date of birth now, so the "if it has one" branches go; each child is saved as `{ first_name, last_name, dob, age }`.
+Same arguments, owner, security invoker, `search_path = ''`, rights for nobody (the revokes are restated). **No data is read or written:** sign-ups already saved with the old shape (and their prospects) stay as they are (0009's trigger refuses any change to a sign-up).
+
+**Who it affects:** only a page that is still open from before 2026-11-04 (a kiosk tablet or a family's phone left open for days). Its Send is answered `invalid` and the page shows its normal "try again / reload" message; a reload gets the new page. Staff Fill in, the public page and the kiosk all go through the same core.
+
+**Each step needs Jeffrey's OK.**
+
+### 0040a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0040_preapply_check.sql` must answer `check_is_0036 = true`, `check_is_0040 = false`, `submit_is_0036 = true`, `submit_is_0040 = false`, `profile_in = true` (and `old_shape_signups`, which may be above 0 — they are history). Any other answer before 0040 → a function changed since 0036 was tested: stop and tell Claude (0040 would silently undo that change).
+2. Claude runs `supabase/tests/0036_fingerprints.sql` and `0009_fingerprints.sql` and keeps the result (the "before" record for 0040c and the undo).
+
+### 0040b. Apply 0040 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0040_forms_old_shapes_removed.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The word "dropdown" appears inside a function (a question type), so Supabase may show a warning — nothing is removed; confirm.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0040c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0040_fingerprints.sql` — four lines that must match what `run.mjs` printed ("0040 fingerprints"): `forms_check_answers` (`9f091ef38f440d9d812d8bce7f3fd4dc`) and `forms_submit_core` (`36f2025c9c15c5473f64ad498dd1e99b`), both `definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`, plus their `function-kind` lines.
+2. `0009_fingerprints.sql`, `0031_fingerprints.sql` and `0036_fingerprints.sql`: **only** those functions' body md5 moved (to the two above); everything else in them, and every other fingerprint file, is byte-identical (`run.mjs` step0040 checks exactly that).
+3. `0040_preapply_check.sql` again: `false / true / false / true / true`.
+4. **Security advisor:** nothing new.
+
+### 0040d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0040_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0040 TESTS PASSED**. It makes its own `zz test …` Walk-in form, checks that only the new child shape and the object Address are accepted (and that 0036's other rules still hold), that families sent the old way are refused with nothing saved (public page and staff Fill in), ages 2–99, and the two functions' rights. It rolls everything back.
+2. **Do not** run `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0021_tests.sql`, `0031_tests.sql` or `0036_tests.sql` after 0040: they send the old child shape on purpose and now fail by design. `0007_tests.sql` and `0019_tests.sql` still pass. Put the placeholders back afterwards.
+
+### 0040e. Undo 0040 (only with Jeffrey's OK)
+
+1. There is no separate undo file: **paste `supabase/migrations/0036_new_students_profile.sql` again** (it is safe to re-run; it puts back the two functions that accept both old ways). Claude checks `0036_fingerprints.sql` and `0009_fingerprints.sql` equal 0040a's record and `0040_preapply_check.sql` answers `true / false / true / false / true`. Then the six Forms tests above pass again. To redo: paste 0040 again.
+
+Tested in PGlite on every run (`run.mjs` step0040: the pre-apply check; only the two functions' body md5 moves in 0009's, 0031's and 0036's files; 0040 writes nothing — an old-shape sign-up made before it is unchanged; 0040's tests; re-run safety; the undo exactly as named here, then the redo).
+
+**Why:**
+- **Why now:** 0036 had to take both ways during the switch (a kiosk page stays open up to 12 hours). The new app has been live for days, so the old ways are only a way to put data without a date of birth in.
+- **Why no undo file:** the undo is "put 0036 back", which already exists and is tested as safe to re-run.
 
 ---
 

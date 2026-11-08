@@ -65,7 +65,7 @@ Fix list `docs/Design Review/Rolling check/Pass 1/Fix-NewStudents.md`, received 
 | 4 | R3-03 "Showing … only · Show all", R3-09 "Find a prospect" | Planned: mockup first |
 | 5 | R3-11 ⋯ last, R4-06 weights + 12 px letters, family page Send gray, Sent page gap, Edit statuses wrap, S-10's dropdowns | Planned: pictures first; question 3 |
 | 6 | N7 shared time list (+ S-10 in the two dialogs) | Picture to redraw |
-| 7 | 0036 clean-up migration | **0040** reserved by Main 2026-11-05 (main 2187dbe, merged in here); `0040_<what>.sql`, SETUP "## Migration 0040: …", `step0040` |
+| 7 | 0036 clean-up migration | **0040** reserved by Main 2026-11-05 (main 2187dbe, merged in here). **WRITTEN 2026-11-07 (batch 4, rulebook v0.647), not applied:** `0040_forms_old_shapes_removed.sql`, `0040_tests.sql`, `0040_fingerprints.sql`, `0040_preapply_check.sql`, SETUP "## Migration 0040", `step0040` (82 checks pass); security review clear; waits on Jeffrey's OK to paste |
 | later | R2-05, R2-07 words, R3-06, S-2, Fill in's Send (R1-08) | Wait for Dashboard core's matching items on main |
 | later | N16's Show menu, N11 | Wait for the shared menu's tick boxes / Color Belt's CB14 + M15 |
 | check | R2-06, Draft Fill in gray, "Delete form", R5-01, R4-02, Delete field | Already done; checked when the steps are tried
@@ -104,7 +104,7 @@ Fix list `docs/Design Review/Rolling check/Pass 2/Fix-NewStudents.md`, relayed b
 <br>&nbsp;&nbsp;- **Found on the way (older; for step B):** "Saving…" is wider than Save / Book, so Cancel slides left while saving. After a successful Delete prospect or Came, focus falls to the page.
 <br>- **Design re-check** (option A and the two fixes): no must-fix.
 <br>- Both builds, the 6 check scripts and 174 function tests pass. **Committed 9ad2c35** (2026-11-06, Jeffrey: "Yes, commit"). **Live 2026-11-06:** main 596c297, pushed (Jeffrey in Main: "merge and push"); merged back here (fast-forward). |
-| B, step 2, 3, 4, 5, 6 | **Re-planned 2026-11-07 into batches by page (P8, rulebook v0.309: Jeffrey "build a whole section of changes first", mockups "B": none for decided items).** Batch 1 Forms area · Batch 2 Prospects page · Batch 3 Calendar + Schedule · Batch 4 database 0040 | **Batches 1–3 BUILT 2026-11-07, not committed, waiting on Jeffrey's try in the preview** (details below) |
+| B, step 2, 3, 4, 5, 6 | **Re-planned 2026-11-07 into batches by page (P8, rulebook v0.309: Jeffrey "build a whole section of changes first", mockups "B": none for decided items).** Batch 1 Forms area · Batch 2 Prospects page · Batch 3 Calendar + Schedule · Batch 4 database 0040 | **Batches 1–3 BUILT and COMMITTED 2026-11-07 (4b84e6b6, Jeffrey "Yes, commit").** **Batch 4 (0040) WRITTEN 2026-11-07**, uncommitted: migration + tests + fingerprints + pre-apply check + SETUP + `step0040` (82/0), security review clear, the preview's fake database and 3 check files now refuse the old shapes (all check files and both builds pass), rulebook v0.647. Not applied (details below) |
 | later | L-06, U-06, L-03, R2-05, R2-07 shared words, R3-06, S-2, R1-08 (Fill in's Send); N16 Show menu, N11 | Wait for Dashboard core's items on main / the shared menu's tick boxes / Color Belt's CB14 |
 
 ### Batches 1–3 (2026-11-07): built together, not committed
@@ -117,3 +117,15 @@ Jeffrey's four open questions, answered as recommended in one message: Duplicate
 - **Reviews:** a design and a code review per batch: **no must-fix in any**; fixes applied as listed. Both builds, all check scripts and 174 function tests pass; PGlite `--only-step0045` 79/79.
 - **For Dashboard core / Main (shared parts, not changed here):** the shared `Select` trigger is 36 px tall on touch (§2.5 wants 44); `DateSigned`'s label is 12 px on desktop where the old one was 13 px (it sits smaller than the Signature and Waiver labels); `Select` takes no groups. Also: Star's and Black Belt's copies of the date-of-birth hint should read like the forms' (curly apostrophe).
 - **Noted, not changed:** Edit statuses at 320 wide: the gray kind words run to four lines (legible); the Retry button and Fill in's phone Sent buttons are 36 px tall (shared ErrorBanner / existing). The "Move them to" label repeats the sentence's last words in Delete status (as in the approved N3 picture).
+
+## Batch 4: migration 0040 (2026-11-07)
+
+Jeffrey: "Yes, start batch 4". The clean-up migration after 0036 (rulebook v0.647):
+
+- **What:** replaces only `forms_check_answers` and `forms_submit_core`. A child must be exactly `{ first_name, last_name, dob }`; an Address answer only the object `{ street, city, state, zip }`. The old `{ first_name, age }` and a plain-text address are refused (`invalid`). Sign-ups already saved the old way stay as history. Rights unchanged.
+- **Files:** `supabase/migrations/0040_forms_old_shapes_removed.sql`; `supabase/tests/0040_tests.sql`, `0040_fingerprints.sql`, `0040_preapply_check.sql`; `supabase/SETUP.md` "Migration 0040" (0040a–e); `run.mjs` `step0040` (`node run.mjs --only-step0040`: 82 passed, 0 failed). SETUP's Migration 0042 note about 0040 corrected (0040 is not in step0042's list: its Forms tests send the old shape on purpose).
+- **Undo:** paste 0036 again (safe to re-run; tested). No separate undo file.
+- **Security review (separate agent):** clear, no must-fix or should-fix.
+- **Preview side:** `src/lib/mockForms.js` (the fake database) and its checks (`src/lib/forms/checks.mjs`, `src/lib/prospects/checks.mjs`) now refuse the old shapes like the database. All `checks.mjs` files, `npm run build` and `npm run build:preview-mode` pass.
+- **After Jeffrey's OK:** he pastes 0040 → Claude runs `0040_preapply_check.sql` first, then after: `0040_fingerprints.sql`, `0036_fingerprints.sql`/`0009_fingerprints.sql` (only those two functions' md5 moved), security advisor, `0040_tests.sql` (he pastes his UIDs). Do not run 0009/0012/0015/0021/0031/0036 tests after 0040 (they send the old shape on purpose).
+- **Shared files touched in batch 4:** the rulebook (v0.647 row + changelog + header), `supabase/SETUP.md`, `supabase/tests/pglite/run.mjs`. CLAUDE.md's 0040 row is Main's (says "reserved"; update to "written, not applied").

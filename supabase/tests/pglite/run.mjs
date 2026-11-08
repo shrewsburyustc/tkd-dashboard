@@ -518,6 +518,13 @@
 //       Undo of SETUP.md 0042e (manual/0042u: the kept copy stays, every
 //       fingerprint back to before 0042) - see step0042 below. Run only
 //       this step with   node run.mjs --only-step0042
+//   step0040. 0040 (New students: the clean-up after 0036 - forms stop accepting the old child shape
+//       { first_name, age } and a plain-text Address; v0.640) on its own database in the production order
+//       (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036) with a Walk-in
+//       form and two sign-ups made before it (one old shape, one new): the pre-apply check, only the two
+//       functions' body md5 moves in 0009's / 0031's / 0036's files, 0040 writes nothing, 0040's tests, re-run
+//       safety, and the Undo of SETUP.md 0040e (paste 0036 again) - see step0040 below. Run only this step
+//       with   node run.mjs --only-step0040
 //   step0043. 0043 (Camps Fill in: staff sign up a walk-in family at the
 //       desk, v0.740 / v0.741) on its own database in the production
 //       order (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030,
@@ -619,6 +626,7 @@ const onlyStep0035 = process.argv.includes('--only-step0035');
 const onlyStep0036 = process.argv.includes('--only-step0036');
 const onlyStep0041 = process.argv.includes('--only-step0041');
 const onlyStep0042 = process.argv.includes('--only-step0042');
+const onlyStep0040 = process.argv.includes('--only-step0040');
 const onlyStep0043 = process.argv.includes('--only-step0043');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStep0044 = process.argv.includes('--only-step0044');
@@ -908,6 +916,15 @@ async function main() {
     if (prints45) {
       console.log('\n0045 fingerprints (kind  item  detail):');
       for (const line of prints45) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0040: just New students' clean-up after 0036 (0040)
+  if (onlyStep0040) {
+    const prints40 = await step0040();
+    if (prints40) {
+      console.log('\n0040 fingerprints (kind  item  detail):');
+      for (const line of prints40) console.log('  ' + line);
     }
     return finish();
   }
@@ -1246,6 +1263,9 @@ async function main() {
   // step0042: New students - Copy a form to the other school (its own database, production order)
   console.log('\nMigration 0042 (New students: Copy a form to the other school):');
   const after42 = after5 ? await step0042() : null;
+  // step0040: New students - the clean-up after 0036 (its own database, production order)
+  console.log('\nMigration 0040 (New students: the old child shape and the plain-text Address removed):');
+  const after40 = after5 ? await step0040() : null;
   // step0043: Camps Fill in (its own database, production order)
   console.log('\nMigration 0043 (Camps Fill in):');
   const after43 = after5 ? await step0043() : null;
@@ -9000,6 +9020,204 @@ async function step0041() {
   }
   await db.close().catch(() => {});
   return prints41;
+}
+
+// =====================================================================
+// step0040: New students - the clean-up after 0036: forms stop accepting the old child shape and a
+// plain-text Address (0040, rulebook v0.640)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every live migration (liveOrderTo0025,
+// then 0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034 and 0036 - each only if its file is on
+// this branch), with a Walk-in form and two sign-ups made BEFORE 0040 (a family sent the old way,
+// { first_name, age }, and one sent the new way):
+//   a. 0040_fingerprints.sql and 0040_preapply_check.sql are connector-safe (no "delete" / "drop"); the
+//      pre-apply check names the md5s checked here and answers true / false / true / false / true, 1
+//      old-shape sign-up
+//   b. the Forms / Prospects tests (0007, 0009, 0012, 0015, 0019, 0021, 0031, 0036) pass BEFORE 0040
+//   c. apply 0040: in every fingerprint file ONLY the body md5 of forms_check_answers and
+//      forms_submit_core moves (0009's, 0031's and 0036's files), to 0040's; nothing is written (the
+//      earlier sign-ups and their prospects stay as they are, old shape included)
+//   d. 0040_tests.sql; the tests that still send the old shape are NOT run after 0040 (they would
+//      fail by design: 0009, 0012, 0015, 0021, 0031, 0036 - 0007 and 0019 are)
+//   e. 0040 applied a SECOND time: no fingerprint, row or history change
+//   f. the Undo of SETUP.md 0040e is to paste 0036 again (it is safe to re-run): every fingerprint
+//      file equals the one before 0040, the pre-apply check answers as before, the data is as before,
+//      the baseline tests pass again; then 0040 again -> the tested fingerprints, 0040_tests.sql passes
+// Run only this step with   node run.mjs --only-step0040
+// =====================================================================
+const MD5_0040 = {
+  check36: 'e0cfb494a50bc97364811bbfbeb727af', check40: '9f091ef38f440d9d812d8bce7f3fd4dc',
+  submit36: '0f7695175947d82bccddd0db87e66400', submit40: '36f2025c9c15c5473f64ad498dd1e99b',
+};
+
+async function step0040() {
+  const L = '[0040] ';
+  const preSql = read('tests', '0040_preapply_check.sql');
+  const migration = read('migrations', '0040_forms_old_shapes_removed.sql');
+  const migration36 = read('migrations', '0036_new_students_profile.sql');
+  const unsafe = [['tests', '0040_fingerprints.sql'], ['tests', '0040_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0040_fingerprints.sql and 0040_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the pre-apply check names the four md5s run.mjs checks (0036's and 0040's forms_check_answers and forms_submit_core)`,
+    Object.values(MD5_0040).every((m) => preSql.includes(`'${m}'`)));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students: last name, date of birth, Address)', '0036_new_students_profile.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. a Walk-in form and two families made BEFORE 0040: one sent the old way, one the new way
+  const SIG = "'data:image/png;base64,' || repeat('A', 300)";
+  const SETTINGS = `'{"thank_you":"","alert_email":null,"confirm_email":false,"add_to_calendar":false}'`;
+  if (!(await run(db, `${L}a Walk-in form and two sign-ups (one old shape, one new) from before 0040`, `
+    do $$
+    declare
+      v_f uuid;
+      v_r jsonb;
+      v_fields jsonb;
+      v_ans jsonb := jsonb_build_object('parent_name', 'Pat Zzbefore', 'parent_phone', '(508) 555-0177',
+                       'parent_email', 'pat.zz@example.com', 'waiver', true,
+                       'address', jsonb_build_object('street', '1 Elm St', 'city', 'Worcester', 'state', 'MA', 'zip', '01604'));
+    begin
+      select jsonb_agg(case when e ->> 'id' = 'waiver' then jsonb_set(e, '{text}', '"Our wording."') else e end order by n)
+        into v_fields from jsonb_array_elements(public.forms_template('walk_in')) with ordinality as t(e, n);
+      insert into public.forms (location_code, name, slug, kind, status, draft, published, published_version, settings)
+      values ('worcester', 'zz before 0040', 'zz-before-0040', 'walk_in', 'live', v_fields, v_fields, 1, ${SETTINGS})
+      returning id into v_f;
+      v_r := public.forms_submit_core(v_f, gen_random_uuid(), 1, (v_ans - 'address') || '{"address": "1 Elm St, Worcester"}',
+               '[{"first_name": "Una", "age": 6}, {"first_name": "Ned", "age": 8}]', '[]', ${SIG}, 'staff', 'PGlite before 0040');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'old-shape sign-up before 0040: %', v_r; end if;
+      v_r := public.forms_submit_core(v_f, gen_random_uuid(), 1, v_ans,
+               jsonb_build_array(jsonb_build_object('first_name', 'Una', 'last_name', 'Zzbefore',
+                                   'dob', to_char(public.schedule_today() - interval '6 years', 'YYYY-MM-DD'))),
+               '[]', ${SIG}, 'staff', 'PGlite before 0040');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'new-shape sign-up before 0040: %', v_r; end if;
+    end
+    $$;`))) return null;
+  // everything 0040 could touch, as one md5
+  const snapSql = `select md5(
+       coalesce((select string_agg(to_jsonb(f)::text, ',' order by f.id) from public.forms f), '')
+    || coalesce((select string_agg(to_jsonb(s)::text, ',' order by s.id) from public.form_submissions s), '')
+    || coalesce((select string_agg(to_jsonb(p)::text, ',' order by p.id) from public.prospects p), '')
+    || (select count(*) from public.change_log)::text || '/' || (select count(*) from public.family_history)::text)`;
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0040: true / false / true / false / true, 1 old-shape sign-up`,
+    ready.check_is_0036 === true && ready.check_is_0040 === false && ready.submit_is_0036 === true
+      && ready.submit_is_0040 === false && ready.profile_in === true && ready.old_shape_signups === 1,
+    JSON.stringify(ready));
+
+  // b. the baseline tests
+  const baseline = [['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'],
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0031_tests.sql', 'ALL 0031 TESTS PASSED'], ['0036_tests.sql', 'ALL 0036 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0040', baseline);
+
+  // c. apply 0040: only the two functions' body md5 moves
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0040']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0040');
+  const before = await printsOf(db, numbers);
+  const dataBefore = await one(db, snapSql);
+  if (!(await run(db, `${L}apply 0040_forms_old_shapes_removed.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const parts = (line) => line.split('  ');
+  const two = ['forms_check_answers(', 'forms_submit_core('];
+  const newMd5 = { 'forms_check_answers(': MD5_0040.check40, 'forms_submit_core(': MD5_0040.submit40 };
+  const wrong = [];
+  const moved = {};
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+      const which = two.find((t) => item.startsWith(t));
+      if (kind === 'function' && which && twin && parts(twin)[2].slice(32) === detail.slice(32)
+          && parts(twin)[2].slice(0, 32) === newMd5[which]) {
+        (moved[n] ??= []).push(item);
+      } else {
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+      }
+    }
+    for (const a of added) {
+      const [kind, item] = parts(a);
+      if (!gone.some((g) => parts(g)[0] === kind && parts(g)[1] === item)) wrong.push(`${n}: added ${a}`);
+    }
+  }
+  const expected = { '0009': two, '0031': ['forms_submit_core('], '0036': two };
+  for (const [n, items] of Object.entries(expected)) {
+    if (!existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`))) continue;
+    const got = moved[n] ?? [];
+    if (got.length !== items.length || !items.every((x) => got.some((g) => g.startsWith(x)))) {
+      wrong.push(`${n}: planned ${items.join(', ')} - moved ${got.join(', ') || 'nothing'}`);
+    }
+  }
+  for (const n of Object.keys(moved)) if (!expected[n]) wrong.push(`${n}: moved ${moved[n].join(', ')}`);
+  record(`${L}fingerprints: exactly the planned lines moved (forms_check_answers and forms_submit_core body md5 in 0009's and 0036's files, forms_submit_core in 0031's, to 0040's); everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints40 = after['0040_fingerprints.sql'];
+  const tail = ' definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE';
+  record(`${L}0040 fingerprints: forms_check_answers and forms_submit_core are security invoker, search_path="", for nobody, one version each, the md5s of the pre-apply check`,
+    prints40.length === 4
+      && prints40.some((l) => l.startsWith('function  forms_check_answers(') && l.includes(`  ${MD5_0040.check40}`) && l.endsWith(tail))
+      && prints40.some((l) => l.startsWith('function  forms_submit_core(') && l.includes(`  ${MD5_0040.submit40}`) && l.endsWith(tail)),
+    prints40.join(' | '));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0040: false / true / false / true / true, still 1 old-shape sign-up (history is kept)`,
+    applied.check_is_0036 === false && applied.check_is_0040 === true && applied.submit_is_0036 === false
+      && applied.submit_is_0040 === true && applied.profile_in === true && applied.old_shape_signups === 1,
+    JSON.stringify(applied));
+  record(`${L}0040 wrote nothing: the forms, both earlier sign-ups (the old-shape one too), their prospects and both histories are unchanged`,
+    dataBefore === (await one(db, snapSql)));
+
+  // d. the new test file; the old-shape tests are left out by design
+  await tests('after 0040', [['0040_tests.sql', 'ALL 0040 TESTS PASSED'], ['0007_tests.sql', 'ALL 0007 TESTS PASSED'],
+    ['0019_tests.sql', 'ALL 0019 TESTS PASSED']]);
+
+  // e. re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0040 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0040 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+
+  // f. the undo: paste 0036 again (SETUP.md 0040e says so)
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0040e\. Undo 0040/m);
+  if (at < 0 || !setup.slice(at, at + 2500).includes('0036_new_students_profile.sql')) {
+    record(`${L}[undo 0040] SETUP.md has "### 0040e. Undo 0040" naming 0036_new_students_profile.sql`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0040] paste 0036_new_students_profile.sql again`, migration36)) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0040] every fingerprint file equals the one before 0040`, back.length === 0,
+      back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    record(`${L}[undo 0040] the pre-apply check answers as before 0040`, JSON.stringify(await pre()) === JSON.stringify(ready),
+      JSON.stringify(await pre()));
+    record(`${L}[undo 0040] the forms, both sign-ups, their prospects and both histories are as before 0040`,
+      dataBefore === (await one(db, snapSql)));
+    await tests('after the undo', baseline);
+    if (await run(db, `${L}[undo 0040] apply 0040 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0040_fingerprints.sql');
+      record(`${L}[undo 0040] after the redo the 0040 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints40));
+      await tests('after the redo', [['0040_tests.sql', 'ALL 0040 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints40;
 }
 
 // =====================================================================

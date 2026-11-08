@@ -152,10 +152,10 @@ group('children: first name, last name, date of birth (0036, v0.634 / v0.637)', 
   assert.equal(removedChildIndex([a, b, c], [a, { ...b }, c]), -1); // a change, not a removal
   assert.deepEqual(bookingsWithoutChild({ 0: 'x|d|1', 1: 'none', 2: 'y|d|2' }, 1), { 0: 'x|d|1', 1: 'y|d|2' });
   assert.deepEqual(bookingsWithoutChild({ 0: 'x|d|1', 2: 'y|d|2' }, 0), { 1: 'y|d|2' });
-  // the database: the new shape or the old one (a page opened before 0036), exactly those keys
+  // the database (0040): only the new shape, exactly those keys; the old { first_name, age } is refused
   assert.equal(checkAnswers(walkIn, goodAnswers, kids, SIG), true);
-  assert.equal(checkAnswers(walkIn, goodAnswers, [{ first_name: 'Maya', age: 7 }], SIG), true);
-  assert.equal(checkAnswers(walkIn, goodAnswers, [maya, { first_name: 'Leo', age: 9 }], SIG), true);
+  assert.equal(checkAnswers(walkIn, goodAnswers, [{ first_name: 'Maya', age: 7 }], SIG), false);
+  assert.equal(checkAnswers(walkIn, goodAnswers, [maya, { first_name: 'Leo', age: 9 }], SIG), false);
   assert.equal(checkAnswers(walkIn, goodAnswers, [{ ...maya, age: 7 }], SIG), false);
   assert.equal(checkAnswers(walkIn, goodAnswers, [{ first_name: 'Maya', dob: '2019-03-04' }], SIG), false);
   assert.equal(checkAnswers(walkIn, goodAnswers, [{ ...maya, last_name: '' }], SIG), false);
@@ -189,12 +189,12 @@ group('address: street, city, state, ZIP code (0036, v0.634)', () => {
   // what is sent: each part tidied; a blank one isn't sent
   assert.deepEqual(cleanAnswers(walkIn, { ...goodAnswers, address: { street: ' 12  Elm Street ', city: 'Worcester ', state: ' MA', zip: ' 01602 ' } }).address, HOME);
   assert.equal('address' in cleanAnswers(walkIn, { ...goodAnswers, address: { street: '', city: '', state: 'MA', zip: '' } }), false);
-  // the database: exactly the four parts, all filled — or a plain text (from a page opened before)
+  // the database (0040): exactly the four parts, all filled; a plain text is refused since 0040
   const { address: _gone, ...noAddress } = goodAnswers;
   const db = (v, fields = walkIn) => checkAnswers(fields, v === undefined ? noAddress : { ...goodAnswers, address: v }, kids, SIG);
   assert.equal(db(HOME), true);
   assert.equal(db({ ...HOME, zip: '01602-1234' }), true);
-  assert.equal(db('12 Elm Street, Worcester MA 01602'), true);
+  assert.equal(db('12 Elm Street, Worcester MA 01602'), false);
   assert.equal(db('x'.repeat(201)), false);
   assert.equal(db({ ...HOME, country: 'US' }), false);
   assert.equal(db({ street: HOME.street, city: HOME.city, zip: HOME.zip }), false);
@@ -435,7 +435,7 @@ group('backend: closures hide times; Calendar list flags cancelled classes', () 
   assert.equal(t.call('forms_bookings_between', { p_location_code: null, p_from: TODAY, p_to: '2027-04-30' }).status, 'invalid'); // > 62 days
 });
 
-group("backend: a child's age from the date of birth; the old shape still saved (0036)", () => {
+group("backend: a child's age from the date of birth; the old shape and a plain-text address refused (0036, 0040)", () => {
   const t = makeBackend();
   const f = liveFreeClass(t);
   // today is Mon 2027-01-11 (TODAY)
@@ -455,11 +455,11 @@ group("backend: a child's age from the date of birth; the old shape still saved 
   const before = t.store().submissions.length;
   for (const dob of ['2025-01-12', '1927-01-11', '2027-01-12']) assert.equal(send([{ ...maya, dob }]).status, 'invalid', dob);
   assert.equal(t.store().submissions.length, before);
-  // a page opened before 0036 still sends { first_name, age }: saved as before, a mix too
-  assert.equal(send([{ first_name: 'Leo', age: 9 }]).status, 'ok');
-  assert.deepEqual(last().children, [{ first_name: 'Leo', age: 9 }]);
-  assert.equal(send([{ first_name: 'Leo', age: 9 }, maya]).status, 'ok');
-  assert.deepEqual(last().children.map((c) => c.age), [9, 7]);
+  // a page opened before 0036 sends { first_name, age }: since 0040 refused, a mix too, nothing saved
+  const kept = t.store().submissions.length;
+  assert.equal(send([{ first_name: 'Leo', age: 9 }]).status, 'invalid');
+  assert.equal(send([{ first_name: 'Leo', age: 9 }, maya]).status, 'invalid');
+  assert.equal(t.store().submissions.length, kept);
   // the Address question is required on this form; a wrong ZIP code is refused
   const { address: _gone, ...noAddress } = ANSWERS;
   const answers = (a) => t.call('forms_staff_submit', {
@@ -467,6 +467,7 @@ group("backend: a child's age from the date of birth; the old shape still saved 
   }).status;
   assert.equal(answers(noAddress), 'invalid');
   assert.equal(answers({ ...ANSWERS, address: { ...HOME, zip: '160' } }), 'invalid');
+  assert.equal(answers({ ...ANSWERS, address: '45 Pleasant Street, Worcester, MA 01609' }), 'invalid'); // 0040: no plain text
 });
 
 group('preview samples: a store from before 0036 is replaced; the samples follow 0036', () => {
