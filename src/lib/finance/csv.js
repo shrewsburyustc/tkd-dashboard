@@ -61,6 +61,8 @@ export const DEFAULT_CSV_LABELS = {
   bb_items: { payment: 'Payment', kukkiwon: 'Kukkiwon', join: ' + ' },
   // A returned check's note: "Handed in 2027-04-14"
   handed_in: 'Handed in',
+  // An edited line whose school changed: "was $70.00 cash at Worcester" (Batch A, R1-01)
+  was_at: 'at',
 };
 
 // What a Black Belt payment is for, as Black Belt's own screens write it (contract 0026 §6):
@@ -141,6 +143,14 @@ function noteOf(row, labels) {
   return String(note).startsWith(handed) ? String(note) : `${handed} · ${note}`;
 }
 
+// An edited line whose first desk was another school (was_school, 0047): "was $70.00 cash" becomes
+// "was $70.00 cash at Worcester". Rows without was_school keep their note exactly as it was.
+function wasSchoolNote(row, labels) {
+  const note = row?.note ?? null;
+  if (!row?.was_school || typeof note !== 'string' || !note.startsWith('was ')) return note;
+  return `${note} ${labels.was_at} ${labels.school?.[row.was_school] ?? row.was_school}`;
+}
+
 // The whole file: a byte-order mark, a header line, then one line per row, every line ending with CRLF.
 //   rows: finance_export's `rows` (snake_case, exactly as the database sends them)
 //   options.headers: { key: 'Header words' } to replace any default header
@@ -155,7 +165,8 @@ export function toCsv(rows, { headers = {}, labels = {} } = {}) {
   }));
   const lines = [CSV_COLUMNS.map(([key]) => quoteCell(guardFormula(String(head[key] ?? key)))).join(',')];
   for (const row of rows ?? []) {
-    const withNote = row?.kind === 'returned' ? { ...row, note: noteOf(row, words) } : row;
+    let withNote = row?.kind === 'returned' ? { ...row, note: noteOf(row, words) } : row;
+    if (withNote?.was_school) withNote = { ...withNote, note: wasSchoolNote(withNote, words) };
     lines.push(CSV_COLUMNS.map(([key, type]) => cellText(withNote, key, type, words)).join(','));
   }
   return `${CSV_BOM}${lines.join('\r\n')}\r\n`;

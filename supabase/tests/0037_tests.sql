@@ -137,7 +137,7 @@ declare
     'status', 'day', 'school', 'fingerprint', 'totals', 'count', 'total_cents', 'in_cents', 'net_cents',
     'cash', 'check', 'card', 'cents', 'refunds', 'cash_cents', 'check_cents', 'card_cents', 'items', 'source',
     'payment_id', 'time', 'first_name', 'last_name', 'what', 'event_date', 'is_private', 'kind', 'method',
-    'amount_cents', 'state', 'was_amount_cents', 'was_method', 'moved_to', 'moved_from', 'changed_by_name',
+    'amount_cents', 'state', 'was_amount_cents', 'was_method', 'was_school', 'moved_to', 'moved_from', 'changed_by_name',
     'changed_on', 'recorded_by_name', 'added_after_closing', 'closing', 'id', 'by_name', 'at',
     'cash_counted_cents', 'checks_counted', 'checks_counted_cents', 'card_counted_cents', 'expected_count',
     'expected_cash_cents', 'expected_checks', 'expected_checks_cents', 'expected_card_cents', 'note', 'results',
@@ -260,7 +260,8 @@ begin
   select string_agg(distinct k, ',' order by k) into v_txt
     from (select jsonb_array_elements(v_rw -> 'rows') e union all select jsonb_array_elements(v_rs -> 'rows')) x,
          lateral jsonb_object_keys(e) k;
-  perform pg_temp.t_eq('E5 row keys', v_txt,
+  -- (0047, later, adds was_school to every row: this check passes before and after it)
+  perform pg_temp.t_eq('E5 row keys', replace(replace(v_txt, ',was_school', ''), 'was_school,', ''),
     'amount_cents,counted_cents,day,event_date,first_name,is_private,kind,last_name,method,note,recorded_by_name,school,state,time,what');
 
   -- ===================================================================
@@ -281,7 +282,10 @@ begin
     into v_txt
     from pg_proc p
    where p.oid = to_regprocedure('public.finance_export(text, date, date)');
-  perform pg_temp.t_eq('E7 definer | settings | anon | authenticated | service_role | PUBLIC | code', v_txt,
+  -- the code is 0037's, or (once 0047 is applied) 0047's: it adds only was_school
+  perform pg_temp.t_eq('E7 definer | settings | anon | authenticated | service_role | PUBLIC | code',
+    case when right(v_txt, 32) in ('f812a5b147fda8d8603afe907abd2137', '0f4b678f757bca72fec14bb78aacd37d')
+         then left(v_txt, length(v_txt) - 32) || 'f812a5b147fda8d8603afe907abd2137' else v_txt end,
     'true|search_path=""|false|true|false|false|f812a5b147fda8d8603afe907abd2137');
 
   -- ===================================================================
