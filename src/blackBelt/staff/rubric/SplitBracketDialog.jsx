@@ -3,11 +3,10 @@
 // makes; both keep the pass mark (change either one after), and a subject limited to the bracket
 // stays limited to both halves (rubric.js splitBracket does the work).
 // PC and tablet: a small dialog over the editor. Phones: a full-screen page over the full-screen
-// editor (InnerDialog, so the editor keeps the browser-history step).
+// editor (the shared Dialog with onTop, so the editor keeps the browser-history step).
 import { useId, useState } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import { AGE_MAX, bracketLabel } from '../../../lib/blackBelt/rubric.js';
-import InnerDialog from '../parts/InnerDialog.jsx';
 import { FieldNote, NumberBox } from './fields.jsx';
 import * as T from '../text.js';
 
@@ -73,10 +72,11 @@ export default function SplitBracketDialog({ bracket, danNo, where, isPhone, onS
     </form>
   );
 
-  const Frame = isPhone ? InnerDialog : Dialog;
+  // On phones it opens on top of the full-screen editor (onTop: no history step of its own, so the
+  // editor keeps the browser-history step); on PC and tablet it is a plain dialog over the page.
   return (
-    <Frame title={T.splitTitle(label)} fullScreen={isPhone} onRequestClose={onCancel}>
+    <Dialog title={T.splitTitle(label)} fullScreen={isPhone} onTop={isPhone} onRequestClose={onCancel}>
       {content}
-    </Frame>
+    </Dialog>
   );
 }

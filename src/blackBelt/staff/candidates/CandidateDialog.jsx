@@ -10,7 +10,7 @@
 //   - Payments: Plan · Kukkiwon certificate · every payment (Date · For · How · Amount · Note ·
 //     Recorded by; phones: two lines each) with a ⋯ per line for admins · the totals
 //   - History · N changes › (BB8, v0.972: the shared line, CandidateHistory.jsx; not in Edit details)
-//   - Close · Print receipt · Record payment (primary), and ⋯: Edit details · Change plan or
+//   - Close · Print receipt (only with a payment or refund that still stands) · Record payment (primary), and ⋯: Edit details · Change plan or
 //     Kukkiwon — (admins) Withdraw · Delete permanently, or on a withdrawn candidate Restore ·
 //     Delete permanently (v1.007 / v0.963: no "Remove candidate" choice box any more)
 // Edit details (Star v0.112) turns the same dialog into fields with Cancel and Save.
@@ -44,7 +44,7 @@ import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
 import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
-import { canRecordPayment, detailsProblems } from './checks.js';
+import { canRecordPayment, detailsProblems, printReceiptOffered } from './checks.js';
 import CandidateHistory from './CandidateHistory.jsx';
 import { ICONS } from './icons.js';
 import { MoneyTag } from './RosterRows.jsx';
@@ -683,7 +683,9 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
       {T.RECORD_PAYMENT}
     </button>
   );
-  const printButton = !hidden && (
+  // Print receipt only with a payment or refund that still stands (the detail knows the live lines
+  // exactly), active or withdrawn; never while hidden (BB2 / M-03, v1.055 (b))
+  const printButton = printReceiptOffered({ hidden, isMakeup: c.isMakeup === true, lines: data.payments }) && (
     <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} data-focus-key="detail-print" onClick={(event) => actions.openReceipt(c.id, event.currentTarget)}>
       <PrintIcon size={16} aria-hidden="true" />
       {T.PRINT_RECEIPT}

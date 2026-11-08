@@ -9,16 +9,17 @@
 //   1. setKeepYears(confirmCount: null) → 'confirm_needed' + how many candidates it would remove
 //   2. 0 → saved straight away; more than 0 → "Saving deletes the signature, signer's name, date of
 //      birth and email of N candidates now. This can't be undone." · Save and delete (red)
+// The "Save and delete" question is the shared ConfirmBox on top of this dialog (BB7: safe button left).
 // Toast "Keeping time saved · Undo" (BB5, v0.967; RubricTab.jsx runs the Undo) — without Undo when
 // the save went through "Save and delete" (it already deleted details).
 import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { setKeepYears } from '../../../lib/blackBelt/api.js';
 import { keepYearsProblem } from '../../../lib/blackBelt/rules.js';
-import ConfirmDialog from '../parts/ConfirmDialog.jsx';
 import * as T from '../text.js';
 
 const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE_SETTINGS, NOT_ALLOWED: T.NOT_ALLOWED, INVALID: T.INVALID };
@@ -182,17 +183,21 @@ export default function KeepYearsDialog({ settings, isPhone, onClose, onSaved, o
         </form>
       </Dialog>
       {confirm && (
-        <ConfirmDialog
+        // The shared ConfirmBox (BB7), on top of this dialog: the safe button on the left, the red
+        // "Save and delete" on the right ("Deleting…" while it works; it can't be closed meanwhile).
+        <ConfirmBox
           title={T.KEEP_CONFIRM_TITLE}
-          body={T.keepConfirmBody(confirm.count)}
-          cancelLabel={T.CANCEL}
-          confirmLabel={T.SAVE_AND_DELETE}
-          danger
-          nested
+          keepLabel={T.KEEP_CONFIRM_KEEP}
+          actionLabel={T.SAVE_AND_DELETE}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          onTop
           busy={saving}
           onConfirm={() => secondStep(confirm.count)}
-          onCancel={() => !saving && setConfirm(null)}
-        />
+          onKeep={() => !saving && setConfirm(null)}
+        >
+          {T.keepConfirmBody(confirm.count)}
+        </ConfirmBox>
       )}
     </>
   );

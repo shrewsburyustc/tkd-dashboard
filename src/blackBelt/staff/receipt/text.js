@@ -1,44 +1,33 @@
-// text.js — every word of the Black Belt payment receipt (its preview and the printed page).
+// text.js — the words Black Belt gives the shared payment receipt (buildReceipt.js).
 // Why it exists: contract CONTRACT-0016-B2 §0 / §4 — the data layer (src/lib/blackBelt/api.js)
-// returns only codes ('ok', 'not_found', 'kukkiwon', 'check' …); the receipt turns them into words
-// here, in one place. The sentences come from the approved mockup Candidates 8
-// (TKD-BlackBelt-Candidates-Mockups.html, rulebook v0.220). Anything the mockup doesn't show is
-// marked "(not in the mockups)" so it can be listed for Jeffrey's walkthrough (CP2).
+// returns only codes ('ok', 'not_found', 'kukkiwon', 'check' …); the receipt's facts and table
+// lines turn them into words here, in one place. The sentences come from the approved mockup
+// Candidates 8 (TKD-BlackBelt-Candidates-Mockups.html, rulebook v0.220). Since BB2 (rulebook v1.002 /
+// v1.105) the box, its buttons, the table's headings, the totals and the footer are the shared
+// receipt's own words (src/components/text.js); only what is Black Belt's own stays here. Anything
+// the mockup doesn't show is marked "(not in the mockups)".
 //
-// Money: whole cents in, "$290" / "$290.50" / "−$50" out (formatCents, money.js).
+// Money: whole cents in, "$290" / "$290.50" out (formatCents, money.js).
 // Dates: 'YYYY-MM-DD' school dates, turned into words by the staff screens' helpers.
 import { formatCents } from '../../../lib/blackBelt/money.js';
 import { monthDay, shortDate } from '../text.js';
 
-// "Apr 26, 2027" (the printed date) — the school date as text, read on this computer's calendar
-// (new Date(year, month - 1, day), never new Date('YYYY-MM-DD'), which could show the day before).
-export function longDate(iso) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '');
-  if (!match) return '';
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-// ===== The preview (dialog on PC / tablet, full screen on phones) =====
-export const DIALOG_TITLE = 'Receipt';
+// ===== The box =====
 export const dialogSub = (firstName, lastName, cycleName) => `${firstName} ${lastName} · ${cycleName}`;
-export const PRINT = 'Print or save as PDF';
-export const CLOSE = 'Close';
-export const LOADING = 'Loading the receipt'; // screen readers only (not in the mockups)
-export const LOAD_FAILED = "Couldn't load the receipt. Check the connection, then try again."; // (not in the mockups)
 export const NOT_FOUND = 'This candidate was deleted, so there is no receipt.'; // (not in the mockups)
-export const HIDDEN = 'Payment details are hidden on this tablet.'; // Hide private details on: the shared receipt's words (v1.105, v0.974)
-// The printed page's name for screen readers in the preview (the picture of the page).
-export const PAGE_LABEL = 'Receipt page as it will print'; // screen readers only (not in the mockups)
 
-// ===== The printed page =====
-export const SCHOOL_NAME = 'Jae H. Jeong’s U.S. Taekwondo Center';
-export const PAGE_SUBTITLE = 'Black Belt testing · payment receipt';
+// ===== The page's facts =====
+export const KIND_LINE = 'Black Belt testing · payment receipt';
 export const LABEL_CANDIDATE = 'Candidate';
 export const LABEL_CYCLE = 'Cycle';
 export const LABEL_REFERENCE = 'Reference';
 export const LABEL_SCHOOL = 'School';
 export const LABEL_PLAN = 'Plan';
+
+// The word after a balance owed on the receipt (buildReceipt.js): "next due May 29", or "overdue"
+// when the next payment's date has passed (the receipt has no "since" date).
+export const nextDueNote = (dateText) => `next due ${dateText}`;
+export const OVERDUE_NOTE = 'overdue';
 
 const DAN = { 1: '1st Dan', 2: '2nd Dan', 3: '3rd Dan', 4: '4th Dan' };
 export const danLabel = (dan) => DAN[dan] ?? '';
@@ -72,16 +61,9 @@ export function planLine({ planName, amounts, kukkiwon, kukkiwonCents, kukkiwonA
   return text;
 }
 
-// The table
-export const COL_DATE = 'Date';
-export const COL_FOR = 'For';
-export const COL_HOW = 'How paid';
-export const COL_AMOUNT = 'Amount';
-export const lineDate = (iso) => monthDay(iso); // "Mar 27"
-
-const METHOD = { cash: 'Cash', check: 'Check', card: 'Card' };
-export const methodLabel = (method) => METHOD[method] ?? '';
+// ===== The table's "For" and "How paid" cells =====
 export const NO_METHOD = '—'; // a returned check: no money changed hands that day
+export const REFUND = 'Refund';
 
 // One item code → its words: 'p2' → "Payment 2", 'kukkiwon' → "Kukkiwon certificate".
 export function itemLabel(code) {
@@ -100,26 +82,6 @@ export function itemsText(codes, { planName, paymentsCount }) {
     .filter(Boolean)
     .join(' + ');
 }
-export const REFUND = 'Refund';
 // A returned check's line: "Payment 2 · check returned"; when the check it marks can't be told
 // apart, just "Check returned" (contract §4.2).
 export const returnedText = (itemsWords) => (itemsWords ? `${itemsWords} · check returned` : 'Check returned');
-
-// The totals
-export const TOTAL_DUE = 'Total due';
-export const PAID_TO_DATE = 'Paid to date';
-export const BALANCE = 'Balance';
-// "$0 · paid in full" · "$290 · next due May 29" · "$290 · overdue" · "−$50 · overpaid"
-export function balanceText({ balanceCents, nextOn }) {
-  const amount = formatCents(balanceCents);
-  if (balanceCents === 0) return `${amount} · paid in full`;
-  if (balanceCents < 0) return `${amount} · overpaid`;
-  if (nextOn) return `${amount} · next due ${monthDay(nextOn)}`;
-  return `${amount} · overdue`; // late or not paid (the receipt has no "since" date, contract §7.3)
-}
-
-// The footer: one line per school, then who printed it
-// "Worcester · 1141 Main St · (508) 767-1717" (an empty street or phone is left out)
-export const schoolLine = (name, street, phone) => [name, street, phone].filter((part) => typeof part === 'string' && part.trim() !== '').join(' · ');
-export const printedLine = (printedOn, printedByName) =>
-  `Printed ${longDate(printedOn)}${printedByName ? ` by ${printedByName}` : ''}. Fees are non-refundable.`;

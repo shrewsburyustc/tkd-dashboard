@@ -206,7 +206,7 @@ export default function RubricReadView({ dan, isPhone, showStamp }) {
     <div className="bbr-view">
       <div className="bbr-pass">
         <p className="bbr-pass-line">
-          <b>{T.TO_PASS}:</b> {passText(dan)}
+          <b className="bb-medium">{T.TO_PASS}:</b> {passText(dan)}
           {dan.pass?.no_d ? ` · ${T.NO_D_ANY}` : ''}
           <span className="bbr-most">{mostText(dan)}</span>
         </p>

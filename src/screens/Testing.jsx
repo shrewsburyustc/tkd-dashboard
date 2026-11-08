@@ -316,6 +316,7 @@ export default function Testing({
           clearToast={clearToast}
           onModalOpenChange={onModalOpenChange}
           location={location} onLocationChange={onLocationChange}
+          deviceLocation={tabProps.deviceLocation}
           onLeaveGuardChange={tabProps.onLeaveGuardChange}
         />
       </Suspense>
