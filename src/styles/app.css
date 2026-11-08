@@ -503,6 +503,10 @@ img {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Positioned, so the visually-hidden spans inside a page (position: absolute) are measured from
+     the page area, not from the whole document: otherwise they make the document scroll as well, a
+     second scrollbar that pageRoom.js then subtracts twice (Color Belt's L-02 review). */
+  position: relative;
 }
 
 /* Panel size couldn't be saved (v1.118), and the one offline bar (v1.123, M12), Shell.jsx: the
@@ -516,6 +520,13 @@ img {
 
 .shell-errbar .errbar {
   margin-bottom: 0; /* the page's own top padding makes the gap under it */
+}
+
+/* Since R2-05 (v1.128, v1.129) the bars sit in one box under the top bar: the offline bar, Panel
+   size's bar, a left page's Undo bar, and the place (.shell-pagebars) where a page's own bars are
+   drawn (PageBar.jsx). It holds --page-scrollbar for all of them; empty, it takes no room. */
+.shell-bars {
+  flex: none;
 }
 
 /* ===== Rail (left navigation) — hidden on phones ===== */
@@ -1114,7 +1125,7 @@ img {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: var(--space-4);
+  justify-content: center;
   height: 32px;
   padding: 0 var(--space-8);
   border: none;
@@ -1123,6 +1134,33 @@ img {
   color: var(--color-on-blue); /* white */
   font-size: var(--text-13);
   font-weight: 500;
+}
+
+/* The queued Undo (rulebook v1.125, Toast.jsx): "Undo" and "Undoing…" (each with its icon) sit in one
+   spot, so the button is as wide as "Undoing…" from the start and nothing moves when the words
+   change. The hidden one keeps the width; each is centred, as in the approved picture. */
+.toast-undo-words {
+  display: inline-grid;
+}
+
+.toast-undo-word {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  justify-self: center;
+  gap: var(--space-4);
+  white-space: nowrap;
+}
+
+.toast-undo-word.is-hidden {
+  visibility: hidden;
+}
+
+/* "Undoing…" while the Undo waits or runs: the busy look on the dark toast — the toast's white at
+   60 % and the busy cursor (the approved picture); still a Tab stop (aria-disabled) */
+.toast-undo[aria-disabled='true'] {
+  color: rgb(255 255 255 / 60%);
+  cursor: progress;
 }
 
 /* A white ring: the usual blue one would hardly show on the near-black toast */
@@ -1220,7 +1258,9 @@ img {
   .btn::after {
     content: '';
     position: absolute;
-    inset: -4px 0; /* invisible: 36px button + 2 × 4px = 44px tap height */
+    /* Invisible tap box. An absolutely placed box is measured from inside the button's 1px border, so
+       the 36px button's inside is 34px: 34 + 2 × 5 = 44px tap height (pass 2 L-03; -4px gave 42). */
+    inset: -5px 0;
   }
 
   .input {

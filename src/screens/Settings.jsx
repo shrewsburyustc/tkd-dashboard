@@ -28,7 +28,7 @@
 // focusPart ('classes-and-ranks' when the address asked for that part, else null).
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
-import ErrorBanner from '../components/ErrorBanner.jsx';
+import PageBar from '../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
 import ChoiceGroup from '../components/ChoiceGroup.jsx';
 import IconButton from '../components/IconButton.jsx';
 import { loadSchools, updateSchoolContact } from '../lib/settings/schoolsApi.js';
@@ -222,11 +222,11 @@ export default function Settings({
       </div>
     );
   } else if (load.state === 'error') {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />;
   } else {
     body = (
       <>
-        {load.failed && <ErrorBanner text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />}
+        {load.failed && <PageBar text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />}
         <div className="clist st-list" role="list" aria-label={T.SCHOOLS} {...nav.containerProps}>
           {schools.map((school) => {
             const name = T.schoolName(school.name);

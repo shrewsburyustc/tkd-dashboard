@@ -38,7 +38,7 @@
 //   today            'YYYY-MM-DD' (the school's today: the outline, and where an empty calendar opens)
 //   min, max         the first / last day that can be chosen ('YYYY-MM-DD' or null = no limit)
 //   years            the Year list's years, e.g. [2026, 2027, 2028] (the year on show is added)
-//   hint             the gray line under the days ("Past dates can't be chosen.")
+//   hint             the gray line under the days ("Past days can't be chosen.", the shared words)
 //   marked           { date, hintLabel: 'Testing date.', srLabel: 'testing date' } or null — the
 //                    dot day; hintLabel starts the hint (after a dot) only while its month is on show
 //   placeholder      shown when empty ("Choose…")

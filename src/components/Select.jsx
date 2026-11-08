@@ -29,7 +29,10 @@
 // Props:
 //   id, labelId, describedBy   the field's id, its visible label's id, the hint / error under it
 //   value          the chosen value, or null (nothing chosen)
-//   options        [{ value, label }]
+//   options        [{ value, label, group? }]. With `group` ("Current", "Planned"), the list shows the
+//                  group's name as a heading row above its first choice, like a browser's optgroup:
+//                  keep a group's choices next to each other, in order. Nothing else changes (the
+//                  arrow keys and typing move by choice; the heading is only text).
 //   placeholder    shown when value is null ("Choose…")
 //   onChange       (value) => void
 //   readOnly       true while saving ("busy"): gray, the busy cursor, it doesn't open; still a Tab stop
@@ -47,7 +50,7 @@
 //                  that typing STARTED (before the "1" of "10" moved it). The time list
 //                  (TimeList.jsx) uses it so typing a number jumps to that hour (M8 detail b,
 //                  rulebook v1.109). Without it, typing works exactly as before.
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { IconChevronDown } from '@tabler/icons-react';
 
 const PAGE_STEP = 8;
@@ -277,21 +280,31 @@ export default function Select({ id, labelId, describedBy, value, options, place
         style={place ? { top: place.top, left: place.left, width: place.width, maxHeight: place.maxHeight } : undefined}
       >
         {options.map((option, index) => (
-          <li
-            key={option.value}
-            id={optionId(index)}
-            role="option"
-            aria-selected={option.value === value ? 'true' : 'false'}
-            className={`fa-option${index === active ? ' is-active' : ''}${option.value === value ? ' is-selected' : ''}`}
-            // mousedown preventDefault keeps focus on the field
-            onMouseDown={(event) => event.preventDefault()}
-            onMouseMove={() => {
-              if (active !== index) setActive(index);
-            }}
-            onClick={() => choose(index)}
-          >
-            {option.label}
-          </li>
+          <Fragment key={option.value}>
+            {/* A group heading ("Current", "Planned") above the first choice of each group: plain text,
+                never a choice, never reached by the arrow keys (they move by choice). */}
+            {option.group && option.group !== options[index - 1]?.group && (
+              <li role="presentation" className="fa-group-label">
+                {option.group}
+              </li>
+            )}
+            <li
+              id={optionId(index)}
+              role="option"
+              aria-selected={option.value === value ? 'true' : 'false'}
+              // A choice in a group says its group too, so a screen reader hears it ("Current: Spring")
+              aria-label={option.group ? `${option.group}: ${option.label}` : undefined}
+              className={`fa-option${index === active ? ' is-active' : ''}${option.value === value ? ' is-selected' : ''}`}
+              // mousedown preventDefault keeps focus on the field
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseMove={() => {
+                if (active !== index) setActive(index);
+              }}
+              onClick={() => choose(index)}
+            >
+              {option.label}
+            </li>
+          </Fragment>
         ))}
       </ul>
     </div>
