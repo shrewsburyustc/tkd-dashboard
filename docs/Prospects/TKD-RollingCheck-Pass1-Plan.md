@@ -35,7 +35,11 @@ No database change in steps 1–6. Step 7 is the 0036 clean-up migration, **0040
   - Undo: "Undo didn't save. Check the connection, then retry."
   - Other saves: "Couldn't save. Check the connection, then try again." (Black Belt's and the Schedule's words). Prospects' "It wasn't saved. Check the connection and try again." changes to the same; it's outlined in amber in the mockup.
   - The builder's draft autosave keeps its own line, because it really does try again.
-- **Mockup:** the bars at the four sizes.
+- **Mockup:** the bars at the four sizes. **Pictures sent 2026-11-07** (Jeffrey: "Yes, step 2"): `RollingCheck-Step2-1-forms.png`, `-2-builder.png`, `-3-prospects.png` (real preview screens with a real failed save; only the bar's words and its Retry are added).
+- **Pass 2 corrections that go into this step:**
+  - **X-1:** a bar belongs to the child it was made for; opening another child (`openProspect`) clears it, so Retry can never repeat one child's save inside another child's window.
+  - **U-04:** Print on a child deleted elsewhere (`not_found`) closes the window with "That prospect no longer exists." in the page's bar; Retry stays for `'error'` only.
+  - **U-01's four boxes** (Delete prospect, Came, Joined, Book) keep their own note inside the box (step A, live), not this bar.
 - **Files:** `Forms.jsx`, `forms/Builder.jsx`, `forms/text.js`, `Prospects.jsx`, `prospects/ProspectPanel.jsx`, `prospects/text.js`.
 
 ### Step 3 — Toasts and short words (R2-09, R2-07's "open again", R2-08, ⋯ names, Forms' empty line)

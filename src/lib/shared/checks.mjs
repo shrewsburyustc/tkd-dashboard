@@ -743,5 +743,41 @@ await check('R2-05 sign-out: an Undo still running when the person signs out sho
   assert.equal(LINE.leftUndoBar(), null, 'nothing for the next person');
 });
 
+await check('R2-05 retry: a first save that hangs does not hold "Neither change saved" forever, and a retry after sign-out says no "Undone"', async () => {
+  // a hanging first save: the Retry gives up on it after the limit and runs the Undo anyway
+  const bars = [];
+  const toasts = [];
+  const options = { section: 'Camps', showToast: (text) => toasts.push(text), undoBar: (bar) => bars.push(bar), onBusyChange: () => {} };
+  const line = LINE.createSaveLine(() => options, { giveUpMs: 30 });
+  line.begin();
+  let tries = 0;
+  const pressed = line.undoAction(async () => ((tries += 1), { status: tries === 1 ? 'error' : 'ok' }), { words: 'Zoe Park withdrawn' }).onAction();
+  line.end('error', { retry: () => new Promise(() => {}) }); // the save's own Retry never answers
+  await pressed;
+  const bar = bars.at(-1);
+  assert.equal(bar.text, SHARED.NEITHER_SAVED);
+  await bar.retry();
+  assert.equal(tries, 2, 'the Undo ran after the hanging save was given up on');
+  assert.deepEqual(toasts, [SHARED.UNDONE]);
+  // a Retry that succeeds after the person signed out: no "Undone" for whoever is next
+  const bars2 = [];
+  const toasts2 = [];
+  const options2 = { section: 'Camps', showToast: (text) => toasts2.push(text), undoBar: (bar2) => bars2.push(bar2), onBusyChange: () => {} };
+  const line2 = LINE.createSaveLine(() => options2);
+  let runs = 0;
+  const gate = later();
+  await line2.undoAction(async () => {
+    runs += 1;
+    if (runs === 1) return { status: 'error' };
+    await gate.promise;
+    return { status: 'ok' };
+  }).onAction();
+  const retrying = bars2.at(-1).retry();
+  LINE.endLeftUndoBarSession(); // signed out; the next person signs in
+  gate.settle();
+  await retrying;
+  assert.deepEqual(toasts2, [], 'no "Undone" for the next person');
+});
+
 console.log(`${count} groups of checks ran.`);
 console.log('ALL SHARED PARTS CHECKS PASSED');

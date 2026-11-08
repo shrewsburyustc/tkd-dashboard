@@ -40,7 +40,7 @@
 //                      rubric card registers its question through setGuard; the ways out inside
 //                      Black Belt (the tabs, ← Testing, opening or leaving a cycle) ask it too.
 import { useCallback, useEffect, useId, useRef } from 'react';
-import { IconArrowLeft } from '@tabler/icons-react';
+import BackLink from '../../components/BackLink.jsx';
 import CyclesTab from './cycles/CyclesTab.jsx';
 import CyclePage from './cycle/CyclePage.jsx';
 import RubricTab from './rubric/RubricTab.jsx';
@@ -67,11 +67,8 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   }
   return (
     <>
-      <button type="button" className="link-button ev-back bb-back" onClick={onBack}>
-        {/* ti-arrow-left = back */}
-        <IconArrowLeft size={16} aria-hidden="true" />
-        {T.BACK_TO_TESTING}
-      </button>
+      {/* the shared back link (R3-06, v1.048): 24px with a mouse, a 44px tap box on touch, the title never moves */}
+      <BackLink label={T.BACK_TO_TESTING} onClick={onBack} className="bb-back-link" />
       <div className="phead">
         <div className="phead-titles">
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>

@@ -77,8 +77,8 @@
 }
 
 /* Date signed under the signature (v0.522, v0.638) is the shared DateSigned.jsx (its own stylesheet,
-   date-signed-public.css: box, hint, 40px / 16px on touch). Star keeps nothing of its own here: the
-   label is the shared 13px one (Dashboard core; Star's old 12px rule was removed in Step D). */
+   date-signed-public.css: box, hint, 40px / 16px on touch). Nothing of Star's own: its label is the
+   shared 13px on every device, with the hint at 12px (Star used to keep 12px here). */
 
 /* Register another (Form screen 10): the note after the step line */
 

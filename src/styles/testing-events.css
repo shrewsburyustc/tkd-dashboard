@@ -286,6 +286,12 @@
 }
 
 /* ===== Event page (R1) ===== */
+/* The shared back link (components/BackLink.jsx, R3-06) sits straight inside .testing, a column: without this it
+   would stretch across the page, so the whole width above the title was a button (the old .ev-back had this too) */
+.testing > .back-link {
+  align-self: flex-start;
+}
+
 .ev-back {
   display: inline-flex;
   align-items: center;

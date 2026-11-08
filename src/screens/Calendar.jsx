@@ -1,6 +1,7 @@
 // Calendar.jsx — the Calendar section (rail icon ti-calendar-month, "Calendar"; rulebook v0.234, v0.239).
 // Why it exists: one place to see every school day — the regular classes (from the Schedule),
-// closures, school events, and Color Belt / Star testing events (read from Testing). It follows
+// closures, school events, and (v0.645, read-only) every other section's dated things — Color
+// Belt / Star testing, Black Belt testing days, camps, deadlines, new sign-ups. It follows
 // the school switcher. This file is the "brain" of the section, like ScheduleSchool is for the
 // Schedule. It:
 //   - loads both schools' schedules and the calendar rows for the dates on screen (useCalendar)
@@ -14,6 +15,8 @@
 //   - shows prospects' follow-ups (v0.612 / v0.615, loaded apart by useFollowUps) — a tap opens
 //     the child in Prospects — and the "Show" menu that hides any kind of item (v0.613),
 //     remembered per person on this device (showKinds.js)
+//   - opens another section's item in that section (openItem): it first switches the school
+//     switcher where that page needs it, then calls App.jsx's own openers (nothing is copied here)
 //
 // Rules worth knowing (same as Testing and the Schedule):
 //   - ONE change at a time; dialog saves WAIT for the database.
@@ -25,6 +28,8 @@ import ErrorBanner from '../components/ErrorBanner.jsx';
 import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
+import { STAR_TESTING_ON } from '../lib/features.js';
+import { handOffPrivate } from '../lib/star/homeHandoff.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { colorOf } from '../lib/schedule/colors.js';
@@ -59,12 +64,30 @@ import EventTypesDialog, { checkTypeForm, isTypeFormDirty } from './calendar/Eve
 import * as T from './calendar/text.js';
 
 const ALL_CODES = ['worcester', 'shrewsbury'];
+const SCHOOL_OF_CODE = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' }; // the switcher's words
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 // Today in Massachusetts, until the database's own answer arrives ('YYYY-MM-DD').
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 
-export default function Calendar({ location, staffId, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onOpenProspect }) {
+export default function Calendar({
+  location,
+  staffId,
+  isAdmin,
+  screenLocked,
+  onNoAccess,
+  onRefreshProfile,
+  showToast,
+  clearToast,
+  onModalOpenChange,
+  onOpenProspect,
+  onLocationChange,
+  onOpenTestingEvent,
+  onOpenPrivate,
+  onOpenStarEvent,
+  onOpenBlackBelt,
+  onOpenCamp,
+}) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const both = location === 'Both';
@@ -123,7 +146,8 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
       events: loaded?.events ?? [],
       closures: loaded?.closures ?? [],
       closureClasses: loaded?.closureClasses ?? new Map(),
-      testingEvents: loaded?.testingEvents ?? [],
+      // Star's items only while Star testing is switched on (the live site doesn't have its pages yet)
+      items: (loaded?.items ?? []).filter((i) => STAR_TESTING_ON || !i.opens.startsWith('star_')),
       bookings: loaded?.bookings ?? [],
     };
     return (codes) => ({ ...base, schools: allSchools.filter((s) => codes.includes(s.code)) });
@@ -233,6 +257,44 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
   function pickDay(date) {
     setSelected(date);
     if (monthKey(date) !== monthKey(anchorDate)) setAnchor(date); // a grayed day of the next / previous month
+  }
+
+  // ===== Other sections' dates (v0.645): a click opens the item in its own section =====
+  // The pages that belong to one school close themselves on another school (or on Both), so the
+  // switcher moves to the item's school FIRST — as Finance's "Open in Testing" does. Camps and Star
+  // work on Both, so they only follow a single-school switcher. All the real opening is App.jsx's.
+  function openItem(item) {
+    const school = item.locationCode ? SCHOOL_OF_CODE[item.locationCode] : null;
+    const oneSchoolPage = item.opens === 'colorbelt_event' || item.opens === 'colorbelt_private';
+    if (school && school !== location && (oneSchoolPage || (item.opens === 'camp' && location !== 'Both'))) onLocationChange(school);
+    switch (item.opens) {
+      case 'colorbelt_event':
+        onOpenTestingEvent(item.refId);
+        break;
+      case 'colorbelt_private':
+        onOpenPrivate(item.refId);
+        break;
+      case 'star_event':
+        onOpenStarEvent(item.refId);
+        break;
+      case 'star_private':
+        // The private test has no address of its own: leave the candidate's id in page memory and
+        // open its event's Students tab, exactly like Home's Grade (lib/star/homeHandoff.js).
+        if (!item.eventId) return;
+        handOffPrivate({ eventId: item.eventId, candidateId: item.refId });
+        onOpenStarEvent(item.eventId, 'students');
+        break;
+      case 'bb_cycle':
+        onOpenBlackBelt({ cycleId: item.refId });
+        break;
+      case 'camp':
+        onOpenCamp(item.refId);
+        break;
+      case 'prospect':
+        onOpenProspect?.(item.refId);
+        break;
+      default:
+    }
   }
 
   // ===== Dialogs =====
@@ -626,13 +688,6 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
   const buttons =
     isAdmin && ready ? (
       <div className="sactions">
-        <IconButton
-          label={T.MORE_ACTIONS}
-          aria-haspopup="menu"
-          aria-expanded={menu?.kind === 'more' ? 'true' : 'false'}
-          onClick={(e) => setMenu(menu ? null : { kind: 'more', anchor: e.currentTarget })}
-          Icon={IconDots}
-        />
         <button
           type="button"
           className="btn btn-primary"
@@ -644,6 +699,14 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
           <IconPlus size={16} aria-hidden="true" />
           {T.ADD}
         </button>
+        {/* The page's ⋯ comes last, right of the blue button (R3-11, v1.047 (16)) */}
+        <IconButton
+          label={T.MORE_ACTIONS}
+          aria-haspopup="menu"
+          aria-expanded={menu?.kind === 'more' ? 'true' : 'false'}
+          onClick={(e) => setMenu(menu ? null : { kind: 'more', anchor: e.currentTarget })}
+          Icon={IconDots}
+        />
       </div>
     ) : null;
 
@@ -710,7 +773,7 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
   } else if (cal.status === 'noAccess' || !loaded) {
     body = null;
   } else if (shownView === 'week') {
-    body = <WeekView dates={week} today={today} infoFor={infoFor} typeColor={typeColor} both={both} onOpenEvent={openEvent} onOpenClosure={openClosure} />;
+    body = <WeekView dates={week} today={today} infoFor={infoFor} typeColor={typeColor} both={both} onOpenEvent={openEvent} onOpenClosure={openClosure} onOpenItem={openItem} itemsFailed={Boolean(loaded?.itemsFailed)} />;
   } else {
     const month = monthKey(anchorDate);
     const panel = (
@@ -729,6 +792,8 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
         onOpenClosure={openClosure}
         followUpsFailed={fu.status === 'error'}
         onOpenFollowUp={(f) => onOpenProspect?.(f.id)}
+        onOpenItem={openItem}
+        itemsFailed={Boolean(loaded?.itemsFailed)}
       />
     );
     const gridProps = { weeks, month, today, selected: selectedDate, infoFor, typeColor, onPick: pickDay };

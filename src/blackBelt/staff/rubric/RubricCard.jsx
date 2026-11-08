@@ -23,15 +23,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { danDiff, newSubjectId, RUBRIC_DANS, subjectLetters, workedPoints } from '../../../lib/blackBelt/rubric.js';
-import Choice from '../parts/Choice.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import CopyDanDialog from './CopyDanDialog.jsx';
 import DiscardDialog from './DiscardDialog.jsx';
 import RubricEditor, { PhoneUnsavedNote } from './RubricEditor.jsx';
 import RubricReadView from './RubricReadView.jsx';
 import SplitBracketDialog from './SplitBracketDialog.jsx';
 import SubjectDialog from './SubjectDialog.jsx';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
 import { prepareDan } from './draft.js';
 import { useRubricDraft } from './useRubricDraft.js';
 import * as T from '../text.js';
@@ -70,6 +72,8 @@ export default function RubricCard({
   const [saving, setSaving] = useState(false);
   const [stale, setStale] = useState(false);
   const [banner, setBanner] = useState(null); // { text, retry? } — read view and editor
+  // Save and the toast's Undo share one line (R2-05): an Undo pressed during a save waits its turn.
+  const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
   const [afterReload, setAfterReload] = useState(null);
   const [pendingReload, setPendingReload] = useState(null); // { yours } while Reload waits for the newer version
   const [override, setOverride] = useState(null); // a just-saved Dan, until the reload brings it
@@ -195,10 +199,17 @@ export default function RubricCard({
       return;
     }
     const base = d.base;
+    const token = line.begin(); // false while an Undo runs: the Save button is unavailable then (saving={saving || line.busy})
+    if (!token) return;
     setSaving(true);
     setBanner(null);
     clearToast();
-    const result = await saveDan({ dan: danNo, expectedRev: base.rev, sheet: dan });
+    let result;
+    try {
+      result = await saveDan({ dan: danNo, expectedRev: base.rev, sheet: dan });
+    } finally {
+      line.end(result?.status ?? 'error', { token });
+    }
     setSaving(false);
     const status = result.status;
     if (status === 'ok') {
@@ -208,7 +219,7 @@ export default function RubricCard({
         const savedRev = result.rev;
         showToast(T.danRubricSaved(danNo), {
           icon: false,
-          action: result.undoAvailable ? { label: T.UNDO, onAction: () => undo(danNo, savedRev, base) } : null,
+          action: result.undoAvailable ? line.undoAction(() => runUndo(danNo, savedRev, base), { words: T.danRubricSaved(danNo) }) : null,
         });
       }
       reload();
@@ -235,30 +246,32 @@ export default function RubricCard({
     }
   }
 
-  async function undo(n, rev, previous) {
+  // The toast's Undo, run inside the save line: answers { status, reason? } and the line shows "Undone",
+  // or the bar ("Undo didn't save…" with Retry, or the reason).
+  async function runUndo(n, rev, previous) {
     const result = await undoDan({ dan: n, expectedRev: rev });
     const status = result.status;
     if (status === 'ok') {
       setOverride({ ...previous, rev: result.rev, saved_at: result.savedAt, saved_by_name: result.savedByName });
-      showToast(T.TOAST_UNDONE, { icon: false });
-      reload();
-    } else if (status === 'no_access') {
-      onNoAccess();
-    } else if (status === 'stale') {
-      setBanner({ text: T.UNDO_RUBRIC_STALE });
-      reload();
-    } else if (status === 'locked') {
-      setBanner({ text: T.RUBRIC_LOCKED_NOW });
-      onLocked?.();
-    } else if (status === 'not_allowed') {
-      setBanner({ text: T.RUBRIC_NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (status === 'invalid' || status === 'not_found') {
-      setBanner({ text: T.UNDO_RUBRIC_STALE });
-      reload();
-    } else {
-      setBanner({ text: T.RUBRIC_UNDO_FAILED, retry: () => undo(n, rev, previous) });
+      await reload();
+      return { status: 'ok' };
     }
+    if (status === 'no_access') {
+      onNoAccess();
+      return { status };
+    }
+    if (status === 'error') return { status };
+    if (status === 'locked') {
+      onLocked?.();
+      return { status, reason: T.RUBRIC_LOCKED_NOW };
+    }
+    if (status === 'not_allowed') {
+      onRefreshProfile();
+      return { status, reason: T.RUBRIC_NOT_ALLOWED };
+    }
+    // stale, invalid, not_found: someone else changed it; read it again so "Their change is shown" is true
+    await reload();
+    return { status, reason: T.someoneElseChanged(T.DAN_LABELS[n] ?? 'this rubric') };
   }
 
   function pressReload() {
@@ -328,13 +341,12 @@ export default function RubricCard({
   if (!rubric) return null;
 
   const switcher = (
-    <div className="bbr-switcher">
+    <div className="bbr-switcher bbr-gray bbr-dans">
       <span id={`bbr-switch-${cardKey}`} className="visually-hidden">
         {T.DAN_SWITCHER}
       </span>
-      <Choice
+      <ChoiceGroup
         labelId={`bbr-switch-${cardKey}`}
-        className="bbr-gray bbr-dans"
         options={RUBRIC_DANS.map((n) => ({ key: n, label: T.DAN_LABELS[n] }))}
         value={danNo}
         onChange={(n) => {
@@ -353,7 +365,7 @@ export default function RubricCard({
     </div>
   );
 
-  const bannerElement = banner ? <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={saving} onDismiss={() => setBanner(null)} /> : null;
+  const bannerElement = banner ? <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={saving || banner.retrying === true} onDismiss={() => setBanner(null)} /> : null;
   const staleBanner = stale ? (
     <div className="errbar" role="alert">
       <IconAlertTriangle size={16} aria-hidden="true" className="errbar-icon" />
@@ -380,7 +392,7 @@ export default function RubricCard({
           triedSave={triedSave}
           serverProblems={serverProblems}
           stale={stale}
-          saving={saving}
+          saving={saving || line.busy}
           topBanners={
             <>
               {staleBanner}

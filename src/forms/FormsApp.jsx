@@ -380,7 +380,7 @@ export default function FormsApp({ kiosk = null }) {
                 {T.BACK}
               </button>
             )}
-            <button type="submit" className="btn btn-primary fp-btn fp-btn--main" aria-disabled={sending ? 'true' : undefined}>
+            <button type="submit" className={`btn btn-primary fp-btn fp-btn--main${sending ? ' is-unavailable' : ''}`} aria-disabled={sending ? 'true' : undefined}>
               {last ? (sending ? T.SENDING : T.SEND) : T.CONTINUE}
             </button>
           </div>

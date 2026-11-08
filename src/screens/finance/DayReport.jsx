@@ -213,6 +213,7 @@ export default function DayReport({
   const [banner, setBanner] = useState(null); // { text, retry? } — amber, until dismissed or fixed
   const [saving, setSaving] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [undoing, setUndoing] = useState(false); // a close-day Undo (or its Retry) is on its way: one at a time
   const [detail, setDetail] = useState(null); // the payment whose detail is open
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(null); // { printedAt } while the page prints
@@ -307,7 +308,7 @@ export default function DayReport({
         onNoAccess();
         return;
       case 'stale':
-        setBanner({ text: T.STALE });
+        setBanner({ text: T.STALE_DAY });
         break;
       case 'already_closed':
         setBanner({ text: T.ALREADY_CLOSED });
@@ -395,7 +396,7 @@ export default function DayReport({
     if (answer.status === 'stale') {
       // Someone changed the day meanwhile: say so inside the dialog and reload, so the Expected
       // lines are fresh. Everything typed stays.
-      setCloseNotice(T.STALE);
+      setCloseNotice(T.STALE_DAY);
       live.reload();
       return;
     }
@@ -408,7 +409,11 @@ export default function DayReport({
 
   // The toast's Undo (10 seconds for the person who closed, enforced by the database).
   async function undoClose(closingId, forKey) {
+    if (undoing) return; // a double-click on Retry must not send the Undo twice
+    setUndoing(true);
+    setBanner(null); // a Retry that works must not leave the old "Undo didn't save" bar behind
     const answer = await financeUndoClose({ closingId });
+    setUndoing(false);
     if (answer.status === 'ok') {
       // The day is open again: the counts come back as the draft (the button reappears).
       if (closedDrafts.has(forKey)) {
@@ -420,7 +425,9 @@ export default function DayReport({
       live.reload();
       return;
     }
-    handleProblem(answer, T.UNDO_FAILED, null);
+    // A failed Undo says so in the shared words and offers Retry (the 10 seconds may be over by then: the database
+    // then answers too_late and the bar says so)
+    handleProblem(answer, T.UNDO_FAILED, () => undoClose(closingId, forKey));
   }
 
   // ----- Reopen day (admins, D4) -----
@@ -639,7 +646,7 @@ export default function DayReport({
         />
       )}
       {!isAdmin && isPhone && <p className="fin-hint fin-staff-hint">{T.STAFF_HINT}</p>}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ?? undefined} retrying={reopening} onDismiss={() => setBanner(null)} />}
+      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ?? undefined} retrying={reopening || undoing} onDismiss={() => setBanner(null)} />}
       {body}
 
       {menu && !screenLocked && (

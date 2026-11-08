@@ -33,7 +33,7 @@ import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { cycleDateYears, dueKey, lastTestingDay, notBeforeToday, savedDueDates } from '../../../lib/blackBelt/dateLimits.js';
-import Choice from '../parts/Choice.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import DateField from '../parts/DateField.jsx';
 import PricesSection from './PricesSection.jsx';
 import * as T from '../text.js';
@@ -277,7 +277,7 @@ export default function CycleDialog({ state, check, today, isPhone, handlers, da
             {T.REGISTRATION}
           </h3>
           {openedOnce ? (
-            <Choice
+            <ChoiceGroup
               labelId={`${id}-reg`}
               options={[
                 { key: 'open', label: T.REG_OPEN },

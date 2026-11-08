@@ -35,12 +35,14 @@
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
+import { IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
+import BackLink from '../../../components/BackLink.jsx';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadCycle, schoolToday } from '../../../lib/blackBelt/api.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import CandidatesTab from '../candidates/CandidatesTab.jsx';
@@ -52,6 +54,8 @@ import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/us
 import { showOnCyclesList } from '../cycles/CyclesTab.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import NoIcon from '../parts/NoIcon.jsx';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
 import LinksDialog from './LinksDialog.jsx';
@@ -125,17 +129,22 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   const [menu, setMenu] = useState(null); // { anchor }
   const [links, setLinks] = useState(null); // { opener } while the Registration link box is open
   const [banner, setBanner] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
+  // One change at a time, and an Undo pressed meanwhile waits its turn (the shared save line, R2-05).
+  // The line's own bar is the page's bar: a failed Undo shows on whichever tab is open (never silent).
+  const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
+  const busy = line.busy;
+  // The token is this save's own: end() frees the line only for the save that holds it (lib/saveLine.js).
+  // endWrite(status, retry): the database's real answer and how to do the same save again, so a waiting Undo
+  // can build "Neither change saved" with its Retry (C1, v1.127).
+  const tokenRef = useRef(null);
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = line.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  function endWrite(status = 'ok', retry = null) {
+    line.end(status, { retry, token: tokenRef.current });
     if (status && status !== 'ok') clearToast();
   }
   const reloadQuiet = () => liveRef.current.reload();
@@ -183,7 +192,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   }, [screenLocked]);
 
   const moreRef = useRef(null);
-  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload: reloadQuiet, setBanner: tabBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
+  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, undoAction: line.undoAction, reload: reloadQuiet, setBanner: tabBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
   const editor = useCycleEditor({
     isAdmin,
     today,
@@ -191,6 +200,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     screenLocked,
     beginWrite,
     endWrite,
+    undoAction: line.undoAction,
     setBanner: tabBanner,
     onNoAccess,
     onRefreshProfile,
@@ -228,13 +238,8 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   }, [modalShown, onModalOpenChange]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
 
-  const backLink = (
-    <button type="button" className="link-button ev-back bb-back" onClick={() => onBack()}>
-      {/* ti-arrow-left = back */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {T.BACK_TO_BLACK_BELT}
-    </button>
-  );
+  // The shared back link (R3-06, v1.048): 24px with a mouse, a 44px tap box on touch, the title never moves
+  const backLink = <BackLink label={T.BACK_TO_BLACK_BELT} onClick={() => onBack()} className="bb-back-link" />;
 
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'noAccess' || live.status === 'notFound') {
     return (
@@ -400,7 +405,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
         <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} gradingStartedAt={rubricLive.data.gradingStartedAt ?? null} onGoToDefaultRubric={onGoToDefaultRubric} />
       )}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={dismissBanner} />}
+      {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={dismissBanner} />}
       {tab === 'rubric' && (
         <CycleRubricTab
           cycle={cycle}

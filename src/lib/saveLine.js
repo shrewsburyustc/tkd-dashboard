@@ -32,9 +32,12 @@
 //       'no_access'  the database locked this sign-in: the page locks the screen, and the line leaves
 //                the same "Undo didn't save" bar with Retry, so after unlocking it is not silent.
 //       other    the database refused it: reason (the page's own words) shows in the bar, without
-//                Retry. No reason: no bar.
+//                Retry. No reason: no bar. (An 'error' or 'no_access' answer WITH a reason shows
+//                that reason and does get a Retry, unless noRetry is set.)
 //     An Undo whose run() never answers is given up on after 30 seconds and counts as not reached
-//     ('error'), so it can't hold the line for good.
+//     ('error'), so it can't hold the line for good. An answer that comes in after the give-up is
+//     ignored, so a later Retry may meet "already undone": the section's run() should answer 'ok'
+//     for a change that is already undone (as for a double press).
 //     So the page no longer shows "Undone" or its Undo's bars itself: the line does.
 //   undoBar(bar | null)   the page's setter for the bar the line shows. One bar per page: the page
 //                keeps it with its other bars and draws it with PageBar. bar = { text, retry,
@@ -171,7 +174,8 @@ export function createSaveLine(getOptions, { giveUpMs = UNDO_GIVE_UP_MS } = {}) 
       if (open) undoBar?.(null);
       else if (fromBar && epoch === startEpoch) setLeftBar(null);
       // From a toast, the toast says "Undone" (lib/toastLine.js); from a bar's Retry, it's said here.
-      if (fromBar) showToast?.(result.doneText ?? doneText ?? UNDONE, { icon: false });
+      // (Not for the next person after a sign-out: the epoch moved on.)
+      if (fromBar && epoch === startEpoch) showToast?.(result.doneText ?? doneText ?? UNDONE, { icon: false });
       return { undone: true, doneText: result.doneText ?? doneText };
     }
 
@@ -198,7 +202,16 @@ export function createSaveLine(getOptions, { giveUpMs = UNDO_GIVE_UP_MS } = {}) 
       bar =
         before?.failed && before.retry
           ? { text: NEITHER_SAVED, retry: async () => {
-              await before.retry();
+              // The first save is redone, but not waited for forever: a save that hangs is given up
+              // on after the limit, and the Undo runs anyway (so the bar can't stay "retrying").
+              let giveUp = 0;
+              await Promise.race([
+                Promise.resolve().then(before.retry).catch(() => {}),
+                new Promise((resolve) => {
+                  giveUp = setTimeout(resolve, giveUpMs);
+                }),
+              ]);
+              clearTimeout(giveUp);
               return again();
             } }
           : { text: UNDO_DIDNT_SAVE, retry: again };

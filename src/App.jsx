@@ -1191,6 +1191,14 @@ export default function App() {
                 location={location}
                 staffId={profile.id}
                 onOpenProspect={openProspectFromCalendar}
+                // Other sections' dates open in their own section (v0.645): the same openers Home,
+                // Finance and Testing use; the Calendar switches the school first where a page needs it.
+                onLocationChange={changeLocation}
+                onOpenTestingEvent={openEvent}
+                onOpenPrivate={openPrivate}
+                onOpenStarEvent={openStarEventTab}
+                onOpenBlackBelt={openBlackBelt}
+                onOpenCamp={openCamp}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
                 screenLocked={phase === 'locked'}
