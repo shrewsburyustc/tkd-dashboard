@@ -114,10 +114,16 @@ const RPC_ARGS = {
     ['p_event_id', 'uuid'], ['p_expected_version', 'int'], ['p_expected_candidate_count', 'int'],
     ['p_expected_payment_total_cents', 'int'],
   ],
+  // 0038: all ten inputs, none with a default (p_open = null means "the switch was not changed").
+  star_undo_event_edit: [
+    ['p_event_id', 'uuid'], ['p_expected_version', 'int'], ['p_name', 'text'], ['p_testing_date', 'date'],
+    ['p_start_time', 'time'], ['p_where_code', 'text'], ['p_auto_close_on', 'date'], ['p_note', 'text'],
+    ['p_end_time', 'time'], ['p_open', 'bool'],
+  ],
 };
 export const STAR_EVENT_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS);
 // Admin only ("A" in §6.2). star_set_registration is staff and admins (the date rule is inside).
-const ADMIN_ONLY = new Set(['star_add_event', 'star_update_event', 'star_delete_event']);
+const ADMIN_ONLY = new Set(['star_add_event', 'star_update_event', 'star_delete_event', 'star_undo_event_edit']);
 
 // Thrown inside this file only, turned into a { data:null, error } answer.
 class DbError extends Error {
@@ -446,6 +452,30 @@ export function createStarEventsBackend({
       if (rule.clearsAutoClose) changes.auto_close_on = null;
       updateEvent(event, changes, ctx); // same value → nothing written, version kept
       return { status: 'ok', version: event.version, state: eventState(event, t) };
+    },
+
+    // Migration 0038 (R2-02): Edit event's Undo in ONE step, admin only. Checks like the SQL (invalid
+    // → not_found → stale), then star_update_event with the old details and — when p_open is not
+    // null — star_set_registration with the version the first step made. If either step refuses,
+    // its answer comes back as it is and NOTHING is saved: rpc() works on a private copy of the
+    // store and only writes it for an 'ok', which is this function's "all or nothing".
+    star_undo_event_edit(db, a, ctx) {
+      if (a.p_event_id === null || a.p_expected_version === null) return st('invalid');
+      const event = findEvent(db, a.p_event_id);
+      if (!event) return st('not_found');
+      if (event.version !== a.p_expected_version) return st('stale');
+      const details = handlers.star_update_event(db, {
+        p_event_id: a.p_event_id, p_expected_version: a.p_expected_version, p_name: a.p_name, p_testing_date: a.p_testing_date,
+        p_start_time: a.p_start_time, p_where_code: a.p_where_code, p_auto_close_on: a.p_auto_close_on, p_note: a.p_note,
+        p_end_time: a.p_end_time,
+      }, ctx);
+      if (details.status !== 'ok') return details;
+      if (a.p_open === null) return { status: 'ok', version: details.version };
+      const switched = handlers.star_set_registration(db, {
+        p_event_id: a.p_event_id, p_expected_version: details.version, p_open: a.p_open,
+      }, ctx);
+      if (switched.status !== 'ok') return switched;
+      return { status: 'ok', version: switched.version };
     },
 
     star_delete_event(db, a) {

@@ -122,6 +122,21 @@ await withChrome(async (tab) => {
     assert.equal(gray.color, GRAY, 'busy: gray words');
     assert.equal(gray.cursor, 'not-allowed');
   });
+  await check('Select: 44px tall on touch (36 with a mouse); grouped options show a heading, and the arrow keys skip it', async () => {
+    await open(1280, 800, false);
+    const pc = await ev(`document.querySelector('#sh-select').getBoundingClientRect().height`);
+    assert.ok(pc < 40, `with a mouse ${pc}px`);
+    await open(820, 1180, true);
+    const touch = await ev(`document.querySelector('#sh-select').getBoundingClientRect().height`);
+    assert.ok(touch >= 43.5, `on touch ${touch}px`);
+    await open(1280, 800, false);
+    await ev(`document.querySelector('#sh-select').click()`);
+    await sleep(300);
+    const list = await ev(`(() => { const l = document.querySelector('.sel-list'); return { headings: [...l.querySelectorAll('.fa-group-label')].map((h) => h.textContent), options: l.querySelectorAll('[role=option]').length, optionLabel: l.querySelector('[role=option]').getAttribute('aria-label') }; })()`);
+    assert.deepEqual(list.headings, ['Current', 'Planned']);
+    assert.equal(list.options, 4, 'the headings are not choices');
+    assert.equal(list.optionLabel, 'Current: Spring', 'a screen reader hears the group');
+  });
   await check('tablet 820, touch: a button\'s tap box reaches 44px: a click 3.5px above and below still lands on it (L-03)', async () => {
     await open(820, 1180, true);
     const hit = await ev(`(() => { const b = document.querySelector('[data-sh="buttons"] .btn'); const r = b.getBoundingClientRect(); const a = document.elementFromPoint(r.left + 20, r.top - 3.5); const c = document.elementFromPoint(r.left + 20, r.bottom + 3.5); return [a === b, c === b, r.height]; })()`);

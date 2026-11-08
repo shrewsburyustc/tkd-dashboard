@@ -39,7 +39,7 @@ import {
   saveStarEventEdit,
   setStarRegistration,
   splitUpcomingPast,
-  updateStarEvent,
+  undoStarEventEdit,
 } from '../../../../lib/star/eventsApi.js';
 import { schoolToday } from '../../../../lib/testing/eventsApi.js';
 import { registrationSwitch } from '../../../../lib/testing/eventRules.js';
@@ -499,11 +499,11 @@ export default function StarEventsTab({
       };
       const switchChanged = result.registration !== null;
       const savedVersion = result.version;
-      // R2-02 stop-gap: the Undo is two calls (details, then the Registration switch). If the first
-      // worked and the second didn't, Retry re-sends ONLY the second, with the version the first
-      // one returned (kept here, in the toast's own closure). Until the one-step database
-      // function exists (migration 0038).
-      const undoState = { detailsBackVersion: null, openAgain: record.registrationOpen };
+      // R2-02 (migration 0038): the Undo is ONE database step. The old details and, if the Edit
+      // changed the Registration switch, the old switch position go back together or not at all,
+      // so a refusal means nothing changed. open = the old switch position, or null when the Edit
+      // didn't change it.
+      const openAgain = switchChanged ? record.registrationOpen : null;
       showToast(T.TOAST_CHANGES_SAVED, {
         icon: false,
         action: {
@@ -511,25 +511,10 @@ export default function StarEventsTab({
           onAction: () =>
             runUndo(
               async () => {
-                if (undoState.detailsBackVersion === null) {
-                  const back = await updateStarEvent({ eventId: d.eventId, expectedVersion: savedVersion, ...previous });
-                  if (back.status !== 'ok' || !switchChanged) return back;
-                  undoState.detailsBackVersion = back.version;
-                }
-                let second = await setStarRegistration({ eventId: d.eventId, expectedVersion: undoState.detailsBackVersion, open: undoState.openAgain });
-                // "stale" here only means the version we hold is old (the details step may have been
-                // saved elsewhere meanwhile): read the event's current version and try once more,
-                // so Retry never loops on the same old version.
-                if (second.status === 'stale') {
-                  const fresh = await loadStarEvent(d.eventId);
-                  if (fresh.status === 'ok') {
-                    undoState.detailsBackVersion = fresh.event.version;
-                    second = await setStarRegistration({ eventId: d.eventId, expectedVersion: fresh.event.version, open: undoState.openAgain });
-                  }
-                }
-                // The details are already back, so a refusal here must not blame "someone else":
-                // anything but ok / no access / not allowed is shown as "didn't save", with Retry.
-                if (second.status === 'ok' || second.status === 'no_access' || second.status === 'not_allowed') return second;
+                const back = await undoStarEventEdit({ eventId: d.eventId, expectedVersion: savedVersion, ...previous, open: openAgain });
+                // A refusal undid nothing. "Someone else changed it" is only true for a stale (or
+                // vanished) event; any other refusal is shown as "didn't save", with Retry.
+                if (['ok', 'no_access', 'not_allowed', 'stale', 'not_found'].includes(back.status)) return back;
                 return { status: 'error' };
               },
               // Undo that puts registration back to Open says so (R2-07, v1.051).

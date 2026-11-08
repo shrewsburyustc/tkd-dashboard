@@ -1120,6 +1120,8 @@ export default function App() {
                 deviceLocation={deviceLocation}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
+                // This device's home school: a Color Belt payment counts at the desk that took it (v1.035).
+                deviceLocation={deviceLocation}
                 testingPage={testingPage}
                 onOpenTestingPage={openTestingPage}
                 eventId={eventId}
@@ -1141,6 +1143,9 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+                // This device's home school: Star's Record payment / Record refund count at it (v1.035, R1-01).
+                // Testing.jsx hands it on to Star's page with its other props; nothing else changes there.
+                deviceLocation={deviceLocation}
               />
             )}
             {section === 'camps' && (
@@ -1259,9 +1264,14 @@ export default function App() {
                 profile={profile}
                 screenLocked={phase === 'locked'}
                 showToast={showToast}
+                clearToast={clearToast}
                 onModalOpenChange={setSettingsModalOpen}
                 onRefreshProfile={refreshProfile}
                 onNoAccess={handleNoAccess}
+                // Classes and ranks opens on the top bar's school; the address #settings/classes-and-ranks
+                // scrolls to it (CB14).
+                location={location}
+                focusPart={eventTab === 'classes-and-ranks' ? 'classes-and-ranks' : null}
               />
             )}
           </Shell>

@@ -8,7 +8,19 @@
 // when, which version). Those are never shown as a change. paying_by is a real field a person
 // chooses, so it is shown. While Hide private details is on, the History screen hides payment rows
 // (historyPrivacy) and a Paying by change is one of them, so it stays out of the list there.
+//
+// One save = one entry (rolling check pass 2 M-02, rulebook v1.055 (a)): a single tap can write
+// several change-log rows - Mark paid by another way writes the payment AND changes Paying by, an
+// Edit payment writes a reversal, a new payment and maybe Paying by. Those rows made two or three
+// History entries for one tap. groupHistoryRows() joins the rows of ONE save into one entry and
+// describeHistoryEntry() words it, money first, joined with "; " (the money words are the ones each
+// row already had - nothing new is worded here), the same way an edit of several fields already was.
+// Plain English: the reader (star_candidate_history) gives no "batch id", so "one save" is found the
+// way the database writes it: every row of one save has the SAME time (a database call is one
+// transaction, and a transaction has one clock time), the same action name (the function that
+// ran) and the same person.
 import { startTimeLabel } from './starEventRules.js';
+import { historyPrivacy } from './candidatesCore.js';
 import * as T from '../../screens/testing/star/candidates/text.js';
 
 // The columns the database fills in by itself. Matched by NAME, never by how a name ends.
@@ -112,4 +124,58 @@ export function linesFor(row, hiddenDetails) {
   // An update that only moved the row's version (a payment or refund touches the candidate too)
   // says nothing on its own: no words, and the entry is left out.
   return lines;
+}
+
+// ----- One save, one entry (pass 2 M-02) -----
+// The order of the words inside one entry: money first (a reversal "Payment undone" before the new
+// payment of an Edit payment, then the payment or refund, then a Paying by change), then the rest.
+function rankInEntry(row) {
+  if (row.tableName === 'star_payments') {
+    const kind = (row.op === 'insert' ? row.after : row.before)?.kind;
+    return kind === 'reversal' ? 0 : 1;
+  }
+  if (row.tableName === 'star_candidates' && row.op === 'update' && 'paying_by' in (row.after ?? {})) return 2;
+  if (row.tableName === 'star_candidates') return 3;
+  if (row.tableName === 'star_candidate_signatures') return 4;
+  return 5;
+}
+
+// rows: the reader's rows (newest first) -> entries, newest first, each
+//   { rows, occurredAt, actorName, action }   rows already in the entry's word order.
+// A row with no time or no action name can't be matched to others, so it stays an entry of its own.
+export function groupHistoryRows(rows) {
+  const entries = [];
+  const byKey = new Map();
+  for (const row of rows ?? []) {
+    const key = row?.occurredAt && row?.action ? `${row.occurredAt}|${row.action}|${row.actorName ?? ''}` : null;
+    let entry = key === null ? null : byKey.get(key);
+    if (!entry) {
+      entry = { rows: [], occurredAt: row?.occurredAt ?? null, actorName: row?.actorName ?? null, action: row?.action ?? null };
+      entries.push(entry);
+      if (key !== null) byKey.set(key, entry);
+    }
+    entry.rows.push(row);
+  }
+  for (const entry of entries) entry.rows = entry.rows.map((row, i) => ({ row, i })).sort((a, b) => rankInEntry(a.row) - rankInEntry(b.row) || a.i - b.i).map((x) => x.row);
+  return entries;
+}
+
+// One entry -> what the shared History line draws: { text, at, who } · { hiddenPayment: true } (money
+// while Hide private details is on, and nothing else to say) · null (the entry says nothing: for
+// example only the candidate's version moved). While hidden, the money rows' words are left out of
+// the entry; the other rows of the same save still show.
+export function describeHistoryEntry(entry, { hidden }) {
+  let leftOutMoney = false;
+  const lines = [];
+  for (const row of entry.rows) {
+    if (hidden && historyPrivacy(row).payment) {
+      leftOutMoney = true;
+      continue;
+    }
+    lines.push(...linesFor(row, hidden));
+  }
+  if (lines.length === 0) return leftOutMoney ? { hiddenPayment: true } : null;
+  // The same words twice in one save (a make-up copies several grades: "Grade changed" for each)
+  // are said once.
+  return { text: [...new Set(lines)].join('; '), at: entry.occurredAt, who: entry.actorName || T.HISTORY_STAFF };
 }

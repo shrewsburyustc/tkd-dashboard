@@ -1144,6 +1144,12 @@ html.is-reordering .tib-tip {
     min-width: var(--tap-size); /* a short word ("Camps", "Events") is still 44px wide (pass 2 L-10) */
   }
 
+  /* The shared Select's field is a 44px tap target on touch (it measured 36px), like the other shared
+     controls (New students' batch review) */
+  .sel-field {
+    min-height: var(--tap-size);
+  }
+
   .rrow {
     padding: 0 0 0 48px;
     min-height: 48px;
@@ -2370,6 +2376,15 @@ html.is-reordering .tib-tip {
    "Choose a time" (.sel-field.is-empty) and the 2px ring on the row the arrow keys are on
    (.sel-list .fa-option.is-active), above. Turned off (v1.116): .fa-field.is-disabled, next to
    .fa-field.is-readonly near the top. */
+
+/* A group's heading row in the shared Select's list ("Current", "Planned": Select.jsx `group`): small
+   gray words, never hovered or chosen */
+.sel-list .fa-group-label {
+  padding: var(--space-8) var(--space-12) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
 
 /* ===== Unavailable, page-wide (pass 1 R1-08; rulebook v1.103 detail 8) =====
    A plain button or a clickable tag that can't be used right now — another save is running (Mark

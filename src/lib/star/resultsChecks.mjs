@@ -151,8 +151,8 @@ await check('loadResults: Summer — private rows included, belt order, the data
   assert.ok(d1.rows.some((r) => r.firstName === 'Zoe') && d1.rows.some((r) => r.firstName === 'Ivy'));
   assert.deepEqual(d1.counts, summaryCounts(d1.rows));
   assert.equal(d1.rows.some((r) => r.firstName === 'Casey'), false); // withdrawn: never listed
-  // belt order: stars, Shrewsbury before Worcester, last name
-  const order = d1.rows.map((r) => [r.starsFrom, r.locationCode === 'shrewsbury' ? 0 : 1, r.lastName.toLowerCase()]);
+  // belt order: stars, Worcester before Shrewsbury (0038, S-1), last name
+  const order = d1.rows.map((r) => [r.starsFrom, r.locationCode === 'worcester' ? 0 : 1, r.lastName.toLowerCase()]);
   assert.deepEqual(order, [...order].sort((a, b) => a[0] - b[0] || a[1] - b[1] || (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0)));
   assert.equal(d1.passMark, 245);
   assert.equal(d1.maxScore, 315);

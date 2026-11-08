@@ -722,6 +722,15 @@ begin
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.star_results_csv(v_e, null);
   reset role;
+  -- After 0038 (S-1, rulebook v1.047) Worcester comes before Shrewsbury; this test was written for the
+  -- old order (Shrewsbury first), so it checks the new order and then swaps the two rows to the old one.
+  if to_regprocedure('public.star_undo_event_edit(uuid, integer, text, date, time, text, date, text, time, boolean)') is not null
+     and v_r ->> 'status' = 'ok' and jsonb_array_length(v_r -> 'rows') = 2 then
+    if (v_r -> 'rows' -> 0 ->> 'candidate_id')::uuid is distinct from v_ca then
+      raise exception 'TEST FAILED: R8 after 0038 the Worcester row (Alpha) must come first: %', v_r -> 'rows';
+    end if;
+    v_r := jsonb_set(v_r, '{rows}', jsonb_build_array(v_r -> 'rows' -> 1, v_r -> 'rows' -> 0));
+  end if;
   if v_r ->> 'status' <> 'ok' or jsonb_array_length(v_r -> 'rows') <> 2 then
     raise exception 'TEST FAILED: R8 the CSV expected ok with 2 rows, got %', v_r ->> 'status';
   end if;
@@ -770,6 +779,11 @@ begin
   set local role authenticated;
   v_r := public.star_results_csv(v_e, 1);
   reset role;
+  -- (the same swap as above for 0038's Worcester-first order)
+  if to_regprocedure('public.star_undo_event_edit(uuid, integer, text, date, time, text, date, text, time, boolean)') is not null
+     and v_r ->> 'status' = 'ok' and jsonb_array_length(v_r -> 'rows') = 2 then
+    v_r := jsonb_set(v_r, '{rows}', jsonb_build_array(v_r -> 'rows' -> 1, v_r -> 'rows' -> 0));
+  end if;
   if v_r ->> 'status' <> 'ok' or v_r -> 'rows' -> 1 -> 'sent' ->> 'result_status' <> 'makeup'
      or v_r -> 'rows' -> 1 -> 'sent' ->> 'marked_by_name' <> 'Staff'
      or v_r -> 'rows' -> 1 ->> 'paid_on' is distinct from (v_today - 10)::text

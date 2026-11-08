@@ -159,6 +159,7 @@ export default function PrivateTestingTab({
   clearToast,
   onModalOpenChange,
   onOpenPrivate,
+  deviceLocation, // 'Worcester' | 'Shrewsbury' — This device's school: where Mark paid's money counts (R1-01)
 }) {
   const locationCode = LOCATION_CODE[school];
   const live = useLiveLoad({ key: locationCode, enabled: !screenLocked, load: loadPrivateTestings, refreshMs: LIVE_REFRESH_MS });
@@ -843,7 +844,9 @@ export default function PrivateTestingTab({
   }
   async function saveMarkPaid(rowId, snap, method, amountCents, anchor) {
     if (!beginWrite()) return;
-    const result = await markPrivatePaidBy({ privateId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents });
+    // school: This device's school — the payment counts at the desk that took it (R1-01, v1.035);
+    // null (no school) lets the database use the private testing's.
+    const result = await markPrivatePaidBy({ privateId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents, school: LOCATION_CODE[deviceLocation] ?? null });
     const row = (liveRef.current.data?.rows ?? []).find((r) => r.id === rowId) ?? snap;
     const name = T.studentLabel(row);
     if (result.status === 'price_changed' && !hiddenNowRef.current) {

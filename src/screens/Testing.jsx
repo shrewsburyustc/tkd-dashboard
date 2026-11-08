@@ -5,8 +5,10 @@
 //
 // This file draws the frame of the section:
 //   - the page header: "Testing", the school under it, and the tab's add button for admins
-//     ("Add event" on Events, "Add class" on Classes and ranks — v0.45)
-//   - the tab bar: Events · Classes and ranks (← → move between the tabs)
+//     ("Add event" on Events; the Prices tab has none — classes and ranks moved to Settings, CB14 / v0.427)
+//   - the tab bar: Events · Prices · Private testing (← → move between the tabs)
+//   - on Prices, a gray line under the tabs: for admins "… Classes and ranks are in Settings.", for staff
+//     "View only. … Classes and ranks are set by an admin."
 //   - for staff, a gray line under the tabs: the Events line (Star v0.86) or "View only. Ask an
 //     admin to make changes." (v0.40)
 //   - when the location switcher is on Both: no tabs; "Both schools" under the title and one
@@ -14,7 +16,7 @@
 //     choose-a-school message)
 //   - when an event is open (address #testing/event/<id>, or .../grading for its Grading tab):
 //     that event's page instead (with the switch on: #testing/color-belt/event/<id>…)
-// Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
+// Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx (part 'prices');
 // the event page in testing/event/EventPage.jsx.
 // Phase 4 (contract 0014 §5.1, rulebook v0.401): a third tab, "Private testing", at the far right
 // (testing/private/PrivateTestingTab.jsx), and a private testing's grading page
@@ -52,6 +54,9 @@
 //   privateId          phase 4: the open private testing's id (its grading page), or null.
 //                      Always a Color Belt page: with the switch on, testingPage is 'colorBelt'.
 //   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
+//   deviceLocation     'Worcester' | 'Shrewsbury' — This device's home school (account menu). Passed
+//                      on untouched (in tabProps) to the event page and the Private testing tab:
+//                      Mark paid stores it on the payment (migration 0044, R1-01, rulebook v1.035).
 //
 // Black Belt testing (contract CONTRACT-0016-B1 §3; C2, rulebook v0.937): a Testing page of its own,
 // testingPage 'blackBelt', with its own addresses (#testing/black-belt…, lib/pageAddress.js) — with
@@ -72,7 +77,7 @@ import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
 import TestingChooser from './testing/chooser/TestingChooser.jsx';
 import BackToTesting from './testing/chooser/BackToTesting.jsx';
 import { COLOR_BELT_TITLE } from './testing/chooser/text.js';
-import { BOTH_SCHOOLS, PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
+import { BOTH_SCHOOLS, PAGE_TITLE, PRICES_LINE_ADMIN, PRICES_LINE_STAFF, TAB_EVENTS, TAB_PRICES, TAB_PRIVATE } from './testing/text.js';
 import { loadStarTesting, STAR_TESTING_ON } from '../lib/features.js';
 import '../styles/testing-events.css';
 
@@ -89,7 +94,7 @@ const BLACK_BELT_LINK = 'Black Belt testing'; // the link's words (Black Belt's 
 
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
-  { key: 'classes', label: TAB_CLASSES_RANKS },
+  { key: 'prices', label: TAB_PRICES }, // CB14: was "Classes and ranks" (now in Settings)
   { key: 'private', label: TAB_PRIVATE }, // phase 4: last, far right
 ];
 
@@ -406,9 +411,10 @@ export default function Testing({
         <ClassesRanksTab
           school={location}
           isAdmin={isAdmin}
-          panelId={ids.panel('classes')}
-          tabId={ids.tab('classes')}
-          renderHeader={(action) => renderHeader(action, isAdmin ? null : VIEW_ONLY_LINE)}
+          part="prices"
+          panelId={ids.panel('prices')}
+          tabId={ids.tab('prices')}
+          renderHeader={(action) => renderHeader(action, isAdmin ? PRICES_LINE_ADMIN : PRICES_LINE_STAFF)}
           {...tabProps}
         />
       )}

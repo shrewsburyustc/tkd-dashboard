@@ -1,10 +1,12 @@
 // Settings.jsx — the Settings page (admins only; account menu → Admin → Settings, ti-settings).
 // Why it exists: rulebook v0.135 — school street addresses are entered by admins in the
-// dashboard. Phase 2 has one part, **Schools**: each school's street, city, state and ZIP (and,
+// dashboard. Phase 2 had one part, **Schools**: each school's street, city, state and ZIP (and,
 // since migration 0019, an optional phone for the closed sign-up form — F3 difference 4),
 // edited in a small dialog (SchoolDialog.jsx), logged by the database. Approved mockups:
-// docs/Dashboard Docs/TKD-Settings-Schools-Mockups.html (S1–S3). Later parts of Settings
-// (e.g. keyboard shortcuts on/off) are separate decisions.
+// docs/Dashboard Docs/TKD-Settings-Schools-Mockups.html (S1–S3). Color Belt's CB14 (rulebook v0.427)
+// added a second part, **Classes and ranks**, under Schools: the classes and belt ranks that the
+// Schedule, Calendar, Forms and Testing all use, moved here from Color belt testing (whose Prices tab
+// keeps the prices). Later parts of Settings (e.g. keyboard shortcuts on/off) are separate decisions.
 //
 // What's on the page:
 //   - title "Settings" + "Details for the whole school. Admins only."
@@ -13,24 +15,48 @@
 //     Clicking the row or the pencil opens the dialog.
 //   - loading: gray placeholder rows; couldn't load: amber banner + Retry (rules 3.4, 3.5);
 //     not an admin: "Only admins can see Settings." (the database refuses the save anyway)
-//   - the location switcher does NOT filter this page: both schools are always listed.
+//   - the location switcher does NOT filter the Schools part: both schools are always listed.
+//   - "Classes and ranks": its heading and gray line, then a Worcester | Shrewsbury switch with
+//     Add class on its right, then the list (testing/ClassesRanksTab.jsx, part 'settings': names,
+//     order, add / edit / delete, the same Undo as before; prices are in Color belt testing → Prices).
+//     It opens on the top bar's school (Worcester when the top bar says Both) and then keeps its own
+//     choice. The address #settings/classes-and-ranks scrolls to it and puts keyboard focus on its heading.
 //
-// Props (from App.jsx): profile, screenLocked, showToast, onModalOpenChange, onRefreshProfile,
-// onNoAccess (the database refused data because this sign-in is locked: lock the screen).
-import { useCallback, useEffect, useRef, useState } from 'react';
+// Props (from App.jsx): profile, screenLocked, showToast, clearToast, onModalOpenChange, onRefreshProfile,
+// onNoAccess (the database refused data because this sign-in is locked: lock the screen),
+// location (the top bar's school: only the first choice of the Classes and ranks switch),
+// focusPart ('classes-and-ranks' when the address asked for that part, else null).
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
 import PageBar from '../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
+import ChoiceGroup from '../components/ChoiceGroup.jsx';
 import IconButton from '../components/IconButton.jsx';
 import { loadSchools, updateSchoolContact } from '../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../lib/useRowArrowNav.js';
+import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import SchoolDialog, { checkSchoolForm, isSchoolFormDirty } from './settings/SchoolDialog.jsx';
 import * as T from './settings/text.js';
 import '../styles/settings.css';
 
 const BLOCKING_NOTES = ['STALE', 'NOT_ALLOWED'];
 
-export default function Settings({ profile, screenLocked, showToast, onModalOpenChange, onRefreshProfile, onNoAccess }) {
+const SCHOOL_CHOICES = [
+  { key: 'Worcester', label: 'Worcester' },
+  { key: 'Shrewsbury', label: 'Shrewsbury' },
+];
+
+export default function Settings({
+  profile,
+  screenLocked,
+  showToast,
+  clearToast,
+  onModalOpenChange,
+  onRefreshProfile,
+  onNoAccess,
+  location = 'Worcester',
+  focusPart = null,
+}) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isAdmin = profile.role === 'admin';
   const [load, setLoad] = useState({ state: 'loading', schools: [] }); // loading | ok | error
@@ -41,6 +67,25 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
     dialogRef.current = dialog;
   });
   const focusAfterRef = useRef(null); // school code whose row gets focus after the dialog closes
+
+  // ----- The Classes and ranks part -----
+  // Its school: the top bar's, or Worcester when the top bar says Both; after that its own choice.
+  const [classesSchool, setClassesSchool] = useState(location === 'Shrewsbury' ? 'Shrewsbury' : 'Worcester');
+  const baseId = useId();
+  const schoolLabelId = `${baseId}-classes-school`;
+  const classesHeadingRef = useRef(null);
+  // Two parts of this page can open a dialog (the school's address, and the class list's): the App
+  // only needs to know if ANY is open.
+  const modalFlags = useRef({ school: false, classes: false });
+  const reportModal = useCallback(
+    (kind, shown) => {
+      modalFlags.current[kind] = shown;
+      onModalOpenChange(modalFlags.current.school || modalFlags.current.classes);
+    },
+    [onModalOpenChange],
+  );
+  const reportSchoolModal = useCallback((shown) => reportModal('school', shown), [reportModal]);
+  const reportClassesModal = useCallback((shown) => reportModal('classes', shown), [reportModal]);
 
   const fetchList = useCallback(async () => {
     const result = await loadSchools();
@@ -59,9 +104,25 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
   // hidden (it comes back with what was typed).
   const modalShown = dialog !== null && !screenLocked;
   useEffect(() => {
-    onModalOpenChange(modalShown);
-  }, [modalShown, onModalOpenChange]);
-  useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
+    reportSchoolModal(modalShown);
+  }, [modalShown, reportSchoolModal]);
+  useEffect(() => () => reportSchoolModal(false), [reportSchoolModal]);
+
+  // The address #settings/classes-and-ranks: once the Schools list above has settled (so the page
+  // stops growing), scroll to the Classes and ranks heading and put keyboard focus on it, once.
+  const focusedPartRef = useRef(false);
+  useEffect(() => {
+    if (focusPart !== 'classes-and-ranks') {
+      focusedPartRef.current = false;
+      return;
+    }
+    if (focusedPartRef.current || !isAdmin || screenLocked || load.state === 'loading') return;
+    focusedPartRef.current = true;
+    const heading = classesHeadingRef.current;
+    if (!heading) return;
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView({ block: 'start' });
+  }, [focusPart, isAdmin, screenLocked, load.state]);
 
   // After the dialog closes: focus back on that school's row.
   useEffect(() => {
@@ -89,7 +150,7 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
     const d = dialogRef.current;
     if (!d || d.saving) return;
     focusAfterRef.current = d.code;
-    onModalOpenChange(false); // same screen update, so the row can take focus
+    reportSchoolModal(false); // same screen update, so the row can take focus
     setDialog(null);
   }
   function requestClose() {
@@ -117,7 +178,7 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
     if (result.status === 'ok') {
       patchDialog({ saving: false });
       focusAfterRef.current = d.code;
-      onModalOpenChange(false);
+      reportSchoolModal(false);
       setDialog(null);
       showToast(T.TOAST_SAVED, { icon: false });
       fetchList();
@@ -226,6 +287,35 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
         </>
       )}
       {body}
+      {isAdmin && (
+        <>
+          <h2 className="st-heading st-heading--part" ref={classesHeadingRef} tabIndex={-1}>
+            {T.CLASSES_RANKS}
+          </h2>
+          <p className="st-sub st-sub--section">{T.CLASSES_RANKS_SUB}</p>
+          <ClassesRanksTab
+            part="settings"
+            school={classesSchool}
+            isAdmin
+            addClassLabel={T.addClassFor(classesSchool)}
+            renderHeader={(addClassButton) => (
+              <div className="st-classes-bar">
+                <span id={schoolLabelId} className="visually-hidden">
+                  {T.SCHOOL_CHOICE}
+                </span>
+                <ChoiceGroup labelId={schoolLabelId} options={SCHOOL_CHOICES} value={classesSchool} onChange={setClassesSchool} />
+                {addClassButton}
+              </div>
+            )}
+            screenLocked={screenLocked}
+            onNoAccess={onNoAccess}
+            onRefreshProfile={onRefreshProfile}
+            showToast={showToast}
+            clearToast={clearToast}
+            onModalOpenChange={reportClassesModal}
+          />
+        </>
+      )}
       {dialog && !screenLocked && (
         <SchoolDialog
           key={dialog.key}

@@ -23,6 +23,10 @@
 //     and the summary, on top of it), the one-line History (S6) and formatMoney (S10)
 //   - the shared count cards (S11, v0.518 / v1.115): blue selected edge, 16 px icons, Payments
 //     recorded a plain total (no longer a filter), the Candidates card's two school lines on Both
+//   - Step B of the design review's pass 1 (rulebook v1.038, v1.055): the numbers come from
+//     src/lib/star/candidateCards.js (removed candidates' money in Payments recorded, possible
+//     duplicates left out of Paid / Not paid with one gray line, Worcester first), each filter card
+//     has its own empty line, and a removed candidate who paid can have Print receipt (M-03)
 // The data (event, its rubric copy and the candidates) is loaded by StarEventPage with the 15-second
 // quiet refresh (v0.507 Q3); this tab reloads through `reload()` after every change.
 //
@@ -68,6 +72,9 @@ import MakeupPickerDialog from './MakeupPickerDialog.jsx';
 import PrivateDialog, { checkPrivate, isPrivateDirty } from './PrivateDialog.jsx';
 import { takeSnapshot, writeArgs } from '../../../../lib/star/dialogSnapshot.js';
 import { candidateMenuKeys } from '../../../../lib/star/candidateMenu.js';
+import { deskSchoolFor } from '../../../../lib/star/deskSchool.js';
+import { payingByWhere } from '../../../../lib/star/payingByWhere.js';
+import { candidateCardNumbers, emptyLineKind, filterRows } from '../../../../lib/star/candidateCards.js';
 import SignatureDialog from './SignatureDialog.jsx';
 import { checkRecordPayment, EditPaymentDialog, isRecordDirty, PayingByDialog, RefundDialog } from './StarPaymentDialogs.jsx';
 import * as T from './text.js';
@@ -100,6 +107,7 @@ export default function CandidatesTab({
   isAdmin,
   hidden, // Hide private details (v0.506)
   location, // the top-bar switcher: 'Worcester' | 'Shrewsbury' | 'Both'
+  deviceLocation = null, // This device's school (account menu): the desk whose Daily report a payment counts in (R1-01)
   onLocationChange,
   panelId,
   tabId,
@@ -261,16 +269,11 @@ export default function CandidatesTab({
   const schoolCode = location === 'Both' ? null : LOCATION_CODE[location];
   const oneSchool = schoolCode !== null && schoolCode !== undefined;
   const inSchool = (c) => !oneSchool || c.locationCode === schoolCode;
-  const active = candidates.filter((c) => c.status === 'active' && inSchool(c));
+  // The card numbers and their rules live in candidateCards.js (R5-05, R3-02, S-1).
+  const cards = candidateCardNumbers(candidates, inSchool);
+  const { active, countable } = cards;
   const removedAll = candidates.filter((c) => c.status === 'withdrawn' && inSchool(c));
-  const nonMakeup = active.filter((c) => !c.isMakeup);
-  const cards = {
-    candidates: active.length,
-    bySchool: ['shrewsbury', 'worcester'].map((code) => ({ code, n: active.filter((c) => c.locationCode === code).length })), // as drawn: Shrewsbury, Worcester
-    paid: nonMakeup.filter((c) => c.paid).length,
-    notPaid: nonMakeup.filter((c) => !c.paid && c.feeKind !== 'none').length,
-    payments: active.reduce((sum, c) => sum + (c.paidCents ?? 0), 0),
-  };
+  const removedPaidCents = cards.removedPaidCents;
   const danCount = (dan) => active.filter((c) => c.dan === dan).length;
   const passFor = (dan) => dans.find((d) => d.dan === dan)?.passMark ?? null;
   const categoryName = new Map();
@@ -278,20 +281,21 @@ export default function CandidatesTab({
   const subjectNames = (row) => (row.makeupSubjects ?? []).map((s) => categoryName.get(s.eventCategoryId)).filter(Boolean);
   const belowPassMark = (row) => ((row.makeupSubjects ?? []).some((s) => s.kind === 'chosen') ? passFor(row.dan) : null);
 
-  let shown = active.filter((c) => c.dan === danSel);
-  if (filter === 'paid') shown = shown.filter((c) => !c.isMakeup && c.paid);
-  if (filter === 'notPaid') shown = shown.filter((c) => !c.isMakeup && !c.paid && c.feeKind !== 'none');
+  const shown = filterRows(active.filter((c) => c.dan === danSel), countable, filter);
   const removedRows = removedAll.filter((c) => c.dan === danSel);
   const rowsInView = [...shown, ...(removedOpen ? removedRows : [])];
   // G4: while hidden, the Status column shows only when a shown row has a status tag.
   const showStatusCol = !hidden || rowsInView.some((c) => statusTagKind(c, notSavedId) !== null);
 
   // Possible duplicates (v0.114): one line per pair, in the whole event (both schools' view).
+  // Built from the whole event (not the school filter), so a pair split across the two schools is
+  // still reviewable while one school is shown, and the gray line under the cards counts the same pairs.
+  const wholeEventActive = candidates.filter((c) => c.status !== 'withdrawn');
   const pairs = [];
   const seen = new Set();
-  for (const c of active) {
+  for (const c of wholeEventActive) {
     if (c.duplicateState !== 'possible' || seen.has(c.id)) continue;
-    const other = active.find((o) => o.id !== c.id && o.duplicateState === 'possible' && (o.duplicateOf === c.id || c.duplicateOf === o.id));
+    const other = wholeEventActive.find((o) => o.id !== c.id && o.duplicateState === 'possible' && (o.duplicateOf === c.id || c.duplicateOf === o.id));
     if (!other) continue;
     seen.add(c.id);
     seen.add(other.id);
@@ -613,7 +617,8 @@ export default function CandidatesTab({
   async function saveMarkPaid(rowId, snap, method) {
     const row = rowOf(rowId);
     if (!row || !beginWrite()) return;
-    const result = await recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today }));
+    // The money counts at the desk that takes it: This device's school (R1-01, v1.035).
+    const result = await recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today, school: deskSchoolFor(deviceLocation) }));
     endWrite(result.status);
     if (result.status !== 'ok') {
       rowProblem('mark_paid', result, row, () => saveMarkPaid(rowId, snap, method));
@@ -761,7 +766,8 @@ export default function CandidatesTab({
       return;
     }
     // Record refund
-    const result = await recordRefund(writeArgs('refund', d.snap, p));
+    // A refund counts at the desk that hands the money back: This device's school (R1-01, v1.040).
+    const result = await recordRefund(writeArgs('refund', d.snap, { ...p, school: deskSchoolFor(deviceLocation) }));
     endWrite(result.status);
     if (result.status === 'refund_too_large') {
       const msg = T.statusMessage('refund', 'refund_too_large', { overpaidCents: result.overpaidCents ?? 0 });
@@ -1268,8 +1274,9 @@ export default function CandidatesTab({
   const schoolNote = oneSchool ? T.schoolName(schoolCode) : cards.bySchool.map((s) => `${T.schoolName(s.code)} ${s.n}`); // one line each (screen 1)
   const hasAny = candidates.some(inSchool);
   const danLabelId = `${panelId}-dan`;
-  let emptyText = T.NO_CANDIDATES_DAN;
-  if (filter) emptyText = T.NO_MATCHES;
+  // C-05 (b): a card's own empty line; a Dan with nobody in it keeps 'No candidates for this Dan.'
+  const emptyKind = emptyLineKind(filter, active.some((c) => c.dan === danSel));
+  const emptyText = emptyKind === 'noPaid' ? T.NO_PAID_DAN : emptyKind === 'everyPaid' ? T.EVERY_PAID_DAN : T.NO_CANDIDATES_DAN;
 
   // ----- The open dialog -----
   let dialogElement = null;
@@ -1498,7 +1505,7 @@ export default function CandidatesTab({
         name={T.candidateName(markPaidRow)}
         amountCents={snap.expectedFeeCents}
         familyChoice={markPaidRow.payingBy}
-        choiceWhere={markPaidRow.source === 'form' ? 'form' : 'desk'}
+        choiceWhere={payingByWhere(markPaidRow)}
         onMarkPaid={(method) => saveMarkPaid(rowId, snap, method)}
         onClose={(restoreFocus) => {
           setMarkPaid(null);
@@ -1539,13 +1546,14 @@ export default function CandidatesTab({
                 : [
                     { key: 'paid', Icon: IconCheck, label: T.CARD_PAID, value: cards.paid, kind: 'filter' },
                     { key: 'notPaid', Icon: IconCircleX, label: T.CARD_NOT_PAID, value: cards.notPaid, kind: 'filter' }, // ti-circle-x = not paid (S9, 16a)
-                    { key: 'payments', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(cards.payments), kind: 'total' }, // ti-sum = a money total (v0.303)
+                    { key: 'payments', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(cards.payments), note: removedPaidCents > 0 ? T.includesRemoved(removedPaidCents) : null, kind: 'total' }, // ti-sum = a money total (v0.303)
                   ]),
             ]}
             selected={filter}
             onSelect={setFilter}
             showingText={filter ? T.FILTER_LINE[filter] : ''}
             showAllLabel={T.SHOW_ALL_LINK}
+            note={!hidden && cards.dupLeftOut > 0 ? T.dupNotCounted(cards.dupLeftOut) : null}
           />
         )}
         {oneSchool && (

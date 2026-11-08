@@ -6,10 +6,22 @@
 //     still focusable), next to their usable twins.
 // Why it exists: the looks are built before any section switches to them, so they need a page where
 // they can be seen and measured. The browser check (docs/Dashboard Core/tools/check-batch.mjs) uses it.
+import { useId, useState } from 'react';
 import BackLink from '../components/BackLink.jsx';
 import Grip from '../components/Grip.jsx';
+import Select from '../components/Select.jsx';
+
+// A grouped list (Select's `group`): "Current" and "Planned" headings above their choices
+const GROUPED = [
+  { value: 'a', label: 'Spring', group: 'Current' },
+  { value: 'b', label: 'Summer', group: 'Current' },
+  { value: 'c', label: 'Fall', group: 'Planned' },
+  { value: 'd', label: 'Winter', group: 'Planned' },
+];
 
 function Looks() {
+  const [picked, setPicked] = useState('a');
+  const labelId = useId();
   return (
     <div className="parts-frame" data-shot>
       <BackLink label="Camps" ariaLabel="Back to Camps" onClick={() => {}} />
@@ -35,6 +47,12 @@ function Looks() {
         <button type="button" className="btn btn-primary" aria-disabled="true">
           Mark paid (busy)
         </button>
+      </div>
+      <div className="parts-sh-row" data-sh="select">
+        <span id={labelId}>Schedule</span>
+        <div style={{ width: 240 }}>
+          <Select id="sh-select" labelId={labelId} value={picked} options={GROUPED} placeholder="Choose…" onChange={setPicked} />
+        </div>
       </div>
       <div className="parts-sh-row" data-sh="tags">
         <button type="button" className="ttag ev-tag-button">

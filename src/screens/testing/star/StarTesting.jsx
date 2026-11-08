@@ -66,6 +66,7 @@ export default function StarTesting({
   clearToast,
   onModalOpenChange,
   onLeaveGuardChange,
+  deviceLocation = null, // This device's school ('Worcester' | 'Shrewsbury'): where payments are counted (R1-01)
 }) {
   const baseId = useId();
   const tabRefs = useRef({});
@@ -94,6 +95,7 @@ export default function StarTesting({
         showToast={showToast}
         clearToast={clearToast}
         onModalOpenChange={onModalOpenChange}
+        deviceLocation={deviceLocation}
       />
     );
   }
