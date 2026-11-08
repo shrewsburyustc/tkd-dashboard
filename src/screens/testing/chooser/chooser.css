@@ -86,19 +86,4 @@
   outline-offset: 2px;
 }
 
-/* ===== "← Testing" above Color Belt's title (same look as Star's) ===== */
-.tc-back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 24px;
-  margin-bottom: 2px;
-}
-
-/* Touch: a 44px tall tap area, pulled back with negative margins so the title doesn't move down. */
-@media (pointer: coarse) {
-  .tc-back {
-    min-height: var(--tap-size);
-    margin: -10px 0 -8px;
-  }
-}
+/* ("← Testing" above Color Belt's title was `.tc-back` here; since R3-06 it is the shared `.back-link` in shared.css.) */
