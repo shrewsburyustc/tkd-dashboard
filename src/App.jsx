@@ -1116,6 +1116,8 @@ export default function App() {
               <Testing
                 location={location}
                 onLocationChange={changeLocation}
+                // This device's school: the desk Black Belt payments and refunds count at (R1-01)
+                deviceLocation={deviceLocation}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
                 testingPage={testingPage}

@@ -4,8 +4,11 @@
 // bb_price_is_valid (migration 0016, section 1a): WHOLE dollars from $1 to $5,000, stored as
 // cents (29000 = $290). This file is the same rule for the screens and the preview database, so
 // Save turns gray before the database would say "invalid".
-// For SHOWING a price use formatDollars from src/lib/money.js (87000 → "$870"); for payment amounts
-// (any cents, phase B2) use parseAmount / formatCents / amountInputText at the end of this file.
+// For SHOWING any amount use formatMoney from src/lib/money.js (87000 → "$870", 29050 → "$290.50");
+// for reading payment amounts (any cents, phase B2) use parseAmount / amountInputText at the end of
+// this file. (formatCents, below, is only an old name for formatMoney: it stays until the files
+// that still import it — the Candidates dialogs, the receipt's words and the checks — have
+// switched; design review BB14.)
 //
 // It is pure (no React, no browser), so Node can import it (checks.mjs) and so can the public
 // family form.
@@ -90,8 +93,11 @@ export function parseAmount(text) {
 // -29000 → "−$290" (a real minus sign, U+2212, as the mockups draw it). Whole dollars show no
 // ".00". Not a whole number → ''.
 // Since Dashboard core step 1 this is the dashboard's shared helper, formatMoney in
-// src/lib/money.js (rulebook v1.026, v1.101): the same output for every value. The name stays so
-// Black Belt's screens keep working; they switch to formatMoney in Black Belt's own prompt.
+// src/lib/money.js (rulebook v1.026, v1.101): the same output for every value. The name still
+// stays for the Candidates page's own files (CandidateDialog, ChangePlanDialog, ItemChecklist,
+// compareRows.js), the receipt's words (receipt/text.js) and the checks (checks.mjs and
+// src/lib/shared/checks.mjs); staff/text.js and results/ already call formatMoney (BB14). Delete this
+// wrapper once nothing imports it.
 export function formatCents(cents) {
   return formatMoney(cents);
 }

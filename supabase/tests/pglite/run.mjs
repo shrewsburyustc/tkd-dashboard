@@ -473,6 +473,32 @@
 //       safety, and the Undo of SETUP.md 0034e (manual/0034u, back to
 //       0032's reader) - see step0034 below. Run only this step with
 //       node run.mjs --only-step0034
+//   step0046. 0046 (Black Belt: every payment counts at the school of the
+//       desk that took it - Record payment and Record refund get a last
+//       input p_school; v1.035 / v1.040, R1-01) on its own database in the
+//       production order (liveOrderTo0025, then 0027, 0026, 0028, 0029,
+//       0031, 0032, 0033, 0034) with a payment made before it: the
+//       pre-apply check, only the two functions' lines move (0016's file),
+//       that payment kept exactly as it was, 0046's tests (the live app's
+//       calls without p_school as role authenticated included) and the
+//       Black Belt tests (0016, 0024, 0025, 0026, 0032, 0034) after it,
+//       re-run safety, and the Undo of SETUP.md 0046e
+//       (manual/0046u_undo_black_belt_payment_school.sql, back to 0016's
+//       two functions) - see step0046 below. Run only this step with
+//       node run.mjs --only-step0046
+//   step0048. 0048 (Black Belt: the downloaded results CSV lists Worcester
+//       before Shrewsbury - bb_results_csv(p_cycle_id) sorted Shrewsbury
+//       first; v1.047 (19), Jeffrey's "C" 2026-11-07; one function replaced,
+//       same signature, so create or replace is enough) on its own database
+//       in the production order (liveOrderTo0025, then 0027, 0026, 0028,
+//       0029, 0031, 0032, 0033, 0034) WITHOUT 0046: the pre-apply check, only
+//       the CSV function's line moves (0016's and 0025's files), 0048's tests and the
+//       Black Belt tests (0016, 0024, 0025, 0026, 0032, 0034) after it,
+//       re-run safety, and the Undo of SETUP.md 0048e
+//       (manual/0048u_undo_black_belt_results_csv_order.sql, back to 0025's
+//       function); then the same again with 0046 applied first (the two are
+//       independent) - see step0048 below. Run only this step with
+//       node run.mjs --only-step0048
 //   step0035. 0035 (Color Belt clean-up: the old one-click Mark paid
 //       functions testing_mark_paid / testing_private_mark_paid removed;
 //       the app uses 0030's *_by) on its own database in the production
@@ -615,6 +641,8 @@ const onlyStep0030 = process.argv.includes('--only-step0030');
 const onlyStep0032 = process.argv.includes('--only-step0032');
 const onlyStep0033 = process.argv.includes('--only-step0033');
 const onlyStep0034 = process.argv.includes('--only-step0034');
+const onlyStep0046 = process.argv.includes('--only-step0046');
+const onlyStep0048 = process.argv.includes('--only-step0048');
 const onlyStep0035 = process.argv.includes('--only-step0035');
 const onlyStep0036 = process.argv.includes('--only-step0036');
 const onlyStep0041 = process.argv.includes('--only-step0041');
@@ -866,6 +894,24 @@ async function main() {
     if (prints34) {
       console.log('\n0034 fingerprints (kind  item  detail):');
       for (const line of prints34) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0048: just Black Belt's results CSV order step (0048)
+  if (onlyStep0048) {
+    const prints48 = await step0048();
+    if (prints48) {
+      console.log('\n0048 fingerprints (kind  item  detail):');
+      for (const line of prints48) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0046: just Black Belt's payment school step (0046)
+  if (onlyStep0046) {
+    const prints46 = await step0046();
+    if (prints46) {
+      console.log('\n0046 fingerprints (kind  item  detail):');
+      for (const line of prints46) console.log('  ' + line);
     }
     return finish();
   }
@@ -1257,6 +1303,14 @@ async function main() {
     for (const line of after37) console.log('  ' + line);
   }
 
+  // step0046: Black Belt - payments count at the desk's school (its own database, production order)
+  console.log('\nMigration 0046 (Black Belt: payments count at the desk\'s school):');
+  const after46 = after5 ? await step0046() : null;
+
+  // step0048: Black Belt - the results CSV lists Worcester before Shrewsbury (its own database, production order)
+  console.log('\nMigration 0048 (Black Belt: the results CSV lists Worcester before Shrewsbury):');
+  const after48 = after5 ? await step0048() : null;
+
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
   const after20 = after5 ? await step0020(db, upgradeDb) : null;
@@ -1386,6 +1440,14 @@ async function main() {
   if (after39) {
     console.log('\n0039 fingerprints (kind  item  detail):');
     for (const line of after39) console.log('  ' + line);
+  }
+  if (after46) {
+    console.log('\n0046 fingerprints (kind  item  detail):');
+    for (const line of after46) console.log('  ' + line);
+  }
+  if (after48) {
+    console.log('\n0048 fingerprints (kind  item  detail):');
+    for (const line of after48) console.log('  ' + line);
   }
   if (after44) {
     console.log('\n0044 fingerprints (kind  item  detail):');
@@ -10266,6 +10328,448 @@ async function stepFinanceCampRefunds() {
     ['0026_tests.sql', 'ALL 0026 TESTS PASSED']]) {
     await runTestFile(db, `${L}${file} (after 0039)`, file, ok);
   }
+}
+
+// =====================================================================
+// step0046: Black Belt payments count at the desk's school (0046;
+// rulebook v1.035 / v1.040, design-review item R1-01)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0032, 0033 and 0034 - each only if its file is on this branch), with a
+// Black Belt payment made BEFORE 0046 by the old function (committed):
+//   a. 0046's tests, fingerprints and pre-apply check are connector-safe
+//      (no "delete" / "drop"); the migration itself DOES contain "drop
+//      function" on purpose (the two old versions) - Jeffrey pastes it
+//      himself, SETUP.md says so; the pre-apply check (SETUP 0046a) before
+//      0046: both functions are 0016's, one version each
+//   b. apply 0046: in 0016's fingerprint file ONLY the two lines of
+//      bb_record_payment and bb_record_refund change (their inputs and
+//      body md5, 0016's md5 -> 0046's, the four the pre-apply check names);
+//      every other fingerprint file is byte-identical; 0046's own two
+//      rows: plpgsql, volatile, security definer, search_path="",
+//      authenticated + postgres only; the payment made before 0046 and its
+//      history row are exactly as they were (no backfill)
+//   c. 0046_tests.sql (including the live app's 6-value / 6-name /
+//      5-value calls as role authenticated), then 0016's, 0024's, 0025's,
+//      0026's, 0032's and 0034's tests; the pre-apply check now says 0046
+//   d. 0046 applied a SECOND time: no fingerprint change, the payment kept
+//   e. the Undo of SETUP.md 0046e (the file it names,
+//      supabase/manual/0046u_undo_black_belt_payment_school.sql): every
+//      fingerprint file equals the one before 0046, the pre-apply check
+//      answers as before, the payments are untouched, 0016's and 0026's
+//      tests pass; then 0046 again -> the tested fingerprints,
+//      0046_tests.sql passes
+// Run only this step with   node run.mjs --only-step0046
+// =====================================================================
+const MD5_0016_PAYMENT = 'cdb0669362d4a0e7729f3362f6dbb2f2';
+const MD5_0046_PAYMENT = 'cc4e34bd6210d2235b6a0567a1a656f0';
+const MD5_0016_REFUND = '4db305703d66061fe7963499374af4d3';
+const MD5_0046_REFUND = '275b129dd69fb6469d3afdd2eb86396e';
+
+async function step0046() {
+  const L = '[0046] ';
+  const preSql = read('tests', '0046_preapply_check.sql');
+  const migration = read('migrations', '0046_black_belt_payment_school.sql');
+  const unsafe = [['tests', '0046_tests.sql'], ['tests', '0046_fingerprints.sql'], ['tests', '0046_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0046's tests, fingerprints and pre-apply check contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}0046's migration has no secret key in it (no "eyJ" token, no "sb_secret_" key)`,
+    !/eyJ[A-Za-z0-9_-]{20,}|sb_secret_/.test(migration));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0032 (Black Belt design review)', '0032_black_belt_review.sql'], ['0033 (Camps design review)', '0033_camps_design_review.sql'],
+    ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a payment made BEFORE 0046 by the old function (a Worcester candidate, the desk's
+  // payment): committed, so it must be exactly the same after 0046 and after its undo
+  const seedSql = `
+begin;
+do $$
+declare
+  v_admin uuid := '${ADMIN_UID}';
+  v_desk  uuid := '${DESK_UID}';
+  v_a1 uuid := gen_random_uuid(); v_d1 uuid := gen_random_uuid();
+  v_amr jsonb := jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60));
+  v_today date := public.testing_today();
+  v_adult date := (public.testing_today() - interval '30 years')::date;
+  v_r jsonb; v_cycle uuid; v_full uuid; v_pre uuid;
+begin
+  perform set_config('request.jwt.claims', '', true);
+  insert into auth.sessions (id, user_id) values (v_a1, v_admin), (v_d1, v_desk);
+  insert into public.session_unlock (session_id, staff_id, unlocked_until) values
+    (v_a1, v_admin, now() + interval '30 minutes'), (v_d1, v_desk, now() + interval '30 minutes');
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a1, 'amr', v_amr)::text, true);
+  if (select v.is_placeholder from public.bb_waiver_versions v where v.superseded_at is null) then
+    v_r := public.bb_save_waiver((select v.id from public.bb_waiver_versions v where v.superseded_at is null), 'zz seed waiver: every subject must be passed.');
+    if v_r ->> 'status' <> 'ok' then raise exception 'seed: waiver %', v_r; end if;
+  end if;
+  v_r := public.bb_add_cycle(jsonb_build_object(
+    'name', 'zz seed before 0046', 'application_due', v_today + 20, 'submissions_due', v_today + 40, 'auto_close', true,
+    'days', jsonb_build_array(
+      jsonb_build_object('name', 'Physical', 'day_date', v_today + 30, 'start_time', '12:30', 'end_time', '14:30',
+                         'place', jsonb_build_object('code', 'worcester'), 'second', null, 'parts', jsonb_build_array('physical')),
+      jsonb_build_object('name', 'Technical', 'day_date', v_today + 37, 'start_time', '12:30', 'end_time', '15:30',
+                         'place', jsonb_build_object('code', 'shrewsbury'), 'second', null, 'parts', jsonb_build_array('technical')),
+      jsonb_build_object('name', 'Curriculum', 'day_date', v_today + 44, 'start_time', '14:00', 'end_time', '17:00',
+                         'place', jsonb_build_object('code', 'shrewsbury'), 'second', null, 'parts', jsonb_build_array('curriculum'))),
+    'plans', jsonb_build_array(
+      jsonb_build_object('name', 'In full',
+                         'payments', jsonb_build_array(jsonb_build_object('due_on', v_today + 20, 'follows_application_due', true)),
+                         'amounts', jsonb_build_object('1', jsonb_build_array(87000), '2', jsonb_build_array(99000),
+                                                       '3', jsonb_build_array(150000), '4', jsonb_build_array(270000)))),
+    'kukkiwon', jsonb_build_object('1', 10000, '2', 11000, '3', 14000, '4', 17000),
+    'prices_from', null), null);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: cycle %', v_r; end if;
+  v_cycle := (v_r ->> 'id')::uuid;
+  select pl.id into v_full from public.bb_cycle_plans pl where pl.cycle_id = v_cycle and pl.name = 'In full';
+  v_r := public.bb_set_registration(v_cycle, 1, true);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: open %', v_r; end if;
+  v_r := public.bb_add_candidate(v_cycle, 'Pre', 'Zzseed', v_adult, 'zzseed.pre@example.com', 'worcester', 1, v_full, false, true);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: candidate %', v_r; end if;
+  v_pre := (v_r ->> 'id')::uuid;
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', v_desk, 'role', 'authenticated', 'session_id', v_d1, 'amr', v_amr)::text, true);
+  v_r := public.bb_record_payment(v_pre, (select c.version from public.bb_candidates c where c.id = v_pre), 1234, 'cash', array['p1'], null);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: payment %', v_r; end if;
+  perform set_config('request.jwt.claims', '', true);
+end
+$$;
+commit;
+`;
+  if (!(await run(db, `${L}a Black Belt payment made before 0046 (old function, committed)`, seedSql))) return null;
+  const payments = async () => JSON.stringify([
+    (await db.query(`select p.id, p.kind, p.amount_cents, p.location_code, p.cycle_name from public.bb_payments p order by p.id`)).rows,
+    (await db.query(`select l.id, l.location_code, l.action, l.record_id from public.change_log l where l.table_name = 'bb_payments' order by l.id`)).rows]);
+  const seeded = await payments();
+  record(`${L}the seeded payment counts at the candidate's school (worcester), as before 0046`,
+    JSON.parse(seeded)[0].length === 1 && JSON.parse(seeded)[0][0].location_code === 'worcester' && JSON.parse(seeded)[1].length === 1,
+    seeded.slice(0, 200));
+
+  // a. the pre-apply check before 0046
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const clean = await pre();
+  record(`${L}[pre-apply check] before 0046: both functions are 0016's, one version each`,
+    clean.payment_is_0016 === true && clean.payment_is_0046 === false && clean.refund_is_0016 === true && clean.refund_is_0046 === false
+      && clean.payment_versions === 1 && clean.refund_versions === 1, JSON.stringify(clean));
+
+  // b. apply 0046: only the two functions' lines move (0016's file)
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0032', '0033', '0034', '0046']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0046');
+  const before = await printsOf(db, others);
+  if (!(await run(db, `${L}apply 0046_black_belt_payment_school.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isPay = (line) => line.startsWith('function  bb_record_payment(');
+  const isRef = (line) => line.startsWith('function  bb_record_refund(');
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (n === '0016') {
+      const gp = gone.filter(isPay), gr = gone.filter(isRef), ap = added.filter(isPay), ar = added.filter(isRef);
+      const rest = [...gone, ...added].filter((x) => !isPay(x) && !isRef(x));
+      if (gone.length !== 2 || added.length !== 2 || gp.length !== 1 || gr.length !== 1 || ap.length !== 1 || ar.length !== 1 || rest.length
+          || !gp[0].includes(MD5_0016_PAYMENT) || !ap[0].includes(MD5_0046_PAYMENT) || gp[0].includes('p_school') || !ap[0].includes('p_note text, p_school text)')
+          || !gr[0].includes(MD5_0016_REFUND) || !ar[0].includes(MD5_0046_REFUND) || gr[0].includes('p_school') || !ar[0].includes('p_note text, p_school text)')) {
+        wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      }
+    } else if (gone.length || added.length) {
+      wrong.push(`${n} moved: ${JSON.stringify({ gone, added })}`);
+    }
+  }
+  record(`${L}fingerprints: only bb_record_payment's and bb_record_refund's lines moved (0016's file; inputs + body md5 ${MD5_0016_PAYMENT.slice(0, 8)} -> ${MD5_0046_PAYMENT.slice(0, 8)}, ${MD5_0016_REFUND.slice(0, 8)} -> ${MD5_0046_REFUND.slice(0, 8)}), every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints46 = after['0046_fingerprints.sql'];
+  const tail = ' lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE';
+  record(`${L}0046 fingerprints: both functions plpgsql, volatile, security definer, search_path="", authenticated + postgres only, 7 / 6 inputs`,
+    prints46.length === 2 && isPay(prints46[0]) && isRef(prints46[1]) && prints46[0].includes(MD5_0046_PAYMENT) && prints46[1].includes(MD5_0046_REFUND)
+      && prints46[0].includes('p_note text, p_school text)') && prints46[1].includes('p_note text, p_school text)')
+      && prints46[0].endsWith(tail) && prints46[1].endsWith(tail),
+    prints46.join(' | '));
+  const afterApply = await payments();
+  record(`${L}no backfill: the payment made before 0046 and its history row are exactly as they were`, afterApply === seeded);
+
+  // c. the tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFileLive(db, `${L}${file} (${label})`, file, ok);
+  };
+  const bbTests = [['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0024_tests.sql', 'ALL 0024 TESTS PASSED'],
+    ['0025_tests.sql', 'ALL 0025 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED'],
+    ['0032_tests.sql', 'ALL 0032 TESTS PASSED'], ['0034_tests.sql', 'ALL 0034 TESTS PASSED']]
+    .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file)));
+  await tests('after 0046', [['0046_tests.sql', 'ALL 0046 TESTS PASSED'], ...bbTests]);
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0046: both functions are 0046's, one version each`,
+    applied.payment_is_0016 === false && applied.payment_is_0046 === true && applied.refund_is_0016 === false && applied.refund_is_0046 === true
+      && applied.payment_versions === 1 && applied.refund_versions === 1, JSON.stringify(applied));
+
+  // d. re-run safety
+  await run(db, `${L}apply 0046 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0046 re-run: no fingerprint change, the payment kept`, movedAgain.length === 0 && (await payments()) === seeded, movedAgain.join(', '));
+
+  // e. Undo 0046, as SETUP.md 0046e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0046e\. Undo 0046/m);
+  const undoFile = 'manual/0046u_undo_black_belt_payment_school.sql';
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0046] SETUP.md has "### 0046e. Undo 0046" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0046] paste ${undoFile}`, read('manual', '0046u_undo_black_belt_payment_school.sql'))) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0046] every fingerprint file equals the one before 0046 (0016's two functions are back)`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    const undonePre = await pre();
+    record(`${L}[undo 0046] the pre-apply check answers as before 0046`, JSON.stringify(undonePre) === JSON.stringify(clean), JSON.stringify(undonePre));
+    record(`${L}[undo 0046] the payments are untouched`, (await payments()) === seeded);
+    await tests('after the undo', [['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED']]);
+    if (await run(db, `${L}[undo 0046] apply 0046 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0046_fingerprints.sql');
+      record(`${L}[undo 0046] after the redo the 0046 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints46));
+      await tests('after the redo', [['0046_tests.sql', 'ALL 0046 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints46;
+}
+
+// =====================================================================
+// step0048: Black Belt - the results CSV lists Worcester before Shrewsbury
+// (0048; rulebook v1.047 (19), Jeffrey's "C" 2026-11-07)
+// ---------------------------------------------------------------------
+// bb_results_csv(p_cycle_id) is the only function 0048 replaces (same
+// signature: create or replace, nothing removed). On its OWN fresh
+// database built in the production order with every live migration
+// (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0032, 0033 and 0034
+// - each only if its file is on this branch), and WITHOUT 0046 (the two
+// are independent), with a result row and a CSV download made BEFORE 0048
+// (committed):
+//   a. 0048's tests, fingerprints and pre-apply check, its migration and
+//      its undo file contain neither "delete" nor "drop" (connector-safe:
+//      no function is removed); the pre-apply check before 0048: the
+//      function is 0025's, one version
+//   b. apply 0048: in 0016's and 0025's fingerprint files (each lists every
+//      bb_ function) ONLY the line of bb_results_csv changes (body md5,
+//      0025's -> 0048's); every other fingerprint file is byte-identical; 0048's own row: plpgsql,
+//      volatile, security definer, search_path="", authenticated +
+//      postgres only; the download row made before 0048 is exactly as it
+//      was (no backfill)
+//   c. 0048_tests.sql, then 0016's, 0024's, 0025's, 0026's, 0032's and
+//      0034's tests; the pre-apply check now says 0048
+//   d. 0048 applied a SECOND time: no fingerprint change
+//   e. the Undo of SETUP.md 0048e (the file it names): every fingerprint
+//      file equals the one before 0048, the pre-apply check answers as
+//      before, the download row is untouched, 0025's tests pass; then 0048
+//      again -> the tested fingerprints, 0048_tests.sql passes
+//   f. the same on a second database WITH 0046 applied first (they are
+//      independent): the same pre-apply check, only the CSV line moves,
+//      0048's tests and 0046's tests pass
+// Run only this step with   node run.mjs --only-step0048
+// =====================================================================
+const MD5_0025_CSV = '3bf1eb21bc8c435c695525fd27f4ec68';
+const MD5_0048_CSV = '0a0e6884e67191fbd7379ca7fc40905a';
+
+async function step0048() {
+  const L = '[0048] ';
+  const preSql = read('tests', '0048_preapply_check.sql');
+  const migration = read('migrations', '0048_black_belt_results_csv_order.sql');
+  const unsafe = [['tests', '0048_tests.sql'], ['tests', '0048_fingerprints.sql'], ['tests', '0048_preapply_check.sql'],
+    ['migrations', '0048_black_belt_results_csv_order.sql'], ['manual', '0048u_undo_black_belt_results_csv_order.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0048's tests, fingerprints, pre-apply check, migration and undo contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}0048's migration has no secret key in it (no "eyJ" token, no "sb_secret_" key)`,
+    !/eyJ[A-Za-z0-9_-]{20,}|sb_secret_/.test(migration));
+
+  // one database in the production order; with46 = 0046 applied first
+  const build = async (with46) => {
+    const tag = with46 ? `${L}[with 0046] ` : L;
+    const db = await buildBase(tag);
+    if (!db) return null;
+    if (!(await liveOrderTo0025(db, tag))) return null;
+    for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+      ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+      ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+      ['0032 (Black Belt design review)', '0032_black_belt_review.sql'], ['0033 (Camps design review)', '0033_camps_design_review.sql'],
+      ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql']]) {
+      if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+      if (!(await run(db, `${tag}apply ${label}`, read('migrations', file)))) return null;
+    }
+    if (with46 && !(await run(db, `${tag}apply 0046_black_belt_payment_school.sql`, read('migrations', '0046_black_belt_payment_school.sql')))) return null;
+    return db;
+  };
+
+  const db = await build(false);
+  if (!db) return null;
+
+  // a result row and a CSV download made BEFORE 0048 (committed): they must be exactly the same after 0048 and after its undo
+  const seedSql = `
+begin;
+do $$
+declare
+  v_admin uuid := '${ADMIN_UID}';
+  v_a1 uuid := gen_random_uuid();
+  v_amr jsonb := jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60));
+  v_today date := public.testing_today();
+  v_adult date := (public.testing_today() - interval '30 years')::date;
+  v_r jsonb; v_cycle uuid; v_full uuid;
+begin
+  perform set_config('request.jwt.claims', '', true);
+  insert into auth.sessions (id, user_id) values (v_a1, v_admin);
+  insert into public.session_unlock (session_id, staff_id, unlocked_until) values (v_a1, v_admin, now() + interval '30 minutes');
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a1, 'amr', v_amr)::text, true);
+  if (select v.is_placeholder from public.bb_waiver_versions v where v.superseded_at is null) then
+    v_r := public.bb_save_waiver((select v.id from public.bb_waiver_versions v where v.superseded_at is null), 'zz seed waiver: every subject must be passed.');
+    if v_r ->> 'status' <> 'ok' then raise exception 'seed: waiver %', v_r; end if;
+  end if;
+  v_r := public.bb_add_cycle(jsonb_build_object(
+    'name', 'zz seed before 0048', 'application_due', v_today + 20, 'submissions_due', v_today + 40, 'auto_close', true,
+    'days', jsonb_build_array(
+      jsonb_build_object('name', 'Physical', 'day_date', v_today + 30, 'start_time', '12:30', 'end_time', '14:30',
+                         'place', jsonb_build_object('code', 'worcester'), 'second', null, 'parts', jsonb_build_array('physical')),
+      jsonb_build_object('name', 'Technical', 'day_date', v_today + 37, 'start_time', '12:30', 'end_time', '15:30',
+                         'place', jsonb_build_object('code', 'shrewsbury'), 'second', null, 'parts', jsonb_build_array('technical')),
+      jsonb_build_object('name', 'Curriculum', 'day_date', v_today + 44, 'start_time', '14:00', 'end_time', '17:00',
+                         'place', jsonb_build_object('code', 'shrewsbury'), 'second', null, 'parts', jsonb_build_array('curriculum'))),
+    'plans', jsonb_build_array(
+      jsonb_build_object('name', 'In full',
+                         'payments', jsonb_build_array(jsonb_build_object('due_on', v_today + 20, 'follows_application_due', true)),
+                         'amounts', jsonb_build_object('1', jsonb_build_array(87000), '2', jsonb_build_array(99000),
+                                                       '3', jsonb_build_array(150000), '4', jsonb_build_array(270000)))),
+    'kukkiwon', jsonb_build_object('1', 10000, '2', 11000, '3', 14000, '4', 17000),
+    'prices_from', null), null);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: cycle %', v_r; end if;
+  v_cycle := (v_r ->> 'id')::uuid;
+  select pl.id into v_full from public.bb_cycle_plans pl where pl.cycle_id = v_cycle and pl.name = 'In full';
+  v_r := public.bb_set_registration(v_cycle, 1, true);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: open %', v_r; end if;
+  v_r := public.bb_add_candidate(v_cycle, 'Pre', 'Zzseed', v_adult, 'zzseed.pre@example.com', 'worcester', 1, v_full, false, true);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: candidate %', v_r; end if;
+  v_r := public.bb_add_candidate(v_cycle, 'Aft', 'Zzseed', v_adult, 'zzseed.aft@example.com', 'shrewsbury', 1, v_full, false, true);
+  if v_r ->> 'status' <> 'ok' then raise exception 'seed: candidate 2 %', v_r; end if;
+  v_r := public.bb_results_csv(v_cycle);   -- the old order (Shrewsbury first), and one download row
+  if v_r ->> 'status' <> 'ok' or v_r -> 'rows' -> 0 ->> 'first_name' <> 'Aft' then raise exception 'seed: the old CSV should list Aft (Shrewsbury) first, got %', left(v_r::text, 300); end if;
+  perform set_config('request.jwt.claims', '', true);
+end
+$$;
+commit;
+`;
+  if (!(await run(db, `${L}a result row and a CSV download made before 0048 (old function, committed)`, seedSql))) return null;
+  const downloads = async (d) => JSON.stringify((await d.query(`select x.id, x.cycle_name, x.row_count from public.bb_downloads x order by x.id`)).rows);
+  const seeded = await downloads(db);
+  record(`${L}the seeded download row exists (one row, two candidates)`,
+    JSON.parse(seeded).length === 1 && JSON.parse(seeded)[0].row_count === 2, seeded.slice(0, 200));
+
+  // a. the pre-apply check before 0048
+  const pre = async (d) => (await d.query(preSql)).rows[0];
+  const clean = await pre(db);
+  record(`${L}[pre-apply check] before 0048: the function is 0025's, one version`,
+    clean.csv_is_0025 === true && clean.csv_is_0048 === false && clean.csv_versions === 1, JSON.stringify(clean));
+
+  // b. apply 0048: only the CSV function's line moves (0025's file)
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0032', '0033', '0034', '0048']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0048');
+  const before = await printsOf(db, others);
+  if (!(await run(db, `${L}apply 0048_black_belt_results_csv_order.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isCsv = (line) => line.startsWith('function  bb_results_csv(');
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (n === '0016' || n === '0025') {   // both files list every bb_ function, so both show the one line
+      if (gone.length !== 1 || added.length !== 1 || !isCsv(gone[0]) || !isCsv(added[0])
+          || !gone[0].includes(MD5_0025_CSV) || !added[0].includes(MD5_0048_CSV)
+          || gone[0].replace(MD5_0025_CSV, '') !== added[0].replace(MD5_0048_CSV, '')) {
+        wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      }
+    } else if (gone.length || added.length) {
+      wrong.push(`${n} moved: ${JSON.stringify({ gone, added })}`);
+    }
+  }
+  record(`${L}fingerprints: only bb_results_csv's line moved (in 0016's and 0025's files; body md5 ${MD5_0025_CSV.slice(0, 8)} -> ${MD5_0048_CSV.slice(0, 8)}, everything else on the line the same), every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints48 = after['0048_fingerprints.sql'];
+  const tail = ' lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE';
+  record(`${L}0048 fingerprint: bb_results_csv(p_cycle_id uuid), plpgsql, volatile, security definer, search_path="", authenticated + postgres only`,
+    prints48.length === 1 && isCsv(prints48[0]) && prints48[0].includes(MD5_0048_CSV) && prints48[0].includes('(p_cycle_id uuid)')
+      && prints48[0].endsWith(tail),
+    prints48.join(' | '));
+  record(`${L}no backfill: the download row made before 0048 is exactly as it was`, (await downloads(db)) === seeded);
+
+  // c. the tests
+  const tests = async (d, label, files) => {
+    for (const [file, ok] of files) await runTestFileLive(d, `${L}${file} (${label})`, file, ok);
+  };
+  const bbTests = [['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0024_tests.sql', 'ALL 0024 TESTS PASSED'],
+    ['0025_tests.sql', 'ALL 0025 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED'],
+    ['0032_tests.sql', 'ALL 0032 TESTS PASSED'], ['0034_tests.sql', 'ALL 0034 TESTS PASSED']]
+    .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file)));
+  await tests(db, 'after 0048', [['0048_tests.sql', 'ALL 0048 TESTS PASSED'], ...bbTests]);
+  const applied = await pre(db);
+  record(`${L}[pre-apply check] after 0048: the function is 0048's, one version`,
+    applied.csv_is_0025 === false && applied.csv_is_0048 === true && applied.csv_versions === 1, JSON.stringify(applied));
+
+  // d. re-run safety
+  await run(db, `${L}apply 0048 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0048 re-run: no fingerprint change, the download row kept`, movedAgain.length === 0 && (await downloads(db)) === seeded, movedAgain.join(', '));
+
+  // e. Undo 0048, as SETUP.md 0048e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0048e\. Undo 0048/m);
+  const undoFile = 'manual/0048u_undo_black_belt_results_csv_order.sql';
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0048] SETUP.md has "### 0048e. Undo 0048" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0048] paste ${undoFile}`, read('manual', '0048u_undo_black_belt_results_csv_order.sql'))) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0048] every fingerprint file equals the one before 0048 (0025's function is back)`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    const undonePre = await pre(db);
+    record(`${L}[undo 0048] the pre-apply check answers as before 0048`, JSON.stringify(undonePre) === JSON.stringify(clean), JSON.stringify(undonePre));
+    record(`${L}[undo 0048] the download row is untouched`, (await downloads(db)) === seeded);
+    await tests(db, 'after the undo', [['0025_tests.sql', 'ALL 0025 TESTS PASSED']]);
+    if (await run(db, `${L}[undo 0048] apply 0048 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0048_fingerprints.sql');
+      record(`${L}[undo 0048] after the redo the 0048 fingerprint equals the tested one`, JSON.stringify(redo) === JSON.stringify(prints48));
+      await tests(db, 'after the redo', [['0048_tests.sql', 'ALL 0048 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+
+  // f. independent of 0046: the same on a database with 0046 applied first
+  if (existsSync(path.join(supabaseDir, 'migrations', '0046_black_belt_payment_school.sql'))) {
+    const L2 = `${L}[with 0046] `;
+    const db2 = await build(true);
+    if (db2) {
+      const clean2 = await pre(db2);
+      record(`${L2}[pre-apply check] before 0048: the function is 0025's, one version`,
+        clean2.csv_is_0025 === true && clean2.csv_is_0048 === false && clean2.csv_versions === 1, JSON.stringify(clean2));
+      if (await run(db2, `${L2}apply 0048_black_belt_results_csv_order.sql`, migration)) {
+        const fp2 = await fingerprints(db2, '0048_fingerprints.sql');
+        record(`${L2}the 0048 fingerprint equals the one tested without 0046`, JSON.stringify(fp2) === JSON.stringify(prints48), fp2.join(' | '));
+        const tests2 = [['0048_tests.sql', 'ALL 0048 TESTS PASSED'], ['0046_tests.sql', 'ALL 0046 TESTS PASSED'], ['0025_tests.sql', 'ALL 0025 TESTS PASSED']]
+          .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file)));
+        for (const [file, ok] of tests2) await runTestFileLive(db2, `${L2}${file}`, file, ok);
+      }
+      await db2.close().catch(() => {});
+    }
+  }
+  return prints48;
 }
 
 main().catch((error) => {

@@ -682,19 +682,7 @@ section.bbf-card .bbf-review {
 .bbf-field--sign {
   margin: 0;
 }
-/* Date signed (v0.638): the same look as New students' .fsigned-box — a read-only box with a light
-   gray fill and a darker gray border, 12px under the signature hint. It is an <output>, not an input. */
-.bbf-field--signed {
-  margin: 12px 0 0;
-}
-.bbf-input--signed {
-  display: flex;
-  align-items: center;
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: default;
-}
+
 .bbf-sigpad {
   height: 120px;
   border: 1px dashed var(--color-border-control);

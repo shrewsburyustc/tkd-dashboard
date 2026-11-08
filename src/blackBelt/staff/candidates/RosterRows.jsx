@@ -75,12 +75,13 @@ function Balance({ row }) {
   return <span className={`bb-balance${over ? ' is-over' : ''}`}>{T.balanceText(row.money)}</span>;
 }
 
-// One candidate. ctx = { layout, nav, hidden, busy, menuFor, flashId, onOpen, onMore, onRecord, onReview }
+// One candidate. ctx = { layout, nav, hidden, busy, menuLoading, menuFor, flashId, onOpen, onMore, onRecord, onReview }
 function CandidateRow({ row, ctx }) {
   const { layout, nav, hidden } = ctx;
   const name = T.candidateName(row);
   const removed = row.status === 'withdrawn';
   const open = ctx.menuFor === row.id;
+  const reading = ctx.menuLoading === row.id; // this row's ⋯ is reading the candidate (R4-11)
   const makeup = row.isMakeup === true;
   // A possible duplicate offers no Record payment until the pair is resolved (R3-02, v1.046 (8))
   const showRecord = !hidden && canRecordPayment({ withdrawn: removed, isMakeup: makeup, duplicateState: row.duplicateState }) && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
@@ -113,6 +114,10 @@ function CandidateRow({ row, ctx }) {
       Icon={ICONS.more}
       aria-haspopup="menu"
       aria-expanded={open ? 'true' : 'false'}
+      // While an admin's ⋯ reads the candidate first (R4-11), it shows busy: grayed (the shared
+      // unavailable look, still a Tab stop) and announced as busy
+      aria-disabled={reading ? 'true' : undefined}
+      aria-busy={reading ? 'true' : undefined}
       data-candidate-more={row.id}
       tabIndex={nav.itemTabIndex(row.id)}
       onClick={(event) => {

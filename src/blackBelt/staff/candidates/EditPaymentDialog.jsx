@@ -1,7 +1,7 @@
 // EditPaymentDialog.jsx — "Edit payment" (admins only, from a payment line's ⋯ in the detail).
 // Why it exists: approved mockup Candidates 5, contract CONTRACT-0016-B2 §3.5. "Alex Kim · Payment 2
 // · recorded Mar 27 by Staff"; For (the same checklist as Record payment, ticked with the line's
-// items — OP-B4), Amount, Method and Note filled in from the line; Reason for the change
+// items — OP-B4), Amount, Paid by (BB1; was "Method") and Note filled in from the line; Reason for the change
 // (required); "The date (Mar 27) stays. The old and new values go in the change log."
 // The database never changes a payment row: it adds an undo of the old one and the new one, both
 // on the old date (append-only, Star v0.166). Save → toast "Payment changed · Undo".
@@ -10,7 +10,7 @@
 // payment is for." under it (useCandidateActions.openEditPayment).
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
-import { AmountField, AmountMethod, FailedBanner, Footer, MethodField, PrimaryButton, TextField } from './dialogParts.jsx';
+import { AmountField, AmountMethod, FailedBanner, Footer, PaidByBox, PrimaryButton, TextField } from './dialogParts.jsx';
 import { ICONS } from './icons.js';
 import ItemChecklist from './ItemChecklist.jsx';
 import { paymentErrors } from './RecordPaymentDialog.jsx';
@@ -45,7 +45,7 @@ export default function EditPaymentDialog({ state, isPhone, onChange, onTicks, o
         <ItemChecklist items={data.money.items ?? []} ticks={v.ticks} onChange={onTicks} showAll label={T.FOR_LABEL} error={ticksError} readOnly={ro} />
         <AmountMethod>
           <AmountField value={v.amount} error={errors.amount} readOnly={ro} onChange={(amount) => onChange({ amount })} />
-          <MethodField value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
+          <PaidByBox value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
         </AmountMethod>
         <TextField label={T.NOTE_OPTIONAL} placeholder={T.NOTE_PLACEHOLDER} value={v.note} error={errors.note} readOnly={ro} onChange={(note) => onChange({ note })} />
         <TextField label={T.REASON} placeholder={T.REASON_PLACEHOLDER} value={v.reason} error={errors.reason} readOnly={ro} onChange={(reason) => onChange({ reason })} />

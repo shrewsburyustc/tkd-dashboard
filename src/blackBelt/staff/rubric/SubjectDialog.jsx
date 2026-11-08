@@ -15,16 +15,16 @@
 // link (v0.56, v0.928). Switching Measured → Graded keeps the ways in the draft until Save
 // (useRubricDraft keeps them aside), so switching back brings them back.
 // PC and tablet: a dialog (over the inline editor). Phones: a full-screen page over the
-// full-screen editor (InnerDialog, so the editor below keeps the one browser-history step).
+// full-screen editor (the shared Dialog with onTop, so the editor below keeps the one browser-history
+// step; the "Grade needs" list is the shared Select).
 import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react';
 import { IconCheck, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
+import Select from '../../../components/Select.jsx';
 import { bracketLabel, CUTOFF_LETTERS, MAX_BRACKETS, sameBracket, subjectLetters } from '../../../lib/blackBelt/rubric.js';
 import Choice from '../parts/Choice.jsx';
-import InnerDialog from '../parts/InnerDialog.jsx';
-import SelectField from '../parts/SelectField.jsx';
 import { checkDraft, prepareDan } from './draft.js';
 import { FieldNote, NumberBox, TextBox } from './fields.jsx';
 import { describe } from './problemText.js';
@@ -159,7 +159,7 @@ export default function SubjectDialog({ draft, partCode, subject: original, isNe
             <span id={`${id}-dir-${wi}-label`} className="bbe-label">
               {T.GRADE_NEEDS}
             </span>
-            <SelectField
+            <Select
               id={`${id}-dir-${wi}`}
               labelId={`${id}-dir-${wi}-label`}
               value={way.direction}
@@ -437,9 +437,9 @@ export default function SubjectDialog({ draft, partCode, subject: original, isNe
   const title = s.name?.trim() ? s.name : original.name?.trim() ? original.name : T.ADD_SUBJECT;
   if (isPhone) {
     return (
-      <InnerDialog title={title} fullScreen onRequestClose={requestClose}>
+      <Dialog title={title} fullScreen onTop onRequestClose={requestClose}>
         {content}
-      </InnerDialog>
+      </Dialog>
     );
   }
   return (
