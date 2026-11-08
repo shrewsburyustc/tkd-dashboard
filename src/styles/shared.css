@@ -2411,6 +2411,15 @@ html.is-reordering .tib-tip {
   cursor: not-allowed;
 }
 
+/* A clickable tag is already light gray, so the gray above barely shows on it: a tag that can't be
+   pressed right now also goes white with a dashed edge (design review: the busy "$X due" tag looked
+   almost the same as a ready one). */
+.ev-tag-button[aria-disabled='true'],
+.ev-tag-button[aria-disabled='true']:hover {
+  border-style: dashed;
+  background: var(--color-bg);
+}
+
 /* A control that is busy saving (aria-busy) keeps the busy cursor instead (v1.008, v1.103) */
 .btn[aria-disabled='true'][aria-busy='true'],
 .ev-tag-button[aria-disabled='true'][aria-busy='true'] {
