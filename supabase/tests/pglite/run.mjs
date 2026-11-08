@@ -726,9 +726,11 @@ async function runTestFile(db, label, file, passedText) {
 // (F1, F2, P2) and failed on production with "permission denied for function t_eq" while PGlite let it pass.
 // The 0035 and 0044 steps run their test files through this; other sections' steps still use runTestFile.
 async function runTestFileLive(db, label, file, passedText) {
-  await db.exec('alter default privileges for role postgres revoke execute on functions from public;');
   try {
+    await db.exec('alter default privileges for role postgres revoke execute on functions from public;');
     await runTestFile(db, label, file, passedText);
+  } catch (error) {
+    record(label, false, error.message); // a failure to set the rule is a FAIL line, not a crash
   } finally {
     await db.exec('alter default privileges for role postgres grant execute on functions to public;').catch(() => {});
   }

@@ -1230,9 +1230,14 @@ export default function App() {
                 profile={profile}
                 screenLocked={phase === 'locked'}
                 showToast={showToast}
+                clearToast={clearToast}
                 onModalOpenChange={setSettingsModalOpen}
                 onRefreshProfile={refreshProfile}
                 onNoAccess={handleNoAccess}
+                // Classes and ranks opens on the top bar's school; the address #settings/classes-and-ranks
+                // scrolls to it (CB14).
+                location={location}
+                focusPart={eventTab === 'classes-and-ranks' ? 'classes-and-ranks' : null}
               />
             )}
           </Shell>

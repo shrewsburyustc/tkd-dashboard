@@ -31,6 +31,21 @@
   margin: 0 0 var(--space-8);
 }
 
+/* The second part of the page (Classes and ranks, CB14): room above, like a new section */
+.st-heading--part {
+  margin-top: var(--space-32);
+}
+
+/* Its switch (Worcester | Shrewsbury) with Add class on the right */
+.st-classes-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
 .st-empty {
   padding: var(--space-32) var(--space-16);
   color: var(--color-text-secondary);

@@ -1,7 +1,15 @@
-// ClassesRanksTab.jsx — the "Classes and ranks" tab of Testing: the list and everything you
-// can do with it.
+// ClassesRanksTab.jsx — the class and rank list and everything you can do with it. Since CB14
+// (rulebook v0.427 / v0.432) it is used in two places, chosen by the `part` prop:
+//   part 'settings'  Settings → Classes and ranks (admins): names and order — add, edit, delete and
+//                    reorder classes and ranks. No prices; the dialogs are Add/Edit class (name),
+//                    Edit rank (name + belt) and Add rank (everything, prices pre-filled).
+//   part 'prices'    Color belt testing → Prices: every rank's prices and each class's final award.
+//                    Admins edit them (Edit prices on a rank, Final award on a class); staff see the list
+//                    read-only. No add, no reorder, no delete, no ⋯ menu.
+// Both parts read the same data and call the same database functions (which take every field), so a save
+// from one half sends the other half back unchanged and the version check stops it if someone else changed it.
 // Why it exists: approved mockup screens 1–8 and contract 0003 §8. This file is the "brain"
-// of the tab. It:
+// of the list. It:
 //   - loads the selected school's classes and ranks (useClassesRanks — reloads quietly after
 //     every change, when the school changes, after unlocking, and when the browser tab
 //     becomes visible again)
@@ -100,6 +108,8 @@ function rankFormValues(rank) {
 }
 
 export default function ClassesRanksTab({
+  part = 'prices', // 'settings' | 'prices' (see the top of the file)
+  addClassLabel, // Settings: the Add class button's name for screen readers ("Add class, Worcester"); the words on it stay "Add class"
   school,
   isAdmin,
   panelId,
@@ -112,6 +122,8 @@ export default function ClassesRanksTab({
   clearToast,
   onModalOpenChange,
 }) {
+  const isPrices = part === 'prices';
+  const loadFailedText = isPrices ? T.PRICES_LOAD_FAILED : T.LOAD_FAILED;
   const locationCode = LOCATION_CODE[school];
   const data = useClassesRanks({ locationCode, enabled: !screenLocked });
   const classes = data.classes;
@@ -130,8 +142,8 @@ export default function ClassesRanksTab({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const isNarrowPhone = useMediaQuery(NARROW_PHONE_QUERY); // under 360px: no Edit pencil on rank rows (v0.68)
-  // Grips (drag to reorder) for admins on EVERY device (v0.63); staff never see them.
-  const layout = { isPhone, isNarrowPhone, isTouch, isWide, isPc, hasGrip: isAdmin };
+  // Grips (drag to reorder) for admins on EVERY device (v0.63), in Settings only; staff never see them.
+  const layout = { isPhone, isNarrowPhone, isTouch, isWide, isPc, hasGrip: isAdmin && !isPrices };
 
   // ----- State -----
   const [openBySchool, setOpenBySchool] = useState(() => Object.fromEntries(openClassesBySchool));
@@ -210,7 +222,7 @@ export default function ClassesRanksTab({
   async function reloadQuiet() {
     const result = await dataRef.current.reload();
     // A quiet reload that fails keeps the list on screen and shows the load banner.
-    if (result === 'error') setBanner({ text: T.LOAD_FAILED, retry: retryLoad });
+    if (result === 'error') setBanner({ text: loadFailedText, retry: retryLoad });
     return result;
   }
   async function retryLoad() {
@@ -228,10 +240,11 @@ export default function ClassesRanksTab({
   useEffect(() => {
     if (previousCodeRef.current === locationCode) return;
     previousCodeRef.current = locationCode;
+    clearToast(); // an Undo offered for the other school's change must not sit over this one
     setBanner(null);
     setMenu(null);
     setFailedReorder(null);
-  }, [locationCode]);
+  }, [locationCode, clearToast]);
 
   // Locking closes menus (they aren't brought back). Dialogs are only hidden — see render.
   // After unlocking, focus goes back to that menu's ⋯ button.
@@ -286,12 +299,15 @@ export default function ClassesRanksTab({
     setDialog({ key: Date.now(), touched: {}, note: null, blocked: false, duplicateName: null, saving: false, ...next });
   }
 
+  // Settings: Edit rank (name + belt). Prices: Edit prices. Staff have no dialog (view only).
   function openRank(rank, opener) {
+    if (!isAdmin) return;
     const cls = classesRef.current.find((c) => c.id === rank.classId);
     const values = rankFormValues(rank);
     openDialog({
       type: 'rank',
-      mode: isAdmin ? 'edit' : 'view',
+      mode: 'edit',
+      part: isPrices ? 'prices' : 'structure',
       classId: rank.classId,
       rankId: rank.id,
       values,
@@ -314,13 +330,13 @@ export default function ClassesRanksTab({
       // The new rank's belt starts as a copy of the class's last rank's (plain white if empty).
       belt: defaultBeltFor(classesRef.current.find((c) => c.id === cls.id) ?? cls),
     };
-    openDialog({ type: 'rank', mode: 'add', classId: cls.id, rankId: null, values, initial: values, addInfo, snapshot: { cls }, opener });
+    openDialog({ type: 'rank', mode: 'add', part: 'all', classId: cls.id, rankId: null, values, initial: values, addInfo, snapshot: { cls }, opener });
   }
 
   function openAddClass(opener) {
     if (!isAdmin) return;
     const values = { name: '', awardId: null };
-    openDialog({ type: 'class', mode: 'add', classId: null, values, initial: values, moreOpen: false, opener });
+    openDialog({ type: 'class', mode: 'add', part: 'name', classId: null, values, initial: values, opener });
   }
 
   function openEditClass(cls, opener) {
@@ -330,7 +346,8 @@ export default function ClassesRanksTab({
     const saved = finalAwardChoiceOf(cls);
     const awardId = saved === FINAL_AWARD_NONE || cls.finalAward ? saved : null;
     const values = { name: cls.name, awardId };
-    openDialog({ type: 'class', mode: 'edit', classId: cls.id, values, initial: values, snapshot: { cls }, opener });
+    // Settings: Edit class (the name). Prices: Final award.
+    openDialog({ type: 'class', mode: 'edit', part: isPrices ? 'award' : 'name', classId: cls.id, values, initial: values, snapshot: { cls }, opener });
   }
 
   function patchDialog(patch) {
@@ -377,7 +394,7 @@ export default function ClassesRanksTab({
   function requestClose() {
     const d = dialogRef.current;
     if (!d || d.saving) return;
-    if (d.type === 'delete' || d.mode === 'view') {
+    if (d.type === 'delete') {
       cancelDialog();
       return;
     }
@@ -469,7 +486,7 @@ export default function ClassesRanksTab({
         ...beltOf(record), // Undo puts the old belt back too
       };
       const savedVersion = result.version;
-      showToast(T.TOAST_RANK_SAVED, {
+      showToast(isPrices ? T.TOAST_PRICES_SAVED : T.TOAST_RANK_SAVED, {
         icon: false,
         action: {
           label: T.UNDO,
@@ -519,7 +536,7 @@ export default function ClassesRanksTab({
       // Both final-award values always go along (v0.62), so Undo puts None / Not set / a rank back.
       const previous = { name: record.name, ...finalAwardArgs(finalAwardChoiceOf(record)) };
       const savedVersion = result.version;
-      showToast(T.TOAST_CLASS_SAVED, {
+      showToast(isPrices ? T.TOAST_AWARD_SAVED : T.TOAST_CLASS_SAVED, {
         icon: false,
         action: {
           label: T.UNDO,
@@ -689,7 +706,7 @@ export default function ClassesRanksTab({
       return;
     }
     if (fresh.status !== 'ok') {
-      setBanner({ text: T.LOAD_FAILED, retry: retryLoad });
+      setBanner({ text: loadFailedText, retry: retryLoad });
       return;
     }
     dataRef.current.setLocalClasses(() => fresh.classes); // show what was just read
@@ -842,7 +859,7 @@ export default function ClassesRanksTab({
     },
   });
 
-  const addClassShown = isAdmin && data.status === 'ready';
+  const addClassShown = isAdmin && !isPrices && data.status === 'ready';
   useShortcutN({
     enabled: addClassShown && dialog === null && menu === null && !screenLocked && !busy && drag.state === null,
     onPress: () => openAddClass(addClassEl()),
@@ -850,7 +867,7 @@ export default function ClassesRanksTab({
 
   // ===== Drawing =====
   const addClassButton = addClassShown ? (
-    <button type="button" className="btn btn-primary" data-add-class onClick={(event) => openAddClass(event.currentTarget)}>
+    <button type="button" className="btn btn-primary" data-add-class aria-label={addClassLabel} onClick={(event) => openAddClass(event.currentTarget)}>
       {/* ti-plus = add new */}
       <IconPlus size={16} aria-hidden="true" />
       {T.ADD_CLASS}
@@ -858,9 +875,10 @@ export default function ClassesRanksTab({
   ) : null;
 
   const ctx = {
+    part,
     isAdmin,
     layout,
-    columns: rankGridColumns({ hasGrip: layout.hasGrip, isWide, isTouch, isAdmin }),
+    columns: rankGridColumns({ hasGrip: layout.hasGrip, isWide, isTouch, isAdmin, part }),
     notSavedId: failedReorder?.movedId ?? null,
     drag: drag.state,
     gripProps: drag.gripProps,
@@ -886,11 +904,13 @@ export default function ClassesRanksTab({
     body = <TestingSkeleton />;
   } else if (data.status === 'error') {
     // The first load failed: nothing to show, so the banner takes the list's place.
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => dataRef.current.reload()} />;
+    body = <ErrorBanner text={loadFailedText} onRetry={() => dataRef.current.reload()} />;
   } else if (data.status === 'noAccess') {
     body = null; // the screen is about to lock
   } else if (classes.length === 0) {
-    body = <p className="tempty">{isAdmin ? T.emptySchoolAdmin(school) : T.emptySchoolStaff(school)}</p>;
+    let emptyText = T.emptySchoolStaff(school);
+    if (isAdmin) emptyText = isPrices ? T.emptySchoolPricesAdmin(school) : T.emptySchoolAdmin(school);
+    body = <p className="tempty">{emptyText}</p>;
   } else {
     // A class being dragged to a new spot: a lifted copy of its line + the blue line go there.
     const classDrag = drag.state?.group === 'classes' ? drag.state : null;
@@ -948,7 +968,6 @@ export default function ClassesRanksTab({
           school={school}
           classes={classes}
           record={record}
-          onToggleMore={() => patchDialog({ moreOpen: !dialog.moreOpen })}
           onSave={saveClass}
           {...common}
         />
@@ -982,7 +1001,8 @@ export default function ClassesRanksTab({
   return (
     <>
       {renderHeader(addClassButton)}
-      <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
+      {/* On the Prices tab this is the tab's panel; in Settings it is just a part of the page. */}
+      <div {...(isPrices ? { role: 'tabpanel', id: panelId, 'aria-labelledby': tabId } : {})} className="tpanel">
         {banner && (
           <ErrorBanner
             text={banner.text}

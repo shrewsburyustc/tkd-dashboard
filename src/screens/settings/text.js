@@ -13,6 +13,13 @@ export const NO_ADDRESS = 'No address yet. Family pages show only the school nam
 export const NO_PHONE = 'No phone yet';
 export const phoneLine = (phone) => `Phone: ${phone}`;
 export const LOADING = 'Loading Settings';
+
+// ----- Classes and ranks (CB14, rulebook v0.427: moved here from Color belt testing) -----
+export const CLASSES_RANKS = 'Classes and ranks';
+export const CLASSES_RANKS_SUB =
+  "Each school's classes and belt ranks. The Schedule, Calendar, Forms and Testing all use them. Testing prices are in Color belt testing → Prices.";
+export const SCHOOL_CHOICE = 'School'; // names the Worcester | Shrewsbury switch for screen readers
+export const addClassFor = (school) => `Add class, ${school}`; // screen-reader name of the Add class button
 export const LOAD_FAILED = "Couldn't load the schools. Check the connection, then retry.";
 export const ONLY_ADMINS = 'Only admins can see Settings.';
 

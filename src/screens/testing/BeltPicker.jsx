@@ -42,15 +42,8 @@ const colorName = (key) => BELT_COLORS.find((c) => c.key === key)?.name ?? '';
 // What's wrong with the belt, for the screen: the shared rules (validateBelt) plus one more the
 // picker adds — end stripes in the same color as the belt underneath them would be invisible.
 // 'endStripeSame' | validateBelt codes | null.
-export function beltFormProblem(belt) {
-  const problem = validateBelt(belt);
-  if (problem) return problem;
-  if (belt.beltEndStripes > 0) {
-    const on = belt.beltEndStripeColor;
-    if (on === belt.beltColor || (belt.beltPattern === 'half' && on === belt.beltColor2)) return 'endStripeSame';
-  }
-  return null;
-}
+export { beltFormProblem } from '../../lib/testing/belts.js'; // (moved to lib/testing/belts.js so the node checks can reach it; CB14)
+import { beltFormProblem } from '../../lib/testing/belts.js';
 
 // A second color that differs from the first: white on a colored belt, black on a white one.
 function contrastingColor(first) {
