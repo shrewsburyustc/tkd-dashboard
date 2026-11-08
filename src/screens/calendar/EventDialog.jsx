@@ -3,7 +3,9 @@
 //   Title, Type (sets the color — types are set up under ⋯ → Event types), All day (untick it
 //   to set times), Starts / Ends (a later end date = a several-day event, at most 31 days;
 //   the dates use the dashboard's own calendar, components/DatePicker.jsx, design review N6 /
-//   v1.018, and the end can't be before the start; the times stay the browser's time box),
+//   v1.018, and the end can't be before the start; the times are the shared time list,
+//   components/TimeList.jsx, N7 / v1.109: 6:00 AM–10:00 PM in 5-minute steps; Type is the shared
+//   dropdown, S-10 / v1.048 (20)),
 //   School (Worcester, Shrewsbury or Both — starts with the school in the switcher), and notes
 //   under "More details". Save stays gray until there's a title, a type and good dates.
 // Edit has Remove (instant, with Undo — no confirmation, v0.234).
@@ -14,6 +16,8 @@ import { IconCheck, IconChevronDown, IconChevronRight, IconTrash } from '@tabler
 import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
+import Select from '../../components/Select.jsx';
+import TimeList from '../../components/TimeList.jsx';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { parseTime } from '../../lib/schedule/time.js';
 import { cleanNotes, cleanText, eventTimesProblem, notesProblem, textProblem, TITLE_MAX } from '../../lib/calendar/rules.js';
@@ -159,30 +163,29 @@ export default function EventDialog({ state, types, today, isPhone, onChange, on
         </div>
 
         <div className="field">
-          <label htmlFor={`${idBase}-type`}>{T.TYPE}</label>
+          <span id={`${idBase}-type-label`} className="field-label">
+            {T.TYPE}
+          </span>
           {types.length === 0 ? (
             <Notice>{T.NO_TYPES}</Notice>
           ) : (
             <div className="ctype-row">
               <i className="cpanel-swatch" style={type ? { background: colorOf(type.color).fill, borderColor: colorOf(type.color).edge } : undefined} aria-hidden="true" />
-              <select
+              {/* The shared dropdown (S-10, v1.048 (20)); "Choose a type" is its gray placeholder */}
+              <Select
                 id={`${idBase}-type`}
-                className="input sdialog-select"
-                disabled={readOnly}
-                value={v.typeId ?? ''}
-                aria-invalid={check.typeError ? true : undefined}
-                onChange={(e) => onChange({ typeId: e.target.value || null })}
-              >
-                <option value="">{T.CHOOSE_TYPE}</option>
-                {types.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+                labelId={`${idBase}-type-label`}
+                value={v.typeId ?? null}
+                options={types.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder={T.CHOOSE_TYPE}
+                readOnly={readOnly}
+                invalid={Boolean(check.typeError)}
+                describedBy={check.typeError ? `${idBase}-type-error` : undefined}
+                onChange={(typeId) => onChange({ typeId: typeId || null })}
+              />
             </div>
           )}
-          {check.typeError && <Notice>{check.typeError}</Notice>}
+          {check.typeError && <Notice id={`${idBase}-type-error`}>{check.typeError}</Notice>}
         </div>
 
         <label className="sday-check cbox">
@@ -212,18 +215,22 @@ export default function EventDialog({ state, types, today, isPhone, onChange, on
               }}
             />
             {!v.allDay && (
-              <input
-                className="input"
-                type="time"
-                step={300}
-                aria-label={T.startTime}
+              <>
+                <span id={`${idBase}-start-time-label`} className="visually-hidden">
+                  {T.startTime}
+                </span>
+                <TimeList
+                id={`${idBase}-start-time`}
+                labelId={`${idBase}-start-time-label`}
+                value={v.start || null}
                 readOnly={readOnly}
-                value={v.start}
-                onChange={(e) => {
-                  onChange({ start: e.target.value });
+                invalid={Boolean(check.timeError)}
+                onChange={(start) => {
+                  onChange({ start: start ?? '' });
                   onTouch(['dates']);
                 }}
-              />
+                />
+              </>
             )}
           </div>
           <div className="ctimes-row">
@@ -246,18 +253,22 @@ export default function EventDialog({ state, types, today, isPhone, onChange, on
               }}
             />
             {!v.allDay && (
-              <input
-                className="input"
-                type="time"
-                step={300}
-                aria-label={T.endTime}
+              <>
+                <span id={`${idBase}-end-time-label`} className="visually-hidden">
+                  {T.endTime}
+                </span>
+                <TimeList
+                id={`${idBase}-end-time`}
+                labelId={`${idBase}-end-time-label`}
+                value={v.end || null}
                 readOnly={readOnly}
-                value={v.end}
-                onChange={(e) => {
-                  onChange({ end: e.target.value });
+                invalid={Boolean(check.timeError)}
+                onChange={(end) => {
+                  onChange({ end: end ?? '' });
                   onTouch(['dates']);
                 }}
-              />
+                />
+              </>
             )}
           </div>
         </div>

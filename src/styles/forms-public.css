@@ -121,6 +121,16 @@ h1:focus,
   cursor: progress;
 }
 
+/* Send while it says "Sending…": the approved gray "unavailable" look (the dashboard's shared.css has the
+   same rule; this page loads only this file). Still focusable (aria-disabled, never disabled). */
+.btn-primary.is-unavailable,
+.btn-primary.is-unavailable:hover,
+.btn-primary.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+}
+
 /* The icon-only button (IconButton.jsx; "Remove child") has its own small file,
    icon-button-public.css, loaded right after this one (design review R5-03). */
 
@@ -382,7 +392,7 @@ h1:focus,
   padding-block: 12px; /* a 44px-tall tap area without moving the line */
   margin-block: -12px;
   color: var(--color-blue);
-  font-weight: 600;
+  font-weight: 500; /* §7: screen text uses 400 and 500 only (R4-06) */
   white-space: nowrap;
 }
 

@@ -3,7 +3,10 @@
 // shows in the side panel) with a short summary written out inside:
 //   - closures first (amber, ti-alert-triangle: they are a warning — classes are cancelled)
 //   - the day a planned schedule starts (dashed chip)
-//   - events in their type's color; Color Belt / Star testing events (purple, ti-certificate)
+//   - events in their type's color; every other section's dated things (v0.645, read-only): Color
+//     Belt / Star testing + Black Belt in the Testing purple (ti-certificate / ti-star / ti-award),
+//     camps in the Camp teal (ti-tent), deadlines as dashed gray chips (ti-flag)
+//   - "2 new sign-ups" (ti-address-book): one blue count chip per day, last (one per school on Both)
 //   - "4 classes" in gray (crossed out when the whole day is closed)
 //   - "2 free classes" (ti-user-plus) booked through Forms; amber when one is on a cancelled class
 //   - "2 follow-ups" (ti-clock-hour-4): prospects to call that day; amber when due today or
@@ -21,7 +24,18 @@
 //   typeColor   (typeId) => color record (schedule/colors.js)
 //   both        true on "Both" (school letters)
 //   onPick      (date, element) => void
-import { IconAlertTriangle, IconCalendarEvent, IconCertificate, IconClockHour4, IconUserPlus } from '@tabler/icons-react';
+import {
+  IconAddressBook,
+  IconAlertTriangle,
+  IconAward,
+  IconCalendarEvent,
+  IconCertificate,
+  IconClockHour4,
+  IconFlag,
+  IconStar,
+  IconTent,
+  IconUserPlus,
+} from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import * as T from './text.js';
 
@@ -49,10 +63,55 @@ export function dayChips(info, typeColor, both) {
       text: `${e.event.title}${T.partOf(e.part)}`,
     });
   }
-  for (const t of info.testing) {
-    chips.push({ key: `t${t.id}`, kind: 'testing', color: colorOf('purple'), letters: both ? schoolLetters(t.locationCode) : '', text: t.title });
+  // every other section's dated things (v0.645): purple Testing / Black Belt, teal camps, dashed deadlines
+  for (const i of info.items) {
+    chips.push({ key: `i${i.id}`, kind: i.kind === 'camp_day' ? 'camp' : 'testing', item: i, color: itemColor(i), letters: both ? schoolLetters(i.locationCode) : '', text: T.itemText(i) });
+  }
+  for (const d of info.deadlines) {
+    chips.push({ key: `d${d.id}`, kind: 'deadline', item: d, letters: both ? schoolLetters(d.locationCode) : '', text: T.itemText(d) });
   }
   return chips;
+}
+
+// The colors of a section item: camps use the Camp teal, the rest the Testing purple (v0.239, v0.645).
+export const itemColor = (item) => colorOf(item.kind === 'camp_day' ? 'teal' : 'purple');
+
+// The section's own icon (same set in the month, week and day panel).
+export function ItemIcon({ item, size = 12, className }) {
+  const props = { size, 'aria-hidden': 'true', className };
+  switch (item.kind) {
+    case 'star_event':
+    case 'star_private':
+      return <IconStar {...props} />;
+    case 'bb_day':
+      return <IconAward {...props} />;
+    case 'camp_day':
+      return <IconTent {...props} />;
+    case 'deadline':
+      return <IconFlag {...props} />;
+    case 'signup':
+      return <IconAddressBook {...props} />;
+    default:
+      return <IconCertificate {...props} />;
+  }
+}
+
+// The new-sign-ups chips of one day: one count chip, or one per school on Both (like follow-ups).
+export function signupChips(info, both) {
+  if (!info.signupCount) return [];
+  if (!both) return [{ key: 'n', letters: '', count: info.signupCount }];
+  const codes = [...new Set(info.signups.map((s) => s.locationCode))];
+  return codes.map((code) => ({ key: `n${code}`, letters: schoolLetters(code), count: info.signups.filter((s) => s.locationCode === code).length }));
+}
+
+export function SignupChip({ chip }) {
+  return (
+    <span className="cchip cchip--follow">
+      <IconAddressBook size={12} aria-hidden="true" />
+      {chip.letters && <b className="cchip-letters">{chip.letters}</b>}
+      <span className="cchip-text">{T.newSignups(chip.count)}</span>
+    </span>
+  );
 }
 
 // The follow-up chips of one day: one per school on Both, else one. Also used by the week view.
@@ -80,7 +139,7 @@ export function Chip({ chip }) {
     <span className={`cchip cchip--${chip.kind}`} style={style}>
       {chip.kind === 'closed' && <IconAlertTriangle size={12} aria-hidden="true" />}
       {chip.kind === 'sched' && <IconCalendarEvent size={12} aria-hidden="true" />}
-      {chip.kind === 'testing' && <IconCertificate size={12} aria-hidden="true" />}
+      {chip.item && <ItemIcon item={chip.item} />}
       {chip.letters && <b className="cchip-letters">{chip.letters}</b>}
       <span className="cchip-text">{chip.text}</span>
     </span>
@@ -140,6 +199,9 @@ export default function MonthGrid({ weeks, month, today, selected, infoFor, type
                     )}
                     {followChips(info, date, today, both).map((chip) => (
                       <FollowChip key={chip.key} chip={chip} />
+                    ))}
+                    {signupChips(info, both).map((chip) => (
+                      <SignupChip key={chip.key} chip={chip} />
                     ))}
                   </span>
                 </button>

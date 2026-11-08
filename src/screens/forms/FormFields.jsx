@@ -20,13 +20,13 @@
 //   onAnswer(fieldId, value)  onChildren(list)  onBooking(childIndex, timeKey | '')  onSignature(dataUrl | null)
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import DatePicker from '../../components/DatePicker.jsx';
+import DateSigned from '../../components/DateSigned.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import {
   ADDRESS_STATE, addressBlank, addressPartProblems, addressParts, ageOn, childBoxProblems, childrenProblemKinds, emptyChild, isVisible, MAX_CHILDREN,
   NO_TIME_KEY,
 } from '../../lib/forms/fields.js';
-import { shortDate } from '../../lib/calendarDates.js';
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 import { classWithAges } from '../../lib/schedule/ages.js';
@@ -53,6 +53,10 @@ const dobYears = (todayIso) => {
   for (let y = year; y >= year - 100; y -= 1) list.push(y);
   return list;
 };
+// The date of birth reads "Apr 19, 2017", with no weekday (P-05, v1.055) — the same words as Star's
+// formatValue (monthDayYear in src/star-register/parts.jsx), made here with the date helper this file
+// already uses, so the family page's bundle doesn't pull in the Star form's file.
+const dobText = (iso) => formatDate(iso, { weekday: false });
 // The Address question's boxes: the browser's own address filling (not on the kiosk), and how many
 // characters each box takes (a little over the rule, so "too long" can show).
 const ADDRESS_AUTOFILL = { street: 'address-line1', city: 'address-level2', state: 'address-level1', zip: 'postal-code' };
@@ -256,6 +260,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
                   yearsNewestFirst
                   emptyFocus="month"
                   hint={T.DOB_CALENDAR_HINT}
+                  formatValue={dobText}
                   placeholder={T.PICK}
                   disabled={readOnly}
                   invalid={marked('dob')}
@@ -446,15 +451,10 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
         </p>
         <SignaturePad value={values.signature} onChange={onSignature} disabled={readOnly} labelId={`${id}-sig-label`} hintId={`${id}-sig-hint`} />
         <Problem id={`${id}-sig-err`} code={problems.signature} />
-        {/* Date signed (v0.635): today's date in a gray box that can't be changed. It is not one of
-            the form's answers: the database saves the day the form is sent (signed_at). */}
-        <div className="field fsigned">
-          <label htmlFor={`${id}-signed`}>{T.DATE_SIGNED}</label>
-          <input id={`${id}-signed`} className="input fsigned-box" type="text" readOnly value={shortDate(today())} aria-describedby={`${id}-signed-hint`} />
-          <p id={`${id}-signed-hint`} className="field-hint">
-            {T.DATE_SIGNED_HINT}
-          </p>
-        </div>
+        {/* Date signed (v0.635, v0.638): today's date in a gray box that can't be changed, now the one
+            shared version (components/DateSigned.jsx, v0.430) that every family form uses. It is not
+            one of the form's answers: the database saves the day the form is sent (signed_at). */}
+        <DateSigned id={`${id}-signed`} day={today()} />
       </div>
     );
   }

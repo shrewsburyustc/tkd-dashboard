@@ -36,7 +36,7 @@ export const plannedBar = (v) => `Starts ${formatDate(v.startsOn)}. Until then, 
 export const pastBar = (v, endsOn) =>
   `Past schedule: ${formatDate(v.startsOn, { weekday: false })} to ${endsOn ? formatDate(endsOn, { weekday: false }) : 'now'}. View only.`;
 export const NO_CURRENT_BAR = 'No schedule has started yet. The first planned one starts on its date.';
-export const SCHEDULE_MORE = (v) => `More for ${v.name ?? 'this planned schedule'}`;
+export const SCHEDULE_MORE = (v) => `More actions for ${v.name ?? 'this planned schedule'}`;
 export const startsLine = (v) => `Starts ${formatDate(v.startsOn)}`;
 export const CHANGE_START_DATE = 'Change start date';
 export const RENAME = 'Rename';

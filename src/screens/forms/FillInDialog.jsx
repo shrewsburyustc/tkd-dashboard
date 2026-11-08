@@ -1,7 +1,8 @@
 // FillInDialog.jsx — "Fill in for a family" and the builder's / staff's Preview (mockup screens 8, 10).
 // Why it exists: staff fill a form in while talking to a family (phone or desk). It shows the
-// SAME steps as the public page: one step at a time, Back / Next, then Submit. The sign-up is
-// marked "Entered by <staff name>" by the database. Preview is the same dialog without Submit.
+// SAME steps as the public page: one step at a time, Back / Continue, then Send (the family page's
+// words, v0.622). The sign-up is marked "Entered by <staff name>" by the database. Preview is the
+// same dialog without Send.
 // The typed answers live in Forms.jsx (so a lock while it's open loses nothing).
 //
 // state: { mode: 'fill' | 'preview', form, fields, step, values, problems, times, saving, note, sent }
@@ -76,7 +77,8 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
             </ul>
           )}
         </div>
-        <div className={isPhone ? 'dialog-page-submit' : 'dialog-actions'}>
+        {/* on a phone the two stacked buttons keep 8 px between them (fsent-buttons, as Black Belt's) */}
+        <div className={isPhone ? 'dialog-page-submit fsent-buttons' : 'dialog-actions'}>
           <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={onAnother}>
             {T.ANOTHER}
           </button>

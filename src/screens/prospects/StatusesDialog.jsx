@@ -12,6 +12,7 @@ import Dialog from '../../components/Dialog.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
+import Select from '../../components/Select.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
 import { cleanText, textProblem } from '../../lib/calendar/rules.js';
@@ -32,15 +33,18 @@ export function checkStatusForm(state, statuses) {
 }
 
 const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, DELETE_FAILED: T.DELETE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
+// The words of a note: a plain one by its code, or "Someone else changed [Name] just now…" (STALE_STATUS,
+// pass 2 U-03), which names the status the box was deleting (state.noteName).
+const noteText = (state) => (state.note === 'STALE_STATUS' ? T.staleStatus(state.noteName ?? '') : NOTES[state.note]);
 
 export default function StatusesDialog({ state, statuses, counts, schoolName, isAdmin, isPhone, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
   const idBase = `statuses-${state.key}`;
   const [menu, setMenu] = useState(null);
   const drag = useReorderDrag({ enabled: state.step === 'list' && !state.saving && menu === null, onDrop: (group, id, toIndex) => onReorder(statuses.find((s) => s.id === id), toIndex) });
   const status = statuses.find((s) => s.id === state.statusId) ?? null;
-  const noteBlock = state.note && NOTES[state.note] && (
+  const noteBlock = state.note && noteText(state) && (
     <div className="tdialog-note">
-      <Notice>{NOTES[state.note]}</Notice>
+      <Notice>{noteText(state)}</Notice>
     </div>
   );
 
@@ -157,15 +161,20 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
         </p>
         {n > 0 && (
           <div className="field">
-            <label htmlFor={`${idBase}-move`}>{T.MOVE_TO}</label>
-            <select id={`${idBase}-move`} className="input sdialog-select" value={state.moveTo ?? ''} disabled={state.saving} onChange={(e) => onChange({ moveTo: e.target.value || null, note: null }, 'delete')}>
-              <option value="">{T.CHOOSE}</option>
-              {others.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <span id={`${idBase}-move-label`} className="field-label">
+              {T.MOVE_TO}
+            </span>
+            {/* The shared dropdown instead of the browser's own (S-10, v1.048 (20)); the same as
+                Calendar's Delete type "Move to". */}
+            <Select
+              id={`${idBase}-move`}
+              labelId={`${idBase}-move-label`}
+              value={state.moveTo ?? null}
+              options={others.map((s) => ({ value: s.id, label: s.name }))}
+              placeholder={T.CHOOSE}
+              readOnly={state.saving}
+              onChange={(moveTo) => onChange({ moveTo: moveTo || null, note: null }, 'delete')}
+            />
           </div>
         )}
         <ConfirmButtons
@@ -195,10 +204,10 @@ export default function StatusesDialog({ state, statuses, counts, schoolName, is
   }
   // The Add / Edit step's note: under the buttons on PC / tablet (v0.81); on phones above Save
   // with "Discard changes", which goes back to the list — phones have no Cancel (v0.56, N15).
-  const formNote = state.note && NOTES[state.note] && (
+  const formNote = state.note && noteText(state) && (
     <div className="tdialog-note">
       <Notice>
-        {NOTES[state.note]}
+        {noteText(state)}
         {isPhone && (
           <button type="button" className="note-action" onClick={() => onStep('list')}>
             {T.DISCARD_CHANGES}

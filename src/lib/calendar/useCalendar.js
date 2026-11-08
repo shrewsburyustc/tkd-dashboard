@@ -7,7 +7,9 @@
 //   const c = useCalendar({ codes: ['worcester'], from, to, enabled });
 //   c.status   'loading' | 'ready' | 'error' (first load failed) | 'noAccess'
 //   c.data     { today, schools: [{ code, versions, slots, classes, colors }], types, events,
-//                closures, closureClasses (Map), testingEvents, bookings } once 'ready' (else null)
+//                closures, closureClasses (Map), items, itemsFailed, bookings } once 'ready' (else null)
+//   items = every other section's dated things (v0.645, migration 0045). If only THEY can't be read,
+//   itemsFailed is true and the Calendar still shows everything else (the day panel says so).
 //   bookings = free-class bookings from Forms (v0.241 answer 6). If they can't be read (e.g. the
 //   Forms tables aren't in the database yet) the Calendar still shows, without them.
 //   c.reload() quiet reload; resolves 'ok' | 'error' | 'noAccess'
@@ -16,7 +18,7 @@
 // becomes visible again (another admin may have changed things).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadSchedule } from '../schedule/api.js';
-import { loadCalendar, loadTestingEvents } from './api.js';
+import { loadCalendar, loadCalendarItems } from './api.js';
 import { bookingsBetween } from '../forms/api.js';
 
 export function useCalendar({ codes, from, to, enabled }) {
@@ -35,14 +37,16 @@ export function useCalendar({ codes, from, to, enabled }) {
     const seq = ++seqRef.current;
     setState((prev) => (prev.key === k ? (prev.data ? prev : { ...prev, status: 'loading' }) : { key: k, data: null, status: 'loading' }));
     const run = async () => {
-      const [calendar, testing, bookings, ...schedules] = await Promise.all([
+      const [calendar, other, bookings, ...schedules] = await Promise.all([
         loadCalendar({ from: a, to: b }),
-        loadTestingEvents({ from: a, to: b }),
+        loadCalendarItems({ from: a, to: b }),
         bookingsBetween({ locationCode: null, from: a, to: b }),
         ...list.map((code) => loadSchedule(code)),
       ]);
       if (seq !== seqRef.current) return latestRef.current; // a newer request took over
-      const all = [calendar, testing, ...schedules];
+      // (the other sections' dates are NOT in this list: if only they fail, the rest still shows)
+      const all = [calendar, ...schedules];
+      if (other.status === 'no_access') all.push(other);
       if (all.some((r) => r.status === 'no_access')) {
         setState((prev) => ({ key: k, data: prev.key === k ? prev.data : null, status: 'noAccess' }));
         return 'noAccess';
@@ -63,7 +67,8 @@ export function useCalendar({ codes, from, to, enabled }) {
           events: calendar.events,
           closures: calendar.closures,
           closureClasses: calendar.closureClasses,
-          testingEvents: testing.events,
+          items: other.status === 'ok' ? other.items : [],
+          itemsFailed: other.status !== 'ok',
           bookings: bookings.status === 'ok' ? bookings.bookings : [],
         };
         setState({ key: k, data, status: 'ready' });
