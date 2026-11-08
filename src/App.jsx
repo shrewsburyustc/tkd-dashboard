@@ -79,7 +79,7 @@ import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePrivateDetailsHidden } from './lib/privateDetails.js';
 import { usePanelSize } from './lib/panelSize.js';
 import { useToastLine } from './lib/toastLine.js';
-import { dismissLeftUndoBar } from './lib/saveLine.js';
+import { endLeftUndoBarSession } from './lib/saveLine.js';
 import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
@@ -254,7 +254,7 @@ export default function App() {
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
     clearOpenProspect(); // a Calendar → Prospects hand-over never carries over to the next person
-    dismissLeftUndoBar(); // a left page's Undo bar (v1.129) belongs to the person who pressed Undo
+    endLeftUndoBarSession(); // a left page's Undo bar (v1.129) belongs to the person who pressed Undo: it goes, and an Undo still running can't bring one back for the next person
     // The same for any other hand-over that lives outside this file (e.g. Star's Home → Grade,
     // src/lib/star/homeHandoff.js): a plain signal, so App needs no import of that code.
     window.dispatchEvent(new Event('tkd:signed-out'));
@@ -406,7 +406,7 @@ export default function App() {
       if (event === 'SIGNED_OUT') {
         // Signed out somewhere else (e.g. another tab): same as Sign out here — back to Home.
         // (Our own signOut() above decides the address itself, e.g. the 7-day rule keeps it.)
-        dismissLeftUndoBar(); // a left page's Undo bar must not reach the next person (v1.129)
+        endLeftUndoBarSession(); // a left page's Undo bar must not reach the next person (v1.129)
         if (!signingOutHereRef.current) {
           window.history.replaceState(null, '', addressFor('home'));
           setSection('home');

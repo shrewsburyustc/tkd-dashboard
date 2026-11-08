@@ -29,7 +29,7 @@ import { UNDONE } from '../components/text.js';
 
 const UNDO_GIVE_UP_MS = 30000; // see pressUndo
 
-export function createToastLine() {
+export function createToastLine({ giveUpMs = UNDO_GIVE_UP_MS } = {}) {
   let current = null; // the toast on screen, or null
   let waiting = null; // a toast that came while "Undoing…" showed (v1.126)
   let nextId = 1;
@@ -81,7 +81,7 @@ export function createToastLine() {
       // up for good, with every later toast waiting behind it. After 30 seconds it counts as not done.
       let timer = 0;
       const tooLong = new Promise((resolve) => {
-        timer = setTimeout(() => resolve(null), UNDO_GIVE_UP_MS);
+        timer = setTimeout(() => resolve(null), giveUpMs);
       });
       try {
         result = await Promise.race([action.onAction(), tooLong]);

@@ -122,6 +122,39 @@ await withChrome(async (tab) => {
     assert.equal(gray.color, GRAY, 'busy: gray words');
     assert.equal(gray.cursor, 'not-allowed');
   });
+  await check('the red Delete button stays red; only a Delete that is aria-disabled (busy) turns gray (finding 4)', async () => {
+    await open(1280, 800, false);
+    const looks = await ev(`(() => {
+      const make = (extra) => { const b = document.createElement('button'); b.className = 'btn btn-delete'; b.textContent = 'Delete permanently'; if (extra) b.setAttribute('aria-disabled', 'true'); document.body.appendChild(b); const s = getComputedStyle(b); const out = { color: s.color, bg: s.backgroundColor }; b.remove(); return out; };
+      return { ready: make(false), busy: make(true) };
+    })()`);
+    assert.notEqual(looks.ready.color, GRAY, 'a ready Delete is not gray');
+    assert.notEqual(looks.ready.bg, 'rgb(247, 247, 245)', 'a ready Delete keeps its own background');
+    assert.equal(looks.busy.color, GRAY, 'a busy Delete is gray, as v1.103 says');
+  });
+  await check('L-10, touch 820: the page tabs and the sort headers are at least 44px wide', async () => {
+    await tab.size({ w: 820, h: 1180, touch: true, scale: 1 });
+    for (const hash of ['camps', 'testing/color-belt']) {
+      await tab.open('about:blank', 0);
+      await tab.open(`${base}#${hash}`, 300);
+      for (let i = 0; i < 60; i += 1) {
+        const where = await ev(`document.querySelector('.shell:not([hidden])') ? 'shell' : document.getElementById('signin-email') ? 'signin' : 'wait'`);
+        if (where === 'shell') break;
+        if (where === 'signin') {
+          await ev(`(() => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+            for (const [id, value] of [['signin-email', 'preview@example.com'], ['signin-password', 'preview']]) { const input = document.getElementById(id); set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); }
+            [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Sign in').click(); })()`);
+          await sleep(1500);
+        }
+        await sleep(150);
+      }
+      await sleep(1500);
+      const widths = await ev(`[...document.querySelectorAll('.shell-content .ttab, .shell-content .ev-sort')].map((b) => ({ words: b.textContent.trim().slice(0, 20), w: Math.round(b.getBoundingClientRect().width * 10) / 10 }))`);
+      assert.ok(widths.length > 0, `${hash}: tabs or sort headers found`);
+      const narrow = widths.filter((x) => x.w < 43.5);
+      assert.deepEqual(narrow, [], `${hash}: narrower than 44px`);
+    }
+  });
   await check('Select: 44px tall on touch (36 with a mouse); grouped options show a heading, and the arrow keys skip it', async () => {
     await open(1280, 800, false);
     const pc = await ev(`document.querySelector('#sh-select').getBoundingClientRect().height`);

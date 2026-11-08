@@ -14,7 +14,7 @@ import ChoiceGroup from '../components/ChoiceGroup.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import PageBar, { PageBarSlot } from '../components/PageBar.jsx';
 import Toast from '../components/Toast.jsx';
-import { dismissLeftUndoBar, useLeftUndoBar, useSaveLine } from '../lib/saveLine.js';
+import { dismissLeftUndoBar, endLeftUndoBarSession, useLeftUndoBar, useSaveLine } from '../lib/saveLine.js';
 import { useToastLine } from '../lib/toastLine.js';
 
 const CAMPERS = [
@@ -41,10 +41,17 @@ function SamplePage({ settingsRef, toasts }) {
   });
 
   async function withdraw(camper) {
-    if (!line.begin()) return;
+    const token = line.begin();
+    if (!token) return;
     const { saveMs, saveFails } = settingsRef.current;
-    const result = await fakeSave(saveMs, saveFails);
-    line.end(result.status, { retry: () => withdraw(camper) });
+    // The pattern every page follows: end() exactly once per begin(), from a finally, with its
+    // token, so a save that throws still frees the line and a second end() can't free it under an Undo.
+    let result = { status: 'error' };
+    try {
+      result = await fakeSave(saveMs, saveFails);
+    } finally {
+      line.end(result.status, { retry: () => withdraw(camper), token });
+    }
     if (result.status !== 'ok') {
       setNotSaved(camper.id);
       setBar({ kind: 'row', text: `Couldn't withdraw ${camper.name}. Check the connection, then retry.`, retry: () => withdraw(camper) });
@@ -70,7 +77,7 @@ function SamplePage({ settingsRef, toasts }) {
 
   return (
     <div className="parts-r205-pagebody">
-      {bar && <PageBar text={bar.text} onRetry={bar.retry ?? undefined} onDismiss={() => setBar(null)} takeFocus={bar.takeFocus} />}
+      {bar && <PageBar text={bar.text} onRetry={bar.retry ?? undefined} onDismiss={() => setBar(null)} retrying={bar.retrying} takeFocus={bar.takeFocus} />}
       <ul className="parts-r205-roster" aria-label="Sample roster">
         {CAMPERS.map((camper) => (
           <li key={camper.id} className="parts-r205-row" data-camper={camper.id}>
@@ -111,7 +118,7 @@ function UndoSample({ start = {} }) {
   const [slot, setSlot] = useState(null);
   const [onPage, setOnPage] = useState(true);
   // Leaving the sample: nothing of it may stay behind (a left bar belongs to this sample only).
-  useEffect(() => () => dismissLeftUndoBar(), []);
+  useEffect(() => () => endLeftUndoBarSession(), []);
 
   return (
     <div className="parts-frame" data-shot>

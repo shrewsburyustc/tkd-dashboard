@@ -1679,9 +1679,10 @@ html.is-reordering .tib-tip {
    .btn-primary.is-unavailable above. Still focusable (aria-disabled, never disabled). Used by
    "Keep …" while a confirm box works (M2), every button of the Compare dialog while it works
    (M1, "Keeping…") and "Mark paid $X" with no choice on record (M3).
-   Written for the shared parts only: Staff accounts' Reset password dialog already gives its
-   plain Generate / Copy buttons is-unavailable with no gray rule, and a page-wide .btn.is-unavailable
-   would turn them gray — a change on screen, which Dashboard core step 1 doesn't make. */
+   Written for the shared parts only in step 1. Since the shared-parts batch (pass 1 R1-08, rulebook
+   v1.131) the same gray is page-wide, at the end of this file ("Unavailable, page-wide"): Staff
+   accounts' Reset password dialog's plain Generate / Copy buttons, which already carry is-unavailable,
+   now turn gray too, as do Fill in's busy Cancel / Send. The rules here stay, harmlessly. */
 .cmp-dialog .btn.is-unavailable,
 .cmp-dialog .btn.is-unavailable:hover,
 .cmp-dialog .btn.is-unavailable:active,
