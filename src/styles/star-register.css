@@ -76,23 +76,11 @@
   padding: 0 8px;
 }
 
-/* Date signed under the signature (v0.522, v0.638): today's date in a gray box that can't be changed.
-   Same look as New students' box (border, gray background, default cursor); the label stays 12px at
-   every size because it sits inside .reg-field--sign, like the "Signature" label above it. The box is
-   .reg-input, so it is 40px tall with 16px text on touch like the form's other boxes. */
-.sreg .sreg-signed-box {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: default;
-}
-.sreg .sreg-signed-box:focus {
-  border-color: var(--color-border-strong); /* read-only: no blue "typing" ring, but keyboard focus stays visible below */
-  box-shadow: none;
-}
-.sreg .sreg-signed-box:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 1px;
+/* Date signed under the signature (v0.522, v0.638) is the shared DateSigned.jsx (its own stylesheet,
+   date-signed-public.css: box, hint, 40px / 16px on touch). The one thing Star keeps: its label stays
+   12px at every size, like the "Signature" label above it (the shared label grows to 13px on touch). */
+.sreg .ds-label {
+  font-size: var(--text-12);
 }
 
 /* Register another (Form screen 10): the note after the step line */

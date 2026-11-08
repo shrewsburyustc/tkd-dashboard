@@ -10,7 +10,8 @@
 //   'closed'  registration closed while filling in — banner at the top, only the summary stays (13)
 // Nothing the family entered is lost in any of them.
 // Also (v0.522 / v0.638): a gray, read-only "Date signed" box under the signature pad shows today's
-// date, the same as New students' form; the database saves the day the form is sent.
+// date. It is the shared DateSigned.jsx, the same box as every family form; the database saves the day
+// the form is sent.
 import { IconAlertTriangle, IconArrowLeft } from '@tabler/icons-react';
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from '../register/parts.jsx';
@@ -18,8 +19,7 @@ import { formatDollars, methodWord, shortDate } from '../register/format.js';
 import { testingTimeLabel } from '../lib/star/starEventRules.js';
 import { ageOn } from '../lib/star/resultRules.js';
 import { monthDayYear } from './parts.jsx';
-import { shortDate as shortDateWithYear } from '../lib/calendarDates.js';
-import { DATE_SIGNED, DATE_SIGNED_HINT } from '../components/text.js';
+import DateSigned from '../components/DateSigned.jsx';
 import * as T from './text.js';
 
 const TOP_BANNERS = { failed: T.SEND_FAILED, rate: T.RATE_LIMITED, closed: T.CLOSED_WHILE_FILLING };
@@ -113,24 +113,10 @@ export default function StepCheck({
               </div>
             </div>
 
-            {/* Date signed (v0.522, v0.638): today's date in a gray box that can't be changed, like New
-                students' form. Not one of the answers sent: the database saves the day the form is sent. */}
-            <div className="reg-field reg-field--sign sreg-signed">
-              <label className="reg-label" htmlFor="sreg-signed">
-                {DATE_SIGNED}
-              </label>
-              <input
-                id="sreg-signed"
-                className="reg-input sreg-signed-box"
-                type="text"
-                readOnly
-                value={shortDateWithYear(today)}
-                aria-describedby="sreg-signed-hint"
-              />
-              <div className="reg-hint" id="sreg-signed-hint">
-                {DATE_SIGNED_HINT}
-              </div>
-            </div>
+            {/* Date signed (v0.522, v0.638): today's date in a gray box that can't be changed. The shared
+                part, the same on every family form. Not one of the answers sent: the database saves the
+                day the form is sent. */}
+            <DateSigned id="sreg-signed" day={today} />
           </div>
 
           {/* Turnstile puts its "Verify you are human" box here, only when Cloudflare asks (screen 8).
