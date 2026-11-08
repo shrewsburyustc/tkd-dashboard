@@ -415,6 +415,17 @@
 //       file; 0037's tests and the Finance tests after it; re-run safety -
 //       see step0037 below. Run only this step with
 //       node run.mjs --only-step0037
+//   step0047. 0047 (Finance Batch A: payment lines count at the school
+//       STORED ON THE PAYMENT, and was_school - design review pass 1 R1-01)
+//       on its own database in the production order (0025's order, then
+//       0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041,
+//       0042, 0043, 0039, 0037, then Color Belt's 0035 and 0044 and Star's
+//       0038, the real files): the five functions are
+//       the live text before; the guard refuses a changed function; only
+//       those five functions' fingerprint lines move in every fingerprints
+//       file; 0047's tests and the Finance / camps tests after it; re-run
+//       safety - see step0047 below. Run only this step with
+//       node run.mjs --only-step0047
 //   step0028. 0028 (Star start times 6:00 AM - 10:00 PM every 5 minutes,
 //       v1.019 / S12) on its own database in the production order with
 //       every live migration (0025's order, then 0027 and 0026): the
@@ -618,7 +629,7 @@
 //   Exit code 0 = everything passed, 1 = something failed.
 // =====================================================================
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -653,6 +664,7 @@ const onlyStep0044 = process.argv.includes('--only-step0044');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
 const onlyStep0037 = process.argv.includes('--only-step0037');
 const onlyStep0038 = process.argv.includes('--only-step0038');
+const onlyStep0047 = process.argv.includes('--only-step0047');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -981,6 +993,15 @@ async function main() {
     if (prints44) {
       console.log('\n0044 fingerprints (kind  item  detail):');
       for (const line of prints44) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0047: just Finance's Batch A step (0047, the stored payment school)
+  if (onlyStep0047) {
+    const prints47 = await step0047();
+    if (prints47) {
+      console.log('\n0047 fingerprints (kind  item  detail):');
+      for (const line of prints47) console.log('  ' + line);
     }
     return finish();
   }
@@ -1318,6 +1339,13 @@ async function main() {
   if (after38) {
     console.log('\n0038 fingerprints (kind  item  detail):');
     for (const line of after38) console.log('  ' + line);
+  }
+  // step0047: Finance Batch A - the stored payment school + was_school (its own database, production order: pasted after 0038 and 0044)
+  console.log('\nMigration 0047 (Finance: payment lines count at the school stored on the payment, was_school):');
+  const after47 = after5 ? await step0047() : null;
+  if (after47) {
+    console.log('\n0047 fingerprints (kind  item  detail):');
+    for (const line of after47) console.log('  ' + line);
   }
 
   // step0046: Black Belt - payments count at the desk's school (its own database, production order)
@@ -10652,6 +10680,170 @@ async function step0037() {
   await runTestFile(db, `${L}0037_tests.sql (after the re-run)`, '0037_tests.sql', 'ALL 0037 TESTS PASSED');
   await db.close().catch(() => {});
   return prints37;
+}
+
+// =====================================================================
+// step0047: Finance Batch A - payment lines count at the school stored on
+// the payment, and was_school (0047, design review pass 1 R1-01)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order (liveOrderTo0025,
+// then 0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041,
+// 0042, 0043, 0039 and 0037 - each only if its file is on this branch),
+// then the school column on each payment table: Color Belt's 0035 and
+// 0044 and Star's 0038 (the real files, all on main):
+//   a. 0047_fingerprints.sql is connector-safe (no "delete" / "drop")
+//   b. before 0047 the five functions are the live text (the md5s the
+//      migration's guard names)
+//   c. the guard: 0047 stops - and changes nothing - when a live function
+//      is not the live text (a changed copy is planted, rolled back)
+//   d. apply 0047: in every fingerprints file only the five functions'
+//      lines move (code md5 from the live text to 0047's; result tables of
+//      the two internal helpers); 0047's own fingerprints are as planned
+//   e. 0047_tests.sql, then 0037's, 0011's, camps' 0017's, 0018's, 0026's
+//      tests and finance_camp_refunds_tests.sql again
+//   f. 0047 applied a SECOND time: no fingerprint changes
+// Run only this step with   node run.mjs --only-step0047
+// =====================================================================
+const MD5_0047 = {
+  "old": {
+    "finance_money_rows_core": "77bc764dfe331a09919ac7c72962b76c",
+    "finance_money_rows": "6882b0a0f80407ba97864f47feae0e7f",
+    "finance_day": "3f6831f61735e1447c5974cc1dcba2ff",
+    "finance_payment_detail": "31e25e5951b33aeac8ee4900271f885a",
+    "finance_export": "f812a5b147fda8d8603afe907abd2137"
+  },
+  "new": {
+    "finance_money_rows_core": "11479fb6451a956b5f8bb5bc6b5c0366",
+    "finance_money_rows": "6882b0a0f80407ba97864f47feae0e7f",
+    "finance_day": "8cb806284e54443fb73bd4a8f679b617",
+    "finance_payment_detail": "cc90ec717325831a58a3063c9cb73c12",
+    "finance_export": "0f4b678f757bca72fec14bb78aacd37d"
+  }
+};
+const FIVE_0047 = ['finance_money_rows_core', 'finance_money_rows', 'finance_day', 'finance_payment_detail', 'finance_export'];
+
+async function step0047() {
+  const L = '[0047] ';
+  record(`${L}0047_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0047_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  const order = [['0027', '0027_camps_edit_guard.sql'], ['0026', '0026_finance_black_belt.sql'], ['0028', '0028_star_start_times.sql'],
+    ['0029', '0029_finance_reminder_5min.sql'], ['0031', '0031_class_ages.sql'], ['0030', '0030_color_belt_review.sql'],
+    ['0032', '0032_black_belt_review.sql'], ['0033', '0033_camps_design_review.sql'], ['0034', '0034_black_belt_history_ids.sql'],
+    ['0036', '0036_new_students_profile.sql'], ['0041', '0041_star_end_time.sql'], ['0042', '0042_forms_copy_to_school.sql'],
+    ['0043', '0043_camps_fill_in.sql'], ['0039', '0039_camps_record_refund.sql'], ['0037', '0037_finance_export_private.sql']];
+  const applied = [];
+  for (const [n, file] of order) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${n}`, read('migrations', file)))) return null;
+    applied.push(n);
+  }
+  // the school column on each payment table: Color Belt's real 0035 and 0044 and Star's real 0038 (all on main)
+  const real = (n) => readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith(`${n}_`) && f.endsWith('.sql'));
+  for (const n of ['0035', '0044', '0038']) {
+    if (!real(n)) { record(`${L}the real ${n} file is in supabase/migrations/`, false, 'missing'); return null; }
+    if (!(await run(db, `${L}apply ${n} (the real file)`, read('migrations', real(n))))) return null;
+    applied.push(n);
+  }
+  const migration = read('migrations', '0047_finance_stored_school.sql');
+  const sigs = {
+    finance_money_rows_core: 'public.finance_money_rows_core(text, date, date, text, uuid)',
+    finance_money_rows: 'public.finance_money_rows(text, date, date)',
+    finance_day: 'public.finance_day(text, date)',
+    finance_payment_detail: 'public.finance_payment_detail(text, uuid)',
+    finance_export: 'public.finance_export(text, date, date)',
+  };
+  const md5Of = async (name) => one(db, `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                                           from pg_proc p where p.oid = to_regprocedure('${sigs[name]}')`);
+  for (const name of FIVE_0047) {
+    record(`${L}before 0047 ${name} is the live text (md5 ${MD5_0047.old[name]})`, (await md5Of(name)) === MD5_0047.old[name]);
+  }
+
+  // c. the guard refuses a changed function (planted in a transaction, rolled back)
+  {
+    let message = '';
+    try {
+      await db.exec(`begin;
+        create or replace function public.finance_day(p_location_code text, p_day date)
+        returns jsonb language plpgsql stable security definer set search_path = '' as $$ begin return '{}'::jsonb; end; $$;
+        ${migration}`);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0047 over a changed finance_day (it stops, nothing changes)`,
+      message.includes('rebuild 0047 first') && (await md5Of('finance_day')) === MD5_0047.old.finance_day, message || 'it ran');
+  }
+
+  // d. apply: only the five functions' lines move
+  const numbers = [...NUMBERS_0025, ...applied, '0047']
+    .filter((n, i, all) => all.indexOf(n) === i && existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  if (!(await run(db, `${L}apply 0047_finance_stored_school.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const nameOf = (line) => (/^function(?:-kind)? {1,2}([a-z_0-9]+)\(/.exec(line) ?? [])[1];
+  const wrong = [];
+  const movedIn = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (!gone.length && !added.length) continue;
+    if (gone.length !== added.length || ![...gone, ...added].every((line) => FIVE_0047.includes(nameOf(line)))) {
+      wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      continue;
+    }
+    for (const g of gone) {
+      const a = added.find((line) => nameOf(line) === nameOf(g) && line.startsWith(g.split(/ {1,2}/)[0] + ' '));
+      if (!a) { wrong.push(`${n}: no matching new line for ${g}`); continue; }
+      if (g.startsWith('function-kind')) {
+        // an internal helper's result table gained was_school; nothing else of the kind line moved
+        if (!a.includes('was_school') || g.includes('was_school')) wrong.push(`${n}: ${g} => ${a}`);
+      } else {
+        const name = nameOf(g);
+        if (g.replace(MD5_0047.old[name], '<md5>') !== a.replace(MD5_0047.new[name], '<md5>') || !g.includes(MD5_0047.old[name]) || !a.includes(MD5_0047.new[name])) {
+          wrong.push(`${n}: more than the code md5 changed: ${g} => ${a}`);
+        }
+      }
+    }
+    movedIn.push(n);
+  }
+  record(`${L}fingerprints: only the five functions' lines moved (code md5 live text -> 0047's; the helpers' result tables gained was_school), every other line of every file byte-identical`,
+    wrong.length === 0 && movedIn.includes('0047') && movedIn.includes('0026') && movedIn.includes('0037'),
+    wrong.join('; ') || `moved in ${movedIn.join(', ')}; ${numbers.length} files checked`);
+  const prints47 = after['0047_fingerprints.sql'];
+  const fnLine = (name) => prints47.find((l) => /^function {2}/.test(l) && nameOf(l) === name) ?? '';
+  const kindLine = (name) => prints47.find((l) => l.startsWith('function-kind') && nameOf(l) === name) ?? '';
+  const planned = FIVE_0047.every((name) => {
+    const l = fnLine(name);
+    const appFn = ['finance_day', 'finance_payment_detail', 'finance_export'].includes(name);
+    return l.includes(MD5_0047.new[name]) && l.includes('settings=search_path=""') && l.includes(`definer=${appFn}`)
+      && (appFn ? /rights=authenticated:EXECUTE,postgres:EXECUTE$/.test(l) : l.endsWith('rights=postgres:EXECUTE'));
+  });
+  record(`${L}0047 fingerprints: ten lines; the five functions' md5, definer, search_path="" and rights as planned (app functions: authenticated only; helpers: owner only); both helpers' tables end with was_school`,
+    prints47.length === 10 && planned
+      && kindLine('finance_money_rows_core').includes('was_school text)') && kindLine('finance_money_rows').includes('was_school text)'),
+    prints47.join(' | '));
+
+  // e. the tests
+  const testFiles = [['0047_tests.sql', 'ALL 0047 TESTS PASSED'], ['0037_tests.sql', 'ALL 0037 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
+    [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED'],
+    ['finance_camp_refunds_tests.sql', 'ALL FINANCE CAMP REFUND TESTS PASSED']];
+  for (const [file, ok] of testFiles) {
+    if (file === 'finance_camp_refunds_tests.sql' && !applied.includes('0039')) continue;
+    if (existsSync(path.join(supabaseDir, 'tests', file))) await runTestFile(db, `${L}${file} (after 0047)`, file, ok);
+  }
+
+  // f. re-run safety
+  await run(db, `${L}apply 0047 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0047 re-run: no fingerprint changed`, movedAgain.length === 0, movedAgain.join(', '));
+  await runTestFile(db, `${L}0047_tests.sql (after the re-run)`, '0047_tests.sql', 'ALL 0047 TESTS PASSED');
+  await db.close().catch(() => {});
+  return prints47;
 }
 
 // =====================================================================

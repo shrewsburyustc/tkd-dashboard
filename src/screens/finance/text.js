@@ -13,6 +13,7 @@
 // mockups don't draw (plural forms) are marked  // NOT IN MOCKUPS (B…)
 import { money, dayShort, timeOfDay } from './format.js';
 import { blackBeltItemsText } from '../../lib/finance/csv.js';
+import { LOCATION_NAME } from '../../lib/device.js';
 
 // ----- Page, tabs -----
 export const PAGE_TITLE = 'Finance';
@@ -268,6 +269,33 @@ export const methodLower = (m) => (METHOD[m] ?? m ?? '').toLowerCase();
 // Tags on a payment row (one per row, rule 8)
 export const TAG_UNDONE = 'Undone';
 export const TAG_EDITED = 'Edited';
+export const D_WAS = 'Was'; // the detail's line under Amount on an edited payment: "Was Worcester" (Batch A)
+// What an edited payment was before the edit, in the words after "Was": "$70.00", "$70.00 cash",
+// "cash", "Worcester" (only the school changed) or "$70.00 cash, Worcester" (Batch A, R1-01 / U-1:
+// the school is named only when the server sends was_school, i.e. the first desk differs).
+export function wasText(item) {
+  let was = '';
+  if (item.was_amount_cents !== null && item.was_amount_cents !== undefined && item.was_amount_cents !== item.amount_cents) {
+    was = money(item.was_amount_cents);
+    if (item.was_method && item.was_method !== item.method) was += ` ${methodLower(item.was_method)}`;
+  } else if (item.was_method && item.was_method !== item.method) {
+    was = methodLower(item.was_method);
+  }
+  if (item.was_school) {
+    const school = LOCATION_NAME[item.was_school] ?? item.was_school;
+    was = was ? `${was}, ${school}` : school;
+  }
+  return was;
+}
+// True when an edited payment ended up exactly as first recorded: the same amount, the same way to
+// pay AND the same school (a changed date is "moved", a different state). Such a payment shows as
+// a plain one, on screen, on paper and in its detail (v0.824).
+export function editChangedNothing(item) {
+  if (item.state !== 'edited') return false;
+  const sameAmount = item.was_amount_cents === null || item.was_amount_cents === undefined || item.was_amount_cents === item.amount_cents;
+  const sameMethod = !item.was_method || item.was_method === item.method;
+  return sameAmount && sameMethod && !item.was_school;
+}
 export const TAG_MOVED = 'Moved'; // NOT IN MOCKUPS — for CP1 (D4 proposal shows only "Moved to <date>")
 export const TAG_ADDED_AFTER = 'Added after closing';
 export const TAG_REFUND = 'Refund'; // #q12 A
