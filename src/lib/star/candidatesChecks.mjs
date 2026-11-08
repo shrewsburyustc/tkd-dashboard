@@ -32,6 +32,8 @@ import { statusMessage, refundTooLarge, NOTHING_OVERPAID, UNDO_PAYMENT_TOO_LATE,
 import { addDays } from '../testing/eventRules.js';
 import { takeSnapshot, writeArgs } from './dialogSnapshot.js';
 import { candidateMenuKeys, canPrintReceipt } from './candidateMenu.js';
+import { candidateCardNumbers, filterRows, emptyLineKind } from './candidateCards.js';
+import { includesRemoved, dupNotCounted, NO_PAID_DAN, EVERY_PAID_DAN, NO_CANDIDATES_DAN } from '../../screens/testing/star/candidates/text.js';
 import { buildStarReceipt } from './candidatesReceipt.js';
 import { linesFor, isBookkeepingColumn } from './candidateHistoryLines.js';
 
@@ -1195,18 +1197,29 @@ await check('menu: paid and overpaid, admin (c) — the money group between two 
 await check('menu: paid row, staff (d) — only Print receipt in the money group (S2, v0.518)', () => {
   assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: false, hidden: false }), 'edit setPrivate /printReceipt');
   assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: false, hidden: true }), 'edit setPrivate'); // hidden: no Print receipt (Q8 B)
-  assert.equal(menuOf({ ...baseRow, paid: true, status: 'withdrawn' }, { isAdmin: true, hidden: false }), 'restore /delete');
-  // the summary uses the same rule (canPrintReceipt): no Print receipt on a withdrawn, make-up or hidden row
+  // the summary uses the same rule (canPrintReceipt): Print receipt on any row with money that stands, but not a make-up or a hidden row
   assert.equal(canPrintReceipt({ ...baseRow, paid: true }, false), true);
-  assert.equal(canPrintReceipt({ ...baseRow, paid: true, status: 'withdrawn' }, false), false);
+  assert.equal(canPrintReceipt({ ...baseRow, paid: true, status: 'withdrawn' }, false), true); // M-03
+  assert.equal(canPrintReceipt({ ...baseRow, status: 'withdrawn' }, false), false); // nothing paid
+  assert.equal(canPrintReceipt({ ...baseRow, paid: true, status: 'withdrawn' }, true), false);
   assert.equal(canPrintReceipt({ ...baseRow, paid: true, isMakeup: true }, false), false);
   assert.equal(canPrintReceipt({ ...baseRow, paid: true }, true), false);
   assert.equal(canPrintReceipt({ ...baseRow, refundedCents: 2000 }, false), true);
 });
-await check('menu: withdrawn row (e) — Restore · line · Delete permanently; nothing for staff', () => {
+await check('menu: withdrawn row (e) — nothing paid: Restore · line · Delete permanently; nothing for staff', () => {
   const row = { ...baseRow, status: 'withdrawn' };
   assert.equal(menuOf(row, { isAdmin: true, hidden: false }), 'restore /delete');
   assert.equal(menuOf(row, { isAdmin: false, hidden: false }), '');
+});
+await check('menu: withdrawn row that paid (M-03, v1.055) — Print receipt for staff and admins; hidden and make-up rules', () => {
+  const row = { ...baseRow, status: 'withdrawn', paid: true };
+  assert.equal(menuOf(row, { isAdmin: true, hidden: false }), 'printReceipt /restore /delete');
+  assert.equal(menuOf(row, { isAdmin: false, hidden: false }), 'printReceipt');
+  assert.equal(menuOf(row, { isAdmin: true, hidden: true }), 'restore /delete'); // Hide private details on
+  assert.equal(menuOf(row, { isAdmin: false, hidden: true }), '');
+  // a refund that still stands counts as money too
+  assert.equal(menuOf({ ...baseRow, status: 'withdrawn', refundedCents: 500 }, { isAdmin: false, hidden: false }), 'printReceipt');
+  assert.equal(menuOf({ ...row, isMakeup: true }, { isAdmin: false, hidden: false }), '');
 });
 await check('menu: a refund stands (f) — Undo refund takes Record refund’s place', () => {
   const row = { ...baseRow, paid: true, overpaidCents: 0, refundedCents: 2000 };
@@ -1223,6 +1236,69 @@ await check('menu: a flagged "Possible duplicate" row — Review possible duplic
   assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: true, hidden: false, flagged: true }), 'edit setPrivate reviewDuplicate /editPayment undoPayment printReceipt /withdraw delete');
 });
 
+// =====================================================================================
+// 7b. The count cards (candidateCards.js; R5-05, R3-02, S-1, C-05 (b), Step B of pass 1)
+// =====================================================================================
+{
+  const mk = (id, over) => ({ id, status: 'active', locationCode: 'worcester', dan: 1, paid: false, paidCents: 0, feeKind: 'standard', isMakeup: false, duplicateState: 'none', duplicateOf: null, ...over });
+  const rows = [
+    mk('a', { paid: true, paidCents: 7000 }),
+    mk('b', { locationCode: 'shrewsbury', paid: true, paidCents: 7000 }),
+    mk('c'), // not paid
+    mk('d', { locationCode: 'shrewsbury', feeKind: 'none' }), // no fee: in neither Paid nor Not paid
+    mk('e', { isMakeup: true }),
+    mk('f', { duplicateState: 'possible', duplicateOf: 'g' }), // one pair, both Worcester
+    mk('g', { duplicateState: 'possible', duplicateOf: 'f', paid: true, paidCents: 7000 }),
+    mk('h', { locationCode: 'shrewsbury', duplicateState: 'possible', duplicateOf: 'i' }), // a pair split across schools
+    mk('i', { duplicateState: 'possible', duplicateOf: 'h' }),
+    mk('x', { status: 'withdrawn', paid: true, paidCents: 14000 }), // removed, paid (Worcester)
+    mk('y', { status: 'withdrawn', locationCode: 'shrewsbury', paid: true, paidCents: 3000 }),
+    mk('z', { status: 'withdrawn' }),
+  ];
+  const both = candidateCardNumbers(rows, () => true);
+  const worc = candidateCardNumbers(rows, (c) => c.locationCode === 'worcester');
+  await check('cards: Paid / Not paid leave out make-ups and flagged rows by the row’s own state', () => {
+    assert.equal(both.candidates, 9);
+    assert.equal(both.paid, 2); // a, b (g is flagged)
+    assert.equal(both.notPaid, 1); // c (d has no fee, e make-up, f/h/i flagged)
+    assert.deepEqual(filterRows(both.active, both.countable, 'paid').map((c) => c.id), ['a', 'b']);
+    assert.deepEqual(filterRows(both.active, both.countable, 'notPaid').map((c) => c.id), ['c']);
+    assert.equal(filterRows(both.active, both.countable, null).length, 9);
+    // Worcester only: h (Shrewsbury) is out of view, but i's own flag still keeps i out of Not paid
+    assert.equal(worc.notPaid, 1);
+    assert.equal(worc.countable.some((c) => c.id === 'i'), false);
+  });
+  await check('cards: Payments recorded includes removed candidates’ money, with the removed part named (R5-05)', () => {
+    assert.equal(both.payments, 7000 + 7000 + 7000 + 14000 + 3000);
+    assert.equal(both.removedPaidCents, 17000);
+    assert.equal(worc.payments, 7000 + 7000 + 14000);
+    assert.equal(worc.removedPaidCents, 14000);
+    assert.equal(includesRemoved(14000), 'includes $140 from removed candidates');
+    assert.equal(candidateCardNumbers([mk('p', { paid: true, paidCents: 7000 })], () => true).removedPaidCents, 0);
+  });
+  await check('cards: possible duplicates are counted in pairs, a split pair once (R3-02)', () => {
+    assert.equal(both.dupLeftOut, 2); // f+g, h+i
+    assert.equal(worc.dupLeftOut, 2); // f+g, and h+i because i is in view
+    assert.equal(candidateCardNumbers(rows, (c) => c.locationCode === 'shrewsbury').dupLeftOut, 1); // only h+i (h in view)
+    assert.equal(candidateCardNumbers([mk('o', { duplicateState: 'possible', duplicateOf: 'zz' })], () => true).dupLeftOut, 1); // no partner
+    assert.equal(dupNotCounted(1), '1 possible duplicate isn’t counted in Paid or Not paid until it’s reviewed.');
+    assert.equal(dupNotCounted(2), '2 possible duplicates aren’t counted in Paid or Not paid until they’re reviewed.');
+  });
+  await check('cards: the Candidates card lists Worcester first, then Shrewsbury (S-1)', () => {
+    assert.deepEqual(both.bySchool.map((s) => s.code), ['worcester', 'shrewsbury']);
+    assert.deepEqual(both.bySchool.map((s) => s.n), [6, 3]);
+  });
+  await check('cards: each filter card’s own empty line; an empty Dan keeps its own (C-05 (b))', () => {
+    assert.equal(emptyLineKind('paid', true), 'noPaid');
+    assert.equal(emptyLineKind('notPaid', true), 'everyPaid');
+    assert.equal(emptyLineKind(null, true), 'dan');
+    assert.equal(emptyLineKind('notPaid', false), 'dan');
+    assert.equal(emptyLineKind('paid', false), 'dan');
+    assert.equal(NO_PAID_DAN, 'No paid candidates in this Dan.');
+    assert.equal(EVERY_PAID_DAN, 'Every candidate in this Dan has paid.');
+    assert.equal(NO_CANDIDATES_DAN, 'No candidates for this Dan.');
+  });
+}
 // =====================================================================================
 // 7b. The payment receipt (candidatesReceipt.js, S2, DR2-P4, v0.518)
 // =====================================================================================

@@ -32,7 +32,8 @@ import DatePicker from '../../../../components/DatePicker.jsx';
 import { nameProblem, normalizeName } from '../../../../lib/testing/names.js';
 import { isIsoDate } from '../../../../lib/testing/eventRules.js';
 import { starEmailIsValid, trimEmail } from '../../../../lib/star/candidatesApi.js';
-// Print receipt's one rule, the same as the ⋯ menu's (withdrawn rows, make-ups and hidden: none)
+// Print receipt's one rule, the same as the ⋯ menu's (nothing paid, make-ups and hidden: none; a
+// withdrawn row only when money still stands, M-03)
 import { canPrintReceipt } from '../../../../lib/star/candidateMenu.js';
 import { yearRange } from '../../../../lib/star/eventDateRules.js';
 import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
