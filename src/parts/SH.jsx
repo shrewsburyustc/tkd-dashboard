@@ -9,6 +9,7 @@
 import { useId, useState } from 'react';
 import BackLink from '../components/BackLink.jsx';
 import Grip from '../components/Grip.jsx';
+import ErrorBanner from '../components/ErrorBanner.jsx';
 import Select from '../components/Select.jsx';
 import ChoiceGroup from '../components/ChoiceGroup.jsx';
 import { PaidByField } from '../components/MarkPaidBox.jsx';
@@ -69,6 +70,10 @@ function Looks() {
       {/* Paid by in a wide parent: its joined buttons are only as wide as their words (compact) */}
       <div className="parts-sh-row" data-sh="paidby" style={{ display: 'block', width: 520 }}>
         <PaidByField value="cash" onChange={() => {}} label="Refunded by" />
+      </div>
+      {/* An amber bar with Retry and Dismiss, as the failed-Undo bar: its Retry is a 44px tap target on touch */}
+      <div data-sh="bar" style={{ marginBottom: 16 }}>
+        <ErrorBanner text="Undo didn't save. Check the connection, then retry." onRetry={() => {}} onDismiss={() => {}} />
       </div>
       <div className="parts-sh-row" data-sh="tags">
         <button type="button" className="ttag ev-tag-button">

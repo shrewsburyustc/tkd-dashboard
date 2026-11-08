@@ -663,6 +663,12 @@ await check('R2-05 line: the page closes while the Undo waits; it still runs. Sa
   await refused.line.undoAction(async () => ({ status: 'not_allowed', reason: 'Too late to undo here.' }), { words: 'Ava Reed marked paid' }).onAction();
   assert.equal(LINE.leftUndoBar().text, 'Couldn\'t undo “Ava Reed marked paid” (Star testing). Too late to undo here.');
   assert.equal(LINE.leftUndoBar().retry, null);
+  // A page that passes R2-07's whole sentence: the name goes inside it, with no second "Couldn't undo"
+  assert.equal(SHARED.undoLeftRefused('Zoe Park withdrawn', 'Camps', SHARED.couldntUndo("it's too late")), "Couldn't undo “Zoe Park withdrawn” (Camps): it's too late.");
+  const sentence = fakePage('Camps');
+  sentence.line.close();
+  await sentence.line.undoAction(async () => ({ status: 'not_allowed', reason: SHARED.couldntUndo('too late') }), { words: 'Zoe Park withdrawn' }).onAction();
+  assert.equal(LINE.leftUndoBar().text, "Couldn't undo “Zoe Park withdrawn” (Camps): too late.");
   LINE.dismissLeftUndoBar();
   assert.equal(LINE.leftUndoBar(), null, '× closes it');
 });
