@@ -51,7 +51,7 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
     const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
     const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
     if (!forward && !back) return;
-    if (disabled) return;
+    if (disabled || readOnly || locked) return; // nothing can be chosen: focus stays on the one Tab stop
     event.preventDefault();
     const from = buttonsRef.current.indexOf(document.activeElement);
     const start = from === -1 ? tabStop : from;

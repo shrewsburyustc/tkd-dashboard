@@ -2412,6 +2412,7 @@ html.is-reordering .tib-tip {
 }
 
 /* A control that is busy saving (aria-busy) keeps the busy cursor instead (v1.008, v1.103) */
-.btn[aria-disabled='true'][aria-busy='true'] {
+.btn[aria-disabled='true'][aria-busy='true'],
+.ev-tag-button[aria-disabled='true'][aria-busy='true'] {
   cursor: progress;
 }

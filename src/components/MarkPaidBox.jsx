@@ -62,7 +62,7 @@ export function PaidByField({ value, onChange, familyChoice = null, choiceWhere 
         <span id={labelId} className="field-label">
           {label}
         </span>
-        <ChoiceGroup labelId={labelId} options={METHOD_OPTIONS} value={value} onChange={onChange} variant="segmented" readOnly={readOnly} />
+        <ChoiceGroup labelId={labelId} options={METHOD_OPTIONS} value={value} onChange={onChange} variant="segmented" readOnly={readOnly} compact />
       </div>
       {isMethod(familyChoice) && <p className="mpb-hint">{theyChose(PAY_METHODS[familyChoice], choiceWhere)}</p>}
     </>
@@ -90,8 +90,11 @@ export default function MarkPaidBox({ anchor, name, amountCents, familyChoice = 
       const rect = anchor.getBoundingClientRect();
       const width = boxRef.current.offsetWidth;
       const height = boxRef.current.offsetHeight;
+      // "No room below" is measured to the bottom of the page area, not the window: on a phone the
+      // bottom bar sits under the page, and the box must not cover it.
+      const pageBottom = document.querySelector('.shell-content')?.getBoundingClientRect().bottom ?? window.innerHeight;
       let top = rect.bottom + 4;
-      if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - 4 - height);
+      if (top + height > Math.min(pageBottom, window.innerHeight) - 8) top = Math.max(8, rect.top - 4 - height);
       // Kept 8px inside the page area (never over the left panel), and 8px inside the window's right.
       const pageLeft = document.querySelector('.shell-content')?.getBoundingClientRect().left ?? 0;
       const left = Math.max(pageLeft + 8, Math.min(rect.right - width, window.innerWidth - width - 8));
