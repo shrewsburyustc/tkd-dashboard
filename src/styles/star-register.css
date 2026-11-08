@@ -77,11 +77,8 @@
 }
 
 /* Date signed under the signature (v0.522, v0.638) is the shared DateSigned.jsx (its own stylesheet,
-   date-signed-public.css: box, hint, 40px / 16px on touch). The one thing Star keeps: its label stays
-   12px at every size, like the "Signature" label above it (the shared label grows to 13px on touch). */
-.sreg .ds-label {
-  font-size: var(--text-12);
-}
+   date-signed-public.css: box, hint, 40px / 16px on touch). Star keeps nothing of its own here: the
+   label is the shared 13px one (Dashboard core; Star's old 12px rule was removed in Step D). */
 
 /* Register another (Form screen 10): the note after the step line */
 
