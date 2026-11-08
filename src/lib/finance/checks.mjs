@@ -1440,6 +1440,18 @@ check('shared sentences: a refused change names what changed; a failed Undo is t
   assert.equal(FT.CLOSE_UNDONE, 'Undone. The day is open again.');
 });
 
+// ======================= Finance's own failure sentences say "retry" (v0.825) =======================
+check('failure sentences: every Finance sentence that mentions the connection ends "Check the connection, then retry."', () => {
+  const failures = Object.entries(FT).filter(([, v]) => typeof v === 'string' && /connection/i.test(v));
+  assert.ok(failures.length >= 8, `found ${failures.length} sentences about the connection`);
+  for (const [name, text] of failures) {
+    assert.ok(/Check the connection, then retry\.$/.test(text), `${name}: ${text}`);
+    assert.ok(!/try again/i.test(text), `${name} still says "try again"`);
+  }
+  assert.equal(FT.CLOSE_FAILED, 'Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.');
+  assert.equal(FT.SETTINGS_SAVE_FAILED, 'Couldn’t save. Check the connection, then retry.');
+});
+
 console.log(`${count} groups of checks ran.`);
 console.log('ALL FINANCE LIB CHECKS PASSED');
 
