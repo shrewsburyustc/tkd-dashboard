@@ -420,8 +420,10 @@
 //       on its own database in the production order (0025's order, then
 //       0027, 0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041,
 //       0042, 0043, 0039, 0037, then Color Belt's 0035 and 0044 and Star's
-//       0038 - the real files when they are on this branch, else (for
-//       0038 only) the stand-in fixtures/0047_standin_star_school.sql): the five functions are
+//       0038 - the real files when they are on this branch; Star's 0038 may
+//       also come from the file the environment variable TKD_MIGRATION_0038
+//       names (a copy taken with git show from Star's branch); with neither,
+//       the stand-in fixtures/0047_standin_star_school.sql): the five functions are
 //       the live text before; the guard refuses a changed function; only
 //       those five functions' fingerprint lines move in every fingerprints
 //       file; 0047's tests and the Finance / camps tests after it; re-run
@@ -10364,13 +10366,23 @@ async function step0047() {
   // the school column on each payment table: Color Belt's real 0035 + 0044 (on main since 2026-11-07), then Star's
   // real 0038 when it is on this branch, else the stand-in that adds star_payments.school
   const real = (n) => readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith(`${n}_`) && f.endsWith('.sql'));
-  for (const n of ['0035', '0044', '0038']) {
+  for (const n of ['0035', '0044']) {
     if (!real(n)) continue;
     if (!(await run(db, `${L}apply ${n} (the real file)`, read('migrations', real(n))))) return null;
     applied.push(n);
   }
-  if (!real('0038')) {
-    console.log(`${L}0038 is not on this branch yet: the stand-in fixture adds star_payments.school`);
+  // Star's 0038: from supabase/migrations/ when it is on this branch; before that from the file the environment
+  // variable TKD_MIGRATION_0038 names (a copy taken with   git show star-testing:supabase/migrations/0038_star_design_review.sql );
+  // with neither, the stand-in that adds star_payments.school. A name given but no file there is a mistake (a failure).
+  const fromEnv38 = process.env.TKD_MIGRATION_0038 || '';
+  const file38 = real('0038') ? path.join(supabaseDir, 'migrations', real('0038')) : (fromEnv38 && existsSync(fromEnv38) ? fromEnv38 : null);
+  if (fromEnv38 && !real('0038') && !file38) record(`${L}TKD_MIGRATION_0038 names a file that exists`, false, fromEnv38);
+  if (file38) {
+    console.log(`${L}0038 read from ${real('0038') ? 'this branch' : file38}`);
+    if (!(await run(db, `${L}apply 0038 (the real file)`, readFileSync(file38, 'utf8')))) return null;
+    applied.push('0038');
+  } else {
+    console.log(`${L}0038 is not on this branch and TKD_MIGRATION_0038 is not set: the stand-in fixture adds star_payments.school`);
     if (!(await run(db, `${L}apply the stand-in for 0038 (school column on star_payments)`,
       read('tests', 'pglite', 'fixtures', '0047_standin_star_school.sql')))) return null;
   }

@@ -1114,15 +1114,25 @@ begin
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'shrewsbury', v_d));
   perform pg_temp.t_eq('F6e2 deleted Star event', (v_r #>> '{closing,changed_after}') || '|' || (v_r #>> '{closing,changed_count}'), 'true|1');
 
-  -- f. a Star candidate's school changed (their payment moves schools)
+  -- f. a Star candidate's school changed. Until 0047 their payment moved schools with them (a line counted at
+  -- the CANDIDATE's school). Since 0047 (R1-01) a payment counts at the school stored ON it (the desk that took
+  -- the money, 0038), so nothing moves and the closed day does not change - when the payment has a stored school.
   v_d := v_b + 247;
   perform pg_temp.t_pay('star', v_st_move, 'payment', 14000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), v_desk, v_dn);
   perform pg_temp.t_pay('star', v_st[47], 'payment', 14000, 'card', v_d, pg_temp.t_at(v_d, '15:05'), v_desk, v_dn);
   perform pg_temp.t_eq('F6f close', (pg_temp.t_close(v_c_a1, 'shrewsbury', v_d, 0, null)) ->> 'status', 'ok');
   update public.star_candidates set location_code = 'worcester' where id = v_st_move;
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'shrewsbury', v_d));
-  perform pg_temp.t_eq('F6f school changed', (v_r #>> '{closing,changed_after}') || '|' || (v_r #>> '{closing,changed_count}'), 'true|1');
-  perform pg_temp.t_eq('F6f the payment is now in Worcester', pg_temp.t_sig('worcester', v_d), 'counted:14000:cash');
+  perform pg_temp.t_eq('F6f school changed', (v_r #>> '{closing,changed_after}') || '|' || (v_r #>> '{closing,changed_count}'),
+    case when exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.finance_money_rows_core(text, date, date, text, uuid)')
+                         and pg_get_function_result(p.oid) like '%was_school%')
+              and (select to_jsonb(p) ->> 'school' from public.star_payments p where p.candidate_id = v_st_move limit 1) is not null
+         then 'false|0' else 'true|1' end);
+  perform pg_temp.t_eq('F6f where the payment is now', pg_temp.t_sig('worcester', v_d),
+    case when exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.finance_money_rows_core(text, date, date, text, uuid)')
+                         and pg_get_function_result(p.oid) like '%was_school%')
+              and (select to_jsonb(p) ->> 'school' from public.star_payments p where p.candidate_id = v_st_move limit 1) is not null
+         then '' else 'counted:14000:cash' end);
 
   -- g. a late mis-click undo: the desk's payment 5 s before the close,
   -- undone by the desk 3 s after it (8 s after recording) -> hidden ->
