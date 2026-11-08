@@ -1109,6 +1109,9 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+                // This device's home school: Star's Record payment / Record refund count at it (v1.035, R1-01).
+                // Testing.jsx hands it on to Star's page with its other props; nothing else changes there.
+                deviceLocation={deviceLocation}
               />
             )}
             {section === 'camps' && (

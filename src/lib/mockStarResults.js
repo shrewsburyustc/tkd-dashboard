@@ -110,7 +110,7 @@ export function createResultsHandlers(h) {
         id: env.newId(), event_id: e.id, event_name: e.name, dan: a.p_dan, row_count: list.length,
         downloaded_at: new Date(env.now()).toISOString(), downloaded_by: ctx.userId ?? null, downloaded_by_name: ctx.actorName,
       });
-      const loc = (c) => (c.location_code === 'shrewsbury' ? 0 : 1);
+      const loc = (c) => (c.location_code === 'worcester' ? 0 : c.location_code === 'shrewsbury' ? 1 : 2); // 0038 (S-1): Worcester first
       const rows = [...list]
         .sort((x, y) => x.dan - y.dan || x.stars_from - y.stars_from || loc(x) - loc(y)
           || cmp(x.last_name.toLowerCase(), y.last_name.toLowerCase()) || cmp(x.first_name.toLowerCase(), y.first_name.toLowerCase()) || cmp(x.id, y.id))

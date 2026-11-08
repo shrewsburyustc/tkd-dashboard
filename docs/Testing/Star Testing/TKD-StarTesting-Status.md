@@ -34,6 +34,8 @@ Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into mai
 
 - **Migration 0038 applied on production 2026-11-07** (Jeffrey pasted it; pre-apply check, post-apply check `3 / 0 / 3 / 7 / 0 / 9 / 0 / 0`, all 9 function md5s and rights match, advisor nothing new, his tests passed). Next: Main tells Finance (their R1-01 migration 0047 can be written now); then batch 3 (0038's app side) builds, and merges only after Finance's 0047 is live.
 
+- **Batch 3 built 2026-11-07 (app side of 0038, against live 0038), reviewed (code, privacy, design: no must-fix), committed on star-testing, not pushed; merges only after Finance's 0047 is live:** R2-02 Edit event's Undo = one call to `star_undo_event_edit`; R1-01 Record payment / refund send This device's school (`p_school`, via `deviceLocation` from `src/App.jsx` through `Testing.jsx`'s existing prop spread: the one shared-file line); R1-02 the "on the form" / "at the desk" hint from `paying_by_on_form` (a missing form choice reads "at the desk"); S-1 Worcester before Shrewsbury in results; M-02 one save = one History entry (matched on same `occurred_at` + action + actor, money first, joined with "; "; the family-form registration now reads as one entry, kept on purpose); R1-03 History "Paying by: Cash → Check". Small open points (wording choices, not bugs): `duplicate_name` / `finished` / `invalid` refusals of the Undo still show the generic "Undo didn't save" with Retry; the family-form entry repeats "on the family form" (Dashboard core's R1-07 words may change it); the Mark paid box's method buttons are 34 px at 320 wide (shared MarkPaidBox, existing).
+
 ---
 
 ## 1. Where things stand (one paragraph)
