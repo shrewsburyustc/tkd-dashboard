@@ -191,7 +191,7 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
     const rubric = answer.status === 'ok' ? answer.rubrics.find((d) => d.dan === row.dan) ?? null : null;
     if (!found || !rubric) {
       // gone from the earlier cycle's results (withdrawn meanwhile), or the connection dropped
-      patch({ saving: false, note: answer.status === 'ok' ? T.makeupStale(`${row.firstName} ${row.lastName}`, row.cycleName) : T.LOAD_FAILED });
+      patch({ saving: false, note: answer.status === 'ok' ? T.makeupStale(`${row.firstName} ${row.lastName}`, row.cycleName) : T.LOAD_FAILED_NO_RETRY });
       if (answer.status === 'ok') loadList();
       return;
     }

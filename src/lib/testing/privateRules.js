@@ -16,6 +16,17 @@
 import { isIsoDate } from './eventRules.js';
 import { standingPayments } from './receipt.js';
 
+// ----- The list's room (Color Belt batch 3, Q1) -----
+
+// The narrowest room beside the left panel (px) in which the Private testing list keeps its tablet columns
+// (Color Belt batch 3, Q1 A; same idea as eventRules.ROSTER_ROOM, rulebook v0.431). "Room" is Dashboard core's
+// measure (src/lib/pageRoom.js). Measured in preview on 2026-11-07 with the sample list (Upcoming and Past, a
+// cancelled row's tag included): with a mouse the first text-on-text overlap comes at 608 px of room and the
+// list is clean from 616; with touch the same (592 overlaps, 616 clean), so 632 keeps 16 px to spare. Narrower
+// than this the list draws the stacked rows phones show, whatever the window's own width. If names or tags ever
+// grow, measure again.
+export const PRIVATE_ROOM = 632;
+
 // ----- Day and time (contract 0014 §1.2) -----
 
 // The start times a private testing may have: 6:00 AM to 10:00 PM in 5-minute steps, both ends
@@ -94,14 +105,11 @@ export function showMarkPaid(row) {
   return row?.status === 'active' && row.amountDueCents > 0;
 }
 
-// Where the family chose "Paying by", for the Mark paid box's hint (CB1): 'form' ("They chose
-// Cash on the form.") only when the private testing was moved from an event registration the
-// family made on the event's form (movedFromSource 'form'); otherwise 'desk' ("… at the desk.") —
-// added here at the desk, moved from a student staff added at the desk ('staff'), or the old
-// registration couldn't be read (null; privateApi.loadPrivateTestings).
-export function markPaidChoiceWhere(row) {
-  return row?.movedFromSource === 'form' ? 'form' : 'desk';
-}
+// Where the family chose "Paying by", for the Mark paid box's hint: the same rule as the event
+// roster (eventRules.markPaidChoiceWhere, M-01 / migration 0044) — 'form' only while Paying by
+// still equals the choice the family made on the event's form (kept when a form registration was
+// moved here); otherwise, and for one added at the desk, 'desk'.
+export { markPaidChoiceWhere } from './eventRules.js';
 
 // May the desk change how they'll pay? Active, and not paid yet or still owing.
 export function canChangePayingBy(row) {

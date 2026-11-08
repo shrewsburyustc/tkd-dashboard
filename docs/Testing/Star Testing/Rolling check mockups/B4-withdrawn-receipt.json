@@ -1,0 +1,454 @@
+{
+ "width": 1920,
+ "title": "Star · Step B — Print receipt on a removed candidate who paid (M-03)",
+ "subtitle": "Event → Candidates → the Removed group. Today a removed candidate’s ⋯ holds Restore · Delete permanently and only admins have it, so a candidate who paid and was removed (their money still counts in Payments recorded) has no way to print the receipt. After, as Color Belt does (v0.428): a removed candidate with a payment or refund that still stands gets <b>Print receipt</b> first, in its own group; <b>admins</b> see Print receipt · line · Restore · line · Delete permanently; <b>staff</b> see a ⋯ holding only Print receipt (they still get no Restore or Delete). With nothing paid there is no Print receipt (admins: Restore · Delete permanently, as today; staff: no ⋯). Never while Hide private details is on.",
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/d-B4a-today-pc.png",
+     "crop": [
+      60,
+      570,
+      1210,
+      215
+     ],
+     "scale": 0.72,
+     "caption": "<b>Admin, PC 1280×800.</b> Noah Chen (removed, paid $140): ⋯ → Restore · Delete permanently. No Print receipt.",
+     "marks": [
+      [
+       1047,
+       638,
+       200,
+       83
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B4a-today-tab.png",
+       "crop": [
+        90,
+        880,
+        710,
+        260
+       ],
+       "scale": 0.55,
+       "caption": "<b>Admin, Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         587,
+         959,
+         200,
+         107
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B4a-today-ph.png",
+       "crop": [
+        0,
+        440,
+        390,
+        404
+       ],
+       "scale": 0.55,
+       "caption": "<b>Admin, Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         0,
+         598,
+         390,
+         246
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B4a-today-p320.png",
+       "crop": [
+        0,
+        240,
+        320,
+        460
+       ],
+       "scale": 0.55,
+       "caption": "<b>Admin, 320 wide, touch.</b>",
+       "marks": [
+        [
+         0,
+         454,
+         320,
+         246
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B4b-today-pc.png",
+     "crop": [
+      60,
+      585,
+      1210,
+      130
+     ],
+     "scale": 0.72,
+     "caption": "<b>Staff, PC.</b> The three removed rows have no ⋯ at all (a blank space where it would be), so a staff member can’t print Noah Chen’s receipt.",
+     "marks": [
+      [
+       1195,
+       599,
+       60,
+       40
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B4b-today-tab.png",
+       "crop": [
+        90,
+        890,
+        710,
+        215
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         715,
+         900,
+         80,
+         67
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B4b-today-ph.png",
+       "crop": [
+        0,
+        440,
+        390,
+        290
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         303,
+         456,
+         70,
+         86
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B4b-today-p320.png",
+       "crop": [
+        0,
+        240,
+        320,
+        340
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, 320 wide, touch.</b>",
+       "marks": [
+        [
+         233,
+         252,
+         70,
+         104
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/d-B4a-after-pc.png",
+     "crop": [
+      60,
+      570,
+      1210,
+      215
+     ],
+     "scale": 0.72,
+     "caption": "<b>Admin, PC.</b> Noah Chen: Print receipt · line · Restore · line · Delete permanently.",
+     "marks": [
+      [
+       1047,
+       638,
+       200,
+       124
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B4a-after-tab.png",
+       "crop": [
+        90,
+        880,
+        710,
+        260
+       ],
+       "scale": 0.55,
+       "caption": "<b>Admin, Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         587,
+         959,
+         200,
+         160
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B4a-after-ph.png",
+       "crop": [
+        0,
+        440,
+        390,
+        404
+       ],
+       "scale": 0.55,
+       "caption": "<b>Admin, Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         0,
+         545,
+         390,
+         299
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B4a-after-p320.png",
+       "crop": [
+        0,
+        240,
+        320,
+        460
+       ],
+       "scale": 0.55,
+       "caption": "<b>Admin, 320 wide, touch.</b>",
+       "marks": [
+        [
+         0,
+         401,
+         320,
+         299
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B4b-after-pc.png",
+     "crop": [
+      60,
+      585,
+      1210,
+      130
+     ],
+     "scale": 0.72,
+     "caption": "<b>Staff, PC.</b> Noah Chen (paid) now has a ⋯; Owen Hart and Lily Brooks (nothing paid) still have none.",
+     "marks": [
+      [
+       1219,
+       606,
+       28,
+       28
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B4b-after-tab.png",
+       "crop": [
+        90,
+        890,
+        710,
+        215
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         743,
+         911,
+         44,
+         44
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B4b-after-ph.png",
+       "crop": [
+        0,
+        440,
+        390,
+        290
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, Phone 390×844, touch.</b>",
+       "marks": [
+        [
+         325,
+         465,
+         44,
+         44
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B4b-after-p320.png",
+       "crop": [
+        0,
+        240,
+        320,
+        340
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, 320 wide, touch.</b>",
+       "marks": [
+        [
+         255,
+         261,
+         44,
+         44
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B4c-after-pc.png",
+     "crop": [
+      60,
+      590,
+      1210,
+      110
+     ],
+     "scale": 0.72,
+     "caption": "<b>Staff, PC, Noah Chen’s ⋯ open.</b> Print receipt only.",
+     "marks": [
+      [
+       1047,
+       638,
+       200,
+       42
+      ]
+     ],
+     "shotWidth": 1280
+    },
+    {
+     "row": [
+      {
+       "src": "shots/d-B4c-after-tab.png",
+       "crop": [
+        90,
+        890,
+        710,
+        145
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, Tablet 820×1180, touch.</b>",
+       "marks": [
+        [
+         587,
+         959,
+         200,
+         54
+        ]
+       ],
+       "shotWidth": 820
+      },
+      {
+       "src": "shots/d-B4c-after-ph.png",
+       "crop": [
+        0,
+        440,
+        390,
+        404
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, Phone 390×844, touch.</b> (The phone sheet also has its usual Cancel.)",
+       "marks": [
+        [
+         0,
+         651,
+         390,
+         193
+        ]
+       ],
+       "shotWidth": 390
+      },
+      {
+       "src": "shots/d-B4c-after-p320.png",
+       "crop": [
+        0,
+        240,
+        320,
+        460
+       ],
+       "scale": 0.55,
+       "caption": "<b>Staff, 320 wide, touch.</b>",
+       "marks": [
+        [
+         0,
+         507,
+         320,
+         193
+        ]
+       ],
+       "shotWidth": 320
+      }
+     ]
+    },
+    {
+     "src": "shots/d-B4d-same-pc.png",
+     "crop": [
+      60,
+      585,
+      1210,
+      195
+     ],
+     "scale": 0.72,
+     "caption": "<b>Admin, PC, a removed candidate with nothing paid</b> (Owen Hart): Restore · Delete permanently, exactly as today — no Print receipt. Unchanged at every size.",
+     "marks": [],
+     "shotWidth": 1280
+    }
+   ],
+   "note": "Print receipt prints the same receipt an active row prints, with the payments that still stand. The receipt shown inside a candidate’s summary follows the same one rule (the app shares it with the ⋯ menu). Restore and Delete permanently work as today."
+  }
+ ],
+ "footer": "Star testing · rolling check pass 2 M-03 (rulebook v1.055; Jeffrey’s “fine”, 2026-11-06, to follow Color Belt’s v0.428). Preview screenshots (fake database, Fall Star Testing, Both schools; Noah Chen paid $140 and is removed; Owen Hart is removed with nothing paid). The “After” column is the real page with the new menu items DRAWN OVER it by a small script (mock-cards.js) — nothing in the app was changed. The staff ⋯ is the app’s own button copied into the row; an open staff menu can’t be opened in the app today, so it is drawn by trimming the admin’s open menu to Print receipt (the Print receipt item itself is the app’s own, copied from an active row’s menu). Amber = what changes; green = the change."
+}

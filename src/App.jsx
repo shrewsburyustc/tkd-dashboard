@@ -78,6 +78,8 @@ import Finance from './screens/Finance.jsx';
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePrivateDetailsHidden } from './lib/privateDetails.js';
 import { usePanelSize } from './lib/panelSize.js';
+import { useToastLine } from './lib/toastLine.js';
+import { endLeftUndoBarSession } from './lib/saveLine.js';
 import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
@@ -95,7 +97,7 @@ const NOTICES = {
   passwordAgain: 'For security, sign in with your password again.',
   noAccess: "This account doesn't have dashboard access. Ask an admin.",
   unlockWithPassword: 'Sign in with your password to unlock.',
-  loadFailed: "Couldn't load your account. Check the connection and try again.",
+  loadFailed: "Couldn't load your account. Check the connection, then retry.", // S-2 (v1.051), with a Retry button
   // No PIN = no lock screen: going idle (or Lock now) signs out instead (decided v0.26).
   idleNoPin: 'Signed out after being idle. Set a PIN to unlock faster.',
   // set_my_pin wants a password sign-in in the last 10 minutes.
@@ -215,7 +217,8 @@ export default function App() {
   // The signed-in person's Panel size (v1.118), saved with their account. It follows the sign-in
   // itself (lib/panelSize.js), so it is known before the dashboard first shows.
   const panel = usePanelSize();
-  const [toast, setToast] = useState(null); // { id, text, action, icon } or null
+  // The one toast and its waiting slot (lib/toastLine.js; rulebook v1.125, v1.126).
+  const { toast, line: toasts } = useToastLine();
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
   // `phaseRef` is a copy of `phase` that can be read instantly inside callbacks.
@@ -241,16 +244,17 @@ export default function App() {
 
   // showToast(text) for account toasts (check icon, no Undo).
   // showToast(text, { action: { label: 'Undo', onAction }, icon: false }) for Testing toasts.
-  // A new toast replaces the old one, so only the newest Undo ever exists.
-  const showToast = useCallback(
-    (text, { action = null, icon = true } = {}) => setToast({ id: Date.now(), text, action, icon }),
-    [],
-  );
-  const clearToast = useCallback(() => setToast(null), []);
+  // A new toast replaces the old one, so only the newest Undo ever exists — except while an Undo
+  // runs ("Undoing…"): then the new toast waits for it (v1.126). A section's Undo made by its save
+  // line (lib/saveLine.js, line.undoAction) waits its turn; one that hasn't switched yet works as before.
+  // clearToast (a section's, e.g. after a failed save) never clears the "Undoing…" toast (v1.127).
+  const showToast = useCallback((text, options) => toasts.show(text, options), [toasts]);
+  const clearToast = useCallback(() => toasts.clear(), [toasts]);
 
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
     clearOpenProspect(); // a Calendar → Prospects hand-over never carries over to the next person
+    endLeftUndoBarSession(); // a left page's Undo bar (v1.129) belongs to the person who pressed Undo: it goes, and an Undo still running can't bring one back for the next person
     // The same for any other hand-over that lives outside this file (e.g. Star's Home → Grade,
     // src/lib/star/homeHandoff.js): a plain signal, so App needs no import of that code.
     window.dispatchEvent(new Event('tkd:signed-out'));
@@ -305,8 +309,8 @@ export default function App() {
         row = await fetchProfile();
       } catch {
         if (isStale()) return;
-        // Keep the saved session (a reload will try again), but show why we're stuck.
-        setNotice({ id: Date.now(), text: NOTICES.loadFailed });
+        // Keep the saved session (a reload will try again), but show why we're stuck, with a Retry.
+        setNotice({ id: Date.now(), text: NOTICES.loadFailed, retry: () => retryAccountRef.current?.() });
         setPhase('signedOut');
         return;
       }
@@ -350,6 +354,26 @@ export default function App() {
     [signOut],
   );
 
+  // The sign-in screen's "Couldn't load your account" notice has a Retry (S-2, v1.051): it reads the
+  // saved sign-in again and enters the dashboard if the account loads now. (A ref, because the
+  // notice is made inside enterWithSession, above, before this exists.)
+  const retryAccountRef = useRef(null);
+  retryAccountRef.current = async () => {
+    let result;
+    try {
+      result = await supabase.auth.getSession();
+    } catch {
+      result = { data: null, error: { name: 'AuthRetryableFetchError' } };
+    }
+    const session = result.data?.session ?? null;
+    if (session) {
+      setNotice(null); // the old "couldn't load" notice is over, whatever happens next
+      await enterWithSession(session);
+    } else if (result.error?.name === 'AuthRetryableFetchError') {
+      setNotice({ id: Date.now(), text: NOTICES.loadFailed, retry: () => retryAccountRef.current?.() });
+    } else setNotice(null); // no saved sign-in after all: the plain sign-in screen
+  };
+
   // ----- On first load: is someone already signed in on this device? -----
   useEffect(() => {
     let stale = false; // becomes true if this effect is cleaned up before it finishes
@@ -367,7 +391,7 @@ export default function App() {
         // Only a network failure gets a message. (An expired or revoked sign-in just shows
         // the normal sign-in screen — there's nothing to fix but signing in.)
         if (result.error?.name === 'AuthRetryableFetchError') {
-          setNotice({ id: Date.now(), text: NOTICES.loadFailed });
+          setNotice({ id: Date.now(), text: NOTICES.loadFailed, retry: () => retryAccountRef.current?.() });
         }
         setPhase('signedOut');
         return;
@@ -382,6 +406,7 @@ export default function App() {
       if (event === 'SIGNED_OUT') {
         // Signed out somewhere else (e.g. another tab): same as Sign out here — back to Home.
         // (Our own signOut() above decides the address itself, e.g. the 7-day rule keeps it.)
+        endLeftUndoBarSession(); // a left page's Undo bar must not reach the next person (v1.129)
         if (!signingOutHereRef.current) {
           window.history.replaceState(null, '', addressFor('home'));
           setSection('home');
@@ -580,18 +605,22 @@ export default function App() {
     return stop; // unlocked or signed out: no more tries (a right PIN has unlocked the server)
   }, [phase]);
 
-  // A toast belongs to the open dashboard: drop it if the screen locks or signs out.
+  // A toast belongs to the open dashboard: drop it if the screen locks or signs out. (An Undo that is
+  // running goes on: lib/saveLine.js says how it went, on its page or under the top bar, v1.129.)
   useEffect(() => {
-    if (phase !== 'home') setToast(null);
-  }, [phase]);
+    if (phase !== 'home') toasts.drop();
+  }, [phase, toasts]);
 
   // ----- Account dialogs (from the account menu) -----
   // name: 'changePin' | 'changePassword'. An old toast is dropped so it can't float over the
   // dialog (on a phone the dialog is a full page and the toast would hang in mid-air).
-  const openAccountDialog = useCallback((name) => {
-    setToast(null);
-    setAccountDialog(name);
-  }, []);
+  const openAccountDialog = useCallback(
+    (name) => {
+      toasts.drop();
+      setAccountDialog(name);
+    },
+    [toasts],
+  );
   const closeAccountDialog = useCallback(() => setAccountDialog(null), []);
 
   const handlePinChanged = useCallback(() => {
@@ -607,10 +636,13 @@ export default function App() {
 
   // ----- Location -----
   // A toast (and its Undo) belongs to the school it was made in: changing school drops it.
-  const changeLocation = useCallback((newLocation) => {
-    setToast(null);
-    setLocation(newLocation);
-  }, []);
+  const changeLocation = useCallback(
+    (newLocation) => {
+      toasts.drop();
+      setLocation(newLocation);
+    },
+    [toasts],
+  );
 
   const handleDeviceLocationChange = useCallback(
     (newLocation) => {
@@ -648,7 +680,7 @@ export default function App() {
   //                school — Back then doesn't bring it back).
   const navigate = useCallback(
     (id, { testingPage: nextPage = null, eventId: nextEventId = null, eventTab: nextTab, tab, privateId: nextPrivateId = null, replace = false } = {}) => {
-      setToast(null);
+      toasts.drop();
       // Switch off: Testing has only the Color Belt page, whatever was asked for — and a Star event's
       // id is dropped, so it can never become a Color Belt event address.
       const starAskedWhileOff = !STAR_TESTING_ON && nextPage === 'star';
@@ -689,7 +721,7 @@ export default function App() {
       setEventTab(next.eventTab);
       setPrivateId(next.privateId);
     },
-    [],
+    [toasts],
   );
 
   // ----- The leave guard (contract 0010 §4.9) -----
@@ -886,7 +918,7 @@ export default function App() {
           window.history.pushState({ tkdPage: true }, '', here);
           return;
         }
-        setToast(null);
+        toasts.drop();
         setSection(target);
         setTestingPage(route.testingPage);
         setEventId(route.eventId);
@@ -1029,7 +1061,7 @@ export default function App() {
       <div className="app-screen">
         {phase === 'signedOut' && (
           // `key` = a new notice id makes React start a fresh SignIn (cleared fields and messages).
-          <SignIn key={notice?.id ?? 'none'} notice={notice?.text ?? null} onSignIn={handleSignIn} />
+          <SignIn key={notice?.id ?? 'none'} notice={notice?.text ?? null} onRetryNotice={notice?.retry ?? null} onSignIn={handleSignIn} />
         )}
 
         {phase === 'setPin' && profile !== null && (
@@ -1084,8 +1116,12 @@ export default function App() {
               <Testing
                 location={location}
                 onLocationChange={changeLocation}
+                // This device's school: the desk Black Belt payments and refunds count at (R1-01)
+                deviceLocation={deviceLocation}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
+                // This device's home school: a Color Belt payment counts at the desk that took it (v1.035).
+                deviceLocation={deviceLocation}
                 testingPage={testingPage}
                 onOpenTestingPage={openTestingPage}
                 eventId={eventId}
@@ -1107,6 +1143,9 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+                // This device's home school: Star's Record payment / Record refund count at it (v1.035, R1-01).
+                // Testing.jsx hands it on to Star's page with its other props; nothing else changes there.
+                deviceLocation={deviceLocation}
               />
             )}
             {section === 'camps' && (
@@ -1225,9 +1264,14 @@ export default function App() {
                 profile={profile}
                 screenLocked={phase === 'locked'}
                 showToast={showToast}
+                clearToast={clearToast}
                 onModalOpenChange={setSettingsModalOpen}
                 onRefreshProfile={refreshProfile}
                 onNoAccess={handleNoAccess}
+                // Classes and ranks opens on the top bar's school; the address #settings/classes-and-ranks
+                // scrolls to it (CB14).
+                location={location}
+                focusPart={eventTab === 'classes-and-ranks' ? 'classes-and-ranks' : null}
               />
             )}
           </Shell>
@@ -1263,7 +1307,7 @@ export default function App() {
         )}
       </div>
 
-      <Toast toast={toast} onDismiss={() => setToast(null)} />
+      <Toast toast={toast} onDismiss={(id) => toasts.dismiss(id)} onUndo={(id) => toasts.pressUndo(id)} />
     </div>
   );
 }

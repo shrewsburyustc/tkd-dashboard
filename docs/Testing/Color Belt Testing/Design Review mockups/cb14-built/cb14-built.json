@@ -1,0 +1,38 @@
+{
+  "title": "CB14 built: Classes and ranks in Settings, and the Prices tab",
+  "subtitle": "Real preview screenshots (fake data). <b>Amber</b> = how it was (Color belt testing → Classes and ranks tab, with every price in the list and in one dialog). <b>Green</b> = what is built now: the names and order in Settings, the money on the new Prices tab. Add rank keeps the price fields (your answer A).",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Before — Color belt testing → Classes and ranks",
+      "tone": "today",
+      "items": [
+        { "src": "before-classes-1280.png", "shotWidth": 1280, "crop": [52, 76, 1228, 500], "scale": 0.45, "caption": "<b>One tab</b> held names, order and prices." }
+      ]
+    },
+    {
+      "label": "After — Settings → Classes and ranks (admins)",
+      "tone": "after",
+      "items": [
+        { "src": "settings-pc.png", "shotWidth": 1280, "crop": [52, 76, 1228, 724], "scale": 0.45, "caption": "<b>Settings</b>, second part under Schools: switch + Add class, names, belts, order, Testing for. No prices." },
+        { "row": [
+          { "src": "edit-rank-pc.png", "shotWidth": 1280, "crop": [256, 76, 768, 570], "scale": 0.4, "caption": "<b>Edit rank</b>: name and belt." },
+          { "src": "settings-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 844], "scale": 0.4, "caption": "Phone: Settings part." }
+        ] }
+      ]
+    },
+    {
+      "label": "After — Color belt testing → Prices",
+      "tone": "after",
+      "items": [
+        { "src": "prices-pc.png", "shotWidth": 1280, "crop": [52, 76, 1228, 724], "scale": 0.45, "caption": "<b>Prices tab</b>: all four prices on every size, final award under each class, a pencil per rank and per class (admins). Staff: same list, no pencils." },
+        { "row": [
+          { "src": "edit-prices-pc.png", "shotWidth": 1280, "crop": [380, 76, 520, 330], "scale": 0.4, "caption": "<b>Edit prices</b>" },
+          { "src": "final-award-pc.png", "shotWidth": 1280, "crop": [460, 76, 360, 262], "scale": 0.4, "caption": "<b>Final award</b>" },
+          { "src": "prices-phone.png", "shotWidth": 390, "crop": [0, 0, 390, 844], "scale": 0.4, "caption": "Phone: Prices." }
+        ] }
+      ]
+    }
+  ],
+  "footer": "Also changed: the gray line under the tabs on Prices, sentences that used to say \"Classes and ranks\" for prices (event dialog, private testing, move to private testing) now say the Prices tab, and the address <b>#settings/classes-and-ranks</b> opens Settings scrolled to this part."
+}

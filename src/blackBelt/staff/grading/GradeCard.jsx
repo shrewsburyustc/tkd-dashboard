@@ -176,7 +176,7 @@ export default function GradeCard({ row, columns, kind, ctx, sheetLists = false,
     <div className="bbg-card" role="group" aria-label={name}>
       {row.isMakeup && (
         <div className="bbg-card-makeup">
-          <MakeupPill /> <b>{T.makeupCardFrom(row.makeupOfCycleName ?? '')}</b> {T.makeupCardText(retestNames(result, rubric))}
+          <MakeupPill /> <b className="bb-medium">{T.makeupCardFrom(row.makeupOfCycleName ?? '')}</b> {T.makeupCardText(retestNames(result, rubric))}
         </div>
       )}
       {columns.map((col) => {

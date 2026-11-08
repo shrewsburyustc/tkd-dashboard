@@ -287,6 +287,8 @@ begin
     end;
     $b$;
   $f$;
+  -- production gives functions made by postgres no execute right for other roles: the helper is called inside "set local role authenticated"
+  grant execute on function pg_temp.st_grade_all(uuid, text) to public;
   execute $f$
     create function pg_temp.st_t12(p_mark bigint, p_action text, p_actor uuid, p_session uuid, p_name text, p_label text)
     returns void language plpgsql as $b$
@@ -329,6 +331,7 @@ begin
     end;
     $b$;
   $f$;
+  grant execute on function pg_temp.st_t12(bigint, text, uuid, uuid, text, text) to public;
 
   -- A known template (the seed values), whatever an admin changed in
   -- Rubrics and prices before - so every expected number below holds.
@@ -2464,10 +2467,14 @@ begin
      or v_r2 -> 'needs_ids' <> to_jsonb(array[v_k_brk]) or v_r2 -> 'missing' <> '[]'::jsonb then
     raise exception 'TEST FAILED: T9a result shape: %', v_r2;
   end if;
-  -- the rows come in belt order (star, school Shrewsbury first, last name, first name)
+  -- the rows come in belt order (star, school Shrewsbury first, last name, first name); after 0038
+  -- (S-1, rulebook v1.047) Worcester first
   if array(select t.x ->> 'candidate_id' from jsonb_array_elements(v_r -> 'rows') with ordinality as t(x, o) order by t.o)
      <> array(select t.x ->> 'candidate_id' from jsonb_array_elements(v_r -> 'rows') as t(x)
-               order by (t.x ->> 'stars_from')::int, case t.x ->> 'location_code' when 'shrewsbury' then 0 else 1 end,
+               order by (t.x ->> 'stars_from')::int,
+                        case t.x ->> 'location_code'
+                          when (case when to_regprocedure('public.star_undo_event_edit(uuid, integer, text, date, time, text, date, text, time, boolean)') is not null
+                                     then 'worcester' else 'shrewsbury' end) then 0 else 1 end,
                         lower(t.x ->> 'last_name'), lower(t.x ->> 'first_name'), t.x ->> 'candidate_id') then
     raise exception 'TEST FAILED: T9a event_results rows not in belt order';
   end if;
@@ -2659,7 +2666,10 @@ begin
     raise exception 'TEST FAILED: T10a CSV rows must include DOB, email and payment, the sent state, and no withdrawn candidate';
   end if;
   if array(select t.o from jsonb_array_elements(v_r -> 'rows') with ordinality as t(x, o)
-            order by (t.x ->> 'dan')::int, (t.x ->> 'stars_from')::int, case t.x ->> 'location_code' when 'shrewsbury' then 0 else 1 end,
+            order by (t.x ->> 'dan')::int, (t.x ->> 'stars_from')::int,
+                     case t.x ->> 'location_code'   -- after 0038 (S-1, rulebook v1.047) Worcester first
+                       when (case when to_regprocedure('public.star_undo_event_edit(uuid, integer, text, date, time, text, date, text, time, boolean)') is not null
+                                  then 'worcester' else 'shrewsbury' end) then 0 else 1 end,
                      lower(t.x ->> 'last_name'), lower(t.x ->> 'first_name'), t.o)
      <> array(select generate_series(1, jsonb_array_length(v_r -> 'rows')))::bigint[] then
     raise exception 'TEST FAILED: T10a CSV rows not in belt order';
@@ -2700,7 +2710,8 @@ begin
   end loop;
   select array_agg(a.attname::text order by a.attname) into v_list
     from pg_attribute a where a.attrelid = 'public.star_roster'::regclass and a.attnum > 0 and not a.attisdropped;
-  if v_list <> array['assistant_classes', 'classes_attended', 'created_at', 'created_by_name', 'dan', 'dan_label', 'duplicate_of',
+  -- (0038 adds paying_by_on_form as the roster's last column - R1-02; both before and after 0038 pass)
+  if array_remove(v_list, 'paying_by_on_form') <> array['assistant_classes', 'classes_attended', 'created_at', 'created_by_name', 'dan', 'dan_label', 'duplicate_of',
                      'duplicate_state', 'event_id', 'expected_fee_cents', 'fee_kind', 'first_name', 'id', 'is_makeup',
                      'last_name', 'last_payment_id', 'last_payment_recorded_at', 'last_payment_recorded_by_name', 'location_code',
                      'makeup_of_candidate_id', 'makeup_of_event_name', 'overpaid_cents', 'paid', 'paid_cents', 'paid_method',
@@ -3223,6 +3234,12 @@ begin
               where a.attrelid = 'public.star_events'::regclass and a.attname = 'end_time' and not a.attisdropped) then
     v_list := v_list || 'star_events.end_time'::text;
   end if;
+  -- 0038 (Star design review, v1.035 / R1-02) adds star_payments.school and star_candidates.paying_by_on_form,
+  -- both readable by signed-in staff; star_payments.paying_by_before is NOT (nobody in the app reads it)
+  if exists (select 1 from pg_attribute a
+              where a.attrelid = 'public.star_payments'::regclass and a.attname = 'school' and not a.attisdropped) then
+    v_list := v_list || array['star_payments.school', 'star_candidates.paying_by_on_form']::text[];
+  end if;
   for v_tbl, v_col in
     select c.relname::text, a.attname::text
       from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
@@ -3272,9 +3289,12 @@ begin
     if not coalesce('search_path=""' = any (v_fn.proconfig), false) then
       raise exception 'TEST FAILED: C4 % has no search_path = ''''', v_fn.oid::regprocedure;
     end if;
-    -- the one allowed default: 0041's last input p_end_time (default empty) on star_add_event / star_update_event
-    if v_fn.pronargdefaults <> (case when v_fn.name in ('star_add_event', 'star_update_event')
-                                          and v_fn.proargnames[v_fn.pronargs] = 'p_end_time' then 1 else 0 end) then
+    -- the allowed defaults: 0041's last input p_end_time (default empty) on star_add_event / star_update_event,
+    -- and 0038's last input p_school (default empty) on star_record_payment / star_record_refund
+    if v_fn.pronargdefaults <> (case when (v_fn.name in ('star_add_event', 'star_update_event')
+                                           and v_fn.proargnames[v_fn.pronargs] = 'p_end_time')
+                                          or (v_fn.name in ('star_record_payment', 'star_record_refund')
+                                              and v_fn.proargnames[v_fn.pronargs] = 'p_school') then 1 else 0 end) then
       raise exception 'TEST FAILED: C4 % has argument defaults', v_fn.oid::regprocedure;
     end if;
     if has_function_privilege('anon', v_fn.oid, 'EXECUTE') or has_function_privilege('service_role', v_fn.oid, 'EXECUTE')
@@ -3326,10 +3346,15 @@ begin
       'public.star_withdraw_candidate(uuid, integer)',
       'public.star_restore_candidate(uuid, integer)',
       'public.star_delete_candidate(uuid, integer, uuid[])',
-      'public.star_record_payment(uuid, integer, text, integer, date)',
+      -- before 0038 (v1.035) 5 inputs; 0038 adds p_school as the last one
+      case when to_regprocedure('public.star_record_payment(uuid, integer, text, integer, date, text)') is not null
+           then 'public.star_record_payment(uuid, integer, text, integer, date, text)'
+           else 'public.star_record_payment(uuid, integer, text, integer, date)' end,
       'public.star_undo_payment(uuid)',
       'public.star_edit_payment(uuid, text, integer, date)',
-      'public.star_record_refund(uuid, integer, text, integer, date)',
+      case when to_regprocedure('public.star_record_refund(uuid, integer, text, integer, date, text)') is not null
+           then 'public.star_record_refund(uuid, integer, text, integer, date, text)'
+           else 'public.star_record_refund(uuid, integer, text, integer, date)' end,
       'public.star_set_grade(uuid, uuid, text)',
       'public.star_set_count(uuid, text, integer)',
       'public.star_set_makeup_subjects(uuid, uuid[], uuid[])',
@@ -3379,7 +3404,8 @@ begin
                       where n.nspname = 'public' and c.conname = x.con and c.contype = 'f' and c.confdeltype = x.act);
   if v_txt is not null then raise exception 'TEST FAILED: C6 missing foreign key or wrong removal rule on: %', v_txt; end if;
   if (select count(*) from pg_constraint c where c.contype = 'f' and c.conrelid = any (array(
-        select ('public.' || t)::regclass from unnest(v_tables) as t))) <> 20 then
+        select ('public.' || t)::regclass from unnest(v_tables) as t)))
+     <> 20 + (case when exists (select 1 from pg_constraint c where c.conname = 'star_payments_school_fk') then 1 else 0 end) then   -- 0038 adds one: the payment's school
     raise exception 'TEST FAILED: C6 the 0006 tables must have exactly the 20 listed foreign keys';
   end if;
 
@@ -3414,7 +3440,12 @@ begin
   if v_txt is not null then raise exception 'TEST FAILED: C7 missing / wrong / disabled trigger(s): %', v_txt; end if;
   select count(*) into v_n from pg_trigger t
    where t.tgrelid = any (array(select ('public.' || t)::regclass from unnest(v_tables) as t)) and not t.tgisinternal;
-  if v_n <> 9 + 4 + 14 + 16 + 9 then raise exception 'TEST FAILED: C7 expected % triggers on the 0006 tables, found %', 9 + 4 + 14 + 16 + 9, v_n; end if;
+  -- (+ 1 after 0038: star_candidates_before_form_choice)
+  if v_n <> 9 + 4 + 14 + 16 + 9
+            + (case when to_regclass('public.star_candidates') is not null
+                         and exists (select 1 from pg_trigger t where t.tgname = 'star_candidates_before_form_choice') then 1 else 0 end) then
+    raise exception 'TEST FAILED: C7 expected % triggers on the 0006 tables, found %', 9 + 4 + 14 + 16 + 9, v_n;
+  end if;
   if exists (select 1 from pg_trigger t where t.tgrelid = 'public.star_downloads'::regclass and t.tgname = 'star_downloads_log') then
     raise exception 'TEST FAILED: C7 star_downloads must not be logged';
   end if;

@@ -352,6 +352,33 @@
   -webkit-touch-callout: none; /* no long-press menu on iPhones */
 }
 
+/* The shared back link above a page's title (BackLink.jsx; pass 1 R3-06, rulebook v1.048 (12)): the
+   numbers of Testing's "← Testing" link (chooser.css .tc-back): 24px tall with a 16px arrow */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 24px;
+  margin-bottom: 2px;
+}
+
+/* Touch: a 44px tall tap area, pulled back with negative margins so the title doesn't move down */
+@media (pointer: coarse) {
+  .back-link {
+    min-height: var(--tap-size);
+    margin: -10px 0 -8px;
+  }
+}
+
+/* Dragging is off right now (pass 2 L-06): the icon in the unavailable gray, no grab cursor (as the
+   turned-off icon button, v1.120). Still focusable, so its "Drag to reorder" tooltip still shows. */
+.grip[aria-disabled='true'],
+.grip[aria-disabled='true']:hover {
+  background: none;
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
 /* The grip's tooltip goes above it, starting at its left edge (so it doesn't cover the name) */
 .grip-tip {
   left: 0;
@@ -854,6 +881,32 @@ html.is-reordering .tib-tip {
   z-index: 1;
 }
 
+/* Black Belt's choice-button looks, now in the shared ChoiceGroup (its `fill`, `compact`, `locked` and
+   `invalid`): copied from Black Belt's own sheet, which keeps its rules until it switches. */
+.segmented--fill {
+  display: flex;
+  width: 100%;
+}
+
+.segmented--fill .segment {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 var(--space-4);
+}
+
+.segmented--compact {
+  align-self: flex-start;
+}
+
+.segmented.is-locked .segment {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.segmented.is-invalid {
+  border-color: var(--color-warning-text);
+}
+
 /* ===== The custom dropdown (v0.51): FinalAwardSelect.jsx, Star's StarSelect.jsx and the shared
    Select.jsx (src/components/) ===== */
 .fa-field {
@@ -1088,6 +1141,13 @@ html.is-reordering .tib-tip {
 
   .ttab {
     height: var(--tap-size);
+    min-width: var(--tap-size); /* a short word ("Camps", "Events") is still 44px wide (pass 2 L-10) */
+  }
+
+  /* The shared Select's field is a 44px tap target on touch (it measured 36px), like the other shared
+     controls (New students' batch review) */
+  .sel-field {
+    min-height: var(--tap-size);
   }
 
   .rrow {
@@ -1619,9 +1679,10 @@ html.is-reordering .tib-tip {
    .btn-primary.is-unavailable above. Still focusable (aria-disabled, never disabled). Used by
    "Keep …" while a confirm box works (M2), every button of the Compare dialog while it works
    (M1, "Keeping…") and "Mark paid $X" with no choice on record (M3).
-   Written for the shared parts only: Staff accounts' Reset password dialog already gives its
-   plain Generate / Copy buttons is-unavailable with no gray rule, and a page-wide .btn.is-unavailable
-   would turn them gray — a change on screen, which Dashboard core step 1 doesn't make. */
+   Written for the shared parts only in step 1. Since the shared-parts batch (pass 1 R1-08, rulebook
+   v1.131) the same gray is page-wide, at the end of this file ("Unavailable, page-wide"): Staff
+   accounts' Reset password dialog's plain Generate / Copy buttons, which already carry is-unavailable,
+   now turn gray too, as do Fill in's busy Cancel / Send. The rules here stay, harmlessly. */
 .cmp-dialog .btn.is-unavailable,
 .cmp-dialog .btn.is-unavailable:hover,
 .cmp-dialog .btn.is-unavailable:active,
@@ -2316,3 +2377,51 @@ html.is-reordering .tib-tip {
    "Choose a time" (.sel-field.is-empty) and the 2px ring on the row the arrow keys are on
    (.sel-list .fa-option.is-active), above. Turned off (v1.116): .fa-field.is-disabled, next to
    .fa-field.is-readonly near the top. */
+
+/* A group's heading row in the shared Select's list ("Current", "Planned": Select.jsx `group`): small
+   gray words, never hovered or chosen */
+.sel-list .fa-group-label {
+  padding: var(--space-8) var(--space-12) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+/* ===== Unavailable, page-wide (pass 1 R1-08; rulebook v1.103 detail 8) =====
+   A plain button or a clickable tag that can't be used right now — another save is running (Mark
+   paid, Send, a ⋯ row's tag), or it is waiting for something — shows the approved unavailable look
+   and stays focusable (aria-disabled, never disabled): the same gray as the shared parts' plain
+   button above (.cmp-dialog .btn.is-unavailable). Written once, here, so no section has to repeat it.
+   Sections may still give a control `is-unavailable` themselves (the class and the attribute
+   look the same). A section's own, more specific rule for one control still wins. */
+.btn.is-unavailable,
+.btn.is-unavailable:hover,
+.btn.is-unavailable:active,
+.btn[aria-disabled='true'],
+.btn[aria-disabled='true']:hover,
+.btn[aria-disabled='true']:active,
+.btn-primary[aria-disabled='true'],
+.btn-primary[aria-disabled='true']:hover,
+.btn-primary[aria-disabled='true']:active,
+.ev-tag-button[aria-disabled='true'],
+.ev-tag-button[aria-disabled='true']:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* A clickable tag is already light gray, so the gray above barely shows on it: a tag that can't be
+   pressed right now also goes white with a dashed edge (design review: the busy "$X due" tag looked
+   almost the same as a ready one). */
+.ev-tag-button[aria-disabled='true'],
+.ev-tag-button[aria-disabled='true']:hover {
+  border-style: dashed;
+  background: var(--color-bg);
+}
+
+/* A control that is busy saving (aria-busy) keeps the busy cursor instead (v1.008, v1.103) */
+.btn[aria-disabled='true'][aria-busy='true'],
+.ev-tag-button[aria-disabled='true'][aria-busy='true'] {
+  cursor: progress;
+}

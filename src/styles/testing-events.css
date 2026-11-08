@@ -431,6 +431,17 @@
   cursor: pointer;
 }
 
+/* A click box above and below the tag, with a mouse too (pass 1 R4-09, pass 2 L-03; rulebook v1.033):
+   the tag draws 22px tall and anything you click is at least 24 × 24. An absolutely placed box is
+   measured from inside the tag's 1px border (its padding box, 20px tall), so inset -2px gives
+   20 + 2 + 2 = 24px. (-1px would give only 22: pass 2's correction.) Invisible: the tag looks the
+   same and rows don't grow. On touch the bigger box in the touch rules below replaces it. */
+.ev-tag-button::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
 .ev-srow.is-removed .ev-sname,
 .ev-srow.is-removed .ev-scell {
   color: var(--color-text-secondary);
@@ -1108,6 +1119,11 @@
   .ev-removed-toggle,
   .ev-sort {
     min-height: var(--tap-size);
+  }
+
+  /* A short sort word ("Event", "Camp", "Status") is still 44px wide (pass 2 L-10) */
+  .ev-sort {
+    min-width: var(--tap-size);
   }
 
   .ev-crow {

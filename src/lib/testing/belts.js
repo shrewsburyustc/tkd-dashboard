@@ -116,3 +116,13 @@ export function defaultBeltFor(cls) {
   const copy = last ? beltOf(last) : null;
   return copy && validateBelt(copy) === null ? copy : { ...PLAIN_WHITE_BELT };
 }
+
+export function beltFormProblem(belt) {
+  const problem = validateBelt(belt);
+  if (problem) return problem;
+  if (belt.beltEndStripes > 0) {
+    const on = belt.beltEndStripeColor;
+    if (on === belt.beltColor || (belt.beltPattern === 'half' && on === belt.beltColor2)) return 'endStripeSame';
+  }
+  return null;
+}

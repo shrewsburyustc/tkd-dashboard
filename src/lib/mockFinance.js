@@ -469,6 +469,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       const plan = plans.get(cand.cycle_plan_id ?? '') ?? null;
       out.push({
         ...it, school: shownRow.location_code, first_name: cand.first_name, last_name: cand.last_name,
+        was_school: wasSchoolOf(it, shownRow.location_code, rowsById.get(it.payment_id)?.location_code ?? shownRow.location_code),
         what: 'black_belt', event_date: null, is_private: false, event_name: shownRow.cycle_name, event_id: shownRow.cycle_id,
         for_items: it.kind === 'returned' ? check?.for_items ?? null : it.kind === 'payment' ? shownRow.for_items ?? null : null,
         one_payment_plan: plan && plan.payments_count === 1 ? plan.name : null,
@@ -507,7 +508,8 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         // A moved-in copy is credited to whoever took the money at the event (0018 §2.1), not the mover.
         const original = eventById.get(privById.get(it.payment_id)?.moved_from_payment_id ?? '') ?? null;
         out.push({
-          ...it, school: pv.location_code, first_name: pv.first_name, last_name: pv.last_name,
+          ...it, school: privById.get(it.row_id)?.school ?? pv.location_code, first_name: pv.first_name, last_name: pv.last_name,
+          was_school: wasSchoolOf(it, privById.get(it.row_id)?.school ?? pv.location_code, privById.get(it.payment_id)?.school ?? pv.location_code),
           what: 'color_belt', event_date: pv.private_date, is_private: true, event_name: null, event_id: null,
           recorded_by_name: original && it.row_id === it.payment_id ? original.recorded_by_name : it.recorded_by_name,
         });
@@ -517,7 +519,8 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         const event = reg ? events.get(reg.event_id) : null;
         if (!event) continue;
         out.push({
-          ...it, school: event.location_code, first_name: reg.first_name, last_name: reg.last_name,
+          ...it, school: eventById.get(it.row_id)?.school ?? event.location_code, first_name: reg.first_name, last_name: reg.last_name,
+          was_school: wasSchoolOf(it, eventById.get(it.row_id)?.school ?? event.location_code, eventById.get(it.payment_id)?.school ?? event.location_code),
           what: 'color_belt', event_date: event.testing_date, is_private: false, event_name: event.name, event_id: event.id,
         });
       }
@@ -536,6 +539,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         if (!camp) continue;
         out.push({
           ...it, school: rowsById.get(it.row_id)?.school ?? camp.location_code, first_name: camper.first_name, last_name: camper.last_name,
+          was_school: wasSchoolOf(it, rowsById.get(it.row_id)?.school ?? camp.location_code, rowsById.get(it.payment_id)?.school ?? camp.location_code),
           what: 'camp', event_date: firstDay.get(camp.id) ?? null, is_private: false, event_name: camp.name, event_id: camp.id,
         });
       }
@@ -553,6 +557,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       // current school (live 0026: c.location_code).
       out.push({
         ...it, school: starRowsById.get(it.row_id)?.school ?? cand.location_code, first_name: cand.first_name, last_name: cand.last_name,
+        was_school: wasSchoolOf(it, starRowsById.get(it.row_id)?.school ?? cand.location_code, starRowsById.get(it.payment_id)?.school ?? cand.location_code),
         // A private Star testing shows its private date ("Star testing · private <date>").
         what: 'star', event_date: cand.private_on ?? event.testing_date, is_private: (cand.private_on ?? null) !== null, event_name: event.name, event_id: event.id,
       });
@@ -642,6 +647,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       // "Added after closing": counted on a closed day, and its chain began after the close.
       // Never a returned check: Close the day doesn't use them (0026 §2.2).
       added_after_closing: Boolean(close) && countsInTotals(it.state) && !isReturned(it) && Date.parse(it.chain_started_at) > Date.parse(close.recorded_at),
+      was_school: it.was_school ?? null, // 0047: the first desk's school, only on an edited / moved-in line whose desk changed
     };
     // Camp rows also carry the camp's name ('Camp · April Vacation Camp', v0.707). Color Belt and
     // Star rows are unchanged (their screens show the event date).
@@ -897,7 +903,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
           what: it.what, event_date: it.event_date, is_private: it.is_private === true, // 0037: like finance_day's items
           kind: it.kind, method: it.method, amount_cents: it.amount_cents,
           counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
-          note: exportNote(it),
+          note: exportNote(it), was_school: it.was_school ?? null,
           ...(it.source === 'camp' ? { event_name: it.event_name } : {}), // camp rows: the camp's name (not a CSV column)
           // Black Belt rows (0026 §6): the cycle name, what it's for and, on a returned check, the handed-in day.
           ...(it.source === 'black_belt'
@@ -1057,6 +1063,13 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
   }
 
   return { rpc, failNextSave, setNow, reset, snapshot: read };
+}
+
+// 0047: the first desk's school when it differs from the line shown, only for an edited or moved-in
+// line (the same rule the database uses); otherwise null.
+function wasSchoolOf(it, shownSchool, firstSchool) {
+  const corrected = it.state === 'edited' || it.state === 'moved_in';
+  return corrected && firstSchool && shownSchool && firstSchool !== shownSchool ? firstSchool : null;
 }
 
 // The export's note for a corrected line (plain words in the file, like the database writes them).

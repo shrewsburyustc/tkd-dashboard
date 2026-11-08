@@ -553,3 +553,107 @@ body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
 .parts-room-card + .parts-room-card {
   margin-top: var(--space-8);
 }
+
+/* ===== R205: the queued Undo (lib/saveLine.js, lib/toastLine.js; rulebook v1.125–v1.129) ===== */
+.parts-r205-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12) var(--space-24);
+  margin-bottom: var(--space-16);
+}
+
+/* The pretend frame: a top bar, the bars under it (.shell-bars, as Shell.jsx), then the page */
+.parts-r205-frame {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.parts-r205-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-height: 48px;
+  padding: var(--space-4) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.parts-r205-title {
+  font-weight: 600;
+}
+
+/* The page's own edges, 24px (16px on phones), as a real page's, so the bars line up with it */
+.parts-r205-page {
+  padding: var(--space-16) var(--space-24) var(--space-24);
+}
+
+.parts-r205-roster {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.parts-r205-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  min-height: 48px;
+  padding: var(--space-8) var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.parts-r205-row:first-child {
+  border-top: none;
+}
+
+.parts-r205-name {
+  flex: 1;
+  min-width: 96px;
+  font-weight: 500;
+}
+
+.parts-r205-state {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* A Withdraw that can't be pressed now (another save runs, or already withdrawn): the gray of the
+   shared parts' unavailable plain button (shared.css), for this sample only */
+.parts-r205-row .btn.is-unavailable,
+.parts-r205-row .btn.is-unavailable:hover,
+.parts-r205-row .btn.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* ===== SH: the shared looks (BackLink, grips, unavailable) ===== */
+.parts-sh-title {
+  margin: 0 0 var(--space-16);
+  font-size: var(--text-20);
+}
+
+.parts-sh-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12) var(--space-16);
+  margin-bottom: var(--space-16);
+  font-size: var(--text-13);
+}
+
+.parts-r205-home {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 639.98px) {
+  .parts-r205-page {
+    padding: var(--space-16);
+  }
+}

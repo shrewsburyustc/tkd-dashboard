@@ -18,7 +18,7 @@
 // the clipboard instead (the screen copies it). The CSV is made in the browser (nothing in a web
 // address) and only from bb_results_csv's answer (admins only, logged before it leaves the database).
 import { emailIsValid, trimSpaces } from './rules.js';
-import { formatCents } from './money.js';
+import { formatMoney } from '../money.js';
 import { trimScaleText, joinNames } from './grading.js';
 
 // The subject line, the same for every family (R 13, R 28). Fixed in the app, never stored: it
@@ -227,11 +227,11 @@ function paymentWords(money, isMakeup) {
   if (!money) return '';
   switch (money.tag) {
     case 'paid_in_full':
-      return money.overpaid_cents > 0 ? `Paid in full · ${formatCents(money.overpaid_cents)} overpaid` : 'Paid in full';
+      return money.overpaid_cents > 0 ? `Paid in full · ${formatMoney(money.overpaid_cents)} overpaid` : 'Paid in full';
     case 'next':
-      return `Next ${formatCents(money.next_cents)} by ${monthDay(money.next_on)}`;
+      return `Next ${formatMoney(money.next_cents)} by ${monthDay(money.next_on)}`;
     case 'late':
-      return `Late · ${formatCents(money.late_cents)}${money.late_kukkiwon_only ? ' Kukkiwon' : ''} since ${monthDay(money.late_since)}`;
+      return `Late · ${formatMoney(money.late_cents)}${money.late_kukkiwon_only ? ' Kukkiwon' : ''} since ${monthDay(money.late_since)}`;
     case 'not_paid':
       return 'Not paid';
     default:
@@ -277,7 +277,7 @@ export function csvRows(answer, { schoolDateOf = (iso) => String(iso ?? '').slic
       isMakeup ? 'No fee' : r.plan_name ?? '',
       r.kukkiwon ? 'Yes' : 'No',
       paymentWords(r.money, isMakeup),
-      isMakeup || !r.money ? '' : formatCents(r.money.balance_cents),
+      isMakeup || !r.money ? '' : formatMoney(r.money.balance_cents),
       ...PART_CODES.map(partCell),
       r.extra_total === null || r.extra_total === undefined ? '' : trimScaleText(r.extra_total),
       trimScaleText(r.total),

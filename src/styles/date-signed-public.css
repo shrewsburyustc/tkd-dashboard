@@ -4,7 +4,7 @@
   Why it's its own file: the family pages (/register, /star, /camp, /black-belt) load tokens.css and their
   own CSS, not shared.css, so a shared part that needs a rule brings its own small stylesheet (as
   icon-button-public.css does). Only tokens are used, so every page draws it the same: New students' gray
-  box (their .fsigned-box), label and hint the size of the family pages' own (12px).
+  box (their .fsigned-box), the label 13px and the hint 12px on every device.
 */
 .ds-field {
   display: flex;
@@ -16,7 +16,7 @@
 
 .ds-label {
   color: var(--color-text-secondary);
-  font-size: var(--text-12);
+  font-size: var(--text-13); /* 13px on every device, the hint 12px (New students' batch review) */
 }
 
 /* A read-only box: gray, a stronger border, no text cursor — it looks filled in, not typed in */
@@ -42,12 +42,8 @@
 
 /* Touch devices, tablets included, and phones: the same sizes as the family form's own text boxes
    (register.css, v0.411 and v0.106): a 40px box with 16px text (16px stops phones and tablets
-   zooming in when they tap a field) and a 13px label. A read-only box still takes a tap. */
+   zooming in when they tap a field). A read-only box still takes a tap. */
 @media (pointer: coarse), (max-width: 599px) {
-  .ds-label {
-    font-size: var(--text-13);
-  }
-
   .ds-box {
     height: 40px;
     font-size: 16px;

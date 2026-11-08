@@ -14,6 +14,9 @@
 // outside the page's scrolling part, so they never cover what the keyboard is on (v1.033). They
 // line up with the page's own edges, also when the page has a scrollbar of its own. When one comes
 // or goes, the page stays still under the person's finger (v1.124).
+// Since R2-05 (v1.128, v1.129) the same place also holds a left page's Undo bar (an Undo that kept
+// running after its page closed, and didn't save: lib/saveLine.js) and then the page's own bars,
+// which a page draws with PageBar.jsx: it puts them here, through PageBarSlot.
 // The page area's width is "the room beside the panel" (v1.053, v1.130; lib/pageRoom.js): the frame
 // measures it here, and a roster asks it whether to use its phone layout.
 import { useLayoutEffect, useRef, useState } from 'react';
@@ -25,6 +28,8 @@ import OfflineBar from './OfflineBar.jsx';
 import { PANEL_SIZE_NOT_SAVED } from '../lib/panelSize.js';
 import { useConnectionTrouble } from '../lib/connection.js';
 import { useMeasurePageRoom } from '../lib/pageRoom.js';
+import { dismissLeftUndoBar, useLeftUndoBar } from '../lib/saveLine.js';
+import { PageBarSlot } from './PageBar.jsx';
 
 export default function Shell({
   hidden,
@@ -50,22 +55,26 @@ export default function Shell({
 }) {
   // The one offline bar: true while the browser says offline or any screen's reloads keep failing.
   const offline = useConnectionTrouble();
-  const barShown = offline || panel.saveFailed;
+  // An Undo whose page has closed and that didn't save (v1.129, lib/saveLine.js), or null.
+  const leftUndoBar = useLeftUndoBar();
+  // The place for the page's own bars (PageBar.jsx): a DOM element, known once it is drawn (a
+  // callback ref sets it during the first drawing, before the screen is painted).
+  const [pageBarSlot, setPageBarSlot] = useState(null);
 
-  // While an amber bar shows: the width of the page's own scrollbar (0 when it has none, or when
-  // the device's scrollbars float over the page), so the bars end where the page does. Measured
-  // before the screen is painted (useLayoutEffect), so a new bar never shows one frame too wide.
+  // The width of the page's own scrollbar (0 when it has none, or when the device's scrollbars float
+  // over the page), so the bars end where the page does. Measured before the screen is painted
+  // (useLayoutEffect), so a new bar never shows one frame too wide; measured all the time, because a
+  // page's own bar (PageBar) can come at any moment.
   const contentRef = useRef(null);
   const [pageScrollbar, setPageScrollbar] = useState(0);
   useLayoutEffect(() => {
-    if (!barShown) return undefined;
     const content = contentRef.current;
     const measure = () => setPageScrollbar(content.offsetWidth - content.clientWidth);
     measure();
     const observer = new ResizeObserver(measure); // a scrollbar appearing narrows the page
     observer.observe(content);
     return () => observer.disconnect();
-  }, [barShown]);
+  }, []);
 
   // The room beside the panel: the page area's inside width, for the rosters (lib/pageRoom.js).
   useMeasurePageRoom(contentRef);
@@ -166,24 +175,41 @@ export default function Shell({
           panelSize={panel.size}
           onPanelSizeChange={panel.choose}
         />
-        {offline && (
-          <div className="shell-errbar" style={{ '--page-scrollbar': `${pageScrollbar}px` }}>
-            <OfflineBar />
-          </div>
-        )}
-        {panel.saveFailed && (
-          <div className="shell-errbar" style={{ '--page-scrollbar': `${pageScrollbar}px` }}>
-            <ErrorBanner
-              text={PANEL_SIZE_NOT_SAVED}
-              onRetry={panel.retry}
-              onDismiss={panel.dismiss}
-              retrying={panel.retrying}
-            />
-          </div>
-        )}
-        <main ref={contentRef} className="shell-content">
-          {children}
-        </main>
+        {/* The amber bars under the top bar, in this order (v1.123, v1.118, v1.129, v1.128): the
+            offline bar, Panel size's bar, a left page's Undo bar, then the page's own bars. */}
+        <div className="shell-bars" style={{ '--page-scrollbar': `${pageScrollbar}px` }}>
+          {offline && (
+            <div className="shell-errbar">
+              <OfflineBar />
+            </div>
+          )}
+          {panel.saveFailed && (
+            <div className="shell-errbar">
+              <ErrorBanner
+                text={PANEL_SIZE_NOT_SAVED}
+                onRetry={panel.retry}
+                onDismiss={panel.dismiss}
+                retrying={panel.retrying}
+              />
+            </div>
+          )}
+          {leftUndoBar && (
+            <div className="shell-errbar">
+              <ErrorBanner
+                text={leftUndoBar.text}
+                onRetry={leftUndoBar.retry ?? undefined}
+                onDismiss={dismissLeftUndoBar}
+                retrying={leftUndoBar.retrying}
+              />
+            </div>
+          )}
+          <div ref={setPageBarSlot} className="shell-pagebars" />
+        </div>
+        <PageBarSlot.Provider value={pageBarSlot}>
+          <main ref={contentRef} className="shell-content">
+            {children}
+          </main>
+        </PageBarSlot.Provider>
         <BottomBar current={currentSection} onNavigate={onNavigate} badges={badges} />
       </div>
     </div>

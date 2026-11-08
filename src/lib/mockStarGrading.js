@@ -131,7 +131,7 @@ export function createGradingHandlers(h) {
 
     // §7 star_event_results — invalid (null) · not_found (event) · invalid (Dan not in the copy).
     // One row per ACTIVE candidate of the Dan (private ones INCLUDED — the screens leave them off the
-    // grid), in belt order: stars, Shrewsbury before Worcester, last name, first name, id.
+    // grid), in belt order: stars, Worcester before Shrewsbury (0038, S-1), last name, first name, id.
     star_event_results(db, a) {
       if (a.p_event_id === null || a.p_dan === null) return st('invalid');
       const e = h.findEvent(db, a.p_event_id);
@@ -140,7 +140,7 @@ export function createGradingHandlers(h) {
       if (!d) return st('invalid');
       const aPlus = db.event_grades.find((v) => v.event_id === e.id && v.grade === 'A+')?.value ?? 0;
       const credits = db.event_categories.filter((k) => k.event_id === e.id && k.dan === a.p_dan).reduce((t, k) => t + k.credits, 0);
-      const loc = (c) => (c.location_code === 'shrewsbury' ? 0 : 1);
+      const loc = (c) => (c.location_code === 'worcester' ? 0 : c.location_code === 'shrewsbury' ? 1 : 2); // 0038 (S-1): Worcester first
       const rows = db.candidates
         .filter((c) => c.event_id === e.id && c.dan === a.p_dan && c.status === 'active')
         .sort((x, y) => x.stars_from - y.stars_from || loc(x) - loc(y) || cmp(x.last_name.toLowerCase(), y.last_name.toLowerCase())

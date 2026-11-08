@@ -15,8 +15,11 @@ import { formatMoney } from '../../lib/money.js';
 // ----- 7.1 Page, tabs, states -----
 export const PAGE_TITLE = 'Testing';
 export const ADD_CLASS = 'Add class';
-export const TAB_CLASSES_RANKS = 'Classes and ranks';
-export const VIEW_ONLY_LINE = 'View only. Ask an admin to make changes.';
+export const TAB_PRICES = 'Prices'; // CB14: Color belt testing's tab for prices (classes and ranks moved to Settings)
+// The gray line under the tabs on the Prices tab (CB14, v0.427)
+// (the rulebook's words, v0.427 Q4; staff's line starts with "View only.")
+export const PRICES_LINE_ADMIN = "Testing prices, sparring gear and each class's final award. Classes and ranks are in Settings.";
+export const PRICES_LINE_STAFF = "View only. Testing prices, sparring gear and each class's final award. Classes and ranks are set by an admin.";
 
 // ----- Both: one box per school (CB13, rulebook v1.022 / v0.415 — testing/BothSummary.jsx) -----
 export const BOTH_SCHOOLS = 'Both schools'; // the line under the title (one wording everywhere, v1.022)
@@ -29,10 +32,12 @@ export const bothOpenSchool = (school) => `Open ${school}`;
 export const BOTH_HINT = 'Each school’s testing is kept separate. Open a school to see all its events, students and payments.';
 export const BOTH_LOADING = 'Loading both schools’ testing'; // heard by screen readers only
 export const BOTH_LOAD_FAILED = 'Couldn’t load the schools’ testing. Check the connection, then retry.'; // NOT IN MOCKUPS
-export const LOADING = 'Loading Classes and ranks';
+export const LOADING = 'Loading classes and ranks'; // (the Prices tab reads the same list)
 
-export const emptySchoolAdmin = (school) => `No classes yet at ${school}.`;
+export const emptySchoolAdmin = (school) => `No classes yet at ${school}.`; // Settings → Classes and ranks
 export const emptySchoolStaff = (school) => `No classes yet at ${school}. An admin adds them.`;
+// On the Prices tab the admin is pointed to where classes are made.
+export const emptySchoolPricesAdmin = (school) => `No classes yet at ${school}. Add them in Settings → Classes and ranks.`;
 
 // "No ranks" · "1 rank" · "18 ranks"
 export function rankCount(n) {
@@ -42,6 +47,7 @@ export function rankCount(n) {
 }
 
 export const EMPTY_CLASS = 'No ranks in this class yet.';
+export const EMPTY_CLASS_PRICES = 'No ranks in this class yet. Add them in Settings → Classes and ranks.';
 export const ADD_RANK = 'Add rank';
 
 // Rank table headers (not sortable)
@@ -57,14 +63,17 @@ export const NO = 'No';
 
 // Tags
 export const TAG_FINAL_AWARD = 'Final award';
-export const TAG_SPARRING = 'Sparring gear';
 export const TAG_NOT_SAVED = 'Not saved';
 // Last rank of a class whose final award is None: it doesn't promote, on purpose (v0.62).
 export const TAG_NO_NEW_RANK = 'No new rank';
 
-// The amber reminder on the last rank when the class has no final award.
-export const AWARD_NOT_SET_ADMIN = 'Final award not set — choose one in Edit class';
+// The amber reminder on the last rank when the class has no final award. In Settings it says where
+// to set it (the Prices tab); on the Prices tab itself, on the class line, it only says it is missing.
+export const AWARD_NOT_SET_ADMIN = 'Final award not set — choose one in Prices';
 export const AWARD_NOT_SET_STAFF = 'Final award not set';
+// The Prices tab's class line, under the class name: "Final award: LT Black" / "Final award: None"
+export const finalAwardLine = (name) => `Final award: ${name}`;
+export const FINAL_AWARD_LINE_NONE = 'Final award: None (the last rank does not promote)';
 
 // Phone rank row, line 2: "$70 early · $80 testing day · $95 private"
 export const PHONE_EARLY = (price) => `${price} early`;
@@ -76,11 +85,11 @@ export const PHONE_SPARRING_TEXT = 'Sparring gear';
 export const expandClass = (name) => `Expand ${name}`;
 export const collapseClass = (name) => `Collapse ${name}`;
 export const editClassLabel = (name) => `Edit class ${name}`;
+export const editPricesLabel = (name) => `Edit prices for ${name}`; // the rank pencil on the Prices tab
+export const editAwardLabel = (name) => `Edit final award for ${name}`; // the class pencil on the Prices tab
 export const moreFor = (name) => `More actions for ${name}`;
 export const dragToReorder = (name) => `Drag to reorder ${name}`;
 export const editRankLabel = (name) => `Edit ${name}`;
-export const viewRankLabel = (name) => `View ${name}`;
-export const VIEW = 'View';
 // The shared parts' words (GRIP_TOOLTIP 'Drag to reorder', RETRY, DISMISS, BACK, and CANCEL
 // below) live in src/components/text.js since Dashboard core step 1 (rulebook v1.030); they are
 // re-exported here with the same names and values, so every T.… import keeps working.
@@ -107,6 +116,8 @@ export const EDIT_RANK = 'Edit rank';
 export const ADD_RANK_TITLE = 'Add rank';
 export const EDIT_CLASS = 'Edit class';
 export const ADD_CLASS_TITLE = 'Add class';
+export const EDIT_PRICES = 'Edit prices'; // CB14: the rank's prices, on the Prices tab
+export const FINAL_AWARD_TITLE = 'Final award'; // CB14: the class's final award, on the Prices tab
 export const SAVE = 'Save';
 export const SAVING = 'Saving…'; // on the Save button while the save is on its way
 export const CLOSE = 'Close';
@@ -118,8 +129,8 @@ export const KEEP_CLASS = 'Keep class';
 
 // "Group A · Worcester"
 export const classAtSchool = (className, school) => `${className} · ${school}`;
-export const viewOnlySubtitle = (className, school) => `${className} · ${school} · view only`;
-export const viewOnlyDialogLabel = (rankName) => `${rankName}, view only`;
+// Edit prices: "LT Yellow · Little Tiger · Worcester"
+export const pricesSubtitle = (rankName, className, school) => `${rankName} · ${className} · ${school}`;
 export const addClassSubtitle = (school) => `Adds an empty class to ${school}'s list.`;
 
 // Field labels
@@ -132,7 +143,6 @@ export const TESTING_DAY = 'Testing day';
 export const PRIVATE_TESTING = 'Private testing';
 export const EARLY_HINT = 'Early = paid in full before testing day.';
 export const EARLY_HINT_PHONE = 'Paid in full before testing day.';
-export const EARLY_VIEW_PHONE_SUFFIX = ' · paid in full before testing day';
 export const SPARRING_REQUIRED = 'Sparring gear required';
 
 // Belt section of the rank dialog (v0.65, preview first)
@@ -152,25 +162,21 @@ export const MORE_END_STRIPES = 'More end stripes';
 export const BELT_SAME_STRIPE = 'Pick a stripe color that differs from the belt color.';
 export const BELT_SAME_HALVES = 'Pick a bottom half that differs from the top half.';
 export const END_STRIPE_SAME = 'Pick an end stripe color that differs from the belt color.';
-export const MORE_DETAILS = 'More details';
+export const MORE_DETAILS = 'More details'; // (Star testing's event dialog uses this word too)
 export const FINAL_AWARD_FIELD = 'Final award after this class';
-export const FINAL_AWARD_FIELD_OPTIONAL = 'Final award after this class (optional)';
 export const FINAL_AWARD_HINT = 'Students who pass the last rank of this class receive this rank.';
-export const FINAL_AWARD_HINT_ADD =
-  'Students who pass the last rank of this class receive this rank. You can set it later in Edit class.';
 export const NOT_SET = 'Not set';
 export const FINAL_AWARD_NONE_OPTION = "None — last rank doesn't promote"; // v0.62, in the open list
 export const FINAL_AWARD_NONE_SHORT = 'None'; // the closed field shows just this (screen readers hear the full option)
 
 // "Testing for" read-only text in Edit / View rank
 export const testingForNext = (next) => `${next} — set by the rank order`;
-export const testingForAward = (award) => `${award} — final award, set in the class settings`;
 // Split versions so the name can be drawn dark and the rest gray (as in the mockup).
 export const TESTING_FOR_NEXT_SUFFIX = ' — set by the rank order';
-export const TESTING_FOR_AWARD_SUFFIX = ' — final award, set in the class settings';
+export const TESTING_FOR_AWARD_SUFFIX = ' — final award, set in Prices';
 // Last rank of a None class (v0.62): "No new rank — set in the class settings" (staff: "No new rank")
 export const TESTING_FOR_NONE = 'No new rank';
-export const TESTING_FOR_NONE_SUFFIX = ' — set in the class settings';
+export const TESTING_FOR_NONE_SUFFIX = ' — set in Prices';
 
 // Add rank dialog
 export const addRankAtEnd = (className, lastRank) =>
@@ -274,13 +280,14 @@ export const STALE_DIALOG =
 // Phone version: the full-screen page has no Cancel button, the note's "Discard changes" link is the way out.
 export const STALE_DIALOG_PHONE =
   "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
-export const NOT_ALLOWED = "Only an admin can change Classes and ranks. Your change wasn't saved.";
+export const NOT_ALLOWED = "Only an admin can change classes, ranks and prices. Your change wasn't saved.";
 export const INVALID_DIALOG = "That didn't save. Check the fields and try again.";
 export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
 export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
 export const RANK_ORDER_FAILED = "Rank order didn't save. Check the connection, then retry.";
 export const CLASS_ORDER_FAILED = "Class order didn't save. Check the connection, then retry.";
-export const LOAD_FAILED = "Couldn't load Classes and ranks. Check the connection, then retry.";
+export const LOAD_FAILED = "Couldn't load the classes and ranks. Check the connection, then retry."; // Settings (CB14: S-2's wording)
+export const PRICES_LOAD_FAILED = "Couldn't load the prices. Check the connection, then retry."; // the Prices tab
 export const UNDO_STALE = "Couldn't undo. Someone else changed this just now.";
 export const undoNotEmpty = (className) => `Couldn't undo. ${className} has ranks now. Use ⋯ → Delete class instead.`;
 export const undoAward = (rankName, className) =>
@@ -295,6 +302,8 @@ export const UNDO_PAST_DAY = "Couldn't undo. That day has passed, so it can't be
 export const TOAST_RANK_SAVED = 'Rank saved';
 export const TOAST_RANK_ADDED = 'Rank added';
 export const TOAST_CLASS_SAVED = 'Class saved';
+export const TOAST_PRICES_SAVED = 'Prices saved'; // CB14: Edit prices
+export const TOAST_AWARD_SAVED = 'Final award saved'; // CB14: Final award
 export const TOAST_CLASS_ADDED = 'Class added';
 export const TOAST_RANK_ORDER = 'Rank order saved';
 export const TOAST_CLASS_ORDER = 'Class order saved';
@@ -451,9 +460,9 @@ export const LOAD_EVENTS_FAILED = "Couldn't load events. Check the connection, t
 // ----- E4–E7: Add / Edit event -----
 export const ADD_EVENT_TITLE = 'Add event';
 export const EDIT_EVENT_TITLE = 'Edit event';
-export const addEventSub = (school) => `${school} school. Prices are copied from Classes and ranks when you save.`;
+export const addEventSub = (school) => `${school} school. Prices are copied from the Prices tab when you save.`;
 export const editEventSub = (createdIso) =>
-  `Prices were copied from Classes and ranks when this event was created (${monthDayYear(createdIso)}).`;
+  `Prices were copied from the Prices tab when this event was created (${monthDayYear(createdIso)}).`;
 export const EVENT_NAME = 'Event name';
 export const TESTING_DATE = 'Testing date';
 export const CLASSES_TESTING = 'Classes testing';
@@ -485,7 +494,7 @@ export const CLOSING_PASSED_HINT = 'The testing day has passed, so a new closing
 export const CHOOSE_TESTING_DATE_FIRST = 'Choose the testing date first.';
 export const NOTE_FOR_FAMILIES = 'Note for families (optional)';
 export const NOTE_HINT = 'Shown on the registration form.';
-export const NO_CLASSES_YET = 'This school has no classes yet. Add them in Classes and ranks first.';
+export const NO_CLASSES_YET = 'This school has no classes yet. Add them in Settings → Classes and ranks first.';
 
 // Field messages (amber, under the field)
 export const ENTER_EVENT_NAME = 'Enter an event name.';
@@ -501,7 +510,7 @@ export const CLOSING_AFTER_TESTING = 'The closing date must be on or before the 
 export const CLOSING_IN_PAST = "The closing date can't be in the past.";
 export const ENTER_CLOSING_DATE = 'Enter the closing date, or untick the box.';
 export const NOTE_TOO_LONG = 'Use 600 characters or fewer.';
-export const finalAwardNotSet = (className) => `Set a final award for ${className} in Classes and ranks first.`;
+export const finalAwardNotSet = (className) => `Set a final award for ${className} in the Prices tab first.`;
 export const EVENT_NOT_EMPTY =
   'A class you unticked has students registered. Tick it again, or move its students to another class first.';
 export const EVENT_NOT_ALLOWED = "Only an admin can add or change events. Your change wasn't saved.";
@@ -608,6 +617,10 @@ export const paidOnPhone = (method, stamp) => `${payingByText(method)} · paid $
 export const EMPTY_CLASS_ROSTER = 'No students in this class yet.';
 export const NO_STUDENTS_FILTERED_PAID = 'No paid students in this class.';
 export const NO_STUDENTS_FILTERED_NOT_PAID = 'Everyone in this class has paid.';
+export const TAG_CANCELLED = 'Cancelled'; // the summary's payment line for a cancelled, never-paid private testing (batch 3 Q2 a)
+export const CANCELLED_NOTHING_PAID = 'nothing was paid';
+// Not paid is empty only because the class's unpaid row is a possible duplicate (batch 3 Q2 c)
+export const NO_STUDENTS_FILTERED_NOT_PAID_DUPLICATE = "No unpaid students in this class. A possible duplicate isn't counted.";
 export const NO_CLASSES_IN_EVENT = 'This event has no classes.';
 export const removedGroup = (n) => `Removed · ${n}`;
 export const NOT_IN_COUNTS = 'Not in the counts';
@@ -621,10 +634,16 @@ export function duplicateBoxLine(count) {
 export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
 // The gray line under the count cards while possible duplicates are left out of Paid / Not paid
 // (pass 1 R3-02, v1.046 (8); Black Belt's sentence, naming the two cards; approved 2026-11-06)
-export const duplicatesLeftOut = (count) =>
-  count === 1
-    ? "1 possible duplicate isn't counted in Paid or Not paid until it's resolved."
-    : `${count} possible duplicates aren't counted in Paid or Not paid until they're resolved.`;
+// Batch 3 Q2 b: the box above counts PAIRS ("1 possible duplicate"), this line counted ROWS ("2 possible
+// duplicates") — now it uses the box's unit, and says how many students that is when it differs from the
+// number of pairs (a pair with both rows flagged after a Restore):
+// "1 possible duplicate (2 students) isn't counted in Paid or Not paid until it's resolved."
+// A pair with one flagged row reads as before: "1 possible duplicate isn't counted …".
+export function duplicatesLeftOut(rows, pairs = rows) {
+  const n = Math.max(pairs, 1);
+  const students = rows === n ? '' : ` (${rows === 1 ? '1 student' : `${rows} students`})`;
+  return `${duplicateBoxLine(n)}${students} ${n === 1 ? "isn't" : "aren't"} counted in Paid or Not paid until ${n === 1 ? "it's" : "they're"} resolved.`;
+}
 
 // ⋯ menu on a student (R8, plan answers 6 and 8)
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';
@@ -1080,7 +1099,7 @@ export const PRIVATE_DAY = 'Day';
 export const PRIVATE_TIME = 'Time';
 export const TIME_HINT = '6:00 AM – 10:00 PM, every 5 minutes';
 export const privatePriceLine = (cents) => `${formatMoney(cents)} private price`;
-export const privatePriceHint = (rankName, cents) => `The private price for ${rankName} in Classes and ranks. Mark paid charges ${formatMoney(cents)}.`;
+export const privatePriceHint = (rankName, cents) => `The private price for ${rankName} in the Prices tab. Mark paid charges ${formatMoney(cents)}.`;
 export const ADD_PRIVATE_HINT = 'For a family who asks to test privately, on their own day and time. Not part of a testing event.';
 export const PRIVATE_DAY_PAST = 'The private day can’t be in the past.';
 export const PICK_PRIVATE_DAY = 'Enter the day.'; // CP1
@@ -1159,11 +1178,11 @@ export const moveMoneyOwes = (paidCents, priceCents, dueCents) =>
   `${formatMoney(paidCents)} paid → ${formatMoney(priceCents)} private price · ${formatMoney(dueCents)} more to collect`;
 export const moveMoneyNotPaid = (priceCents) => `${formatMoney(priceCents)} private price · not paid yet`;
 export const moveMoneyEnough = (paidCents) => `Already paid ${formatMoney(paidCents)}. Nothing more to collect.`;
-// "The $65 cash payment moves with Ava. The private price for Yellow in Classes and ranks."
+// "The $65 cash payment moves with Ava. The private price for Yellow in the Prices tab."
 // payments = the live payments [{ cents, method }]: none → only the second sentence; two or more
 // → "The $85 in payments moves with Ava." (CP1)
 export function movePaymentHint(payments, firstName, rankName) {
-  const price = `The private price for ${rankName} in Classes and ranks.`;
+  const price = `The private price for ${rankName} in the Prices tab.`;
   if (payments.length === 0) return price;
   if (payments.length === 1) return `The ${formatMoney(payments[0].cents)} ${payingByLower(payments[0].method)} payment moves with ${firstName}. ${price}`;
   const total = payments.reduce((sum, p) => sum + p.cents, 0);

@@ -25,7 +25,7 @@
 //   onRefreshProfile   re-read "who am I?" (after the database said "not allowed")
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconDots, IconKey, IconPassword } from '@tabler/icons-react';
-import ErrorBanner from '../components/ErrorBanner.jsx';
+import PageBar from '../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
 import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { listStaff } from '../lib/staffAccounts.js';
@@ -145,7 +145,7 @@ export default function StaffAccounts({ profile, screenLocked, showToast, onModa
 
       {load.state === 'not_allowed' && <p className="sa-empty">{T.ONLY_ADMINS}</p>}
 
-      {load.state === 'error' && <ErrorBanner text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />}
+      {load.state === 'error' && <PageBar text={T.LOAD_FAILED} onRetry={retry} retrying={retrying} />}
 
       {load.state === 'loading' && (
         <div className="clist sa-list tskeleton" aria-busy="true">

@@ -36,6 +36,7 @@
 import { supabase } from '../supabase.js';
 import { isIsoDate, shortTime, todayInSchoolTime } from '../testing/eventRules.js';
 import { schoolToday } from './api.js';
+import { sortMakeupPicker, sortWorcesterFirst } from './rules.js';
 import { RESULT_KEYS, RESULT_SUBJECT_KEYS } from './grading.js';
 import { RESULT_KINDS, csvRows, csvText, csvFileName } from './resultEmail.js';
 
@@ -203,7 +204,7 @@ function toRow(r, { withResults = false } = {}) {
 // → { status:'ok', today, cycle, rubric (the Dan's public rubric object, snake_case as the
 //     document), danCounts, rows: GridRow[], loadedAt } · 'invalid' · 'not_found' · 'no_access' · 'error'
 // rows: active candidates of that Dan, the cycle's own first, then make-ups (G 14), each group in
-// roster order. The screen picks the testing day from `today` (G 28), never the device clock.
+// roster order (Worcester before Shrewsbury, S-1). The screen picks the testing day from `today` (G 28), never the device clock.
 // loadedAt (ms, when the read started) is for the save engine.
 export async function loadGradingGrid({ cycleId, dan } = {}) {
   const loadedAt = Date.now();
@@ -211,7 +212,8 @@ export async function loadGradingGrid({ cycleId, dan } = {}) {
     const cycle = toCycle(d.cycle);
     if (!cycle || !isIsoDate(d.today) || !isObj(d.rubric) || !Array.isArray(d.rows)) return null;
     const rows = d.rows.map((r) => toRow(r));
-    return rows.every(Boolean) ? { today: d.today, cycle, rubric: d.rubric, danCounts: toDanCounts(d.dan_counts), rows, loadedAt } : null;
+    // Worcester before Shrewsbury inside the group (S-1); make-ups stay last (G 14).
+    return rows.every(Boolean) ? { today: d.today, cycle, rubric: d.rubric, danCounts: toDanCounts(d.dan_counts), rows: sortWorcesterFirst(rows, { makeupsLast: true }), loadedAt } : null;
   });
 }
 
@@ -282,7 +284,7 @@ export async function setMakeupSubjects({ candidateId, expectedIds, ids } = {}) 
 //   ageGroup ({from,to} on THIS cycle's first day), reasons, complete, needs (names), dSubjects
 //   (names), choiceNeeded, alreadyAdded (a make-up of it is on this cycle already),
 //   preview: { kept, retest, new, dropped, keptExtra, droppedExtra } (names) }
-// rows: newest earlier cycle first, then Dan, school, last name, first name. No DOB, email or reference.
+// rows: newest earlier cycle first, then Dan, Worcester before Shrewsbury (S-1), last name, first name. No DOB, email or reference.
 export async function loadMakeupList({ cycleId } = {}) {
   return callRpc('bb_makeup_list', { p_cycle_id: cycleId ?? null }, (d) => {
     if (!Array.isArray(d.rows)) return null;
@@ -313,7 +315,7 @@ export async function loadMakeupList({ cycleId } = {}) {
         },
       }
       : null));
-    return rows.every(Boolean) ? { rows } : null;
+    return rows.every(Boolean) ? { rows: sortMakeupPicker(rows) } : null;
   });
 }
 
@@ -341,7 +343,7 @@ export async function loadResults({ cycleId, dan = null } = {}) {
     const cycle = toCycle(d.cycle);
     if (!cycle || !isIsoDate(d.today) || !Array.isArray(d.rubrics) || !Array.isArray(d.rows)) return null;
     const rows = d.rows.map((r) => toRow(r, { withResults: true }));
-    return rows.every(Boolean) ? { today: d.today, cycle, rubrics: d.rubrics, danCounts: toDanCounts(d.dan_counts), rows } : null;
+    return rows.every(Boolean) ? { today: d.today, cycle, rubrics: d.rubrics, danCounts: toDanCounts(d.dan_counts), rows: sortWorcesterFirst(rows) } : null;
   });
 }
 

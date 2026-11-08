@@ -38,6 +38,7 @@
 //     attention (resultLines.openGradesDay).
 //   Choose subjects (admins) — C1's MakeupSubjectsDialog over Results.
 //   Print results / Download CSV — the whole cycle, both schools, whatever is showing (proposal 2).
+// The Undo Mark as sent ask is the shared ConfirmBox (BB7): the safe button on the left, the red action on the right.
 // Only one write at a time (busyId): while a save or an address read is on its way, the other
 // buttons wait. Email result, Mark as sent, Print results and Download CSV are grayed offline.
 //
@@ -50,6 +51,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconArrowBackUp, IconCurrencyDollarOff, IconDownload, IconMailCheck, IconPrinter, IconSchool, IconWifiOff,
 } from '@tabler/icons-react';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../lib/device.js';
@@ -62,7 +64,6 @@ import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js
 import ChoiceGroup from '../../../screens/testing/events/ChoiceGroup.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import MakeupSubjectsDialog from '../grading/MakeupSubjectsDialog.jsx';
-import ConfirmDialog from '../parts/ConfirmDialog.jsx';
 import ResultRows from './ResultRows.jsx';
 import ResultsSheet from './ResultsSheet.jsx';
 import { canEmail, emailAnswerFromRow, isSent, nothingYet, openGradesDay, schoolDateOf, summaryCounts } from './resultLines.js';
@@ -758,16 +759,23 @@ export default function ResultsTab({
       </div>
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {confirm && !screenLocked && (
-        <ConfirmDialog
+        // The shared ConfirmBox, the same as Star's Undo Mark as sent box (rulebook v1.008): "Keep send
+        // record" on the left and focused first, the action blue (it only reverses) with the undo arrow,
+        // "Undoing…" while it works.
+        <ConfirmBox
           title={T.undoConfirmTitle(nameOf(confirm.row))}
-          body={T.undoConfirmBody(confirm.day)}
-          cancelLabel={T.CANCEL}
-          confirmLabel={T.UNDO_CONFIRM_GO}
+          keepLabel={T.UNDO_CONFIRM_KEEP}
+          actionLabel={T.UNDO_CONFIRM_GO}
+          busyLabel={T.UNDO_CONFIRM_BUSY}
+          actionIcon={IconArrowBackUp}
+          loses="something"
           busy={confirm.saving}
           failed={confirm.failed ? T.undoSentRefusal('error') : null}
           onConfirm={confirmUndo}
-          onCancel={() => !confirm.saving && closeConfirm()}
-        />
+          onKeep={() => !confirm.saving && closeConfirm()}
+        >
+          {T.undoConfirmBody(confirm.day)}
+        </ConfirmBox>
       )}
       {choose && chooseRow && !screenLocked && (
         <MakeupSubjectsDialog

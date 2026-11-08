@@ -45,9 +45,10 @@ export function writeArgs(type, snap, payload = {}) {
     case 'payingBy':
       return { candidateId: snap.candidateId, expectedVersion: snap.version, payingBy: payload.payingBy };
     case 'record':
-      return { candidateId: snap.candidateId, expectedVersion: snap.version, method: payload.method, amountCents: payload.amountCents, paidOn: payload.paidOn };
+      // school = the desk that takes the money (This device's school, deskSchool.js; null = the candidate's)
+      return { candidateId: snap.candidateId, expectedVersion: snap.version, method: payload.method, amountCents: payload.amountCents, paidOn: payload.paidOn, school: payload.school ?? null };
     case 'refund':
-      return { candidateId: snap.candidateId, expectedVersion: snap.version, method: payload.method, amountCents: payload.amountCents, refundedOn: payload.paidOn };
+      return { candidateId: snap.candidateId, expectedVersion: snap.version, method: payload.method, amountCents: payload.amountCents, refundedOn: payload.paidOn, school: payload.school ?? null };
     case 'private':
       return { candidateId: snap.candidateId, expectedVersion: snap.version, privateOn: payload.privateOn, privateTime: payload.privateTime };
     case 'editPayment':

@@ -45,6 +45,7 @@ const ROSTER_COLUMNS = /*#__PURE__*/ (() => [
   'testing_date', 'dan_label', 'star_limit', 'standard_cents', 'same_day_cents', 'private_cents',
   'paid_cents', 'paid', 'last_payment_id', 'paid_on', 'paid_method', 'last_payment_recorded_at',
   'last_payment_recorded_by_name', 'refunded_cents', 'fee_kind', 'expected_fee_cents', 'overpaid_cents',
+  'paying_by_on_form', // migration 0038 (R1-02): the family form's own choice; the roster view's last column
 ].join(', '))();
 // star_makeup_subjects (§2.6): which subjects a make-up candidate retests ('retest') or an admin
 // chose for a result below the pass mark ('chosen').
@@ -96,10 +97,11 @@ const asIdList = (v) => (v === null || v === undefined ? null : Array.isArray(v)
 // The email rule (star_email_is_valid) lives in emailRule.js, shared with the public family form.
 export { trimEmail, starEmailIsValid };
 
-// Belt order (v0.117): Dan, stars from, school (Shrewsbury before Worcester), last name, first name.
-// Returns a new array. Works on app candidates (camelCase).
+// Belt order (v0.117, school order changed by v0.519 / migration 0038): Dan, stars from, school
+// (WORCESTER before Shrewsbury — the database's own result order now says the same), last name, first
+// name. Returns a new array. Works on app candidates (camelCase).
 export function sortBeltOrder(candidates) {
-  const school = (c) => (c.locationCode === 'shrewsbury' ? 0 : 1);
+  const school = (c) => (c.locationCode === 'worcester' ? 0 : c.locationCode === 'shrewsbury' ? 1 : 2);
   const text = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' });
   return [...(candidates ?? [])].sort((a, b) => a.dan - b.dan || a.starsFrom - b.starsFrom || school(a) - school(b)
     || text(a.lastName, b.lastName) || text(a.firstName, b.firstName) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -138,6 +140,9 @@ function toCandidate(row) {
     starsTo: row.stars_from + 1, // never stored (§2.4)
     starLimit: row.star_limit,
     payingBy: row.paying_by ?? null, // 'cash' | 'check' | 'card' | null (make-ups)
+    // The way the family chose ON THE FORM (never changes); null for a candidate added at the desk and
+    // for an old form sign-up the database could not fill in. payingByWhere.js compares it with payingBy.
+    payingByOnForm: row.paying_by_on_form ?? null,
     source: row.source, // 'form' | 'desk'
     reference: row.reference ?? null, // 'ST-4001' on family-form rows
     registeredAt: row.registered_at,
@@ -509,9 +514,11 @@ export function createStarCandidatesApi(getClient, getToday) {
   }, ['p_candidate_id'], readNothing);
 
   // Record payment: amountCents pre-filled from candidate.expectedFeeCents (staff may change it).
-  const recordPayment = ({ candidateId, expectedVersion, method, amountCents, paidOn } = {}) => send('star_record_payment', {
+  // school = the desk that takes the money (This device's school, deskSchool.js); null / left out =
+  // the candidate's own school (R1-01, migration 0038: p_school has a default, so a call without it works).
+  const recordPayment = ({ candidateId, expectedVersion, method, amountCents, paidOn, school = null } = {}) => send('star_record_payment', {
     p_candidate_id: asId(candidateId), p_expected_version: asInteger(expectedVersion), p_method: asText(method),
-    p_amount_cents: asInteger(amountCents), p_paid_on: asDate(paidOn),
+    p_amount_cents: asInteger(amountCents), p_paid_on: asDate(paidOn), p_school: asText(school),
   }, ['p_candidate_id'], readPayment);
 
   // Undo payment / Undo refund (a reversal row). Staff: their own payment within 10 seconds (the
@@ -524,9 +531,10 @@ export function createStarCandidatesApi(getClient, getToday) {
   }, ['p_payment_id'], readPayment);
 
   // Record refund (admin, S7): at most the overpaid amount; method 'cash' | 'check'.
-  const recordRefund = ({ candidateId, expectedVersion, method, amountCents, refundedOn } = {}) => send('star_record_refund', {
+  // school: as Record payment — a refund counts at the desk that hands the money back (v1.040).
+  const recordRefund = ({ candidateId, expectedVersion, method, amountCents, refundedOn, school = null } = {}) => send('star_record_refund', {
     p_candidate_id: asId(candidateId), p_expected_version: asInteger(expectedVersion), p_method: asText(method),
-    p_amount_cents: asInteger(amountCents), p_refunded_on: asDate(refundedOn),
+    p_amount_cents: asInteger(amountCents), p_refunded_on: asDate(refundedOn), p_school: asText(school),
   }, ['p_candidate_id'], readPayment);
 
   return {

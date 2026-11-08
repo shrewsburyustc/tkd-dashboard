@@ -895,9 +895,122 @@ await check('reset / a damaged store: back to the seed; only an ok answer is sav
   assert.equal(f.testingDate, addDays('2027-01-01', 26));
 });
 
+// R2-02 (migration 0038): Edit event's Undo is ONE database step, all or nothing.
+// What the screen sends after an Edit: the record as it was before, the version the save returned,
+// and open = the old switch position (null when the Edit didn't change the switch).
+const undoOf = (before, savedVersion, over = {}) => ({
+  eventId: before.id, expectedVersion: savedVersion, name: before.name, testingDate: before.testingDate, startTime: before.startTime,
+  endTime: before.endTime, whereCode: before.whereCode, autoCloseOn: before.autoCloseOn, note: before.note, open: null, ...over,
+});
+
+await check('R2-02: Undo of an Edit that changed details AND the switch is one call that puts both back', async () => {
+  const rig = makeRig();
+  const fall = await loaded(rig, 'Fall Star Testing');
+  assert.equal(fall.state, 'open');
+  const saved = await rig.api.saveStarEventEdit(editSave(fall, { name: 'Fall Renamed', note: 'Changed note', registrationOpen: false }));
+  assert.equal(saved.registration.status, 'ok');
+  const edited = await loaded(rig, 'Fall Renamed');
+  assert.equal(edited.state, 'closed');
+  rig.calls.length = 0;
+  const undo = await rig.api.undoStarEventEdit(undoOf(fall, saved.version, { open: true }));
+  assert.equal(undo.status, 'ok');
+  assert.equal(rig.calls.length, 1); // ONE call, not two
+  assert.equal(rig.calls[0][0], 'star_undo_event_edit');
+  assert.deepEqual(Object.keys(rig.calls[0][1]).sort(), [
+    'p_auto_close_on', 'p_end_time', 'p_event_id', 'p_expected_version', 'p_name', 'p_note', 'p_open', 'p_start_time', 'p_testing_date', 'p_where_code',
+  ]); // all ten inputs, always
+  assert.equal(rig.calls[0][1].p_open, true);
+  const back = await loaded(rig, 'Fall Star Testing');
+  assert.equal(back.state, 'open'); // the switch is back
+  assert.equal(back.note, fall.note); // and so are the details
+  assert.equal(back.endTime, fall.endTime);
+  assert.equal(back.version, undo.version);
+});
+
+await check('R2-02: an Edit that did not change the switch sends open: null and leaves the switch alone', async () => {
+  const rig = makeRig();
+  const fall = await loaded(rig, 'Fall Star Testing');
+  const saved = await rig.api.saveStarEventEdit(editSave(fall, { note: 'Another note' }));
+  assert.equal(saved.status, 'ok');
+  rig.calls.length = 0;
+  const undo = await rig.api.undoStarEventEdit(undoOf(fall, saved.version));
+  assert.equal(undo.status, 'ok');
+  assert.equal(rig.calls[0][1].p_open, null);
+  const back = await loaded(rig, 'Fall Star Testing');
+  assert.equal(back.note, fall.note);
+  assert.equal(back.state, 'open');
+});
+
+await check('R2-02: all or nothing — if the switch step is refused, the details step is NOT kept either', async () => {
+  const rig = makeRig();
+  const fall = await loaded(rig, 'Fall Star Testing');
+  const saved = await rig.api.saveStarEventEdit(editSave(fall, { name: 'Fall Renamed', registrationOpen: false }));
+  assert.equal(saved.registration.status, 'ok');
+  rig.setToday(addDays(fall.testingDate, 1)); // the testing day has passed: the switch can't be reopened ('finished')
+  const before = JSON.stringify(rig.events.snapshot());
+  const undo = await rig.api.undoStarEventEdit(undoOf(fall, saved.version, { open: true }));
+  assert.equal(undo.status, 'finished'); // the switch step's refusal, as it came
+  assert.equal(JSON.stringify(rig.events.snapshot()), before); // the name did NOT come back on its own
+  assert.equal((await loaded(rig, 'Fall Renamed')).name, 'Fall Renamed');
+});
+
+await check('R2-02: the refusals come back as they are and change nothing (stale, duplicate_name, invalid, not_found, staff)', async () => {
+  const rig = makeRig();
+  const fall = await loaded(rig, 'Fall Star Testing');
+  const saved = await rig.api.saveStarEventEdit(editSave(fall, { name: 'Fall Renamed' }));
+  let before = JSON.stringify(rig.events.snapshot());
+  // a wrong version → stale
+  assert.equal(statusOf(await rig.api.undoStarEventEdit(undoOf(fall, saved.version + 1))), 'stale');
+  // someone else changed it after the save → stale
+  rig.events.simulateOtherAdminEdit();
+  before = JSON.stringify(rig.events.snapshot());
+  assert.equal(statusOf(await rig.api.undoStarEventEdit(undoOf(fall, saved.version))), 'stale');
+  assert.equal(JSON.stringify(rig.events.snapshot()), before);
+  // the old name is taken by another event now → duplicate_name
+  const rig2 = makeRig();
+  const f2 = await loaded(rig2, 'Fall Star Testing');
+  const s2 = await rig2.api.saveStarEventEdit(editSave(f2, { name: 'Fall Renamed' }));
+  assert.equal(statusOf(await rig2.api.addStarEvent(newEvent({ name: 'Fall Star Testing' }))), 'ok');
+  before = JSON.stringify(rig2.events.snapshot());
+  assert.equal(statusOf(await rig2.api.undoStarEventEdit(undoOf(f2, s2.version))), 'duplicate_name');
+  assert.equal(JSON.stringify(rig2.events.snapshot()), before);
+  // an invalid old value (a start time off the 5-minute step) → invalid; a missing event → not_found
+  assert.equal(statusOf(await rig2.api.undoStarEventEdit(undoOf(f2, s2.version, { startTime: '10:03' }))), 'invalid');
+  assert.equal(statusOf(await rig2.api.undoStarEventEdit(undoOf(f2, 1, { eventId: '00000000-0000-4000-8000-000000000999' }))), 'not_found');
+  assert.equal(JSON.stringify(rig2.events.snapshot()), before);
+  // staff may not (admin only, like Edit event itself)
+  rig2.staff();
+  assert.equal(statusOf(await rig2.api.undoStarEventEdit(undoOf(f2, s2.version))), 'not_allowed');
+  rig2.lock();
+  assert.equal(statusOf(await rig2.api.undoStarEventEdit(undoOf(f2, s2.version))), 'no_access');
+  assert.equal(JSON.stringify(rig2.events.snapshot()), before);
+});
+
+await check('R2-02: a dropped connection is an error and changes nothing; Retry then works; bad inputs never reach the database', async () => {
+  const rig = makeRig();
+  const fall = await loaded(rig, 'Fall Star Testing');
+  const saved = await rig.api.saveStarEventEdit(editSave(fall, { name: 'Fall Renamed', registrationOpen: false }));
+  const before = JSON.stringify(rig.events.snapshot());
+  rig.events.failNextSave();
+  const failed = await rig.api.undoStarEventEdit(undoOf(fall, saved.version, { open: true }));
+  assert.equal(failed.status, 'error');
+  assert.equal(JSON.stringify(rig.events.snapshot()), before); // the new name and Closed both stay
+  const retry = await rig.api.undoStarEventEdit(undoOf(fall, saved.version, { open: true }));
+  assert.equal(retry.status, 'ok'); // the same version still fits: the failed call changed nothing
+  assert.equal((await loaded(rig, 'Fall Star Testing')).state, 'open');
+  rig.calls.length = 0;
+  assert.equal(statusOf(await rig.api.undoStarEventEdit(undoOf(fall, saved.version, { open: 'yes' }))), 'invalid');
+  assert.equal(statusOf(await rig.api.undoStarEventEdit(undoOf(fall, 'x'))), 'invalid');
+  assert.equal(statusOf(await rig.api.undoStarEventEdit(undoOf(fall, saved.version, { eventId: 'nope' }))), 'not_found');
+  assert.equal(rig.calls.length, 0);
+});
+
 await check('the fake answers every §6.2 function by its argument names (missing / extra → not found)', async () => {
   const rig = makeRig();
-  assert.deepEqual(STAR_EVENT_RPC_NAMES, ['star_add_event', 'star_update_event', 'star_set_registration', 'star_delete_event']);
+  assert.deepEqual(STAR_EVENT_RPC_NAMES, ['star_add_event', 'star_update_event', 'star_set_registration', 'star_delete_event', 'star_undo_event_edit']);
+  // 0038: star_undo_event_edit has ten inputs and no defaults — leaving one out is "no such function"
+  const tenth = rig.events.rpc('star_undo_event_edit', { p_event_id: SEED_EVENT_IDS.fall, p_expected_version: 1, p_name: 'x', p_testing_date: TODAY, p_start_time: '10:00', p_where_code: 'worcester', p_auto_close_on: null, p_note: null, p_end_time: null }, rig.ctx);
+  assert.equal(tenth.error.code, 'PGRST202');
   const missing = rig.events.rpc('star_set_registration', { p_event_id: SEED_EVENT_IDS.fall, p_open: true }, rig.ctx);
   assert.equal(missing.error.code, 'PGRST202');
   const extra = rig.events.rpc('star_update_event', { p_event_id: SEED_EVENT_IDS.fall, p_expected_version: 1, p_name: 'x', p_testing_date: TODAY, p_start_time: '10:00', p_where_code: 'worcester', p_auto_close_on: null, p_note: null, p_registration_open: true }, rig.ctx);

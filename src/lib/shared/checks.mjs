@@ -17,7 +17,6 @@ import * as SHARED from '../../components/text.js';
 import * as TESTING from '../../screens/testing/text.js';
 import * as STAFF from '../../screens/staff/text.js';
 import * as SETTINGS from '../../screens/settings/text.js';
-import * as FORMS from '../../screens/forms/text.js';
 import { shortDate } from '../calendarDates.js';
 import * as LIVE_NEW from '../useLiveLoad.js';
 import * as LIVE_OLD from '../../screens/testing/events/useLiveLoad.js';
@@ -26,6 +25,8 @@ import * as TIMES from '../times.js';
 import * as QR from '../qr.js';
 import * as HISTORY from '../historyDates.js';
 import * as ROOM from '../pageRoom.js';
+import * as TOASTS from '../toastLine.js';
+import * as LINE from '../saveLine.js';
 // The four sections' own QR helpers, read only, to compare with the shared one (M5).
 import { qrSvgDataUrl as cbQrSvgDataUrl, registrationLink } from '../testing/qr.js';
 import { starQrSvgDataUrl, starRegistrationLink } from '../star/links.js';
@@ -443,6 +444,303 @@ await check('L-02 store: no room until measured (as today); "below" only under t
   ROOM.reportPageRoom(500);
   assert.equal(heard, 3, 'a hook that stopped listening hears nothing');
   ROOM.reportPageRoom(null);
+});
+
+// ======================= R2-05 — the queued Undo (lib/toastLine.js, lib/saveLine.js; v1.125–v1.129) =======================
+// A promise the check settles by hand, and a pause for the waiting steps to run.
+function later() {
+  let settle;
+  const promise = new Promise((resolve) => {
+    settle = resolve;
+  });
+  return { promise, settle };
+}
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+await check('R2-05 toast: a section not switched yet keeps today\'s Undo (the toast goes first, then its Undo runs)', () => {
+  const toasts = TOASTS.createToastLine();
+  let ran = 0;
+  toasts.show('Zoe Park withdrawn', { icon: false, action: { label: SHARED.UNDO, onAction: () => (ran += 1) } });
+  const { id } = toasts.get();
+  toasts.pressUndo(id);
+  assert.equal(toasts.get(), null);
+  assert.equal(ran, 1);
+});
+
+await check('R2-05 toast: a queued Undo says "Undoing…" until done, a second press does nothing, then "Undone" (v1.125)', async () => {
+  const toasts = TOASTS.createToastLine();
+  const done = later();
+  let ran = 0;
+  const action = { label: SHARED.UNDO, queued: true, onAction: () => ((ran += 1), done.promise) };
+  toasts.show('Zoe Park withdrawn', { icon: false, action });
+  const { id } = toasts.get();
+  const pressed = toasts.pressUndo(id);
+  assert.equal(toasts.get().busy, true, 'busy: the button says "Undoing…"');
+  assert.equal(toasts.get().id, id, 'the same toast stays');
+  toasts.pressUndo(id);
+  toasts.dismiss(id);
+  toasts.clear();
+  assert.equal(ran, 1, 'a second press does nothing');
+  assert.equal(toasts.get()?.busy, true, 'its 5 seconds and a section\'s clearToast don\'t remove it (v1.127)');
+  done.settle({ undone: true });
+  await pressed;
+  assert.equal(toasts.get().text, SHARED.UNDONE);
+  assert.equal(toasts.get().action, null);
+  assert.notEqual(toasts.get().id, id, 'a new toast: its own 5 seconds');
+});
+
+await check('R2-05 toast: a toast that comes during "Undoing…" waits; the newest shows after, and "Undone" is skipped (v1.126)', async () => {
+  const toasts = TOASTS.createToastLine();
+  const done = later();
+  toasts.show('Zoe Park withdrawn', { icon: false, action: { label: SHARED.UNDO, queued: true, onAction: () => done.promise } });
+  const pressed = toasts.pressUndo(toasts.get().id);
+  toasts.show('Sofia Rivera withdrawn', { icon: false });
+  toasts.show('Ava Chen withdrawn', { icon: false });
+  assert.equal(toasts.get().text, 'Zoe Park withdrawn', 'the "Undoing…" toast stays meanwhile');
+  done.settle({ undone: true });
+  await pressed;
+  assert.equal(toasts.get().text, 'Ava Chen withdrawn', 'only the newest waiting toast is kept');
+  // doneText: v1.051's longer words
+  const again = later();
+  toasts.show('Day closed', { icon: false, action: { label: SHARED.UNDO, queued: true, onAction: () => again.promise } });
+  const second = toasts.pressUndo(toasts.get().id);
+  again.settle({ undone: true, doneText: 'Undone. The day is open again.' });
+  await second;
+  assert.equal(toasts.get().text, 'Undone. The day is open again.');
+});
+
+await check('R2-05 toast: an Undo that didn\'t work leaves no toast (the bar says why); one dropped by a page change says nothing more (v1.129)', async () => {
+  const toasts = TOASTS.createToastLine();
+  const failed = later();
+  toasts.show('Zoe Park withdrawn', { icon: false, action: { label: SHARED.UNDO, queued: true, onAction: () => failed.promise } });
+  const first = toasts.pressUndo(toasts.get().id);
+  failed.settle({ undone: false });
+  await first;
+  assert.equal(toasts.get(), null);
+  const left = later();
+  toasts.show('Zoe Park withdrawn', { icon: false, action: { label: SHARED.UNDO, queued: true, onAction: () => left.promise } });
+  const second = toasts.pressUndo(toasts.get().id);
+  toasts.drop(); // the person went to Home
+  left.settle({ undone: true });
+  await second;
+  assert.equal(toasts.get(), null, 'no "Undone" on the page they went to');
+  const thrown = TOASTS.createToastLine();
+  thrown.show('X', { icon: false, action: { label: SHARED.UNDO, queued: true, onAction: () => Promise.reject(new Error('x')) } });
+  await thrown.pressUndo(thrown.get().id);
+  assert.equal(thrown.get(), null, 'an Undo that threw counts as not done');
+});
+
+// A save line with a fake page: what it showed, kept in arrays.
+function fakePage(section = 'Camps') {
+  const page = { bars: [], toasts: [], busy: [] };
+  page.options = {
+    section,
+    showToast: (text) => page.toasts.push(text),
+    undoBar: (bar) => page.bars.push(bar),
+    onBusyChange: (value) => page.busy.push(value),
+  };
+  page.line = LINE.createSaveLine(() => page.options);
+  return page;
+}
+
+await check('R2-05 line: one save at a time; an Undo while idle runs at once and clears the line\'s bar when it works', async () => {
+  const { line, bars, toasts } = fakePage();
+  assert.ok(line.begin(), 'begin() answers a token (truthy)');
+  assert.equal(line.begin(), false, 'a second save waits for the first (as today)');
+  line.end('ok');
+  assert.equal(line.isBusy(), false);
+  let ran = 0;
+  const answer = await line.undoAction(async () => ((ran += 1), { status: 'ok' }), { words: 'Zoe Park withdrawn' }).onAction();
+  assert.deepEqual(answer, { undone: true, doneText: null });
+  assert.equal(ran, 1);
+  assert.deepEqual(bars, [null], 'an Undo that worked clears its own earlier bar');
+  assert.deepEqual(toasts, [], 'from a toast, the toast says "Undone" (lib/toastLine.js)');
+});
+
+await check('R2-05 line: an Undo pressed while a save runs waits its turn, then runs; it holds the line meanwhile (v1.125)', async () => {
+  const { line } = fakePage();
+  line.begin(); // Sofia Rivera's withdraw is running
+  const order = [];
+  const pressed = line.undoAction(async () => (order.push('undo'), { status: 'ok' })).onAction();
+  await tick();
+  assert.deepEqual(order, [], 'it waits');
+  order.push('save ends');
+  line.end('ok');
+  assert.equal(line.begin(), false, 'handed straight to the Undo: no other save slips in');
+  await pressed;
+  assert.deepEqual(order, ['save ends', 'undo']);
+  assert.equal(line.isBusy(), false);
+  const action = line.undoAction(async () => ({ status: 'ok' }));
+  await action.onAction();
+  assert.equal(await action.onAction(), null, 'one press per toast');
+});
+
+await check('R2-05 line: the save it waited for fails; the Undo still runs. If it fails too: one bar, "Neither change saved", whose Retry redoes both in turn (v1.127)', async () => {
+  const page = fakePage();
+  const { line, bars } = page;
+  const order = [];
+  line.begin();
+  let undoTries = 0;
+  const pressed = line
+    .undoAction(async () => {
+      undoTries += 1;
+      order.push(`undo ${undoTries}`);
+      return { status: undoTries === 1 ? 'error' : 'ok' };
+    }, { words: 'Zoe Park withdrawn' })
+    .onAction();
+  const redoSave = async () => {
+    order.push('save again');
+    line.begin();
+    line.end('ok');
+  };
+  line.end('error', { retry: redoSave });
+  assert.deepEqual(await pressed, { undone: false, barShown: true });
+  const bar = bars.at(-1);
+  assert.equal(bar.text, SHARED.NEITHER_SAVED);
+  assert.equal(bar.takeFocus, true, 'the toast\'s button is gone: focus goes to the bar');
+  await bar.retry();
+  assert.deepEqual(order, ['undo 1', 'save again', 'undo 2'], 'Retry: the save, then the Undo');
+  assert.equal(bars.at(-1), null, 'the Undo worked: its bar is cleared');
+  assert.deepEqual(page.toasts, [SHARED.UNDONE], 'from a bar\'s Retry, "Undone" is said by the line');
+});
+
+await check('R2-05 line: other outcomes — "Undo didn\'t save" with Retry; a refusal shows the page\'s reason, no Retry; no reason, no bar', async () => {
+  const { line, bars } = fakePage();
+  await line.undoAction(async () => ({ status: 'error' })).onAction();
+  assert.equal(bars.at(-1).text, SHARED.UNDO_DIDNT_SAVE);
+  assert.equal(typeof bars.at(-1).retry, 'function');
+  await line.undoAction(async () => ({ status: 'not_allowed', reason: 'Too late to undo here.' })).onAction();
+  assert.equal(bars.at(-1).text, 'Too late to undo here.');
+  assert.equal(bars.at(-1).retry, null);
+  await line.undoAction(async () => ({ status: 'error', reason: 'Couldn\'t undo that payment.', noRetry: true })).onAction();
+  assert.equal(bars.at(-1).text, 'Couldn\'t undo that payment.');
+  assert.equal(bars.at(-1).retry, null, 'noRetry');
+  const quiet = fakePage();
+  await quiet.line.undoAction(async () => ({ status: 'refused' })).onAction();
+  assert.deepEqual(quiet.bars, [], 'a refusal with no reason shows no bar of its own');
+  const locked = fakePage();
+  await locked.line.undoAction(async () => ({ status: 'no_access' })).onAction();
+  assert.equal(locked.bars.at(-1).text, SHARED.UNDO_DIDNT_SAVE, 'no_access: the page locks the screen, and the bar is waiting after the unlock');
+  await line.undoAction(async () => {
+    throw new Error('network');
+  }).onAction();
+  assert.equal(bars.at(-1).text, SHARED.UNDO_DIDNT_SAVE, 'an Undo that threw counts as not reached');
+});
+
+await check('R2-05 line: the page closes while the Undo waits; it still runs. Saved: nothing more. Not saved: the bar under the top bar names it, and its Retry runs it again (v1.129)', async () => {
+  LINE.dismissLeftUndoBar();
+  const page = fakePage('Camps');
+  const { line } = page;
+  line.begin();
+  let tries = 0;
+  const pressed = line
+    .undoAction(async () => ((tries += 1), { status: tries === 1 ? 'error' : 'ok' }), { words: 'Zoe Park withdrawn' })
+    .onAction();
+  line.close(); // the person went to Home
+  line.end('ok');
+  await pressed;
+  assert.equal(tries, 1, 'it ran after the page closed');
+  assert.deepEqual(page.bars, [], 'nothing on the closed page');
+  const bar = LINE.leftUndoBar();
+  assert.equal(bar.text, SHARED.undoLeftDidntSave('Zoe Park withdrawn', 'Camps'));
+  assert.equal(bar.text, 'Undo didn\'t save: “Zoe Park withdrawn” (Camps). Check the connection, then retry.');
+  await bar.retry();
+  assert.equal(tries, 2);
+  assert.equal(LINE.leftUndoBar(), null, 'it worked: the bar goes');
+  assert.deepEqual(page.toasts, [SHARED.UNDONE], 'and "Undone" says so');
+  // Saved after leaving: nothing at all.
+  const quiet = fakePage();
+  quiet.line.begin();
+  const second = quiet.line.undoAction(async () => ({ status: 'ok' })).onAction();
+  quiet.line.close();
+  quiet.line.end('ok');
+  await second;
+  assert.equal(LINE.leftUndoBar(), null);
+  assert.deepEqual(quiet.toasts, []);
+  // Refused after leaving: the reason after the change's name, no Retry.
+  const refused = fakePage('Star testing');
+  refused.line.close();
+  await refused.line.undoAction(async () => ({ status: 'not_allowed', reason: 'Too late to undo here.' }), { words: 'Ava Reed marked paid' }).onAction();
+  assert.equal(LINE.leftUndoBar().text, 'Couldn\'t undo “Ava Reed marked paid” (Star testing). Too late to undo here.');
+  assert.equal(LINE.leftUndoBar().retry, null);
+  LINE.dismissLeftUndoBar();
+  assert.equal(LINE.leftUndoBar(), null, '× closes it');
+});
+
+// ----- review fixes (the independent review of the batch, 2026-11-07) -----
+await check('R2-05 line: a double press on a bar\'s Retry runs the Undo once; the bar shows "retrying" meanwhile', async () => {
+  const { line, bars } = fakePage();
+  let runs = 0;
+  const gate = later();
+  const action = line.undoAction(async () => {
+    runs += 1;
+    if (runs === 1) return { status: 'error' };
+    await gate.promise;
+    return { status: 'ok' };
+  });
+  await action.onAction();
+  const bar = bars.at(-1);
+  const first = bar.retry();
+  const second = bar.retry(); // a second click while the first is on its way
+  assert.equal(bars.at(-1).retrying, true, 'the bar says it is retrying');
+  gate.settle();
+  await Promise.all([first, second]);
+  assert.equal(runs, 2, 'the first run and one retry: not three');
+  assert.equal(bars.at(-1), null, 'it worked: the bar is cleared');
+});
+
+await check('R2-05 line: a stale or second end() cannot free the line under a running Undo', async () => {
+  const { line } = fakePage();
+  const token = line.begin();
+  assert.ok(token);
+  const gate = later();
+  const pressed = line.undoAction(async () => (await gate.promise, { status: 'ok' })).onAction();
+  line.end('ok', { token }); // the save ends: the waiting Undo takes the line
+  line.end('error', { token }); // a second end() (a catch AND a finally): nothing
+  line.end('ok'); // an end() with no token while the Undo holds the line: nothing
+  assert.equal(line.isBusy(), true, 'the Undo still holds the line');
+  assert.equal(line.begin(), false, 'no other save slips in');
+  gate.settle();
+  await pressed;
+  assert.equal(line.isBusy(), false);
+  const next = line.begin();
+  assert.ok(next && next !== token, 'a new save gets a new token');
+  line.end('ok', { token }); // the old token: nothing
+  assert.equal(line.isBusy(), true);
+  line.end('ok', { token: next });
+  assert.equal(line.isBusy(), false);
+});
+
+await check('R2-05 give-up: an Undo that never answers frees the toast and the line after the limit (30 s in the app)', async () => {
+  // the toast
+  const toasts = TOASTS.createToastLine({ giveUpMs: 30 });
+  toasts.show('X', { icon: false, action: { label: SHARED.UNDO, queued: true, onAction: () => new Promise(() => {}) } });
+  await toasts.pressUndo(toasts.get().id);
+  assert.equal(toasts.get(), null, 'the toast stops saying "Undoing…"');
+  toasts.show('Y', { icon: false });
+  assert.equal(toasts.get().text, 'Y', 'a later toast shows');
+  // the line
+  const page = {};
+  const bars = [];
+  const options = { section: 'Camps', showToast: () => {}, undoBar: (bar) => bars.push(bar), onBusyChange: () => {} };
+  page.line = LINE.createSaveLine(() => options, { giveUpMs: 30 });
+  await page.line.undoAction(() => new Promise(() => {}), { words: 'Zoe Park withdrawn' }).onAction();
+  assert.equal(bars.at(-1).text, SHARED.UNDO_DIDNT_SAVE, 'counted as not reached: the bar says so, with Retry');
+  assert.equal(page.line.isBusy(), false, 'the line is free again');
+  const after = await page.line.undoAction(async () => ({ status: 'ok' })).onAction();
+  assert.equal(after.undone, true, 'a later Undo runs');
+});
+
+await check('R2-05 sign-out: an Undo still running when the person signs out shows no bar to the next person', async () => {
+  LINE.endLeftUndoBarSession();
+  const page = fakePage('Camps');
+  page.line.close(); // the page is gone
+  const gate = later();
+  const pressed = page.line.undoAction(async () => (await gate.promise, { status: 'error' }), { words: 'Zoe Park withdrawn' }).onAction();
+  LINE.endLeftUndoBarSession(); // signed out; the next person signs in
+  gate.settle();
+  await pressed;
+  assert.equal(LINE.leftUndoBar(), null, 'nothing for the next person');
 });
 
 console.log(`${count} groups of checks ran.`);

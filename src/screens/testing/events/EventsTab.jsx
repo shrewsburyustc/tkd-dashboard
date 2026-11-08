@@ -28,7 +28,7 @@ import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { addEvent, deleteEvent, loadEvent, loadEvents, schoolToday, setRegistration, updateEvent } from '../../../lib/testing/eventsApi.js';
+import { addEvent, deleteEvent, loadEvent, loadEvents, schoolToday, setRegistration, undoEventEdit, updateEvent } from '../../../lib/testing/eventsApi.js';
 import { defaultAutoCloseOn, registrationSwitch, stateTag } from '../../../lib/testing/eventRules.js';
 import { registrationLink } from '../../../lib/testing/qr.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
@@ -498,13 +498,17 @@ export default function EventsTab({
         icon: false,
         action: {
           label: T.UNDO,
+          // R2-02 (migration 0044): ONE database call puts the old details and — only if the
+          // edit changed it — the old switch back, together or not at all, so the Undo can't
+          // stop halfway and Retry simply sends the same call again.
           onAction: () =>
             runUndo(
-              async () => {
-                const back = await updateEvent({ eventId: d.eventId, expectedVersion: savedVersion, ...previous });
-                if (back.status !== 'ok' || !switchChanged) return back;
-                return setRegistration({ eventId: d.eventId, expectedVersion: back.version, open: record.registrationOpen });
-              },
+              () => undoEventEdit({
+                eventId: d.eventId,
+                expectedVersion: savedVersion,
+                ...previous,
+                open: switchChanged ? record.registrationOpen : null,
+              }),
               { find: () => rowEl(d.eventId) },
               // R2-07 (v1.051): the Undo opens registration again when the edit had closed it.
               switchChanged && record.registrationOpen ? T.TOAST_UNDONE_REOPENED : T.TOAST_UNDONE,
