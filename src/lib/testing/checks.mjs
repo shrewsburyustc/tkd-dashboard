@@ -4620,5 +4620,193 @@ await (async () => {
   }
 })();
 
+// ======================= CB14: the split dialogs (classRankForms.js) =======================
+// Edit rank / Edit prices / Add rank and Edit class / Final award each own one half of a record; a save still calls
+// the one database function that takes every field, so the other half must go back exactly as it was saved.
+import { checkRankForm as CHECK_RANK, isRankFormDirty as RANK_DIRTY, checkClassForm as CHECK_CLASS, isClassFormDirty as CLASS_DIRTY } from './classRankForms.js';
+{
+  const savedBelt = { beltPattern: 'solid', beltColor: 'blue', beltColor2: null, beltEndStripes: 1, beltEndStripeColor: 'white' };
+  const savedRank = { id: 'r1', classId: 'c1', name: 'LT Blue', version: 3, earlyCents: 6500, dayCents: 8000, privateCents: 9500, sparringGear: true, ...savedBelt };
+  const savedClass = { id: 'c1', name: 'Little Tiger', version: 2, ranks: [savedRank, { id: 'r2', classId: 'c1', name: 'LT Black' }], finalAwardRankId: null, finalAwardNone: true };
+  const cv = { id: 'c1', name: 'Little Tiger', ranks: savedClass.ranks };
+  // The dialog's values for a rank as ClassesRanksTab fills them (prices as the fields show them).
+  const valuesOf = (rank) => ({
+    name: rank.name,
+    early: centsToInputText(rank.earlyCents),
+    day: centsToInputText(rank.dayCents),
+    priv: centsToInputText(rank.privateCents),
+    sparring: rank.sparringGear,
+    belt: { ...savedBelt },
+  });
+  const rankState = (part, patch = {}, mode = 'edit') => {
+    const values = { ...valuesOf(savedRank), ...patch };
+    return { mode, part, rankId: 'r1', values, initial: valuesOf(savedRank), touched: {}, duplicateName: null, saving: false, blocked: false };
+  };
+
+  check('CB14 Edit rank: the name and belt change; the saved prices and Sparring gear go back unchanged', () => {
+    const state = rankState('structure', { name: 'LT Navy', belt: { ...savedBelt, beltColor: 'black' } });
+    const result = CHECK_RANK(state, cv, savedRank);
+    assert.equal(result.canSave, true);
+    assert.deepEqual(result.payload, {
+      name: 'LT Navy', earlyCents: 6500, dayCents: 8000, privateCents: 9500, sparringGear: true,
+      beltPattern: 'solid', beltColor: 'black', beltColor2: null, beltEndStripes: 1, beltEndStripeColor: 'white',
+    });
+  });
+  check('CB14 Edit rank: price text is not part of this dialog, so a bad price never blocks it or changes the sent prices', () => {
+    const state = rankState('structure', { name: 'LT Navy', early: 'abc', sparring: false });
+    const result = CHECK_RANK(state, cv, savedRank);
+    assert.equal(result.canSave, true);
+    assert.equal(result.payload.earlyCents, 6500);
+    assert.equal(result.payload.sparringGear, true);
+    assert.deepEqual(result.priceErrors, {});
+  });
+  check('CB14 Edit rank: nothing changed = sameAsSaved (Save just closes)', () => {
+    const result = CHECK_RANK(rankState('structure'), cv, savedRank);
+    assert.equal(result.canSave, true);
+    assert.equal(result.sameAsSaved, true);
+    assert.equal(RANK_DIRTY(rankState('structure')), false);
+  });
+  check('CB14 Edit rank: still checks the name (empty, too long, same as another rank)', () => {
+    assert.equal(CHECK_RANK(rankState('structure', { name: '  ' }), cv, savedRank).canSave, false);
+    assert.equal(CHECK_RANK(rankState('structure', { name: 'x'.repeat(61) }), cv, savedRank).canSave, false);
+    assert.equal(CHECK_RANK(rankState('structure', { name: 'lt black' }), cv, savedRank).canSave, false); // LT Black is the class's other rank
+    assert.ok(CHECK_RANK(rankState('structure', { name: 'lt black' }), cv, savedRank).nameError);
+  });
+
+  check('CB14 Edit prices: the prices and Sparring gear change; the saved name and belt go back unchanged', () => {
+    const state = rankState('prices', { early: '70', day: '85', priv: '100', sparring: false });
+    const result = CHECK_RANK(state, cv, savedRank);
+    assert.equal(result.canSave, true);
+    assert.deepEqual(result.payload, {
+      name: 'LT Blue', earlyCents: 7000, dayCents: 8500, privateCents: 10000, sparringGear: false, ...savedBelt,
+    });
+  });
+  check('CB14 Edit prices: the name field is not on this dialog, so even an empty name never blocks it or goes out', () => {
+    const state = rankState('prices', { name: '', early: '70' });
+    const result = CHECK_RANK(state, cv, savedRank);
+    assert.equal(result.canSave, true);
+    assert.equal(result.payload.name, 'LT Blue');
+    assert.equal(result.nameError, null);
+  });
+  check('CB14 Edit prices: still checks every price (whole dollars, $0 to $1,000)', () => {
+    for (const bad of ['', 'abc', '65.5', '1001', '-1']) {
+      assert.equal(CHECK_RANK(rankState('prices', { priv: bad }), cv, savedRank).canSave, false, bad);
+    }
+    assert.equal(CHECK_RANK(rankState('prices', { early: '0', day: '1000' }), cv, savedRank).canSave, true);
+  });
+  check('CB14 Edit prices: nothing changed = sameAsSaved', () => {
+    const result = CHECK_RANK(rankState('prices'), cv, savedRank);
+    assert.equal(result.sameAsSaved, true);
+    assert.equal(CHECK_RANK(rankState('prices', { early: '65.00' }), cv, savedRank).sameAsSaved, true); // "65" typed as "65.00"
+    assert.equal(CHECK_RANK(rankState('prices', { early: '66' }), cv, savedRank).sameAsSaved, false);
+  });
+
+  check('CB14 Add rank (option A, Jeffrey v0.432): checks and sends the name, belt, all three prices and Sparring gear', () => {
+    const add = (patch) => ({ mode: 'add', part: 'all', rankId: null, values: { ...valuesOf(savedRank), name: 'LT Brown', ...patch }, initial: valuesOf(savedRank), touched: {}, duplicateName: null, saving: false, blocked: false });
+    const ok = CHECK_RANK(add({}), cv, null);
+    assert.equal(ok.canSave, true);
+    assert.deepEqual(ok.payload, { name: 'LT Brown', earlyCents: 6500, dayCents: 8000, privateCents: 9500, sparringGear: true, ...savedBelt });
+    assert.equal(CHECK_RANK(add({ name: '' }), cv, null).canSave, false);
+    assert.equal(CHECK_RANK(add({ day: '' }), cv, null).canSave, false); // a new rank never goes live with a blank price
+    assert.equal(CHECK_RANK(add({}), cv, null).sameAsSaved, false); // never "same as saved" when adding
+  });
+
+  const classState = (part, patch = {}, mode = 'edit') => {
+    const initial = { name: savedClass.name, awardId: 'none' }; // FINAL_AWARD_NONE
+    return { mode, part, classId: 'c1', values: { ...initial, ...patch }, initial, touched: {}, duplicateName: null, saving: false, blocked: false };
+  };
+  const others = [savedClass, { id: 'c2', name: 'Group A', ranks: [], finalAwardRankId: null, finalAwardNone: false }];
+
+  check('CB14 Edit class: the name changes; the saved final award goes back unchanged', () => {
+    const result = CHECK_CLASS(classState('name', { name: 'Tiny Tiger' }), others, 'Worcester', savedClass);
+    assert.equal(result.canSave, true);
+    assert.equal(result.payload.name, 'Tiny Tiger');
+    assert.equal(result.payload.choice, 'none'); // None stays None
+  });
+  check('CB14 Edit class: still checks the name (empty, same as another class)', () => {
+    assert.equal(CHECK_CLASS(classState('name', { name: '' }), others, 'Worcester', savedClass).canSave, false);
+    assert.equal(CHECK_CLASS(classState('name', { name: 'group a' }), others, 'Worcester', savedClass).canSave, false);
+  });
+  check('CB14 Final award: the award changes; the saved name goes back unchanged and is never checked', () => {
+    const result = CHECK_CLASS(classState('award', { name: '', awardId: 'r9' }), others, 'Worcester', savedClass);
+    assert.equal(result.canSave, true);
+    assert.deepEqual(result.payload, { name: 'Little Tiger', choice: 'r9' });
+    assert.equal(result.nameError, null);
+  });
+  check('CB14 Final award / Edit class: nothing changed = sameAsSaved; any change counts as unsaved', () => {
+    assert.equal(CHECK_CLASS(classState('award'), others, 'Worcester', savedClass).sameAsSaved, true);
+    assert.equal(CHECK_CLASS(classState('name'), others, 'Worcester', savedClass).sameAsSaved, true);
+    assert.equal(CLASS_DIRTY(classState('award')), false);
+    assert.equal(CLASS_DIRTY(classState('award', { awardId: null })), true);
+    assert.equal(CLASS_DIRTY(classState('name', { name: 'X' })), true);
+  });
+  check('CB14 Add class: the name only; the final award starts Not set', () => {
+    const state = { mode: 'add', part: 'name', classId: null, values: { name: 'Seniors', awardId: null }, initial: { name: '', awardId: null }, touched: {}, duplicateName: null, saving: false, blocked: false };
+    const result = CHECK_CLASS(state, others, 'Worcester', null);
+    assert.equal(result.canSave, true);
+    assert.deepEqual(result.payload, { name: 'Seniors', choice: null });
+  });
+
+  // ----- the gaps the code review's mutation run found (each of these failed to be caught before) -----
+  check('CB14 Edit rank: a VALID typed price or a toggled Sparring gear never leaks into the save', () => {
+    const result = CHECK_RANK(rankState('structure', { name: 'LT Navy', early: '99', day: '98', priv: '97', sparring: false }), cv, savedRank);
+    assert.deepEqual([result.payload.earlyCents, result.payload.dayCents, result.payload.privateCents, result.payload.sparringGear], [6500, 8000, 9500, true]);
+  });
+  check('CB14 Edit prices: a changed belt or name in the form never leaks into the save', () => {
+    const result = CHECK_RANK(rankState('prices', { name: 'Other', belt: { ...savedBelt, beltColor: 'red' }, early: '70' }), cv, savedRank);
+    assert.equal(result.payload.name, 'LT Blue');
+    assert.equal(result.payload.beltColor, 'blue');
+    assert.equal(result.payload.earlyCents, 7000);
+  });
+  check('CB14 sameAsSaved is false for every field that really changed (Save must not just close)', () => {
+    const s = (patch) => CHECK_RANK(rankState('structure', patch), cv, savedRank).sameAsSaved;
+    assert.equal(s({ name: 'LT Navy' }), false);
+    assert.equal(s({ belt: { ...savedBelt, beltColor: 'red' } }), false);
+    assert.equal(s({ belt: { ...savedBelt, beltEndStripes: 2 } }), false);
+    const p = (patch) => CHECK_RANK(rankState('prices', patch), cv, savedRank).sameAsSaved;
+    assert.equal(p({ early: '66' }), false);
+    assert.equal(p({ day: '81' }), false);
+    assert.equal(p({ priv: '96' }), false);
+    assert.equal(p({ sparring: false }), false);
+  });
+  check('CB14 dirty (Esc must not close over edits): every rank field counts', () => {
+    for (const patch of [{ name: 'X' }, { early: '1' }, { day: '1' }, { priv: '1' }, { sparring: false }, { belt: { ...savedBelt, beltColor: 'red' } }]) {
+      assert.equal(RANK_DIRTY(rankState('structure', patch)), true, JSON.stringify(patch));
+    }
+  });
+  check('CB14 Save is unavailable while saving or after a refused save (stale / not allowed), rank and class', () => {
+    assert.equal(CHECK_RANK({ ...rankState('structure'), saving: true }, cv, savedRank).canSave, false);
+    assert.equal(CHECK_RANK({ ...rankState('prices'), blocked: true }, cv, savedRank).canSave, false);
+    assert.equal(CHECK_CLASS({ ...classState('name'), saving: true }, others, 'Worcester', savedClass).canSave, false);
+    assert.equal(CHECK_CLASS({ ...classState('award'), blocked: true }, others, 'Worcester', savedClass).canSave, false);
+  });
+  check('CB14 a duplicate name the SERVER reported blocks Save for exactly that name (rank and class)', () => {
+    const r = CHECK_RANK({ ...rankState('structure', { name: 'LT Navy' }), duplicateName: 'LT Navy' }, cv, savedRank);
+    assert.equal(r.canSave, false);
+    assert.ok(r.nameError);
+    assert.equal(CHECK_RANK({ ...rankState('structure', { name: 'LT Teal' }), duplicateName: 'LT Navy' }, cv, savedRank).canSave, true);
+    const c = CHECK_CLASS({ ...classState('name', { name: 'Tiny Tiger' }), duplicateName: 'Tiny Tiger' }, others, 'Worcester', savedClass);
+    assert.equal(c.canSave, false);
+    assert.ok(c.nameError);
+  });
+  check('CB14 an invalid belt (end stripe the same color as the belt) blocks Edit rank but not Edit prices', () => {
+    const bad = { ...savedBelt, beltEndStripes: 1, beltEndStripeColor: 'blue' };
+    assert.equal(CHECK_RANK(rankState('structure', { belt: bad }), cv, savedRank).canSave, false);
+    assert.equal(CHECK_RANK(rankState('prices', { belt: bad, early: '70' }), cv, savedRank).canSave, true);
+  });
+  check('CB14 "Enter a name / price" shows only once the field was touched; Save is unavailable either way', () => {
+    const untouched = CHECK_RANK(rankState('structure', { name: '' }), cv, savedRank);
+    assert.equal(untouched.nameError, null);
+    assert.equal(untouched.canSave, false);
+    assert.ok(CHECK_RANK({ ...rankState('structure', { name: '' }), touched: { name: true } }, cv, savedRank).nameError);
+    const emptyPrice = CHECK_RANK(rankState('prices', { priv: '' }), cv, savedRank);
+    assert.equal(emptyPrice.priceErrors.priv, undefined);
+    assert.equal(emptyPrice.canSave, false);
+    assert.ok(CHECK_RANK({ ...rankState('prices', { priv: '' }), touched: { priv: true } }, cv, savedRank).priceErrors.priv);
+    assert.equal(CHECK_CLASS(classState('name', { name: '' }), others, 'Worcester', savedClass).nameError, null);
+    assert.ok(CHECK_CLASS({ ...classState('name', { name: '' }), touched: { name: true } }, others, 'Worcester', savedClass).nameError);
+  });
+}
+
 console.log(`${count} groups of checks ran.`);
 console.log('ALL TESTING LIB CHECKS PASSED');
