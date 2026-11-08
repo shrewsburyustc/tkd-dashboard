@@ -72,7 +72,7 @@ export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel
   return (
     <Dialog title={T.bookTitle(state.name, state.change)} size="detail" fullScreen={isPhone} onTop={onTop} returnFocusTo={onTop ? state.opener ?? null : null} onRequestClose={onCancel}>
       {times === null && <p className="field-hint">{T.LOADING_TIMES}</p>}
-      {times === 'error' && <Notice>{T.SAVE_FAILED}</Notice>}
+      {times === 'error' && <Notice>{T.TIMES_FAILED}</Notice>}
       {Array.isArray(times) && times.length === 0 && <p className="fnotimes">{T.NO_TIMES}</p>}
       {groups.length > 0 && (
         <fieldset className="field cfieldset">

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Calendar · every section's events · question 1</title>
+<style>
+  :root { --text:#1F1F1F; --muted:#5E5E5A; --line:#D9D9D4; --bg:#F3F3F0; --card:#FFFFFF; --blue:#1A4FA0; --blue-tint:#EAF0FA; --amber:#E89800; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:36px 44px 44px; background:var(--bg); color:var(--text); font: 16px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { margin:0 0 6px; font-size:30px; }
+  .lead { margin:0 0 4px; color:var(--muted); font-size:17px; max-width: 1240px; }
+  h2 { margin:30px 0 12px; font-size:22px; }
+  .kinds { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+  .kind { display:grid; grid-template-columns: 300px 1fr; gap:14px; align-items:start; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  .kind.ask { border:2px dashed var(--amber); }
+  .kind b { display:block; font-size:16px; }
+  .kind small { display:block; color:var(--muted); font-size:14px; }
+  .kind .opens { margin-top:4px; font-size:14px; }
+  .chip { display:inline-flex; align-items:flex-start; gap:4px; max-width:100%; padding:1px 6px; border-radius:4px; font-size:13px; line-height:18px; }
+  .chip svg { flex:none; margin-top:3px; }
+  .chip--blue { background:var(--blue-tint); color:var(--blue); border:1px solid #b3c2df; }
+  .chip--dash { border:1px dashed #9C9C96; color:#4A4A46; background:#FFF; }
+  .note { margin:12px 0 0; color:var(--muted); font-size:15px; }
+  .opts { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  .opt { padding:18px 20px 16px; background:var(--card); border:1px solid var(--line); border-radius:12px; }
+  .opt.rec { border:2px solid var(--blue); }
+  .opt h3 { margin:0 0 2px; font-size:20px; }
+  .tag { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; background:var(--blue); color:#fff; font-size:13px; font-weight:600; vertical-align:middle; }
+  .opt .sub { margin:0 0 12px; color:var(--muted); font-size:15px; }
+  .diagram { display:flex; align-items:center; gap:10px; margin:6px 0 14px; padding:14px; background:#FAFAF8; border:1px solid var(--line); border-radius:10px; }
+  .box { padding:6px 10px; border:1px solid #9C9C96; border-radius:6px; background:#fff; font-size:13px; white-space:nowrap; }
+  .box.app { border-color:var(--blue); color:var(--blue); font-weight:600; }
+  .box.fn { border:2px solid var(--blue); color:var(--blue); font-weight:600; }
+  .box.db { background:#F1F1EE; }
+  .arrow { color:#7A7A75; font-size:20px; }
+  .tables { display:grid; grid-template-columns: repeat(2, auto); gap:5px; }
+  .dbwrap { padding:8px; border:1px dashed #9C9C96; border-radius:8px; }
+  .dbwrap .cap { display:block; margin-bottom:5px; color:var(--muted); font-size:12px; }
+  ul { margin:0; padding-left:20px; }
+  li { margin:3px 0; font-size:15px; }
+  .plus { color:#2F6B0C; } .minus { color:#8A4B00; }
+  .rec-line { margin:18px 0 0; padding:12px 16px; background:var(--blue-tint); border-radius:10px; font-size:16px; }
+</style></head><body>
+<h1>Calendar · every section's events</h1>
+<p class="lead">Your words: "Everything … Any EVENT that gets added even in the future, new prospects, etc. We need to see everything that is going on." Plan: <code>docs/Prospects/TKD-Calendar-AllEvents-Plan.md</code>. Nothing is built yet.</p>
+
+<h2>What will show — read-only; a click opens it in its own section, where it is changed</h2>
+<div class="kinds">
+<div class="kind"><div><span class="chip" style="background:#EEEDFE;border-left:3px solid #ABA5EA;color:#3C3489"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M13 17.5v4.5l2 -1.5l2 1.5v-4.5"/><path d="M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73"/><path d="M6 9l12 0"/><path d="M6 12l3 0"/><path d="M6 15l2 0"/></svg><span>Fall color belt testing</span></span></div><div><b>Color belt testing</b><small>Its date, from its first class to its last · its school</small><div class="opens">Opens: The event in Testing</div></div></div>
+<div class="kind"><div><span class="chip" style="background:#EEEDFE;border-left:3px solid #ABA5EA;color:#3C3489"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M13 17.5v4.5l2 -1.5l2 1.5v-4.5"/><path d="M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73"/><path d="M6 9l12 0"/><path d="M6 12l3 0"/><path d="M6 15l2 0"/></svg><span>Private · Ava N.</span></span></div><div><b>Color belt private testing</b><small>Its date and time · the child as on Follow-ups (first name + initial)</small><div class="opens">Opens: The private testing</div></div></div>
+<div class="kind"><div><span class="chip" style="background:#EEEDFE;border-left:3px solid #ABA5EA;color:#3C3489"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245"/></svg><span>Star testing</span></span></div><div><b>Star testing</b><small>Its date, start–end · both schools (Star is joint)</small><div class="opens">Opens: The event in Star testing</div></div></div>
+<div class="kind"><div><span class="chip" style="background:#EEEDFE;border-left:3px solid #ABA5EA;color:#3C3489"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245"/></svg><span>Private Star · Leo N.</span></span></div><div><b>Private Star test</b><small>Its date and time · the child as "Leo N."</small><div class="opens">Opens: The event's Students list (as Home does)</div></div></div>
+<div class="kind"><div><span class="chip" style="background:#EEEDFE;border-left:3px solid #ABA5EA;color:#3C3489"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"/><path d="M12 15l3.4 5.89l1.598 -3.233l3.598 .232l-3.4 -5.889"/><path d="M6.802 12l-3.4 5.89l3.598 -.233l1.598 3.232l3.4 -5.889"/></svg><span>Black Belt · Day 1</span></span></div><div><b>Black Belt testing day</b><small>Each testing day, its times and place</small><div class="opens">Opens: The cycle in Black Belt testing</div></div></div>
+<div class="kind"><div><span class="chip" style="background:#DFF3EC;border-left:3px solid #7FC6AE;color:#074536"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 14l4 6h6l-9 -16l-9 16h6l4 -6"/></svg><span>Thanksgiving camp</span></span></div><div><b>Camp day</b><small>Every day of a camp, with the camp's times · its school</small><div class="opens">Opens: The camp</div></div></div>
+<div class="kind"><div><span class="chip chip--blue"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6v12a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2"/><path d="M10 16h6"/><path d="M11 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M4 8h3"/><path d="M4 12h3"/><path d="M4 16h3"/></svg><span>2 new sign-ups</span></span></div><div><b>New sign-ups ("new prospects")</b><small>One count per day, like follow-ups; the day panel lists "Ava N."</small><div class="opens">Opens: That child in Prospects</div></div></div>
+<div class="kind ask"><div><span class="chip chip--dash"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9"/><path d="M5 21v-7"/></svg><span>Sign-up closes · Thanksgiving camp</span></span></div><div><b>Deadlines — question 2 (next)</b><small>Registration closes, camp sign-up, early price, Black Belt applications / submissions due</small><div class="opens">Opens: Its section</div></div></div>
+</div>
+<p class="note">Testing keeps its purple (rulebook v0.239) with each section's own icon; camps use the Camp type's teal; new sign-ups count per day like follow-ups. Children appear only as "Ava N." (as follow-ups do) — never a date of birth, contact details, payments or notes. The Show menu gets a line each: Testing, Black Belt, Camps, New sign-ups (and Deadlines if you say yes). Payments, money due dates and Finance's close-the-day stay off.</p>
+
+<h2>Question 1 — how should the Calendar get all of this?</h2>
+<div class="opts">
+  <div class="opt">
+    <h3>A · The app reads each section itself</h3>
+    <p class="sub">No database change — the way follow-ups are read today (v0.615).</p>
+    <div class="diagram"><div class="box app">Calendar</div><span class="arrow">→</span>
+      <div class="tables"><div class="box db">testing_events</div><div class="box db">testing_event_classes</div><div class="box db">testing_private</div><div class="box db">star_events</div><div class="box db">star_candidates</div><div class="box db">camps + camp_days</div><div class="box db">bb_cycles + bb_cycle_days</div><div class="box db">sign-ups</div></div></div>
+    <ul>
+      <li class="plus">No migration: the fastest to build.</li>
+      <li class="minus">About 8 reads every time a month opens.</li>
+      <li class="minus">The browser receives children's full names (first and last) for private tests and drops what it doesn't show.</li>
+      <li class="minus">The preview's fake database needs date filters added in Testing's, Star's and Camps' own files — files other sessions own.</li>
+      <li class="minus">Each section's table names live in the Calendar's code.</li>
+    </ul>
+  </div>
+  <div class="opt rec">
+    <h3>B · One Calendar reader in the database<span class="tag">Recommended</span></h3>
+    <p class="sub">A read-only database function, <code>calendar_items(from, to)</code>, built like Finance's Daily report reads every section.</p>
+    <div class="diagram"><div class="box app">Calendar</div><span class="arrow">→</span><div class="box fn">calendar_items(from, to)</div><span class="arrow">→</span>
+      <div class="dbwrap"><span class="cap">inside the database</span><div class="tables"><div class="box db">Testing</div><div class="box db">Star</div><div class="box db">Black Belt</div><div class="box db">Camps</div><div class="box db">Sign-ups</div></div></div></div>
+    <ul>
+      <li class="plus">One read per month.</li>
+      <li class="plus">Only what the Calendar shows leaves the database — dates, times, names of events, and children as "Ava N."</li>
+      <li class="plus">One place to keep complete: a dated thing added later goes into this reader.</li>
+      <li class="plus">The preview needs one fake reader, in our own file.</li>
+      <li class="minus">Costs a migration: a number from Main, tests, a security review, then you paste it in the SQL Editor and run its tests file (like 0042).</li>
+      <li class="minus">Each later dated thing adds a few lines to it (its own small migration).</li>
+    </ul>
+  </div>
+</div>
+<p class="rec-line"><b>Recommendation: B.</b> You want everything, now and later — one reader is the easiest place to keep it complete and private, and it doesn't touch the other sessions' files. A is quicker today but spreads the work across eight reads and three other sessions' fake-data files.</p>
+</body></html>

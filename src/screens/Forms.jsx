@@ -86,8 +86,16 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
 
-  function focusBack(el, fallback) {
-    window.requestAnimationFrame(() => (usable(el) ?? usable(fallback ? document.querySelector(fallback) : null))?.focus());
+  // The page behind a closing dialog stays "inert" (unclickable, unfocusable) until the App has seen
+  // the dialog close, so a single try can miss; it tries again on the next few frames (about a third
+  // of a second at most), as Prospects' focusSoon does — otherwise focus fell to the page after Delete
+  // form (design review, batch 1).
+  function focusBack(el, fallback, tries = 20) {
+    window.requestAnimationFrame(() => {
+      const target = usable(el) ?? usable(fallback ? document.querySelector(fallback) : null);
+      target?.focus();
+      if ((!target || document.activeElement !== target) && tries > 0) focusBack(el, fallback, tries - 1);
+    });
   }
 
   // ===== The builder =====
@@ -164,7 +172,8 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
       patchDialog({ saving: false, note: T.NOT_ALLOWED });
       onRefreshProfile();
     } else {
-      patchDialog({ saving: false, note: res.status === 'invalid' ? T.INVALID_SAVE : T.SAVE_FAILED_BAR });
+      // a failure stays in the box under its buttons; pressing Create again is its retry (v1.103)
+      patchDialog({ saving: false, note: res.status === 'invalid' ? T.INVALID_SAVE : T.SAVE_FAILED });
     }
   }
 
@@ -178,15 +187,42 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
 
   // ----- Row actions -----
   async function duplicate(form) {
-    if (busy) return;
+    if (busyRef.current) return; // (the ref, not `busy`: a Retry kept in a bar carries the old render's value)
     setBusy(true);
     const res = await duplicateForm(form.id);
     setBusy(false);
     if (res.status === 'ok') {
+      setBanner((b) => (b?.kind === 'duplicate' && b.formId === form.id ? null : b)); // a retry that worked takes its own bar away
       await list.reload();
-      showToast(T.duplicated(`Copy of ${form.name}`.slice(0, 80)));
+      // Undo for 5 seconds (v1.006, R2-08): deletes the new Draft copy with the same call as ⋯ Delete form
+      // (a copy made a moment ago has no sign-ups), like "Copy to the other school"'s Undo below.
+      const undo = async () => {
+        if (busyRef.current) return;
+        setBusy(true);
+        const u = await deleteForm({ id: res.id, expectedVersion: res.version });
+        setBusy(false);
+        if (u.status === 'ok' || u.status === 'not_found') {
+          // not_found: the copy is already gone, which is what Undo wanted
+          setBanner((b) => (b?.kind === 'undoDuplicate' && b.copyId === res.id ? null : b));
+          list.reload();
+          showToast(T.UNDONE, { icon: false });
+        } else if (u.status === 'no_access') onNoAccess();
+        else if (u.status === 'stale' || (u.status === 'not_allowed' && u.reason === 'has_signups')) {
+          list.reload();
+          setBanner({ text: T.UNDO_STALE });
+        } else if (u.status === 'not_allowed') {
+          setBanner({ text: T.NOT_ALLOWED });
+          onRefreshProfile();
+        } else setBanner({ kind: 'undoDuplicate', copyId: res.id, text: T.UNDO_FAILED, retry: undo });
+      };
+      showToast(T.duplicated(`Copy of ${form.name}`.slice(0, 80)), { icon: false, action: { label: T.UNDO, onAction: () => undo() } });
     } else if (res.status === 'no_access') onNoAccess();
-    else setBanner({ text: res.status === 'not_allowed' ? T.NOT_ALLOWED : T.SAVE_FAILED_BAR });
+    else if (res.status === 'not_allowed') setBanner({ text: T.NOT_ALLOWED });
+    else if (res.status === 'not_found') {
+      // another admin deleted the form meanwhile: Retry could never work, so no Retry (as Copy to the other school)
+      list.reload();
+      setBanner({ text: T.STALE_BUILDER });
+    } else setBanner({ kind: 'duplicate', formId: form.id, text: T.SAVE_FAILED, retry: () => duplicate(form) }); // the connection (or anything else that isn't a refusal): Retry makes the copy again (R2-01)
   }
   // "Copy to Worcester / Shrewsbury" (rulebook v0.642): a Draft copy at the other school. You stay
   // in the list (option A, as with Duplicate); the toast says where the copy went, with Undo for 5
@@ -238,11 +274,12 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     else setBanner({ kind: 'copy', formId: form.id, text: T.SAVE_FAILED, retry: () => copyToOtherSchool(form) });
   }
   async function toggleClosed(form) {
-    if (busy) return;
+    if (busyRef.current) return; // (the ref, as in duplicate)
     setBusy(true);
     const res = await setFormStatus({ id: form.id, expectedVersion: form.version, status: form.status === 'live' ? 'closed' : 'live' });
     setBusy(false);
     if (res.status === 'ok') {
+      setBanner((b) => (b?.kind === 'status' && b.formId === form.id ? null : b)); // a retry that worked takes its own bar away
       await list.reload();
       // Undo for 5 seconds (v1.006, N2): sets the form back to how it was
       const undo = async () => {
@@ -251,20 +288,24 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
         const u = await setFormStatus({ id: form.id, expectedVersion: res.version, status: form.status });
         setBusy(false);
         if (u.status === 'ok') {
+          setBanner((b) => (b?.kind === 'undoStatus' && b.formId === form.id ? null : b));
           list.reload();
-          showToast(T.UNDONE, { icon: false }); // v0.618
+          // an Undo that opens the form again says so (v1.051 (1)); one that closes it again just says Undone
+          showToast(form.status === 'live' ? T.UNDONE_OPEN : T.UNDONE, { icon: false }); // v0.618
         } else if (u.status === 'no_access') onNoAccess();
         else if (u.status === 'stale') {
           list.reload();
           setBanner({ text: T.UNDO_STALE });
-        } else setBanner({ text: T.SAVE_FAILED_BAR });
+        // a failed Undo keeps its bar with Retry, which runs this same Undo again (R2-01): the
+        // toast is gone by now, so without it nothing could put the form back
+        } else setBanner({ kind: 'undoStatus', formId: form.id, text: T.UNDO_FAILED, retry: undo });
       };
       showToast(form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name), { icon: false, action: { label: T.UNDO, onAction: undo } });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
       list.reload();
       setBanner({ text: T.STALE_BUILDER });
-    } else setBanner({ text: T.SAVE_FAILED_BAR });
+    } else setBanner({ kind: 'status', formId: form.id, text: T.SAVE_FAILED, retry: () => toggleClosed(form) });
   }
   async function confirmDelete() {
     const d = dialogRef.current;
@@ -274,15 +315,19 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     if (res.status === 'ok') {
       setDialog(null);
       await list.reload();
-      showToast(T.deletedToast(d.form.name));
+      showToast(T.deletedToast(d.form.name), { icon: false });
       focusBack(null, '[data-forms-new]');
     } else if (res.status === 'not_allowed' && res.reason === 'has_signups') patchDialog({ saving: false, note: T.HAS_SIGNUPS, blocked: true });
     else if (res.status === 'no_access') {
       patchDialog({ saving: false });
       onNoAccess();
     } else if (res.status === 'stale' || res.status === 'not_found') {
-      patchDialog({ saving: false, note: T.STALE_BUILDER, blocked: true });
+      // U-03: pressing Delete again can't work (the box keeps the old version), so the box closes and
+      // the page's bar says what happened; the list shows the form as it is now (or gone)
+      setDialog(null);
       list.reload();
+      setBanner({ text: res.status === 'stale' ? T.deleteStale(d.form.name) : T.FORM_GONE });
+      focusBack(null, '[data-forms-new]');
     } else patchDialog({ saving: false, note: T.DELETE_FAILED });
   }
 
@@ -422,9 +467,10 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     } else if (dialog.type === 'delete') {
       dialogElement = (
         // The shared "are you sure?" box (design review N3): "Keep form" · "Delete form" (red, first
-        // focus on Keep). The sentence always stays; a refusal (the form has sign-ups, or it changed)
-        // or a failure shows as the amber note under the buttons. After a refusal "Delete form"
-        // grays (actionUnavailable, rulebook v0.633): the note already says why.
+        // focus on Keep). The sentence always stays; a refusal (the form has sign-ups) or a failure
+        // shows as the amber note under the buttons. After the sign-ups refusal "Delete form" grays
+        // (actionUnavailable, rulebook v0.633): the note already says why. A form someone else
+        // changed or deleted closes the box and the page's bar says so (U-03).
         <ConfirmBox
           title={T.DELETE_TITLE}
           keepLabel={T.KEEP_FORM}

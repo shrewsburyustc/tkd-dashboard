@@ -11,6 +11,9 @@
 //     ('tkd.calendar.hidden.<staff id>', like Prospects' list/board choice). Saving what's hidden
 //     means a kind added later starts SHOWN. Blocked storage = everything shown. Nothing goes to
 //     the database.
+//   - v0.645: other sections' dates have their own lines — Testing, Black Belt, Camps, Deadlines
+//     (after Events) and New sign-ups (after Follow-ups); showKeyOfItem() says which line an item
+//     from the database reader belongs to. A choice saved before they existed shows them all.
 //   - Hiding Closures never un-cancels a class: cancelled classes stay crossed out (v0.615).
 import { readStorage, writeStorage } from '../storage.js';
 
@@ -19,12 +22,30 @@ export const KINDS = [
   { key: 'classes', label: 'Classes' },
   { key: 'closures', label: 'Closures' },
   { key: 'events', label: 'Events' },
+  { key: 'testing', label: 'Testing' }, // Color belt + Star: testing days and private tests (v0.645)
+  { key: 'blackBelt', label: 'Black Belt' },
+  { key: 'camps', label: 'Camps' },
+  { key: 'deadlines', label: 'Deadlines' },
   { key: 'free', label: 'Free classes' },
   { key: 'followUps', label: 'Follow-ups' },
+  { key: 'signups', label: 'New sign-ups' },
 ];
 const KEYS = new Set(KINDS.map((k) => k.key));
 
-export const hiddenKey = (staffId) => `tkd.calendar.hidden.${staffId ?? 'anyone'}`;
+// Which Show line an item from the database reader (api.js loadCalendarItems) belongs to.
+const ITEM_SHOW = {
+  colorbelt_event: 'testing',
+  colorbelt_private: 'testing',
+  star_event: 'testing',
+  star_private: 'testing',
+  bb_day: 'blackBelt',
+  camp_day: 'camps',
+  deadline: 'deadlines',
+  signup: 'signups',
+};
+export const showKeyOfItem = (item) => ITEM_SHOW[item.kind] ?? null;
+
+export const hiddenKey =(staffId) => `tkd.calendar.hidden.${staffId ?? 'anyone'}`;
 
 // The saved hidden kinds (a Set). Anything unknown or unreadable is ignored → shown.
 export function loadHidden(staffId, read = readStorage) {
@@ -58,7 +79,11 @@ export function shownCount(hidden) {
 // for the few things that aren't a list (Week view's closed-hour stripes, the panel's Classes heading).
 export function applyShow(info, hidden) {
   const on = (key) => !hidden.has(key);
-  const shows = { classes: on('classes'), closures: on('closures'), events: on('events'), free: on('free'), followUps: on('followUps') };
+  const shows = Object.fromEntries(KINDS.map((k) => [k.key, on(k.key)]));
+  const keep = (list) => (list ?? []).filter((item) => on(showKeyOfItem(item)));
+  const items = keep(info.items);
+  const deadlines = keep(info.deadlines);
+  const signups = keep(info.signups);
   const schools = info.schools.map((s) => ({
     ...s,
     classes: shows.classes ? s.classes.map((c) => (shows.free ? c : { ...c, bookings: 0 })) : [],
@@ -79,5 +104,9 @@ export function applyShow(info, hidden) {
     bookingProblems: shows.free ? info.bookingProblems : 0,
     followUps,
     followUpCount: followUps.length,
+    items,
+    deadlines,
+    signups,
+    signupCount: signups.length,
   };
 }
