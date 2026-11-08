@@ -89,7 +89,9 @@ import {
   undoPrivatePayment,
   updatePrivate,
 } from '../../../lib/testing/privateApi.js';
-import { amountDue, markPaidChoiceWhere, privateCards, privateMenu, showMarkPaid, splitPrivate } from '../../../lib/testing/privateRules.js';
+import { PRIVATE_ROOM, amountDue, markPaidChoiceWhere, privateCards, privateMenu, showMarkPaid, splitPrivate } from '../../../lib/testing/privateRules.js';
+import { rosterLayoutFor } from '../../../lib/testing/eventRules.js';
+import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { buildColorBeltReceipt } from '../../../lib/testing/receipt.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
@@ -176,6 +178,11 @@ export default function PrivateTestingTab({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  // Only the list follows the room beside the left panel (batch 3 Q1, as the event roster, lib/pageRoom.js):
+  // narrower than PRIVATE_ROOM its tablet columns would run text into text, so it draws its phone rows.
+  // Dialogs, ⋯ menus and the rest of the page keep following the window (isPhone).
+  const narrowRoom = usePageRoomBelow(PRIVATE_ROOM);
+  const listLayout = rosterLayoutFor(layout, narrowRoom);
   const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
 
   // ----- State -----
@@ -194,6 +201,14 @@ export default function PrivateTestingTab({
   // CB2: the receipt — { key, rowId, opener, data, notFound } or null (data null while it loads).
   const [receipt, setReceipt] = useState(null);
   const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
+  // A flip of the list's layout (the window crosses a breakpoint, or the room beside the panel crosses
+  // PRIVATE_ROOM after a Panel size change) redraws every row's buttons, so an open ⋯ menu or Mark paid
+  // box would point at a button that is gone: close them, as the event roster does (EventPage.jsx).
+  const listIsPhone = listLayout.isPhone;
+  useEffect(() => {
+    setMenu(null);
+    setMarkPaidBox(null);
+  }, [listIsPhone, isPhone]);
   const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
@@ -1153,7 +1168,7 @@ export default function PrivateTestingTab({
   });
 
   const ctx = {
-    layout,
+    layout: listLayout, // the room beside the panel decides the list's own layout
     busy,
     isAdmin,
     menuFor: menu?.id ?? null,

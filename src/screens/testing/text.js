@@ -617,6 +617,10 @@ export const paidOnPhone = (method, stamp) => `${payingByText(method)} · paid $
 export const EMPTY_CLASS_ROSTER = 'No students in this class yet.';
 export const NO_STUDENTS_FILTERED_PAID = 'No paid students in this class.';
 export const NO_STUDENTS_FILTERED_NOT_PAID = 'Everyone in this class has paid.';
+export const TAG_CANCELLED = 'Cancelled'; // the summary's payment line for a cancelled, never-paid private testing (batch 3 Q2 a)
+export const CANCELLED_NOTHING_PAID = 'nothing was paid';
+// Not paid is empty only because the class's unpaid row is a possible duplicate (batch 3 Q2 c)
+export const NO_STUDENTS_FILTERED_NOT_PAID_DUPLICATE = "No unpaid students in this class. A possible duplicate isn't counted.";
 export const NO_CLASSES_IN_EVENT = 'This event has no classes.';
 export const removedGroup = (n) => `Removed · ${n}`;
 export const NOT_IN_COUNTS = 'Not in the counts';
@@ -630,10 +634,16 @@ export function duplicateBoxLine(count) {
 export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
 // The gray line under the count cards while possible duplicates are left out of Paid / Not paid
 // (pass 1 R3-02, v1.046 (8); Black Belt's sentence, naming the two cards; approved 2026-11-06)
-export const duplicatesLeftOut = (count) =>
-  count === 1
-    ? "1 possible duplicate isn't counted in Paid or Not paid until it's resolved."
-    : `${count} possible duplicates aren't counted in Paid or Not paid until they're resolved.`;
+// Batch 3 Q2 b: the box above counts PAIRS ("1 possible duplicate"), this line counted ROWS ("2 possible
+// duplicates") — now it uses the box's unit, and says how many students that is when it differs from the
+// number of pairs (a pair with both rows flagged after a Restore):
+// "1 possible duplicate (2 students) isn't counted in Paid or Not paid until it's resolved."
+// A pair with one flagged row reads as before: "1 possible duplicate isn't counted …".
+export function duplicatesLeftOut(rows, pairs = rows) {
+  const n = Math.max(pairs, 1);
+  const students = rows === n ? '' : ` (${rows === 1 ? '1 student' : `${rows} students`})`;
+  return `${duplicateBoxLine(n)}${students} ${n === 1 ? "isn't" : "aren't"} counted in Paid or Not paid until ${n === 1 ? "it's" : "they're"} resolved.`;
+}
 
 // ⋯ menu on a student (R8, plan answers 6 and 8)
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';
