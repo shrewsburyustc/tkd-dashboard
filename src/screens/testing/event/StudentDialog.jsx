@@ -16,7 +16,8 @@
 //
 // Follows "Hide private details" (v0.506, v0.507 Q2): while `hidden` is on, the summary's Paying by
 // and Payment lines become one gray "Payment details are hidden on this tablet." line, and Add /
-// Edit show no fee (the Paying by choice of Add stays: it records how they'll pay, not money).
+// Edit show no fee. Add student also leaves out "Paying by" (batch 3 Q3, as Camps: it is a payment
+// detail): the student starts as Cash, and Mark paid asks the way to pay anyway.
 //
 // Design review Part 2, mockup P3 (rulebook v0.421): the summary
 //   - ends its Payment row with an outline "Print receipt" (CB2) — staff and admins, on a student
@@ -465,7 +466,9 @@ export default function StudentDialog({
           </div>
         )}
 
-        {isAdd && (
+        {/* Hide private details (batch 3 Q3, as Camps): Paying by is a payment detail, so it isn't asked.
+            The student starts as Cash (the form's default); Mark paid asks the way to pay anyway. */}
+        {isAdd && !hidden && (
           <div className="field">
             <span id={`${idBase}-pay-label`} className="field-label">
               {T.PAYING_BY_LABEL}

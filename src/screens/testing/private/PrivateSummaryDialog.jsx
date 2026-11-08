@@ -97,6 +97,13 @@ export default function PrivateSummaryDialog({
         {canPrintReceipt && !hidden && onPrintReceipt && <PrintReceiptButton onPrint={onPrintReceipt} />}
       </>
     );
+  } else if (record.status === 'cancelled') {
+    // Cancelled and never paid: nothing is owed, so no "[Not paid] · $85" (batch 3 Q2 a)
+    payment = (
+      <>
+        <span className="ttag">{T.TAG_CANCELLED}</span> · {T.CANCELLED_NOTHING_PAID}
+      </>
+    );
   } else {
     payment = (
       <>

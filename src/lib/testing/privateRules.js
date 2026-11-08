@@ -16,6 +16,17 @@
 import { isIsoDate } from './eventRules.js';
 import { standingPayments } from './receipt.js';
 
+// ----- The list's room (Color Belt batch 3, Q1) -----
+
+// The narrowest room beside the left panel (px) in which the Private testing list keeps its tablet columns
+// (Color Belt batch 3, Q1 A; same idea as eventRules.ROSTER_ROOM, rulebook v0.431). "Room" is Dashboard core's
+// measure (src/lib/pageRoom.js). Measured in preview on 2026-11-07 with the sample list (Upcoming and Past, a
+// cancelled row's tag included): with a mouse the first text-on-text overlap comes at 608 px of room and the
+// list is clean from 616; with touch the same (592 overlaps, 616 clean), so 632 keeps 16 px to spare. Narrower
+// than this the list draws the stacked rows phones show, whatever the window's own width. If names or tags ever
+// grow, measure again.
+export const PRIVATE_ROOM = 632;
+
 // ----- Day and time (contract 0014 §1.2) -----
 
 // The start times a private testing may have: 6:00 AM to 10:00 PM in 5-minute steps, both ends

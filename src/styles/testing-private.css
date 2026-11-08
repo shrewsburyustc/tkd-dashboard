@@ -170,6 +170,11 @@
 }
 
 /* Phone rows: stacked lines, ⋯ on the right (P1 phone / 320) */
+/* A mouse in a narrow room: the list is both .is-wide and .is-phone (batch 3 Q1); the phone rows keep their own gap */
+.pv-list.is-wide .pv-row.is-phone {
+  column-gap: var(--space-8);
+}
+
 .pv-row.is-phone {
   display: flex;
   align-items: flex-start;
