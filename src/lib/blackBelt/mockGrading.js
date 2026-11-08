@@ -242,8 +242,8 @@ export function createGradingPart(env) {
 
   // A cycle's rows for one Dan with this row-order (§7.2): own first, then make-ups (G 14).
   const ownThenMakeups = (x, y) => (x.source === 'makeup' ? 1 : 0) - (y.source === 'makeup' ? 1 : 0) || schoolOrder(x, y);
-  // roster order inside a Dan: Shrewsbury then Worcester, last name, first name, id
-  const schoolOrder = (x, y) => (x.location_code === 'shrewsbury' ? 0 : 1) - (y.location_code === 'shrewsbury' ? 0 : 1)
+  // roster order inside a Dan: Worcester then Shrewsbury (S-1, v1.047 (19)), last name, first name, id
+  const schoolOrder = (x, y) => (x.location_code === 'worcester' ? 0 : 1) - (y.location_code === 'worcester' ? 0 : 1)
     || collate(x.last_name, y.last_name) || collate(x.first_name, y.first_name) || byId(x, y);
 
   // A cycle object of the grading reads (§7.2).

@@ -10,7 +10,6 @@ import { useId, useState } from 'react';
 import { IconAlertTriangle } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import { RUBRIC_DANS } from '../../../lib/blackBelt/rubric.js';
-import InnerDialog from '../parts/InnerDialog.jsx';
 import { mostPointsList, passMarksList } from './summary.js';
 import * as T from '../text.js';
 
@@ -73,9 +72,10 @@ export default function CopyDanDialog({ rubric, danNo, where, unsaved, isPhone, 
 
   if (isPhone) {
     return (
-      <InnerDialog title={T.COPY_TITLE} fullScreen onRequestClose={onCancel}>
+      // onTop: it opens over the full-screen editor, which keeps the browser-history step.
+      <Dialog title={T.COPY_TITLE} fullScreen onTop onRequestClose={onCancel}>
         {content}
-      </InnerDialog>
+      </Dialog>
     );
   }
   return (

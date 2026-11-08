@@ -8,37 +8,31 @@
 //   2027. This can't be undone."  Keep candidate · Delete permanently (red)
 // The item is grayed (it never opens this) while the candidate has payment records (v0.904 —
 // payment records are never deleted) or grades (0025, v0.950); the database checks again.
-// The small box on every device (Dialog variant 'confirm'); focus starts on the safe choice.
-import { useId } from 'react';
-import Dialog from '../../../components/Dialog.jsx';
-import Notice from '../../../components/Notice.jsx';
+// Since BB7 (rulebook v1.008 / v1.103) it is the shared confirm box (components/ConfirmBox.jsx):
+// "Keep candidate" on the left (first focus), the red "Delete permanently" on the right; while it
+// works the red button says "Deleting…", both gray, and Esc, a click outside and Back wait. A
+// refusal (payment records, grades, a changed candidate) grays the red button and says why under
+// the buttons. The same small box on every device.
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
 export default function DeleteConfirm({ state, cycle, onConfirm, onCancel }) {
-  const bodyId = useId();
-  const name = T.candidateName(state.target);
-  const off = state.saving || state.blocking;
-  const Trash = ICONS.deleteForever;
   return (
-    <Dialog title={T.deleteTitle(name)} variant="confirm" describedBy={bodyId} onRequestClose={onCancel}>
-      <p id={bodyId} className="tdialog-sub tdialog-body">
-        {T.deleteBody(cycle.name)}
-      </p>
-      <div className="dialog-actions">
-        <button type="button" className="btn" data-autofocus onClick={onCancel}>
-          {T.KEEP_CANDIDATE}
-        </button>
-        <button type="button" className={`btn btn-delete${off ? ' is-unavailable' : ''}`} aria-disabled={off ? 'true' : undefined} onClick={() => !off && onConfirm()}>
-          <Trash size={16} aria-hidden="true" />
-          {state.saving ? T.SAVING : T.DELETE_PERMANENTLY}
-        </button>
-      </div>
-      {(state.note || state.failed) && (
-        <div className="tdialog-note">
-          <Notice>{state.failed ? T.SAVE_FAILED : state.note}</Notice>
-        </div>
-      )}
-    </Dialog>
+    <ConfirmBox
+      title={T.deleteTitle(T.candidateName(state.target))}
+      keepLabel={T.KEEP_CANDIDATE}
+      actionLabel={T.DELETE_PERMANENTLY}
+      actionIcon={ICONS.deleteForever}
+      busyLabel={T.DELETING}
+      loses="forGood"
+      busy={state.saving}
+      actionUnavailable={state.blocking}
+      failed={state.failed ? T.DELETE_FAILED : state.note}
+      onKeep={onCancel}
+      onConfirm={onConfirm}
+    >
+      {T.deleteBody(cycle.name)}
+    </ConfirmBox>
   );
 }

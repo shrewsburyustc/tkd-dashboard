@@ -25,6 +25,7 @@ import {
   IconTrash, // ti-trash — Delete permanently
   IconUserMinus, // ti-user-minus — Withdraw
   IconUserPlus, // ti-user-plus — New candidate (0025, G 24)
+  IconUsers, // ti-users — the Candidates card (the one card left while private details are hidden, as Star's)
   IconX, // ti-x — clear the search
 } from '@tabler/icons-react';
 
@@ -50,6 +51,7 @@ export const ICONS = {
   cardOnSchedule: IconClock,
   cardLate: IconAlertTriangle,
   cardNotPaid: IconCircleX,
+  cardCandidates: IconUsers,
   newCandidate: IconUserPlus,
   makeup: IconRepeat,
 };
