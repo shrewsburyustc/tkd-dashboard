@@ -12,6 +12,7 @@
 // (docs/Finance/TKD-Finance-BlackBelt-Mockups.html, rulebook v0.814 / v0.815). Words the
 // mockups don't draw (plural forms) are marked  // NOT IN MOCKUPS (B…)
 import { money, dayShort, timeOfDay } from './format.js';
+import { someoneElseChanged } from '../../components/text.js';
 import { blackBeltItemsText } from '../../lib/finance/csv.js';
 import { LOCATION_NAME } from '../../lib/device.js';
 
@@ -199,7 +200,9 @@ export const UNDO = 'Undo';
 export const UNDONE = 'Undone'; // the toast after an Undo that worked (v1.051)
 export const CLOSE_UNDONE = 'Undone. The day is open again.'; // two sentences: keeps its full stops (v1.051)
 export const TOO_LATE_UNDO = 'Too late to undo here. Ask an admin to reopen the day.'; // D3 proposal text
-export const UNDO_FAILED = 'Couldn’t undo. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
+// A failed Undo: the shared sentence (v1.051 (2): "Undo didn't save. Check the connection, then retry."), typed once in
+// src/components/text.js; the page's bar offers Retry with it (R2-07, v1.045 (4)).
+export { UNDO_DIDNT_SAVE as UNDO_FAILED } from '../../components/text.js';
 export const DAY_REOPENED = 'Day reopened. It can be counted again.'; // NOT IN MOCKUPS — for CP1
 export const REOPEN_FAILED = 'Couldn’t reopen the day. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
 export const NOT_CLOSED_ANY_MORE = 'This day isn’t closed any more. Someone reopened it just now.'; // NOT IN MOCKUPS — for CP1
@@ -207,8 +210,10 @@ export const ALREADY_CLOSED = 'Someone else closed this day just now. Check thei
 export const NOTHING_TO_CLOSE_NOW = 'There’s nothing to close any more: the payments were undone.'; // NOT IN MOCKUPS — for CP1
 
 // ----- Shared messages -----
-// The same sentence the Testing screens use for a stale write (contract §4: amber + reload).
-export const STALE = 'Someone else changed this just now. Your change wasn’t saved.';
+// A refused change: the one sentence every section says (R2-07, v1.045 (4)), naming what changed. The screen
+// reloads, so "Their change is shown" is true (contract §4: amber + reload).
+export const STALE_DAY = someoneElseChanged('the day'); // the Daily report, and the Close the day box
+export const STALE_SETTING = someoneElseChanged('the setting'); // Settings
 export const NOT_ALLOWED = 'Only an admin can do that.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_FAILED = 'Couldn’t load the daily report. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_HISTORY_FAILED = 'Couldn’t load History. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1

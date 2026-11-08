@@ -75,6 +75,7 @@ export default function SettingsTab({ isPhone, location, screenLocked, onNoAcces
 
   // The toast's Undo: puts the old value(s) back, using the version the change itself returned.
   async function runUndo(undo, version) {
+    setBanner(null); // a Retry that works must not leave the old "Undo didn't save" bar behind
     setBusy(true);
     const answer = await undo(version);
     setBusy(false);
@@ -83,16 +84,17 @@ export default function SettingsTab({ isPhone, location, screenLocked, onNoAcces
       live.reload();
       return;
     }
-    handleProblem(answer, null);
+    // a failed Undo says so in the shared words, with Retry for the same Undo (R2-07)
+    handleProblem(answer, () => runUndo(undo, version), T.UNDO_FAILED);
   }
 
-  function handleProblem(answer, retry) {
+  function handleProblem(answer, retry, failedText = T.SETTINGS_SAVE_FAILED) {
     if (answer.status === 'no_access') {
       onNoAccess();
       return;
     }
     if (answer.status === 'stale') {
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.STALE_SETTING });
       live.reload();
       return;
     }
@@ -101,7 +103,7 @@ export default function SettingsTab({ isPhone, location, screenLocked, onNoAcces
       onRefreshProfile();
       return;
     }
-    setBanner({ text: T.SETTINGS_SAVE_FAILED, retry });
+    setBanner({ text: failedText, retry });
   }
 
   // Several writes one after the other, each with the version the previous one returned.
