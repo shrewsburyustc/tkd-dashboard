@@ -65,7 +65,7 @@ Fix list `docs/Design Review/Rolling check/Pass 1/Fix-NewStudents.md`, received 
 | 4 | R3-03 "Showing … only · Show all", R3-09 "Find a prospect" | Planned: mockup first |
 | 5 | R3-11 ⋯ last, R4-06 weights + 12 px letters, family page Send gray, Sent page gap, Edit statuses wrap, S-10's dropdowns | Planned: pictures first; question 3 |
 | 6 | N7 shared time list (+ S-10 in the two dialogs) | Picture to redraw |
-| 7 | 0036 clean-up migration | **0040** reserved by Main 2026-11-05 (main 2187dbe, merged in here). **WRITTEN 2026-11-07 (batch 4, rulebook v0.647), not applied:** `0040_forms_old_shapes_removed.sql`, `0040_tests.sql`, `0040_fingerprints.sql`, `0040_preapply_check.sql`, SETUP "## Migration 0040", `step0040` (82 checks pass); security review clear; waits on Jeffrey's OK to paste |
+| 7 | 0036 clean-up migration | **0040** reserved by Main 2026-11-05 (main 2187dbe, merged in here). **WRITTEN 2026-11-07 (batch 4, rulebook v0.647); APPLIED 2026-11-08 (Jeffrey pasted it; fingerprints equal PGlite, advisor nothing new; `0040_tests.sql` passed on production, Jeffrey: "pass"):** `0040_forms_old_shapes_removed.sql`, `0040_tests.sql`, `0040_fingerprints.sql`, `0040_preapply_check.sql`, SETUP "## Migration 0040", `step0040` (82 checks pass); security review clear; waits on Jeffrey's OK to paste |
 | later | R2-05, R2-07 words, R3-06, S-2, Fill in's Send (R1-08) | Wait for Dashboard core's matching items on main |
 | later | N16's Show menu, N11 | Wait for the shared menu's tick boxes / Color Belt's CB14 + M15 |
 | check | R2-06, Draft Fill in gray, "Delete form", R5-01, R4-02, Delete field | Already done; checked when the steps are tried

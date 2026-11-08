@@ -3354,7 +3354,7 @@ Tested in PGlite on every run (`run.mjs` step0042: the pre-apply check; only 000
 
 ## Migration 0040: New students — the old child shape and the plain-text Address removed
 
-**Status: written and tested in PGlite 2026-11-07; NOT applied** (needs a security review and Jeffrey's OK before he pastes it). Built on `claude/prospect-form-system-cd893d` (rulebook v0.640; the clean-up 0036 promised: "a later small migration removes both old ways, at least 12 hours after the new app is pushed" — the new app went live 2026-11-04, main a5d0e1d).
+**Status: APPLIED 2026-11-08** (pasted by Jeffrey in the SQL Editor: "success no rows returned"; 0040a pre-check true / false / true / false / true, 0 old-shape sign-ups saved; 0040c: `0040_fingerprints.sql` on production equals the PGlite output exactly (both functions security invoker, `search_path=""`, `postgres:EXECUTE` only), pre-apply check after: false / true / false / true; the security advisor mentions neither function; 0040d: Jeffrey ran `0040_tests.sql` with the admin and desk UIDs: "pass" = ALL 0040 TESTS PASSED). Written and tested in PGlite 2026-11-07; security-reviewed, no findings. Built on `claude/prospect-form-system-cd893d` (rulebook v0.640; the clean-up 0036 promised: "a later small migration removes both old ways, at least 12 hours after the new app is pushed" — the new app went live 2026-11-04, main a5d0e1d).
 
 **Production order:** … 0036 → 0041 → 0042 → … → **0040** (it needs only 0036, 0031 and 0009; nothing after 0036 replaced the two functions it replaces — checked 2026-11-07). It stops with "0040 needs migration 0036 … first" otherwise.
 
