@@ -45,6 +45,7 @@ function Sign({ form, qr, link }) {
 
 export default function ShareDialog({ form, profile, isPhone, onClose, onNoAccess, showToast }) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false); // the clipboard refused (U-05)
   const [ask, setAsk] = useState(null); // null | 'open' | 'end' — the kiosk question shown in the dialog
   const [busy, setBusy] = useState(false);
   const [kioskNote, setKioskNote] = useState(null);
@@ -69,12 +70,15 @@ export default function ShareDialog({ form, profile, isPhone, onClose, onNoAcces
   }, [printing]);
 
   async function copy() {
+    setCopyFailed(false);
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
+      // a failure is never silent (U-05): the note under the link says to select and copy it by hand
       setCopied(false);
+      setCopyFailed(true);
     }
   }
 
@@ -176,6 +180,7 @@ export default function ShareDialog({ form, profile, isPhone, onClose, onNoAcces
               <span className="visually-hidden" aria-live="polite">
                 {copied ? T.COPIED : ''}
               </span>
+              {copyFailed && <Notice>{T.COPY_FAILED}</Notice>}
             </div>
             {live && qr && (
               <div className="field">

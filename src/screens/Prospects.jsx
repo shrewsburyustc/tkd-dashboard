@@ -3,7 +3,9 @@
 // here until they join (or drop out). This file is the "brain" of the section, like Forms.jsx:
 //   - loads the shown school's prospects and statuses (useProspects); on Both, Worcester's and
 //     Shrewsbury's sections show one after the other, each with its own bar — never mixed
-//   - the stage bar + chips + search (PipelineBar), the list (ProspectList), opening on
+//   - the stage bar + chips (PipelineBar), the gray "Showing … only · Show all" line while the List
+//     is filtered (R3-03), "Find a prospect" (SearchBox, left, above the list — R3-09; one box above
+//     both schools on Both), the list (ProspectList), opening on
 //     "Follow up today" (follow-ups due today or overdue, new sign-ups, "Did … come?", and free
 //     classes whose class was cancelled)
 //   - List or Board (v0.246): the switch next to the chips; each person's choice is remembered on
@@ -23,7 +25,7 @@
 //     Cancel a free class, Joined date, Delete (admins only)
 // Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
+import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus } from '@tabler/icons-react';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
@@ -43,7 +45,7 @@ import {
   searchProspects, setFollowUp, setStatus, undoCheckIn, updateStatus,
 } from '../lib/prospects/api.js';
 import { useFillIn } from './forms/useFillIn.js';
-import PipelineBar from './prospects/PipelineBar.jsx';
+import PipelineBar, { SearchBox } from './prospects/PipelineBar.jsx';
 import ProspectList from './prospects/ProspectList.jsx';
 import Board from './prospects/Board.jsx';
 import { useCardDrag } from './prospects/useCardDrag.js';
@@ -70,11 +72,11 @@ const connectionFailed = (status) => status === 'error';
 // Focus what `find` returns as soon as it can take focus. The page behind the profile window stays
 // "inert" (unclickable, unfocusable) until the App has seen the window close, so this tries again
 // on the next few screen frames (about a third of a second at most).
-function focusSoon(find, tries = 20) {
+function focusSoon(find, tries = 20, preventScroll = false) {
   window.requestAnimationFrame(() => {
     const el = find();
-    el?.focus();
-    if ((!el || document.activeElement !== el) && tries > 0) focusSoon(find, tries - 1);
+    el?.focus({ preventScroll });
+    if ((!el || document.activeElement !== el) && tries > 0) focusSoon(find, tries - 1, preventScroll);
   });
 }
 
@@ -101,7 +103,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   useEffect(() => {
     if (privateHidden) setDialog((d) => (d?.type === 'add' ? null : d));
   }, [privateHidden]);
-  const [found, setFound] = useState(null); // code -> Set of ids, while searching
+  const [found, setFound] = useState(null); // { text, ids: code -> Set of ids }, while searching
   const [selected, setSelected] = useState(null); // { id, code, opener } — the child whose profile is open
   const [detail, setDetail] = useState(null); // the profile window's prospect
   const [detailFailed, setDetailFailed] = useState(null); // the child whose profile couldn't be read (P-02)
@@ -171,13 +173,19 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       setFound(null);
       return undefined;
     }
+    let cancelled = false; // an answer that comes back after the text changed is thrown away
     const timer = window.setTimeout(async () => {
       const results = await Promise.all(codes.map((code) => searchProspects(code, text)));
+      if (cancelled) return undefined;
       if (results.some((r) => r.status === 'no_access')) return onNoAccess();
-      setFound(Object.fromEntries(codes.map((code, i) => [code, new Set(results[i].status === 'ok' ? results[i].ids : [])])));
+      // `text` says which search these results belong to (the no-match line waits for the current one)
+      setFound({ text, ids: Object.fromEntries(codes.map((code, i) => [code, new Set(results[i].status === 'ok' ? results[i].ids : [])])) });
       return undefined;
     }, 300);
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [search, codes, onNoAccess]);
 
   // ----- The profile window -----
@@ -188,6 +196,11 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     selectedIdRef.current = next?.id ?? null;
     setSelected(next);
   }
+  // A failure bar shown in a child's window goes when that window closes or another child opens,
+  // however that happens (pass 2 X-1); a bar without a window owner stays until fixed or ×.
+  useEffect(() => {
+    setBanner((b) => (b?.scope === 'window' && b.owner !== (selected?.id ?? null) ? null : b));
+  }, [selected?.id]);
   // The window's heading (PC / tablet) or its back arrow (phone): where focus goes inside it.
   const windowFocus = () => document.querySelector('.pp-dialog [data-profile-heading]') ?? document.querySelector('.dialog-page.pp-dialog [data-back]');
   // Loads a child's profile. An answer that comes back after another child was opened (a brother
@@ -257,6 +270,9 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   async function openProspect(p, code, opener) {
     if (noteInTheWay(p.id)) return;
     clearToast();
+    // A failure bar belongs to the child (or Board drop) it was made for: opening another child
+    // clears it, so its Retry can never repeat that save inside this child's window (pass 2 X-1).
+    setBanner(null);
     setNoteWarning(false);
     if (ref.current.selected?.id !== p.id) setNote(emptyNote());
     // the row that opened the window (a brother or sister opened inside it keeps the first one)
@@ -304,14 +320,31 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const s = ref.current.selected;
     select(null);
     setDetail(null);
+    setBanner((b) => (b?.scope === 'window' ? null : b)); // the window's own failure bar goes with it (X-1)
     // back on the child's row (or, when that child isn't in the list shown, the row that opened it)
     focusSoon(() => usable(document.querySelector(`[data-prospect-row="${s?.id}"]`)) ?? usable(s?.opener));
   }
-  async function afterWrite(result, toastText, undo) {
+  // `retry` = { key, run, undo, childId, windowOnly } (R2-01): what Retry does when this save fails on
+  // the connection. The failure bar keeps `run` (Retry repeats the same call) and the `key`; a later
+  // save with the same key that works takes that bar away. `undo: true` = it is an Undo, so the bar
+  // says "Undo didn't save …". `childId` = the child the save was for; `windowOnly` = `run` works on
+  // "the child in the open window", so it is dropped when that window is gone. `scope` says where
+  // the bar shows: 'window' (the child's profile, and only while that child is open) or 'page'
+  // (a Board drop, or a bar whose window closed). (Pass 2 X-1.)
+  async function afterWrite(result, toastText, undo, retry) {
     setBusy(false);
     if (result.status === 'ok') {
+      // this save worked: its own failure bar goes, and so does a failed-Undo bar for the same child
+      // (it could only undo something older than this save)
+      setBanner((b) => {
+        if (!b) return b;
+        if (retry && b.retryKey === retry.key) return null;
+        if (retry?.childId && b.retryKey === `undo:${retry.childId}`) return null;
+        return b;
+      });
       await Promise.all([pros.reload(), selectedIdRef.current ? loadDetail(selectedIdRef.current) : null]);
-      if (toastText) showToast(toastText, undo ? { icon: false, action: { label: T.UNDO, onAction: undo } } : {});
+      // no ✓ on any Prospects toast (R2-09, v1.046 (7)); a reversible change has a 5-second Undo
+      if (toastText) showToast(toastText, undo ? { icon: false, action: { label: T.UNDO, onAction: undo } } : { icon: false });
       keepFocusInWindow();
       return true;
     }
@@ -327,26 +360,42 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       setBanner({ text: T.NOT_ALLOWED });
       onRefreshProfile();
     } else if (result.status === 'invalid') setBanner({ text: T.INVALID });
-    else setBanner({ text: T.SAVE_FAILED });
+    else {
+      // Whose bar is it? A save made in a child's window (`childId`) shows its bar there only while
+      // that same child is still open. If the window closed or another child opened while the save
+      // was on its way, the bar goes to the page, and a retry that reads "the open child" is dropped:
+      // it could only change the wrong child (pass 2 X-1). Board drops and Undos know their child
+      // themselves, so they keep their Retry.
+      const mine = !retry?.childId || selectedIdRef.current === retry.childId;
+      setBanner({
+        text: retry?.undo ? T.UNDO_FAILED : T.SAVE_FAILED,
+        retry: retry && (mine || !retry.windowOnly) ? retry.run : undefined,
+        retryKey: retry?.key,
+        scope: retry?.childId && mine ? 'window' : 'page',
+        owner: retry?.childId ?? null,
+      });
+    }
     keepFocusInWindow();
     return false;
   }
   // The end of every Undo: the same checks as any save, then a short "Undone" when it worked
-  // (v0.618 — no tick, no button, like Calendar, Schedule and the Testing sections).
-  async function afterUndo(result) {
-    if (await afterWrite(result)) showToast(T.UNDONE, { icon: false });
+  // (v0.618 — no tick, no button, like Calendar, Schedule and the Testing sections). `run` is the
+  // Undo itself, so a failed one keeps a bar whose Retry runs it again (R2-01): the toast is gone by then.
+  async function afterUndo(result, run, key, childId) {
+    if (await afterWrite(result, undefined, undefined, run ? { key, run, undo: true, childId } : undefined)) showToast(T.UNDONE, { icon: false });
   }
   const statusOfDetail = () => schools.find((s) => s.code === ref.current.selected?.code)?.statusById;
 
   // Undo for a status change (v1.006, N2; Joined too, v0.617): puts the old status back — and the
   // old joined date when the child was Joined before, otherwise none. Like the Board drop's Undo.
   function statusUndo(p, wasJoined, savedVersion) {
-    return async () => {
+    const run = async () => {
       if (ref.current.busy) return;
       setBusy(true);
       const u = await setStatus({ id: p.id, expectedVersion: savedVersion, statusId: p.statusId, joinedOn: wasJoined ? p.joinedOn : null });
-      afterUndo(u);
+      afterUndo(u, run, `undo:${p.id}`, p.id);
     };
+    return run;
   }
 
   async function changeStatus(statusId, opener = null) {
@@ -360,7 +409,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const wasJoined = statusOfDetail()?.get(d.statusId)?.builtin === 'joined'; // before the save (the panel may change school)
     setBusy(true);
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId, joinedOn: null });
-    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''), statusUndo(d, wasJoined, r.version));
+    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''), statusUndo(d, wasJoined, r.version), { key: `status:${d.id}`, run: () => changeStatus(statusId, opener), childId: d.id, windowOnly: true });
   }
   async function saveJoined() {
     const g = ref.current.dialog;
@@ -383,14 +432,30 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const d = ref.current.detail;
     if (!d || busy) return;
     setBusy(true);
-    afterWrite(await setFollowUp({ id: d.id, expectedVersion: d.version, followUpOn: date }));
+    const r = await setFollowUp({ id: d.id, expectedVersion: d.version, followUpOn: date });
+    // A new follow-up date has a 5-second Undo that puts the old date back (v1.006, default 3); a
+    // failed one keeps a bar whose Retry runs it again (R2-01)
+    const undoRun = async () => {
+      if (ref.current.busy) return;
+      setBusy(true);
+      const u = await setFollowUp({ id: d.id, expectedVersion: r.version, followUpOn: d.followUpOn ?? null });
+      afterUndo(u, undoRun, `undo:${d.id}`, d.id);
+    };
+    afterWrite(r, T.FOLLOW_UP_SAVED(date), undoRun, { key: `followup:${d.id}`, run: () => changeFollowUp(date), childId: d.id, windowOnly: true });
   }
   async function saveNote({ set, date }) {
     const d = ref.current.detail;
     if (!d || busy) return;
+    // A Retry pressed after the note was cleared or cancelled must not send an empty note: drop its bar
+    if (!noteRef.current.body.trim()) {
+      setBanner((b) => (b?.retryKey === `note:${d.id}` ? null : b));
+      return;
+    }
     setBusy(true);
-    const r = await addNote({ id: d.id, body: note.body.trim(), setFollowUp: set, followUpOn: date });
-    if (await afterWrite(r, T.NOTE_SAVED)) {
+    // the note as it is NOW (noteRef), not as it was when this function was made: a Retry pressed
+    // after more typing must save, and then clear, that newer text
+    const r = await addNote({ id: d.id, body: noteRef.current.body.trim(), setFollowUp: set, followUpOn: date });
+    if (await afterWrite(r, T.NOTE_SAVED, undefined, { key: `note:${d.id}`, run: () => saveNote({ set, date }), childId: d.id, windowOnly: true })) {
       setNote(emptyNote());
       setNoteWarning(false);
     }
@@ -402,14 +467,18 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     if (!d || busy) return;
     setBusy(true);
     const r = await checkIn({ id: d.id, expectedVersion: d.version, came, afterClass });
-    return checkInDone(r, came, d);
+    return checkInDone(r, came, d, { key: `checkin:${d.id}`, run: () => doCheckIn(came, afterClass), childId: d.id, windowOnly: true });
   }
-  // The end of a check-in (or No-show): the usual checks, the toast and its Undo
-  function checkInDone(r, came, d) {
-    return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), async () => {
+  // The end of a check-in (or No-show): the usual checks, the toast and its Undo (and, from the
+  // window, the Retry of a failed one — R2-01)
+  function checkInDone(r, came, d, retry) {
+    const undoRun = async () => {
+      if (ref.current.busy) return; // a second press of Retry while it runs does nothing
+      setBusy(true);
       const u = await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn });
-      afterUndo(u);
-    });
+      afterUndo(u, undoRun, `undo:${d.id}`, d.id);
+    };
+    return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), undoRun, retry);
   }
 
   // ----- Book / change / cancel a free class -----
@@ -445,7 +514,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       return;
     }
     setDialog(null);
-    if ((await afterWrite(r, T.BOOKED(d.childFirstName))) && g.dropCode) {
+    // A first booking has a 5-second Undo that cancels it, like Cancel booking (v1.006, default 3). A
+    // changed time has none: cancelling it would leave the child with no class at all.
+    const undoRun = g.change ? undefined : async () => {
+      if (ref.current.busy) return;
+      setBusy(true);
+      const u = await cancelTime({ id: d.id, expectedVersion: r.version });
+      afterUndo(u, undoRun, `undo:${d.id}`, d.id);
+    };
+    if ((await afterWrite(r, T.BOOKED(d.childFirstName), undoRun)) && g.dropCode) {
       const booked = schools.find((x) => x.code === g.dropCode)?.statuses.find((s) => s.builtin === 'booked');
       if (booked) flashStage(g.dropCode, booked.id);
     }
@@ -455,11 +532,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     if (!d || busy) return;
     setBusy(true);
     const r = await cancelTime({ id: d.id, expectedVersion: d.version });
-    afterWrite(r, T.CANCELLED_BOOKING(d.childFirstName), async () => {
+    // the Undo books the same time again; a failed one keeps a bar whose Retry runs it again (R2-01)
+    const undoRun = async () => {
+      if (ref.current.busy) return; // a second press of Retry while it runs does nothing
+      setBusy(true);
       const c = r.cancelled;
       const again = await bookTime({ id: d.id, expectedVersion: r.version, formId: c.formId, classId: c.classId, date: c.date, start: c.start });
-      afterUndo(again.status === 'time_taken' ? { status: 'stale' } : again);
-    });
+      afterUndo(again.status === 'time_taken' ? { status: 'stale' } : again, undoRun, `undo:${d.id}`, d.id);
+    };
+    afterWrite(r, T.CANCELLED_BOOKING(d.childFirstName), undoRun, { key: `cancel:${d.id}`, run: doCancelBooking, childId: d.id, windowOnly: true });
   }
 
   // ----- The Board: List / Board, and dropping a card on another stage (v0.246) -----
@@ -469,6 +550,26 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     // each view starts on its own filter: the List on "Follow up today", the Board on everyone
     setFilters(code && filter ? { [code]: filter } : {});
     setSearch('');
+  }
+  // "Show all" in the gray "Showing … only" line (R3-03): shows everyone. The link goes away as it is
+  // pressed, so when it had the keyboard focus, the focus goes to the chip or stage that was on (v1.119,
+  // as the shared count cards do) — never lost to the page. A click or a tap must not scroll the page
+  // (event.detail counts clicks; a key press is 0).
+  function showAll(code, filter, event) {
+    const wasFocused = document.activeElement === event.currentTarget;
+    const keyOf = filter.kind === 'today' ? 'today' : filter.id;
+    setFilters((x) => ({ ...x, [code]: { kind: 'all' } }));
+    if (wasFocused) {
+      const preventScroll = event.detail > 0;
+      focusSoon(() => document.querySelector(`[data-prospects-school="${code}"] [data-filter-key="${keyOf}"]`), 3, preventScroll);
+    }
+  }
+  // "Clear search" in the no-match line: empties the box and puts the focus back in it (the box's own ✕
+  // does the same)
+  function clearSearch(event) {
+    setSearch('');
+    const preventScroll = (event?.detail ?? 0) > 0;
+    window.requestAnimationFrame(() => document.querySelector('.prospects input[type=search]')?.focus({ preventScroll }));
   }
   function goToStage(code, statusId) {
     if (isPhone) {
@@ -492,14 +593,22 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     });
   }
   // The full prospect for a dialog (the list doesn't carry everything the dialogs need)
-  async function fetchProspect(id) {
+  // `retry` runs when the read fails on the connection (the bar's Retry, R2-01)
+  async function fetchProspect(id, retry) {
     setBusy(true);
     const res = await getProspect(id);
     setBusy(false);
-    if (res.status === 'ok') return res.prospect;
+    if (res.status === 'ok') {
+      // an earlier "Couldn't load that child" bar for this child is fixed now: it goes
+      setBanner((b) => (b?.retryKey === `fetch:${id}` ? null : b));
+      return res.prospect;
+    }
     if (res.status === 'no_access') onNoAccess();
-    else {
-      setBanner({ text: res.status === 'not_found' ? T.STALE : T.SAVE_FAILED });
+    else if (res.status === 'not_found') {
+      setBanner({ text: T.STALE });
+      pros.reload();
+    } else {
+      setBanner({ text: T.LOAD_ONE_FAILED, retry, retryKey: `fetch:${id}`, scope: 'page' });
       pros.reload();
     }
     return null;
@@ -513,13 +622,14 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     if (from?.builtin === 'no_show' && to.builtin === 'booked') return;
     clearToast();
     const booked = Boolean(p.booking && p.booking.status === 'booked');
+    const again = () => dropCard(p, code, statusId); // what Retry does if reading the child fails
     if (to.builtin === 'booked' && !booked) {
-      const d = await fetchProspect(p.id);
+      const d = await fetchProspect(p.id, again);
       if (d) openBook(d, code);
       return;
     }
     if (to.builtin === 'came') {
-      const d = await fetchProspect(p.id);
+      const d = await fetchProspect(p.id, again);
       // a class still ahead can't be checked in yet: the dialog says when, with only "Keep in …"
       const ahead = Boolean(d?.booking && d.booking.status === 'booked' && d.booking.classRunning && !d.checkedInAt && d.booking.date > today);
       // the Board column the card sits in now, for "Keep in Booked" (N3): a No-show's card sits
@@ -529,19 +639,21 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       return;
     }
     if (to.builtin === 'joined') {
-      const d = await fetchProspect(p.id);
+      const d = await fetchProspect(p.id, again);
       if (d) setDialog({ type: 'joined', key: Date.now(), prospect: d, name: d.childFirstName, statusId, date: today, dropCode: code, saving: false, note: null });
       return;
     }
     setBusy(true);
     const r = await setStatus({ id: p.id, expectedVersion: p.version, statusId, joinedOn: null });
     if (r.status === 'ok') flashStage(code, statusId);
-    afterWrite(r, T.MOVED(p.childFirstName, to.name), async () => {
+    const undoRun = async () => {
       if (ref.current.busy) return;
       setBusy(true);
       const u = await setStatus({ id: p.id, expectedVersion: r.version, statusId: p.statusId, joinedOn: from?.builtin === 'joined' ? p.joinedOn : null });
-      afterUndo(u);
-    });
+      afterUndo(u, undoRun, `undo:${p.id}`, p.id);
+    };
+    // a failed drop keeps a bar whose Retry drops the card again (R2-01)
+    afterWrite(r, T.MOVED(p.childFirstName, to.name), undoRun, { key: `drop:${p.id}`, run: () => dropCard(p, code, statusId) });
   }
   // "Came": check the child in when there is a class to check in to, otherwise save the status
   async function saveCame() {
@@ -601,7 +713,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       setDetail(null);
       await pros.reload();
       onBadgeRefresh?.();
-      showToast(T.DELETED(d.childFirstName));
+      showToast(T.DELETED(d.childFirstName), { icon: false });
     } else afterWrite(r);
   }
 
@@ -705,10 +817,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     else if (r.status === 'no_access') {
       setDialog((x) => (x ? { ...x, saving: false } : x));
       onNoAccess();
+    } else if (r.status === 'stale' || r.status === 'not_found') {
+      // Someone else changed (or deleted) the status: the box steps back to the list, which was just
+      // reloaded and shows their change, with a note that names it — as Calendar's Delete type does
+      // (pass 2 U-03). Pressing Delete again could not work from the old box.
+      setDialog((x) => (x ? { ...x, saving: false, step: 'list', statusId: null, from: g.statusId, moveTo: null, note: 'STALE_STATUS', noteName: st.name } : x));
     } else {
-      // only a connection failure says "Couldn't delete … connection …" (pass 2 U-08); someone
-      // else's change (or a status already gone) and a refused value keep their own notes
-      const note = connectionFailed(r.status) ? 'DELETE_FAILED' : r.status === 'not_allowed' ? 'NOT_ALLOWED' : r.status === 'invalid' ? 'INVALID' : 'STALE';
+      // only a connection failure says "Couldn't delete … connection …" (pass 2 U-08); a refused
+      // value keeps its own note
+      const note = connectionFailed(r.status) ? 'DELETE_FAILED' : r.status === 'not_allowed' ? 'NOT_ALLOWED' : 'INVALID';
       setDialog((x) => (x ? { ...x, saving: false, note } : x));
     }
   }
@@ -746,8 +863,16 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         familyBookingDates={shownDetail ? profileSchool.all.filter((p) => p.familyId === shownDetail.familyId).map((p) => p.booking?.date ?? null) : []}
         printedBy={profileName}
         // the amber bar shows in the window while it is open (the page's own bar is behind it)
-        banner={banner}
+        banner={banner && banner.scope !== 'page' ? banner : null} // a 'page' bar (a Board drop) waits on the page until the window closes
         onDismissBanner={() => setBanner(null)}
+        // Print on a child that was deleted elsewhere (or by the 6-month clean-up): the window closes
+        // and the page's bar says so; Retry could never work (pass 2 U-04)
+        onGone={() => {
+          select(null);
+          setDetail(null);
+          setBanner({ text: T.PROSPECT_GONE });
+          pros.reload();
+        }}
         onNote={(patch) => {
           setNote((n) => ({ ...n, ...patch }));
           if (patch.body === '') setNoteWarning(false);
@@ -788,10 +913,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     body = schools.map((school) => {
       const board = view === 'board';
       // the Board always shows everyone (difference C); only search narrows it
-      const filter = board ? { kind: 'all' } : filters[school.code] ?? { kind: 'today' };
+      // a filter that points at a status that is gone (deleted meanwhile) counts as "everyone"
+      const picked = filters[school.code];
+      const pickedGone = picked?.kind === 'status' && !school.statusById.has(picked.id);
+      const filter = board ? { kind: 'all' } : pickedGone ? { kind: 'all' } : picked ?? { kind: 'today' };
       const searching = found !== null;
+      // the no-match line is only for the text the results were computed for (not during the 300 ms wait)
+      const resultsFresh = searching && found.text === search.trim();
       let items = school.all;
-      if (searching) items = items.filter((p) => found[school.code]?.has(p.id));
+      if (searching) items = items.filter((p) => found.ids[school.code]?.has(p.id));
       else if (filter.kind === 'today') items = school.due;
       else if (filter.kind === 'status' && !board) {
         // the Booked tile shows the No-shows too, like the Booked column (v0.610)
@@ -799,7 +929,31 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         items = items.filter((p) => p.statusId === filter.id || (withNoShows && school.noShowIds.has(p.statusId)));
       }
       const onBoard = (p) => school.statusById.get(p.statusId)?.kind === 'stage' || school.noShowIds.has(p.statusId);
-      const emptyText = school.all.length === 0 ? T.NO_PROSPECTS : searching ? T.NO_MATCH : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
+      const emptyText = school.all.length === 0 ? T.NO_PROSPECTS : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
+      // "Showing follow up today only · Show all" (R3-03, v1.047 (10)): one gray line under the bar
+      // while the List is filtered (the opening filter included, search not on). The Board always
+      // shows everyone, so it gets none.
+      const filterName = filter.kind === 'today' ? T.FOLLOW_UP_TODAY : filter.kind === 'status' ? school.statusById.get(filter.id)?.name ?? '' : null;
+      const showingLine = !board && !searching && filterName !== null && (
+        <p className="ev-filter-line cards-showing">
+          {T.showingOnly(filterName)} ·{' '}
+          <button type="button" className="link-button inline-link" onClick={(e) => showAll(school.code, filter, e)}>
+            {T.SHOW_ALL}
+          </button>
+        </p>
+      );
+      // A search that finds nobody (R3-09): one line in the list's place, with a "Clear search" link
+      // drawn like the "Showing … only" line. On the Board the same line replaces its own note.
+      // Only when the school has no match at all: on the Board a match that is not a card (a Not
+      // interested child) keeps the Board's own "Showing 0 of N" note, because the List would find them.
+      const noMatchLine = resultsFresh && school.all.length > 0 && items.length === 0 && (
+        <p className="ev-filter-line cards-showing pnomatch">
+          {T.noMatch(search.trim())} ·{' '}
+          <button type="button" className="link-button inline-link" aria-label={both ? T.clearSearchFor(school.name) : undefined} onClick={clearSearch}>
+            {T.CLEAR_SEARCH}
+          </button>
+        </p>
+      );
       return (
         <section key={school.code} className="psection" data-prospects-school={school.code} aria-label={both ? school.name : undefined}>
           {both && (
@@ -821,8 +975,6 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
             todayCount={school.due.length}
             filter={searching ? { kind: 'search' } : filter}
             isPhone={isPhone}
-            search={search}
-            showSearch={!both}
             onFilter={(f) => {
               // on the Board, a side exit (No-show, Not interested) shows those children in the List
               if (board && f.kind === 'status') {
@@ -832,8 +984,11 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
               setSearch('');
               setFilters((x) => ({ ...x, [school.code]: f }));
             }}
-            onSearch={setSearch}
           />
+          {/* In this order (v1.047 (15)): the stage bar and chips, "Showing … only", Find a prospect,
+              then the list. On Both there is one box above the two schools instead. */}
+          {showingLine}
+          {!both && <SearchBox id={`prospects-${school.code}-search`} search={search} onSearch={setSearch} />}
           <div className="pbody">
             {board ? (
               <Board
@@ -851,9 +1006,12 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
                 column={boardCols[school.code]}
                 onColumn={(id) => setBoardCols((x) => ({ ...x, [school.code]: id }))}
                 drag={drag}
-                searchNote={searching ? { shown: items.filter(onBoard).length, total: school.all.filter(onBoard).length, text: search.trim(), onClear: () => setSearch('') } : null}
+                noMatch={noMatchLine}
+                searchNote={searching && !noMatchLine ? { shown: items.filter(onBoard).length, total: school.all.filter(onBoard).length, text: search.trim(), onClear: () => setSearch('') } : null}
                 onOpen={(p, opener) => openProspect(p, school.code, opener)}
               />
+            ) : noMatchLine ? (
+              noMatchLine
             ) : (
               <ProspectList
                 items={items}
@@ -941,7 +1099,6 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>
           <p className="psub">{both ? T.BOTH_SCHOOLS : location}</p>
         </div>
-        <IconButton label={T.MORE_ACTIONS} aria-haspopup="menu" aria-expanded={menu ? 'true' : 'false'} onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })} Icon={IconDots} />
         {/* grayed but still focusable while private details are hidden (v0.616); the line below says why */}
         <button
           type="button"
@@ -954,6 +1111,8 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
           <IconPlus size={16} aria-hidden="true" />
           {isPhone ? T.ADD_SHORT : T.ADD_PROSPECT}
         </button>
+        {/* the page's ⋯ comes last, to the right of the blue button (R3-11, v1.047 (16)) */}
+        <IconButton label={T.MORE_ACTIONS} aria-haspopup="menu" aria-expanded={menu ? 'true' : 'false'} onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })} Icon={IconDots} />
       </div>
       {privateHidden && (
         <p className="phidden-line pdesk-line" id="prospects-add-at-desk">
@@ -963,28 +1122,10 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         </p>
       )}
       {/* the amber bar: here while no profile window is open, else at the top of the window — never both */}
-      {banner && !profileElement && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
-      {both && data && (
-        // On Both, ONE search for the two schools (each section shows its own matches)
-        <label className="psearch psearch--both">
-          <IconSearch size={16} aria-hidden="true" />
-          <span className="visually-hidden">{T.SEARCH_LABEL}</span>
-          <input type="search" className="psearch-input" placeholder={T.SEARCH} value={search} maxLength={80} onChange={(e) => setSearch(e.target.value)} />
-          {search && (
-            // the shared icon button: 28px, "Clear search" tooltip, 44px on touch (rulebook v0.631);
-            // it disappears when pressed, so focus goes back into the search box
-            <IconButton
-              label={T.CLEAR_SEARCH}
-              Icon={IconX}
-              onClick={(e) => {
-                const input = e.currentTarget.closest('label')?.querySelector('input');
-                setSearch('');
-                input?.focus();
-              }}
-            />
-          )}
-        </label>
-      )}
+      {/* a bar with `retry` gets Retry, which does the same call again (v1.004, R2-01) */}
+      {banner && !profileElement && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {/* On Both, ONE search for the two schools (each section shows its own matches), on the left above them */}
+      {both && data && <SearchBox id="prospects-both-search" search={search} onSearch={setSearch} both />}
       {body}
       {profileElement}
       {menu && !screenLocked && (
