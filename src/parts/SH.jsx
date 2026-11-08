@@ -10,6 +10,8 @@ import { useId, useState } from 'react';
 import BackLink from '../components/BackLink.jsx';
 import Grip from '../components/Grip.jsx';
 import Select from '../components/Select.jsx';
+import ChoiceGroup from '../components/ChoiceGroup.jsx';
+import { PaidByField } from '../components/MarkPaidBox.jsx';
 
 // A grouped list (Select's `group`): "Current" and "Planned" headings above their choices
 const GROUPED = [
@@ -17,6 +19,12 @@ const GROUPED = [
   { value: 'b', label: 'Summer', group: 'Current' },
   { value: 'c', label: 'Fall', group: 'Planned' },
   { value: 'd', label: 'Winter', group: 'Planned' },
+];
+
+const DANS = [
+  { key: 'first', label: '1st Dan' },
+  { key: 'second', label: '2nd Dan' },
+  { key: 'third', label: '3rd Dan' },
 ];
 
 function Looks() {
@@ -53,6 +61,14 @@ function Looks() {
         <div style={{ width: 240 }}>
           <Select id="sh-select" labelId={labelId} value={picked} options={GROUPED} placeholder="Choose…" onChange={setPicked} />
         </div>
+      </div>
+      <div className="parts-sh-row" data-sh="choices">
+        <span id={`${labelId}-locked`}>Dan (locked)</span>
+        <ChoiceGroup labelId={`${labelId}-locked`} options={DANS} value="first" onChange={() => {}} locked fill />
+      </div>
+      {/* Paid by in a wide parent: its joined buttons are only as wide as their words (compact) */}
+      <div className="parts-sh-row" data-sh="paidby" style={{ display: 'block', width: 520 }}>
+        <PaidByField value="cash" onChange={() => {}} label="Refunded by" />
       </div>
       <div className="parts-sh-row" data-sh="tags">
         <button type="button" className="ttag ev-tag-button">
