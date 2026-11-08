@@ -3461,7 +3461,11 @@ begin
     if not coalesce('search_path=""' = any (v_fn.proconfig), false) then
       raise exception 'TEST FAILED: C4 % has no search_path = ''''', v_fn.oid::regprocedure;
     end if;
-    if v_fn.pronargdefaults <> 0 then raise exception 'TEST FAILED: C4 % has argument defaults', v_fn.oid::regprocedure; end if;
+    -- (0046: Record payment and Record refund end with one defaulted input, p_school; no other function has a default)
+    if v_fn.pronargdefaults <> (case when v_fn.name in ('bb_record_payment', 'bb_record_refund')
+                                      and pg_get_function_arguments(v_fn.oid) like '%p\_school text DEFAULT NULL::text' then 1 else 0 end) then
+      raise exception 'TEST FAILED: C4 % has argument defaults', v_fn.oid::regprocedure;
+    end if;
     if has_function_privilege('anon', v_fn.oid, 'EXECUTE') or has_function_privilege('service_role', v_fn.oid, 'EXECUTE')
        or has_function_privilege('testing_registrar', v_fn.oid, 'EXECUTE') or has_function_privilege('star_registrar', v_fn.oid, 'EXECUTE') then
       raise exception 'TEST FAILED: C4 anon, service_role or another form''s login can execute %', v_fn.oid::regprocedure;
@@ -3527,10 +3531,15 @@ begin
       'public.bb_restore_candidate(uuid, integer)',
       'public.bb_delete_candidate(uuid, integer)',
       'public.bb_record_paper_waiver(uuid, integer)',
-      'public.bb_record_payment(uuid, integer, integer, text, text[], text)',
+      -- (0046 gives Record payment / Record refund a last input, p_school: either signature is right)
+      case when to_regprocedure('public.bb_record_payment(uuid, integer, integer, text, text[], text, text)') is not null
+           then 'public.bb_record_payment(uuid, integer, integer, text, text[], text, text)'
+           else 'public.bb_record_payment(uuid, integer, integer, text, text[], text)' end,
       'public.bb_undo_payment(uuid)',
       'public.bb_edit_payment(uuid, integer, text, text[], text, text)',
-      'public.bb_record_refund(uuid, integer, integer, text, text)',
+      case when to_regprocedure('public.bb_record_refund(uuid, integer, integer, text, text, text)') is not null
+           then 'public.bb_record_refund(uuid, integer, integer, text, text, text)'
+           else 'public.bb_record_refund(uuid, integer, integer, text, text)' end,
       'public.bb_mark_check_returned(uuid, text)',
       'public.bb_cycles_list()',
       'public.bb_cycle_roster(uuid)',

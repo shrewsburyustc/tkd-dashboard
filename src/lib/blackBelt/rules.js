@@ -40,6 +40,20 @@ import { dueKey, savedDueDates } from './dateLimits.js';
 export const PARTS = ['physical', 'technical', 'curriculum']; // always in this order
 export const DANS = [1, 2, 3, 4];
 export const SCHOOL_CODES = ['worcester', 'shrewsbury'];
+// The school of the DESK taking a payment or refund (R1-01, rulebook v1.035): the school set under
+// "This device" in the account menu ('Worcester' | 'Shrewsbury', or a code). Gives the lowercase
+// code the database stores, or null when it isn't a known school — then the app sends no p_school
+// and the database falls back to its old rule (the candidate's school).
+export const deskSchoolCode = (deviceLocation) => {
+  const code = typeof deviceLocation === 'string' ? deviceLocation.trim().toLowerCase() : '';
+  return SCHOOL_CODES.includes(code) ? code : null;
+};
+// The extra database input for Record payment / Record refund: { p_school } for a known school,
+// else nothing at all (an empty object), so the call is the old call.
+export const deskSchoolArg = (deviceLocation) => {
+  const code = deskSchoolCode(deviceLocation);
+  return code ? { p_school: code } : {};
+};
 export const MAX_DAYS = 20; // 1–20 testing days per cycle
 export const MAX_PLANS = 10; // 1–10 payment plans per cycle
 export const MAX_PAYMENTS = 12; // 1–12 payments per plan
@@ -1052,7 +1066,45 @@ export function searchMatches(row, text) {
   return [first, last, `${first}${last}`, squash(row?.reference)].some((hay) => hay.includes(needle));
 }
 
-// The rows the list shows, in the order given (the database's: Dan, Shrewsbury then Worcester,
+// The order of every Black Belt list that names both schools (S-1, rulebook v1.047 (19), Jeffrey "C"):
+// Dan, then Worcester before Shrewsbury, then last name, then first name, then id. Names compare
+// without regard to capitals (en-US, like the database). The database still sends Shrewsbury first
+// (its migration changes later), so the app puts the rows in this order itself as it receives them
+// (api.js loadRoster, gradingApi.js loadGradingGrid / loadResults / loadMakeupList); on a one-school
+// list the school step does nothing, so nothing else moves.
+const NAME_COLLATOR = new Intl.Collator('en-US');
+const nameCompare = (a, b) => NAME_COLLATOR.compare(String(a ?? '').toLowerCase(), String(b ?? '').toLowerCase());
+const schoolRank = (code) => (code === 'worcester' ? 0 : 1);
+// row: { dan, locationCode, lastName, firstName, id } (the app's camelCase rows)
+export function compareDanSchoolName(a, b) {
+  return ((a?.dan ?? 0) - (b?.dan ?? 0))
+    || (schoolRank(a?.locationCode) - schoolRank(b?.locationCode))
+    || nameCompare(a?.lastName, b?.lastName)
+    || nameCompare(a?.firstName, b?.firstName)
+    || byText(String(a?.id ?? ''), String(b?.id ?? ''));
+}
+// A new array in that order. makeupsLast: the cycle's own candidates first, then make-ups (the
+// Grading grid, G 14), each group in the order above (rows there carry no Dan: one Dan per grid).
+export function sortWorcesterFirst(rows, { makeupsLast = false } = {}) {
+  const list = [...(rows ?? [])];
+  list.sort((a, b) => (makeupsLast ? (a?.isMakeup ? 1 : 0) - (b?.isMakeup ? 1 : 0) : 0) || compareDanSchoolName(a, b));
+  return list;
+}
+// The make-up picker: newest earlier cycle first (as the database sends it), then the order above.
+export function sortMakeupPicker(rows) {
+  const list = [...(rows ?? [])];
+  // Newest earlier cycle first; two cycles that start the same day stay apart (the database keeps
+  // each cycle's rows together, ordered by first day then cycle id), then Dan, school, name.
+  list.sort(
+    (a, b) =>
+      byText(String(b?.cycleFirstDay ?? ''), String(a?.cycleFirstDay ?? '')) ||
+      byText(String(a?.cycleId ?? ''), String(b?.cycleId ?? '')) ||
+      compareDanSchoolName(a, b),
+  );
+  return list;
+}
+
+// The rows the list shows, in the order given (Dan, Worcester then Shrewsbury — sortWorcesterFirst —
 // last name, first name):
 //   school  the location switcher (Both = everyone)
 //   card    null (all) | 'paidInFull' | 'onSchedule' | 'late' | 'notPaid' — exactly the rows the

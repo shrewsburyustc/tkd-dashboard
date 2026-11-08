@@ -8,78 +8,40 @@
 //     2nd Dan has different subjects. This can't be undone." — with extra-point counts or chosen
 //     make-up subjects too: "The 9 grades and 4 extra-point counts entered for 1st Dan will be
 //     cleared. …" (DC 1)
-//   - Cancel (back to Edit details, nothing saved) and the red "Change Dan and clear 9 grades"
-//     (", 4 counts") — red because it deletes (DC 2). The cleared grades stay in the change log.
-//   - PC and tablet: a centred box (44px buttons on touch, from the touch styles); phones: a full
-//     screen with the buttons stacked, the red one on top (DC 3)
+//   - "Keep 1st Dan" (the current Dan, as Star's; back to Edit details, nothing saved) on the left,
+//     and the red "Change Dan and clear 9 grades" (", 4 counts") on the right — red because it
+//     deletes (DC 2). The cleared grades stay in the change log.
 //   - someone graded meanwhile: the red button's answer is has_grades with the NEW counts; the
 //     question stays open with them and says "Alex Kim's grades changed. Check the number and try
 //     again." (DC 5)
+// Since BB7 / BB19 (rulebook v1.008 / v1.103, D10a) it is the shared confirm box
+// (components/ConfirmBox.jsx): the same small box on EVERY device (phones used to get v0.955's
+// full-screen page with the red button on top), the safe button on the left and first focus, the
+// red one on the right; while it works the red button says "Changing…", both gray, and Esc, a
+// click outside and Back wait. A long red label puts the two buttons one under the other, the
+// box measures that itself.
 // This file only draws; useCandidateActions.js keeps the state and makes the call.
-import { useId } from 'react';
-import Dialog from '../../../components/Dialog.jsx';
-import Notice from '../../../components/Notice.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
-export default function DanChangeDialog({ state, isPhone, onConfirm, onCancel }) {
-  const bodyId = useId();
+export default function DanChangeDialog({ state, onConfirm, onCancel }) {
   const name = T.candidateName(state.candidate);
-  const off = state.saving || state.blocking;
-  const Trash = ICONS.deleteForever;
-  const note = state.failed ? T.SAVE_FAILED : state.note;
-
-  const cancelButton = (
-    <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} data-autofocus onClick={onCancel}>
-      {T.CANCEL}
-    </button>
-  );
-  const clearButton = (
-    <button
-      type="button"
-      className={`btn btn-delete${isPhone ? ' btn-block' : ''}${off ? ' is-unavailable' : ''}`}
-      aria-disabled={off ? 'true' : undefined}
-      onClick={() => !off && onConfirm()}
-    >
-      {/* One inline run of icon + words: when the label wraps (320px), the icon stays with the
-          first line instead of sitting beside both lines */}
-      <span>
-        <Trash size={16} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 6 }} />
-        {state.saving ? T.SAVING : T.clearGradesButton(state.counts)}
-      </span>
-    </button>
-  );
-
   return (
-    <Dialog
+    <ConfirmBox
       title={T.changeDanTitle(name, state.newDan)}
-      variant={isPhone ? 'form' : 'confirm'}
-      size="detail"
-      fullScreen={isPhone}
-      describedBy={bodyId}
-      onRequestClose={() => !state.saving && onCancel()}
+      keepLabel={T.keepDan(state.oldDan)}
+      actionLabel={T.clearGradesButton(state.counts)}
+      actionIcon={ICONS.deleteForever}
+      busyLabel={T.CHANGING}
+      loses="forGood"
+      busy={state.saving}
+      actionUnavailable={state.blocking}
+      failed={state.failed ? T.SAVE_FAILED : state.note}
+      onKeep={onCancel}
+      onConfirm={onConfirm}
     >
-      <p id={bodyId} className="tdialog-sub tdialog-body">
-        {T.changeDanBody(state.counts, state.oldDan, state.newDan)}
-      </p>
-      {isPhone ? (
-        // Phones (DC 3): stacked, the red button on top
-        <div className="bb-dan-change-stack">
-          {clearButton}
-          {cancelButton}
-        </div>
-      ) : (
-        <div className="dialog-actions bb-dan-change">
-          {cancelButton}
-          {clearButton}
-        </div>
-      )}
-      {/* The note comes right after the buttons (as every confirm box, v0.81) */}
-      {note && (
-        <div className="tdialog-note">
-          <Notice>{note}</Notice>
-        </div>
-      )}
-    </Dialog>
+      {T.changeDanBody(state.counts, state.oldDan, state.newDan)}
+    </ConfirmBox>
   );
 }
