@@ -178,7 +178,7 @@ export const UNDOING = 'Undoing…';
 export const DELETING = 'Deleting…';
 export const CHANGING = 'Changing…';
 export const UNDO_BOX_FAILED = UNDO_DIDNT_SAVE; // Undo payment, Undo refund: the shared failed-Undo sentence (R2-07 / C-06 b, v1.045 (4))
-export const DELETE_BOX_FAILED = "Couldn't delete. Check the connection, then try again."; // Delete permanently (Q2 B)
+export const DELETE_BOX_FAILED = "Couldn't delete. Check the connection, then retry."; // Delete permanently (Q2 B)
 // (the Dan-change box keeps DIALOG_FAILED, "Couldn't save. …")
 
 // ----- Print receipt (S2, DR2-P4, v0.518; the receipt's own words are in candidatesText.js) -----

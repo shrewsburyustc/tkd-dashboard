@@ -70,7 +70,7 @@ export function namesUpToThree(names) {
 }
 export function saveFailedBanner(grades, counts, names) {
   const who = names.length > 0 ? ` (${namesUpToThree(names)})` : '';
-  return `Couldn’t save ${gradesAndCounts(grades, counts)}${who}. Check the connection, then try again.`;
+  return `Couldn’t save ${gradesAndCounts(grades, counts)}${who}. Check the connection, then retry.`;
 }
 // "You’re offline. 9 grades and 1 count aren’t saved yet. They save by themselves when the connection
 // is back. Keep this page open." + Retry.
@@ -128,4 +128,4 @@ export const keptFromLine = (eventName) => `kept from ${eventName}`; // phone: u
 export const CHOOSE_STALE = 'Someone else chose the subjects just now. Your choice wasn’t saved. Close this to see the latest.';
 export const CHOOSE_NOT_ALLOWED = 'Only an admin can choose the subjects to retest.';
 export const CHOOSE_INVALID = 'This result no longer needs a choice. Close this to see the latest.';
-export const CHOOSE_FAILED = 'Couldn’t save. Check the connection, then try again.';
+export const CHOOSE_FAILED = 'Couldn’t save. Check the connection, then retry.';
