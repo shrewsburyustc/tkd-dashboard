@@ -5041,5 +5041,35 @@ check('Cycles, Rubric, Results: shared words, shared parts, no leftover copies',
   assert.ok(!/undoToast\(words, \(\) => undoPayment/.test(code('candidates/useCandidateActions.js')), 'no money Undo gives the line the toast words (they hold the amount)');
 });
 
+// ----- R1-07 second part (rulebook v1.135): one set of payment-line and History words -----
+check('v1.135 payment line: the shared base, Black Belt extras in order, phone variant, refund, History words, old wording gone', () => {
+  const W = StaffWords;
+  // the base, Star's: "$140 card · paid Nov 3" for cash / check / card
+  assert.equal(W.paidDetail(14000, 'card', '2027-03-20'), '$140 card · paid Mar 20');
+  assert.equal(W.paidDetail(14000, 'cash', '2027-03-20'), '$140 cash · paid Mar 20');
+  assert.equal(W.paidDetail(33000, 'check', '2027-03-27'), '$330 check · paid Mar 27');
+  // a refund and the phone variants
+  assert.equal(W.refundedDetail(2300, 'cash', '2027-03-20'), 'refunded $23 cash Mar 20');
+  assert.equal(W.paidOnPhone('card', '2027-03-20'), 'Card · paid Mar 20');
+  assert.equal(W.refundedOnPhone('cash', '2027-03-20'), 'Cash · refunded Mar 20');
+  // Black Belt's extras, in the decided order: paid date, for what, (no school), by who
+  assert.equal(
+    W.paymentLine({ kind: 'payment', cents: 87000, method: 'card', iso: '2027-03-20', what: 'payments 1, 2 and 3', by: 'Jeffrey Berg' }),
+    '$870 card · paid Mar 20 · for payments 1, 2 and 3 · by Jeffrey Berg',
+  );
+  assert.equal(W.paymentLine({ kind: 'payment', cents: 33000, method: 'check', iso: '2027-03-27', what: '', by: '' }), '$330 check · paid Mar 27');
+  assert.equal(W.paymentLine({ kind: 'refund', cents: -2300, method: 'cash', iso: '2027-03-20', what: 'Refund', by: 'Jeffrey Berg' }), 'refunded $23 cash Mar 20 · by Jeffrey Berg');
+  // History: "Payment recorded: $330 check, paid Mar 27" and "Payment undone: $330" (no extra words)
+  assert.equal(W.historyPayment(33000, 'check', '2027-03-27'), 'Payment recorded: $330 check, paid Mar 27');
+  assert.equal(W.historyPaymentUndone(33000), 'Payment undone: $330');
+  // the real source: the phone block and the ⋯ sheet use the shared line, and the old wording is gone
+  const dialog = readFileSync(new URL('../../blackBelt/staff/candidates/CandidateDialog.jsx', import.meta.url), 'utf8');
+  assert.ok(/T\.paidOnPhone\(/.test(dialog) && /T\.refundedOnPhone\(/.test(dialog), 'the phone block uses the shared phone variant');
+  assert.ok(/T\.paymentLine\(/.test(dialog), 'the ⋯ sheet subtitle is the shared payment line');
+  assert.ok(!/\[T\.monthDay\(line\.paidOn\), w\.how/.test(dialog), 'the old "date · how" phone line is gone');
+  assert.ok(!/menu\.line\.paidOn\)\} · \$\{formatCents/.test(dialog), 'the old "Mar 20 · $870" subtitle is gone from the menu (only a returned check keeps it)');
+  // Black Belt stores no Paying by on a candidate (the method is chosen per payment at the desk), so no Paying by line
+  assert.ok(!/payingBy|chosen on the form/i.test(dialog), 'no Paying by line: Black Belt has no such data (v1.135 note)');
+});
 console.log(`${count} groups of checks ran.`);
 console.log('ALL BLACK BELT LIB CHECKS PASSED');

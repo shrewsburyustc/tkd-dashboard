@@ -41,6 +41,7 @@ import {
 // The Camps words (the screens' text.js): only to check the "Hide private details" sentences and
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
+import * as StarText from '../../screens/testing/star/candidates/text.js'; // only to compare the shared payment words (R1-07)
 // The shared words (src/components/text.js): only to check the "Date signed" sentences (v0.638).
 import * as SharedText from '../../components/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
@@ -1523,10 +1524,41 @@ check('Camps writes money with the shared formatMoney: whole dollars as before, 
   assert.equal(T.newTotalLine(0), 'Total now $0');
   assert.equal(T.markedPaidToast('Leo Kim', 35000, 'cash'), 'Leo Kim marked paid · $350 cash'); // Camps' own copy
   const pay = { amountCents: 33500, method: 'card', kind: 'payment', school: 'worcester', paidOn: '2027-04-19', recordedByName: 'Jeffrey' };
-  assert.equal(T.paymentLine(pay), '$335 card · Worcester · Apr 19 · Jeffrey');
+  assert.equal(T.paymentLine(pay), '$335 card · paid Apr 19 · Worcester · by Jeffrey');
   // The one visible change: a reversed payment reads "−$335" (U+2212 before the $), not "$-335".
-  assert.equal(T.paymentLine({ ...pay, amountCents: -33500, kind: 'reversal' }), '\u2212$335 card (reversed) · Worcester · Apr 19 · Jeffrey');
+  assert.equal(T.paymentLine({ ...pay, amountCents: -33500, kind: 'reversal' }), '\u2212$335 card (reversed) · Apr 19 · Worcester · by Jeffrey');
   assert.equal('dollars' in T, false); // Color Belt's helper is no longer re-exported
+});
+
+// ======================= payment line + History words (rulebook v0.751 = v1.135, R1-07 second part) =======================
+// Camps' lines are Star's base words with Camps' extras (school, by who) added after them, in the order
+// date, what for, school, by who. These checks put Star's own output next to Camps', so the words
+// can't drift apart again.
+check('R1-07: Camps\' payment line and History words start with Star\'s words and add only the extras after them', () => {
+  const T = CampText;
+  const S = StarText;
+  const pay = { amountCents: 14000, method: 'card', kind: 'payment', school: 'worcester', paidOn: '2027-11-03', recordedByName: 'Jeffrey Berg' };
+  // A payment: Star's "$140 card · paid Nov 3", then school, then who.
+  assert.equal(T.paymentLine(pay), `${S.paidDetail(14000, 'card', '2027-11-03')} · Worcester · by Jeffrey Berg`);
+  assert.equal(T.paymentLine({ ...pay, school: null, recordedByName: null }), S.paidDetail(14000, 'card', '2027-11-03'));
+  // A refund: Star's "refunded $23 cash Nov 3", then school, then who.
+  const refund = { ...pay, kind: 'refund', amountCents: -2300, method: 'cash' };
+  assert.equal(T.paymentLine(refund), `${S.refundedDetail(2300, 'cash', '2027-11-03')} · Worcester · by Jeffrey Berg`);
+  // The row that undid a payment has no "paid" (its day is when it was undone): amount, "(reversed)", day, school, who.
+  assert.equal(T.paymentLine({ ...pay, kind: 'reversal', amountCents: -14000 }), '−$140 card (reversed) · Nov 3 · Worcester · by Jeffrey Berg');
+  // No paid day on a row: no stray "paid " or trailing space.
+  assert.equal(T.paymentLine({ ...pay, paidOn: null, school: null, recordedByName: null }), '$140 card');
+  assert.equal(T.paymentLine({ ...refund, paidOn: null, school: null, recordedByName: null }), 'refunded $23 cash');
+  // History: Star's two lines, word for word.
+  assert.equal(T.historyMarkedPaid(14000, 'card', '2027-11-03'), S.historyPayment(14000, 'card', '2027-11-03'));
+  assert.equal(T.historyMarkedPaid(14000, 'card', '2027-11-03'), 'Payment recorded: $140 card, paid Nov 3');
+  assert.equal(T.historyPaymentUndone(14000), S.historyPaymentUndone(14000));
+  assert.equal(T.historyPaymentUndone(14000), 'Payment undone: $140');
+  // A history row that carries no paid day (older rows) leaves ", paid …" out instead of printing "undefined".
+  assert.equal(T.historyMarkedPaid(14000, 'card'), 'Payment recorded: $140 card');
+  // The refund lines were already Star's.
+  assert.equal(T.historyRefund(2300, 'cash', '2027-11-03'), 'Refund recorded: $23 cash, Nov 3');
+  assert.equal(T.historyRefundUndone(2300), S.historyRefundUndone ? S.historyRefundUndone(2300) : 'Refund undone: $23');
 });
 
 // ======================= Print receipt (rulebook v0.734, design review C3) =======================
@@ -1713,8 +1745,8 @@ check('History words (v0.736): one entry per save, parts joined with "; ", famil
   const texts = batches.map((b) => say(b)?.text);
   assert.deepEqual(texts, [
     'Parent phone: (508) 555-0141 → (508) 555-0109',
-    'Payment undone: $186 card; Paying by: Card → Cash',
-    'Marked paid $186 card; Paying by: Cash → Card',
+    'Payment undone: $186; Paying by: Card → Cash',
+    'Payment recorded: $186 card; Paying by: Cash → Card',
     'Age: 10 → 11; Member: No → Yes',
     // Drop-off on Fri only followed the new day (nothing of its own); pizza is new.
     'Days: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27; Pizza party added',
@@ -1808,7 +1840,7 @@ check('mock (0033): Mark paid with a way, Paying by follows, Undo puts it back, 
   assert.equal(jack.payingBy, 'check');
   assert.equal(payingByChoiceWhere(jack), 'desk');
   assert.deepEqual(words(jack), [
-    'Marked paid $186 check | Jeffrey Berg',
+    'Payment recorded: $186 check, paid Oct 13 | Jeffrey Berg',
     'Paying by: Cash → Check | Jeffrey Berg',
     'Parent phone: (508) 555-0141 → (508) 555-0109 (whole family) | Jeffrey Berg',
     'Days: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27 | Dana Ross',
@@ -1828,8 +1860,8 @@ check('mock (0033): Mark paid with a way, Paying by follows, Undo puts it back, 
   // Owen: changes, withdrawn and restored, Mark paid by card and its Undo.
   const owenTotal = find('Owen', 'Reed').totalCents;
   assert.deepEqual(words(find('Owen', 'Reed')), [
-    `${CampText.historyPaymentUndone(owenTotal, 'card')}; Paying by: Card → Cash | Jeffrey Berg`,
-    `${CampText.historyMarkedPaid(owenTotal, 'card')}; Paying by: Cash → Card | Staff`,
+    `${CampText.historyPaymentUndone(owenTotal)}; Paying by: Card → Cash | Jeffrey Berg`,
+    `${CampText.historyMarkedPaid(owenTotal, 'card', '2026-10-10')}; Paying by: Cash → Card | Staff`,
     'Restored | Jeffrey Berg',
     'Withdrawn | Jeffrey Berg',
     'Age: 9 → 10; Member: Yes → No | Dana Ross',
@@ -1865,14 +1897,14 @@ check('mock (0033): Mark paid with a way, Paying by follows, Undo puts it back, 
   assert.equal(mia.payingByOnForm, 'cash'); // never changes
   assert.equal(payingByChoiceWhere(mia), 'desk');
   assert.equal(mia.version, paid.version);
-  assert.equal(words(mia)[0], `${CampText.historyMarkedPaid(paid.amount_cents, 'card')}; Paying by: Cash → Card | Staff`);
+  assert.equal(words(mia)[0], `${CampText.historyMarkedPaid(paid.amount_cents, 'card', '2026-10-19')}; Paying by: Cash → Card | Staff`);
   // The toast's Undo (staff, within 10 seconds) puts Paying by back.
   env.clock += 2000;
   assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paid.payment_id }, STAFF).status, 'ok');
   mia = find('Mia', 'Rossi');
   assert.equal(mia.payingBy, 'cash');
   assert.equal(payingByChoiceWhere(mia), 'form');
-  assert.equal(words(mia)[0], `${CampText.historyPaymentUndone(paid.amount_cents, 'card')}; Paying by: Card → Cash | Staff`);
+  assert.equal(words(mia)[0], `${CampText.historyPaymentUndone(paid.amount_cents)}; Paying by: Card → Cash | Staff`);
   // Paying by changed again after a card payment: Undo leaves it alone.
   env.clock += 2000;
   const paid2 = rpcOk(b, 'camp_mark_paid', { p_camper_id: mia.id, p_expected_version: mia.version, p_school: 'worcester', p_method: 'card' }, ADMIN);
@@ -1892,7 +1924,7 @@ check('mock (0033): Mark paid with a way, Paying by follows, Undo puts it back, 
   mia = find('Mia', 'Rossi');
   const same = rpcOk(b, 'camp_mark_paid', { p_camper_id: mia.id, p_expected_version: mia.version, p_school: 'worcester' }, ADMIN);
   assert.equal(same.paying_by, 'cash');
-  assert.equal(words(find('Mia', 'Rossi'))[0], `${CampText.historyMarkedPaid(same.amount_cents, 'cash')} | Jeffrey Berg`);
+  assert.equal(words(find('Mia', 'Rossi'))[0], `${CampText.historyMarkedPaid(same.amount_cents, 'cash', '2026-10-19')} | Jeffrey Berg`);
   assert.equal(b.select('camp_payments', 'paying_by_before', [], [], ADMIN).error.code, '42501'); // not granted
 
   // Check-ins never reach the history; a family sign-up does, by "Family form".
@@ -2484,10 +2516,10 @@ check('Record refund: the words (v0.743 — Star\'s box, Camps\' words)', () => 
   // Camper detail's lines: the refund as its own line; its Undo the same "(reversed)" line as a
   // payment's (its own plus amount), so it can't be taken for a second refund (review L4).
   const base = { method: 'cash', school: 'worcester', paidOn: '2027-04-21', recordedByName: 'Jeffrey Berg' };
-  assert.equal(T.paymentLine({ ...base, kind: 'refund', amountCents: -2300 }), 'Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg');
-  assert.equal(T.paymentLine({ ...base, kind: 'reversal', amountCents: 2300, paidOn: '2027-04-22' }), '$23 cash (reversed) · Worcester · Apr 22 · Jeffrey Berg');
-  assert.equal(T.paymentLine({ ...base, kind: 'reversal', amountCents: -31500, method: 'check' }), '−$315 check (reversed) · Worcester · Apr 21 · Jeffrey Berg');
-  assert.equal(T.paymentLine({ ...base, kind: 'payment', amountCents: 31500, method: 'check' }), '$315 check · Worcester · Apr 21 · Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'refund', amountCents: -2300 }), 'refunded $23 cash Apr 21 · Worcester · by Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'reversal', amountCents: 2300, paidOn: '2027-04-22' }), '$23 cash (reversed) · Apr 22 · Worcester · by Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'reversal', amountCents: -31500, method: 'check' }), '−$315 check (reversed) · Apr 21 · Worcester · by Jeffrey Berg');
+  assert.equal(T.paymentLine({ ...base, kind: 'payment', amountCents: 31500, method: 'check' }), '$315 check · paid Apr 21 · Worcester · by Jeffrey Berg');
   assert.equal(T.historyRefund(2300, 'cash', '2027-04-21'), 'Refund recorded: $23 cash, Apr 21');
   assert.equal(T.historyRefundUndone(2300), 'Refund undone: $23');
   assert.equal(T.RECEIPT_FOR_REFUND, 'Refund');
@@ -2533,7 +2565,7 @@ check('Record refund: the History words ("Refund recorded: $23 cash, Apr 21", "R
   assert.deepEqual(say(refund), { text: 'Refund recorded: $23 cash, Apr 21', at: '2027-04-21T14:00:00Z', who: 'Jeffrey Berg' });
   assert.equal(say([row('u', 'camp_payments', { kind: 'reversal', amountCents: 2300, method: 'cash', paidOn: '2027-04-22', reversesPaymentId: 'f' })]).text, 'Refund undone: $23');
   // A payment's Undo and Edit payment read as before.
-  assert.equal(say([row('p', 'camp_payments', { kind: 'reversal', amountCents: -31500, method: 'check' })]).text, 'Payment undone: $315 check');
+  assert.equal(say([row('p', 'camp_payments', { kind: 'reversal', amountCents: -31500, method: 'check' })]).text, 'Payment undone: $315');
   assert.equal(say([
     row('e', 'camp_payments', { kind: 'reversal', amountCents: -31500, method: 'check' }),
     row('e', 'camp_payments', { kind: 'payment', amountCents: 29200, method: 'check' }),
@@ -2623,7 +2655,7 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(refundRow.amountCents, -2300);
   assert.equal(refundRow.school, 'shrewsbury');
   assert.equal(refundRow.paidOn, '2027-03-04');
-  assert.equal(CampText.paymentLine(refundRow), 'Refunded $23 cash · Shrewsbury · Mar 4 · Jeffrey Berg');
+  assert.equal(CampText.paymentLine(refundRow), 'refunded $23 cash Mar 4 · Shrewsbury · by Jeffrey Berg');
   assert.equal(newestStandingRefund(d1.payments).id, saved.payment_id);
   assert.equal(words(c)[0], 'Refund recorded: $23 cash, Mar 4 | Jeffrey Berg');
 
@@ -2657,9 +2689,9 @@ check('mock (0039): Record refund and its Undo — the contract\'s answers, refu
   assert.equal(words(c)[0], 'Refund undone: $23 | Jeffrey Berg');
   const d2 = detailOf(c.id);
   assert.deepEqual(d2.payments.map((p) => CampText.paymentLine(p)), [
-    '$315 check · Worcester · Mar 11 · Staff',
-    'Refunded $23 cash · Shrewsbury · Mar 4 · Jeffrey Berg',
-    '$23 cash (reversed) · Shrewsbury · Apr 21 · Jeffrey Berg',
+    '$315 check · paid Mar 11 · Worcester · by Staff',
+    'refunded $23 cash Mar 4 · Shrewsbury · by Jeffrey Berg',
+    '$23 cash (reversed) · Apr 21 · Shrewsbury · by Jeffrey Berg',
   ]);
   assert.equal(newestStandingRefund(d2.payments), null);
   // The receipt: only the payment again; Paid to date $315.

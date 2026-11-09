@@ -15,7 +15,7 @@ import ErrorBanner from '../components/ErrorBanner.jsx';
 import PageBar, { PageBarSlot } from '../components/PageBar.jsx';
 import Toast from '../components/Toast.jsx';
 import { dismissLeftUndoBar, endLeftUndoBarSession, useLeftUndoBar, useSaveLine } from '../lib/saveLine.js';
-import { useToastLine } from '../lib/toastLine.js';
+import { useDropWhenPrivateHidden, useToastLine } from '../lib/toastLine.js';
 
 const CAMPERS = [
   { id: 'zoe', name: 'Zoe Park' },
@@ -116,6 +116,7 @@ function UndoSample({ start = {} }) {
     settingsRef.current = { saveMs, saveFails, undoFails };
   }, [saveMs, saveFails, undoFails]);
   const { toast, line: toasts } = useToastLine();
+  useDropWhenPrivateHidden(toasts); // Hide private details turned ON removes the toast, "Undoing…" included
   const leftBar = useLeftUndoBar();
   const [slot, setSlot] = useState(null);
   const [onPage, setOnPage] = useState(true);
