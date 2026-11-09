@@ -736,6 +736,20 @@ export const RETURNED_NOTE = 'returned'; // "post-dated Apr 24 · returned"
 export const NO_NOTE = '—';
 export const NO_PAYMENTS_YET = 'No payments recorded yet.'; // (not in the mockups)
 export const byName = (name) => `by ${name}`;
+// ----- The payment line (rulebook v1.135, Jeffrey "C" 2026-11-08) -----
+// words of rulebook v1.135; Black Belt switches to the shared copy once Dashboard core's src/components/text.js has it
+// One base, Star's: "$140 card · paid Nov 3", a refund "refunded $23 cash Nov 3", phones "Card · paid Nov 3".
+// A section adds only what it alone has, always in this order: paid date, what it was for, school, by who.
+// Black Belt adds the "for what" and "by who" and NO school (the candidate detail already shows it).
+export const paidDetail = (cents, method, iso) => `${formatMoney(cents)} ${methodName(method).toLowerCase()} · paid ${monthDay(iso)}`;
+export const refundedDetail = (cents, method, iso) => `refunded ${formatMoney(cents)} ${methodName(method).toLowerCase()} ${monthDay(iso)}`;
+export const paidOnPhone = (method, iso) => `${methodName(method)} · paid ${monthDay(iso)}`;
+export const refundedOnPhone = (method, iso) => `${methodName(method)} · refunded ${monthDay(iso)}`;
+// "$870 card · paid Mar 20 · for payments 1, 2 and 3 · by Jeffrey Berg" (the pieces that are empty drop out)
+export const paymentLine = ({ kind, cents, method, iso, what, by }) =>
+  [kind === 'refund' ? refundedDetail(Math.abs(cents), method, iso) : paidDetail(Math.abs(cents), method, iso), what && kind !== 'refund' ? `for ${what}` : '', by ? byName(by) : '']
+    .filter(Boolean)
+    .join(' · ');
 export const paymentMoreLabel = (what, date) => `More actions for ${what} of ${monthDay(date)}`;
 export const TOTAL_DUE = 'Total due';
 export const PAID = 'Paid';
