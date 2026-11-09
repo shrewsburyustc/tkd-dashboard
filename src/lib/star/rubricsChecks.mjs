@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createStarBackend, defaultStarData, STAR_RPC_NAMES, STAR_TABLES, STAR_STORE_KEY } from '../mockStarTesting.js';
 import { createRubricsApi, RUBRIC_STATUSES } from './rubricsCore.js';
+import { createSaveLine } from '../saveLine.js';
 
 let count = 0;
 async function check(label, fn) {
@@ -631,4 +632,59 @@ await check('only an ok answer is saved (a refusal leaves the store as it was)',
   assert.equal(JSON.stringify(backend.snapshot()), before);
 });
 
+// Step D (Dashboard core's shared parts): R2-05 and R2-07 for Rubrics and prices, L-06 for its grips.
+await check('R2-07: a refused Rubrics change or Undo names what changed in the one shared sentence', async () => {
+  const T = await import('../../screens/testing/star/text.js');
+  const shared = await import('../../components/text.js');
+  assert.equal(T.stale('Sparring'), shared.someoneElseChanged('Sparring'));
+  assert.equal(T.stale('Sparring'), 'Someone else changed Sparring just now, so nothing was done. Their change is shown.');
+  assert.equal(T.stale(null), shared.someoneElseChanged('this list')); // no name known: still a whole sentence
+  assert.equal(T.STALE, undefined);
+  assert.equal(T.UNDO_STALE, undefined); // the old "Couldn't undo. Someone else changed this just now."
+  assert.equal(T.UNDO_FAILED, undefined); // the save line says "Undo didn't save…" itself
+  assert.equal(T.SECTION_NAME, 'Star testing');
+});
+
+await check('R2-05: the Undo of a category move goes through the save line: one call, "Undone", or "Undo didn\'t save" + Retry that redoes it', async () => {
+  const { UNDO_DIDNT_SAVE, UNDONE } = await import('../../components/text.js');
+  const { api, backend } = makeRig();
+  const dan = (await api.loadRubrics()).dans.find((d) => d.dan === 1);
+  const ids = dan.categories.map((c) => c.id);
+  const reversed = [...ids].reverse();
+  assert.equal((await api.reorderCategories(1, ids, reversed)).status, 'ok'); // the move
+  const seen = { bars: [], toasts: [] };
+  const line = createSaveLine(() => ({ section: 'Star testing', showToast: (text) => seen.toasts.push(text), undoBar: (bar) => seen.bars.push(bar) }));
+  // the Undo, the way RubricsTab builds it: the reverse reorder; "didn't reach the database" is 'error'
+  const run = async () => {
+    const result = await api.reorderCategories(1, reversed, ids);
+    if (result.status === 'ok' || result.status === 'error') return { status: result.status };
+    return { status: result.status, reason: 'refused' };
+  };
+  backend.failNextSave();
+  const failed = await line.undoAction(run, { words: 'Category order saved' }).onAction();
+  assert.equal(failed.undone, false);
+  assert.equal(seen.bars.at(-1).text, UNDO_DIDNT_SAVE);
+  assert.deepEqual((await api.loadRubrics()).dans.find((d) => d.dan === 1).categories.map((c) => c.id), reversed); // nothing changed
+  await seen.bars.at(-1).retry();
+  assert.deepEqual(seen.toasts, [UNDONE]);
+  assert.deepEqual((await api.loadRubrics()).dans.find((d) => d.dan === 1).categories.map((c) => c.id), ids);
+});
+
+await check('L-06: every grip of Rubrics and prices gets the shared Grip\'s `disabled` while a save runs (a source check)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const dir = new URL('../../screens/testing/star/', import.meta.url);
+  const block = readFileSync(new URL('DanBlock.jsx', dir), 'utf8');
+  const tab = readFileSync(new URL('RubricsTab.jsx', dir), 'utf8');
+  assert.match(block, /<Grip[^>]*disabled=\{Boolean\(ctx\.gripsOff\)\}/);
+  assert.match(tab, /gripsOff: busy/); // busy = the save line's busy: a save or an Undo is running
+});
+
+// Review of batch 4, SHOULD 3: every save ends its line from a `finally` (a throw can't leave it busy).
+await check('pass 3: the Rubrics saves end the save line from a finally', async () => {
+  const { readFileSync } = await import('node:fs');
+  const tab = readFileSync(new URL('../../screens/testing/star/RubricsTab.jsx', import.meta.url), 'utf8');
+  assert.match(tab, /\} finally \{\r?\n\s+endWrite\(ended\);/, 'inWrite ends the line from a finally');
+  assert.equal((tab.match(/\bendWrite\(/g) ?? []).length, 2, 'endWrite: its definition and the finally only');
+  assert.equal((tab.match(/await inWrite\(/g) ?? []).length, 4, 'the four saves go through inWrite');
+});
 console.log(`ALL STAR RUBRIC CHECKS PASSED (${count} checks)`);

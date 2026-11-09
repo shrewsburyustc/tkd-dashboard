@@ -4,7 +4,7 @@
 // screen lock can hide the dialog and bring it back exactly as it was.
 //
 //   const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast,
-//                                    clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner });
+//                                    clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner, saveLine, paymentsHidden });
 //   picker.open(opener) · picker.state (null = closed) · picker.close() · picker.setSearch(text)
 //   picker.add(row) · picker.retry() · picker.openChoose(row) · picker.closeChoose({ saved })
 //
@@ -21,13 +21,16 @@
 //     MakeupSubjectsDialog); closing it comes back here with the list read again. That dialog needs
 //     the earlier candidate's result and its Dan's rubric, so the earlier cycle's Results for that
 //     Dan are read first (loadResults — no date of birth, email or money).
+// S3 (review of batch 4): `paymentsHidden` is the device switch, so a refused Undo says nothing about payments while it is on.
+// R2-05 (v1.125): Add and the toast's Undo run on the Candidates tab's one save line (`saveLine`, from
+// useCandidateActions.js): an Undo pressed during another save waits ("Undoing…") and runs when it ends.
 // Status words come from text.js; the database decides everything.
 import { useLayoutEffect, useRef, useState } from 'react';
 import { deleteCandidate } from '../../../lib/blackBelt/api.js';
 import { addMakeup, loadMakeupList, loadResults } from '../../../lib/blackBelt/gradingApi.js';
 import * as T from '../text.js';
 
-export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner }) {
+export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner, saveLine, paymentsHidden }) {
   const [state, setStateRaw] = useState(null);
   const stateRef = useRef(null);
   const setState = (next) => {
@@ -39,9 +42,8 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
   // The newest props for the answers that arrive later
   const latest = useRef({});
   useLayoutEffect(() => {
-    latest.current = { cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner };
+    latest.current = { cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner, paymentsHidden };
   });
-  const undoBusy = useRef(false);
 
   async function loadList() {
     const cycleId = latest.current.cycle.id;
@@ -78,9 +80,18 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
   async function add(row) {
     const s = stateRef.current;
     if (!s || s.saving) return;
+    // The Add is a save on the tab's one save line (R2-05): an Undo pressed meanwhile waits for it, and
+    // the Add buttons are unavailable while another save or an Undo runs (`saving` below).
+    const token = saveLine.begin();
+    if (!token) return;
     const a = latest.current;
     patch({ saving: true, note: null });
-    const result = await addMakeup({ cycleId: a.cycle.id, earlierCandidateId: row.id });
+    let result = { status: 'error' };
+    try {
+      result = await addMakeup({ cycleId: a.cycle.id, earlierCandidateId: row.id });
+    } finally {
+      saveLine.end(result.status, { retry: () => add(row), token });
+    }
     const name = `${row.firstName} ${row.lastName}`;
     const status = result.status;
     if (status === 'ok') {
@@ -93,10 +104,8 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
       // v0.913: Undo after Add is for admins only (= Delete permanently of the new row)
       const id = result.id;
       const version = result.version;
-      a.showToast(
-        T.makeupAddedToast(name, row.cycleName),
-        a.isAdmin ? { icon: false, action: { label: T.UNDO, onAction: () => undoAdd(id, version, name) } } : { icon: false },
-      );
+      const words = T.makeupAddedToast(name, row.cycleName);
+      a.showToast(words, a.isAdmin ? { icon: false, action: saveLine.undoAction(undoAdd(id, version, name), { words }) } : { icon: false });
       return;
     }
     if (status === 'no_access') {
@@ -136,50 +145,46 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
     patch({ saving: false, note: T.SAVE_FAILED });
   }
 
-  // The toast's Undo (admins): delete the just-added make-up row.
-  async function undoAdd(id, version, name) {
-    if (undoBusy.current) return;
-    undoBusy.current = true;
-    // The props as they were when Undo was pressed: an answer after a tab change is dropped
-    // instead of showing its bar on the new tab (CyclePage.jsx).
-    const a = latest.current;
-    const result = await deleteCandidate({ candidateId: id, expectedVersion: version });
-    undoBusy.current = false;
-    if (result.status === 'no_access') {
-      a.onNoAccess();
-      return;
-    }
-    const reloaded = a.reloadRoster();
-    a.onCandidatesChanged?.();
-    if (result.status === 'ok') {
-      a.showToast(T.TOAST_UNDONE, { icon: false });
-      return;
-    }
-    // v0.966 (BB4): the picker is closed by now, so a problem goes in the Candidates tab's amber
-    // bar — a lost connection with Retry (the same Undo again), a refusal with × only, shown once
-    // the list has been read again. Any toast goes first (no toast Undo next to the bar).
-    a.clearToast();
-    if (result.status === 'error') {
-      a.setBanner({ text: T.UNDO_FAILED, retry: () => undoAdd(id, version, name) });
-      return;
-    }
-    if (result.status === 'not_allowed') a.onRefreshProfile();
-    const words = {
-      stale: T.candidateStale(name),
-      has_grades: T.hasGrades(name),
-      has_payments: T.hasPaymentRecords(name),
-      not_allowed: T.NOT_ALLOWED,
-      not_found: T.CANDIDATE_GONE,
-    }[result.status] ?? T.INVALID;
-    await reloaded;
-    a.setBanner({ text: words });
+  // The toast's Undo (admins): delete the just-added make-up row. It runs on the tab's save line (R2-05):
+  // pressed while another save runs it WAITS ("Undoing…") instead of being dropped. This returns what the
+  // line runs; the line says "Undone" when it worked, and shows the bar when it didn't: "Undo didn't
+  // save. Check the connection, then retry." with Retry for a lost connection, a refusal's own words
+  // ("Someone else changed … Their change is shown." / "Couldn't undo: …") with × only, shown once the
+  // list has been read again.
+  function undoAdd(id, version, name) {
+    return async () => {
+      const a = latest.current;
+      const result = await deleteCandidate({ candidateId: id, expectedVersion: version });
+      if (result.status === 'no_access') {
+        a.onNoAccess();
+        return { status: 'no_access' };
+      }
+      const reloaded = a.reloadRoster();
+      a.onCandidatesChanged?.();
+      if (result.status === 'ok') return { status: 'ok' };
+      if (result.status === 'error') return { status: 'error' };
+      if (result.status === 'not_allowed') a.onRefreshProfile();
+      // S3: an Undo queued before Hide private details turned on must not say why it was refused ("has payment
+      // records" tells paid from unpaid on a mat tablet): one neutral sentence while hidden.
+      const reason = a.paymentsHidden
+        ? T.UNDO_AT_DESK
+        : ({
+            stale: T.candidateStale(name),
+            has_grades: T.undoWhy.hasGrades(name),
+            has_payments: T.undoWhy.hasPayments(name),
+            not_allowed: T.undoWhy.notAllowed,
+            not_found: T.undoWhy.candidateGone,
+          }[result.status] ?? T.undoWhy.invalid);
+      await reloaded;
+      return { status: result.status, reason };
+    };
   }
 
   // ----- Choose subjects (admins) for a choice-needed row -----
   async function openChoose(row) {
     const s = stateRef.current;
     if (!s || s.saving || !latest.current.isAdmin) return;
-    patch({ saving: true, note: null });
+    patch({ saving: true, note: null, chooseFailed: null });
     const answer = await loadResults({ cycleId: row.cycleId, dan: row.dan });
     if (!stateRef.current) return; // closed meanwhile
     if (answer.status === 'no_access') {
@@ -190,9 +195,12 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
     const found = answer.status === 'ok' ? answer.rows.find((r) => r.id === row.id) ?? null : null;
     const rubric = answer.status === 'ok' ? answer.rubrics.find((d) => d.dan === row.dan) ?? null : null;
     if (!found || !rubric) {
-      // gone from the earlier cycle's results (withdrawn meanwhile), or the connection dropped
-      patch({ saving: false, note: answer.status === 'ok' ? T.makeupStale(`${row.firstName} ${row.lastName}`, row.cycleName) : T.LOAD_FAILED_NO_RETRY });
-      if (answer.status === 'ok') loadList();
+      // gone from the earlier cycle's results (withdrawn meanwhile): a note and the list again. Anything
+      // else is a read that didn't load: the shared sentence with a Retry for this row (S-2).
+      if (answer.status === 'ok') {
+        patch({ saving: false, note: T.makeupStale(`${row.firstName} ${row.lastName}`, row.cycleName) });
+        loadList();
+      } else patch({ saving: false, chooseFailed: row });
       return;
     }
     patch({ saving: false, choose: { row, result: found.result, rubric } });
@@ -210,7 +218,10 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
     loadList();
   }
 
-  return { state, open, close, setSearch, retry, add, openChoose, closeChoose, isOpen: state !== null };
+  // `saving` also shows while another save or an Undo holds the tab's save line (the Add buttons are
+  // unavailable meanwhile, never a silent no-op).
+  const shownState = state && saveLine.busy && !state.saving ? { ...state, saving: true } : state;
+  return { state: shownState, open, close, setSearch, retry, add, openChoose, closeChoose, isOpen: state !== null };
 }
 
 // Focus back on the button that opened the picker once the page can take focus again.

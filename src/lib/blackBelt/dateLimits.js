@@ -23,7 +23,7 @@ const yearOf = (iso) => (isIsoDate(iso) ? Number(iso.slice(0, 4)) : null);
 // The calendar's hint for a "today or later" date: "Past dates can't be chosen." only while the
 // first choosable day really is today or later; when a saved past date pulls it back, no hint.
 //   min   the first choosable day (notBeforeToday / testingDayMin)
-//   hint  the words (text.js PAST_DATES_HINT)
+//   hint  the words (text.js PAST_DAYS_HINT)
 export function pastHint(today, min, hint) {
   return isIsoDate(today) && isIsoDate(min) && min >= today ? hint : '';
 }

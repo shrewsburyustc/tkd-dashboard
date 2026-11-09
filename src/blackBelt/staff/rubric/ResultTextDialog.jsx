@@ -33,6 +33,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
+import Select from '../../../components/Select.jsx';
 import { loadCycles } from '../../../lib/blackBelt/api.js';
 import { loadResults } from '../../../lib/blackBelt/gradingApi.js';
 import { BLANKS_BY_KIND, STARTING_TEXTS, buildResultMessage, resultKind, resultTextProblemDetail } from '../../../lib/blackBelt/resultEmail.js';
@@ -274,14 +275,13 @@ export default function ResultTextDialog({ state, record, isPhone, isTouch, onCh
           <div className="bbrt-lbl bbrt-prevline">
             {preview.status === 'ready' && !preview.sample && (
               <>
-                <label htmlFor={`${idBase}-who`}>{T.PREVIEW_WITH}</label>
-                <select id={`${idBase}-who`} className="input bbrt-select" value={picked?.id ?? ''} onChange={(event) => setPickedId(event.target.value)}>
-                  {preview.candidates.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <label id={`${idBase}-who-label`} htmlFor={`${idBase}-who`}>
+                  {T.PREVIEW_WITH}
+                </label>
+                {/* S-10 (v1.048 (20)): the shared dropdown (it looks the same on every device, phones included) */}
+                <span className="bbrt-who">
+                  <Select id={`${idBase}-who`} labelId={`${idBase}-who-label`} value={picked?.id ?? null} options={preview.candidates.map((c) => ({ value: c.id, label: c.name }))} onChange={setPickedId} />
+                </span>
                 <span>· {preview.cycleName}</span>
               </>
             )}

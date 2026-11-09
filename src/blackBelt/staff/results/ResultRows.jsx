@@ -31,7 +31,7 @@
 // Props:
 //   rows   the Dan's rows (already filtered by school)
 //   ctx    { layout: { isPhone, isWide, isTouch }, nav (useRowArrowNav), isAdmin, emailOff,
-//            markOff, whyId (id of the gray offline line, for aria-describedby; offline only), today, danObj, submissionsDue, label, menuFor, busyId, asked(row) →
+//            markOff, whyId (id of the gray offline line, for aria-describedby; offline only), emailWhyId (the ids of the gray lines that say why Email result is off: hidden details and/or offline, space-separated), today, danObj, submissionsDue, label, menuFor, busyId, asked(row) →
 //            { copied } | null, handlers: { onOpen(row), onEmail(row), onMarkSent(row),
 //            onMore(row, anchor), onChooseSubjects(row, opener) } }
 import { IconAlertTriangle, IconCopy, IconDots, IconMail } from '@tabler/icons-react';
@@ -109,7 +109,7 @@ function SentLine({ row, ctx }) {
       </>
     );
   }
-  const off = ctx.busyId === row.id || ctx.markOff;
+  const off = ctx.busyId === row.id || ctx.markOff || ctx.lineBusy; // lineBusy: a save or an Undo runs (C3)
   return (
     <span className="bbres-sent bbres-sent--asked">
       {asked.copied && (
@@ -143,14 +143,14 @@ function SentLine({ row, ctx }) {
 
 function EmailButton({ row, ctx }) {
   if (!canEmail(row)) return null;
-  const off = ctx.emailOff || !row.hasEmail || ctx.busyId === row.id;
+  const off = ctx.emailOff || !row.hasEmail || ctx.busyId === row.id || ctx.lineBusy; // lineBusy: a save or an Undo runs (C3)
   return (
     <button
       type="button"
       className="btn btn-sm bbres-tap bbres-email"
       aria-label={T.emailResultLabel(nameOf(row))}
       aria-disabled={off ? 'true' : undefined}
-      aria-describedby={ctx.whyId}
+      aria-describedby={ctx.emailWhyId}
       tabIndex={ctx.nav.itemTabIndex(row.id)}
       data-bbres-email={row.id}
       onClick={(event) => {
