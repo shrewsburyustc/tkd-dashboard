@@ -13,13 +13,20 @@ import { fullDate, shortDate, weekdayMonthDay } from '../../../../lib/calendarDa
 import { startTimeLabel } from '../../../../lib/star/starEventRules.js';
 import { dollars } from '../../../../lib/star/candidatesText.js';
 import { formatMoney } from '../../../../lib/money.js';
+// The sentences every section says the same way (Dashboard core's shared words, rulebook v1.045,
+// v1.051): the payment toast, the Undo payment box's title and "Paid on", the failed Undo, the past /
+// future days hints and the "couldn't load" lines. Star passes in only what differs (a name, an amount).
+import {
+  FUTURE_DAYS_HINT, PAST_DAYS_HINT, UNDO_DIDNT_SAVE, loadFailedNamed, markedPaidToast, markedPaidToastHidden,
+  paidOnOpening, undoPaymentTitle as sharedUndoPaymentTitle,
+} from '../../../../components/text.js';
 
 export * from '../../../../lib/star/candidatesText.js';
 export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../../../lib/privateDetails.js';
 
 // ----- House words (Color Belt's text.js, unchanged) -----
 export const {
-  UNDO, TOAST_UNDONE, UNDO_FAILED, CANCEL, SAVE, SAVING, CLOSE, UNSAVED, DISCARD_CHANGES, TAG_PAID, TAG_NOT_PAID,
+  UNDO, CANCEL, SAVE, SAVING, CLOSE, UNSAVED, DISCARD_CHANGES, TAG_PAID, TAG_NOT_PAID,
   TAG_POSSIBLE_DUPLICATE, TAG_REMOVED, TAG_DUPLICATE_COPY, TAG_NOT_SAVED, ACTIONS_COL, PAID_BY, AMOUNT, DATE_PAID,
   ENTER_DATE_PAID, AMOUNT_ZERO, EDIT_PAYMENT_HINT, EDIT_PAYMENT_TITLE, CHANGE_PAYING_BY_TITLE, changePayingBySub,
   PAYING_BY_LABEL, KEEP_THIS_ONE, KEEP_BOTH, FIRST_REGISTRATION, SECOND_REGISTRATION, DIFFERENT, keepThisOneLabel,
@@ -151,7 +158,16 @@ export const RESTORE = 'Restore';
 export const moreForCandidate = (name) => `More actions for ${name}`;
 
 // ----- Toasts -----
-export const TOAST_PAYMENT_RECORDED = 'Payment recorded'; // + Undo (screen 4)
+// R1-07 (v1.045 (3)): after Mark paid, "Lily Brooks marked paid · $140 card" + Undo; while Hide private
+// details is on (it went on during the save) no amount or way: "Lily Brooks marked paid" (v0.722).
+// The words a failed Undo names after the person left the page: never the amount or the way (the bar
+// can show on another page and isn't cleared when Hide private details goes on later).
+export const markedPaidWords = (name) => markedPaidToastHidden(name);
+export const paymentRecordedToast =(name, cents, method, hidden = false) =>
+  hidden ? markedPaidToastHidden(name) : markedPaidToast(name, dollars(cents), payingByText(method).toLowerCase());
+// The name of this section on the bar that names an Undo after the person left the page (v1.129):
+// "Undo didn't save: “Noah Chen withdrawn” (Star testing). Check the connection, then retry."
+export const SAVE_LINE_SECTION = 'Star testing';
 export const movedBackToast = (name, feeCents) => `${name} moved back to the testing day${feeCents === null ? '' : ` · fee ${dollars(feeCents)}`}`;
 export const TOAST_PRIVATE_SET = 'Private testing set'; // PROPOSAL (Set / Change private testing, not drawn)
 export const deletedToast = (name) => `${name} deleted`; // PROPOSAL (Color Belt's live wording)
@@ -161,7 +177,7 @@ export const TOAST_REFUND_UNDONE = 'Refund undone'; // PROPOSAL
 export const UNDOING = 'Undoing…';
 export const DELETING = 'Deleting…';
 export const CHANGING = 'Changing…';
-export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // Undo payment, Undo refund (Q2 B)
+export const UNDO_BOX_FAILED = UNDO_DIDNT_SAVE; // Undo payment, Undo refund: the shared failed-Undo sentence (R2-07 / C-06 b, v1.045 (4))
 export const DELETE_BOX_FAILED = "Couldn't delete. Check the connection, then try again."; // Delete permanently (Q2 B)
 // (the Dan-change box keeps DIALOG_FAILED, "Couldn't save. …")
 
@@ -182,9 +198,11 @@ export const refundDateHint = (registeredIso) => `Not before ${monthDay(register
 export const refundAfter = (paidCents, afterCents) => `The ${dollars(paidCents)} payment stays in the history. Afterwards the row reads “${paidAmount(afterCents)}”.`;
 
 // ----- Undo payment / Undo refund confirmations (G16) -----
-export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
-export const undoPaymentBody = (cents, method, iso) =>
-  `The ${dollars(cents)} ${payingByText(method).toLowerCase()} payment recorded on ${monthDay(iso)} is reversed and the row goes back to Not paid. Both stay in the history.`;
+// R1-06 (v1.045 (2)): Black Belt's words. The title names the amount and the way; the second line opens
+// with "Paid on [the day the family paid]" (shared) and goes on with Star's own consequence.
+// "Undo Lily Brooks’s $140 card payment?" / "Paid on Nov 3. It is reversed and the row goes back to Not paid. Both stay in the history."
+export const undoPaymentTitle = (name, cents, method) => sharedUndoPaymentTitle(name, dollars(cents), payingByText(method).toLowerCase());
+export const undoPaymentBody = (iso) => `${paidOnOpening(monthDay(iso))}. It is reversed and the row goes back to Not paid. Both stay in the history.`;
 export const KEEP_PAYMENT = 'Keep payment';
 export const undoRefundTitle = (name) => `Undo ${name}’s refund?`; // PROPOSAL (as Undo payment, G16)
 export const undoRefundBody = (cents, method, iso) =>
@@ -217,7 +235,8 @@ export const TIME = 'Time';
 export const privateFeeLine = (privateCents, wasCents) => `Fee becomes the private fee: ${dollars(privateCents)} (was ${dollars(wasCents)}).`;
 export const privateFeeKept = (privateCents) => `The private fee is ${dollars(privateCents)}.`; // PROPOSAL (Change: already private)
 export const PRIVATE_FEE_HIDDEN = 'The private fee applies. Fees are hidden on this tablet.';
-export const PRIVATE_DAY_HINT = 'Past dates can’t be chosen.'; // PROPOSAL (as the event dates)
+export const PRIVATE_DAY_HINT = PAST_DAYS_HINT; // R3-13: the shared "Past days can't be chosen." (days, not dates)
+export const EDIT_PAYMENT_DATE_HINT = FUTURE_DAYS_HINT; // R3-13: Edit payment's Date paid grays the days after today: "Days after today can't be chosen."
 export const CHOOSE_DAY = 'Choose a day.'; // as Color Belt and Black Belt
 export const CHOOSE_TIME = 'Choose a time.'; // as the time list's "Choose a time", Color Belt and Black Belt
 export const CHOOSE = 'Choose…';
@@ -285,7 +304,7 @@ export const MAKEUP = 'Make-up';
 export const makeupDetail = (eventName, names) => `From ${eventName} · retests ${names.join(', ')}`; // PROPOSAL
 export const PRIVATE = 'Private testing';
 export const privateDetail = (day, time) => `${fullDate(day)}, ${startTimeLabel(time)}`; // PROPOSAL
-export const LOAD_DETAIL_FAILED = "Couldn't load this candidate. Check the connection, then retry."; // PROPOSAL
+export const LOAD_DETAIL_FAILED = loadFailedNamed('this candidate'); // S-2: "Couldn't load this candidate. Check the connection, then retry." + Retry (the summary, the signature box, the compare box)
 
 // ----- View signature (G5) -----
 export const SIGNATURE_TITLE = 'Signature';
@@ -357,6 +376,6 @@ export const HISTORY_BACK_TO_DAY = 'Back to the testing day';
 export const historyPrivate = (dayText, timeText) => `${PRIVATE}: ${dayText}, ${timeText}`;
 
 // ----- Loading -----
-export const LOAD_LIST_FAILED = "Couldn't load the make-up list. Check the connection, then retry."; // PROPOSAL
+export const LOAD_LIST_FAILED = loadFailedNamed('the make-up list'); // S-2 (shared sentence, naming what didn't load)
 export const RETRY = CB.RETRY;
 export { fullDate, shortDate, weekdayMonthDay };

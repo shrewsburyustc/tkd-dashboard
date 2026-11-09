@@ -17,7 +17,12 @@
 // Delete event after the takeover · the console helpers · words for every status · the ⋯ menu's one
 // order in three groups (candidateMenu.js, DR G1) · the toasts' Undo calls (DR G2 / G3).
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { createSaveLine } from '../saveLine.js';
+import { createToastLine } from '../toastLine.js';
+import { UNDO_DIDNT_SAVE, paidOnOpening } from '../../components/text.js';
+import * as GRADING_TEXT from '../../screens/testing/star/grading/text.js';
 import { createStarBackend } from '../mockStarTesting.js';
 import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES } from '../mockStarEvents.js';
 import {
@@ -28,12 +33,15 @@ import { createStarCandidatesApi, STAR_CANDIDATE_STATUSES, STAR_CANDIDATE_LIST_C
 import { createStarEventsApi } from './eventsCore.js';
 import { feeKind, feeCentsFor, overpaidCents, paymentSummary, lastUnreversedPayment, refundedCents } from './feeRules.js';
 import { candidateResult, assistantGrade, ageGroupOf, ageOn } from './resultRules.js';
-import { statusMessage, refundTooLarge, NOTHING_OVERPAID, UNDO_PAYMENT_TOO_LATE, UNDO_REFUND_FIRST, DAN_NEEDS_ADMIN, choiceNeededLine } from './candidatesText.js';
+import { statusMessage, refundTooLarge, NOTHING_OVERPAID, UNDO_PAYMENT_TOO_LATE, UNDO_REFUND_FIRST, DAN_NEEDS_ADMIN, choiceNeededLine, rowStale, paymentUndoneToast } from './candidatesText.js';
 import { addDays } from '../testing/eventRules.js';
 import { takeSnapshot, writeArgs } from './dialogSnapshot.js';
 import { candidateMenuKeys, canPrintReceipt } from './candidateMenu.js';
 import { candidateCardNumbers, filterRows, emptyLineKind } from './candidateCards.js';
-import { includesRemoved, dupNotCounted, NO_PAID_DAN, EVERY_PAID_DAN, NO_CANDIDATES_DAN } from '../../screens/testing/star/candidates/text.js';
+import {
+  includesRemoved, dupNotCounted, NO_PAID_DAN, EVERY_PAID_DAN, NO_CANDIDATES_DAN, paymentRecordedToast, undoPaymentTitle, undoPaymentBody,
+  markedPaidWords, movedBackToast, UNDO_BOX_FAILED, PRIVATE_DAY_HINT, EDIT_PAYMENT_DATE_HINT, LOAD_DETAIL_FAILED, LOAD_LIST_FAILED,
+} from '../../screens/testing/star/candidates/text.js';
 import { buildStarReceipt } from './candidatesReceipt.js';
 import { linesFor, isBookkeepingColumn, groupHistoryRows, describeHistoryEntry } from './candidateHistoryLines.js';
 import { payingByWhere } from './payingByWhere.js';
@@ -1688,4 +1696,141 @@ await check('R2-08 Undo plumbing: Private testing set and Make-up added', async 
   assert.equal(statusMessage('undo_makeup', 'stale').text, statusMessage('undo_paying_by', 'stale').text);
 });
 
+// =====================================================================================
+// 8. Step D (after Dashboard core): the queued Undo, the shared words, S-2's failed read, R3-06
+// =====================================================================================
+
+// R2-05: a toast's Undo pressed while another save runs WAITS, then runs (v1.125–v1.127). This drives the
+// same two parts CandidatesTab uses (lib/saveLine.js and lib/toastLine.js) with the real Star fake:
+// Withdraw A, Withdraw B (slow), press A's Undo during B's save → A is restored after B's save ends, and
+// the toast says "Undone". Then an Undo whose call fails leaves the shared bar (retry kept).
+await check('R2-05: an Undo pressed during another save waits its turn, then runs and says Undone', async () => {
+  const rig = makeRig();
+  const a = await cand(rig, 'fall', 'Lily');
+  const b = await cand(rig, 'fall', 'Noah');
+  const bars = [];
+  const toasts = createToastLine();
+  const line = createSaveLine(() => ({ section: 'Star testing', showToast: (text, o) => toasts.show(text, o), undoBar: (bar) => bars.push(bar) }));
+  // Withdraw A (a quick save), with its toast and Undo through the line
+  const tokenA = line.begin();
+  assert.ok(tokenA);
+  const withdrawnA = await rig.api.withdrawCandidate({ candidateId: a.id, expectedVersion: a.version });
+  line.end(withdrawnA.status, { token: tokenA });
+  const runUndoA = async () => rig.api.restoreCandidate({ candidateId: a.id, expectedVersion: withdrawnA.version });
+  toasts.show('Lily withdrawn', { icon: false, action: line.undoAction(runUndoA, { words: 'Lily withdrawn' }) });
+  // Withdraw B starts and has not ended yet
+  const tokenB = line.begin();
+  assert.ok(tokenB);
+  assert.equal(line.begin(), false, 'a second save while one runs is refused, as before');
+  const idA = toasts.get().id;
+  const pressed = toasts.pressUndo(idA);
+  assert.equal(toasts.get().busy, true, 'the toast says Undoing… at once');
+  assert.equal((await roster(rig, 'fall')).find((c) => c.id === a.id).status, 'withdrawn', 'A is still withdrawn: the Undo waits');
+  const withdrawnB = await rig.api.withdrawCandidate({ candidateId: b.id, expectedVersion: b.version });
+  line.end(withdrawnB.status, { token: tokenB });
+  await pressed;
+  assert.equal((await roster(rig, 'fall')).find((c) => c.id === a.id).status, 'active', 'A is back once B\'s save ended');
+  assert.equal(toasts.get()?.text, 'Undone');
+  assert.equal(bars.filter(Boolean).length, 0, 'no bar: nothing failed');
+});
+await check('R2-05 / C-06 (b): an Undo that did not reach the database says the shared sentence, with Retry', async () => {
+  const bars = [];
+  const toasts = createToastLine();
+  const line = createSaveLine(() => ({ section: 'Star testing', showToast: (text, o) => toasts.show(text, o), undoBar: (bar) => bars.push(bar) }));
+  let attempts = 0;
+  toasts.show('Lily withdrawn', { icon: false, action: line.undoAction(async () => ({ status: ++attempts === 1 ? 'error' : 'ok' }), { words: 'Lily withdrawn' }) });
+  await toasts.pressUndo(toasts.get().id);
+  const bar = bars.at(-1);
+  assert.equal(bar.text, UNDO_DIDNT_SAVE);
+  assert.equal(bar.text, "Undo didn't save. Check the connection, then retry.");
+  assert.equal(typeof bar.retry, 'function');
+  await bar.retry();
+  assert.equal(attempts, 2);
+  assert.equal(bars.at(-1), null, 'the bar goes when the Retry works');
+  // a refused Undo (someone else changed it) shows the reason without Retry
+  const toasts2 = createToastLine();
+  const bars2 = [];
+  const line2 = createSaveLine(() => ({ section: 'Star testing', showToast: (text, o) => toasts2.show(text, o), undoBar: (b) => bars2.push(b) }));
+  toasts2.show('Lily withdrawn', { icon: false, action: line2.undoAction(async () => ({ status: 'stale', reason: rowStale('Lily Brooks') }), { words: 'Lily withdrawn' }) });
+  await toasts2.pressUndo(toasts2.get().id);
+  assert.equal(bars2.at(-1).text, 'Someone else changed Lily Brooks just now, so nothing was done. Their change is shown.');
+  assert.equal(bars2.at(-1).retry, null);
+});
+
+// R1-06 / R1-07 / R2-07 / R3-13 / S-2: Star takes the shared sentences from components/text.js.
+await check('shared words: payment toast, Undo payment box, stale line, failed Undo, day hints, load lines', () => {
+  assert.equal(paymentRecordedToast('Lily Brooks', 14000, 'card'), 'Lily Brooks marked paid · $140 card');
+  assert.equal(paymentRecordedToast('Lily Brooks', 14000, 'card', true), 'Lily Brooks marked paid'); // hidden (v0.722)
+  assert.equal(paymentUndoneToast('Lily Brooks'), 'Payment undone for Lily Brooks');
+  assert.equal(undoPaymentTitle('Lily Brooks', 14000, 'card'), 'Undo Lily Brooks’s $140 card payment?');
+  assert.equal(undoPaymentBody('2026-11-03'), 'Paid on Nov 3. It is reversed and the row goes back to Not paid. Both stay in the history.');
+  assert.ok(undoPaymentBody('2026-11-03').startsWith(paidOnOpening('Nov 3')));
+  assert.equal(rowStale('Lily Brooks'), 'Someone else changed Lily Brooks just now, so nothing was done. Their change is shown.');
+  assert.equal(statusMessage('withdraw', 'stale', { name: 'Lily Brooks' }).text, rowStale('Lily Brooks'));
+  assert.equal(statusMessage('undo_payment', 'not_found', { name: 'Lily Brooks' }).text, rowStale('Lily Brooks'));
+  assert.equal(rowStale(''), 'Someone else changed this candidate just now, so nothing was done. Their change is shown.');
+  assert.equal(UNDO_BOX_FAILED, UNDO_DIDNT_SAVE); // the Undo payment / Undo refund boxes' failed line
+  assert.equal(PRIVATE_DAY_HINT, "Past days can't be chosen.");
+  assert.equal(EDIT_PAYMENT_DATE_HINT, "Days after today can't be chosen.");
+  assert.equal(LOAD_DETAIL_FAILED, "Couldn't load this candidate. Check the connection, then retry.");
+  assert.equal(LOAD_LIST_FAILED, "Couldn't load the make-up list. Check the connection, then retry.");
+  // the two Grading lines S-2 names end "then retry" now
+  assert.equal(GRADING_TEXT.LOAD_PRIVATE_FAILED, "Couldn't load the private testing. Check the connection, then retry.");
+  assert.equal(GRADING_TEXT.LOAD_GRADES_FAILED, "Couldn't load the grades. Check the connection, then retry.");
+});
+
+// S-2: the fake store's failed-read helper (the app's `__tkdPreview.failNextStarRead`): the next read of
+// that one function fails like a dropped connection, once; the summary and the signature box then show
+// "Couldn't load this candidate. Check the connection, then retry." with a Retry that reads again.
+await check('S-2: failNextRead fails exactly one read of the named function', async () => {
+  const rig = makeRig();
+  const c = await cand(rig, 'fall', 'Lily');
+  assert.equal(rig.cands.failNextRead('star_nothing'), null);
+  assert.equal(rig.cands.failNextRead(), 'star_candidate_detail');
+  assert.equal((await rig.api.loadCandidateDetail(c.id)).status, 'error'); // the summary can't load
+  assert.equal((await rig.api.loadCandidateDetail(c.id)).status, 'ok'); // Retry reads again and it works
+  assert.equal(rig.cands.failNextRead('star_view_signature'), 'star_view_signature');
+  assert.equal((await rig.api.loadCandidateDetail(c.id)).status, 'ok'); // only the signature read is armed
+  assert.equal((await rig.api.viewSignature(c.id)).status, 'error');
+  assert.notEqual((await rig.api.viewSignature(c.id)).status, 'error');
+  // armed writes are untouched: failNextRead never fails a save
+  rig.cands.failNextRead();
+  assert.equal(statusOf(await rig.api.withdrawCandidate({ candidateId: c.id, expectedVersion: c.version })), 'ok');
+});
+
+// How the screens are wired (the parts of Step D that live in JSX, which Node can't draw): read the files.
+await check('Step D wiring: save line, shared back link, Mark paid busy, signature Retry, preview helper', () => {
+  const here = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+  const tab = here('screens/testing/star/candidates/CandidatesTab.jsx');
+  assert.ok(tab.includes("useSaveLine({"), 'the tab keeps its one-at-a-time flag in the save line');
+  assert.ok(!tab.includes('onAction:'), 'no toast builds its own Undo: every one goes through line.undoAction');
+  assert.ok(!tab.includes('busyRef'), 'the old busy flag is gone');
+  assert.ok(tab.includes('<PageBar'), 'the page bar (v1.128)');
+  assert.ok(tab.includes('onRetry={retrySignature}'));
+  assert.ok(here('screens/testing/star/candidates/CandidateRows.jsx').includes("aria-busy={ctx.busy ? 'true' : undefined}"), 'R1-08: the grayed Mark paid keeps the busy cursor');
+  assert.ok(here('screens/testing/star/candidates/SignatureDialog.jsx').includes('onClick={onRetry}'));
+  for (const file of ['screens/testing/star/StarTesting.jsx', 'screens/testing/star/grading/PrivateGradingPage.jsx']) {
+    const source = here(file);
+    assert.ok(source.includes('<BackLink'), `${file} uses the shared back link`);
+    assert.ok(!source.includes('st-back'), `${file} has no .st-back`);
+  }
+  assert.ok(here('lib/mockClient.js').includes('failNextStarRead'), 'registered in the preview client');
+});
+
+// Review of batch 4, SHOULD 1 and 3: the words a failed Undo names after the person left the page never
+// carry money, and every save ends the line from a `finally`.
+await check('privacy + pass 3: Undo words carry no amount or way; every save ends its line from a finally', () => {
+  const here = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+  assert.equal(markedPaidWords('Lily Brooks'), 'Lily Brooks marked paid');
+  assert.ok(!/[$0-9]/.test(markedPaidWords('Lily Brooks')), 'no amount, no way');
+  assert.ok(!/[$0-9]/.test(movedBackToast('Lily Brooks', null)), 'no fee');
+  const tab = here('screens/testing/star/candidates/CandidatesTab.jsx');
+  assert.ok(tab.includes('words: T.markedPaidWords('), 'the payment toast\'s Undo names the payment without the amount and way');
+  assert.ok(tab.includes('words: T.movedBackToast(T.candidateName(row), null)'), 'the moved-back toast\'s Undo names it without the fee');
+  assert.ok(tab.includes('{ words: undo.words ?? text }'), 'words default to the toast\'s own text, which has no money in it');
+  assert.equal((tab.match(/\bendWrite\(/g) ?? []).length, 2, 'endWrite is called only from the finally of inWrite (plus its own definition)');
+  assert.ok(tab.includes('} finally {\n      endWrite(ended, retry);'), 'inWrite ends the line from a finally');
+  assert.equal((tab.match(/\bbeginWrite\(\)/g) ?? []).length - 1, 15, 'every begin has its call inside inWrite (15 saves)');
+  assert.ok((tab.match(/await inWrite\(/g) ?? []).length >= 15, 'each save runs its call through inWrite');
+});
 console.log(`ALL STAR CANDIDATE CHECKS PASSED (${count} checks)`);

@@ -131,6 +131,10 @@ function CandidateRow({ row, ctx }) {
       className="btn btn-sm st-record"
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
+      // R1-08 (v1.103 detail 8): while a save runs the shared gray look shows (shared.css grays any
+      // .btn marked aria-disabled), and aria-busy gives it the busy cursor, as the rulebook asks of a
+      // button that waits for a save. It stays focusable.
+      aria-busy={ctx.busy ? 'true' : undefined}
       aria-haspopup="dialog"
       aria-expanded={ctx.markPaidFor === row.id ? 'true' : 'false'}
       data-star-mark-paid={row.id}
