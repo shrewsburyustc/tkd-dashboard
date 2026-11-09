@@ -1833,4 +1833,26 @@ await check('privacy + pass 3: Undo words carry no amount or way; every save end
   assert.equal((tab.match(/\bbeginWrite\(\)/g) ?? []).length - 1, 15, 'every begin has its call inside inWrite (15 saves)');
   assert.ok((tab.match(/await inWrite\(/g) ?? []).length >= 15, 'each save runs its call through inWrite');
 });
+// R3-12 (v1.138): a locked Dan and a Stars field waiting for a Dan are `unavailable` (gray, plain cursor, still a
+// Tab stop, the reason read through describedBy), never the busy "saving" look (`readOnly` stays for real saves).
+await check('R3-12: Dan and Stars use unavailable with a reason line, readOnly only while saving', () => {
+  const dialog = readSource(new URL('../../screens/testing/star/candidates/CandidateDialog.jsx', import.meta.url));
+  const text = readSource(new URL('../../screens/testing/star/candidates/text.js', import.meta.url));
+  const selectOf = (id) => {
+    const at = dialog.indexOf('id={`${idBase}-' + id + '`}');
+    const start = dialog.lastIndexOf('<Select', at);
+    return dialog.slice(start, dialog.indexOf('/>', at));
+  };
+  const dan = selectOf('dan');
+  const stars = selectOf('stars');
+  assert.ok(dan.includes('unavailable={Boolean(danLock)}') && dan.includes('readOnly={readOnly}'), 'Dan: unavailable when locked, readOnly only when saving');
+  assert.ok(dan.includes('describedBy={danLock || danFee ?'), 'Dan: the reason is linked with describedBy');
+  assert.ok(stars.includes('unavailable={!dan}') && stars.includes('readOnly={readOnly}'), 'Stars: unavailable until a Dan is chosen');
+  assert.ok(stars.includes('-stars-hint'), 'Stars: the reason is linked with describedBy');
+  assert.ok(!dan.includes('readOnly={readOnly ||') && !stars.includes('readOnly={readOnly ||'), 'no lock is folded into readOnly');
+  assert.ok(dialog.includes('!dan ? T.STARS_NEEDS_DAN'), 'Stars: the reason line is drawn under the field');
+  assert.ok(dialog.includes('danLock ?? danFee'), 'Dan: the reason line is drawn under the field');
+  assert.ok(text.includes("STARS_NEEDS_DAN = 'Choose a Dan first.'"));
+  assert.equal(DAN_NEEDS_ADMIN, 'Only an admin can change the Dan after a payment is recorded.');
+});
 console.log(`ALL STAR CANDIDATE CHECKS PASSED (${count} checks)`);
