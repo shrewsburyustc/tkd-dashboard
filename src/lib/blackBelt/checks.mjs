@@ -5071,5 +5071,29 @@ check('v1.135 payment line: the shared base, Black Belt extras in order, phone v
   // Black Belt stores no Paying by on a candidate (the method is chosen per payment at the desk), so no Paying by line
   assert.ok(!/payingBy|chosen on the form/i.test(dialog), 'no Paying by line: Black Belt has no such data (v1.135 note)');
 });
+// Rulebook v1.051 (2) + Jeffrey "A for both" (Finance v0.826): every connection-failure sentence in the staff screens ends
+// "Check the connection, then retry." (the public family forms keep "try again" beside a "Try again" button)
+check('Connection-failure sentences say "then retry", not "then try again"', async () => {
+  const staff = await import('../../blackBelt/staff/text.js');
+  const results = await import('../../blackBelt/staff/results/text.js');
+  const grading = await import('../../blackBelt/staff/grading/text.js');
+  const sentences = [
+    staff.SAVE_FAILED, staff.DELETE_FAILED, staff.ACTION_FAILED, staff.UNDO_BOX_FAILED, staff.LOAD_FAILED,
+    results.MESSAGE_NOT_READY, results.CSV_FAILED, results.TEXT_SAVE_FAILED, results.LOAD_FAILED,
+    results.addressFailed('Mia'), grading.LOAD_GRADES_FAILED,
+  ];
+  for (const s of sentences) {
+    assert.ok(typeof s === 'string' && s.length > 0, 'a sentence is missing: ' + s);
+    assert.ok(/Check the connection, then retry\.$/.test(s), 'ends "Check the connection, then retry.": ' + s);
+  }
+  // none of Black Belt's staff text still says "then try again" (validation messages keep "Check the fields and try again.")
+  for (const [name, mod] of Object.entries({ staff, results, grading })) {
+    for (const [key, value] of Object.entries(mod)) {
+      if (typeof value !== 'string') continue; // only the plain sentences (the one function sentence, addressFailed, is checked above)
+      const text = value;
+      assert.ok(!/then try again/i.test(text), name + '.' + key + ' still says "then try again": ' + text);
+    }
+  }
+});
 console.log(`${count} groups of checks ran.`);
 console.log('ALL BLACK BELT LIB CHECKS PASSED');
