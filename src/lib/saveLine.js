@@ -49,7 +49,17 @@
 //
 // createSaveLine is the same line outside React (the checks, src/lib/shared/checks.mjs).
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { NEITHER_SAVED, UNDO, UNDO_DIDNT_SAVE, UNDONE, undoLeftDidntSave, undoLeftRefused } from '../components/text.js';
+import {
+  NEITHER_SAVED,
+  UNDO,
+  UNDO_DIDNT_SAVE,
+  UNDONE,
+  undoLeftDidntSave,
+  undoLeftDidntSavePlain,
+  undoLeftRefused,
+  undoLeftRefusedPlain,
+} from '../components/text.js';
+import { getPrivateDetailsHidden } from './privateDetails.js';
 
 const UNDO_GIVE_UP_MS = 30000; // an Undo that never answers counts as not reached after this long
 
@@ -72,6 +82,13 @@ export function useLeftUndoBar() {
 // Its × (Shell.jsx): the person closes the bar.
 export function dismissLeftUndoBar() {
   setLeftBar(null);
+}
+// Hide private details turned ON while the bar shows (v0.249, v0.506): its words name the change
+// ("Undo didn't save: “Sam Lee marked paid · $330 cash” (Star testing)…"), which may hold an amount
+// or a name. They become the plain words, which name only the section; the Retry stays. While details
+// are hidden, a new bar is made with the plain words from the start.
+export function hideLeftUndoBarWords() {
+  if (leftBar && leftBar.plain && leftBar.text !== leftBar.plain) setLeftBar({ ...leftBar, text: leftBar.plain });
 }
 // Signing out (App.jsx): the bar belongs to the person who pressed Undo. It goes, and an Undo still
 // running for them can't bring one back for the next person: every Undo remembers the number it
@@ -226,9 +243,11 @@ export function createSaveLine(getOptions, { giveUpMs = UNDO_GIVE_UP_MS } = {}) 
       undoBar?.({ ...bar, takeFocus: true });
     } else if (notReached && !result.reason) {
       // v1.129: the person left; the bar under the top bar names the change and the section.
-      showLeft({ text: undoLeftDidntSave(words, section), retry: result.noRetry ? null : leftRetry(again), retrying: false });
+      const plain = undoLeftDidntSavePlain(section);
+      showLeft({ text: getPrivateDetailsHidden() ? plain : undoLeftDidntSave(words, section), plain, retry: result.noRetry ? null : leftRetry(again), retrying: false });
     } else {
-      showLeft({ text: undoLeftRefused(words, section, bar.text), retry: bar.retry ? leftRetry(again) : null, retrying: false });
+      const plain = undoLeftRefusedPlain(section, bar.text);
+      showLeft({ text: getPrivateDetailsHidden() ? plain : undoLeftRefused(words, section, bar.text), plain, retry: bar.retry ? leftRetry(again) : null, retrying: false });
     }
     return { undone: false, barShown: true };
   }
