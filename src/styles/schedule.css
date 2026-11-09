@@ -410,6 +410,32 @@ button.sslot {
     inset: -4px 0;
     content: '';
   }
+
+  /* L-10 (Jeffrey: option A): a slot under 44px tall (a 30-minute one is 33px) keeps its drawn size but gets
+     an invisible tap box, out to 44px where there is room. TimeGrid.jsx sets --tap-top / --tap-bottom per
+     slot: half of the free gap to its neighbour in the same lane, at most the missing pixels, so a tap never
+     picks the wrong slot. The button's overflow: hidden would clip the box, so on touch it is let out and the
+     time line clips itself instead. */
+  button.sslot {
+    position: relative;
+    overflow: visible;
+  }
+
+  button.sslot::after {
+    position: absolute;
+    /* the 1px border is outside an absolutely placed box's reference edge, so each side also gives it back */
+    top: calc(var(--tap-top, 0px) * -1 - 1px);
+    right: -1px;
+    bottom: calc(var(--tap-bottom, 0px) * -1 - 1px);
+    left: -1px;
+    content: '';
+  }
+
+  .sslot-time {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
