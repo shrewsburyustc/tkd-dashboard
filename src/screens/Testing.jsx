@@ -254,7 +254,7 @@ export default function Testing({
     let timer = 0;
     let tries = 0;
     function tryFocus() {
-      const link = document.querySelector('.back-link, .tc-back, .st-back, .bb-back'); // .back-link: the shared one (R3-06)
+      const link = document.querySelector('.back-link, .st-back, .bb-back'); // .back-link: the shared one (R3-06; .tc-back is gone)
       if (link) {
         focusBackLinkRef.current = false;
         link.focus();

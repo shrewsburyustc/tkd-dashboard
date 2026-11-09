@@ -94,18 +94,8 @@
 }
 
 /* ===== Date row (D1, D4, D14) ===== */
-/* History's "← Back to the day" (v0.820): the shared link-button look (app.css: blue text), with
-   the same numbers as the other sections' back link (.tc-back, chooser.css; R4-12): 24px tall with
-   a mouse; on touch a 44px tap box pulled back with negative margins (below), so the History
-   heading doesn't move down. */
-.fin-back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  align-self: flex-start;
-  min-height: 24px;
-  margin-bottom: 2px;
-}
+/* History's "← Back to the day" is the one shared back link (src/components/BackLink.jsx, shared.css
+   ".back-link"; R3-06, v1.048 (12)): Finance has no back-link style of its own any more. */
 
 .fin-dayrow {
   display: flex;
@@ -944,13 +934,6 @@
 
 /* ===== Touch screens: 36px controls, 44px tap areas, 48px rows (guidelines 2.5) ===== */
 @media (pointer: coarse) {
-  /* History's back link: a 44px tap box, pulled back so it takes no more room than with a mouse
-     (as .tc-back, chooser.css) */
-  .fin-back-link {
-    min-height: var(--tap-size);
-    margin: -10px 0 -8px;
-  }
-
   /* Export's From / To: every field has 16px text on touch (app.css), so the longest date
      (135px) plus the chevron needs a wider field. Two of these don't fit side by side on a 390
      phone, so there they stack (as at 320; Jeffrey's choice, v0.818). 200px leaves room for an

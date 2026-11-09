@@ -6,7 +6,7 @@
 //     tag) with the admin's Edit icon; the first lines in a gray box; "Read all" (the whole text)
 //     under the box; who signs. The Edit icon (Edit waiver → a new version). The seeded waiver is a
 //     placeholder: an amber line says to save the school's waiver before opening registration.
-//   - the Keeping block (its save: "Keeping time saved · Undo", BB5 v0.967 — undoKeep below): "Keep signed waivers for N years after the last testing day. For a
+//   - the Keeping block (its save: "Keeping time saved · Undo", BB5 v0.967 — runUndoKeep below): "Keep signed waivers for N years after the last testing day. For a
 //     candidate under 18: …" — while the insurer hasn't answered, "Not set: nothing is deleted
 //     until both numbers are entered." Admins edit it (KeepYearsDialog.jsx).
 //   - staff: "View only. Ask an admin to make changes." under the tabs, no Edit icons.
@@ -20,6 +20,7 @@ import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import { loadRubric, setKeepYears } from '../../../lib/blackBelt/api.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import KeepYearsDialog from './KeepYearsDialog.jsx';
@@ -28,6 +29,8 @@ import WaiverDialog from './WaiverDialog.jsx';
 import DefaultRubricCard from './DefaultRubricCard.jsx';
 import ResultEmailsBlock from './ResultEmailsBlock.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
 import * as T from '../text.js';
 
 const LIVE_KEY = 'black-belt-rubric';
@@ -48,6 +51,8 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [dialog, setDialog] = useState(null); // { type: 'read' | 'waiver' | 'keep', opener, … }
   const [banner, setBanner] = useState(null);
+  // The toast's Undo goes through the shared save line (R2-05): pressed while another save runs, it waits its turn.
+  const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
   const [rubricModal, setRubricModal] = useState(false); // the rubric card's dialogs / phone editor
   const [textsModal, setTextsModal] = useState(false); // the Result emails block's Edit result email
 
@@ -71,46 +76,32 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
   // is a legal record the database never changes or removes, so it keeps no Undo.
   function saved(text, undo = null) {
     close();
-    showToast(text, undo ? { icon: false, action: { label: T.UNDO, onAction: () => undoKeep(undo) } } : { icon: false });
+    showToast(text, undo ? { icon: false, action: line.undoAction(() => runUndoKeep(undo), { words: T.TOAST_KEEPING_SAVED }) } : { icon: false });
     liveRef.current.reload();
   }
 
   // The keeping time's Undo: the same two steps as the dialog's Save. It never deletes anything:
   // if the old numbers would delete details now, it is refused in the amber bar instead of asking
   // the red "This can't be undone" question. Every problem goes in the amber bar (v0.966).
-  const undoBusy = useRef(false);
-  async function undoKeep(undo) {
-    if (undoBusy.current) return;
-    undoBusy.current = true;
+  // Runs inside the save line: answers { status, reason? } and the line shows "Undone" or the bar.
+  async function runUndoKeep(undo) {
     const args = { expectedVersion: undo.version, afterLastDay: undo.afterLastDay, after18: undo.after18 };
     let result = await setKeepYears({ ...args, confirmCount: null });
     if (result.status === 'confirm_needed' && (result.removeCount ?? 0) === 0) result = await setKeepYears({ ...args, confirmCount: 0 });
-    undoBusy.current = false;
     const status = result.status;
     if (status === 'ok') {
-      liveRef.current.reload();
-      showToast(T.TOAST_UNDONE, { icon: false });
-      return;
+      await liveRef.current.reload();
+      return { status: 'ok' };
     }
     if (status === 'no_access') {
       onNoAccess();
-      return;
+      return { status };
     }
-    clearToast();
-    if (status === 'error') {
-      setBanner({
-        text: T.UNDO_FAILED,
-        retry: () => {
-          setBanner(null);
-          undoKeep(undo);
-        },
-      });
-      return;
-    }
+    if (status === 'error') return { status };
     if (status === 'not_allowed') onRefreshProfile();
     await liveRef.current.reload();
     const words = { confirm_needed: T.UNDO_KEEP_DELETES, stale: T.UNDO_KEEP_STALE, not_allowed: T.NOT_ALLOWED }[status] ?? T.INVALID;
-    setBanner({ text: words });
+    return { status, reason: words };
   }
 
   const data = live.data;
@@ -217,7 +208,7 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
     <>
       {renderHeader(null)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel bb-rubric">
-        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
+        {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry} retrying={banner.retrying === true} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
         {body}
       </div>
       {dialogElement}

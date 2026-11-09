@@ -24,7 +24,7 @@ import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import Select from '../../../components/Select.jsx';
 import { bracketLabel, CUTOFF_LETTERS, MAX_BRACKETS, sameBracket, subjectLetters } from '../../../lib/blackBelt/rubric.js';
-import Choice from '../parts/Choice.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { checkDraft, prepareDan } from './draft.js';
 import { FieldNote, NumberBox, TextBox } from './fields.jsx';
 import { describe } from './problemText.js';
@@ -284,7 +284,7 @@ export default function SubjectDialog({ draft, partCode, subject: original, isNe
         <span id={`${id}-scoring`} className="bbe-label">
           {T.SCORING}
         </span>
-        <Choice
+        <ChoiceGroup
           labelId={`${id}-scoring`}
           options={[
             { key: 'graded', label: T.GRADED_A_TO_D },
@@ -314,7 +314,7 @@ export default function SubjectDialog({ draft, partCode, subject: original, isNe
         <span id={`${id}-points`} className="bbe-label">
           {T.POINTS_LABEL}
         </span>
-        <Choice
+        <ChoiceGroup
           labelId={`${id}-points`}
           options={[
             { key: 'worked', label: T.WORKED_OUT },
@@ -350,7 +350,7 @@ export default function SubjectDialog({ draft, partCode, subject: original, isNe
         <span id={`${id}-who`} className="bbe-label">
           {T.WHO_DOES_IT}
         </span>
-        <Choice
+        <ChoiceGroup
           labelId={`${id}-who`}
           options={[
             { key: 'everyone', label: T.EVERYONE },

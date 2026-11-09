@@ -23,7 +23,7 @@ import { useId, useRef } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import { formatCents } from '../../../lib/blackBelt/money.js';
 import { cycleCandidateItems, dueNowItems, hasLivePayment, nextItems, predictMoney } from '../../../lib/blackBelt/rules.js';
-import Choice from '../parts/Choice.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { FailedBanner, Footer, PrimaryButton } from './dialogParts.jsx';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
@@ -151,9 +151,9 @@ export default function ChangePlanDialog({ state, cycle, isAdmin, isPhone, hidde
           <span id={`${id}-kuk`} className="field-label">
             {T.KUKKIWON_DAN_CERT}
           </span>
-          <Choice
+          <ChoiceGroup
             labelId={`${id}-kuk`}
-            className="bb-segmented--fill"
+            fill
             options={[
               { key: 'no', label: T.KUKKIWON_NO },
               { key: 'yes', label: T.kukkiwonYes(hidden ? null : fee) },

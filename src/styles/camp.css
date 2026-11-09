@@ -29,27 +29,8 @@
 .camp-child__head .reg-card__title {
   margin-bottom: 0;
 }
-/* Date signed under the signature (rulebook v0.638, copied from Star's v0.522 box in star-register.css):
-   today's date in a gray box that can't be changed. Same look as New students' box (border, gray
-   background, default cursor); the label stays 12px at every size because it sits inside
-   .reg-field--sign, like the "Signature" label above it. The box is .reg-input, so it is 40px tall
-   with 16px text on touch like the form's other boxes. Two classes, so it beats .reg-input and
-   .reg-input:focus (one class less) wherever the page's styles are loaded: on the family page and
-   in the dashboard's Fill in dialog, where camp.css comes after the cut-down register.css. */
-.reg-input.camp-signed-box {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: default;
-}
-.reg-input.camp-signed-box:focus {
-  border-color: var(--color-border-strong); /* read-only: no blue "typing" ring, but keyboard focus stays visible below */
-  box-shadow: none;
-}
-.reg-input.camp-signed-box:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 1px;
-}
+/* (The "Date signed" box under the signature is the shared components/DateSigned.jsx with its own
+   stylesheet, styles/date-signed-public.css — rulebook v0.638 / v0.749.) */
 /* First and last name side by side, also on phones (C7a). */
 .camp-two {
   display: grid;

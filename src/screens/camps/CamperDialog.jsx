@@ -64,7 +64,7 @@ import Notice from '../../components/Notice.jsx';
 import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
 // Print receipt's one rule, the same as the ⋯ menu's (v0.734)
 import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
-import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
+import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, payingByChoiceWhere, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { CamperTag } from './CampRoster.jsx';
@@ -264,7 +264,7 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                 : T.priceBreakdownLine(b, allDays)}
             </Row>
           )}
-          <Row label={T.DETAIL_PAYING_BY}>{detailsHidden ? hiddenValue : T.payingByText(camper.payingBy)}</Row>
+          <Row label={T.DETAIL_PAYING_BY}>{detailsHidden ? hiddenValue : T.payingByDetail(camper.payingBy, payingByChoiceWhere(camper))}</Row>
           {camper.status !== 'active' && <Row label={T.DETAIL_REMOVED}>{T.removedDetail(camper)}</Row>}
         </dl>
 

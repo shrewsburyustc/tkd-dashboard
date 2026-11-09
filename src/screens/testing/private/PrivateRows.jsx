@@ -17,6 +17,8 @@
 // Follows "Hide private details" (v0.506), as Star's CandidateRows: while ctx.hidden is on there is
 // no price, Paying by, Payment or Paid on column, no Paid / Not paid tag, no amber owed line and no
 // Mark paid (PC: Day · time · Student · Testing for · ⋯). The gray "Moved from …" line stays.
+// R1-08 (batch 2): while the page's save line is busy (a save or an Undo runs, ctx.busy) the Mark paid
+// buttons LOOK unavailable (`is-unavailable`, gray page-wide) as well as being aria-disabled.
 // v1.009 (CB6): tapping anywhere on a row (but not on Mark paid or ⋯) opens the read-only summary
 // (PrivateSummaryDialog.jsx). The keyboard works as on the event roster (useRowArrowNav): the
 // list is one Tab stop, ↑ ↓ move between rows, Enter opens the summary, ← → reach the buttons.
@@ -104,7 +106,7 @@ function PrivateRow({ row, ctx }) {
   const markPaid = !hidden && !cancelled && showMarkPaid(row) ? (
     <button
       type="button"
-      className="btn btn-sm ev-markpaid"
+      className={`btn btn-sm ev-markpaid${ctx.busy ? ' is-unavailable' : ''}`}
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
       aria-haspopup="dialog"

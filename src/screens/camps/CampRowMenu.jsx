@@ -19,6 +19,14 @@
 //   Delete camp (admin, red)  → DeleteCampDialog (asks first; permanent)
 // Close / Open are instant with a 5-second Undo toast (C1, 2026-10-19).
 //
+// The page's line of saves (design review R2-05, rulebook v1.125–v1.129): this hook no longer keeps
+// a busy flag of its own. The page (the camp page, or the Camps list) makes one line with
+// useSaveLine (src/lib/saveLine.js) and passes it in as `line`, so a Close sign-up and a Mark paid
+// on the same page can't run at once, and the Undo of Close / Open sign-up and of Save as template
+// is line.undoAction(…): pressed during another save it waits its turn ("Undoing…") instead of
+// being dropped, and the LINE says "Undone" or shows the bar when it didn't save (the page draws
+// that bar with PageBar). Each save ends the line exactly once, from a `finally` (lineSave.js).
+//
 //   const actions = useCampActions({ … });
 //   actions.items(camp, days, { includeEdit, onEdit })  → the RowMenu items
 //   actions.elements   → the open dialog and the print sheet (draw them once on the page)
@@ -32,6 +40,7 @@ import { signupState } from '../../lib/camps/campRules.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import DeleteCampDialog from './DeleteCampDialog.jsx';
 import { focusSoon } from './focusSoon.js';
+import { reloadBounded, saveOnLine, undoAnswer } from './lineSave.js';
 import PrintRoster from './PrintRoster.jsx';
 import SaveTemplateDialog from './SaveTemplateDialog.jsx';
 import * as T from './text.js';
@@ -52,6 +61,7 @@ export function useCampActions({
   isAdmin,
   today,
   screenLocked,
+  line, // the page's save line (useSaveLine): one save at a time, the Undos queue on it
   showToast,
   clearToast,
   onNoAccess,
@@ -62,37 +72,21 @@ export function useCampActions({
 }) {
   const [dialog, setDialog] = useState(null); // { type: 'template' | 'delete', … }
   const [printing, setPrinting] = useState(null); // the loaded camp data while it prints
-  const busyRef = useRef(false);
-  const [busy, setBusy] = useState(false);
   const [detailsHidden] = usePrivateDetailsHidden(); // Hide private details (v0.506 / v0.722)
+  const busy = line.busy; // a save or an Undo is running on the page's line
 
-  function begin() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
-    return true;
-  }
-  function end(status) {
-    busyRef.current = false;
-    setBusy(false);
-    if (status && status !== 'ok') clearToast();
-  }
+  // One save or read on the page's line (lineSave.js): null = something else is running (do nothing,
+  // as the old begin() returning false); a save that didn't work clears the toast, as before.
+  const save = (call, retry = null) => saveOnLine(line, call, { retry, onNotOk: () => clearToast() });
 
   // ----- Close / Open sign-up (instant, with Undo) -----
-  async function switchSignup(camp, days, open, isUndo = false, expectedVersion = camp.version) {
-    if (!begin()) return;
-    const result = await setSignup(camp.id, expectedVersion, open);
-    end(result.status);
+  async function switchSignup(camp, days, open) {
+    const result = await save(() => setSignup(camp.id, camp.version, open), () => switchSignup(camp, days, open));
+    if (!result) return; // something else is running
     const status = result.status;
     if (status === 'ok') {
       setBanner((current) => (current?.kind === 'switch' ? null : current));
       reload();
-      if (isUndo) {
-        // An Undo that opened sign-up again says so; one that closed it says just "Undone"
-        // (design review R2-07, rulebook v1.051 (1)).
-        showToast(open ? T.TOAST_UNDONE_SIGNUP_OPEN : T.TOAST_UNDONE, { icon: false });
-        return;
-      }
       // An admin opening it after the closing date: the database moved that date to the last day.
       const moved = open && today > camp.signupClosesOn;
       const lastDay = days[days.length - 1]?.day ?? null;
@@ -100,7 +94,12 @@ export function useCampActions({
       const newVersion = result.version;
       showToast(text, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => switchSignup({ ...camp, version: newVersion }, days, !open, true, newVersion) },
+        // The Undo of Close opens sign-up again, so its toast says so; the Undo of Open says just
+        // "Undone" (design review R2-07, rulebook v1.051 (1)). The line says it, not this page.
+        action: line.undoAction(() => undoSwitchSignup(camp, newVersion, !open), {
+          words: text,
+          doneText: !open ? T.TOAST_UNDONE_SIGNUP_OPEN : null,
+        }),
       });
     } else if (status === 'no_access') {
       onNoAccess();
@@ -112,23 +111,48 @@ export function useCampActions({
       setBanner({ text: T.CAMP_FINISHED });
       reload();
     } else if (['stale', 'not_found', 'invalid'].includes(status)) {
-      setBanner({ text: isUndo ? T.UNDO_STALE : T.STALE });
+      setBanner({ text: T.someoneElseChanged(camp.name) }); // R2-07: names the camp
       reload();
     } else {
       // Didn't reach the database: the banner says so and offers Retry (never silent, rule 3.5).
       setBanner({
         kind: 'switch',
         text: open ? T.signupNotOpened(camp.name) : T.signupNotClosed(camp.name),
-        retry: () => switchSignup(camp, days, open, isUndo, expectedVersion),
+        retry: () => switchSignup(camp, days, open),
       });
     }
+  }
+  // The Undo of Close / Open sign-up, as the line wants it (its run(): { status, reason?, … }). The
+  // page reloads inside it, so the list or roster shows the Undo before the toast says "Undone".
+  // Refusals say why (reasons in the page's own words); a connection failure ('error') is the
+  // line's "Undo didn't save" bar with Retry.
+  async function undoSwitchSignup(camp, version, open) {
+    const result = await setSignup(camp.id, version, open);
+    const answer = undoAnswer(result, {
+      notAllowed: open ? T.OPEN_NEEDS_ADMIN : T.CAMPS_NOT_ALLOWED,
+      // 'finished' is its own refusal (the camp is over); stale, not_found and invalid name the camp.
+      stale: result.status === 'finished' ? T.CAMP_FINISHED : T.someoneElseChanged(camp.name),
+    });
+    // Bounded: a reload that hangs must not hold the line (the Undo already saved; lineSave.js).
+    if (answer.status === 'ok') await reloadBounded(reload);
+    else if (answer.status === 'no_access') onNoAccess();
+    else if (answer.status === 'not_allowed') {
+      onRefreshProfile();
+      reload();
+    } else if (answer.status !== 'error') reload(); // refused: show what changed
+    return answer;
   }
 
   // ----- Delete camp: read the camp fresh first, so the warning names the real numbers -----
   async function startDelete(camp, opener) {
-    if (!isAdmin || !begin()) return;
-    const fresh = await loadCamp(camp.id);
-    end(fresh.status === 'ok' || fresh.status === 'not_found' ? 'ok' : fresh.status);
+    if (!isAdmin) return;
+    let fresh = null;
+    const ran = await save(async () => {
+      fresh = await loadCamp(camp.id);
+      // (a camp deleted meanwhile is an answer, not a failed read: it doesn't clear the toast)
+      return { status: fresh.status === 'not_found' ? 'ok' : fresh.status };
+    });
+    if (!ran) return; // something else is running
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
@@ -136,16 +160,15 @@ export function useCampActions({
     if (fresh.status !== 'ok') {
       // Couldn't read it (no connection): the bar offers Retry, which clears the bar and reads the
       // camp again (design review S-2, rulebook v1.051). Deleted meanwhile ('not_found'): nothing
-      // to retry — "Someone else changed this just now", and the list reloads without it. (No
-      // reload after a failed read: it would fail too and put its own bar over this one's Retry.)
+      // to retry — "Someone else changed [camp] just now …" (R2-07), and the list reloads without it.
+      // (No reload after a failed read: it would fail too and put its own bar over this one's Retry.)
       if (fresh.status === 'not_found') {
-        setBanner({ text: T.STALE });
+        setBanner({ text: T.someoneElseChanged(camp.name) });
         reload();
       } else {
         setBanner({
           text: T.LOAD_CAMP_FAILED,
-          reveal: true, // the page brings it into view and focuses its Retry (revealRetryBar.js)
-          opener, // the ⋯ that started it: focus may move from there to Retry
+          takeFocus: true, // the page's bar (PageBar) puts focus on its Retry
           retry: () => {
             setBanner(null);
             startDelete(camp, opener);
@@ -174,9 +197,8 @@ export function useCampActions({
 
   // ----- Print roster: load the camp (the list has no campers), print, done -----
   async function startPrint(camp) {
-    if (!begin()) return;
-    const fresh = await loadCamp(camp.id);
-    end(fresh.status === 'ok' ? 'ok' : fresh.status);
+    const fresh = await save(() => loadCamp(camp.id));
+    if (!fresh) return; // something else is running
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
@@ -193,23 +215,16 @@ export function useCampActions({
   }
 
   // ----- Undo of Save as template: delete the new template (as Add camp's Undo deletes the new
-  // camp; rulebook v0.726). Edited or deleted meanwhile → 'stale' / 'not_found' → "Couldn't undo.
-  // Someone else changed this just now." No connection → the amber bar with Retry. -----
-  async function undoSaveTemplate(saved) {
-    if (!begin()) return;
+  // camp; rulebook v0.726). It is the line's Undo (its run()): edited or deleted meanwhile →
+  // 'stale' / 'not_found' → "Someone else changed [template] just now, so nothing was done. …"
+  // (R2-07). No connection → the line's "Undo didn't save" bar with Retry. Nothing to reload: the
+  // Templates tab reads its list when it opens. -----
+  async function undoSaveTemplate(saved, name) {
     const result = await deleteTemplate(saved.id, saved.version);
-    end(result.status);
-    const status = result.status;
-    if (status === 'ok') {
-      setBanner((current) => (current?.kind === 'undoTemplate' ? null : current));
-      showToast(T.TOAST_UNDONE, { icon: false });
-    } else if (status === 'no_access') onNoAccess();
-    else if (status === 'not_allowed') {
-      setBanner({ text: T.CAMPS_NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (status === 'error') {
-      setBanner({ kind: 'undoTemplate', text: T.UNDO_FAILED, retry: () => undoSaveTemplate(saved) });
-    } else setBanner({ text: T.UNDO_STALE });
+    const answer = undoAnswer(result, { notAllowed: T.CAMPS_NOT_ALLOWED, stale: T.someoneElseChanged(name) });
+    if (answer.status === 'no_access') onNoAccess();
+    else if (answer.status === 'not_allowed') onRefreshProfile();
+    return answer;
   }
 
   function startSaveTemplate(camp, days, opener) {
@@ -299,7 +314,8 @@ export function useCampActions({
           onClose={closeDialog}
           onSaved={(name, saved) => {
             closeDialog();
-            showToast(T.templateSavedToast(name), { icon: false, action: { label: T.UNDO, onAction: () => undoSaveTemplate(saved) } });
+            const words = T.templateSavedToast(name);
+            showToast(words, { icon: false, action: line.undoAction(() => undoSaveTemplate(saved, name), { words }) });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -326,7 +342,7 @@ export function useCampActions({
             setDialog(null);
             if (status === 'no_access') onNoAccess();
             else {
-              setBanner({ text: status === 'not_allowed' ? T.CAMPS_NOT_ALLOWED : T.STALE });
+              setBanner({ text: status === 'not_allowed' ? T.CAMPS_NOT_ALLOWED : T.someoneElseChanged(dialog.camp.name) }); // R2-07
               if (status === 'not_allowed') onRefreshProfile();
               reload();
             }

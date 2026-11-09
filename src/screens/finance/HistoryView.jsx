@@ -15,7 +15,8 @@
 // Props: location, today, month ('YYYY-MM-01'), onMonth(month), onBack(), onOpenDay(day, schoolName),
 //        screenLocked, onNoAccess, wide, isPhone, isTouch
 import { useEffect } from 'react';
-import { IconAlertTriangle, IconArrowLeft, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { IconAlertTriangle, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import BackLink from '../../components/BackLink.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../lib/device.js';
@@ -106,11 +107,8 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
 
   const top = (
     <>
-      <button type="button" className="link-button fin-back-link" onClick={onBack}>
-        {/* ti-arrow-left = back */}
-        <IconArrowLeft size={16} aria-hidden="true" />
-        {T.BACK_TO_DAY}
-      </button>
+      {/* the one shared back link (R3-06, v1.048 (12)) */}
+      <BackLink label={T.BACK_TO_DAY} onClick={onBack} />
       <div className="fin-dayrow">
         <h2 className="fin-day">{T.HISTORY}</h2>
         <span className="fin-grow" />
