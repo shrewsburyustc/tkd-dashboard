@@ -7,24 +7,29 @@
 //   - opens the dialogs (add / edit time slot, plan / edit a planned schedule, delete one)
 //   - sends every change to the database (src/lib/schedule/api.js) and reacts to the answer
 //   - offers Undo for reversible changes (add, edit, remove a slot; plan, edit a planned
-//     schedule); deleting a planned schedule is permanent and asks first (rule 1.4)
+//     schedule); deleting a planned schedule is permanent and asks first (rule 1.4). Saves and Undos
+//     go through one save line (lib/saveLine.js, R2-05): an Undo pressed while another save runs
+//     WAITS its turn (its toast says "Undoing…"); the line says "Undone" or shows a failed Undo's
+//     bar, and a refusal names the time slot or schedule (R2-07)
 // On "Both" the Schedule page draws this twice (Worcester above Shrewsbury, decided v0.233).
 //
 // Rules worth knowing (same as Testing):
-//   - ONE change at a time; dialog saves WAIT for the database.
+//   - ONE change at a time (the save line); dialog saves WAIT for the database.
 //   - The dialog's typed values live HERE, so a lock while it's open loses nothing.
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCalendar, IconCalendarEvent, IconCalendarPlus, IconDots, IconEdit, IconHistory, IconMapPin, IconPlus, IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
-import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
+import PageBar from '../../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
 import RowMenu from '../../components/RowMenu.jsx';
+import Select from '../../components/Select.jsx'; // the shared dropdown, with its groups (S-10)
 import { addSlots, deleteVersion, planVersion, removeSlot, setClassAges, setClassColor, updateSlot, updateVersion } from '../../lib/schedule/api.js';
 import { agesToText } from '../../lib/schedule/ages.js';
 import { DEFAULT_COLOR } from '../../lib/schedule/colors.js';
 import { formatTime, toTimeText } from '../../lib/schedule/time.js';
 import { useSchedule } from '../../lib/schedule/useSchedule.js';
+import { useSaveLine } from '../../lib/saveLine.js';
 import { addDays, classifyVersions, copySourceFor, currentOf, endsBefore, pastOf, plannedOf, weekdayOf } from '../../lib/schedule/versions.js';
 import { useShortcutN } from '../../lib/useShortcutN.js';
 import PlanDialog, { checkPlanForm, isPlanFormDirty } from './PlanDialog.jsx';
@@ -92,23 +97,31 @@ export default function ScheduleSchool({
   // ----- State -----
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { anchor }
-  const [banner, setBanner] = useState(null); // { text, retry? }
-  const busyRef = useRef(false);
-  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState(null); // { text, retry?, kind?: 'undo', retrying?, takeFocus? }
+  // One line of saves for this school's schedule (lib/saveLine.js): one at a time, and an Undo pressed
+  // meanwhile waits its turn. The line keeps the page's one Undo bar through undoBar (kind 'undo').
+  const line = useSaveLine({
+    section: T.SECTION_NAME,
+    showToast,
+    undoBar: (next) => setBanner((cur) => (next ? { kind: 'undo', ...next } : cur?.kind === 'undo' ? null : cur)),
+  });
+  const busy = line.busy;
+  const tokenRef = useRef(null); // the token of the save that is running (one at a time)
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
   });
 
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = line.begin(); // false while a save or an Undo runs
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
+  // Every begin is ended exactly once; the token keeps a stale end from freeing the line under an Undo.
   function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+    line.end(status ?? 'ok', { token: tokenRef.current });
+    tokenRef.current = null;
     if (status && status !== 'ok') clearToast();
   }
 
@@ -292,23 +305,17 @@ export default function ScheduleSchool({
     else if (agesFailed) setBanner({ text: T.AGES_FAILED });
     if (d.mode === 'add') {
       const added = result.slots;
-      showToast(T.toastSlotsAdded(added.length), {
-        icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => removeMany(added)) },
-      });
+      const addedWords = T.toastSlotsAdded(added.length);
+      showToast(addedWords, { icon: false, action: undoOf(addedWords, T.newSlotsName(added.length), () => removeMany(added)) });
       focusBack(d.opener, '[data-add-slot]');
     } else {
       const before = d.snapshot;
       const savedVersion = result.version;
       showToast(T.TOAST_SLOT_SAVED, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () =>
-            runUndo(() =>
-              updateSlot({ slotId: d.slotId, expectedVersion: savedVersion, classIds: before.classIds, weekday: before.weekday, start: before.start, end: before.end }),
-            ),
-        },
+        action: undoOf(T.TOAST_SLOT_SAVED, T.slotName(before.weekday, before.start), () =>
+          updateSlot({ slotId: d.slotId, expectedVersion: savedVersion, classIds: before.classIds, weekday: before.weekday, start: before.start, end: before.end }),
+        ),
       });
       focusBack(document.querySelector(`[data-slot="${d.slotId}"]`) ?? d.opener, '[data-add-slot]');
     }
@@ -339,14 +346,12 @@ export default function ScheduleSchool({
     setDialog(null);
     reloadQuiet();
     const r = result.removed;
-    showToast(T.toastSlotRemoved(r.weekday, r.classIds.map((id) => classNames.get(id) ?? '').join(' + '), formatTime(r.start)), {
+    const removedWords = T.toastSlotRemoved(r.weekday, r.classIds.map((id) => classNames.get(id) ?? '').join(' + '), formatTime(r.start));
+    showToast(removedWords, {
       icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () => runUndo(() => addSlots({ locationCode, versionId: r.versionId, classIds: r.classIds, weekdays: [r.weekday], start: r.start, end: r.end })),
-      },
+      action: undoOf(removedWords, T.slotName(r.weekday, r.start), () => addSlots({ locationCode, versionId: r.versionId, classIds: r.classIds, weekdays: [r.weekday], start: r.start, end: r.end })),
     });
-    focusBack(null, `[data-add-slot="${locationCode}"], [data-version-picker="${locationCode}"]`);
+    focusBack(null, `[data-add-slot="${locationCode}"], #picker-${locationCode}`);
   }
 
   // ----- Plan a change / edit a planned schedule -----
@@ -380,26 +385,20 @@ export default function ScheduleSchool({
       const count = result.slotCount;
       showToast(T.TOAST_PLANNED, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () => {
-            setChosenId(null);
-            return runUndo(() => deleteVersion({ versionId: newId, expectedVersion: 1, expectedSlotCount: count }));
-          },
-        },
+        action: undoOf(T.TOAST_PLANNED, T.NEW_PLAN_NAME, () => {
+          setChosenId(null); // back to the schedule that was shown before, as the Undo runs
+          return deleteVersion({ versionId: newId, expectedVersion: 1, expectedSlotCount: count });
+        }),
       });
     } else {
       const before = d.snapshot;
       const savedVersion = result.version;
       showToast(T.TOAST_PLAN_SAVED, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () => runUndo(() => updateVersion({ versionId: d.versionId, expectedVersion: savedVersion, name: before.name, startsOn: before.startsOn })),
-        },
+        action: undoOf(T.TOAST_PLAN_SAVED, T.planName(before), () => updateVersion({ versionId: d.versionId, expectedVersion: savedVersion, name: before.name, startsOn: before.startsOn })),
       });
     }
-    focusBack(document.querySelector(`[data-version-picker="${locationCode}"]`), null);
+    focusBack(document.getElementById(`picker-${locationCode}`), null);
   }
 
   // ----- Delete a planned schedule (permanent → confirmation naming what goes) -----
@@ -419,13 +418,13 @@ export default function ScheduleSchool({
       setChosenId(null);
       showToast(T.toastDeletedPlan(d.version), { icon: false }); // no Undo: permanent
       reloadQuiet();
-      focusBack(document.querySelector(`[data-version-picker="${locationCode}"]`), null);
+      focusBack(document.getElementById(`picker-${locationCode}`), null);
     } else if (result.status === 'no_access') {
       patchDialog({ saving: false });
       onNoAccess();
     } else if (['stale', 'not_found', 'not_allowed', 'invalid'].includes(result.status)) {
       setDialog(null);
-      setBanner({ text: result.status === 'not_allowed' ? T.PAST_NOT_ALLOWED : T.STALE });
+      setBanner({ text: result.status === 'not_allowed' ? T.PAST_NOT_ALLOWED : T.someoneElseChanged(T.planName(d.version)) });
       reloadQuiet();
     } else {
       patchDialog({ saving: false, failed: true });
@@ -433,25 +432,35 @@ export default function ScheduleSchool({
   }
 
   // ===== Undo =====
-  async function runUndo(call) {
-    if (!beginWrite()) return;
-    const result = await call();
-    endWrite(result.status);
-    if (result.status === 'ok') {
-      setBanner(null);
-      await reloadQuiet(); // "Undone" appears once the schedule on screen shows it
-      showToast(T.TOAST_UNDONE, { icon: false });
-    } else if (result.status === 'no_access') {
-      onNoAccess();
-    } else if (result.status === 'not_allowed') {
-      setBanner({ text: isAdmin ? T.PAST_NOT_ALLOWED : T.NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (['stale', 'not_found', 'invalid', 'duplicate_date'].includes(result.status)) {
-      setBanner({ text: T.UNDO_STALE });
-      reloadQuiet();
-    } else {
-      setBanner({ text: T.UNDO_FAILED, retry: () => runUndo(call) });
-    }
+  // The toast's Undo button, made by the save line (R2-05): pressed while another save runs, it waits
+  // its turn and the toast says "Undoing…". `words` = the toast's own words (the bar after leaving
+  // the page quotes them); `name` = what a refusal names (R2-07: "Someone else changed the Tuesday
+  // 4:00 PM time slot just now, so nothing was done. Their change is shown."). `call` does the Undo;
+  // this reads the schedule again and tells the line how it went (it says "Undone" or shows the bar).
+  function undoOf(words, name, call) {
+    return line.undoAction(
+      async () => {
+        const result = await call();
+        if (result.status === 'ok') {
+          await reloadQuiet(); // "Undone" appears once the schedule on screen shows it
+          return { status: 'ok' };
+        }
+        if (result.status === 'no_access') {
+          onNoAccess();
+          return { status: 'no_access' };
+        }
+        if (result.status === 'not_allowed') {
+          onRefreshProfile();
+          return { status: 'not_allowed', reason: isAdmin ? T.PAST_NOT_ALLOWED : T.NOT_ALLOWED };
+        }
+        if (['stale', 'not_found', 'invalid', 'duplicate_date'].includes(result.status)) {
+          reloadQuiet();
+          return { status: 'stale', reason: T.someoneElseChanged(name) };
+        }
+        return { status: 'error' }; // never reached the database: "Undo didn't save. …" with Retry
+      },
+      { words },
+    );
   }
 
   // ===== The ⋯ menu of a planned schedule =====
@@ -522,38 +531,27 @@ export default function ScheduleSchool({
       </div>
     ) : null;
 
+  // The schedule picker's choices: the current one, then Planned, then Past (the group names are headings in the list)
+  const pickerOptions = [
+    ...(current ? [{ value: current.id, label: T.currentLabel(current) }] : []),
+    ...planned.map((v) => ({ value: v.id, label: T.plannedLabel(v), group: T.GROUP_PLANNED })),
+    ...past.map((v) => ({ value: v.id, label: versionLabel(v, classified), group: T.GROUP_PAST })),
+  ];
   const pickerRow = hasAnything && (
     <div className="spicker-row">
-      <label className="visually-hidden" htmlFor={`picker-${locationCode}`}>
+      <span id={`picker-label-${locationCode}`} className="visually-hidden">
         {T.SCHEDULE_PICKER}
-      </label>
-      <select
-        id={`picker-${locationCode}`}
-        className="input spicker"
-        data-version-picker={locationCode}
-        value={shown?.id ?? ''}
-        onChange={(e) => setChosenId(e.target.value)}
-      >
-        {current && <option value={current.id}>{T.currentLabel(current)}</option>}
-        {planned.length > 0 && (
-          <optgroup label={T.GROUP_PLANNED}>
-            {planned.map((v) => (
-              <option key={v.id} value={v.id}>
-                {T.plannedLabel(v)}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {past.length > 0 && (
-          <optgroup label={T.GROUP_PAST}>
-            {past.map((v) => (
-              <option key={v.id} value={v.id}>
-                {versionLabel(v, classified)}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
+      </span>
+      {/* The shared dropdown with its groups (S-10): Current first, then the Planned and Past headings */}
+      <div className="spicker">
+        <Select
+          id={`picker-${locationCode}`}
+          labelId={`picker-label-${locationCode}`}
+          value={shown?.id ?? null}
+          options={pickerOptions}
+          onChange={(id) => setChosenId(id)}
+        />
+      </div>
       {isAdmin && shown?.state === 'planned' && (
         <IconButton
           label={T.SCHEDULE_MORE(shown)}
@@ -588,7 +586,7 @@ export default function ScheduleSchool({
       </div>
     );
   } else if (data.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => data.reload()} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={() => data.reload()} />;
   } else if (data.status === 'noAccess') {
     body = null;
   } else if (!hasAnything || (shown === current && shownSlots.length === 0 && planned.length === 0)) {
@@ -711,7 +709,15 @@ export default function ScheduleSchool({
         </div>
       )}
       {!isAdmin && headerMode === 'page' && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {banner && (
+        <PageBar
+          text={banner.text}
+          onRetry={banner.retry ? () => banner.retry() : undefined}
+          retrying={Boolean(banner.retrying) || busy}
+          takeFocus={banner.takeFocus}
+          onDismiss={() => setBanner(null)}
+        />
+      )}
       {data.status === 'ready' && pickerRow}
       {body}
       {menu && !screenLocked && (menu.kind === 'page' || shown?.state === 'planned') && (

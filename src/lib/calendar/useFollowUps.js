@@ -8,6 +8,7 @@
 //   const f = useFollowUps({ codes: ['worcester'], enabled });
 //   f.status     'loading' | 'ready' | 'error' | 'noAccess' | 'off'
 //   f.followUps  [follow-up] (empty until ready)
+//   f.reload()   read them again (the Retry of the day panel's "Couldn't load follow-ups" line)
 //
 // Kept apart from useCalendar on purpose:
 //   - it does NOT reload on every month / week click or after Calendar saves (that list is a whole
@@ -71,7 +72,8 @@ export function useFollowUps({ codes, enabled }) {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [load]);
 
-  if (!enabled) return { status: 'off', followUps: NONE };
+  if (!enabled) return { status: 'off', followUps: NONE, reload: load };
   const current = state.key === key;
-  return { status: current ? state.status : 'loading', followUps: current ? state.followUps : NONE };
+  // reload: the day panel's Retry under "Couldn't load follow-ups." (S-2, v1.051 (2))
+  return { status: current ? state.status : 'loading', followUps: current ? state.followUps : NONE, reload: load };
 }

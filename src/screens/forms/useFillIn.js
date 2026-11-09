@@ -136,6 +136,11 @@ export function useFillIn({ isPhone, screenLocked, onNoAccess, onSent, onClosed 
       onAnother: () => patch({ sent: null, step: 0, values: emptyFillValues(), problems: {}, note: null, submissionKey: newKey() }),
       onCancel: close,
       onRequestClose: requestClose,
+      // S-2: the open-times line's Retry reads the times again
+      onRetryTimes: () => {
+        patch({ times: null });
+        loadTimes(state.form);
+      },
     })
     : null;
 

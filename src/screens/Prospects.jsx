@@ -28,10 +28,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus } from '@tabler/icons-react';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import IconButton from '../components/IconButton.jsx';
+import PageBar from '../components/PageBar.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
 import { PC_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { readStorage, writeStorage } from '../lib/storage.js';
+import { useSaveLine } from '../lib/saveLine.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { addDays } from '../lib/schedule/versions.js';
 import { loadForms } from '../lib/forms/api.js';
@@ -112,7 +114,47 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null);
   const [banner, setBanner] = useState(null);
-  const [busy, setBusy] = useState(false);
+  // One line of saves for the page (R2-05, rulebook v1.125–v1.129; lib/saveLine.js): one save at a time,
+  // and an Undo pressed while another save runs waits its turn ("Undoing…") instead of being dropped.
+  // `busy` is the line's: true while a save or an Undo runs. A failed Undo's amber bar comes back here
+  // through undoBar and is kept with the page's other bar (`banner`, kind 'undo').
+  const undoChild = useRef(null); // the child the Undo that is running belongs to (where its bar shows)
+  const line = useSaveLine({
+    section: 'Prospects',
+    showToast,
+    undoBar: (next) => {
+      // undoChild is read once, HERE (not inside the state update below, which React may run twice) and
+      // cleared: an Undo that failed before saying whose it is (a thrown error, a time-out) never shows
+      // its bar on the child of an earlier Undo. A bar already showing (Retry pressed) keeps its child.
+      const named = next ? undoChild.current : null;
+      if (next) undoChild.current = null;
+      setBanner((b) => {
+        if (!next) return b?.kind === 'undo' ? null : b; // an Undo worked: only its own bar goes
+        // In the child's window while that child is open (the page's bar would be behind it), else on the page.
+        const owner = named ?? (b?.kind === 'undo' ? b.childId : null);
+        const mine = Boolean(owner) && selectedIdRef.current === owner;
+        // childId = whose Undo this is (always); owner = the window the bar sits in (only while that child is open)
+        return { kind: 'undo', text: next.text, retry: next.retry ?? undefined, retrying: next.retrying, takeFocus: next.takeFocus, scope: mine ? 'window' : 'page', owner: mine ? owner : null, childId: owner };
+      });
+    },
+  });
+  const busy = line.busy;
+  const saveToken = useRef(null); // the token of the save that holds the line (given back to line.end)
+  // Starts a save: true when it holds the line now. A save that couldn't start (another one runs) goes
+  // on without a token, and its end does nothing — the same as the old busy flag, which never refused.
+  function beginSave() {
+    const token = line.begin();
+    if (token) saveToken.current = token;
+    return Boolean(token);
+  }
+  // Ends the save that holds the line (once). `retry` = how to do that save again, kept in case an Undo
+  // waited for it and failed too ("Neither change saved", v1.127).
+  function endSave(status, retry) {
+    const token = saveToken.current;
+    if (!token) return;
+    saveToken.current = null;
+    line.end(status, { retry: retry ?? null, token });
+  }
   const ref = useRef({});
   useLayoutEffect(() => {
     ref.current = { selected, detail, dialog, data, busy };
@@ -331,20 +373,23 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   // "the child in the open window", so it is dropped when that window is gone. `scope` says where
   // the bar shows: 'window' (the child's profile, and only while that child is open) or 'page'
   // (a Board drop, or a bar whose window closed). (Pass 2 X-1.)
-  async function afterWrite(result, toastText, undo, retry) {
-    setBusy(false);
+  // `undo` = what the toast's Undo does: a function that makes the Undo's database call and answers with
+  // undoResult(…) (R2-05: the save line runs it, waiting its turn if another save is on). `who` = the
+  // child's first name, for "Someone else changed [name] just now …" (R2-07).
+  async function afterWrite(result, toastText, undo, retry, who) {
+    endSave(result.status, retry?.run);
     if (result.status === 'ok') {
       // this save worked: its own failure bar goes, and so does a failed-Undo bar for the same child
       // (it could only undo something older than this save)
       setBanner((b) => {
         if (!b) return b;
         if (retry && b.retryKey === retry.key) return null;
-        if (retry?.childId && b.retryKey === `undo:${retry.childId}`) return null;
+        if (retry?.childId && b.kind === 'undo' && b.childId === retry.childId) return null;
         return b;
       });
       await Promise.all([pros.reload(), selectedIdRef.current ? loadDetail(selectedIdRef.current) : null]);
       // no ✓ on any Prospects toast (R2-09, v1.046 (7)); a reversible change has a 5-second Undo
-      if (toastText) showToast(toastText, undo ? { icon: false, action: { label: T.UNDO, onAction: undo } } : { icon: false });
+      if (toastText) showToast(toastText, undo ? { icon: false, action: line.undoAction(undo, { words: toastText }) } : { icon: false });
       keepFocusInWindow();
       return true;
     }
@@ -353,7 +398,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       return false;
     }
     if (result.status === 'stale' || result.status === 'not_found') {
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.stale(who ?? ref.current.detail?.childFirstName) });
       pros.reload();
       if (selectedIdRef.current) loadDetail(selectedIdRef.current);
     } else if (result.status === 'not_allowed') {
@@ -365,10 +410,10 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       // that same child is still open. If the window closed or another child opened while the save
       // was on its way, the bar goes to the page, and a retry that reads "the open child" is dropped:
       // it could only change the wrong child (pass 2 X-1). Board drops and Undos know their child
-      // themselves, so they keep their Retry.
+      // themselves, so they keep their Retry. (A failed Undo is not here: the save line shows its bar.)
       const mine = !retry?.childId || selectedIdRef.current === retry.childId;
       setBanner({
-        text: retry?.undo ? T.UNDO_FAILED : T.SAVE_FAILED,
+        text: T.SAVE_FAILED,
         retry: retry && (mine || !retry.windowOnly) ? retry.run : undefined,
         retryKey: retry?.key,
         scope: retry?.childId && mine ? 'window' : 'page',
@@ -378,24 +423,41 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     keepFocusInWindow();
     return false;
   }
-  // The end of every Undo: the same checks as any save, then a short "Undone" when it worked
-  // (v0.618 — no tick, no button, like Calendar, Schedule and the Testing sections). `run` is the
-  // Undo itself, so a failed one keeps a bar whose Retry runs it again (R2-01): the toast is gone by then.
-  async function afterUndo(result, run, key, childId) {
-    if (await afterWrite(result, undefined, undefined, run ? { key, run, undo: true, childId } : undefined)) showToast(T.UNDONE, { icon: false });
+  // The end of every Undo's database call (R2-05, R2-07; lib/saveLine.js): turns the answer into what the
+  // save line wants — { status: 'ok' } (the line then says "Undone" and clears its bar), 'error' (not
+  // reached: the line shows "Undo didn't save. Check the connection, then retry." with Retry), or
+  // another status with the page's own reason, shown in the bar without Retry. The page reloads what it
+  // shows here, as a normal save does. `p` is the child (for its name and where its bar shows).
+  async function undoResult(u, p) {
+    undoChild.current = p.id;
+    if (u.status === 'ok') {
+      await Promise.all([pros.reload(), selectedIdRef.current ? loadDetail(selectedIdRef.current) : null]);
+      keepFocusInWindow();
+      return { status: 'ok' };
+    }
+    if (u.status === 'no_access') {
+      onNoAccess();
+      return { status: 'no_access' };
+    }
+    if (u.status === 'error') return { status: 'error' };
+    // Refused: show what the database holds now, and say why in the bar (no Retry: it could not work).
+    pros.reload();
+    if (selectedIdRef.current) loadDetail(selectedIdRef.current);
+    if (u.status === 'stale' || u.status === 'not_found') return { status: u.status, reason: T.stale(p.childFirstName) };
+    if (u.status === 'time_taken') return { status: u.status, reason: T.UNDO_TIME_TAKEN };
+    if (u.status === 'not_allowed') {
+      onRefreshProfile();
+      return { status: u.status, reason: T.UNDO_NOT_ALLOWED };
+    }
+    return { status: u.status, reason: T.UNDO_INVALID };
   }
   const statusOfDetail = () => schools.find((s) => s.code === ref.current.selected?.code)?.statusById;
 
   // Undo for a status change (v1.006, N2; Joined too, v0.617): puts the old status back — and the
   // old joined date when the child was Joined before, otherwise none. Like the Board drop's Undo.
+  // It returns the Undo's function; the toast's button runs it through the save line (R2-05).
   function statusUndo(p, wasJoined, savedVersion) {
-    const run = async () => {
-      if (ref.current.busy) return;
-      setBusy(true);
-      const u = await setStatus({ id: p.id, expectedVersion: savedVersion, statusId: p.statusId, joinedOn: wasJoined ? p.joinedOn : null });
-      afterUndo(u, run, `undo:${p.id}`, p.id);
-    };
-    return run;
+    return async () => undoResult(await setStatus({ id: p.id, expectedVersion: savedVersion, statusId: p.statusId, joinedOn: wasJoined ? p.joinedOn : null }), p);
   }
 
   async function changeStatus(statusId, opener = null) {
@@ -407,9 +469,9 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       return;
     }
     const wasJoined = statusOfDetail()?.get(d.statusId)?.builtin === 'joined'; // before the save (the panel may change school)
-    setBusy(true);
+    beginSave();
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId, joinedOn: null });
-    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''), statusUndo(d, wasJoined, r.version), { key: `status:${d.id}`, run: () => changeStatus(statusId, opener), childId: d.id, windowOnly: true });
+    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''), statusUndo(d, wasJoined, r.version), { key: `status:${d.id}`, run: () => changeStatus(statusId, opener), childId: d.id, windowOnly: true }, d.childFirstName);
   }
   async function saveJoined() {
     const g = ref.current.dialog;
@@ -426,22 +488,17 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     // the status it had before: from the dropped card's school on the Board, else the open panel's
     const before = g.dropCode ? schools.find((s) => s.code === g.dropCode)?.statusById : statusOfDetail();
     const wasJoined = before?.get(d.statusId)?.builtin === 'joined';
-    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE), statusUndo(d, wasJoined, r.version))) && g.dropCode) flashStage(g.dropCode, g.statusId);
+    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE), statusUndo(d, wasJoined, r.version), undefined, d.childFirstName)) && g.dropCode) flashStage(g.dropCode, g.statusId);
   }
   async function changeFollowUp(date) {
     const d = ref.current.detail;
     if (!d || busy) return;
-    setBusy(true);
+    beginSave();
     const r = await setFollowUp({ id: d.id, expectedVersion: d.version, followUpOn: date });
-    // A new follow-up date has a 5-second Undo that puts the old date back (v1.006, default 3); a
-    // failed one keeps a bar whose Retry runs it again (R2-01)
-    const undoRun = async () => {
-      if (ref.current.busy) return;
-      setBusy(true);
-      const u = await setFollowUp({ id: d.id, expectedVersion: r.version, followUpOn: d.followUpOn ?? null });
-      afterUndo(u, undoRun, `undo:${d.id}`, d.id);
-    };
-    afterWrite(r, T.FOLLOW_UP_SAVED(date), undoRun, { key: `followup:${d.id}`, run: () => changeFollowUp(date), childId: d.id, windowOnly: true });
+    // A new follow-up date has a 5-second Undo that puts the old date back (v1.006, default 3); the
+    // save line runs it, and a failed one keeps a bar whose Retry runs it again (R2-01, R2-05)
+    const undoRun = async () => undoResult(await setFollowUp({ id: d.id, expectedVersion: r.version, followUpOn: d.followUpOn ?? null }), d);
+    afterWrite(r, T.FOLLOW_UP_SAVED(date), undoRun, { key: `followup:${d.id}`, run: () => changeFollowUp(date), childId: d.id, windowOnly: true }, d.childFirstName);
   }
   async function saveNote({ set, date }) {
     const d = ref.current.detail;
@@ -451,11 +508,11 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       setBanner((b) => (b?.retryKey === `note:${d.id}` ? null : b));
       return;
     }
-    setBusy(true);
+    beginSave();
     // the note as it is NOW (noteRef), not as it was when this function was made: a Retry pressed
     // after more typing must save, and then clear, that newer text
     const r = await addNote({ id: d.id, body: noteRef.current.body.trim(), setFollowUp: set, followUpOn: date });
-    if (await afterWrite(r, T.NOTE_SAVED, undefined, { key: `note:${d.id}`, run: () => saveNote({ set, date }), childId: d.id, windowOnly: true })) {
+    if (await afterWrite(r, T.NOTE_SAVED, undefined, { key: `note:${d.id}`, run: () => saveNote({ set, date }), childId: d.id, windowOnly: true }, d.childFirstName)) {
       setNote(emptyNote());
       setNoteWarning(false);
     }
@@ -465,20 +522,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   async function doCheckIn(came, afterClass) {
     const d = ref.current.detail;
     if (!d || busy) return;
-    setBusy(true);
+    beginSave();
     const r = await checkIn({ id: d.id, expectedVersion: d.version, came, afterClass });
     return checkInDone(r, came, d, { key: `checkin:${d.id}`, run: () => doCheckIn(came, afterClass), childId: d.id, windowOnly: true });
   }
   // The end of a check-in (or No-show): the usual checks, the toast and its Undo (and, from the
   // window, the Retry of a failed one — R2-01)
   function checkInDone(r, came, d, retry) {
-    const undoRun = async () => {
-      if (ref.current.busy) return; // a second press of Retry while it runs does nothing
-      setBusy(true);
-      const u = await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn });
-      afterUndo(u, undoRun, `undo:${d.id}`, d.id);
-    };
-    return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), undoRun, retry);
+    const undoRun = async () => undoResult(await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn }), d);
+    return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), undoRun, retry, d.childFirstName);
   }
 
   // ----- Book / change / cancel a free class -----
@@ -489,6 +541,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     setDialog({ type: 'book', key: Date.now(), prospect: d, dropCode, name: d.childFirstName, change, times: null, pick: null, saving: false, note: null, opener });
     const res = await openTimesFor({ id: d.id, from: today, to: addDays(today, 60) });
     setDialog((g) => (g && g.type === 'book' ? { ...g, times: res.status === 'ok' ? res.times : 'error' } : g));
+    if (res.status === 'no_access') onNoAccess();
+  }
+  // The Book box's Retry when the list of times failed to load (S-2): reads it again, "Loading…" meanwhile
+  async function retryTimes() {
+    const g = ref.current.dialog;
+    if (!g || g.type !== 'book') return;
+    setDialog((x) => (x && x.key === g.key ? { ...x, times: null } : x));
+    const res = await openTimesFor({ id: g.prospect.id, from: today, to: addDays(today, 60) });
+    setDialog((x) => (x && x.key === g.key ? { ...x, times: res.status === 'ok' ? res.times : 'error' } : x));
     if (res.status === 'no_access') onNoAccess();
   }
   async function saveBook() {
@@ -510,19 +571,14 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     }
     if (r.status !== 'ok') {
       setDialog(null);
-      afterWrite(r);
+      afterWrite(r, undefined, undefined, undefined, d.childFirstName);
       return;
     }
     setDialog(null);
     // A first booking has a 5-second Undo that cancels it, like Cancel booking (v1.006, default 3). A
     // changed time has none: cancelling it would leave the child with no class at all.
-    const undoRun = g.change ? undefined : async () => {
-      if (ref.current.busy) return;
-      setBusy(true);
-      const u = await cancelTime({ id: d.id, expectedVersion: r.version });
-      afterUndo(u, undoRun, `undo:${d.id}`, d.id);
-    };
-    if ((await afterWrite(r, T.BOOKED(d.childFirstName), undoRun)) && g.dropCode) {
+    const undoRun = g.change ? undefined : async () => undoResult(await cancelTime({ id: d.id, expectedVersion: r.version }), d);
+    if ((await afterWrite(r, T.BOOKED(d.childFirstName), undoRun, undefined, d.childFirstName)) && g.dropCode) {
       const booked = schools.find((x) => x.code === g.dropCode)?.statuses.find((s) => s.builtin === 'booked');
       if (booked) flashStage(g.dropCode, booked.id);
     }
@@ -530,17 +586,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   async function doCancelBooking() {
     const d = ref.current.detail;
     if (!d || busy) return;
-    setBusy(true);
+    beginSave();
     const r = await cancelTime({ id: d.id, expectedVersion: d.version });
-    // the Undo books the same time again; a failed one keeps a bar whose Retry runs it again (R2-01)
+    // the Undo books the same time again; a failed one keeps a bar whose Retry runs it again (R2-01, R2-05)
     const undoRun = async () => {
-      if (ref.current.busy) return; // a second press of Retry while it runs does nothing
-      setBusy(true);
       const c = r.cancelled;
       const again = await bookTime({ id: d.id, expectedVersion: r.version, formId: c.formId, classId: c.classId, date: c.date, start: c.start });
-      afterUndo(again.status === 'time_taken' ? { status: 'stale' } : again, undoRun, `undo:${d.id}`, d.id);
+      return undoResult(again, d); // a time that filled up meanwhile ('time_taken') says so in the bar
     };
-    afterWrite(r, T.CANCELLED_BOOKING(d.childFirstName), undoRun, { key: `cancel:${d.id}`, run: doCancelBooking, childId: d.id, windowOnly: true });
+    afterWrite(r, T.CANCELLED_BOOKING(d.childFirstName), undoRun, { key: `cancel:${d.id}`, run: doCancelBooking, childId: d.id, windowOnly: true }, d.childFirstName);
   }
 
   // ----- The Board: List / Board, and dropping a card on another stage (v0.246) -----
@@ -594,10 +648,10 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   }
   // The full prospect for a dialog (the list doesn't carry everything the dialogs need)
   // `retry` runs when the read fails on the connection (the bar's Retry, R2-01)
-  async function fetchProspect(id, retry) {
-    setBusy(true);
+  async function fetchProspect(id, retry, who) {
+    const token = line.begin(); // a read holds the line too, so no save starts under it (as before)
     const res = await getProspect(id);
-    setBusy(false);
+    if (token) line.end(res.status, { token });
     if (res.status === 'ok') {
       // an earlier "Couldn't load that child" bar for this child is fixed now: it goes
       setBanner((b) => (b?.retryKey === `fetch:${id}` ? null : b));
@@ -605,7 +659,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     }
     if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'not_found') {
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.stale(who) }); // R2-07: names the child
       pros.reload();
     } else {
       setBanner({ text: T.LOAD_ONE_FAILED, retry, retryKey: `fetch:${id}`, scope: 'page' });
@@ -624,12 +678,12 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     const booked = Boolean(p.booking && p.booking.status === 'booked');
     const again = () => dropCard(p, code, statusId); // what Retry does if reading the child fails
     if (to.builtin === 'booked' && !booked) {
-      const d = await fetchProspect(p.id, again);
+      const d = await fetchProspect(p.id, again, p.childFirstName);
       if (d) openBook(d, code);
       return;
     }
     if (to.builtin === 'came') {
-      const d = await fetchProspect(p.id, again);
+      const d = await fetchProspect(p.id, again, p.childFirstName);
       // a class still ahead can't be checked in yet: the dialog says when, with only "Keep in …"
       const ahead = Boolean(d?.booking && d.booking.status === 'booked' && d.booking.classRunning && !d.checkedInAt && d.booking.date > today);
       // the Board column the card sits in now, for "Keep in Booked" (N3): a No-show's card sits
@@ -639,21 +693,17 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       return;
     }
     if (to.builtin === 'joined') {
-      const d = await fetchProspect(p.id, again);
+      const d = await fetchProspect(p.id, again, p.childFirstName);
       if (d) setDialog({ type: 'joined', key: Date.now(), prospect: d, name: d.childFirstName, statusId, date: today, dropCode: code, saving: false, note: null });
       return;
     }
-    setBusy(true);
+    beginSave();
     const r = await setStatus({ id: p.id, expectedVersion: p.version, statusId, joinedOn: null });
     if (r.status === 'ok') flashStage(code, statusId);
-    const undoRun = async () => {
-      if (ref.current.busy) return;
-      setBusy(true);
-      const u = await setStatus({ id: p.id, expectedVersion: r.version, statusId: p.statusId, joinedOn: from?.builtin === 'joined' ? p.joinedOn : null });
-      afterUndo(u, undoRun, `undo:${p.id}`, p.id);
-    };
+    // the Board drop's Undo: the save line runs it, waiting its turn if another save is on (R2-05)
+    const undoRun = async () => undoResult(await setStatus({ id: p.id, expectedVersion: r.version, statusId: p.statusId, joinedOn: from?.builtin === 'joined' ? p.joinedOn : null }), p);
     // a failed drop keeps a bar whose Retry drops the card again (R2-01)
-    afterWrite(r, T.MOVED(p.childFirstName, to.name), undoRun, { key: `drop:${p.id}`, run: () => dropCard(p, code, statusId) });
+    afterWrite(r, T.MOVED(p.childFirstName, to.name), undoRun, { key: `drop:${p.id}`, run: () => dropCard(p, code, statusId) }, p.childFirstName);
   }
   // "Came": check the child in when there is a class to check in to, otherwise save the status
   async function saveCame() {
@@ -666,10 +716,10 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       // the check-in runs inside the box, like the status below: "Saving…" shows, and a dropped
       // connection keeps the box open with its note (pass 2 U-01)
       setDialog({ ...g, saving: true, note: null });
-      setBusy(true);
+      beginSave();
       const c = await checkIn({ id: d.id, expectedVersion: d.version, came: true, afterClass: Boolean(g.askCame) });
       if (connectionFailed(c.status)) {
-        setBusy(false);
+        endSave(c.status);
         keepOpenWithNote(g, 'BOX_SAVE_FAILED');
         return;
       }
@@ -680,18 +730,18 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     // no class to check in to: save Came as the status (a class still ahead never gets here —
     // CameDialog only offers "Keep in …" then)
     setDialog({ ...g, saving: true, note: null });
-    setBusy(true);
+    beginSave();
     const wasJoined = schools.find((s) => s.code === g.dropCode)?.statusById?.get(d.statusId)?.builtin === 'joined';
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: null });
     if (connectionFailed(r.status)) {
       // stays open with the note; Came again tries again (U-01)
-      setBusy(false);
+      endSave(r.status);
       keepOpenWithNote(g, 'BOX_SAVE_FAILED');
       return;
     }
     setDialog(null);
     // Undo like every other Board drop (v1.006)
-    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME), statusUndo(d, wasJoined, r.version))) flashStage(g.dropCode, g.statusId);
+    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME), statusUndo(d, wasJoined, r.version), undefined, d.childFirstName)) flashStage(g.dropCode, g.statusId);
   }
   const drag = useCardDrag({ enabled: view === 'board' && !busy && !dialog && !selected && !screenLocked && !fill.isOpen, resetKey: location, onDrop: dropCard });
 
@@ -714,7 +764,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       await pros.reload();
       onBadgeRefresh?.();
       showToast(T.DELETED(d.childFirstName), { icon: false });
-    } else afterWrite(r);
+    } else afterWrite(r, undefined, undefined, undefined, d.childFirstName);
   }
 
   // ----- Add prospect -----
@@ -723,6 +773,12 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     clearToast();
     const school = both ? 'worcester' : codes[0];
     setDialog({ type: 'add', key: Date.now(), both, school, forms: null, allForms: null, opener });
+    await readAddForms();
+  }
+  // Reads the Live forms for the Add prospect box. Also the box's Retry when the read failed (S-2:
+  // "Couldn't load the forms. Check the connection, then retry."): it shows "Loading…" meanwhile.
+  async function readAddForms() {
+    setDialog((g) => (g && g.type === 'add' && g.forms === 'error' ? { ...g, forms: null, allForms: null } : g));
     const res = await loadForms({ since: `${today.slice(0, 7)}-01` });
     const live = res.status === 'ok' ? res.forms.filter((f) => f.status === 'live') : 'error';
     setDialog((g) => (g && g.type === 'add' ? { ...g, allForms: live, forms: live === 'error' ? 'error' : live.filter((f) => f.locationCode === g.school) } : g));
@@ -788,7 +844,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       // back on the list with focus on the status just saved (a new one by its new id)
       setDialog((x) => (x ? { ...x, saving: false, step: 'list', from: g.step === 'add' ? r.id ?? 'add' : g.statusId } : x));
     } else {
-      setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'duplicate_name' ? 'DUPLICATE' : r.status === 'stale' ? 'STALE' : r.status === 'not_allowed' ? 'NOT_ALLOWED' : 'SAVE_FAILED' } : x));
+      setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'duplicate_name' ? 'DUPLICATE' : r.status === 'stale' ? 'STALE_STATUS' : r.status === 'not_allowed' ? 'NOT_ALLOWED' : 'SAVE_FAILED', noteName: st?.name } : x));
       if (r.status === 'stale') pros.reload();
       if (r.status === 'no_access') onNoAccess();
     }
@@ -1038,7 +1094,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   const overProfile = Boolean(selected && !screenLocked);
   if (dialog && !screenLocked) {
     if (dialog.type === 'book') {
-      dialogElement = <BookTimeDialog state={dialog} today={today} isPhone={isPhone} onTop={overProfile} onPick={(pick) => setDialog((g) => ({ ...g, pick, note: pick ? null : 'PICK' }))} onSave={saveBook} onCancel={() => !dialog.saving && setDialog(null)} />;
+      dialogElement = <BookTimeDialog state={dialog} today={today} isPhone={isPhone} onTop={overProfile} onPick={(pick) => setDialog((g) => ({ ...g, pick, note: pick ? null : 'PICK' }))} onSave={saveBook} onRetryTimes={retryTimes} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'joined') {
       dialogElement = <JoinedDialog state={dialog} today={today} isPhone={isPhone} onTop={overProfile} onChange={(date) => setDialog((g) => ({ ...g, date }))} onSave={saveJoined} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'add') {
@@ -1048,6 +1104,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
           isPhone={isPhone}
           onPickSchool={(school) => setDialog((g) => ({ ...g, school, forms: Array.isArray(g.allForms) ? g.allForms.filter((f) => f.locationCode === school) : g.forms }))}
           onPick={pickAddForm}
+          onRetryForms={readAddForms}
           onCancel={() => {
             const opener = dialog.opener;
             setDialog(null);
@@ -1123,7 +1180,8 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       )}
       {/* the amber bar: here while no profile window is open, else at the top of the window — never both */}
       {/* a bar with `retry` gets Retry, which does the same call again (v1.004, R2-01) */}
-      {banner && !profileElement && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {/* PageBar draws it under the top bar (v1.128); a failed Undo's bar says when its Retry is on its way */}
+      {banner && !profileElement && <PageBar text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying ?? busy} takeFocus={banner.takeFocus} onDismiss={() => setBanner(null)} />}
       {/* On Both, ONE search for the two schools (each section shows its own matches), on the left above them */}
       {both && data && <SearchBox id="prospects-both-search" search={search} onSearch={setSearch} both />}
       {body}

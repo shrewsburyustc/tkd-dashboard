@@ -32,7 +32,7 @@ export function checkStatusForm(state, statuses) {
   };
 }
 
-const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE, SAVE_FAILED: T.SAVE_FAILED, DELETE_FAILED: T.DELETE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
+const NOTES = { UNSAVED: T.UNSAVED, STALE: T.STALE_STATUSES, SAVE_FAILED: T.SAVE_FAILED, DELETE_FAILED: T.DELETE_FAILED, INVALID: T.INVALID, NOT_ALLOWED: T.ADMIN_ONLY, DUPLICATE: T.DUPLICATE_NAME };
 // The words of a note: a plain one by its code, or "Someone else changed [Name] just now…" (STALE_STATUS,
 // pass 2 U-03), which names the status the box was deleting (state.noteName).
 const noteText = (state) => (state.note === 'STALE_STATUS' ? T.staleStatus(state.noteName ?? '') : NOTES[state.note]);

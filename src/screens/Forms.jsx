@@ -9,6 +9,9 @@
 //   - staff: no building; a row opens a read-only Preview; "Fill in" and Share on each row
 //   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
+// Saves (create, Duplicate, Copy, Close / Open) go through one save line (lib/saveLine.js, R2-05): an Undo
+// pressed during another save waits its turn instead of being dropped.
+//
 // The public page, its QR code and kiosk mode are step F3; emails wait for the school's sending
 // address (rulebook v0.242). Admin vs staff only changes what is SHOWN — the database enforces
 // who may change what.
@@ -20,6 +23,7 @@ import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../lib/device.js';
 import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
+import { useSaveLine } from '../lib/saveLine.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { loadSchedule } from '../lib/schedule/api.js';
 import { cleanText } from '../lib/calendar/rules.js';
@@ -62,12 +66,15 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   // This device's "Hide private details" switch: while on, Fill in is desk-only (v0.616), because
   // its form always asks the parent's email and shows every answer as it is typed. Preview stays.
   const [privateHidden] = usePrivateDetailsHidden();
-  const [busy, setBusy] = useState(false);
-  // the latest busy for an Undo pressed later (a toast's button keeps the function it was given)
-  const busyRef = useRef(false);
-  useLayoutEffect(() => {
-    busyRef.current = busy;
+  // One save at a time, and an Undo pressed during another save waits its turn (R2-05, lib/saveLine.js).
+  // `busy` is true while a save or an Undo runs. The line's own bar (a failed Undo, with Retry) is
+  // kept in the same `banner` as the page's other bars (kind 'undoLine').
+  const line = useSaveLine({
+    section: 'Forms',
+    showToast,
+    undoBar: (next) => setBanner((cur) => (next ? { kind: 'undoLine', ...next } : cur?.kind === 'undoLine' ? null : cur)),
   });
+  const busy = line.busy;
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
@@ -101,12 +108,14 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   // ===== The builder =====
   async function openBuilder(formId) {
     clearToast();
+    setBanner((b) => (b?.kind === 'openForm' ? null : b)); // a Retry that is on its way takes its own bar away
     setBuilder({ formId, detail: null, school: null, status: 'loading' });
     const detail = await loadForm(formId);
     if (detail.status === 'no_access') return onNoAccess();
     if (detail.status !== 'ok') {
       setBuilder(null);
-      setBanner({ text: T.LOAD_FAILED });
+      // S-2: opening the form didn't load; the bar says so, with a Retry that opens it again
+      setBanner({ kind: 'openForm', text: T.LOAD_FORM_FAILED, retry: () => openBuilder(formId) });
       return undefined;
     }
     const school = await loadSchedule(detail.form.locationCode);
@@ -151,16 +160,21 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   async function createNew() {
     const d = dialogRef.current;
     if (!d || d.saving || !checkNewForm(d).canSave) return;
+    const token = line.begin();
+    if (!token) return;
     patchDialog({ saving: true, note: null });
-    setBusy(true);
     const name = cleanText(d.values.name);
     const base = slugify(name);
     const taken = new Set((list.data?.forms ?? []).map((f) => f.slug));
     let slug = base;
     for (let i = 2; taken.has(slug) && i < 50; i += 1) slug = `${base.slice(0, 36)}-${i}`;
-    let res = await createForm({ locationCode: d.values.school, kind: d.values.kind, name, slug });
-    if (res.status === 'duplicate_slug') res = await createForm({ locationCode: d.values.school, kind: d.values.kind, name, slug: `${base.slice(0, 30)}-${Date.now().toString(36).slice(-6)}` });
-    setBusy(false);
+    let res = { status: 'error' };
+    try {
+      res = await createForm({ locationCode: d.values.school, kind: d.values.kind, name, slug });
+      if (res.status === 'duplicate_slug') res = await createForm({ locationCode: d.values.school, kind: d.values.kind, name, slug: `${base.slice(0, 30)}-${Date.now().toString(36).slice(-6)}` });
+    } finally {
+      line.end(res.status, { token });
+    }
     if (res.status === 'ok') {
       setDialog(null);
       list.reload();
@@ -186,125 +200,135 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   }
 
   // ----- Row actions -----
+  // Every save here goes through the page's save line (lib/saveLine.js, design review R2-05): one at a
+  // time, and an Undo pressed while another save runs WAITS its turn (its toast says "Undoing…") instead
+  // of being dropped without a word. line.begin() gives a token (false while a save or an Undo runs);
+  // line.end() is called exactly once per begin(), from a finally, even when the call threw.
+  // An Undo's function answers { status, reason? } and the line does the rest: "Undone" (or its
+  // doneText), or the page's bar with Retry, or the bar with the reason when the database refused it.
+
+  // The Undo of Duplicate and of Copy to the other school: it deletes the new Draft copy with the same
+  // call as ⋯ Delete form (a copy made a moment ago has no sign-ups).
+  function deleteCopyUndo(copy, copyName) {
+    return async () => {
+      const u = await deleteForm({ id: copy.id, expectedVersion: copy.version });
+      if (u.status === 'ok' || u.status === 'not_found') {
+        // not_found: the copy is already gone, which is what Undo wanted
+        await list.reload();
+        return { status: 'ok' };
+      }
+      if (u.status === 'no_access') {
+        onNoAccess();
+        return { status: 'no_access' };
+      }
+      if (u.status === 'stale' || (u.status === 'not_allowed' && u.reason === 'has_signups')) {
+        // someone changed the copy (or a family signed up on it) in the meantime: it stays
+        list.reload();
+        return { status: 'stale', reason: T.staleForm(copyName) };
+      }
+      if (u.status === 'not_allowed') {
+        onRefreshProfile();
+        return { status: 'not_allowed', reason: T.NOT_ALLOWED };
+      }
+      return { status: 'error' }; // the connection: the line's bar says so, with Retry
+    };
+  }
   async function duplicate(form) {
-    if (busyRef.current) return; // (the ref, not `busy`: a Retry kept in a bar carries the old render's value)
-    setBusy(true);
-    const res = await duplicateForm(form.id);
-    setBusy(false);
+    const token = line.begin();
+    if (!token) return; // another save or Undo is running
+    let res = { status: 'error' };
+    try {
+      res = await duplicateForm(form.id);
+    } finally {
+      line.end(res.status, { retry: () => duplicate(form), token });
+    }
     if (res.status === 'ok') {
       setBanner((b) => (b?.kind === 'duplicate' && b.formId === form.id ? null : b)); // a retry that worked takes its own bar away
       await list.reload();
-      // Undo for 5 seconds (v1.006, R2-08): deletes the new Draft copy with the same call as ⋯ Delete form
-      // (a copy made a moment ago has no sign-ups), like "Copy to the other school"'s Undo below.
-      const undo = async () => {
-        if (busyRef.current) return;
-        setBusy(true);
-        const u = await deleteForm({ id: res.id, expectedVersion: res.version });
-        setBusy(false);
-        if (u.status === 'ok' || u.status === 'not_found') {
-          // not_found: the copy is already gone, which is what Undo wanted
-          setBanner((b) => (b?.kind === 'undoDuplicate' && b.copyId === res.id ? null : b));
-          list.reload();
-          showToast(T.UNDONE, { icon: false });
-        } else if (u.status === 'no_access') onNoAccess();
-        else if (u.status === 'stale' || (u.status === 'not_allowed' && u.reason === 'has_signups')) {
-          list.reload();
-          setBanner({ text: T.UNDO_STALE });
-        } else if (u.status === 'not_allowed') {
-          setBanner({ text: T.NOT_ALLOWED });
-          onRefreshProfile();
-        } else setBanner({ kind: 'undoDuplicate', copyId: res.id, text: T.UNDO_FAILED, retry: undo });
-      };
-      showToast(T.duplicated(`Copy of ${form.name}`.slice(0, 80)), { icon: false, action: { label: T.UNDO, onAction: () => undo() } });
+      // Undo for 5 seconds (v1.006, R2-08): deletes the new Draft copy, like "Copy to the other school"'s Undo below.
+      const copyName = `Copy of ${form.name}`.slice(0, 80);
+      const words = T.duplicated(copyName);
+      showToast(words, { icon: false, action: line.undoAction(deleteCopyUndo(res, copyName), { words }) });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'not_allowed') setBanner({ text: T.NOT_ALLOWED });
     else if (res.status === 'not_found') {
       // another admin deleted the form meanwhile: Retry could never work, so no Retry (as Copy to the other school)
       list.reload();
-      setBanner({ text: T.STALE_BUILDER });
+      setBanner({ text: T.staleForm(form.name) });
     } else setBanner({ kind: 'duplicate', formId: form.id, text: T.SAVE_FAILED, retry: () => duplicate(form) }); // the connection (or anything else that isn't a refusal): Retry makes the copy again (R2-01)
   }
   // "Copy to Worcester / Shrewsbury" (rulebook v0.642): a Draft copy at the other school. You stay
   // in the list (option A, as with Duplicate); the toast says where the copy went, with Undo for 5
   // seconds, which deletes the copy. A failure shows the bar with Retry, which copies again.
   // A bar stays until what it reports is fixed or × is pressed (v1.004). Each of these bars says
-  // what it belongs to (`kind` + the form or the copy, as Camps' bars do), so a copy or an Undo
-  // that worked takes away only its OWN bar, never another one that came up meanwhile. A copy of
-  // the same form made again from ⋯ fixes its bar too, so that bar's Retry can't make a second copy.
+  // what it belongs to (`kind` + the form, as Camps' bars do), so a copy that worked takes away only
+  // its OWN bar, never another one that came up meanwhile. A copy of the same form made again from ⋯
+  // fixes its bar too, so that bar's Retry can't make a second copy.
   async function copyToOtherSchool(form) {
-    if (busyRef.current) return;
+    const token = line.begin();
+    if (!token) return;
     const target = otherSchool(form.locationCode);
-    setBusy(true);
-    const res = await copyFormToSchool(form.id, target);
-    setBusy(false);
+    let res = { status: 'error' };
+    try {
+      res = await copyFormToSchool(form.id, target);
+    } finally {
+      line.end(res.status, { retry: () => copyToOtherSchool(form), token });
+    }
     if (res.status === 'ok') {
       setBanner((b) => (b?.kind === 'copy' && b.formId === form.id ? null : b));
       await list.reload();
-      const undo = async () => {
-        if (busyRef.current) return;
-        setBusy(true);
-        const u = await deleteForm({ id: res.id, expectedVersion: res.version });
-        setBusy(false);
-        if (u.status === 'ok' || u.status === 'not_found') {
-          // not_found: the copy is already gone, which is what Undo wanted
-          setBanner((b) => (b?.kind === 'undoCopy' && b.copyId === res.id ? null : b));
-          list.reload();
-          showToast(T.UNDONE, { icon: false }); // v0.618
-        } else if (u.status === 'no_access') onNoAccess();
-        else if (u.status === 'stale' || (u.status === 'not_allowed' && u.reason === 'has_signups')) {
-          // someone changed the copy (or a family signed up on it) in the meantime: it stays
-          list.reload();
-          setBanner({ text: T.UNDO_STALE });
-        } else if (u.status === 'not_allowed') {
-          setBanner({ text: T.NOT_ALLOWED });
-          onRefreshProfile();
-        } else setBanner({ kind: 'undoCopy', copyId: res.id, text: T.UNDO_FAILED, retry: undo });
-      };
-      showToast(T.copiedTo(LOCATION_NAME[target], hasBookingStep(form)), { icon: false, action: { label: T.UNDO, onAction: () => undo() } });
+      const words = T.copiedTo(LOCATION_NAME[target], hasBookingStep(form));
+      showToast(words, { icon: false, action: line.undoAction(deleteCopyUndo(res, form.name), { words }) });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'not_allowed') {
       setBanner({ text: T.NOT_ALLOWED });
       onRefreshProfile();
     } else if (res.status === 'not_found') {
       list.reload();
-      setBanner({ text: T.STALE_BUILDER });
+      setBanner({ text: T.staleForm(form.name) });
     } else if (res.status === 'invalid') setBanner({ text: T.COPY_REFUSED }); // trying again can't help: no Retry
     else if (res.status === 'duplicate_slug') setBanner({ text: T.copyTooMany(LOCATION_NAME[target]) }); // nor here
     // the connection, or two copies at the same moment (stale): trying again works
     else setBanner({ kind: 'copy', formId: form.id, text: T.SAVE_FAILED, retry: () => copyToOtherSchool(form) });
   }
   async function toggleClosed(form) {
-    if (busyRef.current) return; // (the ref, as in duplicate)
-    setBusy(true);
-    const res = await setFormStatus({ id: form.id, expectedVersion: form.version, status: form.status === 'live' ? 'closed' : 'live' });
-    setBusy(false);
+    const token = line.begin();
+    if (!token) return;
+    let res = { status: 'error' };
+    try {
+      res = await setFormStatus({ id: form.id, expectedVersion: form.version, status: form.status === 'live' ? 'closed' : 'live' });
+    } finally {
+      line.end(res.status, { retry: () => toggleClosed(form), token });
+    }
     if (res.status === 'ok') {
       setBanner((b) => (b?.kind === 'status' && b.formId === form.id ? null : b)); // a retry that worked takes its own bar away
       await list.reload();
-      // Undo for 5 seconds (v1.006, N2): sets the form back to how it was
-      const undo = async () => {
-        if (busyRef.current) return;
-        setBusy(true);
+      // Undo for 5 seconds (v1.006, N2): sets the form back to how it was. A failed Undo keeps its bar
+      // with Retry (the line's): the toast is gone by then, so without it nothing could put the form back.
+      const undoRun = async () => {
         const u = await setFormStatus({ id: form.id, expectedVersion: res.version, status: form.status });
-        setBusy(false);
         if (u.status === 'ok') {
-          setBanner((b) => (b?.kind === 'undoStatus' && b.formId === form.id ? null : b));
+          await list.reload();
+          return { status: 'ok' };
+        }
+        if (u.status === 'no_access') {
+          onNoAccess();
+          return { status: 'no_access' };
+        }
+        if (u.status === 'stale') {
           list.reload();
-          // an Undo that opens the form again says so (v1.051 (1)); one that closes it again just says Undone
-          showToast(form.status === 'live' ? T.UNDONE_OPEN : T.UNDONE, { icon: false }); // v0.618
-        } else if (u.status === 'no_access') onNoAccess();
-        else if (u.status === 'stale') {
-          list.reload();
-          setBanner({ text: T.UNDO_STALE });
-        // a failed Undo keeps its bar with Retry, which runs this same Undo again (R2-01): the
-        // toast is gone by now, so without it nothing could put the form back
-        } else setBanner({ kind: 'undoStatus', formId: form.id, text: T.UNDO_FAILED, retry: undo });
+          return { status: 'stale', reason: T.staleForm(form.name) };
+        }
+        return { status: 'error' };
       };
-      showToast(form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name), { icon: false, action: { label: T.UNDO, onAction: undo } });
+      const words = form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name);
+      // an Undo that opens the form again says so (v1.051 (1)); one that closes it again just says Undone
+      const doneText = form.status === 'live' ? T.UNDONE_OPEN : T.UNDONE;
+      showToast(words, { icon: false, action: line.undoAction(undoRun, { words, doneText }) });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
       list.reload();
-      setBanner({ text: T.STALE_BUILDER });
+      setBanner({ text: T.staleForm(form.name) });
     } else setBanner({ kind: 'status', formId: form.id, text: T.SAVE_FAILED, retry: () => toggleClosed(form) });
   }
   async function confirmDelete() {
@@ -326,7 +350,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
       // the page's bar says what happened; the list shows the form as it is now (or gone)
       setDialog(null);
       list.reload();
-      setBanner({ text: res.status === 'stale' ? T.deleteStale(d.form.name) : T.FORM_GONE });
+      setBanner({ text: res.status === 'stale' ? T.staleForm(d.form.name) : T.FORM_GONE });
       focusBack(null, '[data-forms-new]');
     } else patchDialog({ saving: false, note: T.DELETE_FAILED });
   }
@@ -517,7 +541,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
         </>
       )}
       {/* a bar with `retry` gets Retry, which does the same again (v1.004) */}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || Boolean(banner.retrying)} onDismiss={() => setBanner(null)} />}
       {body}
       {menu && !screenLocked && (
         <RowMenu
