@@ -17,7 +17,7 @@
 // Delete event after the takeover · the console helpers · words for every status · the ⋯ menu's one
 // order in three groups (candidateMenu.js, DR G1) · the toasts' Undo calls (DR G2 / G3).
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readSource } from './readSource.js';
 import { randomUUID } from 'node:crypto';
 import { createSaveLine } from '../saveLine.js';
 import { createToastLine } from '../toastLine.js';
@@ -1800,7 +1800,7 @@ await check('S-2: failNextRead fails exactly one read of the named function', as
 
 // How the screens are wired (the parts of Step D that live in JSX, which Node can't draw): read the files.
 await check('Step D wiring: save line, shared back link, Mark paid busy, signature Retry, preview helper', () => {
-  const here = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+  const here = (path) => readSource(new URL(`../../${path}`, import.meta.url));
   const tab = here('screens/testing/star/candidates/CandidatesTab.jsx');
   assert.ok(tab.includes("useSaveLine({"), 'the tab keeps its one-at-a-time flag in the save line');
   assert.ok(!tab.includes('onAction:'), 'no toast builds its own Undo: every one goes through line.undoAction');
@@ -1820,7 +1820,7 @@ await check('Step D wiring: save line, shared back link, Mark paid busy, signatu
 // Review of batch 4, SHOULD 1 and 3: the words a failed Undo names after the person left the page never
 // carry money, and every save ends the line from a `finally`.
 await check('privacy + pass 3: Undo words carry no amount or way; every save ends its line from a finally', () => {
-  const here = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+  const here = (path) => readSource(new URL(`../../${path}`, import.meta.url));
   assert.equal(markedPaidWords('Lily Brooks'), 'Lily Brooks marked paid');
   assert.ok(!/[$0-9]/.test(markedPaidWords('Lily Brooks')), 'no amount, no way');
   assert.ok(!/[$0-9]/.test(movedBackToast('Lily Brooks', null)), 'no fee');

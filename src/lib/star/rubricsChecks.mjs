@@ -671,18 +671,18 @@ await check('R2-05: the Undo of a category move goes through the save line: one 
 });
 
 await check('L-06: every grip of Rubrics and prices gets the shared Grip\'s `disabled` while a save runs (a source check)', async () => {
-  const { readFileSync } = await import('node:fs');
+  const { readSource } = await import('./readSource.js');
   const dir = new URL('../../screens/testing/star/', import.meta.url);
-  const block = readFileSync(new URL('DanBlock.jsx', dir), 'utf8');
-  const tab = readFileSync(new URL('RubricsTab.jsx', dir), 'utf8');
+  const block = readSource(new URL('DanBlock.jsx', dir));
+  const tab = readSource(new URL('RubricsTab.jsx', dir));
   assert.match(block, /<Grip[^>]*disabled=\{Boolean\(ctx\.gripsOff\)\}/);
   assert.match(tab, /gripsOff: busy/); // busy = the save line's busy: a save or an Undo is running
 });
 
 // Review of batch 4, SHOULD 3: every save ends its line from a `finally` (a throw can't leave it busy).
 await check('pass 3: the Rubrics saves end the save line from a finally', async () => {
-  const { readFileSync } = await import('node:fs');
-  const tab = readFileSync(new URL('../../screens/testing/star/RubricsTab.jsx', import.meta.url), 'utf8');
+  const { readSource } = await import('./readSource.js');
+  const tab = readSource(new URL('../../screens/testing/star/RubricsTab.jsx', import.meta.url));
   assert.match(tab, /\} finally \{\r?\n\s+endWrite\(ended\);/, 'inWrite ends the line from a finally');
   assert.equal((tab.match(/\bendWrite\(/g) ?? []).length, 2, 'endWrite: its definition and the finally only');
   assert.equal((tab.match(/await inWrite\(/g) ?? []).length, 4, 'the four saves go through inWrite');

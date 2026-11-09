@@ -22,7 +22,7 @@
 // the migration's seed · star_set_result_text (admin, invalid, stale, same text, history).
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readSource } from './readSource.js';
 import { createStarBackend } from '../mockStarTesting.js';
 import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES } from '../mockStarEvents.js';
 import {
@@ -633,7 +633,7 @@ await check('loadEmailAddress: star_candidate_detail at the click, ONLY the addr
 
 // The 0023 seed texts, read from the migration file itself (E'…' strings: \n = line break, '' = ').
 function sqlSeedTexts() {
-  const sql = readFileSync(SQL_0023, 'utf8');
+  const sql = readSource(SQL_0023);
   const out = {};
   for (const m of sql.matchAll(/\('(passed|makeup_d|makeup_below)',\s*\r?\n\s*E'((?:[^']|'')*)'/g)) {
     out[m[1]] = m[2].replace(/''/g, "'").replace(/\\n/g, '\n');
@@ -701,7 +701,7 @@ await check('the text rules give the SAME answers as star_result_text_problem �
   assert.equal(resultTextProblem('passed', base + '😀'.repeat(2000 - 29)), null);
   assert.equal(resultTextProblem('passed', base + '😀'.repeat(2001 - 29)), 'too_long');
   // the 0023 tests file still has the cases this check copies (so a change there is noticed)
-  const tests = readFileSync(TESTS_0023, 'utf8');
+  const tests = readSource(TESTS_0023);
   for (const label of ['first line no-break sp', 'double braces', 'below no subjects', 'direction override']) assert.ok(tests.includes(label), label);
   // the editor's details and messages (48)
   assert.deepEqual(resultTextProblemDetail('passed', `${base} {frist name}`), { code: 'unknown_blank', blank: 'frist name' });
@@ -823,7 +823,7 @@ await check('R2-05 / R2-07: Mark as sent Undo through the save line: Undone · d
 
 // Review of batch 4, SHOULD 3: every save ends its line from a `finally` (a throw can't leave it busy).
 await check('pass 3: the Results saves end the save line from a finally', () => {
-  const tab = readFileSync(new URL('../../screens/testing/star/results/ResultsTab.jsx', import.meta.url), 'utf8');
+  const tab = readSource(new URL('../../screens/testing/star/results/ResultsTab.jsx', import.meta.url));
   assert.equal((tab.match(/\} finally \{\n\s+end\(/g) ?? []).length, 3, 'Email result, Mark as sent and Undo mark as sent end the line from a finally');
   assert.equal((tab.match(/[^.\w]end\(/g) ?? []).length, 4, 'end( appears in its definition and the three finally blocks only');
 });
