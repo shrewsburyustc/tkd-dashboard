@@ -102,9 +102,19 @@ export default function TimeGrid({ days, slots, classNames, colors, pxPerMin, sh
                         .map((c, i) => `${c.fill} ${(i * 100) / slotColors.length}% ${((i + 1) * 100) / slotColors.length}%`)
                         .join(', ')})`;
                 const boxHeight = (slot.end - slot.start) * pxPerMin;
+                // L-10 (Jeffrey, option A): a slot shorter than 44 px gets an invisible tap box up to 44 px on
+                // touch (the slot is drawn the same). It grows only into free room: half of the gap to the
+                // next slot above / below in the same lane, so a tap never picks the wrong slot and two slots
+                // that touch stay at their own size. (CSS: schedule.css, the touch block.)
+                const need = Math.max(0, (44 - boxHeight) / 2);
+                const sameLane = placed.filter((o) => o.slot.id !== slot.id && o.lane === lane);
+                const gapAbove = Math.min(...sameLane.filter((o) => o.slot.end <= slot.start).map((o) => (slot.start - o.slot.end) * pxPerMin), Infinity);
+                const gapBelow = Math.min(...sameLane.filter((o) => o.slot.start >= slot.end).map((o) => (o.slot.start - slot.end) * pxPerMin), Infinity);
                 const style = {
                   top: (slot.start - from) * pxPerMin,
                   height: boxHeight,
+                  '--tap-top': `${Math.min(need, gapAbove / 2)}px`,
+                  '--tap-bottom': `${Math.min(need, gapBelow / 2)}px`,
                   left: `calc(${(lane / lanes) * 100}% + 2px)`,
                   width: `calc(${100 / lanes}% - 4px)`,
                   '--slot-fill': fill,
