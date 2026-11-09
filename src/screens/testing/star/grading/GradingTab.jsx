@@ -48,6 +48,7 @@
 import { useEffect, useState } from 'react';
 import { IconAlertTriangle, IconChevronDown, IconChevronLeft, IconChevronRight, IconPlus, IconPrinter } from '@tabler/icons-react';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
+import PageBar from '../../../../components/PageBar.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../../lib/device.js';
 import { gradeLetters, judgedSubjects } from '../../../../lib/star/gradingApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
@@ -322,10 +323,10 @@ export default function GradingTab({
     <>
       {renderHeader(addButton)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel stg-panel">
-        {/* The save engine's banner (Retry + ✕) and an answer that is never retried (✕ only). Both
+        {/* The save engine's banner (PageBar, v1.128: under the top bar) (Retry + ✕) and an answer that is never retried (✕ only). Both
             show only in the rare case that both happen at once. */}
-        {saves.banner && <ErrorBanner text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
-        {pageBanner && <ErrorBanner text={pageBanner} onDismiss={onDismissPageBanner} />}
+        {saves.banner && <PageBar text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
+        {pageBanner && <PageBar text={pageBanner} onDismiss={onDismissPageBanner} />}
         {oneSchool && (
           <p className="ev-filter-line st-school-line">
             {T.oneSchoolLine(schoolLabel)} ·{' '}

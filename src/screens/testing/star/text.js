@@ -9,6 +9,7 @@
 // "Retry" / "Dismiss", RowMenu's "Cancel", the delete confirmation's buttons): those live in
 // Color Belt's text.js and are the same house wording.
 import { formatMoney } from '../../../lib/money.js';
+import { someoneElseChanged } from '../../../components/text.js';
 
 // ----- Page header (approved phase 1 header, Chooser mockups screen 5, v0.177) -----
 export const PAGE_TITLE = 'Star testing';
@@ -228,7 +229,9 @@ export const feeProblemText = (label, message) => `${label}: ${message}`;
 // ----- Notes, banners, toasts -----
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const DISCARD_CHANGES = 'Discard changes'; // phone only: the link inside the note (v0.56)
-export const STALE = "Someone else changed this just now. Your change wasn't saved.";
+// R2-07 (v1.045 (4)): a refused change or Undo, in the one shared sentence (src/components/text.js).
+// name = the category's (or "this list" when there is none).
+export const stale = (name) => someoneElseChanged(name || 'this list');
 export const STALE_DIALOG =
   "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
 export const STALE_DIALOG_PHONE =
@@ -238,8 +241,8 @@ export const INVALID_DIALOG = "That didn't save. Check the fields and try again.
 export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
 export const ORDER_FAILED = "Category order didn't save. Check the connection, then retry.";
 export const LOAD_FAILED = "Couldn't load Rubrics and prices. Check the connection, then retry.";
-export const UNDO_STALE = "Couldn't undo. Someone else changed this just now.";
-export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry.";
+// (A failed Undo's bar and the "Undone" words are said by the save line itself: lib/saveLine.js.)
+export const SECTION_NAME = 'Star testing'; // names the section in the bar shown after leaving the page (v1.129)
 
 export const TOAST_CATEGORY_SAVED = 'Category saved';
 export const TOAST_CATEGORY_ADDED = 'Category added';
@@ -248,4 +251,3 @@ export const TOAST_DAN_SAVED = 'Dan settings saved';
 export const TOAST_GRADES_SAVED = 'Grade values saved';
 export const TOAST_ASSISTANT_SAVED = 'Assistant-class table saved';
 export const TOAST_FEES_SAVED = 'Fees saved';
-export const TOAST_UNDONE = 'Undone';

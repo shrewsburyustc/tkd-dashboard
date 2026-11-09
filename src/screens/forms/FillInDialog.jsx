@@ -29,7 +29,7 @@ const NOTES = {
   LEAVE_FILL: T.LEAVE_FILL,
 };
 
-export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmit, onAnother, onCancel, onRequestClose }) {
+export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmit, onAnother, onCancel, onRequestClose, onRetryTimes }) {
   const preview = state.mode === 'preview';
   const steps = stepsOf(state.fields).filter((s) => s.fields.length > 0);
   const step = Math.min(state.step, steps.length - 1);
@@ -136,7 +136,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
           </button>
         )}
         {!(preview && last) && (
-          <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined}>
+          <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined} aria-busy={state.saving ? 'true' : undefined}>
             {last ? <IconCheck size={16} aria-hidden="true" /> : <IconArrowRight size={16} aria-hidden="true" />}
             {last ? (state.saving ? T.SUBMITTING : T.SEND) : T.CONTINUE}
           </button>
@@ -163,6 +163,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
           values={v}
           problems={state.problems}
           times={state.times}
+          onRetryTimes={onRetryTimes}
           readOnly={state.saving}
           idBase={idBase}
           onAnswer={answer}

@@ -18,6 +18,17 @@
 // says which one is open and reloads the lists after a save. Every save's toast has Undo for 5
 // seconds (rulebook v0.726); an Undo the database refuses shows why in the amber bar here.
 //
+// The list page's line of saves (design review R2-05, rulebook v1.125–v1.129): `Camps` only decides
+// which page shows (a camp's page, or the list page `CampsList` below). The list page keeps ONE save
+// line (useSaveLine, src/lib/saveLine.js) and ONE amber bar (a PageBar under the top bar, v1.128),
+// shared by the frame, the Camps tab and the Templates tab: the Undo of "Camp added", "Camp saved"
+// and "Template saved" is line.undoAction(…), and so are the Camps tab's Close / Open sign-up and
+// Save as template (CampRowMenu.jsx), so an Undo pressed during another save WAITS its turn instead of
+// being dropped, and the line says "Undone" or shows the bar. It is a page of its own (not kept in
+// `Camps`) so that when a camp's page opens, this one closes: an Undo that is still running and then
+// fails is shown by the bar under the top bar of the page the person is on, naming the change and
+// the section (v1.129).
+//
 // Props (from App.jsx):
 //   location        'Worcester' | 'Shrewsbury' | 'Both' (the top-bar switcher)
 //   isAdmin         show admin controls? (only for the screen — the database enforces the rules)
@@ -32,7 +43,8 @@
 //   screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange — as Testing
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
-import ErrorBanner from '../components/ErrorBanner.jsx';
+import PageBar from '../components/PageBar.jsx';
+import { useSaveLine } from '../lib/saveLine.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import CampsTab from './camps/CampsTab.jsx';
@@ -40,6 +52,7 @@ import TemplatesTab from './camps/TemplatesTab.jsx';
 import CampPage from './camps/CampPage.jsx';
 import CampDialog from './camps/CampDialog.jsx';
 import { focusSoon } from './camps/focusSoon.js';
+import { undoAnswer } from './camps/lineSave.js';
 import * as T from './camps/text.js';
 import '../styles/testing-events.css';
 import '../styles/camps.css';
@@ -65,8 +78,67 @@ export default function Camps({
   clearToast,
   onModalOpenChange,
 }) {
-  const baseId = useId();
   const locationKey = LOCATION_KEY[location] ?? 'worcester';
+  // ----- One camp's page (it keeps its own save line and bar: camps/CampPage.jsx) -----
+  if (campId) {
+    return (
+      <div className="testing camps">
+        <CampPage
+          key={campId}
+          campId={campId}
+          locationKey={locationKey}
+          isAdmin={isAdmin}
+          tab={campTab}
+          onTab={onCampTab}
+          onBack={onCloseCamp}
+          deviceLocation={deviceLocation}
+          followSchool={followSchoolFor === campId}
+          onLocationChange={onLocationChange}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={onModalOpenChange}
+        />
+      </div>
+    );
+  }
+  return (
+    <CampsList
+      location={location}
+      locationKey={locationKey}
+      isAdmin={isAdmin}
+      campTab={campTab}
+      onCampTab={onCampTab}
+      onOpenCamp={onOpenCamp}
+      screenLocked={screenLocked}
+      onNoAccess={onNoAccess}
+      onRefreshProfile={onRefreshProfile}
+      showToast={showToast}
+      clearToast={clearToast}
+      onModalOpenChange={onModalOpenChange}
+    />
+  );
+}
+
+// The list page: the header, the Camps / Templates tabs, the Add / Edit camp dialog, and the page's
+// one save line and one amber bar.
+function CampsList({
+  location,
+  locationKey,
+  isAdmin,
+  campTab,
+  onCampTab,
+  onOpenCamp,
+  screenLocked,
+  onNoAccess,
+  onRefreshProfile,
+  showToast,
+  clearToast,
+  onModalOpenChange,
+}) {
+  const baseId = useId();
   const isPhone = useMediaQuery(PHONE_QUERY);
   // Staff never see Templates (C1 2026-10-19): an address "#camps/templates" shows Camps for them.
   const tab = campTab === 'templates' && isAdmin ? 'templates' : 'camps';
@@ -79,8 +151,17 @@ export default function Camps({
   const [refreshKey, setRefreshKey] = useState(0);
   // A dialog inside a tab or on the camp page is open (those report it here).
   const [childModal, setChildModal] = useState(false);
-  // An Undo of "Camp added" that didn't work (a family signed up already, or no connection).
+  // The page's one amber bar (a PageBar, drawn below): { kind?, text, retry?, retrying?, takeFocus? }.
+  // The tabs put their own bars here too (Camps tab: a failed Close / Open sign-up, a failed read;
+  // Templates tab: a refused delete); kind 'undo' is the one the save line makes for an Undo that
+  // didn't save or was refused (a family signed up already, no connection, a day picked …).
   const [banner, setBanner] = useState(null);
+  // The list page's line of saves (R2-05): one save at a time, and an Undo pressed meanwhile waits.
+  const line = useSaveLine({
+    section: 'Camps',
+    showToast,
+    undoBar: (next) => setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current)),
+  });
 
   const editorShown = editor !== null && !screenLocked;
   useEffect(() => {
@@ -118,57 +199,69 @@ export default function Camps({
   //   Add camp      → "Camp added" · Undo = delete the new, empty camp (reports via onUndoResult)
   //   Edit camp     → "Camp saved" · Undo = save the camp's old values again
   //   Edit template → "Template saved" · Undo = save the template's old values again
+  // The dialog's onSaved result may carry `name` (the camp's or template's name); without it the
+  // refusal says "this camp" / "this template" (R2-07: it names what it can).
   function handleSaved(result) {
     closeEditor();
     setRefreshKey((n) => n + 1);
     if (result.kind === 'added') {
-      showToast(T.TOAST_CAMP_ADDED, { icon: false, action: result.undo ? { label: T.UNDO, onAction: result.undo } : null });
+      // Add camp's undo() reports through onUndoResult (below) and answers nothing: runAddUndo makes it
+      // an answer for the line.
+      showToast(T.TOAST_CAMP_ADDED, {
+        icon: false,
+        action: result.undo
+          ? line.undoAction(() => runAddUndo(result.undo, result.name ?? T.THIS_CAMP), { words: T.TOAST_CAMP_ADDED })
+          : null,
+      });
       return;
     }
     const text = result.kind === 'camp' ? T.TOAST_CAMP_SAVED : T.TOAST_TEMPLATE_SAVED_EDIT;
     const undo = result.undo;
-    showToast(text, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo) } : null });
+    const name = result.name ?? (result.kind === 'camp' ? T.THIS_CAMP : T.THIS_TEMPLATE);
+    showToast(text, { icon: false, action: undo ? line.undoAction(() => runUndo(undo, name), { words: text }) : null });
   }
 
-  // The Undo of Edit camp / Edit template. The toast goes away when Undo is pressed (one Undo only);
-  // the ref also stops a Retry from running twice. undo() → the database's answer + undoText.
-  const undoBusyRef = useRef(false);
-  const [undoRunning, setUndoRunning] = useState(false); // grays the bar's Retry while an Undo runs
-  async function runUndo(undo) {
-    if (undoBusyRef.current) return;
-    undoBusyRef.current = true;
-    setUndoRunning(true);
+  // The Undo of Edit camp / Edit template, as the line wants it (its run(): { status, reason? }).
+  // undo() → the database's answer + undoText. The list reloads whatever the answer. A refusal says
+  // why when the database said (a family picked a newly added day, 0027's guard …, "Couldn't undo: …"),
+  // else "Someone else changed [Name] just now …" (stale, not_found, a template name taken …).
+  async function runUndo(undo, name) {
     const result = await undo();
-    undoBusyRef.current = false;
-    setUndoRunning(false);
     setRefreshKey((n) => n + 1);
-    const status = result.status;
-    if (status === 'ok') {
-      setBanner(null);
-      showToast(T.TOAST_UNDONE, { icon: false });
-    } else if (status === 'no_access') onNoAccess();
-    else if (status === 'not_allowed') {
-      setBanner({ text: T.CAMPS_NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (status === 'error') {
-      // Didn't reach the database: the amber bar offers Retry (never silent, rule 3.5).
-      setBanner({ text: T.UNDO_FAILED, retry: () => runUndo(undo) });
-    } else {
-      // Refused: why, when the database said (a family picked a newly added day, 0027's guard …),
-      // else "Someone else changed this just now." (stale, not_found, a template name taken …).
-      setBanner({ text: result.undoText ?? T.UNDO_STALE });
-    }
+    return finishUndo(undoAnswer(result, { notAllowed: T.CAMPS_NOT_ALLOWED, stale: T.someoneElseChanged(name) }));
+  }
+  // Add camp's Undo: undo() deletes the new camp and reports its status through onUndoResult, which
+  // leaves it in addUndoStatus (a ref: the dialog is gone by then and its callbacks are old).
+  const addUndoStatus = useRef(null);
+  async function runAddUndo(undo, name) {
+    addUndoStatus.current = null;
+    await undo();
+    const status = addUndoStatus.current ?? 'error';
+    addUndoStatus.current = null;
+    setRefreshKey((n) => n + 1);
+    return finishUndo(undoAnswer({ status }, { notAllowed: T.CAMPS_NOT_ALLOWED, stale: T.someoneElseChanged(name) }));
+  }
+  // What this page does itself after an Undo's answer (the line says the rest): lock the screen when
+  // the database locked this sign-in; refresh the profile after "only an admin".
+  function finishUndo(answer) {
+    if (answer.status === 'no_access') onNoAccess();
+    else if (answer.status === 'not_allowed') onRefreshProfile();
+    return answer;
   }
 
   // A toast and its Undo belong to the tab they were made on (as App drops them when the page
   // changes): switching Camps ↔ Templates drops it, so an Undo never runs behind another tab.
   function changeTab(next) {
-    if (next !== tab) clearToast();
+    if (next !== tab) {
+      clearToast();
+      // A tab's own bar goes with the tab; a failed Undo's bar stays (it belongs to the page).
+      setBanner((current) => (current?.kind === 'undo' ? current : null));
+    }
     onCampTab(next);
   }
 
   // ----- The header's + Add camp (admins; both tabs; N on the PC) -----
-  const addShown = isAdmin && !campId;
+  const addShown = isAdmin;
   useShortcutN({
     enabled: addShown && editor === null && !childModal && !screenLocked,
     onPress: () => openEditor({ mode: 'add', opener: document.querySelector('[data-add-camp]') }),
@@ -200,38 +293,15 @@ export default function Camps({
       onSaved={handleSaved}
       onNoAccess={onNoAccess}
       onRefreshProfile={onRefreshProfile}
+      // The Undo of "Camp added" finished: runAddUndo (above) picks the status up from here.
       onUndoResult={(status) => {
-        // The Undo of "Camp added" finished: reload, and say so.
-        setRefreshKey((n) => n + 1);
-        if (status === 'ok') showToast(T.TOAST_UNDONE, { icon: false });
-        else if (status === 'no_access') onNoAccess();
-        else setBanner({ text: status === 'error' ? T.UNDO_FAILED : T.UNDO_STALE });
+        addUndoStatus.current = status;
       }}
     />
   ) : null;
 
-  const shared = { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange: setChildModal };
-
-  // ----- One camp's page -----
-  if (campId) {
-    return (
-      <div className="testing camps">
-        <CampPage
-          key={campId}
-          campId={campId}
-          locationKey={locationKey}
-          isAdmin={isAdmin}
-          tab={campTab}
-          onTab={onCampTab}
-          onBack={onCloseCamp}
-          deviceLocation={deviceLocation}
-          followSchool={followSchoolFor === campId}
-          onLocationChange={onLocationChange}
-          {...shared}
-        />
-      </div>
-    );
-  }
+  // What both tabs get: the page's line and bar setter (they put their own bars in the page's one bar).
+  const shared = { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange: setChildModal, line, setBanner };
 
   // ----- The tabs -----
   const tabId = (key) => `${baseId}-tab-${key}`;
@@ -275,7 +345,16 @@ export default function Camps({
         })}
       </div>
       {!isAdmin && <p className="viewonly">{T.STAFF_LINE}</p>}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={undoRunning} onDismiss={() => setBanner(null)} />}
+      {/* The page's amber bar, under the top bar (PageBar, v1.128): in view however far the list is scrolled. */}
+      {banner && (
+        <PageBar
+          text={banner.text}
+          onRetry={banner.retry ? () => banner.retry() : undefined}
+          retrying={Boolean(banner.retrying) || line.busy}
+          onDismiss={() => setBanner(null)}
+          takeFocus={Boolean(banner.takeFocus)}
+        />
+      )}
 
       {tab === 'templates' ? (
         <TemplatesTab

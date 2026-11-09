@@ -18,9 +18,11 @@
 // not buttons here — classes are changed in the Schedule.
 //
 // Props: dates (7), today, infoFor, typeColor, both, onOpenEvent, onOpenClosure, onOpenItem(item),
-//   itemsFailed (true = the gray line "Couldn't load the other sections' dates." above the grid, so a
+//   itemsFailed (true = the amber line "Couldn't load the other sections' dates. Check the connection,
+//   then retry." with Retry (onRetryItems) above the grid, so a
 //   week that looks empty isn't taken for a week with nothing on)
 import { IconAlertTriangle, IconCalendarEvent, IconUserPlus } from '@tabler/icons-react';
+import ErrorBanner from '../../components/ErrorBanner.jsx'; // the amber line with Retry (S-2, v1.051 (2))
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, hourLabel } from '../../lib/schedule/time.js';
@@ -36,7 +38,7 @@ function splitFill(colorKeys) {
   return `linear-gradient(90deg, ${colors.map((c, i) => `${c.fill} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(', ')})`;
 }
 
-export default function WeekView({ dates, today, infoFor, typeColor, both, onOpenEvent, onOpenClosure, onOpenItem, itemsFailed = false }) {
+export default function WeekView({ dates, today, infoFor, typeColor, both, onOpenEvent, onOpenClosure, onOpenItem, itemsFailed = false, onRetryItems }) {
   const infos = dates.map((d) => infoFor(d));
 
   // Everything with a time on each day: classes + timed one-day events.
@@ -67,7 +69,11 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
 
   return (
     <div className="cweek">
-      {itemsFailed && <p className="cpanel-empty cweek-failed">{T.OTHER_SECTIONS_FAILED}</p>}
+      {itemsFailed && (
+        <div className="cweek-failed">
+          <ErrorBanner text={T.OTHER_SECTIONS_FAILED} onRetry={onRetryItems} />
+        </div>
+      )}
       <div className="cweek-heads" aria-hidden="true">
         <span />
         {dates.map((d, i) => (

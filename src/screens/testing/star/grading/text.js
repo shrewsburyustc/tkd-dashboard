@@ -9,6 +9,7 @@
 // (rulebook v0.512, "Proposals to confirm (31)"). Lines marked "approved v0.513" are not in any
 // drawing — Jeffrey approved them in the preview (rulebook v0.513).
 export * as G from '../../../../lib/star/gradingText.js';
+import { loadFailedNamed } from '../../../../components/text.js'; // the shared "Couldn't load … Check the connection, then retry." (S-2)
 
 export const TAB_GRADING = 'Grading';
 
@@ -85,7 +86,7 @@ export const privatePageLine = (dateText, timeText, danLabel, testingForText, sc
 export const backToEventLabel = (eventName) => `Back to ${eventName} candidates`; // the back link's name for screen readers
 export const privateGradesLabel = (name) => `${name}’s grades`;
 export const LOADING_PRIVATE = 'Loading the private testing…';
-export const LOAD_PRIVATE_FAILED = 'Couldn’t load the private testing. Check the connection, then try again.'; // approved v0.513 (Color Belt's pattern; not in the mockups)
+export const LOAD_PRIVATE_FAILED = loadFailedNamed('the private testing'); // S-2 (v1.051 (2)): the ending is "then retry" now (was v0.513's "then try again"); it has Retry
 // Back on the Candidates tab when the open private page had to close (banner with ✕ only; the
 // pattern of the H2 banners, "… on another device") — not in the mockups, approved v0.513:
 export const privateMovedBack = (name) => `${name} was moved back to the testing day on another device. Grade them on the Grading tab.`; // approved v0.513 (not in the mockups)
@@ -99,7 +100,7 @@ export const emptyDanBoth = (danLabel) => `No ${danLabel} candidates. Add candid
 
 // ----- Loading the grid -----
 export const LOADING_GRADES = 'Loading grades…';
-export const LOAD_GRADES_FAILED = 'Couldn’t load the grades. Check the connection, then try again.'; // approved v0.513 (Color Belt's pattern; not in the mockups)
+export const LOAD_GRADES_FAILED = loadFailedNamed('the grades'); // S-2 (v1.051 (2)): the ending is "then retry" now (was v0.513's "then try again"); it has Retry
 
 // ----- One grade cell -----
 export const EMPTY_CELL = '·'; // drawn in light gray (aria-hidden)

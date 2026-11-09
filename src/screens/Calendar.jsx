@@ -11,7 +11,9 @@
 //   - opens the dialogs: event, closure, event types (admins edit; staff see them read-only)
 //   - sends every change to the database (src/lib/calendar/api.js) and reacts to the answer
 //   - offers Undo for adding, editing and removing events and closures; deleting an event type
-//     is permanent and asks first
+//     is permanent and asks first. Saves and Undos go through one save line (lib/saveLine.js, R2-05):
+//     an Undo pressed while another save runs WAITS its turn (its toast says "Undoing…"); a failed
+//     Undo's bar and the "Undone" toast come from the line, the refused ones name the event or closure
 //   - shows prospects' follow-ups (v0.612 / v0.615, loaded apart by useFollowUps) — a tap opens
 //     the child in Prospects — and the "Show" menu that hides any kind of item (v0.613),
 //     remembered per person on this device (showKinds.js)
@@ -19,17 +21,18 @@
 //     switcher where that page needs it, then calls App.jsx's own openers (nothing is copied here)
 //
 // Rules worth knowing (same as Testing and the Schedule):
-//   - ONE change at a time; dialog saves WAIT for the database.
+//   - ONE change at a time (the save line); dialog saves WAIT for the database.
 //   - The dialog's typed values live HERE, so a lock while it's open loses nothing.
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCalendarEvent, IconCalendarOff, IconChevronLeft, IconChevronRight, IconDots, IconPalette, IconPlus } from '@tabler/icons-react';
-import ErrorBanner from '../components/ErrorBanner.jsx';
 import IconButton from '../components/IconButton.jsx';
+import PageBar from '../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
 import { STAR_TESTING_ON } from '../lib/features.js';
 import { handOffPrivate } from '../lib/star/homeHandoff.js';
+import { useSaveLine } from '../lib/saveLine.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { colorOf } from '../lib/schedule/colors.js';
@@ -66,6 +69,7 @@ import * as T from './calendar/text.js';
 const ALL_CODES = ['worcester', 'shrewsbury'];
 const SCHOOL_OF_CODE = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' }; // the switcher's words
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
+const quoted = (words) => `“${words}”`; // an event's or closure's name in a sentence
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 // Today in Massachusetts, until the database's own answer arrives ('YYYY-MM-DD').
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
@@ -173,23 +177,31 @@ export default function Calendar({
   // ----- State -----
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { kind: 'add' | 'more', anchor }
-  const [banner, setBanner] = useState(null); // { text, retry? }
-  const busyRef = useRef(false);
-  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState(null); // { text, retry?, kind?: 'undo' | 'checkin', retrying?, takeFocus? }
+  // One line of saves for the page (lib/saveLine.js): one at a time, and an Undo pressed meanwhile
+  // waits its turn. The line keeps the page's one Undo bar through undoBar (kind 'undo').
+  const line = useSaveLine({
+    section: T.SECTION_NAME,
+    showToast,
+    undoBar: (next) => setBanner((cur) => (next ? { kind: 'undo', ...next } : cur?.kind === 'undo' ? null : cur)),
+  });
+  const busy = line.busy;
+  const tokenRef = useRef(null); // the token of the save that is running (one at a time)
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
   });
 
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = line.begin(); // false while a save or an Undo runs
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
+  // Every begin is ended exactly once; the token keeps a stale end from freeing the line under an Undo.
   function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+    line.end(status ?? 'ok', { token: tokenRef.current });
+    tokenRef.current = null;
     if (status && status !== 'ok') clearToast();
   }
 
@@ -417,12 +429,12 @@ export default function Calendar({
     if (monthKey(p.startsOn) !== monthKey(anchorDate) && shownView === 'month') setAnchor(p.startsOn);
     reloadQuiet();
     if (d.mode === 'add') {
-      showToast(T.TOAST_EVENT_ADDED, { icon: false, action: { label: T.UNDO, onAction: () => runUndo(() => removeEvent({ id: result.id, expectedVersion: result.version })) } });
+      showToast(T.TOAST_EVENT_ADDED, { icon: false, action: undoOf(T.TOAST_EVENT_ADDED, quoted(p.title), () => removeEvent({ id: result.id, expectedVersion: result.version })) });
     } else {
       const before = d.snapshot;
       showToast(T.TOAST_EVENT_SAVED, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => updateEvent({ ...before, expectedVersion: result.version })) },
+        action: undoOf(T.TOAST_EVENT_SAVED, quoted(before.title), () => updateEvent({ ...before, expectedVersion: result.version })),
       });
     }
     focusBack(document.querySelector(`[data-event="${result.id}"]`) ?? d.opener, '[data-cal-add]');
@@ -441,7 +453,8 @@ export default function Calendar({
     }
     setDialog(null);
     reloadQuiet();
-    showToast(T.toastEventRemoved(result.removed.title), { icon: false, action: { label: T.UNDO, onAction: () => runUndo(() => addEvent(result.removed)) } });
+    const removedWords = T.toastEventRemoved(result.removed.title);
+    showToast(removedWords, { icon: false, action: undoOf(removedWords, quoted(result.removed.title), () => addEvent(result.removed)) });
     focusBack(null, `[data-day="${selectedDate}"], [data-cal-add]`);
   }
 
@@ -492,13 +505,13 @@ export default function Calendar({
     if (monthKey(p.startsOn) !== monthKey(anchorDate) && shownView === 'month') setAnchor(p.startsOn);
     reloadQuiet();
     if (d.mode === 'add') {
-      showToast(T.TOAST_CLOSURE_ADDED, { icon: false, action: { label: T.UNDO, onAction: () => runUndo(() => removeClosure({ id: result.id, expectedVersion: result.version })) } });
+      showToast(T.TOAST_CLOSURE_ADDED, { icon: false, action: undoOf(T.TOAST_CLOSURE_ADDED, quoted(p.reason), () => removeClosure({ id: result.id, expectedVersion: result.version })) });
     } else {
       const s = d.snapshot;
       const before = { locationCode: s.locationCode, startsOn: s.startsOn, endsOn: s.endsOn, reason: s.reason, wholeDay: s.wholeDay, slotIds: d.initial.slotIds };
       showToast(T.TOAST_CLOSURE_SAVED, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => updateClosure({ id: s.id, expectedVersion: result.version, ...before })) },
+        action: undoOf(T.TOAST_CLOSURE_SAVED, quoted(s.reason), () => updateClosure({ id: s.id, expectedVersion: result.version, ...before })),
       });
     }
     focusBack(document.querySelector(`[data-closure="${result.id}"]`) ?? d.opener, '[data-cal-add]');
@@ -517,7 +530,8 @@ export default function Calendar({
     }
     setDialog(null);
     reloadQuiet();
-    showToast(T.toastClosureRemoved(result.removed.reason), { icon: false, action: { label: T.UNDO, onAction: () => runUndo(() => addClosure(result.removed)) } });
+    const removedWords = T.toastClosureRemoved(result.removed.reason);
+    showToast(removedWords, { icon: false, action: undoOf(removedWords, quoted(result.removed.reason), () => addClosure(result.removed)) });
     focusBack(null, `[data-day="${selectedDate}"], [data-cal-add]`);
   }
 
@@ -645,36 +659,55 @@ export default function Calendar({
     endWrite(r.status);
     if (r.status === 'ok') {
       await reloadQuiet();
-      showToast(T.checkedInToast(booking.childFirstName), {
+      setBanner((cur) => (cur?.kind === 'checkin' ? null : cur)); // a Retry from the bar worked
+      const words = T.checkedInToast(booking.childFirstName);
+      showToast(words, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn({ id: p.prospectId, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn })) },
+        action: undoOf(words, booking.childFirstName, () => undoCheckIn({ id: p.prospectId, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn })),
       });
     } else if (r.status === 'no_access') onNoAccess();
-    else {
-      setBanner({ text: T.LOAD_FAILED });
+    else if (r.status === 'stale' || r.status === 'not_found') {
+      // Someone else changed this child: nothing was done, and the day panel shows their change.
+      setBanner({ kind: 'checkin', text: T.someoneElseChanged(booking.childFirstName) });
       reloadQuiet();
+    } else if (r.status === 'not_allowed') {
+      setBanner({ kind: 'checkin', text: T.NOT_ALLOWED });
+      onRefreshProfile();
+    } else {
+      // Not a load at all (S-2): its own words, and a Retry that checks in again (v1.004).
+      setBanner({ kind: 'checkin', text: T.checkInFailed(booking.childFirstName), retry: () => doCheckIn(booking, p) });
     }
   }
 
-  async function runUndo(call) {
-    if (!beginWrite()) return;
-    const result = await call();
-    endWrite(result.status);
-    if (result.status === 'ok') {
-      setBanner(null);
-      await reloadQuiet();
-      showToast(T.TOAST_UNDONE, { icon: false });
-    } else if (result.status === 'no_access') {
-      onNoAccess();
-    } else if (result.status === 'not_allowed') {
-      setBanner({ text: T.NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (['stale', 'not_found', 'invalid'].includes(result.status)) {
-      setBanner({ text: T.UNDO_STALE });
-      reloadQuiet();
-    } else {
-      setBanner({ text: T.UNDO_FAILED, retry: () => runUndo(call) });
-    }
+  // The toast's Undo button, made by the save line (R2-05): pressed while another save runs, it waits
+  // its turn and the toast says "Undoing…". `words` = the toast's own words (the bar after leaving
+  // the page quotes them); `name` = what the refusal names (R2-07: "Someone else changed “Open day”
+  // just now, so nothing was done. Their change is shown."). `call` does the Undo; this reads what
+  // the screen shows again and tells the line how it went (the line says "Undone" or shows the bar).
+  function undoOf(words, name, call) {
+    return line.undoAction(
+      async () => {
+        const result = await call();
+        if (result.status === 'ok') {
+          await reloadQuiet();
+          return { status: 'ok' };
+        }
+        if (result.status === 'no_access') {
+          onNoAccess();
+          return { status: 'no_access' };
+        }
+        if (result.status === 'not_allowed') {
+          onRefreshProfile();
+          return { status: 'not_allowed', reason: T.NOT_ALLOWED };
+        }
+        if (['stale', 'not_found', 'invalid'].includes(result.status)) {
+          reloadQuiet();
+          return { status: 'stale', reason: T.someoneElseChanged(name) };
+        }
+        return { status: 'error' }; // never reached the database: "Undo didn't save. …" with Retry
+      },
+      { words },
+    );
   }
 
   // N = Add event (PC only, when nothing else is open).
@@ -769,11 +802,11 @@ export default function Calendar({
       </div>
     );
   } else if (cal.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => cal.reload()} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={() => cal.reload()} />;
   } else if (cal.status === 'noAccess' || !loaded) {
     body = null;
   } else if (shownView === 'week') {
-    body = <WeekView dates={week} today={today} infoFor={infoFor} typeColor={typeColor} both={both} onOpenEvent={openEvent} onOpenClosure={openClosure} onOpenItem={openItem} itemsFailed={Boolean(loaded?.itemsFailed)} />;
+    body = <WeekView dates={week} today={today} infoFor={infoFor} typeColor={typeColor} both={both} onOpenEvent={openEvent} onOpenClosure={openClosure} onOpenItem={openItem} itemsFailed={Boolean(loaded?.itemsFailed)} onRetryItems={() => cal.reload()} />;
   } else {
     const month = monthKey(anchorDate);
     const panel = (
@@ -794,6 +827,8 @@ export default function Calendar({
         onOpenFollowUp={(f) => onOpenProspect?.(f.id)}
         onOpenItem={openItem}
         itemsFailed={Boolean(loaded?.itemsFailed)}
+        onRetryFollowUps={() => fu.reload()}
+        onRetryItems={() => cal.reload()}
       />
     );
     const gridProps = { weeks, month, today, selected: selectedDate, infoFor, typeColor, onPick: pickDay };
@@ -834,6 +869,7 @@ export default function Calendar({
           onSave={saveType}
           onDelete={confirmDeleteType}
           onReorder={reorderType}
+          busy={busy}
           {...common}
           onRequestClose={() => {
             const d = dialogRef.current;
@@ -865,7 +901,15 @@ export default function Calendar({
         {buttons}
       </div>
       {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {banner && (
+        <PageBar
+          text={banner.text}
+          onRetry={banner.retry ? () => banner.retry() : undefined}
+          retrying={Boolean(banner.retrying) || busy}
+          takeFocus={banner.takeFocus}
+          onDismiss={() => setBanner(null)}
+        />
+      )}
       {toolbar}
       {isPhone && ready && <div className="cshow-row">{showMenu}</div>}
       {body}

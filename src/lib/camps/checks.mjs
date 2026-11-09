@@ -41,11 +41,14 @@ import {
 // The Camps words (the screens' text.js): only to check the "Hide private details" sentences and
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
-// The family page's own words (src/camp/text.js): only to check the shared "Date signed" sentences (v0.638).
-import * as FamilyText from '../../camp/text.js';
+// The shared words (src/components/text.js): only to check the "Date signed" sentences (v0.638).
+import * as SharedText from '../../components/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
 // … and its starting values (a Blank camp's two extras, rulebook v0.739).
 import { campUndoRefusal, undoAddsPastDay, undoCampPayload, blankValues, applyBlank, checkForm, valuesFromCamp, valuesFromTemplate } from '../../screens/camps/sections/campForm.js';
+// R2-05: the Camps pages' line of saves (the helpers, and the shared save line they use)
+import { reloadBounded, saveOnLine, undoAnswer } from '../../screens/camps/lineSave.js';
+import { createSaveLine } from '../saveLine.js';
 
 let count = 0;
 function check(label, fn) {
@@ -1483,14 +1486,15 @@ check('Undo of Edit camp: old payload, refusal words (v0.726)', () => {
   // A past day taken off can't be put back by Undo (the database refuses new past days).
   assert.equal(undoAddsPastDay(before, saved, '2027-04-20'), true);
   assert.equal(undoAddsPastDay(before, saved, '2027-04-19'), false);
-  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: true }), "Couldn’t undo. New days can’t be in the past.");
+  // The shared sentence (R2-07, v1.045 (4)): "Couldn't undo: [reason]." (the reason's own period is not doubled)
+  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: true }), "Couldn't undo: New days can’t be in the past.");
   assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: false }), null);
   assert.equal(campUndoRefusal({ status: 'stale' }), null);
   assert.equal(campUndoRefusal({ status: 'ok' }), null);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'day', day: '2027-04-21', firstName: 'Mia', lastName: 'Rossi', more: 0 }), /^Couldn’t undo\. Can’t remove .*Mia Rossi picked it/);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra', extraName: 'Art', count: 2 }), /^Couldn’t undo\. Can’t remove Art: 2 campers picked it/);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_per', extraName: 'Art', count: 1 }), /^Couldn’t undo\. Can’t switch Art/);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_included', extraName: 'Art', count: 1 }), /^Couldn’t undo\. Can’t save: Art would become included/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'day', day: '2027-04-21', firstName: 'Mia', lastName: 'Rossi', more: 0 }), /^Couldn't undo: Can’t remove .*Mia Rossi picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra', extraName: 'Art', count: 2 }), /^Couldn't undo: Can’t remove Art: 2 campers picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_per', extraName: 'Art', count: 1 }), /^Couldn't undo: Can’t switch Art/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_included', extraName: 'Art', count: 1 }), /^Couldn't undo: Can’t save: Art would become included/);
   // The words (v0.725 / v0.726).
   assert.equal(T.OPEN_SIGNUP, 'Open sign-up');
   assert.equal(T.OPEN_NEEDS_ADMIN, 'The closing date has passed. Ask an admin to open it.');
@@ -2408,10 +2412,38 @@ check('a pressed count card that leaves nobody says what is true (C-05 (b), v1.0
   assert.equal(CampText.NO_MATCH_FILTER, undefined); // the old "No campers match." filter line is gone
 });
 
-check('the family form\'s "Date signed" words are the shared ones (v0.638)', () => {
-  // Copied from Star's and Black Belt's family forms: the same two shared sentences (src/components/text.js).
-  assert.equal(FamilyText.DATE_SIGNED, 'Date signed');
-  assert.equal(FamilyText.DATE_SIGNED_HINT, "Filled in automatically with today's date.");
+check('the family form\'s "Date signed" box is the shared one, with the shared words (v0.638)', () => {
+  // components/DateSigned.jsx draws it on every family form; the two sentences live in components/text.js.
+  assert.equal(SharedText.DATE_SIGNED, 'Date signed');
+  assert.equal(SharedText.DATE_SIGNED_HINT, "Filled in automatically with today's date.");
+  // Camps' family page and Fill in use that component (no copy of the box left in the camp page's files).
+  const step = readFileSync(new URL('../../camp/StepCheck.jsx', import.meta.url), 'utf8');
+  assert.ok(step.includes("import DateSigned from '../components/DateSigned.jsx'") && step.includes('<DateSigned id="camp-signed" day={today} />'));
+  assert.ok(!readFileSync(new URL('../../styles/camp.css', import.meta.url), 'utf8').includes('camp-signed-box'));
+});
+
+check('shared sentences and the Paying by line (batch of 2026-11-08: R1-06, R1-07, R2-07, R3-13, R1-02)', () => {
+  const T = CampText;
+  // R1-06: the Undo payment box takes Black Belt's words: the title names the amount and the way, the second line opens "Paid on [day]".
+  assert.equal(T.undoPaymentTitle('Leo Kim', 35000, 'cash'), 'Undo Leo Kim’s $350 cash payment?');
+  assert.equal(T.undoPaymentBody({ amountCents: 35000, method: 'cash', paidOn: '2027-03-17' }, 35000), 'Paid on Mar 17. It is reversed, so $350 is owed again. Both stay in the history.');
+  assert.equal(T.undoPaymentBody({ amountCents: 35000, method: 'cash', paidOn: '2027-03-17' }, 0), 'Paid on Mar 17. It is reversed. Both stay in the history.');
+  // R1-07: the toasts are the shared ones.
+  assert.equal(T.markedPaidToast('Leo Kim', 35000, 'cash'), 'Leo Kim marked paid · $350 cash');
+  assert.equal(T.markedPaidToastHidden('Leo Kim'), 'Leo Kim marked paid');
+  assert.equal(T.paymentUndoneToast('Leo Kim'), 'Payment undone for Leo Kim');
+  // R2-07: a refused change or Undo names the camper; a failed Undo says the shared sentence.
+  assert.equal(T.someoneElseChanged('Leo Kim'), 'Someone else changed Leo Kim just now, so nothing was done. Their change is shown.');
+  assert.equal(T.undoRefused('New days can’t be in the past.'), "Couldn't undo: New days can’t be in the past.");
+  assert.equal(T.UNDO_PAYMENT_FAILED, "Undo didn't save. Check the connection, then retry.");
+  assert.equal(T.UNDO_DIDNT_SAVE, T.UNDO_PAYMENT_FAILED);
+  // R3-13: Edit payment's Date paid hint.
+  assert.equal(T.FUTURE_DAYS_HINT, "Days after today can't be chosen.");
+  // R1-02: Camper detail's Paying by names where the current choice was made, as Star's.
+  assert.equal(T.payingByDetail('cash', 'form'), 'Cash (chosen on the form)');
+  assert.equal(T.payingByDetail('check', 'desk'), 'Check (chosen at the desk)');
+  assert.equal(payingByChoiceWhere({ payingBy: 'cash', payingByOnForm: 'cash' }), 'form');
+  assert.equal(payingByChoiceWhere({ payingBy: 'check', payingByOnForm: 'cash' }), 'desk');
 });
 
 check('Fill in closed by Hide private details: the camp page\'s words (v0.746)', () => {
@@ -2730,6 +2762,217 @@ check('mock (0039): the row rules (kind check + guard) and Edit payment of a ref
   env.clock += 1000;
   assert.equal(edit(paymentId), 'ok');
   assert.equal(edit(paymentId), 'stale'); // already replaced
+});
+
+// ======================= R2-05 — the Camps pages' line of saves (screens/camps/lineSave.js; rulebook v1.125–v1.129) =======================
+// CampPage, CampRowMenu (the camp page's and the list's ⋯) and Camps.jsx used to keep their own busy flag and
+// an Undo that returned early while another save ran. They now go through the page's save line
+// (src/lib/saveLine.js); lineSave.js holds the two pure pieces, checked here without a browser.
+async function checkAsync(label, fn) {
+  try {
+    await fn();
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+}
+const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
+function holdable() {
+  let settle;
+  const promise = new Promise((resolve) => {
+    settle = resolve;
+  });
+  return { promise, settle };
+}
+function pageLine() {
+  const page = { bars: [], toasts: [] };
+  page.options = {
+    section: 'Camps',
+    showToast: (text) => page.toasts.push(text),
+    undoBar: (bar) => page.bars.push(bar),
+    onBusyChange: () => {},
+  };
+  page.line = createSaveLine(() => page.options);
+  return page;
+}
+
+await checkAsync('R2-05 saveOnLine: answers the save\'s own answer, ends the line once, and tells onNotOk how a failed save ended', async () => {
+  const { line } = pageLine();
+  const notOk = [];
+  const answer = await saveOnLine(line, async () => ({ status: 'ok', id: 7 }), { onNotOk: (status) => notOk.push(status) });
+  assert.deepEqual(answer, { status: 'ok', id: 7 });
+  assert.equal(line.isBusy(), false);
+  assert.deepEqual(notOk, [], 'a save that worked does not call onNotOk');
+  const refused = await saveOnLine(line, async () => ({ status: 'stale' }), { onNotOk: (status) => notOk.push(status) });
+  assert.equal(refused.status, 'stale');
+  assert.deepEqual(notOk, ['stale']);
+  assert.equal(line.isBusy(), false);
+});
+
+await checkAsync('R2-05 saveOnLine: a save that throws still ends the line (a waiting Undo must not wait for ever)', async () => {
+  const { line } = pageLine();
+  const notOk = [];
+  await assert.rejects(() => saveOnLine(line, async () => { throw new Error('network'); }, { onNotOk: (status) => notOk.push(status) }), /network/);
+  assert.equal(line.isBusy(), false, 'the line is free again');
+  assert.deepEqual(notOk, ['error'], 'a save that never answered counts as not reached');
+  assert.ok(line.begin(), 'the next save can start');
+  line.end('ok');
+});
+
+await checkAsync('R2-05 saveOnLine: while something runs it does nothing and answers null (as the old begin() returning false)', async () => {
+  const { line } = pageLine();
+  const hold = holdable();
+  let calls = 0;
+  const first = saveOnLine(line, () => ((calls += 1), hold.promise));
+  assert.equal(line.isBusy(), true);
+  const second = await saveOnLine(line, async () => ((calls += 1), { status: 'ok' }));
+  assert.equal(second, null);
+  assert.equal(calls, 1, 'the second save never ran');
+  hold.settle({ status: 'ok' });
+  assert.equal((await first).status, 'ok');
+  assert.equal(line.isBusy(), false);
+});
+
+await checkAsync('R2-05 an Undo pressed during another save waits for it, then runs (the Withdraw A / Withdraw B / Undo A case)', async () => {
+  const page = pageLine();
+  const saveB = holdable();
+  const running = saveOnLine(page.line, () => saveB.promise); // Withdraw B is saving
+  let undone = 0;
+  const pressed = page.line
+    .undoAction(async () => ((undone += 1), undoAnswer({ status: 'ok' }, { notAllowed: 'n', stale: 's' })), { words: 'Zoe Park withdrawn' })
+    .onAction();
+  await pause();
+  assert.equal(undone, 0, 'it waits: B is still saving');
+  saveB.settle({ status: 'ok' });
+  await running;
+  const answer = await pressed;
+  assert.equal(undone, 1, 'it ran as soon as B ended');
+  assert.equal(answer.undone, true);
+  assert.deepEqual(page.bars, [null], 'no failure bar; the toast says "Undone"');
+});
+
+await checkAsync('R2-05 a failed save, then an Undo that fails too: one bar, "Neither change saved", with a Retry that redoes the save and the Undo', async () => {
+  const page = pageLine();
+  const saveB = holdable();
+  let saveAgain = 0;
+  const running = saveOnLine(page.line, () => saveB.promise, { retry: async () => { saveAgain += 1; } });
+  const pressed = page.line.undoAction(async () => ({ status: 'error' }), { words: 'Zoe Park withdrawn' }).onAction();
+  saveB.settle({ status: 'error' });
+  await running;
+  await pressed;
+  const bar = page.bars[page.bars.length - 1];
+  assert.equal(bar.text, SharedText.NEITHER_SAVED);
+  assert.equal(typeof bar.retry, 'function');
+  assert.equal(bar.takeFocus, true);
+  await bar.retry();
+  assert.equal(saveAgain, 1, 'Retry redid the failed save first');
+});
+
+check('R2-05 undoAnswer: ok, no_access and error pass through; a refusal says why (the call\'s own words, the refund words, or "Someone else changed [Name]")', () => {
+  const words = { notAllowed: CampText.CAMPS_NOT_ALLOWED, stale: CampText.someoneElseChanged('Zoe Park'), refundStands: CampText.UNDO_REFUND_FIRST };
+  assert.deepEqual(undoAnswer({ status: 'ok' }, words), { status: 'ok' });
+  assert.deepEqual(undoAnswer({ status: 'no_access' }, words), { status: 'no_access' });
+  assert.deepEqual(undoAnswer({ status: 'error' }, words), { status: 'error' });
+  assert.deepEqual(undoAnswer(undefined, words), { status: 'error' }, 'no answer counts as not reached');
+  assert.deepEqual(undoAnswer({ status: 'not_allowed' }, words), { status: 'not_allowed', reason: CampText.CAMPS_NOT_ALLOWED });
+  assert.deepEqual(undoAnswer({ status: 'stale' }, words), { status: 'stale', reason: 'Someone else changed Zoe Park just now, so nothing was done. Their change is shown.' });
+  assert.equal(undoAnswer({ status: 'not_found' }, words).reason, words.stale);
+  assert.equal(undoAnswer({ status: 'refund_stands' }, words).reason, CampText.UNDO_REFUND_FIRST);
+  assert.equal(undoAnswer({ status: 'refund_stands' }, { notAllowed: 'n', stale: 's' }).reason, 's', 'no refund words given: the stale words');
+  // A call's own reason (Edit camp's and Edit details' Undo) wins over the stale words and the refund words.
+  const named = CampText.undoRefused(CampText.UNDO_DETAILS_NO_LONGER_FIT);
+  assert.equal(undoAnswer({ status: 'invalid', undoText: named }, words).reason, named);
+  assert.equal(undoAnswer({ status: 'refund_stands', undoText: named }, words).reason, named);
+  assert.match(named, /^Couldn't undo: .*\.$/, 'the shared sentence: "Couldn\'t undo: [reason]."');
+  // Hide private details on, a money Undo: the general words only, and never a Retry that could record money.
+  const general = { error: CampText.SAVE_FAILED, notAllowed: CampText.ROSTER_NOT_ALLOWED, stale: words.stale };
+  assert.deepEqual(undoAnswer({ status: 'error' }, { ...words, general }), { status: 'error', reason: CampText.SAVE_FAILED, noRetry: true });
+  assert.deepEqual(undoAnswer({ status: 'not_allowed' }, { ...words, general }), { status: 'not_allowed', reason: CampText.ROSTER_NOT_ALLOWED });
+  assert.deepEqual(undoAnswer({ status: 'refund_stands' }, { ...words, general }), { status: 'refund_stands', reason: words.stale });
+  assert.deepEqual(undoAnswer({ status: 'ok' }, { ...words, general }), { status: 'ok' });
+  assert.deepEqual(undoAnswer({ status: 'no_access' }, { ...words, general }), { status: 'no_access', noRetry: true }, 'locked while hidden: no Retry on the line\'s bar either');
+  assert.deepEqual(undoAnswer({ status: 'no_access' }, words), { status: 'no_access' }, 'not hidden: the usual Retry after the unlock');
+});
+
+await checkAsync('R2-05 an Undo the database refused shows its reason with no Retry; one that never reached it shows "Undo didn\'t save" with Retry', async () => {
+  const refused = pageLine();
+  await refused.line
+    .undoAction(async () => undoAnswer({ status: 'stale' }, { notAllowed: 'n', stale: CampText.someoneElseChanged('Zoe Park') }), { words: 'Zoe Park withdrawn' })
+    .onAction();
+  const bar = refused.bars[refused.bars.length - 1];
+  assert.equal(bar.text, 'Someone else changed Zoe Park just now, so nothing was done. Their change is shown.');
+  assert.equal(bar.retry, null);
+  const lost = pageLine();
+  await lost.line.undoAction(async () => undoAnswer({ status: 'error' }, { notAllowed: 'n', stale: 's' }), { words: 'Zoe Park withdrawn' }).onAction();
+  const lostBar = lost.bars[lost.bars.length - 1];
+  assert.equal(lostBar.text, SharedText.UNDO_DIDNT_SAVE);
+  assert.equal(typeof lostBar.retry, 'function');
+  // The Close sign-up Undo opens sign-up again, so the line's "Undone" says so (doneText).
+  const closed = pageLine();
+  const done = await closed.line.undoAction(async () => ({ status: 'ok' }), { words: 'Sign-up closed', doneText: CampText.TOAST_UNDONE_SIGNUP_OPEN }).onAction();
+  assert.equal(done.doneText, 'Undone. Sign-up is open again.');
+});
+
+await checkAsync('R2-05 reloadBounded: a reload that never answers is given up on after the time; one that throws or answers is passed on; never throws', async () => {
+  const started = Date.now();
+  assert.equal(await reloadBounded(() => new Promise(() => {}), 20), 'timeout', 'a hung reload resolves after the timeout');
+  assert.ok(Date.now() - started < 1000, 'and quickly');
+  assert.equal(await reloadBounded(async () => 'ok', 20), 'ok');
+  assert.equal(await reloadBounded(async () => 'error', 20), 'error');
+  assert.equal(await reloadBounded(async () => { throw new Error('boom'); }, 20), 'error', 'a reload that throws does not break the Undo');
+  assert.equal(await reloadBounded(() => { throw new Error('sync'); }, 20), 'error');
+  // Through the line: an Undo whose reload hangs still answers "undone" (not the false "Undo didn't save").
+  const page = pageLine();
+  const answer = await page.line
+    .undoAction(async () => { await reloadBounded(() => new Promise(() => {}), 20); return { status: 'ok' }; }, { words: 'Zoe Park withdrawn' })
+    .onAction();
+  assert.equal(answer.undone, true);
+  assert.deepEqual(page.bars, [null]);
+});
+
+check('R2-05 the Camps files use the bounded reload in their Undos, name the camp/template in Edit/Add results, and keep a failed Undo\'s bar on a school switch', () => {
+  const read = (name) => readFileSync(new URL(`../../screens/${name}`, import.meta.url), 'utf8');
+  assert.ok(read('camps/CampPage.jsx').includes('await reloadBounded(reloadQuiet)'));
+  assert.ok(read('camps/CampRowMenu.jsx').includes('await reloadBounded(reload)'));
+  assert.ok(!/await reload\(\)|await reloadQuiet\(\)/.test(read('camps/CampPage.jsx') + read('camps/CampRowMenu.jsx')), 'no Undo waits on an unbounded reload');
+  const dialog = read('camps/CampDialog.jsx');
+  for (const kind of ['added', 'camp', 'template']) assert.ok(new RegExp(`onSaved\\(\\{ kind: '${kind}',[^}]*name: payload\\.name`).test(dialog), `${kind}: the saved result carries the name`);
+  assert.ok(read('camps/CampsTab.jsx').includes("current?.kind === 'undo' ? current : null"));
+  // The dead "someone else changed" / failed-Undo re-exports are gone (the shared sentences replaced them).
+  for (const name of ['STALE', 'UNDO_STALE', 'UNDO_FAILED', 'TOAST_UNDONE']) assert.equal(CampText[name], undefined, `${name} is not exported any more`);
+  assert.equal(CampText.ROSTER_STALE.length > 0, true);
+  // A failed read's bar with a Retry takes focus instead of the name that opened Camper detail.
+  const page = read('camps/CampPage.jsx');
+  assert.equal((page.match(/leaveDetail\(from, result\.status !== 'error'\)/g) ?? []).length, 5);
+  assert.ok(page.includes('focusBarSoon();') && page.includes("focusBarSoon('[data-camp-fill-in], [data-camp-head-more]')"));
+});
+check('R2-05 / R3-06 / R1-06 / R2-07 the Camps files: one save line, no busy flag of their own, PageBar, the shared back link', () => {
+  const read = (name) => readFileSync(new URL(`../../screens/${name}`, import.meta.url), 'utf8');
+  const files = {
+    'CampPage.jsx': read('camps/CampPage.jsx'),
+    'CampRowMenu.jsx': read('camps/CampRowMenu.jsx'),
+    'CampsTab.jsx': read('camps/CampsTab.jsx'),
+    'TemplatesTab.jsx': read('camps/TemplatesTab.jsx'),
+    'Camps.jsx': read('Camps.jsx'),
+  };
+  for (const [name, source] of Object.entries(files)) {
+    assert.ok(!/busyRef|setBusy\(|function begin\(|function end\(|undoBusyRef/.test(source), `${name}: no busy flag of its own`);
+    assert.ok(!source.includes('label: T.UNDO'), `${name}: every Undo button is line.undoAction`);
+    assert.ok(!source.includes('ev-back'), `${name}: the shared .back-link, not .ev-back`);
+    assert.ok(!/revealRetryBar|useRevealRetryBar|cp-bar-slot/.test(source), `${name}: no scroll-to-the-bar helper`);
+    assert.ok(!/import ErrorBanner/.test(source), `${name}: the page's bar is a PageBar (a bar inside a box stays an ErrorBanner, in the dialogs' own files)`);
+    assert.ok(!/T\.(UNDO_STALE|UNDO_FAILED|STALE)\b/.test(source), `${name}: the refusals name the camper or camp (T.someoneElseChanged)`);
+  }
+  // The pages each have exactly one line.
+  assert.equal((files['CampPage.jsx'].match(/useSaveLine\(/g) ?? []).length, 1);
+  assert.equal((files['Camps.jsx'].match(/useSaveLine\(/g) ?? []).length, 1);
+  assert.ok(!/useSaveLine\(/.test(files['CampRowMenu.jsx'] + files['CampsTab.jsx'] + files['TemplatesTab.jsx']), 'the hook and the tabs use the page\'s line');
+  // The camp page: the back link, the Undo payment box's title with amount and way, T.ROSTER_STALE only as the no-name fallback.
+  assert.ok(files['CampPage.jsx'].includes('<BackLink label={T.BACK_TO_CAMPS}'));
+  assert.ok(files['CampPage.jsx'].includes('T.undoPaymentTitle(dialog.name, dialog.payment.amountCents, dialog.payment.method)'));
+  assert.equal((files['CampPage.jsx'].match(/T\.ROSTER_STALE/g) ?? []).length, 2, 'once in the no-name fallback of hiddenMoneyProblem (and once in its comment)');
+  assert.equal((files['CampPage.jsx'].match(/querySelector\('\.back-link'\)/g) ?? []).length, 3, 'the three focus calls (Hide private details, closing a receipt, focus that fell) look for .back-link');
 });
 
 console.log(`${count} groups of checks ran.`);

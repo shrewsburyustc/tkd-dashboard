@@ -458,7 +458,15 @@ function Profile({
                       </button>
                     )}
                     {kept && <span className="pp-sig-hint">{T.keptUntil(T.longDate(kept.until, false), kept.afterClass)}</span>}
-                    {sig?.error && <Notice>{T.SIGNATURE_FAILED}</Notice>}
+                    {/* S-2: the line ends "then retry", and the Retry link reads the signature again */}
+                    {sig?.error && (
+                      <Notice>
+                        {T.SIGNATURE_FAILED}{' '}
+                        <button type="button" className="link-button inline-link" onClick={showSignature}>
+                          {T.RETRY}
+                        </button>
+                      </Notice>
+                    )}
                   </>
                 )}
               </Row>
@@ -779,7 +787,8 @@ export default function ProspectPanel(props) {
         {banner && (
           <div ref={barRef} className="pp-window-bar">
             {/* a bar with `retry` gets Retry, which repeats the same call (v1.004, R2-01) */}
-            <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={onDismissBanner} />
+            {/* retrying: the save line's own bars say when their Retry is on its way (R2-05) */}
+            <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying ?? busy} onDismiss={onDismissBanner} />
           </div>
         )}
         {detail ? (

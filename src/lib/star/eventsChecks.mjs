@@ -28,6 +28,7 @@ import { starRegistrationLink, starQrSvgDataUrl, starSchoolLinks, isStarCode } f
 import { timeOptions } from '../times.js';
 import { tagText, statusMessage, eventSummary, registrationStatusLine, switchOnlyHint } from './eventsText.js';
 import { eventState, stateTag, addDays, PUBLIC_ORIGIN } from '../testing/eventRules.js';
+import { createSaveLine } from '../saveLine.js';
 
 let count = 0;
 async function check(label, fn) {
@@ -1047,4 +1048,90 @@ await check('R2-07 / R4-13 words: Undo that reopens says so; the staff reopen li
   assert.equal(text.REGISTRATION_NEEDS_ADMIN.includes('reopen'), false);
 });
 
+// Step D (Dashboard core's shared parts): R2-07 words, C-06 (c), R2-05 and R3-13 for the Events tab.
+await check('R2-07: a refusal names the event in the one shared sentence; the section name for the left-page bar', async () => {
+  const text = await import('./eventsText.js');
+  const shared = await import('../../components/text.js');
+  const name = 'Fall 2026 Star Testing';
+  assert.equal(text.stale(name), `Someone else changed ${name} just now, so nothing was done. Their change is shown.`);
+  assert.equal(text.stale(name), shared.someoneElseChanged(name));
+  assert.equal(text.stale(''), shared.someoneElseChanged('this event')); // no name known: still a whole sentence
+  // a stale Close / Open / Delete banner (not the dialog's note) uses it
+  for (const action of ['close', 'open', 'delete']) {
+    assert.equal(statusMessage(action, 'stale', { name }).text, text.stale(name), action);
+    assert.equal(statusMessage(action, 'not_found', { name }).text, text.stale(name), action);
+  }
+  assert.equal(text.STALE, undefined); // the old "Your change wasn't saved" banner words are gone
+  assert.equal(text.SECTION_NAME, 'Star testing');
+});
+
+await check('R3-13: the testing date calendar says "Past days can\'t be chosen." (the shared words)', async () => {
+  const shared = await import('../../components/text.js');
+  assert.equal(shared.PAST_DAYS_HINT, "Past days can't be chosen.");
+  const { TESTING_DATE_HINT } = await import('../../screens/testing/star/events/text.js');
+  assert.equal(TESTING_DATE_HINT, shared.PAST_DAYS_HINT);
+  assert.equal(TESTING_DATE_HINT.includes('dates'), false);
+});
+
+// The tab hands every toast's Undo to the save line (R2-05). The line is the same code outside React.
+function makeLine() {
+  const seen = { bars: [], toasts: [] };
+  const line = createSaveLine(() => ({ section: 'Star testing', showToast: (text, o) => seen.toasts.push([text, o]), undoBar: (bar) => seen.bars.push(bar) }));
+  return { line, seen };
+}
+
+await check('C-06 (c) / R2-07: a failed Undo of Close registration says "Undo didn\'t save", has Retry, and Retry then says "Undone. Registration is open again."', async () => {
+  const { UNDO_DIDNT_SAVE } = await import('../../components/text.js');
+  const { TOAST_UNDONE_REGISTRATION_OPEN } = await import('./eventsText.js');
+  const rig = makeRig();
+  const fall = (await rig.api.loadStarEvents()).events.find((e) => e.id === SEED_EVENT_IDS.fall);
+  const closed = await rig.api.setStarRegistration({ eventId: fall.id, expectedVersion: fall.version, open: false });
+  assert.equal(closed.status, 'ok');
+  // The Undo, the way the tab builds it: the opposite switch with the version the close returned; an
+  // answer that isn't ok or a refusal means "didn't reach the database".
+  const down = createStarEventsApi(() => { throw new Error('offline'); }, () => TODAY);
+  let api = down;
+  const run = async () => {
+    const result = await api.setStarRegistration({ eventId: fall.id, expectedVersion: closed.version, open: true });
+    return result.status === 'ok' ? { status: 'ok' } : { status: 'error' };
+  };
+  const { line, seen } = makeLine();
+  const answer = await line.undoAction(run, { words: 'Registration closed', doneText: TOAST_UNDONE_REGISTRATION_OPEN }).onAction();
+  assert.equal(answer.undone, false);
+  assert.equal(seen.bars.length, 1);
+  assert.equal(seen.bars[0].text, UNDO_DIDNT_SAVE);
+  assert.equal(typeof seen.bars[0].retry, 'function');
+  assert.equal(seen.bars[0].takeFocus, true);
+  // the connection is back: Retry runs the same Undo, and the toast names the reopening
+  api = rig.api;
+  await seen.bars[0].retry();
+  assert.deepEqual(seen.toasts.map(([text]) => text), ['Undone. Registration is open again.']);
+  assert.equal((await rig.api.loadStarEvent(fall.id)).event.registrationOpen, true);
+});
+
+await check('R2-05: an Undo pressed while a save runs waits and runs when the save ends (nothing is dropped)', async () => {
+  const { line } = makeLine();
+  const order = [];
+  const token = line.begin();
+  assert.ok(token);
+  assert.equal(line.begin(), false); // a second save can't start meanwhile
+  const pressed = line.undoAction(async () => (order.push('undo'), { status: 'ok' }), { words: 'Event added' }).onAction();
+  order.push('save running');
+  await Promise.resolve();
+  assert.deepEqual(order, ['save running']); // the Undo is waiting, not dropped
+  order.push('save done');
+  line.end('ok', { token });
+  const answer = await pressed;
+  assert.deepEqual(order, ['save running', 'save done', 'undo']);
+  assert.equal(answer.undone, true);
+});
+
+// Review of batch 4, SHOULD 3: every save ends its line from a `finally` (a throw can't leave it busy).
+await check('pass 3: the Events saves end the save line from a finally', async () => {
+  const { readSource } = await import('./readSource.js');
+  const tab = readSource(new URL('../../screens/testing/star/events/StarEventsTab.jsx', import.meta.url));
+  assert.ok(tab.includes('} finally {\n      endWrite(ended);'), 'inWrite ends the line from a finally');
+  assert.ok(tab.includes('} finally {\n      endWrite(ended);\n    }\n    if (fresh.status'), 'Retry close registration ends it from a finally too');
+  assert.equal((tab.match(/\bendWrite\(/g) ?? []).length, 4, 'endWrite: a comment, its definition and the two finally blocks only');
+});
 console.log(`ALL STAR EVENT CHECKS PASSED (${count} checks)`);

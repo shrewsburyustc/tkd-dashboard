@@ -35,8 +35,10 @@
 //   pageBanner, onDismissPageBanner   a never-retried answer (H2) — ✕ only
 //   screenLocked, onNoAccess, onModalOpenChange(open)
 import { useEffect, useState } from 'react';
-import { IconArrowLeft, IconPrinter } from '@tabler/icons-react';
+import { IconPrinter } from '@tabler/icons-react';
+import BackLink from '../../../../components/BackLink.jsx'; // the shared back link (R3-06, v1.048 (12))
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
+import PageBar from '../../../../components/PageBar.jsx';
 import { gradeLetters, judgedSubjects } from '../../../../lib/star/gradingApi.js';
 import { shortDate } from '../../../../lib/star/eventsText.js';
 import { startTimeLabel } from '../../../../lib/star/starEventRules.js';
@@ -76,7 +78,7 @@ export default function PrivateGradingPage({
 
   // Keyboard focus starts on the title when the page opens (it replaced the Candidates tab).
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => document.querySelector('.stg-private-head .ptitle, .stg-private-head .st-back')?.focus());
+    const frame = window.requestAnimationFrame(() => document.querySelector('.stg-private-head .ptitle, .stg-private-head .back-link')?.focus());
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
@@ -94,13 +96,7 @@ export default function PrivateGradingPage({
   }
 
   const name = row ? `${row.firstName} ${row.lastName}` : '';
-  const backLink = (
-    <button type="button" className="link-button st-back" aria-label={T.backToEventLabel(event.name)} onClick={onBack}>
-      {/* ti-arrow-left = back */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {event.name}
-    </button>
-  );
+  const backLink = <BackLink label={event.name} ariaLabel={T.backToEventLabel(event.name)} onClick={onBack} />;
 
   let body;
   if (!row && loadFailed) {
@@ -119,8 +115,8 @@ export default function PrivateGradingPage({
   } else {
     body = (
       <div className="stg-private-body">
-        {saves.banner && <ErrorBanner text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
-        {pageBanner && <ErrorBanner text={pageBanner} onDismiss={onDismissPageBanner} />}
+        {saves.banner && <PageBar text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
+        {pageBanner && <PageBar text={pageBanner} onDismiss={onDismissPageBanner} />}
         <GradeCard
           row={row}
           subjects={judgedSubjects(copy, row.dan)}

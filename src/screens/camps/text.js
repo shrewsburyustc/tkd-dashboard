@@ -21,6 +21,21 @@
 // shared box, src/components/text.js (rulebook v0.733, design review C11).
 import { formatMoney } from '../../lib/money.js';
 import * as CB from '../testing/text.js';
+// The sentences every section says, typed once in the shared word file (rulebook v1.045 / v1.051; pass 1
+// R1-06, R1-07, R2-07, R3-13): a refused change or Undo, a failed Undo, the Mark paid / Undo payment
+// toasts, the Undo payment box's title and opening, and the calendar hint.
+import {
+  FUTURE_DAYS_HINT,
+  UNDO_DIDNT_SAVE,
+  couldntUndo,
+  markedPaidToast as sharedMarkedPaidToast,
+  markedPaidToastHidden as sharedMarkedPaidToastHidden,
+  paidOnOpening,
+  paymentUndoneToast as sharedPaymentUndoneToast,
+  someoneElseChanged,
+  undoPaymentTitle as sharedUndoPaymentTitle,
+} from '../../components/text.js';
+export { FUTURE_DAYS_HINT, UNDO_DIDNT_SAVE, someoneElseChanged };
 
 // ----- Reused unchanged from Color Belt (same words) -----
 // (Review, Keep this one, "Not the same person — keep both", "different" and the compare's Close
@@ -33,15 +48,11 @@ export const {
   CLOSE,
   UNSAVED,
   DISCARD_CHANGES,
-  STALE,
   STALE_DIALOG,
   STALE_DIALOG_PHONE,
   INVALID_DIALOG,
   SAVE_FAILED,
   DELETE_FAILED,
-  UNDO_STALE,
-  UNDO_FAILED,
-  TOAST_UNDONE,
   deletedToast,
   ROSTER_STALE,
   ROSTER_NOT_ALLOWED,
@@ -50,8 +61,6 @@ export const {
   actionFailed,
   TOAST_LINK_COPIED,
   TOAST_CHANGES_SAVED,
-  TOAST_PAYMENT_SAVED,
-  paymentUndoneToast,
   withdrawnToast,
   restoredToast,
   alreadyPaid,
@@ -282,8 +291,9 @@ export const TOAST_PAYMENT_CHANGED = 'Payment changed';
 // An Undo the database refused for a reason it named (a family picked a newly added day, an
 // extra campers now have …): the amber bar says so. reason = one of the "Can’t …" sentences.
 // (not in the mockups)
-// (Starts like Color Belt's UNDO_STALE, "Couldn't undo. …")
-export const undoRefused = (reason) => `Couldn’t undo. ${reason}`; // curly ’ like the reasons it is joined to
+// The shared sentence (R2-07, v1.045 (4)): "Couldn't undo: [reason]." — the reasons below end with a period
+// of their own, so it is taken off before the shared sentence adds its own.
+export const undoRefused = (reason) => couldntUndo(String(reason).replace(/\.$/, ''));
 
 // A camper's Undo the database refused as 'invalid' (the old details no longer fit the camp).
 export const UNDO_DETAILS_NO_LONGER_FIT = 'The old details no longer fit the camp as it is now. Open Edit details to change them by hand.'; // (not in the mockups)
@@ -601,11 +611,17 @@ export const COL_CAMPER = 'Camper';
 export const camperNameAge = (row) => `${row.firstName} ${row.lastName} · ${row.age}`;
 export const camperLabel = (row) => `${row.firstName} ${row.lastName}`;
 export const camperPayLine = (daysText, payingBy) => `${daysText} · ${payingByLower(payingBy)}`;
+// Camper detail's Paying by row names where the CURRENT choice was made, as Star's (R1-02, rulebook
+// v1.045 / pass 1): "Cash (chosen on the form)" / "Check (chosen at the desk)". where = 'form' | 'desk'
+// (campRules.payingByChoiceWhere: the same answer the Mark paid box's hint uses).
+export const payingByDetail = (method, where) => `${payingByText(method)} (chosen ${where === 'form' ? 'on the form' : 'at the desk'})`;
 // Mark paid's toast: "Leo Kim marked paid · $350 cash" — the same words as Color Belt's, Camps' own
 // copy since v0.732 (C17) so it writes the amount with the shared formatMoney.
-export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${formatMoney(cents)} ${payingByLower(method)}`;
+export const markedPaidToast = (name, cents, method) => sharedMarkedPaidToast(name, formatMoney(cents), payingByLower(method));
 // Mark paid's toast while private details are hidden: no amount, no method (v0.722, picture 03b).
-export const markedPaidToastHidden = (name) => `${name} marked paid`;
+export const markedPaidToastHidden = (name) => sharedMarkedPaidToastHidden(name);
+// Undo payment's toast: "Payment undone for Leo Kim" (the shared words, R1-07).
+export const paymentUndoneToast = (name) => sharedPaymentUndoneToast(name);
 export const duplicateBoxLine = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
 export const signedUpTwice = (name) => `${name} is signed up twice`;
 export const DELETE_CAMPER_BODY_NO_PAY = (camp) => `The sign-up is deleted from ${camp}. This can’t be undone.`;
@@ -621,18 +637,21 @@ export function deleteCamperBody(campName, payments, detailsHidden = false) {
 export const KEEP_CAMPER = 'Keep camper';
 
 // ----- Undo payment asks first (rulebook v0.730, v1.003; design review C4, picture 11) -----
-// Star's words (v0.508), with its middle "the row goes back to Not paid" replaced by what is owed
-// AFTER the Undo, because a camper can still owe part (Owes $15 → $350 owed after the Undo).
-export const undoPaymentTitle = (name) => `Undo ${name}'s payment?`; // straight ' as the box's other lines
+// Since R1-06 (v1.045 (2)) the box takes the shared words (components/text.js): the title names the amount
+// and the way ("Undo Leo Kim’s $350 cash payment?"), the second line opens "Paid on Mar 17" (the day the
+// family paid). Then Camps' own consequence: what is owed AFTER the Undo, because a camper can still owe
+// part (Owes $15 → $350 owed after the Undo).
+export const undoPaymentTitle = (name, cents, method) => sharedUndoPaymentTitle(name, formatMoney(cents), payingByLower(method));
 export function undoPaymentBody(p, owedAfterCents) {
-  const paid = `The ${formatMoney(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)} is reversed`;
+  const paid = `${paidOnOpening(monthDay(p.paidOn))}. It is reversed`;
   // (not in the mockups) Nothing owed even after the Undo (paid twice, say): no "$0 is owed again".
   if (owedAfterCents <= 0) return `${paid}. Both stay in the history.`;
   return `${paid}, so ${formatMoney(owedAfterCents)} is owed again. Both stay in the history.`;
 }
 export const KEEP_PAYMENT = 'Keep payment';
 export const UNDOING = 'Undoing…';
-export const UNDO_PAYMENT_FAILED = "Couldn't undo. Check the connection, then try again.";
+// A failed Undo says the shared sentence (R2-07, v1.045 (4)): "Undo didn't save. Check the connection, then retry."
+export const UNDO_PAYMENT_FAILED = UNDO_DIDNT_SAVE;
 
 // ----- Record refund (rulebook v0.743, picture 22; carries out v1.039 / v1.040 for Camps) -----
 // Star testing's words and box (Star's v0.166, v0.172, v0.508 (1): screens/testing/star/candidates/
@@ -844,6 +863,10 @@ export const RECEIPT_FOR_REFUND = 'Refund'; // a refund's line, with a minus amo
 export const receiptSub = (name, campName) => `${name} · ${campName}`;
 // The camper was deleted on another device while the receipt opened (Star's and Black Belt's words)
 export const THIS_CAMPER = 'This camper';
+// What a refused Undo calls the thing when the page has no name for it (R2-07: Someone else changed [Name] ...):
+// the camp or template an Edit / Add Undo is about, and a camper on a page with no name to hand (lowercase: mid-sentence).
+export const THIS_CAMP = 'this camp';
+export const THIS_TEMPLATE = 'this template';
 export const receiptNotFound = (name) => `${name} was deleted on another device, so there is no receipt.`;
 
 // Edit details

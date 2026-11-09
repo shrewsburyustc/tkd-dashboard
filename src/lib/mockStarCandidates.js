@@ -1475,6 +1475,7 @@ export function defaultStarCandidatesData(base, { today }) {
 
 export function createStarCandidatesBackend({ readBase, saveStore, now = () => Date.now(), today, newId }) {
   let failNext = false; // set by failNextSave()
+  let failRead = null; // set by failNextRead(): the name of the one read function that fails next (S-2)
   const env = { today, now, newId };
 
   function write(db) {
@@ -1547,6 +1548,10 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
       failNext = false; // pretend the connection dropped: nothing changes (failNextSave helper)
       return { data: null, error: { message: 'Failed to fetch (preview: failNextSave)' }, count: null, status: 0, statusText: '' };
     }
+    if (failRead && failRead === name) {
+      failRead = null; // one read only: pretend the connection dropped (failNextRead helper, S-2)
+      return { data: null, error: { message: 'Failed to fetch (preview: failNextStarRead)' }, count: null, status: 0, statusText: '' };
+    }
     if (!ctx.signedIn) return denied(`function ${name}`);
     let parsed;
     try {
@@ -1613,6 +1618,18 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
 
   function failNextSave() {
     failNext = true;
+  }
+
+  // Preview helper (S-2, __tkdPreview.failNextStarRead): the next call of ONE read function fails like a
+  // dropped connection, so the Retry on a page that couldn't load can be seen (failNextSave only fails
+  // writes). target: 'star_candidate_detail' (the summary; the default), 'star_view_signature' (the
+  // signature box) or 'star_candidate_history'. Returns a sentence for the console, or null when the
+  // name isn't one of the candidate reads.
+  const READ_TARGETS = ['star_candidate_detail', 'star_view_signature', 'star_candidate_history'];
+  function failNextRead(target = 'star_candidate_detail') {
+    if (!READ_TARGETS.includes(target)) return null;
+    failRead = target;
+    return target;
   }
 
   // Preview helper (phase 5, __tkdPreview.simulateStarDanChange): "another device" moves the first
@@ -1726,6 +1743,6 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
   }
 
   return {
-    select, rpc, publicEvent, publicRegister, failNextSave, simulateDanChange, simulateResultChange, homeToday, downloads, reset, snapshot: read,
+    select, rpc, publicEvent, publicRegister, failNextSave, failNextRead, simulateDanChange, simulateResultChange, homeToday, downloads, reset, snapshot: read,
   };
 }
