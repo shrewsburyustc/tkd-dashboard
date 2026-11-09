@@ -17,7 +17,7 @@ const NOTE = 'Keeping one moves the other to Removed as “Duplicate copy” (Un
 const ADMIN_ONLY = 'The testing day is over. Only an admin can keep one registration and remove the other now.';
 const LOAD_FAILED = "Couldn't load this candidate. Check the connection, then retry."; // Star's words
 const BLOCKED = 'These registrations changed just now. Close and open them again.'; // Black Belt's words
-const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";
 
 function rows(hidden) {
   return [

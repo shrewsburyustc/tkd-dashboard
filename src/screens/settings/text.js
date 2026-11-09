@@ -71,4 +71,4 @@ export const STALE_PHONE =
   "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const NOT_ALLOWED = "Only an admin can change school details. Your change wasn't saved.";
 export const INVALID = "That didn't save. Check the fields and try again.";
-export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+export const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";

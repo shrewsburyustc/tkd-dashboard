@@ -84,6 +84,8 @@ export const qrAlt = (shortLink) => `QR code for ${shortLink}`;
 export const qrAltSchool = (school, shortLink) => `QR code for the ${school} link, ${shortLink}`;
 // A failed copy or download: the amber note inside the box (v1.106 detail a)
 export const COPY_FAILED = "Couldn't copy the link. Select the link and copy it yourself.";
+// (Stays "Try again.": the picture is made in this browser with no network call, so a "check the
+// connection" sentence would send the person the wrong way; v1.137, "A for both".)
 export const QR_FAILED = "Couldn't make the QR code picture. Try again.";
 
 // ----- M6: the count cards (CountCards.jsx) -----

@@ -36,7 +36,7 @@ const MESSAGES = {
   weak: 'That password is too easy to guess. Choose a different one.',
   same: 'The new password must be different from the current one.',
   tooMany: 'Too many tries. Wait a minute and try again.',
-  connection: "Couldn't reach the server. Check the connection and try again.",
+  connection: "Couldn't reach the server. Check the connection, then retry.",
   failed: "Couldn't change your password. Try again.",
 };
 

@@ -24,7 +24,7 @@ import { KEYPAD_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useNewPin } from '../lib/useNewPin.js';
 import { PIN_HINT, PIN_TOO_EASY_MESSAGE } from '../lib/pinRules.js';
 
-const SAVE_ERROR = "Couldn't save your PIN. Check the connection and try again.";
+const SAVE_ERROR = "Couldn't save your PIN. Check the connection, then retry.";
 
 export default function SetPinScreen({ profile, onDone, onPasswordRequired, onSignOut }) {
   const showKeypad = useMediaQuery(KEYPAD_QUERY); // touch or narrow screen → on-screen keypad

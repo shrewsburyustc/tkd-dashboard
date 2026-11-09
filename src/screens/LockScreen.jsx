@@ -32,7 +32,7 @@ import { KEYPAD_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { usePinDigits } from '../lib/usePinDigits.js';
 import { PIN_LENGTH } from '../lib/pinRules.js';
 
-const CONNECTION_ERROR = "Couldn't check your PIN. Check the connection and try again.";
+const CONNECTION_ERROR = "Couldn't check your PIN. Check the connection, then retry.";
 
 function triesLeftMessage(count) {
   const word = count === 1 ? 'try' : 'tries'; // "1 try left", "3 tries left"
