@@ -26,6 +26,17 @@
 // permanent ones ask first (rule 1.4), and so does Undo payment (rulebook v0.730). Staff and admins see different ⋯ items
 // (CamperRowMenu.jsx); the database enforces the same rules.
 //
+// One line of saves (design review R2-05, rulebook v1.125–v1.129): the page used to keep its own
+// "one change at a time" flag, and an Undo pressed while another save ran was dropped without a word.
+// Now every save and read goes through the page's save line (useSaveLine, src/lib/saveLine.js; the
+// small helper saveOnLine in lineSave.js ends it from a `finally`), and every toast's Undo is
+// line.undoAction(run): an Undo pressed during another save WAITS its turn ("Undoing…" on the toast)
+// and runs as soon as that save ends. The line, not this page, says "Undone" and shows the bar when
+// an Undo didn't save or was refused (the page keeps the bar in `banner`, kind 'undo').
+// The page's amber bar is a PageBar (v1.128): drawn under the top bar, in view however far the roster
+// is scrolled, so nothing here scrolls to it any more. A bar inside an open box stays an ErrorBanner
+// (those are the dialogs' own).
+//
 // Campers come in through the family form, and — for a family that walks in — through Fill in
 // (rulebook v0.740 / v0.741, picture 23; it replaced v0.232's "no Add camper"): a plain "Fill in"
 // button before Registration link on PC / tablet, "Fill in for a family" first in the header ⋯ on
@@ -68,13 +79,15 @@
 // Undo payment) and reverses the newest refund that stands. A database refusal 'refund_stands' (a
 // refund recorded meanwhile) says "Undo the refund first." too.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowBackUp, IconArrowLeft, IconCurrencyDollarOff, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
+import { IconArrowBackUp, IconCurrencyDollarOff, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
+import BackLink from '../../components/BackLink.jsx';
 import CompareDialog from '../../components/CompareDialog.jsx';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
+import PageBar from '../../components/PageBar.jsx';
 import RegistrationLinkBox from '../../components/RegistrationLinkBox.jsx';
 import ReceiptDialog from '../../components/Receipt.jsx';
-import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
+import { useSaveLine } from '../../lib/saveLine.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
@@ -114,7 +127,7 @@ import { EditPaymentDialog, PayingByDialog, editPaymentForm, payingByForm } from
 import RefundDialog, { refundForm } from './RefundDialog.jsx';
 import { closedWords, useCampFillIn } from './FillInDialog.jsx';
 import { focusSoon } from './focusSoon.js';
-import { useRevealRetryBar } from './revealRetryBar.js';
+import { reloadBounded, saveOnLine, undoAnswer } from './lineSave.js';
 import * as T from './text.js';
 
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
@@ -175,16 +188,30 @@ export default function CampPage({
 
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor, row, kind: 'camper' | 'header' }
+  // The page's one amber bar (a PageBar under the top bar): { kind?, text, retry?, retrying?, takeFocus?, opener? }.
+  // kind 'undo' = the one the save line made for an Undo (saveLine.js); 'row' = a row's failed save.
   const [banner, setBanner] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
+  // The page's line of saves (R2-05): one save at a time, and an Undo pressed meanwhile waits its turn.
+  // undoBar is where the line puts (or clears) the bar for an Undo that didn't save.
+  // Where focus goes when a bar's Retry worked and the bar (with its Retry) is removed: the row of the
+  // Undo that ran last (undoRun sets it), else the page's back link — never the page body.
+  const lastUndoFocusRef = useRef({ rowId: null, dayCell: null });
+  const line = useSaveLine({
+    section: 'Camps',
+    showToast,
+    undoBar: (next) => {
+      if (!next && focusIsInPageBar()) focusRowIfLost(lastUndoFocusRef.current.rowId, lastUndoFocusRef.current.dayCell);
+      setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current));
+    },
+  });
+  const busy = line.busy; // a save or an Undo is running: buttons and menu items are unavailable meanwhile
   const [query, setQuery] = useState('');
   // The pressed count card (C10, rulebook v0.737): null | 'coming' | 'collect'. Kept here beside
   // Find a camper's text; another camp starts without one (Camps.jsx draws this page with key={campId}).
   const [filter, setFilter] = useState(null);
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByCamp.get(campId) ?? true);
   const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
-  const busyRef = useRef(false);
   // The receipt (C3, v0.734): { key, camperId, opener, onTop, data, failed, notFound } or null.
   // onTop = opened from Camper detail, drawn on top of it (Dialog onTop, v1.100); from ⋯ on its own.
   const [receipt, setReceipt] = useState(null);
@@ -205,17 +232,49 @@ export default function CampPage({
     if (OLD_TABS.includes(requestedTab) && onTab) onTab('default');
   }, [requestedTab, onTab]);
 
-  // ----- One change at a time -----
-  function begin() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
-    return true;
+  // ----- One change at a time: the page's line of saves (lineSave.js) -----
+  // save(call, retry): one save or read on the line. null = something else is running (as the old
+  // begin() returning false: do nothing). A save that didn't work clears the toast, as before.
+  // retry = how to do it again, for the "Neither change saved" bar of an Undo that waited for it.
+  const save = (call, retry = null) => saveOnLine(line, call, { retry, onNotOk: () => clearToast() });
+
+  // ----- Where keyboard focus goes when what had it goes away (never the page body) -----
+  // Focus has "fallen" when it is on the page body, nowhere, or on a toast (the Undo button that was
+  // just pressed). Anything else was the person's own choice: it is never taken.
+  function focusHasFallen() {
+    const active = document.activeElement;
+    return !active || active === document.body || !active.isConnected || Boolean(active.closest?.('.toast-region'));
   }
-  function end(status) {
-    busyRef.current = false;
-    setBusy(false);
-    if (status && status !== 'ok') clearToast();
+  // Focus is on a button of a page bar (its Retry or ×): the bar is about to go.
+  function focusIsInPageBar() {
+    return Boolean(document.activeElement?.closest?.('.shell-pagebars'));
+  }
+  // After an Undo worked, or a bar's Retry worked: if focus fell, put it on the camper's pay tag, else
+  // their name, else their ⋯ (the same order as after Mark paid), or the day cell of a check-in Undo,
+  // else the page's back link.
+  function focusRowIfLost(rowId = null, dayCell = null) {
+    focusSoon(() => {
+      if (!focusHasFallen()) return null;
+      const byId = (selector) => (rowId ? document.querySelector(selector) : null);
+      return (
+        (dayCell ? document.querySelector(`[data-day-cell="${dayCell}"]`) : null) ??
+        byId(`[data-pay-tag="${rowId}"]`) ??
+        byId(`[data-nav-row="${rowId}"]`) ??
+        byId(`[data-camper-more="${rowId}"]`) ??
+        document.querySelector('.back-link')
+      );
+    });
+  }
+  // The page bar's own Retry (else ×) takes focus once the page behind is usable. For a bar that appears
+  // after a dialog closed or while focus sits on a button that can't use it (alsoFrom = a selector for
+  // that button, e.g. the gray Fill in): PageBar's own takeFocus only moves focus that has fallen.
+  function focusBarSoon(alsoFrom = null) {
+    focusSoon(() => {
+      if (!focusHasFallen() && !(alsoFrom && document.activeElement?.matches?.(alsoFrom))) return null;
+      const bars = document.querySelectorAll('.shell-pagebars .errbar');
+      const bar = bars[bars.length - 1];
+      return bar?.querySelector('.errbar-retry') ?? bar?.querySelector('.errbar-dismiss') ?? null;
+    });
   }
 
   async function reloadQuiet() {
@@ -225,7 +284,10 @@ export default function CampPage({
   }
   async function retryLoad() {
     const result = await liveRef.current.reload();
-    if (result === 'ok') setBanner(null);
+    if (result === 'ok') {
+      if (focusIsInPageBar()) focusRowIfLost(); // the bar and its Retry go: focus to the back link
+      setBanner(null);
+    }
   }
   useEffect(() => {
     if (live.status === 'noAccess') onNoAccess();
@@ -249,6 +311,7 @@ export default function CampPage({
     isAdmin,
     today,
     screenLocked,
+    line, // the same line of saves as this page's own saves (Close / Open sign-up, Save as template, …)
     showToast,
     clearToast,
     onNoAccess,
@@ -274,11 +337,24 @@ export default function CampPage({
   });
   const [fillTipOpen, setFillTipOpen] = useState(false); // a gray Fill in's tip after a tap (touch screens have no hover)
 
-  // A failed read's amber bar (Undo payment, Edit payment, Delete permanently, Delete camp; S-2)
-  // is drawn right under the page's head, maybe far above where the person is scrolled: bring it
-  // into view and focus its Retry. barRef = the Camps-owned wrapper around the page's bar.
-  const barRef = useRef(null);
-  useRevealRetryBar(banner, () => barRef.current?.querySelector('.errbar') ?? null);
+  // After a bar that has an `opener` and nothing to retry (a refusal behind a ⋯ menu or a name: "Undo
+  // the refund first.", "Someone else changed …"): focus goes back to the button that started it, as
+  // the old reveal did, unless the person has already moved on (focus is on something real). PageBar's
+  // own takeFocus then stays out of it (see where PageBar is drawn). With a Retry (or no opener, or
+  // the opener gone), PageBar's takeFocus puts focus on the bar's Retry or ×: never on the page body.
+  useEffect(() => {
+    if (!banner?.takeFocus || banner.retry || !banner.opener) return undefined;
+    const opener = banner.opener;
+    focusSoon(() => {
+      const active = document.activeElement;
+      const free = !active || active === document.body || !active.isConnected || Boolean(active.closest?.('.toast-region'));
+      if (!free) return null;
+      // The opener went away meanwhile (the roster redrew): the bar's own × takes focus instead.
+      const dismissButtons = document.querySelectorAll('.shell-pagebars .errbar-dismiss');
+      return opener.isConnected ? opener : dismissButtons[dismissButtons.length - 1] ?? null;
+    });
+    return undefined;
+  }, [banner]);
 
   // Locking closes menus; dialogs only hide (they come back after the PIN).
   useEffect(() => {
@@ -309,8 +385,10 @@ export default function CampPage({
   const hiddenNowRef = useRef(detailsHidden);
   hiddenNowRef.current = detailsHidden;
   // A money save's answer that arrives while hidden: the general words only — no amount, no paid
-  // status, no Retry that would record money (Mark paid / Undo payment).
-  function hiddenMoneyProblem(status) {
+  // status, no Retry that would record money (Mark paid / Undo payment). name = the camper it was
+  // about (a name isn't private: it is on the roster), for "Someone else changed [Name] just now …"
+  // (R2-07); without one, the whole-roster words (T.ROSTER_STALE) — no caller lacks one today.
+  function hiddenMoneyProblem(status, name = null) {
     if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: T.ROSTER_NOT_ALLOWED });
@@ -319,17 +397,17 @@ export default function CampPage({
     } else if (status === 'error') {
       setBanner({ text: T.SAVE_FAILED });
     } else {
-      setBanner({ text: T.ROSTER_STALE });
+      setBanner({ text: name ? T.someoneElseChanged(name) : T.ROSTER_STALE });
       reloadQuiet();
     }
   }
   // A payment dialog's save that failed AFTER the dialog was closed (the switch turned on mid-save):
   // the dialog can't show its note any more, so the page says it (as Color Belt's EventPage).
-  function closedPaymentProblem(status) {
-    if (hiddenNowRef.current) hiddenMoneyProblem(status);
+  function closedPaymentProblem(status, name) {
+    if (hiddenNowRef.current) hiddenMoneyProblem(status, name);
     else if (status === 'no_access') onNoAccess();
     else {
-      setBanner({ text: status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
+      setBanner({ text: status === 'error' ? T.SAVE_FAILED : T.someoneElseChanged(name) });
       if (status !== 'error') reloadQuiet();
     }
   }
@@ -342,8 +420,11 @@ export default function CampPage({
       return;
     }
     if (status === 'admin_only') onRefreshProfile(); // maybe this person is no longer an admin
-    // reveal: the bar is scrolled into view and its × focused, in case the person scrolled meanwhile
-    setBanner({ text: T.FILL_IN_CLOSED_NOT_SAVED, reveal: true });
+    // takeFocus: the bar (under the top bar) takes focus on its ×, unless the person is on something else
+    setBanner({ text: T.FILL_IN_CLOSED_NOT_SAVED, takeFocus: true });
+    // Focus sits on the gray Fill in button (or the phone's ⋯) that the closing box gave it back to,
+    // so PageBar's takeFocus stays out: the bar's × takes it from those two, once the page is usable.
+    focusBarSoon('[data-camp-fill-in], [data-camp-head-more]');
     reloadQuiet();
   }
   // Switched on: no payment dialog, ⋯ menu, toast or banner may stay (the roster closes its own
@@ -367,7 +448,7 @@ export default function CampPage({
     if (menu) {
       const anchor = menu.anchor;
       setMenu(null);
-      focusSoon(() => (anchor?.isConnected ? anchor : document.querySelector('.ev-back')));
+      focusSoon(() => (anchor?.isConnected ? anchor : document.querySelector('.back-link')));
     }
     // A toast may name money ("marked paid · $15 cash") or carry a payment Undo: it goes too.
     clearToast();
@@ -434,40 +515,61 @@ export default function CampPage({
   }
 
   // ===== Undo and row problems (as Color Belt's event page) =====
-  // options.money: the Undo of a payment — while hidden on arrival, the general words, no Retry.
+  // The toast's Undo button (R2-05, rulebook v1.125–v1.129): the page's line runs `call` when its turn
+  // comes — at once, or as soon as the save that is running ends — and the toast says "Undoing…"
+  // meanwhile, then "Undone" (or options.doneText). `words` = the toast's own text (the bar names it
+  // when the person has left the page). The page no longer shows "Undone" or the Undo's bars: the line does.
+  //   options.name           the camper (or camp) the Undo is about, for "Someone else changed [Name] …"
+  //   options.rowId          the camper's id, so focus can go back to their row after the Undo
+  //   options.dayCell        "camperId:dayId" of a check-in Undo's day cell, to focus instead
+  //   options.money          the Undo of a payment: while hidden on arrival, the general words, no Retry
+  //   options.notAllowedText the words for a refusal by the database's rules (staff past 10 seconds)
+  //   options.doneText       what the toast says when it worked, instead of "Undone"
+  //   options.onPress        called the moment the button is pressed (even if the Undo has to wait)
+  function undoButton(words, call, options = {}) {
+    const action = line.undoAction(undoRun(call, options), { words, doneText: options.doneText ?? null });
+    if (!options.onPress) return action;
+    return {
+      ...action,
+      onAction() {
+        options.onPress();
+        return action.onAction();
+      },
+    };
+  }
+  // The Undo itself, as the line wants it: run() answers { status, reason?, noRetry? } (saveLine.js).
   // A call may add `undoText` to its answer: the reason it was refused, in words (Edit camp's and
-  // Edit details' Undo, rulebook v0.726) — shown in the amber bar instead of "Couldn't undo.
-  // Someone else changed this just now." The toast is gone once Undo is pressed and begin() lets
-  // only one change run at a time, so a double press can't run it twice.
-  async function runUndo(call, options = {}) {
-    if (!begin()) return;
-    const result = await call();
-    end(result.status);
-    const status = result.status;
-    if (options.money && hiddenNowRef.current && status !== 'ok') {
-      hiddenMoneyProblem(status);
-      return;
-    }
-    if (status === 'ok') {
-      setBanner((current) => (current?.kind === 'undo' ? null : current));
-      showToast(T.TOAST_UNDONE, { icon: false });
-      reloadQuiet();
-    } else if (status === 'no_access') onNoAccess();
-    // Every bar below is brought into view (reveal: useRevealRetryBar): the toast's Undo may be
-    // pressed far down the roster, and the bar sits at the top of the page — without this, nothing
-    // seemed to happen (Record refund's design review). The toast's button is gone, so focus goes
-    // to the bar's Retry, or else its Dismiss (×).
-    else if (status === 'not_allowed') {
-      setBanner({ text: options.notAllowedText ?? T.ROSTER_NOT_ALLOWED, reveal: true });
-      onRefreshProfile();
-    } else if (status === 'error') {
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, options), reveal: true });
-    } else {
-      // refund_stands (migration 0039): the Undo of a payment (the Mark paid toast's, or Edit
-      // payment's), refused because a refund was recorded meanwhile — say what to do instead.
-      setBanner({ text: result.undoText ?? (status === 'refund_stands' ? refundStandsText() : T.UNDO_STALE), reveal: true });
-      reloadQuiet();
-    }
+  // Edit details' Undo, rulebook v0.726, "Couldn't undo: …") — the bar says it instead of "Someone
+  // else changed [Name] just now …". What this page itself does (reload, lock, refresh the profile)
+  // stays here; lineSave.js's undoAnswer only chooses the answer.
+  function undoRun(call, options = {}) {
+    return async () => {
+      const result = await call();
+      const hiddenMoney = Boolean(options.money) && hiddenNowRef.current;
+      const stale = T.someoneElseChanged(options.name ?? T.THIS_CAMPER.toLowerCase());
+      const answer = undoAnswer(result, {
+        notAllowed: options.notAllowedText ?? T.ROSTER_NOT_ALLOWED,
+        stale,
+        // refund_stands (migration 0039): the Undo of a payment (the Mark paid toast's, or Edit
+        // payment's), refused because a refund was recorded meanwhile — say what to do instead.
+        refundStands: refundStandsText(),
+        general: hiddenMoney ? { error: T.SAVE_FAILED, notAllowed: T.ROSTER_NOT_ALLOWED, stale } : null,
+      });
+      if (answer.status === 'ok') {
+        // The roster shows the Undo before the toast says "Undone" — but never waits for ever on a
+        // reload that hangs: the Undo already saved (lineSave.js reloadBounded).
+        await reloadBounded(reloadQuiet);
+        // The toast's Undo button had focus and is gone: focus goes to the camper's row, unless it is
+        // somewhere else on purpose (and after a bar's Retry, the bar's removal does the same: undoBar).
+        lastUndoFocusRef.current = { rowId: options.rowId ?? null, dayCell: options.dayCell ?? null };
+        focusRowIfLost(options.rowId, options.dayCell);
+      } else if (answer.status === 'no_access') onNoAccess();
+      else if (answer.status === 'not_allowed') {
+        onRefreshProfile();
+        if (hiddenMoney) reloadQuiet();
+      } else if (answer.status !== 'error') reloadQuiet(); // refused: show what changed
+      return answer;
+    };
   }
   // What to say when a refund stands in the way (refund_stands): admins can undo it themselves
   // ("Undo the refund first."); staff can't undo refunds, so they're sent to an admin.
@@ -477,7 +579,7 @@ export default function CampPage({
   // money: Mark paid / Undo payment — while hidden on arrival, the general words, no Retry.
   function rowProblem(status, row, retry, money = false) {
     const name = T.camperLabel(row);
-    if (money && hiddenNowRef.current) hiddenMoneyProblem(status);
+    if (money && hiddenNowRef.current) hiddenMoneyProblem(status, name);
     else if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: retry.notAllowedText ?? T.ROSTER_NOT_ALLOWED });
@@ -499,12 +601,14 @@ export default function CampPage({
       setNotSavedId(row.id);
       setBanner({ kind: 'row', text: retry.text, retry: retry.run });
     } else {
-      setBanner({ text: T.ROSTER_STALE });
+      setBanner({ text: T.someoneElseChanged(name) }); // R2-07: names the camper
       reloadQuiet();
     }
   }
-  function rowDone() {
+  // rowId: when a row's own Retry just worked, its bar and Retry go: focus moves to that row.
+  function rowDone(rowId = null) {
     setNotSavedId(null);
+    if (rowId && focusIsInPageBar()) focusRowIfLost(rowId);
     setBanner((current) => (current?.kind === 'row' ? null : current));
   }
 
@@ -517,9 +621,8 @@ export default function CampPage({
     doMarkPaidAt(row, paymentSchoolFor(deviceLocation), method);
   }
   async function doMarkPaidAt(row, school, method = null) {
-    if (!begin()) return;
-    const result = await markPaid(row.id, row.version, school, method);
-    end(result.status);
+    const result = await save(() => markPaid(row.id, row.version, school, method), () => doMarkPaidAt(row, school, method));
+    if (!result) return; // something else is running
     const name = T.camperLabel(row);
     if (result.status === 'invalid' && result.field === 'school') {
       setBanner({ text: T.SCHOOL_REFUSED }); // (review L4)
@@ -531,10 +634,9 @@ export default function CampPage({
     }
     rowDone();
     const reloaded = reloadQuiet();
-    // Set when the toast's Undo is pressed: from then on the Undo's own bar decides where focus goes
-    // (useRevealRetryBar), so the step below must not take focus first — when Undo was pressed
-    // before the roster finished reloading, it did, and the bar stayed above the screen (Record
-    // refund's design review).
+    // Set the moment the toast's Undo is pressed (even while it waits for another save): from then on
+    // the Undo's own bar decides where focus goes (PageBar's takeFocus), so the step below must not
+    // take focus first (Record refund's design review).
     let undoPressed = false;
     // The "$X due" tag (where focus went back when the box closed) turns into a plain "Paid" with
     // the payment, so once the roster has reloaded focus moves to the row, as Star does: the tag if
@@ -554,27 +656,28 @@ export default function CampPage({
     showToast(text, {
       icon: false,
       // Staff may undo their own payment within 10 seconds (§1.14); after that it's an admin's job.
-      action: {
-        label: T.UNDO,
-        onAction: () => {
+      action: undoButton(text, () => undoPayment(paymentId), {
+        notAllowedText: T.UNDO_PAYMENT_TOO_LATE,
+        money: true,
+        name,
+        rowId: row.id,
+        onPress: () => {
           undoPressed = true;
-          runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE, money: true });
         },
-      },
+      }),
     });
   }
 
   // ===== Withdraw / Restore (staff and admins, v0.700) =====
   async function doWithdraw(row, restore = false) {
-    if (!begin()) return;
     const call = restore ? restoreCamper : withdrawCamper;
-    const result = await call(row.id, row.version);
-    end(result.status);
+    const result = await save(() => call(row.id, row.version), () => doWithdraw(row, restore));
+    if (!result) return; // something else is running
     if (result.status !== 'ok') {
       rowProblem(result.status, row, { text: T.actionFailed, run: () => doWithdraw(row, restore) });
       return;
     }
-    rowDone();
+    rowDone(row.id);
     reloadQuiet();
     const name = T.camperLabel(row);
     const newVersion = result.version;
@@ -587,9 +690,10 @@ export default function CampPage({
       showToast(T.restoredToast(name), { icon: false });
       return;
     }
-    showToast(restore ? T.restoredToast(name) : T.withdrawnToast(name), {
+    const words = restore ? T.restoredToast(name) : T.withdrawnToast(name);
+    showToast(words, {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => back(row.id, newVersion)) },
+      action: undoButton(words, () => back(row.id, newVersion), { name, rowId: row.id }),
     });
   }
 
@@ -602,9 +706,9 @@ export default function CampPage({
   // payment that is reversed. From Camper detail (`from`) the box takes the detail's place in one
   // update, as Delete permanently does.
   async function startUndoPayment(row, opener, from = null) {
-    if (!row.lastPaymentId || !begin()) return;
-    const result = await loadCamperDetail(row.id);
-    end(result.status === 'ok' ? 'ok' : result.status);
+    if (!row.lastPaymentId) return;
+    const result = await save(() => loadCamperDetail(row.id));
+    if (!result) return; // something else is running
     if (result.status === 'no_access') {
       onNoAccess();
       return;
@@ -615,8 +719,8 @@ export default function CampPage({
     if (refundStoodMeanwhile(result, from, opener)) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
-      leaveDetail(from);
-      camperReadProblem(result.status, () => startUndoPayment(row, opener), opener);
+      leaveDetail(from, result.status !== 'error'); // a failed read's bar has a Retry: it, not the name, takes focus
+      camperReadProblem(result.status, () => startUndoPayment(row, opener), opener, T.camperLabel(row));
       return;
     }
     openDialog({
@@ -634,13 +738,13 @@ export default function CampPage({
   // Edit payment and Undo payment are gray while a refund stands (v0.743 (4)). If the fresh read
   // shows one that the roster didn't have yet (recorded on another device), their box doesn't open:
   // the amber bar says "Undo the refund first." and the roster reloads (then ⋯ shows them gray).
-  // The bar is brought into view and focus goes back to `opener` (the ⋯, or — from Camper detail's
-  // More, which closes — the name that opened the detail): useRevealRetryBar below.
+  // The bar shows under the top bar, and focus goes back to `opener` (the ⋯, or — from Camper detail's
+  // More, which closes — the name that opened the detail): the effect after useCampActions above.
   // true = it stopped here.
   function refundStoodMeanwhile(result, from, opener) {
     if (result.status !== 'ok' || !refundStands(result.camper)) return false;
     leaveDetail(from);
-    setBanner({ text: refundStandsText(), reveal: true, opener });
+    setBanner({ text: refundStandsText(), takeFocus: true, opener });
     reloadQuiet();
     return true;
   }
@@ -651,9 +755,9 @@ export default function CampPage({
   // one reversed (at the refund's own school, v1.040). From Camper detail (`from`) the box takes the
   // detail's place in one update. Confirming runs confirmUndoPayment below (one box, two kinds).
   async function startUndoRefund(row, opener, from = null) {
-    if (!isAdmin || !begin()) return;
-    const result = await loadCamperDetail(row.id);
-    end(result.status === 'ok' ? 'ok' : result.status);
+    if (!isAdmin) return;
+    const result = await save(() => loadCamperDetail(row.id));
+    if (!result) return; // something else is running
     if (result.status === 'no_access') {
       onNoAccess();
       return;
@@ -663,8 +767,8 @@ export default function CampPage({
     const refund = result.status === 'ok' ? newestStandingRefund(result.payments) : null;
     if (!refund) {
       // Couldn't read (Retry), or no refund stands any more (someone undid it): today's handling.
-      leaveDetail(from);
-      camperReadProblem(result.status, () => startUndoRefund(row, opener), opener);
+      leaveDetail(from, result.status !== 'error'); // a failed read's bar has a Retry: it, not the name, takes focus
+      camperReadProblem(result.status, () => startUndoRefund(row, opener), opener, T.camperLabel(row));
       return;
     }
     openDialog({ type: 'undoRefund', row, name: T.camperLabel(result.camper), refund, saving: false, failed: false, opener });
@@ -673,11 +777,13 @@ export default function CampPage({
   // The Undo payment box's and the Undo refund box's "Undo …" button (they work the same way).
   async function confirmUndoPayment() {
     const d = dialog;
-    if (!d || d.saving || !begin()) return;
+    if (!d || d.saving) return;
     const isRefund = d.type === 'undoRefund';
-    setDialog({ ...d, saving: true, failed: false });
-    const result = isRefund ? await undoRefund({ paymentId: d.refund.id }) : await undoPayment(d.payment.id);
-    end(result.status);
+    const result = await save(() => {
+      setDialog({ ...d, saving: true, failed: false }); // (only once the line took this save)
+      return isRefund ? undoRefund({ paymentId: d.refund.id }) : undoPayment(d.payment.id);
+    });
+    if (!result) return; // something else is running
     // Closed meanwhile (Hide private details switched on mid-save): the page says how it went.
     const open = stillOpen(d);
     if (result.status === 'error' && open) {
@@ -693,7 +799,7 @@ export default function CampPage({
       // Other refusals: today's handling (amber bar, reload; the general words while hidden). No
       // Retry: 'error' (the only status that offers one) was handled above, inside the box.
       if (open) rowProblem(result.status, d.row, { text: T.actionFailed }, true);
-      else closedPaymentProblem(result.status);
+      else closedPaymentProblem(result.status, d.name);
       return;
     }
     rowDone();
@@ -705,9 +811,8 @@ export default function CampPage({
 
   // ===== Check in / Undo check-in (any day, v0.706): a day cell of the roster =====
   async function doCheckIn(row, day) {
-    if (!begin()) return;
-    const result = await checkIn(row.id, day.dayId);
-    end(result.status);
+    const result = await save(() => checkIn(row.id, day.dayId), () => doCheckIn(row, day));
+    if (!result) return; // something else is running
     const name = T.camperLabel(row);
     if (result.status !== 'ok') {
       rowProblem(result.status, row, { text: T.checkInFailed(name), run: () => doCheckIn(row, day) });
@@ -715,18 +820,19 @@ export default function CampPage({
     }
     rowDone();
     reloadQuiet();
-    showToast(T.checkedInToast(name, result.checkedInAt ?? new Date().toISOString()), {
+    const words = T.checkedInToast(name, result.checkedInAt ?? new Date().toISOString());
+    showToast(words, {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn(row.id, day.dayId)) },
+      action: undoButton(words, () => undoCheckIn(row.id, day.dayId), { name, rowId: row.id, dayCell: `:` }),
     });
     // Keyboard: stay on the same day cell (it turns from Check in into the came icon + time).
     focusSoon(() => document.querySelector(`[data-day-cell="${row.id}:${day.dayId}"]`));
   }
   // Tapping a came cell (user-check icon + time) undoes that check-in at once, with an Undo toast that checks the child in again.
   async function doUndoCheckIn(row, day) {
-    if (!day || !begin()) return;
-    const result = await undoCheckIn(row.id, day.dayId);
-    end(result.status);
+    if (!day) return;
+    const result = await save(() => undoCheckIn(row.id, day.dayId), () => doUndoCheckIn(row, day));
+    if (!result) return; // something else is running
     const name = T.camperLabel(row);
     if (result.status !== 'ok') {
       rowProblem(result.status, row, { text: T.undoCheckInFailed(name), run: () => doUndoCheckIn(row, day) });
@@ -734,9 +840,10 @@ export default function CampPage({
     }
     rowDone();
     reloadQuiet();
-    showToast(T.checkInUndoneToast(name), {
+    const words = T.checkInUndoneToast(name);
+    showToast(words, {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => checkIn(row.id, day.dayId)) },
+      action: undoButton(words, () => checkIn(row.id, day.dayId), { name, rowId: row.id, dayCell: `:` }),
     });
     focusSoon(() => document.querySelector(`[data-day-cell="${row.id}:${day.dayId}"]`));
   }
@@ -759,40 +866,44 @@ export default function CampPage({
   function detailGone(from) {
     return from !== null && !stillOpen(from);
   }
-  function leaveDetail(from) {
+  // refocus false: a bar with a Retry is about to take focus (camperReadProblem), so the name that opened
+  // the detail must not take it back afterwards.
+  function leaveDetail(from, refocus = true) {
     if (from === null || !stillOpen(from)) return;
     setDialog(null);
-    if (from.opener) focusSoon(from.opener);
+    if (refocus && from.opener) focusSoon(from.opener);
   }
   // The camper read before Undo payment, Edit payment or Delete permanently didn't give what the
   // box needs. status 'error' = it didn't reach the database: the bar offers Retry, which clears
   // the bar and repeats the same read (design review S-2, rulebook v1.051). `again` starts it
   // without `from` — the Camper detail has closed by then, so the box opens on its own. (No reload
   // after a failed read: it would fail too and put its own bar over this one's Retry.)
-  // Anything else (the camper or the payment is gone, someone changed it): ROSTER_STALE ("Someone
-  // else changed this just now …") and the roster reloads — reading again wouldn't help, so no Retry.
-  // Either way the bar is brought into view (it sits at the top of the page; the person may be far
-  // down the roster): with Retry, focus goes to Retry; without, back to the ⋯ / name that started it.
-  function camperReadProblem(status, again, opener) {
+  // Anything else (the camper or the payment is gone, someone changed it): "Someone else changed
+  // [Name] just now, so nothing was done. Their change is shown." (R2-07: `name` = the camper) and the
+  // roster reloads — reading again wouldn't help, so no Retry.
+  // Either way the bar shows under the top bar (always in view): with Retry, focus goes to Retry;
+  // without, back to the ⋯ / name that started it (the effect after useCampActions above).
+  function camperReadProblem(status, again, opener, name) {
     if (status === 'error') {
       setBanner({
         text: T.LOAD_CAMPER_FAILED,
-        reveal: true, // scrolled into view, focus on its Retry (useRevealRetryBar below)
-        opener, // the ⋯ / name that started it: focus may move from there to Retry
+        takeFocus: true, // focus on its Retry (PageBar)
+        opener, // the ⋯ / name that started it (only used by a bar with nothing to retry)
         retry: () => {
           setBanner(null);
           again();
         },
       });
+      focusBarSoon(); // the Retry takes focus once the detail (if any) has closed and the page is usable
     } else {
-      setBanner({ text: T.ROSTER_STALE, reveal: true, opener }); // scrolled into view, focus back on the opener
+      setBanner({ text: T.someoneElseChanged(name), takeFocus: true, opener }); // focus back on the opener
       reloadQuiet();
     }
   }
   async function startEditPayment(row, opener, from = null) {
-    if (!isAdmin || !begin()) return;
-    const result = await loadCamperDetail(row.id);
-    end(result.status === 'ok' ? 'ok' : result.status);
+    if (!isAdmin) return;
+    const result = await save(() => loadCamperDetail(row.id));
+    if (!result) return; // something else is running
     if (result.status === 'no_access') {
       onNoAccess();
       return;
@@ -803,8 +914,8 @@ export default function CampPage({
     if (refundStoodMeanwhile(result, from, opener)) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
-      leaveDetail(from);
-      camperReadProblem(result.status, () => startEditPayment(row, opener), opener);
+      leaveDetail(from, result.status !== 'error'); // a failed read's bar has a Retry: it, not the name, takes focus
+      camperReadProblem(result.status, () => startEditPayment(row, opener), opener, T.camperLabel(row));
       return;
     }
     // The name comes from this fresh read (as Undo payment's box does), not from `row`: after a
@@ -822,9 +933,9 @@ export default function CampPage({
   // failed read: the bar with Retry. From Camper detail (`from`) the box takes the detail's place in
   // one update.
   async function startRecordRefund(row, opener, from = null) {
-    if (!isAdmin || !begin()) return;
-    const result = await loadCamperDetail(row.id);
-    end(result.status === 'ok' ? 'ok' : result.status);
+    if (!isAdmin) return;
+    const result = await save(() => loadCamperDetail(row.id));
+    if (!result) return; // something else is running
     if (result.status === 'no_access') {
       onNoAccess();
       return;
@@ -834,8 +945,8 @@ export default function CampPage({
     const camper = result.status === 'ok' ? result.camper : null;
     const over = camper ? overpaidCents(camper) : 0;
     if (!camper || camper.status !== 'active' || over <= 0) {
-      leaveDetail(from);
-      camperReadProblem(result.status, () => startRecordRefund(row, opener), opener);
+      leaveDetail(from, result.status !== 'error'); // a failed read's bar has a Retry: it, not the name, takes focus
+      camperReadProblem(result.status, () => startRecordRefund(row, opener), opener, T.camperLabel(row));
       return;
     }
     // The payments that stay in the history (the box's note: "The $315 payment …" / "The 2 payments ($315) …").
@@ -875,28 +986,28 @@ export default function CampPage({
       const refundId = result.paymentId;
       showToast(T.TOAST_REFUND_RECORDED, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => undoRefund({ paymentId: refundId }), { money: true }) },
+        action: undoButton(T.TOAST_REFUND_RECORDED, () => undoRefund({ paymentId: refundId }), { money: true, name: d.name, rowId: d.row.id }),
       });
       return result;
     }
-    if (!stillOpen(d)) closedPaymentProblem(result.status); // closed meanwhile (Hide private details)
+    if (!stillOpen(d)) closedPaymentProblem(result.status, d.name); // closed meanwhile (Hide private details)
     else if (result.status === 'no_access') onNoAccess();
     else if (result.status === 'not_allowed') onRefreshProfile();
     else if (result.status === 'refund_too_large' || result.status === 'stale') reloadQuiet(); // the box says it; the roster catches up
     return result;
   }
   async function startDeleteCamper(row, opener, from = null) {
-    if (!isAdmin || !begin()) return;
-    const result = await loadCamperDetail(row.id);
-    end(result.status === 'ok' ? 'ok' : result.status);
+    if (!isAdmin) return;
+    const result = await save(() => loadCamperDetail(row.id));
+    if (!result) return; // something else is running
     if (result.status === 'no_access') {
       onNoAccess();
       return;
     }
     if (detailGone(from)) return;
     if (result.status !== 'ok') {
-      leaveDetail(from);
-      camperReadProblem(result.status, () => startDeleteCamper(row, opener), opener);
+      leaveDetail(from, result.status !== 'error'); // a failed read's bar has a Retry: it, not the name, takes focus
+      camperReadProblem(result.status, () => startDeleteCamper(row, opener), opener, T.camperLabel(row));
       return;
     }
     const payments = result.payments ?? [];
@@ -917,10 +1028,12 @@ export default function CampPage({
   }
   async function confirmDeleteCamper() {
     const d = dialog;
-    if (!d || d.saving || !begin()) return;
-    setDialog({ ...d, saving: true, failed: false });
-    const result = await deleteCamper(...d.args);
-    end(result.status);
+    if (!d || d.saving) return;
+    const result = await save(() => {
+      setDialog({ ...d, saving: true, failed: false }); // (only once the line took this save)
+      return deleteCamper(...d.args);
+    });
+    if (!result) return; // something else is running
     if (result.status === 'ok') {
       setDialog(null);
       showToast(T.deletedToast(d.name), { icon: false }); // permanent: no Undo
@@ -930,7 +1043,7 @@ export default function CampPage({
     } else {
       setDialog(null);
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.someoneElseChanged(d.name) });
       if (result.status === 'not_allowed') onRefreshProfile();
       reloadQuiet();
     }
@@ -942,10 +1055,12 @@ export default function CampPage({
   // nothing working), and keep both's is 'keep-both'.
   async function keepOne(keep, other, pressed) {
     const d = dialog;
-    if (!d || d.saving || !begin()) return;
-    setDialog({ ...d, saving: pressed, failed: false });
-    const result = await resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
-    end(result.status);
+    if (!d || d.saving) return;
+    const result = await save(() => {
+      setDialog({ ...d, saving: pressed, failed: false }); // (only once the line took this save)
+      return resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
+    });
+    if (!result) return; // something else is running
     if (result.status === 'error') {
       setDialog((current) => (current ? { ...current, saving: false, failed: true } : current));
       return;
@@ -953,7 +1068,7 @@ export default function CampPage({
     setDialog(null);
     if (result.status !== 'ok') {
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.someoneElseChanged(T.camperLabel(keep)) });
       if (result.status === 'not_allowed') onRefreshProfile();
       reloadQuiet();
       return;
@@ -961,18 +1076,21 @@ export default function CampPage({
     reloadQuiet();
     const otherVersion = result.otherVersion;
     // Undo = Restore the copy. Staff may do it within 10 seconds (§1.14), admins any time.
-    showToast(T.duplicateRemovedToast(T.camperLabel(other)), {
+    const words = T.duplicateRemovedToast(T.camperLabel(other));
+    showToast(words, {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => restoreCamper(other.id, otherVersion), { notAllowedText: T.UNDO_DUPLICATE_TOO_LATE }) },
+      action: undoButton(words, () => restoreCamper(other.id, otherVersion), { notAllowedText: T.UNDO_DUPLICATE_TOO_LATE, name: T.camperLabel(other), rowId: other.id }),
     });
   }
   async function keepBoth() {
     const d = dialog;
-    if (!d || d.saving || !begin()) return;
+    if (!d || d.saving) return;
     const { first, second } = d.pair;
-    setDialog({ ...d, saving: 'keep-both', failed: false });
-    const result = await resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
-    end(result.status);
+    const result = await save(() => {
+      setDialog({ ...d, saving: 'keep-both', failed: false }); // (only once the line took this save)
+      return resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
+    });
+    if (!result) return; // something else is running
     if (result.status === 'error') {
       setDialog((current) => (current ? { ...current, saving: false, failed: true } : current));
       return;
@@ -980,7 +1098,7 @@ export default function CampPage({
     setDialog(null);
     if (result.status !== 'ok') {
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.someoneElseChanged(T.camperLabel(first)) });
       reloadQuiet();
       return;
     }
@@ -1029,7 +1147,7 @@ export default function CampPage({
     setReceipt(null);
     // On top of Camper detail, the shared dialog puts focus back on its opener (returnFocusTo).
     // From ⋯: back to the row's ⋯ (or the "← Camps" link, if that ⋯ is gone).
-    if (r && !r.onTop) focusSoon(() => (r.opener?.isConnected ? r.opener : document.querySelector('.ev-back')));
+    if (r && !r.onTop) focusSoon(() => (r.opener?.isConnected ? r.opener : document.querySelector('.back-link')));
   }
 
   // ===== Menus =====
@@ -1108,13 +1226,9 @@ export default function CampPage({
   }
 
   // ===== Drawing =====
-  const backLink = (
-    <button type="button" className="link-button ev-back" onClick={() => onBack()}>
-      {/* ti-arrow-left = back */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {T.BACK_TO_CAMPS}
-    </button>
-  );
+  // The dashboard's shared back link (R3-06, rulebook v1.048 (12)): 24px with a mouse, a 44px tap box
+  // on touch, the title never moves. Focus calls above look for it by its class, ".back-link".
+  const backLink = <BackLink label={T.BACK_TO_CAMPS} onClick={() => onBack()} />;
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'noAccess' || wrongSchool) {
     return (
       <>
@@ -1142,7 +1256,7 @@ export default function CampPage({
     return (
       <>
         {backLink}
-        <ErrorBanner text={T.LOAD_CAMP_FAILED} onRetry={() => liveRef.current.reload()} />
+        <PageBar text={T.LOAD_CAMP_FAILED} onRetry={() => liveRef.current.reload()} />
       </>
     );
   }
@@ -1190,7 +1304,10 @@ export default function CampPage({
           onSaved={(undo) => {
             closeDialog();
             reloadQuiet();
-            showToast(T.TOAST_CHANGES_SAVED, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo) } : null });
+            showToast(T.TOAST_CHANGES_SAVED, {
+              icon: false,
+              action: undo ? undoButton(T.TOAST_CHANGES_SAVED, undo, { name: dialog.camperName, rowId: dialog.camperId }) : null,
+            });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -1211,7 +1328,10 @@ export default function CampPage({
             closeDialog();
             reloadQuiet();
             const undo = result?.undo ?? null;
-            showToast(T.TOAST_CAMP_SAVED, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo, { notAllowedText: T.CAMPS_NOT_ALLOWED }) } : null });
+            showToast(T.TOAST_CAMP_SAVED, {
+              icon: false,
+              action: undo ? undoButton(T.TOAST_CAMP_SAVED, undo, { notAllowedText: T.CAMPS_NOT_ALLOWED, name: result?.name ?? camp.name }) : null,
+            });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -1265,9 +1385,9 @@ export default function CampPage({
               }
               showToast(T.TOAST_CHANGES_SAVED, {
                 icon: false,
-                action: { label: T.UNDO, onAction: () => runUndo(() => changePayingBy(row.id, newVersion, row.payingBy), { money: true }) },
+                action: undoButton(T.TOAST_CHANGES_SAVED, () => changePayingBy(row.id, newVersion, row.payingBy), { money: true, name: T.camperLabel(row), rowId: row.id }),
               });
-            } else if (!stillOpen(d)) closedPaymentProblem(result.status);
+            } else if (!stillOpen(d)) closedPaymentProblem(result.status, T.camperLabel(row));
             else if (result.status === 'no_access') onNoAccess();
             else if (result.status !== 'error') reloadQuiet();
             return result.status;
@@ -1302,15 +1422,15 @@ export default function CampPage({
               // "Payment changed" · Undo (v0.726, Black Belt's words and way): the save reversed the
               // old payment and recorded a new one, so Undo runs the same edit again on the NEW one
               // with the old way to pay, amount, date and school. Someone else editing or undoing
-              // it meanwhile → 'stale' ("Couldn't undo. Someone else changed this just now.").
+              // it meanwhile → 'stale' ("Someone else changed [Name] just now, so nothing was done. …").
               const old = d.payment;
               const newPaymentId = result.paymentId;
               const back = { method: old.method, amountCents: old.amountCents, paidOn: old.paidOn, school: old.school ?? values.school };
               showToast(T.TOAST_PAYMENT_CHANGED, {
                 icon: false,
-                action: { label: T.UNDO, onAction: () => runUndo(() => editPayment(newPaymentId, back), { money: true }) },
+                action: undoButton(T.TOAST_PAYMENT_CHANGED, () => editPayment(newPaymentId, back), { money: true, name: d.name, rowId: d.row.id }),
               });
-            } else if (!stillOpen(d)) closedPaymentProblem(result.status);
+            } else if (!stillOpen(d)) closedPaymentProblem(result.status, d.name);
             else if (result.status === 'no_access') onNoAccess();
             else if (result.status === 'not_allowed') onRefreshProfile();
             // A refund was recorded meanwhile (0039): the box says "Undo the refund first.", and the
@@ -1416,7 +1536,7 @@ export default function CampPage({
         // From the phone's More it takes the detail's place in one update, as Delete does.
         <ConfirmBox
           key={dialog.key}
-          title={T.undoPaymentTitle(dialog.name)}
+          title={T.undoPaymentTitle(dialog.name, dialog.payment.amountCents, dialog.payment.method)}
           keepLabel={T.KEEP_PAYMENT}
           actionLabel={T.UNDO_PAYMENT}
           actionIcon={IconArrowBackUp} // ti-arrow-back-up, the menu item's icon
@@ -1551,12 +1671,19 @@ export default function CampPage({
         </p>
       )}
 
-      {/* The wrapper only lets useRevealRetryBar find this page's bar. display: contents
-          (cp-bar-slot in camps.css) means it draws no box of its own, so the bar's spacing and the
-          layout stay exactly as they were. */}
-      <div className="cp-bar-slot" ref={barRef}>
-        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || actions.busy} onDismiss={() => setBanner(null)} />}
-      </div>
+      {/* The page's amber bar: a PageBar, drawn under the top bar (v1.128), so it is in view however far
+          the roster is scrolled. takeFocus: Retry (else ×) takes focus when it appears and focus is
+          nowhere or on the toast — except a bar with nothing to retry and an opener that is still
+          there: the effect near the top of this page sends focus back to that opener instead. */}
+      {banner && (
+        <PageBar
+          text={banner.text}
+          onRetry={banner.retry ? () => banner.retry() : undefined}
+          retrying={Boolean(banner.retrying) || busy}
+          onDismiss={() => setBanner(null)}
+          takeFocus={Boolean(banner.takeFocus) && !(banner.opener?.isConnected && !banner.retry)}
+        />
+      )}
       <CampRoster
         days={days}
         weeks={weeks}

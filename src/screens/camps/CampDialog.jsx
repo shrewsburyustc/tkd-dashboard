@@ -2,8 +2,8 @@
 // Why it exists: approved mockup C3. A camp has a lot in it (days, hours, sign-up dates, a price
 // grid, extras, ages, description, waiver), but most camps start from a template and only need a
 // name and days. So the dialog shows:
-//   - Start from: Blank camp or a template (Add camp only) — "Fills in everything except the name
-//     and days."
+//   - Start from: Blank camp or a template (Add camp only; the shared dropdown, components/Select.jsx)
+//     — "Fills in everything except the name and days."
 //   - five folded sections, only one open at a time (1. Camp is open first). Each folded section
 //     is a bordered row with its number, title, a one-line summary and a chevron (ti-chevron-down,
 //     ti-chevron-up when open). A section with a problem turns amber and says what's wrong.
@@ -19,7 +19,7 @@
 //
 // Props: mode 'add' | 'edit' | 'template', campId (edit), template (edit template),
 //        startTemplate (Add camp from a template's Use), defaultLocation, isPhone, hidden,
-//        onClose(), onSaved({ kind, undo? }), onNoAccess, onRefreshProfile, onUndoResult(status)
+//        onClose(), onSaved({ kind, name, undo? }) (name = the camp's or template's name, for the Undo's refusal words), onNoAccess, onRefreshProfile, onUndoResult(status)
 //
 // Undo (rulebook v0.726, design review C5): every save hands the page an `undo` for its toast.
 //   - Add camp: undo() deletes the new, empty camp and reports through onUndoResult(status).
@@ -32,6 +32,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
+import Select from '../../components/Select.jsx';
 import { addCamp, deleteCamp, loadCamp, loadTemplates, updateCamp, updateTemplate, campToday } from '../../lib/camps/campsApi.js';
 import CampSection from './sections/CampSection.jsx';
 import ExtrasSection from './sections/ExtrasSection.jsx';
@@ -395,7 +396,7 @@ export default function CampDialog({
         const back = await deleteCamp(newId, newVersion, 0, 0);
         onUndoResult(back.status);
       };
-      onSaved({ kind: 'added', id: newId, undo });
+      onSaved({ kind: 'added', id: newId, name: payload.name, undo });
     } else if (mode === 'edit') {
       // Undo = save the camp's old values again, on the version this save made.
       const newVersion = result.version;
@@ -407,7 +408,7 @@ export default function CampDialog({
             return { ...answer, undoText: campUndoRefusal(answer, { addsPastDay }) };
           }
         : null;
-      onSaved({ kind: 'camp', undo });
+      onSaved({ kind: 'camp', name: payload.name, undo });
     } else {
       // Undo = save the template's old values again. If another template took the old name in the
       // meantime ('duplicate_name'), the amber bar says so in the editor's own words.
@@ -419,7 +420,7 @@ export default function CampDialog({
             return { ...answer, undoText: answer.status === 'duplicate_name' ? T.undoRefused(T.DUPLICATE_TEMPLATE) : null };
           }
         : null;
-      onSaved({ kind: 'template', undo });
+      onSaved({ kind: 'template', name: payload.name, undo });
     }
   }
 
@@ -459,6 +460,8 @@ export default function CampDialog({
     { n: 5, title: T.SECTION_FAMILY },
   ];
   const common = { values, errors: check.errors, readOnly, idBase };
+  // Start from's choices for the shared dropdown: Blank camp first, then the templates (by name).
+  const startOptions = [{ value: 'blank', label: T.BLANK_CAMP }, ...templates.map((t) => ({ value: t.id, label: t.name }))];
 
   let body;
   if (status === 'loading') {
@@ -497,23 +500,25 @@ export default function CampDialog({
       >
         {mode === 'add' && (
           <div className="field cp-startfrom">
-            <label htmlFor={`${idBase}-start`}>{T.START_FROM}</label>
-            <select
+            {/* The shared dropdown (S-10, pass 1): Blank camp, then the templates by name. A span, not a
+                <label>: the field is a div (role combobox), which a label can't point at; the Select
+                reads its name from this span's id. */}
+            <span id={`${idBase}-start-label`} className="field-label">
+              {T.START_FROM}
+            </span>
+            <Select
               id={`${idBase}-start`}
-              className="input cp-select"
-              tabIndex={0}
-              disabled={readOnly}
+              labelId={`${idBase}-start-label`}
+              describedBy={`${idBase}-start-hint`}
               value={values.startFrom}
-              onChange={(event) => changeStartFrom(event.target.value)}
-            >
-              <option value="blank">{T.BLANK_CAMP}</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <p className="field-hint">{T.START_FROM_HINT}</p>
+              options={startOptions}
+              placeholder={T.BLANK_CAMP}
+              readOnly={readOnly}
+              onChange={changeStartFrom}
+            />
+            <p id={`${idBase}-start-hint`} className="field-hint">
+              {T.START_FROM_HINT}
+            </p>
           </div>
         )}
         {folds.map(({ n, title: foldTitle }) => {
