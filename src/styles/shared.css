@@ -360,6 +360,10 @@
   gap: var(--space-4);
   min-height: 24px;
   margin-bottom: 2px;
+  /* Straight inside a page that is a flex column (Camps, Color Belt's event page), the link would
+     stretch across the whole row and a click anywhere right of "← Camps" would go back. Only the
+     link itself is the button (v1.136; the sections' own copies of this line are gone). */
+  align-self: flex-start;
 }
 
 /* Touch: a 44px tall tap area, pulled back with negative margins so the title doesn't move down */

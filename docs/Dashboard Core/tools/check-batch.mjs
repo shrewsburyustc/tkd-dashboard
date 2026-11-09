@@ -287,6 +287,21 @@ await withChrome(async (tab) => {
     assert.equal(hit[0], true, 'above');
     assert.equal(hit[1], true, 'below');
   });
+  await check('PC: the back link inside a page that is a flex column is only as wide as itself, so a click right of it does not go back (v1.136)', async () => {
+    await open(1280, 800, false);
+    const w = await ev(`(() => {
+      const back = document.querySelector('.back-link');
+      const parent = back.parentElement;
+      const was = [parent.style.display, parent.style.flexDirection];
+      parent.style.display = 'flex'; parent.style.flexDirection = 'column'; // the shape of Camps' and Color Belt's pages
+      const r = back.getBoundingClientRect();
+      const out = { link: r.width, page: parent.getBoundingClientRect().width, align: getComputedStyle(back).alignSelf };
+      [parent.style.display, parent.style.flexDirection] = was;
+      return out;
+    })()`);
+    assert.equal(w.align, 'flex-start');
+    assert.ok(w.link < w.page / 2, `the link is ${Math.round(w.link)}px in a ${Math.round(w.page)}px page`);
+  });
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

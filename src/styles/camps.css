@@ -1234,15 +1234,8 @@ button.cp-dc:focus-visible {
   }
 }
 
-/* ===== The camp page's back link (the shared BackLink, pass 1 R3-06) =====
-   .back-link is inline-flex, and the page (.testing) is a flex column, so without this the link
-   stretches across the whole row and a click anywhere right of "← Camps" goes back (the old
-   .ev-back had align-self: flex-start for this). The title doesn't move: the shared rules already
-   pull the 44px touch box back. (The same line belongs in shared.css's .back-link; Dashboard core
-   has been told.) */
-.testing.camps > .back-link {
-  align-self: flex-start;
-}
+/* (The camp page's back link is the shared BackLink; its "only the link is the button" line,
+   align-self: flex-start, now lives in shared.css's .back-link, v1.136.) */
 
 /* ===== Print roster: only on paper ===== */
 .camp-print {
