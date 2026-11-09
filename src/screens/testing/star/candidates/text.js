@@ -257,6 +257,7 @@ export const SCHOOL_HINT = 'Updates the School column.';
 export const EMAIL = 'Email for results';
 export const CURRENT_DAN = 'Current Dan';
 export const STARS_NOW = 'Stars now';
+export const STARS_NEEDS_DAN = 'Choose a Dan first.'; // R3-12: why Stars now is gray until a Dan is chosen
 export const testingForHint = (starsTo) => `Testing for ${starsText(starsTo)}.`;
 export const PAYING_BY_HINT = 'Mark them paid from the row once they pay.'; // (was "Record the payment …"; S1 renamed the button)
 export const ENTER_EMAIL = 'Enter an email for results.'; // PROPOSAL

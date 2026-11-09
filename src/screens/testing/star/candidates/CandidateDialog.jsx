@@ -481,7 +481,8 @@ export default function CandidateDialog({
               value={values.dan}
               options={danChoices}
               placeholder={T.CHOOSE}
-              readOnly={readOnly || Boolean(danLock)}
+              readOnly={readOnly}
+              unavailable={Boolean(danLock)}
             autoFocus={Boolean(state.focusDan)}
               invalid={Boolean(check.danError)}
               describedBy={danLock || danFee ? `${idBase}-dan-hint` : undefined}
@@ -505,13 +506,15 @@ export default function CandidateDialog({
               value={values.starsFrom}
               options={starChoices}
               placeholder={T.CHOOSE}
-              readOnly={readOnly || !dan}
+              readOnly={readOnly}
+              unavailable={!dan}
               invalid={Boolean(check.starsError)}
-              describedBy={`${idBase}-stars-hint`}
+              describedBy={check.starsError ? `${idBase}-stars-error` : `${idBase}-stars-hint`}
               onChange={(starsFrom) => onChange({ starsFrom })}
             />,
             check.starsError,
-            Number.isInteger(values.starsFrom) ? T.testingForHint(values.starsFrom + 1) : null,
+            // No Dan yet: the field is unavailable and this line says why (R3-12, v1.138).
+            !dan ? T.STARS_NEEDS_DAN : Number.isInteger(values.starsFrom) ? T.testingForHint(values.starsFrom + 1) : null,
           )}
         </div>
         {isNew && (
