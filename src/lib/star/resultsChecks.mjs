@@ -239,7 +239,7 @@ await check('summary line (3) and the small wording rules', async () => {
   assert.equal(T.markSentRefusal('not_finished', 'Noah Chen'), 'Noah Chen’s result isn’t finished any more, so it wasn’t marked as sent.');
   assert.equal(T.markSentRefusal('withdrawn', 'Noah Chen'), 'Noah Chen was removed from this testing. It wasn’t marked as sent.');
   assert.equal(T.markSentRefusal('not_found', 'Noah Chen'), 'Noah Chen was deleted on another device. Nothing was marked.');
-  assert.equal(T.markSentRefusal('error', 'Noah Chen'), 'Couldn’t mark Noah Chen as sent. Check the connection, then try again.');
+  assert.equal(T.markSentRefusal('error', 'Noah Chen'), 'Couldn’t mark Noah Chen as sent. Check the connection, then retry.');
   assert.equal(T.undoSentRefusal('stale'), 'That was already undone.');
   assert.equal(T.undoSentRefusal('not_allowed'), 'Too late to undo here. Ask an admin to undo Mark as sent.');
   // R2-07 (v1.045 (4)): an Undo that didn't reach the database says the one shared sentence (the admin's
@@ -248,7 +248,7 @@ await check('summary line (3) and the small wording rules', async () => {
   assert.equal(T.undoSentRefusal('surprise'), T.undoSentRefusal('error'));
   assert.equal(T.TOAST_UNDONE, undefined); // "Undone" is said by the save line now
   assert.equal(T.noEmailOnFile('Noah Chen'), 'Noah Chen has no email for results. Add it with Edit details on the Candidates tab, then try again.');
-  assert.equal(T.addressFailed('Noah Chen'), 'Couldn’t get Noah Chen’s email address. Check the connection, then try again.');
+  assert.equal(T.addressFailed('Noah Chen'), 'Couldn’t get Noah Chen’s email address. Check the connection, then retry.');
   assert.equal(T.csvDownloaded('Fall-2026-Star-Testing-results-2026-11-16.csv', 11),
     'Downloaded Fall-2026-Star-Testing-results-2026-11-16.csv (11 candidates). It has dates of birth, emails and payments — keep it private.');
   for (const s of STAR_RESULTS_STATUSES) assert.equal(typeof T.markSentRefusal(s, 'X'), 'string');

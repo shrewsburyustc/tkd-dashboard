@@ -1037,7 +1037,7 @@ await check('words: every status of every action has a message (ok and no_access
   });
   assert.equal(statusMessage('open', 'not_allowed').text, "The closing date has passed. Ask an admin to open it. Registration wasn't opened.");
   assert.equal(statusMessage('edit', 'stale', { phone: true }).text.includes('Discard changes'), true);
-  assert.equal(statusMessage('close', 'error', { name: 'Fall 2026 Star Testing' }).text, "Registration for Fall 2026 Star Testing wasn't closed. Check the connection and try again.");
+  assert.equal(statusMessage('close', 'error', { name: 'Fall 2026 Star Testing' }).text, "Registration for Fall 2026 Star Testing wasn't closed. Check the connection, then retry.");
 });
 
 // R2-07 (v1.051) and R4-13: the words after an Undo that opens registration again, and the admin line.

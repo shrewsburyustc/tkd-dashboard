@@ -104,15 +104,15 @@ export const STALE_DIALOG = "Someone else changed this just now. Your change was
 export const STALE_DIALOG_PHONE = "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const EVENTS_NOT_ALLOWED = "Only an admin can add or change events. Your change wasn't saved.";
 export const INVALID_DIALOG = "That didn't save. Check the fields and try again.";
-export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+export const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";
 export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to open it.';
 export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to open it. Registration wasn't opened.";
 // Not drawn in the mockups: Color Belt's live wording.
 export const REGISTRATION_FINISHED = 'This testing has finished, so registration can no longer change.';
-export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection and try again.`;
-export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection and try again.`;
+export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection, then retry.`;
+export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection, then retry.`;
 // Not drawn in the mockups (Delete event failing): proposed, in the same pattern.
-export const eventNotDeleted = (name) => `${name} wasn't deleted. Check the connection and try again.`;
+export const eventNotDeleted = (name) => `${name} wasn't deleted. Check the connection, then retry.`;
 // Staff's gray line (v0.86)
 export const STAFF_LINE = 'Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.';
 
