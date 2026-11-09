@@ -1079,6 +1079,9 @@ img {
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-16) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+  /* The toast's own room on a full-screen page (R2-04, v1.138, v1.139; Toast.jsx): while a toast shows,
+     the scrolling body ends above it. 0 when the page has a pinned bar: the toast sits above the bar. */
+  margin-bottom: var(--toast-room-page, 0px);
 }
 
 .dialog-page-body .dialog-form {
