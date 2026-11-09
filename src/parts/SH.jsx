@@ -63,6 +63,16 @@ function Looks() {
           <Select id="sh-select" labelId={labelId} value={picked} options={GROUPED} placeholder="Choose…" onChange={setPicked} />
         </div>
       </div>
+      {/* R3-12: staff can't change this right now. Gray, not-allowed cursor, still a Tab stop, the reason is read on focus */}
+      <div className="parts-sh-row" data-sh="unavailable-select">
+        <span id={`${labelId}-dan`}>Dan (staff)</span>
+        <div style={{ width: 240 }}>
+          <Select id="sh-select-unavailable" labelId={`${labelId}-dan`} describedBy="sh-select-why" value="b" options={GROUPED} placeholder="Choose…" onChange={() => {}} unavailable />
+        </div>
+        <span id="sh-select-why" className="field-hint">
+          Only an admin can change this. Ask an admin.
+        </span>
+      </div>
       <div className="parts-sh-row" data-sh="choices">
         <span id={`${labelId}-locked`}>Dan (locked)</span>
         <ChoiceGroup labelId={`${labelId}-locked`} options={DANS} value="first" onChange={() => {}} locked fill />

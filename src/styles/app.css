@@ -507,6 +507,9 @@ img {
      the page area, not from the whole document: otherwise they make the document scroll as well, a
      second scrollbar that pageRoom.js then subtracts twice (Color Belt's L-02 review). */
   position: relative;
+  /* The toast's own room (R2-04, v1.042, v1.138; Toast.jsx): while a toast shows, the page area ends above
+     it, so its Undo never covers a button, a row's ⋯ or the last control. Gone with the toast. */
+  margin-bottom: var(--toast-room, 0px);
 }
 
 /* Panel size couldn't be saved (v1.118), and the one offline bar (v1.123, M12), Shell.jsx: the

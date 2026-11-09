@@ -1391,12 +1391,8 @@
     margin-bottom: var(--space-4);
   }
 
-  /* A toast sits just above the bottom bar, where the ⋯ sheet's last items are: while one shows
-     on a Black Belt cycle page, the sheet leaves room under its items so nothing is covered. */
-  body:has(.bb-candidates):has(.toast-region .toast) .tsheet {
-    /* the toast's own place (above the bottom bar) + a two-line toast + a gap */
-    padding-bottom: calc(var(--bottombar-height) + var(--space-8) + 72px + env(safe-area-inset-bottom));
-  }
+  /* (The ⋯ sheet's room under a toast is the shared one now: .tsheet ends above the toast, shared.css,
+     R2-04 / v1.138. Black Belt's own copy of that rule is gone.) */
 
   /* BB5 (v0.967): on the full-screen candidate detail the toast ("Changes saved · Undo") sits just
      ABOVE the bottom buttons (Record payment · Print receipt), never over them. CandidateDialog.jsx
