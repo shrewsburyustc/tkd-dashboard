@@ -760,6 +760,10 @@ export const DETAIL_TESTING_FOR = 'Testing for';
 export const DETAIL_STRIPES = '3 stripes';
 export const DETAIL_REGISTERED = 'Registered';
 export const DETAIL_PAYING_BY = 'Paying by';
+// R1-07 second part (rulebook v1.135, Jeffrey "C"): the Paying by line of the summary says where the CURRENT choice
+// was made, the same in Camps, Color Belt, Star and Black Belt: "Cash (chosen on the form)" / "Check (chosen at the
+// desk)". where = 'form' | 'desk' (eventRules.markPaidChoiceWhere: the answer the Mark paid box's hint uses).
+export const payingByDetail = (method, where) => `${payingByText(method)} (chosen ${where === 'form' ? 'on the form' : 'at the desk'})`;
 export const DETAIL_PAYMENT = 'Payment';
 export const DETAIL_SIGNED = 'Signed by';
 export const DETAIL_REMOVED = 'Removed';
@@ -774,6 +778,9 @@ export const REFERENCE_WORD = 'reference';
 export const SIGNED_FORM = 'Parent or guardian, on the form';
 export const signatureDeleted = (stamp) => `Signed on the form, ${stampDay(stamp)} (the signature is deleted 90 days after testing)`;
 export const NOT_SIGNED_DESK = 'Not signed here (added at the desk)';
+// The payment line (v1.135): Star's base — "$140 card · paid Nov 3" (the phone: paidOnPhone, "Card · paid Nov 3");
+// Color Belt adds nothing (the school and who are columns of its lists). History: "Payment recorded: $140 card,
+// paid Nov 3" and "Payment undone: $140" (historyPaymentRecorded / historyPaymentUndone below).
 export const paidDetail = (cents, method, paidOn) => `${formatMoney(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
 export const removedDetail = (stamp, name, reason) =>
   `${reason === 'duplicate_copy' ? 'Duplicate copy, removed' : 'Withdrawn'} ${stampDay(stamp)}${name ? ` by ${name}` : ''}`;

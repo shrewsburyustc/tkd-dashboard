@@ -37,7 +37,7 @@ import { loadRegistrationHistory } from '../../../lib/testing/eventsApi.js';
 import { historyDescriber, historyReader } from '../../../lib/testing/history.js';
 import Notice from '../../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
-import { classTimeLabel, dateSignedOf } from '../../../lib/testing/eventRules.js';
+import { classTimeLabel, dateSignedOf, markPaidChoiceWhere } from '../../../lib/testing/eventRules.js';
 import { DATE_SIGNED } from '../../../components/text.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { ResultTag } from './ResultButtons.jsx';
@@ -188,7 +188,7 @@ function Summary({ row, cls, rank, event, today, hidden, onPrintReceipt }) {
         </SummaryRow>
       ) : (
         <>
-          <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByText(row.payingBy)}</SummaryRow>
+          <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByDetail(row.payingBy, markPaidChoiceWhere(row))}</SummaryRow>
           <SummaryRow label={T.DETAIL_PAYMENT}>
             {row.paid ? (
               <>

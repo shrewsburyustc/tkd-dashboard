@@ -30,7 +30,7 @@ import HistoryLine from '../../../components/HistoryLine.jsx';
 import { formatMoney } from '../../../lib/money.js';
 import { loadPrivateHistory } from '../../../lib/testing/privateApi.js';
 import { describeHistoryRow, historyReader } from '../../../lib/testing/history.js';
-import { summaryPaymentParts } from '../../../lib/testing/privateRules.js';
+import { markPaidChoiceWhere, summaryPaymentParts } from '../../../lib/testing/privateRules.js';
 import { ResultTag } from '../event/ResultButtons.jsx';
 import { PrintReceiptButton, TestingForCell } from '../event/StudentDialog.jsx';
 import { rankViewOf } from './PrivateRows.jsx';
@@ -129,7 +129,7 @@ export default function PrivateSummaryDialog({
           </SummaryRow>
         ) : (
           <>
-            <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByText(record.payingBy)}</SummaryRow>
+            <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByDetail(record.payingBy, markPaidChoiceWhere(record))}</SummaryRow>
             <SummaryRow label={T.DETAIL_PAYMENT}>{payment}</SummaryRow>
           </>
         )}
