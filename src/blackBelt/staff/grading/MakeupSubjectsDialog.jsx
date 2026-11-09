@@ -26,7 +26,7 @@
 //   invalid / not_found / withdrawn   the result no longer needs a choice → amber note, Close only
 //   not_allowed    only an admin can choose → amber note
 //   no_access      close, then lock the screen (onNoAccess)
-//   error          "Couldn't save. Check the connection, then try again." (Save stays)
+//   error          "Couldn't save. Check the connection, then retry." (Save stays)
 //
 // PROPS (C2 and C3 import this file from '../grading/MakeupSubjectsDialog.jsx'):
 //   candidate   { id, firstName, lastName } (or { id, name, firstName }) — whose subjects

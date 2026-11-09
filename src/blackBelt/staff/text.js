@@ -86,10 +86,10 @@ export const HAS_PAYMENTS = 'Payments are recorded for this cycle.';
 export const HAS_WAIVERS = 'Families signed waivers on the form for this cycle.'; // (not in the mockups, OP-6)
 export const CYCLE_DELETED = 'This cycle was deleted.';
 export const INVALID = "That didn't save. Check the fields and try again.";
-export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+export const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";
 export { LOAD_FAILED } from '../../components/text.js'; // S-2 / R4-11 (v1.051): the one sentence, with Retry (the shared words)
 // (S-2: every read that fails now has a Retry, so the old no-Retry "try again" sentence is gone.)
-export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again."; // (not in the mockups)
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then retry."; // (not in the mockups)
 export { UNDO_DIDNT_SAVE as UNDO_FAILED } from '../../components/text.js'; // R2-07 (v1.045 (4)): the shared failed-Undo sentence
 export const REOPEN_NEEDS_ADMIN = 'The application date has passed. Ask an admin to open it.'; // R4-13 (v1.045): "open", not "reopen"
 // OP-4: the cycle saved, the Registration switch (a second call) didn't. (not in the mockups)
@@ -633,7 +633,7 @@ export const CANDIDATE_GONE = 'This candidate was deleted.'; // (not in the mock
 export const CANDIDATE_FINISHED = "This cycle is finished, so candidates can't be added.";
 export const PAPER_WAIVER_FINISHED = "This cycle is finished, so the waiver can't be recorded here."; // (not in the mockups)
 export const PURGED_INVALID = "This candidate's personal details were deleted after the keeping time, so this can't be saved."; // (not in the mockups)
-export const ACTION_FAILED = "That didn't work. Check the connection, then try again."; // a one-click action that didn't reach the database (not in the mockups); an Undo's own failures are said by the save line (lib/saveLine.js)
+export const ACTION_FAILED = "That didn't work. Check the connection, then retry."; // a one-click action that didn't reach the database (not in the mockups); an Undo's own failures are said by the save line (lib/saveLine.js)
 // While Hide private details is on, a refused Undo says nothing about why: "a payment is recorded", "has payment
 // records", "already undone" would tell a mat tablet who has paid and who has not (v0.249, v1.036, v1.037). So every
 // refusal of an Undo that was pressed before the switch turned on shows this one neutral sentence (with × only).
@@ -908,7 +908,7 @@ export const UNDOING = 'Undoing…';
 export const DELETING = 'Deleting…';
 export const CHANGING = 'Changing…'; // the Dan-change box's red button while it works
 export const keepDan = (dan) => `Keep ${DAN_LABELS[dan] ?? 'Dan'}`; // "Keep 1st Dan" — the current Dan (BB19, as Star's)
-export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // under an Undo box's buttons (Star's words)
+export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then retry."; // under an Undo box's buttons (Star's words)
 export const UNDO_REFUND_CONFIRM = 'Undo refund'; // (not in the mockups)
 export const undoBlockedReturned = RETURNED_FIRST;
 export const UNDO_NET_FLOOR = 'Undoing this would take the paid total below zero. Undo the refund first.';
