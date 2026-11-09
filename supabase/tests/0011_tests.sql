@@ -85,6 +85,50 @@
 begin;
 
 -- ---------------------------------------------------------------------
+-- Test payments (migration 0035): 0035 removed the old one-click Mark paid
+-- (testing_mark_paid / testing_private_mark_paid, 2 arguments). The test
+-- payments below go through these helpers, which call the old function
+-- while it exists and otherwise 0030's *_by version the way the old one
+-- worked: the family's "Paying by" as the way and the worked-out amount
+-- (asked for with 0 cents expected first: that price_changed answer
+-- writes nothing). An ok answer keeps only the old keys (status,
+-- payment_id, amount_cents, method, version), so every check reads the
+-- same answer as before. They run with the caller's rights (as whoever
+-- t_call / "set local role" made the caller), like the call they stand in
+-- for. Temporary: they vanish with the session and the rollback.
+-- ---------------------------------------------------------------------
+
+create function pg_temp.t_mark_paid(p_registration_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_mark_paid($1, $2)' into v_r using p_registration_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_registrations x where x.id = p_registration_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_mark_paid_by($1, $2, $3, 0)' into v_r using p_registration_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_registration_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+-- Callable by the logged-in role too: the test calls it inside "set local role authenticated", and
+-- production gives functions made by the SQL Editor's role no rights for anyone else.
+grant execute on function pg_temp.t_mark_paid(uuid, integer) to public;
+
+
+-- ---------------------------------------------------------------------
 -- Test helpers (temporary: they vanish with the session, and the
 -- rollback undoes them anyway)
 -- ---------------------------------------------------------------------
@@ -330,7 +374,7 @@ declare
     'status', 'day', 'school', 'fingerprint', 'totals', 'count', 'total_cents', 'in_cents', 'net_cents',
     'cash', 'check', 'card', 'cents', 'refunds', 'cash_cents', 'check_cents', 'card_cents', 'items', 'source', 'payment_id',
     'time', 'first_name', 'last_name', 'what', 'event_date', 'is_private', 'kind', 'method', 'amount_cents',
-    'state', 'was_amount_cents', 'was_method', 'moved_to', 'moved_from', 'changed_by_name', 'changed_on',
+    'state', 'was_amount_cents', 'was_method', 'was_school', 'moved_to', 'moved_from', 'changed_by_name', 'changed_on',
     'recorded_by_name', 'added_after_closing', 'closing', 'id', 'by_name', 'at', 'cash_counted_cents',
     'checks_counted', 'checks_counted_cents', 'card_counted_cents', 'expected_count', 'expected_cash_cents',
     'expected_checks', 'expected_checks_cents', 'expected_card_cents', 'note', 'results', 'result', 'diff_cents',
@@ -1070,15 +1114,25 @@ begin
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'shrewsbury', v_d));
   perform pg_temp.t_eq('F6e2 deleted Star event', (v_r #>> '{closing,changed_after}') || '|' || (v_r #>> '{closing,changed_count}'), 'true|1');
 
-  -- f. a Star candidate's school changed (their payment moves schools)
+  -- f. a Star candidate's school changed. Until 0047 their payment moved schools with them (a line counted at
+  -- the CANDIDATE's school). Since 0047 (R1-01) a payment counts at the school stored ON it (the desk that took
+  -- the money, 0038), so nothing moves and the closed day does not change - when the payment has a stored school.
   v_d := v_b + 247;
   perform pg_temp.t_pay('star', v_st_move, 'payment', 14000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), v_desk, v_dn);
   perform pg_temp.t_pay('star', v_st[47], 'payment', 14000, 'card', v_d, pg_temp.t_at(v_d, '15:05'), v_desk, v_dn);
   perform pg_temp.t_eq('F6f close', (pg_temp.t_close(v_c_a1, 'shrewsbury', v_d, 0, null)) ->> 'status', 'ok');
   update public.star_candidates set location_code = 'worcester' where id = v_st_move;
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'shrewsbury', v_d));
-  perform pg_temp.t_eq('F6f school changed', (v_r #>> '{closing,changed_after}') || '|' || (v_r #>> '{closing,changed_count}'), 'true|1');
-  perform pg_temp.t_eq('F6f the payment is now in Worcester', pg_temp.t_sig('worcester', v_d), 'counted:14000:cash');
+  perform pg_temp.t_eq('F6f school changed', (v_r #>> '{closing,changed_after}') || '|' || (v_r #>> '{closing,changed_count}'),
+    case when exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.finance_money_rows_core(text, date, date, text, uuid)')
+                         and pg_get_function_result(p.oid) like '%was_school%')
+              and (select to_jsonb(p) ->> 'school' from public.star_payments p where p.candidate_id = v_st_move limit 1) is not null
+         then 'false|0' else 'true|1' end);
+  perform pg_temp.t_eq('F6f where the payment is now', pg_temp.t_sig('worcester', v_d),
+    case when exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.finance_money_rows_core(text, date, date, text, uuid)')
+                         and pg_get_function_result(p.oid) like '%was_school%')
+              and (select to_jsonb(p) ->> 'school' from public.star_payments p where p.candidate_id = v_st_move limit 1) is not null
+         then '' else 'counted:14000:cash' end);
 
   -- g. a late mis-click undo: the desk's payment 5 s before the close,
   -- undone by the desk 3 s after it (8 s after recording) -> hidden ->
@@ -1301,10 +1355,11 @@ begin
   perform pg_temp.t_eq('F9 note for moved out', v_txt, 'moved to ' || (v_b + 82));
   -- case 12: the Oct 1 payment undone on Oct 20, exported Oct 1 - 15
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_export(%L, %L, %L)', 'worcester', v_b + 120, v_b + 134));
-  -- (0037 adds is_private to every row; it is left out here so this check
-  -- passes before and after 0037 - 0037_tests.sql checks is_private)
+  -- (0037 adds is_private and 0047 adds was_school to every row; both are left
+  -- out here so this check passes before and after them - 0037_tests.sql and
+  -- 0047_tests.sql check them)
   perform pg_temp.t_eq('F9 undone weeks later, in a shorter export',
-    (select jsonb_agg(e - 'is_private') from jsonb_array_elements(v_r -> 'rows') e)::text, jsonb_build_array(jsonb_build_object(
+    (select jsonb_agg(e - 'is_private' - 'was_school') from jsonb_array_elements(v_r -> 'rows') e)::text, jsonb_build_array(jsonb_build_object(
     'day', v_b + 120, 'school', 'worcester', 'time', '15:00', 'first_name', 'Fin', 'last_name', 'Cb 12', 'what', 'color_belt',
     'event_date', v_today + 5, 'kind', 'payment', 'method', 'cash', 'amount_cents', 7000, 'counted_cents', 0,
     'recorded_by_name', v_dn, 'state', 'undone', 'note', 'undone by ' || v_an || ' on ' || (v_b + 139)))::text);
@@ -1487,7 +1542,7 @@ begin
   -- Color Belt: testing_mark_paid then the same admin's Undo straight
   -- away = a mis-click -> not shown at all
   select r.version into v_v from public.testing_registrations r where r.id = v_cb[77];
-  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_mark_paid(%L, %s)', v_cb[77], v_v));
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('pg_temp.t_mark_paid(%L, %s)', v_cb[77], v_v));
   perform pg_temp.t_eq('F13 testing_mark_paid', v_r ->> 'status', 'ok');
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_r ->> 'payment_id'));
   perform pg_temp.t_eq('F13 testing_undo_payment (own, at once)', v_r ->> 'status', 'ok');

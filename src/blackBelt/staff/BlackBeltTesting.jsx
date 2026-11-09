@@ -32,13 +32,15 @@
 //   onModalOpenChange  tells the App a dialog is open (the page behind becomes inert)
 //   location / onLocationChange   the top bar's location switcher (phase B2: the cycle page's
 //                      Candidates tab follows it — v0.118; Cycles and Rubric don't)
+//   deviceLocation     This device's school from the account menu ('Worcester' | 'Shrewsbury'): the desk
+//                      a payment or refund counts at (R1-01, v1.035) — sent as p_school to the database
 //   onLeaveGuardChange (fn | null) — App.jsx asks fn before it leaves this page (the rail, the
 //                      account menu, the browser's Back …). Migration 0024: while a rubric Dan has
 //                      unsaved changes, every way out asks "Discard changes to 1st Dan?" (R10). The
 //                      rubric card registers its question through setGuard; the ways out inside
 //                      Black Belt (the tabs, ← Testing, opening or leaving a cycle) ask it too.
 import { useCallback, useEffect, useId, useRef } from 'react';
-import { IconArrowLeft } from '@tabler/icons-react';
+import BackLink from '../../components/BackLink.jsx';
 import CyclesTab from './cycles/CyclesTab.jsx';
 import CyclePage from './cycle/CyclePage.jsx';
 import RubricTab from './rubric/RubricTab.jsx';
@@ -65,11 +67,8 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   }
   return (
     <>
-      <button type="button" className="link-button ev-back bb-back" onClick={onBack}>
-        {/* ti-arrow-left = back */}
-        <IconArrowLeft size={16} aria-hidden="true" />
-        {T.BACK_TO_TESTING}
-      </button>
+      {/* the shared back link (R3-06, v1.048): 24px with a mouse, a 44px tap box on touch, the title never moves */}
+      <BackLink label={T.BACK_TO_TESTING} onClick={onBack} className="bb-back-link" />
       <div className="phead">
         <div className="phead-titles">
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>
@@ -104,7 +103,7 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   );
 }
 
-export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab: askedTab, onTab, onOpen, location, onLocationChange, onLeaveGuardChange, ...shared }) {
+export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab: askedTab, onTab, onOpen, location, onLocationChange, deviceLocation, onLeaveGuardChange, ...shared }) {
   const baseId = useId();
 
   // ----- The leave guard (R10) -----
@@ -158,6 +157,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab:
           guarded={guarded}
           location={location}
           onLocationChange={onLocationChange}
+          deviceLocation={deviceLocation}
           {...shared}
         />
       </div>

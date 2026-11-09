@@ -21,6 +21,7 @@
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
@@ -28,15 +29,17 @@ import { deleteCycle, loadCycle, loadCycles, schoolToday } from '../../../lib/bl
 import { loadGradingState } from '../../../lib/blackBelt/gradingApi.js';
 import { cycleTag } from '../../../lib/blackBelt/rules.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
-import Choice from '../parts/Choice.jsx';
-import ConfirmDialog from '../parts/ConfirmDialog.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { useCycleEditor } from '../cycle/useCycleEditor.jsx';
 import { useCycleActions } from './useCycleActions.js';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import NoIcon from '../parts/NoIcon.jsx';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
 import * as T from '../text.js';
 
 // The one thing this tab loads (Black Belt is joint, so there is no school in the key).
@@ -112,8 +115,6 @@ export default function CyclesTab({
     pendingBanner = null;
   }, []);
   const [confirm, setConfirm] = useState(null); // the Delete cycle confirmation
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
 
   function setSide(next) {
     lastSide = next;
@@ -121,16 +122,23 @@ export default function CyclesTab({
     setSort(null);
   }
 
-  // ----- One change at a time -----
+  // ----- One change at a time (the shared save line, R2-05) -----
+  // The line holds one save at a time, and an Undo pressed meanwhile waits its turn ("Undoing…")
+  // instead of being dropped (lib/saveLine.js). busy = a save or an Undo is running.
+  const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
+  const busy = line.busy;
+  // The token is this save's own: end() frees the line only for the save that holds it (lib/saveLine.js).
+  // endWrite(status, retry): the database's real answer and how to do the same save again, so a waiting Undo
+  // can build "Neither change saved" with its Retry (C1, v1.127).
+  const tokenRef = useRef(null);
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = line.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  function endWrite(status = 'ok', retry = null) {
+    line.end(status, { retry, token: tokenRef.current });
     if (status && status !== 'ok') clearToast();
   }
 
@@ -153,7 +161,7 @@ export default function CyclesTab({
     setTick((n) => n + 1);
   }
 
-  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload: reloadQuiet, setBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
+  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, undoAction: line.undoAction, reload: reloadQuiet, setBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
 
   const editor = useCycleEditor({
     isAdmin,
@@ -162,6 +170,7 @@ export default function CyclesTab({
     screenLocked,
     beginWrite,
     endWrite,
+    undoAction: line.undoAction,
     setBanner,
     onNoAccess,
     onRefreshProfile,
@@ -224,8 +233,13 @@ export default function CyclesTab({
   // ===== Delete cycle (permanent; the count is read fresh first, contract OP-5 / OP-6) =====
   async function startDelete(cycle, anchor) {
     if (!isAdmin || !beginWrite()) return;
-    const [fresh, grading] = await Promise.all([loadCycle({ cycleId: cycle.id }), loadGradingState({ cycleId: cycle.id })]);
-    endWrite(fresh.status === 'not_found' ? 'ok' : fresh.status);
+    let fresh = { status: 'error' };
+    let grading = { status: 'error' };
+    try {
+      [fresh, grading] = await Promise.all([loadCycle({ cycleId: cycle.id }), loadGradingState({ cycleId: cycle.id })]);
+    } finally {
+      endWrite(fresh.status === 'not_found' ? 'ok' : fresh.status);
+    }
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
@@ -236,7 +250,14 @@ export default function CyclesTab({
       return;
     }
     if (fresh.status !== 'ok') {
-      setBanner({ text: T.LOAD_FAILED });
+      // S-2: the read before Delete cycle failed: Retry reads again
+      setBanner({
+        text: T.LOAD_FAILED,
+        retry: () => {
+          setBanner(null);
+          startDelete(cycle, anchor);
+        },
+      });
       return;
     }
     // 0025 (Q-G3): real grades block deleting (unreadable grading state → the database decides)
@@ -248,6 +269,7 @@ export default function CyclesTab({
     setConfirm({
       key: Date.now(),
       id: cycle.id,
+      name: detail.name,
       title: T.deleteCycleTitle(detail.name),
       body: T.deleteCycleBody(detail.candidateCountAll ?? detail.candidateCount ?? 0),
       args: { cycleId: cycle.id, expectedVersion: detail.version, expectedCandidateCount: detail.candidateCountAll ?? 0 },
@@ -262,8 +284,12 @@ export default function CyclesTab({
     const d = confirm;
     if (!d || d.saving || !beginWrite()) return;
     setConfirm({ ...d, saving: true, failed: false });
-    const result = await deleteCycle(d.args);
-    endWrite(result.status);
+    let result = { status: 'error' };
+    try {
+      result = await deleteCycle(d.args);
+    } finally {
+      endWrite(result.status, () => confirmDelete());
+    }
     const status = result.status;
     if (status === 'ok') {
       setConfirm(null);
@@ -294,7 +320,7 @@ export default function CyclesTab({
     else if (status === 'has_waivers') setBanner({ text: T.HAS_WAIVERS });
     else if (status === 'has_grades') setBanner({ text: T.CYCLE_HAS_GRADES });
     else if (status === 'not_found') setBanner({ text: T.CYCLE_DELETED });
-    else setBanner({ text: T.DELETE_STALE });
+    else setBanner({ text: T.someoneElseChanged(d.name) });
     reloadQuiet();
     focusLater(() => moreEl(d.id));
   }
@@ -523,13 +549,13 @@ export default function CyclesTab({
     <>
       {renderHeader(addButton, staffLine)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
-        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
+        {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
         {live.status === 'ready' && (
           <div className="ev-side">
             <span id={sideLabelId} className="visually-hidden">
               {T.SIDE_SWITCH_LABEL}
             </span>
-            <Choice
+            <ChoiceGroup
               labelId={sideLabelId}
               value={side}
               onChange={setSide}
@@ -563,24 +589,30 @@ export default function CyclesTab({
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {!screenLocked && editor.element}
       {confirm && !screenLocked && (
-        <ConfirmDialog
+        // The shared ConfirmBox (BB7, v1.008 / v1.103): "Keep cycle" on the left and focused first,
+        // the red "Delete cycle" on the right ("Deleting…" while it works, both buttons gray and the
+        // box stays open until it's done). A failed delete shows its amber note under the buttons.
+        <ConfirmBox
           key={confirm.key}
           title={confirm.title}
-          body={confirm.body}
-          cancelLabel={T.CANCEL}
-          confirmLabel={T.DELETE_CYCLE}
-          danger
+          keepLabel={T.KEEP_CYCLE}
+          actionLabel={T.DELETE_CYCLE}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
           failed={confirm.failed ? T.DELETE_FAILED : null}
           busy={confirm.saving}
           onConfirm={confirmDelete}
-          onCancel={() => {
+          onKeep={() => {
             if (confirm.saving) return;
             const opener = confirm.opener;
             const id = confirm.id;
             setConfirm(null);
             focusLater(() => moreEl(id), () => opener);
           }}
-        />
+        >
+          {confirm.body}
+        </ConfirmBox>
       )}
     </>
   );

@@ -16,7 +16,8 @@
 // Only one save travels at a time (a queue); each one sends the version it last saw, so another
 // admin's change is noticed ('stale') instead of overwritten.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowDown, IconArrowLeft, IconArrowUp, IconDots, IconEye, IconGitBranch, IconLock, IconPlus, IconSettings, IconShare, IconTrash } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowUp, IconDots, IconEye, IconGitBranch, IconLock, IconPlus, IconSettings, IconShare, IconTrash } from '@tabler/icons-react';
+import BackLink from '../../components/BackLink.jsx'; // the shared "← Forms" link (R3-06, v1.048)
 import Dialog from '../../components/Dialog.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
@@ -172,7 +173,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       if (res.status === 'no_access') onNoAccess();
       else if (res.status === 'duplicate_slug') setSlugTaken(true);
       else if (res.status === 'stale' || res.status === 'not_found') {
-        setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+        setBanner({ kind: 'stale', text: T.staleForm(form.name) });
         onReload();
       } else if (res.status === 'not_allowed') {
         setBanner({ kind: 'stale', text: T.NOT_ALLOWED });
@@ -269,8 +270,9 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     const now = latestRef.current.fields;
     // A new copy from the database meanwhile, or a new field that took the same id: say so instead
     // of doing nothing.
+    // (U-02: a problem never goes in a toast: the builder's amber bar says it and stays until ×)
     if (copy !== copyRef.current || now.some((f) => f.id === gone.id)) {
-      showToast(T.UNDO_FIELD_CHANGED, { icon: false });
+      setBanner({ kind: 'stale', text: T.UNDO_FIELD_CHANGED });
       return;
     }
     const back = [...now.slice(0, at), gone, ...now.slice(at)];
@@ -278,6 +280,9 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     edit(fieldsProblem(tidy(withRules))?.code === 'showIf' ? back : withRules);
     setSelectedId(gone.id);
     showToast(T.UNDONE, { icon: false });
+    // U-07: the toast's Undo button is gone, so focus would fall to the page: put it on the restored field's row
+    // (twice: the row exists after the first frame; on a phone the list is back once the editor closed)
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.querySelector(`[data-field-id="${gone.id}"] .ffield-btn, [data-field-id="${gone.id}"] .fstepbar-btn, [data-field-id="${gone.id}"] .flist-open`)?.focus()));
   }
   function moveField(id, toIndex) {
     const from = fields.findIndex((f) => f.id === id);
@@ -353,13 +358,13 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     setBookingSaving(false);
     if (result.status === 'ok') {
       setBookingSaved(booking);
-      showToast(T.BOOKING_SAVED);
+      showToast(T.BOOKING_SAVED, { icon: false });
     } else if (result.status === 'no_access') onNoAccess();
     else if (result.status === 'stale' || result.status === 'not_found') {
-      setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: T.staleForm(form.name) });
       onReload();
     } else if (result.status === 'invalid') setBookingNote(T.BOOKING_BAD);
-    else setBookingNote(T.SAVE_FAILED_BAR);
+    else setBookingNote(T.SAVE_FAILED); // under its Save button: pressing Save again is the retry
   }
 
   // ----- Publish, Live / Closed -----
@@ -381,7 +386,8 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     });
     setPublishing(false);
     if (res.status === 'ok') {
-      showToast(T.published(cleanText(name)));
+      setBanner((b) => (b?.kind === 'publishFailed' ? null : b)); // a retry that worked takes its own bar away
+      showToast(T.published(cleanText(name)), { icon: false });
       onReload();
     } else if (res.status === 'not_publishable') {
       const waiver = fields.find((f) => f.type === 'waiver');
@@ -389,9 +395,11 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       setBanner({ kind: 'publish', text: T.NOT_PUBLISHABLE });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale' || res.status === 'not_found') {
-      setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: T.staleForm(form.name) });
       onReload();
-    } else setBanner({ kind: 'save', text: T.SAVE_FAILED_BAR });
+    // a failed Publish keeps its bar with Retry, which publishes again (R2-01); its own kind, so a
+    // later successful autosave doesn't wipe it
+    } else setBanner({ kind: 'publishFailed', text: T.SAVE_FAILED, retry: publish });
   }
   // The "Accepting sign-ups (Live)" switch. `quiet` = the Undo of an earlier flip: no Undo again,
   // just "Undone".
@@ -405,15 +413,18 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     });
     setStatusBusy(false);
     if (res.status === 'ok') {
+      setBanner((b) => (b?.kind === 'liveFailed' ? null : b)); // a retry that worked takes its own bar away
       // Undo for 5 seconds (v1.006, N2): flips the switch back
       if (!quiet) showToast(on ? T.reopenedToast(cleanText(name)) : T.closedToast(cleanText(name)), { icon: false, action: { label: T.UNDO, onAction: () => setAccepting(!on, true) } });
-      else showToast(T.UNDONE, { icon: false }); // the Undo worked (v0.618)
+      // the Undo worked (v0.618); one that opens the form again says so (v1.051 (1), R2-07)
+      else showToast(on ? T.UNDONE_OPEN : T.UNDONE, { icon: false });
       onReload();
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
-      setBanner({ kind: 'stale', text: quiet ? T.UNDO_STALE : T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: T.staleForm(form.name) });
       onReload();
-    } else setBanner({ kind: 'save', text: T.SAVE_FAILED_BAR });
+    // a failed switch or Undo keeps its bar with Retry, which flips the switch again (R2-01)
+    } else setBanner({ kind: 'liveFailed', text: quiet ? T.UNDO_FAILED : T.SAVE_FAILED, retry: () => setAccepting(on, quiet) });
   }
 
   // ----- Header -----
@@ -422,14 +433,14 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     <div className="fhead">
       <div className="fhead-titles">
         {/* "← Forms": saves the draft first, then goes back to the list (v1.020, v0.624) */}
-        <button type="button" className="link-button fb-back" aria-label={T.BACK_TO_FORMS} data-builder-back onClick={async () => {
-          await saveNow();
-          onBack();
-        }}>
-          {/* ti-arrow-left = back */}
-          <IconArrowLeft size={16} aria-hidden="true" />
-          {T.FORMS_LINK}
-        </button>
+        <BackLink
+          label={T.FORMS_LINK}
+          ariaLabel={T.BACK_TO_FORMS}
+          onClick={async () => {
+            await saveNow();
+            onBack();
+          }}
+        />
         <h1 className="ptitle">{cleanText(name) || form.name}</h1>
         <p className="psub" aria-live="polite">
           {line.text}
@@ -507,6 +518,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
             idBase={`${idBase}-booking`}
             onChange={(patch) => setBookingDraft((b) => ({ ...b, ...patch }))}
             onSave={saveBooking}
+            onLeave={saveNow}
           />
         )}
       </FieldEditor>
@@ -543,7 +555,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
             stepNo += 1;
             return [
               gap,
-              <div key={f.id} className={`fstepbar fstepbar--field${selectedId === f.id ? ' is-selected' : ''}${lifted ? ' is-lifted' : ''}`} data-drag-group="fields" data-drag-id={f.id}>
+              <div key={f.id} className={`fstepbar fstepbar--field${selectedId === f.id ? ' is-selected' : ''}${lifted ? ' is-lifted' : ''}`} data-drag-group="fields" data-drag-id={f.id} data-field-id={f.id}>
                 <Grip label={T.dragField(f.label)} gripProps={drag.gripProps('fields', f.id)} />
                 <button type="button" className="fstepbar-btn" aria-pressed={selectedId === f.id} onClick={() => setSelectedId(f.id)}>
                   {T.stepLabel(stepNo, f.label)}
@@ -555,7 +567,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
           const req = f.required || ['parent_name', 'parent_phone', 'parent_email', 'waiver'].includes(f.type);
           return [
             gap,
-            <div key={f.id} className={`ffield${selectedId === f.id ? ' is-selected' : ''}${lifted ? ' is-lifted' : ''}`} data-drag-group="fields" data-drag-id={f.id}>
+            <div key={f.id} className={`ffield${selectedId === f.id ? ' is-selected' : ''}${lifted ? ' is-lifted' : ''}`} data-drag-group="fields" data-drag-id={f.id} data-field-id={f.id}>
               <Grip label={T.dragField(f.label)} gripProps={drag.gripProps('fields', f.id)} />
               <button type="button" className="ffield-btn" aria-pressed={selectedId === f.id} onClick={() => setSelectedId(f.id)}>
                 <span className="ffield-label">
@@ -608,7 +620,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
           return fields.map((f, i) => {
             if (f.type === 'step') n += 1;
             const row = (
-              <li key={f.id} className={`prow flist-row${f.type === 'step' ? ' fphone-steprow' : ''}`}>
+              <li key={f.id} data-field-id={f.id} className={`prow flist-row${f.type === 'step' ? ' fphone-steprow' : ''}`}>
                 <button type="button" className="prow-main flist-open" onClick={() => setPhoneEdit(f.id)}>
                   <span className="l1">
                     <FieldIcon type={f.type} /> {f.type === 'step' ? T.stepLabel(n, f.label) : f.label}
@@ -649,7 +661,8 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   return (
     <div className="fbuilder">
       {header}
-      {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
+      {/* a bar with `retry` gets Retry, which does the same again (v1.004, R2-01) */}
+      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={publishing || statusBusy} onDismiss={() => setBanner(null)} />}
       {fieldNote && <Notice>{fieldNote}</Notice>}
       {isPhone ? (
         phoneList

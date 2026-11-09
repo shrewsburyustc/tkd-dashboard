@@ -1,14 +1,15 @@
 // dialogParts.jsx — small pieces the Candidates dialogs share: the Amount box with "$", the
-// Cash · Check · Card choice, the optional Note, and the bottom row (note + Cancel / Save).
-// AmountMethod puts Amount and Method side by side on the PC and tablet (mockup Candidates 4);
+// Paid by Cash · Check · Card choice (PaidByBox; "Refunded by" on Record refund = PaidByBox with a label), the
+// optional Note, and the bottom row (note + Cancel / Save).
+// AmountMethod puts Amount and Paid by side by side on the PC and tablet (mockup Candidates 4);
 // phones stack them.
 // Why it exists: Record payment, Edit payment and Record refund (mockups Candidates 4 and 5) draw
 // the same fields the same way; writing them once keeps them identical.
 import { useId } from 'react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import { PaidByField } from '../../../components/MarkPaidBox.jsx';
 import Notice from '../../../components/Notice.jsx';
-import { METHODS } from '../../../lib/blackBelt/rules.js';
-import Choice from '../parts/Choice.jsx';
+import { PAID_BY } from '../../../components/text.js';
 import * as T from '../text.js';
 
 // "Amount  [$ 390]" — any cents, typed freely (money.parseAmount reads it).
@@ -49,17 +50,21 @@ export function AmountField({ value, onChange, error, readOnly, autoFocus = fals
   );
 }
 
-// "Method  Cash | Check | Card" — nothing chosen at first (OP-B5). Compact: only as wide as its
-// three words (bb-segmented--compact), as drawn.
-export function MethodField({ value, onChange, error, readOnly }) {
+// "Paid by  Cash | Check | Card" — nothing chosen at first (OP-B5): our form records no way to pay
+// on its own, so there is no preset and no hint. The shared PaidByField (BB1, rulebook v1.001 /
+// v1.104) draws the label and the joined buttons; it has no error state, so our amber "Choose
+// cash, check or card." goes under it.
+// For screen readers the field sits in a group named "Paid by" (the shared field exposes no label id)
+// that points at the amber error and says it is invalid, so the error is read with the buttons (C2).
+// Record refund passes label={T.REFUNDED_BY} ("Refunded by": Star's and Finance's words, BB1): the
+// shared field takes the label, so there is no local copy of its look any more (step 2 of the
+// pass-1 shared-parts switch). Pass `label` and the group is named by it too.
+export function PaidByBox({ value, onChange, error, readOnly, label = PAID_BY }) {
   const id = useId();
   return (
-    <div className="field">
-      <span id={`${id}-method`} className="field-label">
-        {T.METHOD}
-      </span>
-      <Choice labelId={`${id}-method`} options={METHODS.map((key) => ({ key, label: T.methodName(key) }))} value={value} readOnly={readOnly} onChange={onChange} className={`bb-segmented--compact${error ? ' is-invalid' : ''}`} />
-      {error && <Notice>{error}</Notice>}
+    <div className="field" role="group" aria-label={label} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-err` : undefined}>
+      <PaidByField value={value} onChange={onChange} readOnly={readOnly} label={label} />
+      {error && <Notice id={`${id}-err`}>{error}</Notice>}
     </div>
   );
 }

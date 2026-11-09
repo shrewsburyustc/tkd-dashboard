@@ -26,6 +26,7 @@
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../../components/IconButton.jsx';
 import * as T from './text.js';
+import { canPrintReceipt } from '../../../../lib/star/candidateMenu.js';
 
 // The row's one status tag that isn't about money (also used while details are hidden), or null.
 export function statusTagKind(row, notSavedId) {
@@ -114,8 +115,10 @@ function CandidateRow({ row, ctx }) {
   const { layout, nav, handlers, hidden, oneSchool } = ctx;
   const name = T.candidateName(row);
   const removed = row.status === 'withdrawn';
-  const showRecord = !hidden && !removed && !row.paid && !row.isMakeup && row.feeKind !== 'none';
-  const showMenu = !removed || ctx.isAdmin; // staff get no ⋯ on removed rows (G13)
+  // R3-02 (v1.055): a row flagged Possible duplicate offers no Mark paid until it is reviewed.
+  const showRecord = !hidden && !removed && !row.paid && !row.isMakeup && row.feeKind !== 'none' && row.duplicateState !== 'possible';
+  // Staff get no ⋯ on a removed row (G13), except one that paid: Print receipt only (M-03, v1.055).
+  const showMenu = !removed || ctx.isAdmin || canPrintReceipt(row, hidden);
   const open = ctx.menuFor === row.id;
   const selected = open || ctx.selectedId === row.id;
   // Paid rows show the method actually used (screen 4: "Alex Kim … Check · Paid"); unpaid rows the family's choice.
@@ -128,6 +131,10 @@ function CandidateRow({ row, ctx }) {
       className="btn btn-sm st-record"
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
+      // R1-08 (v1.103 detail 8): while a save runs the shared gray look shows (shared.css grays any
+      // .btn marked aria-disabled), and aria-busy gives it the busy cursor, as the rulebook asks of a
+      // button that waits for a save. It stays focusable.
+      aria-busy={ctx.busy ? 'true' : undefined}
       aria-haspopup="dialog"
       aria-expanded={ctx.markPaidFor === row.id ? 'true' : 'false'}
       data-star-mark-paid={row.id}

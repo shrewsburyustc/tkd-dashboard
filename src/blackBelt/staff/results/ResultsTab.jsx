@@ -38,7 +38,9 @@
 //     attention (resultLines.openGradesDay).
 //   Choose subjects (admins) — C1's MakeupSubjectsDialog over Results.
 //   Print results / Download CSV — the whole cycle, both schools, whatever is showing (proposal 2).
-// Only one write at a time (busyId): while a save or an address read is on its way, the other
+// The Undo Mark as sent ask is the shared ConfirmBox (BB7): the safe button on the left, the red action on the right.
+// Only one write at a time (the shared save line, R2-05; busyId marks the row): an Undo of Mark as
+// sent pressed meanwhile waits its turn ("Undoing…"). While a save or an address read is on its way, the other
 // buttons wait. Email result, Mark as sent, Print results and Download CSV are grayed offline.
 //
 // Props (from CyclePage.jsx):
@@ -50,22 +52,26 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconArrowBackUp, IconCurrencyDollarOff, IconDownload, IconMailCheck, IconPrinter, IconSchool, IconWifiOff,
 } from '@tabler/icons-react';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../lib/device.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { downloadCsv, loadResultEmail, loadResultTexts, loadResults, markSent, undoSent } from '../../../lib/blackBelt/gradingApi.js';
 import { buildResultMessage, mailtoFor, resultKind } from '../../../lib/blackBelt/resultEmail.js';
 import { schoolToday } from '../../../lib/blackBelt/api.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
-import ChoiceGroup from '../../../screens/testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import MakeupSubjectsDialog from '../grading/MakeupSubjectsDialog.jsx';
-import ConfirmDialog from '../parts/ConfirmDialog.jsx';
 import ResultRows from './ResultRows.jsx';
 import ResultsSheet from './ResultsSheet.jsx';
 import { canEmail, emailAnswerFromRow, isSent, nothingYet, openGradesDay, schoolDateOf, summaryCounts } from './resultLines.js';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
+import { UNDO_SECTION } from '../text.js';
 import * as T from './text.js';
 import './results.css';
 
@@ -195,7 +201,6 @@ export default function ResultsTab({
   const [choose, setChoose] = useState(null); // Choose subjects: { rowId, opener }
   const [announce, setAnnounce] = useState(''); // "Message copied" for screen readers
   const [, setAskedVersion] = useState(0); // redraws after the page-memory Map changes
-  const busyRef = useRef(false);
   const undoToastRef = useRef(null); // the token of the Mark as sent toast still showing (the 9 s cap)
   const capTimerRef = useRef(null);
   useEffect(() => () => window.clearTimeout(capTimerRef.current), []);
@@ -254,23 +259,31 @@ export default function ResultsTab({
     setAskedVersion((v) => v + 1);
   }
 
-  // ----- One write at a time -----
+  // ----- One write at a time (the shared save line, R2-05) -----
+  // The line holds one save at a time; the toast's Undo of Mark as sent pressed meanwhile waits its
+  // turn ("Undoing…") instead of being dropped (lib/saveLine.js). busyId marks the row being saved.
+  const line = useSaveLine({ section: UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
+  // end(status, retry): status is the database's real answer ('ok' or a failure) and retry does the same save
+  // again, so an Undo that waited for a save that failed can build "Neither change saved" with its Retry
+  // (C1, v1.127). Every begin() is ended in a finally (C8), so a call that throws still frees the line.
+  const tokenRef = useRef(null);
   function begin(rowId) {
-    if (busyRef.current) return false;
-    busyRef.current = true;
+    const token = line.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     setBusyId(rowId);
     return true;
   }
-  function end() {
-    busyRef.current = false;
+  function end(status = 'ok', retry = null) {
     setBusyId(null);
+    line.end(status, { retry, token: tokenRef.current });
   }
 
   // ----- Email result (proposals 12–14, 19) -----
   // Everything up to the clipboard runs straight inside the click: no waiting before the copy.
   async function emailResult(row) {
     // (Checked again here, not only on the button: a banner's Retry can call this later.)
-    if (emailOff || hiddenNowRef.current || lockedNowRef.current || !browserOnline() || busyRef.current) return;
+    if (emailOff || hiddenNowRef.current || lockedNowRef.current || !browserOnline() || line.isBusy()) return;
     const current = findRow(row.id) ?? row;
     const name = nameOf(current);
     const kind = resultKind(current.result);
@@ -290,9 +303,16 @@ export default function ResultsTab({
     }
     if (!begin(current.id)) return;
     setBanner(null);
-    const copied = await copyPromise.then(() => true, () => false);
-    const answer = await loadResultEmail({ candidateId: current.id });
-    end();
+    let copied = false;
+    let answer = { status: 'error' };
+    try {
+      copied = await copyPromise.then(() => true, () => false);
+      answer = await loadResultEmail({ candidateId: current.id });
+    } finally {
+      // Reading the family's address changes nothing, so it is not a "save" that a waiting Undo needs
+      // to report as failed: the line is freed as 'ok' either way.
+      end();
+    }
     // The screen locked, or Hide payments went on, while the address was being read: nothing opens
     // (no family address behind the lock screen or against the switch).
     if (lockedNowRef.current || hiddenNowRef.current) return;
@@ -339,18 +359,22 @@ export default function ResultsTab({
     setBanner(null);
     clearToast();
     const clickedAt = Date.now();
-    const answer = await markSent({ candidateId: current.id, expectedResultKey: current.result.result_key });
-    if (answer.status === 'ok') {
+    let answer = { status: 'error' };
+    try {
+      answer = await markSent({ candidateId: current.id, expectedResultKey: current.result.result_key });
       // The row keeps its question (busy) until the reload shows "Sent Jun 9 · …" — no flash of
       // "Not sent yet" in between.
-      await reload();
+      if (answer.status === 'ok') await reload();
+    } finally {
+      end(answer.status, () => markAsSent(current));
+    }
+    if (answer.status === 'ok') {
       forget(current.id);
-      end();
       const token = {};
       undoToastRef.current = token;
       showToast(T.markedAsSent(name), {
         icon: false,
-        action: { label: T.UNDO, onAction: () => undoFromToast(answer.sentId) },
+        action: line.undoAction(() => runUndoSent(answer.sentId), { words: T.markedAsSent(name) }),
       });
       window.clearTimeout(capTimerRef.current);
       // Undo goes away 9 seconds after the click at the latest, however long the toast was paused
@@ -363,7 +387,6 @@ export default function ResultsTab({
       }, Math.max(0, clickedAt + UNDO_CAP_MS - Date.now()));
       return;
     }
-    end();
     if (answer.status === 'no_access') {
       onNoAccess();
       return;
@@ -377,23 +400,23 @@ export default function ResultsTab({
     // The connection: Retry; the row goes back to its question.
     setBanner({ text: T.markSentRefusal('error', name), retry: () => markAsSent(current) });
   }
-  async function undoFromToast(sentId) {
+  // The toast's Undo of Mark as sent, run inside the save line: answers { status, reason? } and the
+  // line shows "Undone", or the bar ("Undo didn't save…" with Retry, or the database's reason).
+  async function runUndoSent(sentId) {
     undoToastRef.current = null;
-    if (!begin(null)) return;
     const answer = await undoSent({ sendId: sentId });
-    end();
     if (answer.status === 'no_access') {
       onNoAccess();
-      return;
+      return { status: 'no_access' };
     }
     if (answer.status === 'ok') {
-      showToast(T.TOAST_UNDONE, { icon: false }); // R2-07: the Undo worked
-    } else {
-      const retry = answer.status === 'error' ? () => undoFromToast(sentId) : undefined;
-      setBanner({ text: T.undoSentRefusal(answer.status), retry });
-      if (answer.status === 'not_allowed') onRefreshProfile?.();
+      await reload();
+      return { status: 'ok' };
     }
-    reload();
+    if (answer.status === 'error') return { status: 'error' };
+    if (answer.status === 'not_allowed') onRefreshProfile?.();
+    await reload();
+    return { status: answer.status, reason: T.undoSentRefusal(answer.status) };
   }
   // Admins: ⋯ → Undo Mark as sent asks first (proposal 18); no Undo toast afterwards.
   function openUndoConfirm(row, opener) {
@@ -410,8 +433,12 @@ export default function ResultsTab({
     const d = confirm;
     if (!d || !begin(d.row.id)) return;
     setConfirm({ ...d, saving: true, failed: false });
-    const answer = await undoSent({ sendId: d.sentId });
-    end();
+    let answer = { status: 'error' };
+    try {
+      answer = await undoSent({ sendId: d.sentId });
+    } finally {
+      end(answer.status, () => confirmUndo());
+    }
     if (answer.status === 'no_access') {
       setConfirm(null);
       onNoAccess();
@@ -539,7 +566,7 @@ export default function ResultsTab({
     const row = findRow(menu.id);
     if (!row) return null;
     const anchor = menu.anchor;
-    const busy = busyId !== null;
+    const busy = busyId !== null || line.busy;
     // ti-school = open a candidate's grades
     const items = [{ key: 'open', label: T.OPEN_GRADES, Icon: IconSchool, onSelect: () => openGrades(row) }];
     if (canEmail(row) && row.hasEmail && !isSent(row)) {
@@ -633,7 +660,10 @@ export default function ResultsTab({
     isAdmin,
     emailOff,
     markOff: !online,
-    whyId: !online ? `${whyId}-rows` : undefined, // aria-describedby for Email result / Mark as sent while offline
+    lineBusy: line.busy, // a save or an Undo holds the line: Email result / Mark as sent on every row are unavailable, never silent (C3)
+    whyId: !online ? `${whyId}-rows` : undefined, // aria-describedby for Mark as sent while offline
+    // R4-08: Email result points at every gray line that explains why it is off: the hidden-details line and/or the offline line
+    emailWhyId: [hidden ? `${whyId}-hidden` : null, !online ? `${whyId}-rows` : null].filter(Boolean).join(' ') || undefined,
     today,
     danObj,
     submissionsDue,
@@ -716,7 +746,7 @@ export default function ResultsTab({
             )}
             {rows.every((r) => nothingYet(r.result)) && <p className="bbres-note">{T.NO_GRADES_YET}</p>}
             {hidden && (
-              <p className="bbres-note">
+              <p id={`${whyId}-hidden`} className="bbres-note">
                 {/* ti-currency-dollar-off = payments hidden on this device (the top bar's chip) */}
                 <IconCurrencyDollarOff size={16} aria-hidden="true" />
                 {T.EMAIL_OFF_HIDDEN}
@@ -736,10 +766,12 @@ export default function ResultsTab({
     <>
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel bbres-panel">
         {banner && (
-          <ErrorBanner
+          <LineBar
+            takeFocus={banner.takeFocus === true}
+            focusKey={banner}
             text={banner.text}
             onRetry={banner.retry ? () => banner.retry() : undefined}
-            retrying={busyId !== null || csvBusy || printBusy}
+            retrying={busyId !== null || csvBusy || printBusy || banner.retrying === true}
             onDismiss={() => setBanner(null)}
           />
         )}
@@ -758,16 +790,23 @@ export default function ResultsTab({
       </div>
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {confirm && !screenLocked && (
-        <ConfirmDialog
+        // The shared ConfirmBox, the same as Star's Undo Mark as sent box (rulebook v1.008): "Keep send
+        // record" on the left and focused first, the action blue (it only reverses) with the undo arrow,
+        // "Undoing…" while it works.
+        <ConfirmBox
           title={T.undoConfirmTitle(nameOf(confirm.row))}
-          body={T.undoConfirmBody(confirm.day)}
-          cancelLabel={T.CANCEL}
-          confirmLabel={T.UNDO_CONFIRM_GO}
+          keepLabel={T.UNDO_CONFIRM_KEEP}
+          actionLabel={T.UNDO_CONFIRM_GO}
+          busyLabel={T.UNDO_CONFIRM_BUSY}
+          actionIcon={IconArrowBackUp}
+          loses="something"
           busy={confirm.saving}
           failed={confirm.failed ? T.undoSentRefusal('error') : null}
           onConfirm={confirmUndo}
-          onCancel={() => !confirm.saving && closeConfirm()}
-        />
+          onKeep={() => !confirm.saving && closeConfirm()}
+        >
+          {T.undoConfirmBody(confirm.day)}
+        </ConfirmBox>
       )}
       {choose && chooseRow && !screenLocked && (
         <MakeupSubjectsDialog

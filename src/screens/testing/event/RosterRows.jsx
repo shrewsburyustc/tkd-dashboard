@@ -7,6 +7,10 @@
 //   Tablet:                  the same without Paid on (it's in the detail view, rule 1.3)
 //   Phone:                   stacked: name + registered, testing for, "Cash · paid Nov 3",
 //                            then the tag and Mark paid, with ⋯ on the right
+// Which of the three the roster draws follows the ROOM beside the left panel, not only the window's
+// width (pass 2 L-02, rulebook v1.053, v1.130): in a room narrower than ROSTER_ROOM (eventRules.js)
+// even a tablet-sized window gets the phone rows. EventPage works that out (rosterLayoutFor) and hands
+// it in as ctx.layout; this file only reads ctx.layout.
 // One tag per row (rule 8): Possible duplicate (amber) > Paid (green) > Not paid (gray).
 // Phase 3 (v0.191): a student an admin added after the testing day gets a gray line
 // "Added Nov 21 by Jeffrey Berg (admin)" under the name.
@@ -23,6 +27,7 @@
 import { Fragment } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
+import { canPrintReceipt } from '../../../lib/testing/eventRules.js';
 import { TestingForCell } from './StudentDialog.jsx';
 import * as T from '../text.js';
 
@@ -77,7 +82,9 @@ function StudentRow({ row, ctx }) {
   const name = T.studentLabel(row);
   const removed = row.status === 'withdrawn';
   const showMarkPaid = !hidden && !removed && !row.paid && row.duplicateState !== 'possible';
-  const showMenu = !removed || ctx.isAdmin;
+  // A removed row's ⋯: admins always; staff only when it holds Print receipt (a payment that still
+  // stands, pass 2 M-03, v0.428). With nothing paid, staff see no ⋯ there, as before.
+  const showMenu = !removed || ctx.isAdmin || canPrintReceipt(row, hidden);
   const open = ctx.menuFor === row.id;
   const selected = open || ctx.selectedId === row.id;
   const moved = removed && row.movedTo ? row.movedTo : null;
@@ -100,7 +107,7 @@ function StudentRow({ row, ctx }) {
   const markPaid = showMarkPaid ? (
     <button
       type="button"
-      className="btn btn-sm ev-markpaid"
+      className={`btn btn-sm ev-markpaid${ctx.busy ? ' is-unavailable' : ''}`}
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
       aria-haspopup="dialog"

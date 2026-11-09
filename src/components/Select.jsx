@@ -29,7 +29,10 @@
 // Props:
 //   id, labelId, describedBy   the field's id, its visible label's id, the hint / error under it
 //   value          the chosen value, or null (nothing chosen)
-//   options        [{ value, label }]
+//   options        [{ value, label, group? }]. With `group` ("Current", "Planned"), the list shows the
+//                  group's name as a heading row above its first choice, like a browser's optgroup:
+//                  keep a group's choices next to each other, in order. Nothing else changes (the
+//                  arrow keys and typing move by choice; the heading is only text).
 //   placeholder    shown when value is null ("Choose…")
 //   onChange       (value) => void
 //   readOnly       true while saving ("busy"): gray, the busy cursor, it doesn't open; still a Tab stop
@@ -37,6 +40,13 @@
 //                  reminder is Off (rulebook v1.116 / v0.823): gray words and chevron on the light
 //                  gray box, the plain cursor, skipped by Tab, never opens. Not the same as readOnly
 //                  ("busy saving"); when both are true, disabled wins. Default false.
+//   unavailable    true when staff can't change this field right now and the screen says why (rulebook
+//                  v1.138; design review R3-12; v1.103's unavailable look, v1.012): the same gray words and
+//                  chevron on the light gray box as `disabled`, but the `not-allowed` cursor, and it STAYS a
+//                  Tab stop (aria-disabled, not tabIndex -1), so a keyboard or screen-reader user reaches it
+//                  and hears the reason the caller links with `describedBy` ("Ask an admin"). It never
+//                  opens. Not `readOnly` (the busy "saving" look); `disabled` wins when both are true.
+//                  Default false.
 //   invalid        true when an error is shown under the field
 //   autoFocus      true: the dialog puts keyboard focus here when it opens (data-autofocus); never
 //                  while disabled
@@ -47,17 +57,18 @@
 //                  that typing STARTED (before the "1" of "10" moved it). The time list
 //                  (TimeList.jsx) uses it so typing a number jumps to that hour (M8 detail b,
 //                  rulebook v1.109). Without it, typing works exactly as before.
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { IconChevronDown } from '@tabler/icons-react';
 
 const PAGE_STEP = 8;
 const TYPE_AHEAD_MS = 500;
 const LIST_MAX_HEIGHT = 244; // px — the same as FinalAwardSelect: the last visible row is cut in half (the cue there's more)
 
-export default function Select({ id, labelId, describedBy, value, options, placeholder, onChange, readOnly = false, disabled = false, invalid = false, autoFocus = false, matcher = null }) {
+export default function Select({ id, labelId, describedBy, value, options, placeholder, onChange, readOnly = false, disabled = false, unavailable = false, invalid = false, autoFocus = false, matcher = null }) {
   const baseId = useId();
   const listId = `${baseId}-list`;
   const optionId = (index) => `${baseId}-o${index}`;
+  const headingId = (index) => `${baseId}-g${index}`; // the heading row above a group's first choice
   const fieldRef = useRef(null);
   const listRef = useRef(null);
 
@@ -72,7 +83,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
   const typedRef = useRef({ text: '', at: 0, from: -1 });
 
   function openList(activeIndex) {
-    if (readOnly || disabled) return;
+    if (readOnly || disabled || unavailable) return;
     setActive(Math.max(0, activeIndex));
     setOpen(true);
   }
@@ -90,10 +101,10 @@ export default function Select({ id, labelId, describedBy, value, options, place
   // Turned off while the list is open (e.g. another admin turns Finance's reminder Off and the
   // screen redraws): the list closes before the screen is painted, so it never shows on a gray field.
   useLayoutEffect(() => {
-    if (disabled) closeList();
-    // Only when `disabled` changes.
+    if (disabled || unavailable) closeList();
+    // Only when `disabled` or `unavailable` changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled]);
+  }, [disabled, unavailable]);
 
   // Under the field, as wide as it; above it when there's no room below.
   useLayoutEffect(() => {
@@ -149,7 +160,11 @@ export default function Select({ id, labelId, describedBy, value, options, place
   function moveTo(index) {
     const next = Math.min(Math.max(index, 0), options.length - 1);
     setActive(next);
-    window.requestAnimationFrame(() => document.getElementById(optionId(next))?.scrollIntoView({ block: 'nearest' }));
+    window.requestAnimationFrame(() => {
+      // A group's first choice keeps its heading in view too (the heading first, then the choice).
+      document.getElementById(headingId(next))?.scrollIntoView({ block: 'nearest' });
+      document.getElementById(optionId(next))?.scrollIntoView({ block: 'nearest' });
+    });
   }
 
   // Type-ahead: the next choice (after the active one, wrapping) starting with what was typed.
@@ -177,7 +192,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
   }
 
   function handleKeyDown(event) {
-    if (readOnly || disabled) return;
+    if (readOnly || disabled || unavailable) return;
     const { key, altKey } = event;
     const typing = Date.now() - typedRef.current.at <= TYPE_AHEAD_MS && typedRef.current.text !== '';
     const printable = key.length === 1 && !event.ctrlKey && !event.metaKey && !altKey && (key !== ' ' || typing);
@@ -247,7 +262,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
         role="combobox"
         tabIndex={disabled ? -1 : 0}
         data-autofocus={autoFocus && !disabled ? true : undefined}
-        className={`input fa-field sel-field${open ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}${disabled ? ' is-disabled' : ''}${currentIndex < 0 ? ' is-empty' : ''}`}
+        className={`input fa-field sel-field${open ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}${disabled ? ' is-disabled' : ''}${unavailable && !disabled ? ' is-unavailable' : ''}${currentIndex < 0 ? ' is-empty' : ''}`}
         aria-labelledby={labelId}
         aria-describedby={describedBy}
         aria-haspopup="listbox"
@@ -255,7 +270,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
         aria-controls={listId}
         aria-activedescendant={open ? optionId(active) : undefined}
         aria-readonly={readOnly && !disabled ? 'true' : undefined}
-        aria-disabled={disabled ? 'true' : undefined}
+        aria-disabled={disabled || unavailable ? 'true' : undefined}
         aria-invalid={invalid ? 'true' : undefined}
         onKeyDown={handleKeyDown}
         // Turned off: a click or tap doesn't move the focus here (as a browser's disabled dropdown)
@@ -277,21 +292,39 @@ export default function Select({ id, labelId, describedBy, value, options, place
         style={place ? { top: place.top, left: place.left, width: place.width, maxHeight: place.maxHeight } : undefined}
       >
         {options.map((option, index) => (
-          <li
-            key={option.value}
-            id={optionId(index)}
-            role="option"
-            aria-selected={option.value === value ? 'true' : 'false'}
-            className={`fa-option${index === active ? ' is-active' : ''}${option.value === value ? ' is-selected' : ''}`}
-            // mousedown preventDefault keeps focus on the field
-            onMouseDown={(event) => event.preventDefault()}
-            onMouseMove={() => {
-              if (active !== index) setActive(index);
-            }}
-            onClick={() => choose(index)}
-          >
-            {option.label}
-          </li>
+          <Fragment key={option.value}>
+            {/* A group heading ("Current", "Planned") above the first choice of each group: plain text,
+                never a choice, never reached by the arrow keys (they move by choice). */}
+            {option.group && option.group !== options[index - 1]?.group && (
+              <li
+                role="presentation"
+                id={headingId(index)}
+                // Seen, not heard: each choice in the group already says its group (aria-label below).
+                aria-hidden="true"
+                className="fa-group-label"
+                // a click on the heading must not take the focus off the field
+                onMouseDown={(event) => event.preventDefault()}
+              >
+                {option.group}
+              </li>
+            )}
+            <li
+              id={optionId(index)}
+              role="option"
+              aria-selected={option.value === value ? 'true' : 'false'}
+              // A choice in a group says its group too, so a screen reader hears it ("Current: Spring")
+              aria-label={option.group ? `${option.group}: ${option.label}` : undefined}
+              className={`fa-option${index === active ? ' is-active' : ''}${option.value === value ? ' is-selected' : ''}`}
+              // mousedown preventDefault keeps focus on the field
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseMove={() => {
+                if (active !== index) setActive(index);
+              }}
+              onClick={() => choose(index)}
+            >
+              {option.label}
+            </li>
+          </Fragment>
         ))}
       </ul>
     </div>

@@ -5,7 +5,10 @@
 //   - "Cancelled class no longer on the schedule: …" when the schedule changed after a closure
 //     was saved (v0.239 answer 2)
 //   - events (time, type color, title); click one to edit / see it
-//   - Color Belt / Star testing events, read from Testing (changed there, v0.239 answer 1)
+//   - every other section's dated things (v0.645, read-only; each row opens the item in its own
+//     section): Color belt / Star testing days and private tests, Black Belt days and camp days
+//     join Events; a "Deadlines" part follows Events; "New sign-ups" ("Liam P. · form name",
+//     opens the child in Prospects) follows Follow-ups; a gray line when they couldn't be loaded
 //   - every class that day in its color; cancelled ones stay listed, crossed out
 //     (on Both: each school's classes under its own heading)
 //   - free classes booked through Forms (child's first name, class, time, form); one whose class
@@ -20,12 +23,15 @@
 // Props:
 //   date, today, info (buildDay result), schoolLabel, both, typeColor,
 //   isAdmin, onOpenEvent(event, element), onOpenClosure(closure, element),
-//   followUpsFailed (true = show "Couldn't load follow-ups."), onOpenFollowUp(follow-up)
-import { IconAlertTriangle, IconCertificate, IconChevronRight, IconClockHour4, IconUserCheck, IconUserPlus } from '@tabler/icons-react';
+//   followUpsFailed (true = show "Couldn't load follow-ups. Check the connection, then retry." with
+//   Retry: onRetryFollowUps), onOpenFollowUp(follow-up), onOpenItem(item), itemsFailed (true = the
+//   same kind of line for "the other sections' dates", Retry: onRetryItems)
+import { IconAlertTriangle, IconChevronRight, IconClockHour4, IconUserCheck, IconUserPlus } from '@tabler/icons-react';
+import ErrorBanner from '../../components/ErrorBanner.jsx'; // the amber line with Retry (S-2, v1.051 (2))
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, formatTime, parseTime } from '../../lib/schedule/time.js';
-import { schoolLetters } from './MonthGrid.jsx';
+import { ItemIcon, schoolLetters } from './MonthGrid.jsx';
 import * as T from './text.js';
 
 function Dots({ colorKeys }) {
@@ -57,12 +63,33 @@ function FollowUps({ list, date, today, onOpen }) {
   );
 }
 
-export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn, followUpsFailed = false, onOpenFollowUp }) {
+// One row of another section's date (v0.645): time, the section's icon, the name, a chevron. The
+// whole row is a button that opens the item in its own section. `timed` false = no time column
+// (new sign-ups have a day, not a time).
+function ItemRow({ item, both, onOpen, timed = true }) {
+  const color = item.kind === 'camp_day' ? colorOf('teal').text : undefined;
+  return (
+    <li>
+      {/* the spoken name says what it is, where it opens and (like the Week view's blocks) when */}
+      <button type="button" className="cpanel-row cpanel-row--btn" data-item={item.id} aria-label={timed ? `${T.openItem(item)}, ${T.itemTime(item)}` : T.openItem(item)} onClick={() => onOpen(item)}>
+        {timed && <span className="cpanel-time">{T.itemTime(item)}</span>}
+        <ItemIcon item={item} size={16} className="cpanel-icon" />
+        <span className="cpanel-name" style={color ? { color } : undefined}>
+          {both && <b className="cchip-letters">{schoolLetters(item.locationCode)}</b>}
+          {T.itemText(item)}
+        </span>
+        <IconChevronRight size={16} aria-hidden="true" />
+      </button>
+    </li>
+  );
+}
+
+export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn, followUpsFailed = false, onOpenFollowUp, onOpenItem, itemsFailed = false, onRetryFollowUps, onRetryItems }) {
   const isToday = date === today;
   const showClasses = info.shows?.classes !== false;
   const followSchools = both ? info.schools.filter((s) => info.followUps.some((f) => f.code === s.code)) : [];
   const action = isAdmin ? T.editThing : T.viewThing;
-  const hasEvents = info.events.length > 0 || info.testing.length > 0;
+  const hasEvents = info.events.length > 0 || info.items.length > 0;
   return (
     <section className="cpanel" aria-label={T.longDate(date)}>
       <h2 className="cpanel-title">{T.longDate(date)}</h2>
@@ -121,15 +148,19 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
                 </li>
               );
             })}
-            {info.testing.map((t) => (
-              <li key={t.id} className="cpanel-row" title={T.TESTING_FROM}>
-                <span className="cpanel-time">{t.start === null ? T.ALL_DAY : T.eventTime({ kind: 'range', start: t.start })}</span>
-                <IconCertificate size={16} aria-hidden="true" className="cpanel-icon" />
-                <span className="cpanel-name">
-                  {both && <b className="cchip-letters">{schoolLetters(t.locationCode)}</b>}
-                  {t.title}
-                </span>
-              </li>
+            {info.items.map((it) => (
+              <ItemRow key={it.id} item={it} both={both} onOpen={onOpenItem} />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {info.deadlines.length > 0 && (
+        <>
+          <h3 className="cpanel-head">{T.DEADLINES}</h3>
+          <ul className="cpanel-list">
+            {info.deadlines.map((it) => (
+              <ItemRow key={it.id} item={it} both={both} onOpen={onOpenItem} />
             ))}
           </ul>
         </>
@@ -179,7 +210,35 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
             <FollowUps list={info.followUps.filter((f) => f.code === school.code)} date={date} today={today} onOpen={onOpenFollowUp} />
           </div>
         ))}
-      {followUpsFailed && <p className="cpanel-empty">{T.FOLLOW_UPS_FAILED}</p>}
+      {followUpsFailed && <ErrorBanner text={T.FOLLOW_UPS_FAILED} onRetry={onRetryFollowUps} />}
+
+      {info.signupCount > 0 && !both && (
+        <>
+          <h3 className="cpanel-head">{T.NEW_SIGNUPS}</h3>
+          <ul className="cpanel-list">
+            {info.signups.map((it) => (
+              <ItemRow key={it.id} item={it} both={false} onOpen={onOpenItem} timed={false} />
+            ))}
+          </ul>
+        </>
+      )}
+      {info.signupCount > 0 &&
+        both &&
+        info.schools
+          .filter((s) => info.signups.some((x) => x.locationCode === s.code))
+          .map((school) => (
+            <div key={`n-${school.code}`}>
+              <h3 className="cpanel-head">{T.newSignupsOf(school.name)}</h3>
+              <ul className="cpanel-list">
+                {info.signups
+                  .filter((x) => x.locationCode === school.code)
+                  .map((it) => (
+                    <ItemRow key={it.id} item={it} both={false} onOpen={onOpenItem} timed={false} />
+                  ))}
+              </ul>
+            </div>
+          ))}
+      {itemsFailed && <ErrorBanner text={T.OTHER_SECTIONS_FAILED} onRetry={onRetryItems} />}
 
       {showClasses && info.schools.map((school) => (
         <div key={school.code}>

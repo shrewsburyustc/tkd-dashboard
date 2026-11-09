@@ -3,7 +3,12 @@
 // mockup (docs/Prospects/TKD-Class-Schedule-Mockups.html, rulebook v0.233) and to change it later.
 // The data layer only returns codes ('stale', 'step' …); this file turns them into plain English.
 import { formatDate } from '../../lib/schedule/versions.js';
-import { formatRange } from '../../lib/schedule/time.js';
+import { formatRange, formatTime } from '../../lib/schedule/time.js';
+// The dashboard's shared sentences (Dashboard core: v1.045 (4), v1.051 (2)) — the Schedule names what it means.
+import { loadFailedNamed, someoneElseChanged } from '../../components/text.js';
+
+export { someoneElseChanged }; // a refused change or Undo: "Someone else changed [name] just now, so nothing was done. Their change is shown."
+export const SECTION_NAME = 'Schedule'; // the section's name in the bar after leaving the page (lib/saveLine.js)
 
 export const PAGE_TITLE = 'Schedule';
 export const VIEW_ONLY_LINE = 'View only. Ask an admin to make changes.';
@@ -36,7 +41,7 @@ export const plannedBar = (v) => `Starts ${formatDate(v.startsOn)}. Until then, 
 export const pastBar = (v, endsOn) =>
   `Past schedule: ${formatDate(v.startsOn, { weekday: false })} to ${endsOn ? formatDate(endsOn, { weekday: false }) : 'now'}. View only.`;
 export const NO_CURRENT_BAR = 'No schedule has started yet. The first planned one starts on its date.';
-export const SCHEDULE_MORE = (v) => `More for ${v.name ?? 'this planned schedule'}`;
+export const SCHEDULE_MORE = (v) => `More actions for ${v.name ?? 'this planned schedule'}`;
 export const startsLine = (v) => `Starts ${formatDate(v.startsOn)}`;
 export const CHANGE_START_DATE = 'Change start date';
 export const RENAME = 'Rename';
@@ -46,7 +51,12 @@ export const DELETE_PLANNED = 'Delete planned schedule';
 export const emptySchoolAdmin = (school) => `No classes on the ${school} schedule yet.`;
 export const emptySchoolStaff = (school) => `No classes on the ${school} schedule yet. An admin adds them.`;
 export const emptyVersion = 'No time slots in this schedule yet.';
-export const NO_CLASSES_IN_TESTING = 'Add classes in Testing → Classes and ranks first. The schedule uses them.';
+// Add time slot with no classes yet (N11, CB14 Q2 "C"): "Settings → Classes and ranks" is a link to
+// that part of Settings, so the line is said in three pieces (the dialog draws the middle one as the link).
+export const NO_CLASSES_BEFORE = 'Add classes in ';
+export const CLASSES_AND_RANKS_LINK = 'Settings → Classes and ranks';
+export const NO_CLASSES_AFTER = ' first. The schedule uses them.';
+export const CLASSES_AND_RANKS_ADDRESS = '#settings/classes-and-ranks'; // src/lib/pageAddress.js (CB14)
 export const noClassesOnDay = (day) => `No classes on ${DAY_LONG[day]}.`;
 
 // ----- Time slot dialog -----
@@ -58,7 +68,7 @@ export const CLASS = 'Class';
 export const CLASSES = 'Class (tick more than one if they are taught together)';
 export const together = (names) => `Taught together: ${names.join(' + ')}`;
 export const colorFor = (name) => `Color · ${name}`;
-export const CLASS_HINT = 'From Testing → Classes and ranks';
+export const CLASS_HINT = 'From Settings → Classes and ranks'; // plain text: a link here would leave the dialog mid-edit (CB14 Q2)
 export const CHOOSE_CLASS = 'Choose a class';
 export const COLOR = 'Color';
 export const colorHint = (className) => (className ? `Used for every ${className} time slot` : 'Used for every time slot of this class');
@@ -156,7 +166,6 @@ export const DELETING = 'Deleting…';
 // ----- Notes, banners, toasts -----
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const DISCARD_CHANGES = 'Discard changes';
-export const STALE = "Someone else changed this just now. Your change wasn't saved.";
 export const STALE_DIALOG = "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
 export const STALE_DIALOG_PHONE = "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const NOT_ALLOWED = "Only an admin can change the schedule. Your change wasn't saved.";
@@ -164,10 +173,14 @@ export const PAST_NOT_ALLOWED = "That schedule has already started or ended, so 
 export const INVALID_DIALOG = "That didn't save. Check the fields and try again.";
 export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
 export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
-export const LOAD_FAILED = "Couldn't load the schedule. Check the connection, then retry.";
+export const LOAD_FAILED = loadFailedNamed('the schedule'); // S-2: "Couldn't load the schedule. Check the connection, then retry."
 export const COLOR_FAILED = "The time slot saved, but the color didn't. Check the connection, then try again.";
-export const UNDO_STALE = "Couldn't undo. Someone else changed this just now.";
-export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry.";
+// ("Undone" and a failed Undo's bar come from the shared save line now: lib/saveLine.js, R2-05 / R2-07.)
+// What a refusal names (R2-07): the time slot, or the schedule.
+export const slotName = (day, start) => `the ${DAY_LONG[day]} ${formatTime(start)} time slot`;
+export const newSlotsName = (n) => (n === 1 ? 'the new time slot' : 'the new time slots');
+export const planName = (v) => `the ${v?.name ?? 'planned'} schedule`;
+export const NEW_PLAN_NAME = 'the new planned schedule';
 
 export const TOAST_SLOT_SAVED = 'Time slot saved';
 export const toastSlotsAdded = (n) => (n === 1 ? 'Time slot added' : `${n} time slots added`);
@@ -175,7 +188,6 @@ export const toastSlotRemoved = (day, className, start) => `${DAY_SHORT[day]} ${
 export const TOAST_PLANNED = 'Planned schedule added';
 export const TOAST_PLAN_SAVED = 'Planned schedule saved';
 export const toastDeletedPlan = (v) => `${v.name ?? 'Planned'} schedule deleted`;
-export const TOAST_UNDONE = 'Undone';
 
 // The slot's accessible name on the grid: "Monday 4:00 to 4:45 pm, White belt".
 export const slotLabel = (slot, className) =>

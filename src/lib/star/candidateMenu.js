@@ -8,7 +8,9 @@
 //       and admins, a row with a payment, not while hidden; S2, v0.518)
 //   (3) taking someone off — Withdraw · Delete permanently (admins)
 // Items that don't apply are left out; the rest never move. A withdrawn row has its own short menu
-// (Restore · line · Delete permanently, admins only).
+// (M-03, v1.055, as Color Belt's v0.428): Print receipt first when a payment or refund still stands
+// (staff and admins), then for admins a line, Restore, a line, Delete permanently. Staff on a
+// withdrawn row get a ⋯ holding only Print receipt, and none when nothing is paid.
 // It is plain JavaScript with no React, so candidatesChecks.mjs can check the order without a browser.
 // The screen (CandidatesTab.jsx) turns each key into a menu item with its words, icon and action.
 
@@ -18,20 +20,22 @@
 // flagged:  the row is one of a "Possible duplicate" pair still on the list
 // canGradePrivate: the page can open the private grading page (phase 5)
 // Returns [{ key, separatorBefore }] — empty when there is nothing to show (a staff member on a
-// withdrawn row).
-// Print receipt's one rule, shared by the ⋯ menu and the summary's Payment part (S2, v0.518): an
-// active row (not withdrawn) with a payment or a refund that stands, not a make-up, and never while
-// Hide private details is on (Q8 B).
+// withdrawn row with nothing paid).
+// Print receipt's one rule, shared by the ⋯ menu and the summary's Payment part (S2, v0.518; M-03,
+// v1.055): a row with a payment or a refund that still stands (active or withdrawn), not a make-up,
+// and never while Hide private details is on (Q8 B).
 export function canPrintReceipt(row, hidden) {
-  return Boolean(row) && row.status !== 'withdrawn' && !hidden && !row.isMakeup && (row.paid || row.refundedCents > 0);
+  return Boolean(row) && !hidden && !row.isMakeup && (row.paid || row.refundedCents > 0);
 }
 
 export function candidateMenuKeys(row, { isAdmin, hidden, flagged = false, canGradePrivate = false }) {
   const out = [];
   const add = (key, separatorBefore = false) => out.push({ key, separatorBefore });
   if (row.status === 'withdrawn') {
+    const receipt = canPrintReceipt(row, hidden);
+    if (receipt) add('printReceipt');
     if (!isAdmin) return out;
-    add('restore');
+    add('restore', receipt);
     add('delete', true);
     return out;
   }

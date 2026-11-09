@@ -22,7 +22,7 @@ const DELETE = {
   busyLabel: 'Deleting…',
   loses: 'forGood',
 };
-const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
+const DELETE_FAILED = "Couldn't delete. Check the connection, then retry.";
 
 const ASKS = {
   something: {

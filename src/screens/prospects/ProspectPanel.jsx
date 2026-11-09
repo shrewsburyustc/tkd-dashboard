@@ -48,7 +48,8 @@
 //   printedBy (the signed-in person's name, for "Printed … by …"), banner ({ text } — the
 //   section's amber bar, shown at the top of the window while it is open) and onDismissBanner,
 //   loadFailed (the words when the first read failed: the bar with Retry instead of "Loading…",
-//   pass 2 P-02) and onRetryLoad, and the actions: onNote,
+//   pass 2 P-02) and onRetryLoad, onGone (Print found the child deleted elsewhere: Prospects closes
+//   the window, pass 2 U-04); a `banner` with `retry` shows Retry (R2-01); and the actions: onNote,
 //   onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete,
 //   onClose (Esc, ×, the back arrow, a click outside), onNoAccess.
 import { useEffect, useRef, useState } from 'react';
@@ -103,7 +104,7 @@ const Muted = ({ children }) => <span className="pp-hid">{children}</span>;
 // the signature, the open History and the waiver text start closed again).
 function Profile({
   detail: p, listItem, statuses, statusById, today, isPc, isWide, isPhone, isAdmin, busy, note, noteWarning, idBase, familyBookingDates, printedBy,
-  onNote, onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete, onNoAccess,
+  onNote, onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete, onNoAccess, onGone,
 }) {
   // This device's "Hide private details" switch (v0.506; what it hides here: v1.000, v0.639); updates live.
   const [hidden] = usePrivateDetailsHidden();
@@ -120,6 +121,7 @@ function Profile({
   }, []);
   const [showNumber, setShowNumber] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false); // the clipboard refused: a note beside the button (U-05)
   const [sig, setSig] = useState(null); // { loading } | { signature } | { error }
   const [statusMenu, setStatusMenu] = useState(null); // the menu under the status tag
   const [followOpen, setFollowOpen] = useState(false); // the quick follow-up choices
@@ -163,10 +165,13 @@ function Profile({
   async function copyNumber() {
     try {
       await navigator.clipboard.writeText(p.parentPhone);
+      setCopyFailed(false);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
+      // never silent (v1.004, U-05): the note stays until a copy works or the number is hidden again
       setCopied(false);
+      setCopyFailed(true);
     }
   }
   async function showSignature() {
@@ -200,6 +205,7 @@ function Profile({
     setPreparing(false);
     if (failed) {
       if (failed.status === 'no_access') onNoAccess();
+      else if (failed.status === 'not_found') onGone?.(); // deleted elsewhere: Retry could never work (pass 2 U-04)
       else setPrintError({ ids });
       return;
     }
@@ -231,7 +237,7 @@ function Profile({
     <div className="pp-section">
       <h3 className="pp-sec">{T.HEAD_FAMILY}</h3>
       <dl className="pp-sum">
-        <Row label={T.DATE_OF_BIRTH}>{hidden ? hiddenValue : p.childDob ? T.longDate(p.childDob) : <Muted>{T.notAskedAge(p.childAge)}</Muted>}</Row>
+        <Row label={T.DATE_OF_BIRTH}>{hidden ? hiddenValue : p.childDob ? T.longDate(p.childDob, false) : <Muted>{T.notAskedAge(p.childAge)}</Muted>}</Row>
         <Row label={T.PARENT}>{p.parentName}</Row>
         <Row label={T.PHONE}>{p.parentPhone}</Row>
         <Row label={T.EMAIL}>{hidden ? hiddenValue : p.parentEmail}</Row>
@@ -294,6 +300,11 @@ function Profile({
             <IconCopy size={16} aria-hidden="true" />
             {copied ? T.COPIED : T.COPY_NUMBER}
           </button>
+          {copyFailed && (
+            <div className="pbignumber-fail">
+              <Notice>{T.COPY_NUMBER_FAILED}</Notice>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -436,7 +447,7 @@ function Profile({
             {p.signedAt && (
               <Row label={T.SIGNATURE}>
                 {sigGone ? (
-                  <Muted>{T.SIGNATURE_GONE}</Muted>
+                  <Muted>{T.signatureGone(Boolean(kept?.afterClass))}</Muted>
                 ) : (
                   <>
                     {sig?.signature ? (
@@ -447,7 +458,15 @@ function Profile({
                       </button>
                     )}
                     {kept && <span className="pp-sig-hint">{T.keptUntil(T.longDate(kept.until, false), kept.afterClass)}</span>}
-                    {sig?.error && <Notice>{T.SIGNATURE_FAILED}</Notice>}
+                    {/* S-2: the line ends "then retry", and the Retry link reads the signature again */}
+                    {sig?.error && (
+                      <Notice>
+                        {T.SIGNATURE_FAILED}{' '}
+                        <button type="button" className="link-button inline-link" onClick={showSignature}>
+                          {T.RETRY}
+                        </button>
+                      </Notice>
+                    )}
                   </>
                 )}
               </Row>
@@ -742,7 +761,7 @@ function Profile({
 export default function ProspectPanel(props) {
   // loadFailed: the words when the first read failed (pass 2 P-02) — the shared amber bar with
   // Retry (onRetryLoad) shows in place of "Loading…", as in Black Belt's candidate window
-  const { name, detail, isPhone, onClose, banner = null, onDismissBanner, loadFailed = null, onRetryLoad } = props;
+  const { name, detail, isPhone, onClose, banner = null, onDismissBanner, loadFailed = null, onRetryLoad, busy = false } = props;
   // A problem while the window is open (a save refused, someone else's change — v1.004's amber bar)
   // shows at the top of the window's body: the page's own bar would be hidden behind the window.
   // When it appears, it is scrolled into view (under the heading row that stays on top); like the
@@ -767,7 +786,9 @@ export default function ProspectPanel(props) {
       <div className="pp-body">
         {banner && (
           <div ref={barRef} className="pp-window-bar">
-            <ErrorBanner text={banner.text} onDismiss={onDismissBanner} />
+            {/* a bar with `retry` gets Retry, which repeats the same call (v1.004, R2-01) */}
+            {/* retrying: the save line's own bars say when their Retry is on its way (R2-05) */}
+            <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying ?? busy} onDismiss={onDismissBanner} />
           </div>
         )}
         {detail ? (

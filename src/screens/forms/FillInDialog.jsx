@@ -1,7 +1,8 @@
 // FillInDialog.jsx — "Fill in for a family" and the builder's / staff's Preview (mockup screens 8, 10).
 // Why it exists: staff fill a form in while talking to a family (phone or desk). It shows the
-// SAME steps as the public page: one step at a time, Back / Next, then Submit. The sign-up is
-// marked "Entered by <staff name>" by the database. Preview is the same dialog without Submit.
+// SAME steps as the public page: one step at a time, Back / Continue, then Send (the family page's
+// words, v0.622). The sign-up is marked "Entered by <staff name>" by the database. Preview is the
+// same dialog without Send.
 // The typed answers live in Forms.jsx (so a lock while it's open loses nothing).
 //
 // state: { mode: 'fill' | 'preview', form, fields, step, values, problems, times, saving, note, sent }
@@ -28,7 +29,7 @@ const NOTES = {
   LEAVE_FILL: T.LEAVE_FILL,
 };
 
-export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmit, onAnother, onCancel, onRequestClose }) {
+export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmit, onAnother, onCancel, onRequestClose, onRetryTimes }) {
   const preview = state.mode === 'preview';
   const steps = stepsOf(state.fields).filter((s) => s.fields.length > 0);
   const step = Math.min(state.step, steps.length - 1);
@@ -76,7 +77,8 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
             </ul>
           )}
         </div>
-        <div className={isPhone ? 'dialog-page-submit' : 'dialog-actions'}>
+        {/* on a phone the two stacked buttons keep 8 px between them (fsent-buttons, as Black Belt's) */}
+        <div className={isPhone ? 'dialog-page-submit fsent-buttons' : 'dialog-actions'}>
           <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={onAnother}>
             {T.ANOTHER}
           </button>
@@ -134,7 +136,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
           </button>
         )}
         {!(preview && last) && (
-          <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined}>
+          <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined} aria-busy={state.saving ? 'true' : undefined}>
             {last ? <IconCheck size={16} aria-hidden="true" /> : <IconArrowRight size={16} aria-hidden="true" />}
             {last ? (state.saving ? T.SUBMITTING : T.SEND) : T.CONTINUE}
           </button>
@@ -161,6 +163,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
           values={v}
           problems={state.problems}
           times={state.times}
+          onRetryTimes={onRetryTimes}
           readOnly={state.saving}
           idBase={idBase}
           onAnswer={answer}

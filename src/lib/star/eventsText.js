@@ -9,6 +9,11 @@
 // Dates are 'YYYY-MM-DD' text and are shown in US style ("Nov 7", "Sat, Nov 14, 2026"); they are
 // read as a calendar date on this computer, so they never shift a day because of time zones.
 import { testingTimeLabel } from './starEventRules.js';
+import { someoneElseChanged } from '../../components/text.js';
+
+// The section's name for the bar that names a change after the person has left the page
+// (lib/saveLine.js, rulebook v1.129): "Undo didn't save: “Event added” (Star testing). …"
+export const SECTION_NAME = 'Star testing';
 
 // ----- Dates -----
 function parseDay(iso) {
@@ -92,20 +97,22 @@ export const LOAD_EVENT_FAILED = 'Couldn’t load this event. Check the connecti
 export const EVENT_GONE = 'This testing event was deleted, or the link is wrong.'; // G3
 
 // ----- Refusals -----
-export const STALE = "Someone else changed this just now. Your change wasn't saved.";
+// R2-07 (v1.045 (4)): a refused change or Undo names who changed what and says what the screen now
+// shows, in the one sentence every section says (src/components/text.js). name = the event's name.
+export const stale = (name) => someoneElseChanged(name || 'this event');
 export const STALE_DIALOG = "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
 export const STALE_DIALOG_PHONE = "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const EVENTS_NOT_ALLOWED = "Only an admin can add or change events. Your change wasn't saved.";
 export const INVALID_DIALOG = "That didn't save. Check the fields and try again.";
-export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+export const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";
 export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to open it.';
 export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to open it. Registration wasn't opened.";
 // Not drawn in the mockups: Color Belt's live wording.
 export const REGISTRATION_FINISHED = 'This testing has finished, so registration can no longer change.';
-export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection and try again.`;
-export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection and try again.`;
+export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection, then retry.`;
+export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection, then retry.`;
 // Not drawn in the mockups (Delete event failing): proposed, in the same pattern.
-export const eventNotDeleted = (name) => `${name} wasn't deleted. Check the connection and try again.`;
+export const eventNotDeleted = (name) => `${name} wasn't deleted. Check the connection, then retry.`;
 // Staff's gray line (v0.86)
 export const STAFF_LINE = 'Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.';
 
@@ -125,7 +132,7 @@ export function statusMessage(action, status, { name = '', phone = false } = {})
     case 'stale':
     case 'not_found': // the event was deleted elsewhere: treated as "someone else changed it" (G3)
       if (dialog) return { text: phone ? STALE_DIALOG_PHONE : STALE_DIALOG };
-      return { text: STALE };
+      return { text: stale(name) };
     case 'not_allowed':
       if (action === 'open') return { text: REGISTRATION_NEEDS_ADMIN };
       return { text: EVENTS_NOT_ALLOWED };
@@ -134,7 +141,7 @@ export function statusMessage(action, status, { name = '', phone = false } = {})
     case 'invalid':
       if (dialog) return { text: INVALID_DIALOG };
       // a switch or delete call refused its arguments: the screen sent something odd; reload
-      return { text: STALE };
+      return { text: stale(name) };
     default: // 'error' and anything unexpected: the connection
       if (action === 'open') return { text: registrationNotOpened(name) };
       if (action === 'close') return { text: registrationNotClosed(name) };

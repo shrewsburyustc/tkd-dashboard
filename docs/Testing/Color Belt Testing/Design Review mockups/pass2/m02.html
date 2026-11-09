@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pass 2 · M-02 — One save is one History entry</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1840px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Pass 2 · M-02 — One save is one History entry</h1>
+<p class="sub">Rulebook v1.055 (a) (you approved A), as Camps does (v0.736): a Mark paid, Undo payment or Edit payment that also changes Paying by is ONE entry, money first, joined with “; ”. Today it shows as two entries and “History · N changes” counts both. The words themselves stay as today (they change later with Dashboard core's R1-07, which draws one set of payment and history words for every section). Example in preview: Ava Chen (Paying by Cash) marked paid $20 by card, then that payment undone. The After column is drawn on top of the real preview page.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:396px">
+    <div class="shot" style="width:396px;height:225px">
+      <img src="m02-pc-paid-today.png" style="left:-378px;top:-414px;width:1152px">
+      <div class="mark" style="left:17.6px;top:46.4px;width:360.8px;height:107px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>PC 1280, after Mark paid by card: two entries for one save; “History · 3 changes”.</figcaption>
+  </figure>
+<figure style="width:396px">
+    <div class="shot" style="width:396px;height:315px">
+      <img src="m02-pc-undo-today.png" style="left:-378px;top:-324px;width:1152px">
+      <div class="mark" style="left:17.6px;top:38.300000000000004px;width:360.8px;height:206px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>PC 1280, after its Undo payment too: four entries for two saves; “History · 5 changes”.</figcaption>
+  </figure>
+<div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:223.2px">
+      <img src="m02-w820-undo-today.png" style="left:-117.8px;top:-303.8px;width:508.4px">
+      <div class="mark" style="left:10.879999999999999px;top:30.72px;width:251.04px;height:144.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Tablet 820 (touch).</figcaption>
+  </figure><figure style="width:273px">
+    <div class="shot" style="width:273px;height:251.99999999999997px">
+      <img src="m02-w390-undo-today.png" style="left:0px;top:-280px;width:273px">
+      <div class="mark" style="left:7.199999999999999px;top:36.599999999999994px;width:258.6px;height:162px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Phone 390.</figcaption>
+  </figure><figure style="width:240px">
+    <div class="shot" style="width:240px;height:270px">
+      <img src="m02-w320-undo-today.png" style="left:0px;top:-157.5px;width:240px">
+      <div class="mark" style="left:8px;top:38.75px;width:224px;height:173px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>320.</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After</div>
+  <figure style="width:396px">
+    <div class="shot" style="width:396px;height:225px">
+      <img src="m02-pc-paid-after.png" style="left:-378px;top:-414px;width:1152px">
+      <div class="mark" style="left:17.6px;top:46.4px;width:360.8px;height:75.5px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>PC 1280: “Payment recorded: $20 card, paid Nov 6; Paying by changed: Cash → Card”; “History · 2 changes”.</figcaption>
+  </figure>
+<figure style="width:396px">
+    <div class="shot" style="width:396px;height:234px">
+      <img src="m02-pc-undo-after.png" style="left:-378px;top:-405px;width:1152px">
+      <div class="mark" style="left:17.6px;top:38.300000000000004px;width:360.8px;height:127.7px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>PC 1280, after its Undo payment: “Payment undone: $20; Paying by changed: Card → Cash”, one entry; “History · 3 changes”.</figcaption>
+  </figure>
+<div class="row"><figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:223.2px">
+      <img src="m02-w820-undo-after.png" style="left:-117.8px;top:-303.8px;width:508.4px">
+      <div class="mark" style="left:10.879999999999999px;top:30.72px;width:251.04px;height:90.46px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Tablet 820 (touch).</figcaption>
+  </figure><figure style="width:273px">
+    <div class="shot" style="width:273px;height:251.99999999999997px">
+      <img src="m02-w390-undo-after.png" style="left:0px;top:-280px;width:273px">
+      <div class="mark" style="left:7.199999999999999px;top:36.599999999999994px;width:258.6px;height:101.1px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>Phone 390.</figcaption>
+  </figure><figure style="width:240px">
+    <div class="shot" style="width:240px;height:225px">
+      <img src="m02-w320-undo-after.png" style="left:0px;top:-210px;width:240px">
+      <div class="mark" style="left:8px;top:38.75px;width:224px;height:120.5px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption>320.</figcaption>
+  </figure></div>
+  
+</div>
+</div>
+<div class="foot">The same on the event roster's student summary (an event registration's Mark paid / Undo payment / Edit payment by another way). With Hide private details on, both parts are money, so the entry is left out as today and the gray “Payment history is hidden on this tablet.” line shows.</div>
+</body></html>

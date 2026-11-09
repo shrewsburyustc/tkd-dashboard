@@ -34,7 +34,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowDown, IconArrowUp, IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
+import { someoneElseChanged } from '../../../components/text.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { centsToInputText } from '../../../lib/money.js';
 import {
   addCategory,
@@ -152,28 +155,47 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
   const [openList, setOpenList] = useState(() => openDans);
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor }
-  const [banner, setBanner] = useState(null); // { text, retry?, kind? }
-  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState(null); // { text, retry?, kind?, retrying?, takeFocus? }
   const [failedReorder, setFailedReorder] = useState(null); // { dan, newIds, movedId }
 
-  const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
   });
+  // R2-05 (v1.125–v1.129): this page's line of saves. One at a time; an Undo pressed while a save runs
+  // waits its turn ("Undoing…" on the toast). A failed Undo's bar goes to `banner` (kind 'undo').
+  const saveLine = useSaveLine({
+    section: T.SECTION_NAME,
+    showToast,
+    undoBar: (next) => setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current)),
+  });
+  const busy = saveLine.busy;
 
-  // ----- One change at a time -----
+  // ----- One change at a time (the save line holds it; an Undo waits for it) -----
+  const tokenRef = useRef(null); // the token of the save that holds the line (only one does)
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = saveLine.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
   // Anything but "ok" also removes a visible Undo toast (it belonged to an earlier change).
   function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+    saveLine.end(status, { token: tokenRef.current });
     if (status && status !== 'ok') clearToast();
+  }
+  // Runs the call a save makes (arguments included) and ends the line from a `finally`, as
+  // lib/saveLine.js asks: a throw between begin and end frees the line as "didn't save" and goes on,
+  // instead of leaving it busy for good with a queued Undo waiting.
+  async function inWrite(call) {
+    let ended = 'error'; // stays so when the call throws
+    try {
+      const answer = await call();
+      ended = answer.status;
+      return answer;
+    } finally {
+      endWrite(ended);
+    }
   }
 
   // ----- Keyboard focus after a dialog closes (same mechanism as Classes and ranks) -----
@@ -422,8 +444,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     }
     if (!beginWrite()) return;
     patchDialog({ saving: true, note: null });
-    const result = await send(check.payload);
-    endWrite(result.status);
+    const result = await inWrite(() => send(check.payload));
     if (result.status !== 'ok') {
       handleDialogProblem(result.status, typedName);
       return;
@@ -434,8 +455,11 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
   }
 
   // A toast with Undo. undoCall: () → Promise of the undo's database answer.
+  // focus: { find, fallback, name } — where keyboard focus goes after it worked, and what "Someone
+  // else changed [name] just now …" names if the database refuses the Undo (R2-07).
+  // The Undo is the save line's queued one (R2-05): it waits for a save that is running.
   function toastWithUndo(text, undoCall, focus) {
-    showToast(text, { icon: false, action: { label: T.UNDO, onAction: () => runUndo(undoCall, focus) } });
+    showToast(text, { icon: false, action: saveLine.undoAction(() => runUndo(undoCall, focus), { words: text }) });
   }
 
   // ----- Save: category -----
@@ -457,6 +481,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
           toastWithUndo(T.TOAST_CATEGORY_ADDED, () => deleteCategory(newId, result.version ?? 1), {
             find: () => addEl(d.dan),
             fallback: () => danToggleEl(d.dan),
+            name: p.name,
           });
           focusLater(() => rowEl(newId), () => addEl(d.dan), reloaded);
         },
@@ -466,10 +491,11 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       runSave(
         check,
         (p) => updateCategory(d.categoryId, opened.version, p.name, p.credits),
-        (result) => {
+        (result, p) => {
           toastWithUndo(T.TOAST_CATEGORY_SAVED, () => updateCategory(d.categoryId, result.version, opened.name, opened.credits), {
             find: () => rowEl(d.categoryId),
             fallback: () => addEl(d.dan),
+            name: p.name,
           });
           focusLater(() => d.opener, () => rowEl(d.categoryId));
         },
@@ -501,6 +527,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
         toastWithUndo(T.TOAST_DAN_SAVED, () => updateDanSettings(d.dan, result.version, danValues(opened)), {
           find: () => danEditEl(d.dan),
           fallback: () => danToggleEl(d.dan),
+          name: dan.label,
         });
         focusLater(() => d.opener, () => danEditEl(dan.dan));
       },
@@ -518,6 +545,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       (result) => {
         toastWithUndo(T.TOAST_FEES_SAVED, () => updateDanSettings(d.dan, result.version, danValues(opened)), {
           find: () => feesEditEl(d.dan),
+          name: `${opened.label} fees`,
         });
         focusLater(() => d.opener, () => feesEditEl(d.dan));
       },
@@ -534,7 +562,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       check,
       (p) => updateGradeValues(opened.map((g) => g.version), p.values),
       (result) => {
-        toastWithUndo(T.TOAST_GRADES_SAVED, () => updateGradeValues(result.versions, opened.map((g) => g.value)), { find: gradesEditEl });
+        toastWithUndo(T.TOAST_GRADES_SAVED, () => updateGradeValues(result.versions, opened.map((g) => g.value)), { find: gradesEditEl, name: 'the grade values' });
         focusLater(() => d.opener, gradesEditEl);
       },
     );
@@ -553,7 +581,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
         toastWithUndo(
           T.TOAST_ASSISTANT_SAVED,
           () => updateAssistantTable(result.version, opened.childMaxAge, opened.childMins, opened.adultMins),
-          { find: assistantEditEl },
+          { find: assistantEditEl, name: 'the assistant-class table' },
         );
         focusLater(() => d.opener, assistantEditEl);
       },
@@ -580,6 +608,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       (result) => {
         toastWithUndo(R.RESULT_TEXT_SAVED, () => setResultText({ kind: d.kind, expectedVersion: result.version, body: opened.body }), {
           find: () => textEditEl(d.kind),
+          name: R.KIND_LABEL[d.kind] ? `the “${R.KIND_LABEL[d.kind]}” email` : 'this email',
         });
         focusLater(() => d.opener, () => textEditEl(d.kind));
       },
@@ -587,52 +616,54 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
   }
 
   // ===== Undo =====
-  // Sends the undo call and reacts to the answer (as Classes and ranks).
-  // focus: { find, fallback } — where keyboard focus goes after it worked.
+  // The toast's Undo, run by the save line (R2-05): sends the undo call, and the line says how it went
+  // — "Undone" when it worked, "Undo didn't save. Check the connection, then retry." with Retry when it
+  // didn't reach the database, a refusal's own words (no Retry) when the database said no.
+  // focus: { find, fallback, name } — where keyboard focus goes after it worked; the name for R2-07.
   async function runUndo(call, focus = null) {
-    if (!beginWrite()) return;
     const result = await call();
-    endWrite(result.status);
     const status = result.status;
     if (status === 'ok') {
-      setBanner((current) => (current?.kind === 'undo' ? null : current)); // a Retry that worked
-      showToast(T.TOAST_UNDONE, { icon: false });
       const reloaded = reloadQuiet();
       if (focus) focusLater(focus.find, focus.fallback, reloaded);
-    } else if (status === 'no_access') {
-      onNoAccess();
-    } else if (status === 'not_allowed') {
-      setBanner({ text: T.NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (['stale', 'not_found', 'duplicate_name', 'invalid'].includes(status)) {
-      setBanner({ text: T.UNDO_STALE });
-      reloadQuiet();
-    } else {
-      // Network etc.: Retry sends the same undo again.
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus) });
+      await reloaded;
+      return { status: 'ok' };
     }
+    if (status === 'no_access') {
+      onNoAccess();
+      return { status };
+    }
+    if (status === 'not_allowed') {
+      onRefreshProfile();
+      return { status, reason: T.NOT_ALLOWED };
+    }
+    if (['stale', 'not_found', 'duplicate_name', 'invalid'].includes(status)) {
+      reloadQuiet();
+      return { status, reason: T.stale(focus?.name) };
+    }
+    return { status: 'error' }; // network etc.: the line's bar offers Retry, which sends the same undo again
   }
 
   // ===== Reordering (optimistic: shown at once, saved right after) =====
-  async function doReorder({ dan, expectedIds, newIds, movedId, isUndo = false }) {
-    if (!beginWrite()) return;
+  // The reorder call itself, shared by the move and its Undo: the new order shows at once, then the
+  // database answers. Returns { status, version?, name } (name: the moved category's, for R2-07).
+  async function sendReorder({ dan, expectedIds, newIds, movedId }) {
     dataRef.current.setLocal((current) => reorderLocal(current, dan, newIds));
     const result = await reorderCategories(dan, expectedIds, newIds);
-    endWrite(result.status);
-    const args = { dan, expectedIds, newIds, movedId, isUndo };
+    return { ...result, name: categoryOf(movedId)?.category.name ?? null };
+  }
+  async function doReorder({ dan, expectedIds, newIds, movedId }) {
+    if (!beginWrite()) return;
+    const result = await inWrite(() => sendReorder({ dan, expectedIds, newIds, movedId }));
     const status = result.status;
     if (status === 'ok') {
       setFailedReorder(null);
       setBanner((current) => (current?.kind === 'reorder' ? null : current));
-      if (isUndo) {
-        showToast(T.TOAST_UNDONE, { icon: false });
-        focusLater(() => rowEl(movedId), () => danToggleEl(dan));
-      } else {
-        showToast(T.TOAST_ORDER_SAVED, {
-          icon: false,
-          action: { label: T.UNDO, onAction: () => doReorder({ dan, expectedIds: newIds, newIds: expectedIds, movedId, isUndo: true }) },
-        });
-      }
+      showToast(T.TOAST_ORDER_SAVED, {
+        icon: false,
+        // Undo = the reverse order, as the save line's queued Undo (R2-05)
+        action: saveLine.undoAction(() => undoReorder({ dan, expectedIds: newIds, newIds: expectedIds, movedId }), { words: T.TOAST_ORDER_SAVED }),
+      });
       reloadQuiet();
     } else if (status === 'no_access') {
       onNoAccess(); // the data reloads by itself after unlocking
@@ -641,13 +672,40 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       reloadQuiet();
       onRefreshProfile();
     } else if (['stale', 'not_found', 'invalid'].includes(status)) {
-      setBanner({ text: isUndo ? T.UNDO_STALE : T.STALE });
+      setBanner({ text: T.stale(result.name) });
       reloadQuiet();
     } else {
       // Didn't reach the database: keep the new order on screen, mark the row, offer Retry.
       setFailedReorder({ dan, newIds, movedId });
-      setBanner({ kind: 'reorder', text: isUndo ? T.UNDO_FAILED : T.ORDER_FAILED, retry: () => doReorder(args) });
+      setBanner({ kind: 'reorder', text: T.ORDER_FAILED, retry: () => doReorder({ dan, expectedIds, newIds, movedId }) });
     }
+  }
+  // The Undo of a move: the same reorder the other way, run by the save line.
+  async function undoReorder({ dan, expectedIds, newIds, movedId }) {
+    const result = await sendReorder({ dan, expectedIds, newIds, movedId });
+    const status = result.status;
+    if (status === 'ok') {
+      setFailedReorder(null);
+      focusLater(() => rowEl(movedId), () => danToggleEl(dan));
+      await reloadQuiet();
+      return { status: 'ok' };
+    }
+    if (status === 'no_access') {
+      onNoAccess();
+      return { status };
+    }
+    if (status === 'not_allowed') {
+      reloadQuiet();
+      onRefreshProfile();
+      return { status, reason: T.NOT_ALLOWED };
+    }
+    if (['stale', 'not_found', 'invalid'].includes(status)) {
+      reloadQuiet();
+      return { status, reason: T.stale(result.name) };
+    }
+    // Didn't reach the database: keep the order on screen, mark the row; the line's bar offers Retry.
+    setFailedReorder({ dan, newIds, movedId });
+    return { status: 'error' };
   }
 
   function moveCategory(category, delta) {
@@ -676,8 +734,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
   async function startDelete(categoryId, anchor) {
     if (!beginWrite()) return;
     // Re-read first, so the confirmation states what is true right now.
-    const fresh = await loadRubrics();
-    endWrite(fresh.status);
+    const fresh = await inWrite(() => loadRubrics());
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
@@ -690,7 +747,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     const dan = fresh.dans.find((d) => d.categories.some((c) => c.id === categoryId));
     const category = dan?.categories.find((c) => c.id === categoryId);
     if (!dan || !category) {
-      setBanner({ text: T.STALE }); // it's already gone
+      setBanner({ text: T.stale(category?.name) }); // it's already gone
       return;
     }
     if (isOnlyFromClassCount(dan, category)) return; // can't be deleted (the menu item is gray)
@@ -715,8 +772,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     if (!d || d.saving) return;
     if (!beginWrite()) return;
     patchDialog({ saving: true, failed: false });
-    const result = await deleteCategory(d.id, d.version);
-    endWrite(result.status);
+    const result = await inWrite(() => deleteCategory(d.id, d.version));
     const status = result.status;
     if (status === 'ok') {
       setDialog(null);
@@ -742,7 +798,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       focusLater(() => moreEl(d.id));
     } else if (['stale', 'not_found', 'invalid'].includes(status)) {
       setDialog(null);
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.stale(d.name) });
       reloadQuiet();
       focusLater(() => moreEl(d.id));
     } else {
@@ -825,6 +881,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     notSavedId: failedReorder?.movedId ?? null,
     drag: drag.state,
     gripProps: drag.gripProps,
+    gripsOff: busy, // L-06: while a save runs every grip is gray and aria-disabled (the shared Grip's `disabled`)
     nav,
     menuFor: menu?.id ?? null,
     // The category open in a dialog right now gets the blue "selected" tint behind the dialog.
@@ -976,8 +1033,15 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
   return (
     <>
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel st-panel">
+        {/* The page's bar shows under the top bar (PageBar, v1.128); an Undo's bar comes with takeFocus */}
         {banner && (
-          <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
+          <PageBar
+            text={banner.text}
+            onRetry={banner.retry ? () => banner.retry() : undefined}
+            retrying={busy || Boolean(banner.retrying)}
+            takeFocus={banner.takeFocus}
+            onDismiss={() => setBanner(null)}
+          />
         )}
         {body}
       </div>

@@ -85,7 +85,9 @@ export function recordMatches(record, slot, code) {
 //   ctx.events         [{ id, locationCode, typeId, title, startsOn, endsOn, allDay, start, end, notes, version }]
 //   ctx.closures       [{ id, locationCode, startsOn, endsOn, reason, wholeDay, version }]
 //   ctx.closureClasses Map closureId → [{ locationCode, weekday, start, end, classIds, classNames, slotId }]
-//   ctx.testingEvents  [{ id, locationCode, title, date, start }] — read from Testing (v0.239 answer 1)
+//   ctx.items          [item] — every other section's dated things from the database reader (api.js
+//                      loadCalendarItems, migration 0045, v0.645): testing days and private tests, Black
+//                      Belt days, camp days, deadlines, new sign-ups. Never re-derived here.
 //   ctx.bookings       [{ id, locationCode, classId, className, date, start 'HH:MM', end, childFirstName,
 //                        formName, status, classRunning }] — free classes from Forms (v0.241 answer 6)
 //   ctx.followUps      [{ id, code, childFirstName, initial, followUpOn }] — prospects' open follow-ups
@@ -95,7 +97,8 @@ export function recordMatches(record, slot, code) {
 //   date, weekday,
 //   schools:  [{ code, name, classes: [{ slot, name, colorKeys, cancelled }] }]   (by start time)
 //   events:   [{ event, part: { index, total } | null }]                           (all day first, then by time)
-//   testing:  [testing event]
+//   items:    [item]  this day's testing / Black Belt / camp items (all day first, then by time)
+//   deadlines: [item] this day's deadlines;  signups: [item] this day's new sign-ups; signupCount
 //   closures: [{ closure, cancelledCount, orphans: [record] }]
 //   scheduleStarts: [{ code, name }]   a schedule (not the very first one) starts that day
 //   bookings: [booking]  this day's free classes (booked, shown schools), by time
@@ -171,6 +174,15 @@ export function buildDay(date, ctx) {
     .filter((f) => f.followUpOn === date && codes.has(f.code))
     .sort((a, b) => a.childFirstName.localeCompare(b.childFirstName) || (a.initial ?? '').localeCompare(b.initial ?? ''));
 
+  // Every other section's dated things (v0.645), already worked out by the database reader.
+  // A school's item shows on that school (and on Both); an item with no school shows on both.
+  const mine = (ctx.items ?? []).filter((i) => i.date === date && relevant(i));
+  const byTime = (a, b) => (a.start ?? -1) - (b.start ?? -1) || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+  const items = mine.filter((i) => i.kind !== 'deadline' && i.kind !== 'signup').sort(byTime);
+  const deadlines = mine.filter((i) => i.kind === 'deadline').sort(byTime);
+  // by the name as shown, "Ava N."
+  const signups = mine.filter((i) => i.kind === 'signup').sort((a, b) => (a.child ?? '').localeCompare(b.child ?? '') || a.id.localeCompare(b.id));
+
   return {
     date,
     weekday,
@@ -179,7 +191,10 @@ export function buildDay(date, ctx) {
     bookingCount: bookings.length,
     bookingProblems: bookings.filter((b) => !b.classRunning).length,
     events,
-    testing: (ctx.testingEvents ?? []).filter((t) => t.date === date && relevant(t)),
+    items,
+    deadlines,
+    signups,
+    signupCount: signups.length,
     closures: closureInfo.filter((c) => relevant(c.closure)),
     scheduleStarts,
     classCount: schools.reduce((n, s) => n + s.classes.length, 0),

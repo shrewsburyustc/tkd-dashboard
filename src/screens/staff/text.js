@@ -6,7 +6,7 @@
 export const PAGE_TITLE = 'Staff accounts';
 export const PAGE_SUB = 'Reset a password or PIN when someone forgets it.';
 export const LOADING = 'Loading staff accounts';
-export const LOAD_FAILED = "Couldn't load staff accounts. Check the connection.";
+export const LOAD_FAILED = "Couldn't load staff accounts. Check the connection, then retry."; // S-2 (v1.051): it has Retry
 export const ONLY_ADMINS = 'Only admins can see Staff accounts.';
 export const YOU = '(you)';
 
@@ -38,7 +38,7 @@ export { CANCEL, BACK } from '../../components/text.js';
 export const OWN_PASSWORD_ERRORS = {
   empty: 'Enter your password to continue.',
   credentials: "That password doesn't match. Try again.",
-  connection: "Couldn't reach the server. Check the connection and try again.",
+  connection: "Couldn't reach the server. Check the connection, then retry.",
   tooMany: 'Too many tries. Wait a few minutes and try again.',
   // the database said the password check is more than 10 minutes old
   expired: 'For security, enter your password again.',
@@ -76,7 +76,7 @@ export const DISCARD_CHANGES = 'Discard changes';
 
 // Toasts (5 seconds, no Undo, no icon)
 export function passwordResetToast(name, devices) {
-  if (devices === 0) return `Password reset for ${name}.`;
+  if (devices === 0) return `Password reset for ${name}`; // one sentence: no full stop (R2-09, v1.051 (5))
   return `Password reset for ${name}. Signed out on ${devices} ${devices === 1 ? 'device' : 'devices'}.`;
 }
 export const pinResetToast = (name) => `PIN reset for ${name}. Works on every device now.`;

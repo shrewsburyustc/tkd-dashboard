@@ -24,6 +24,15 @@
 // Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades, and
 // not a restored "Duplicate copy", R2-03). A saved Edit details closes the detail back to the
 // roster, with focus on the candidate's row (v1.047 (21)); a refused save keeps it open.
+// R4-11 / S-2 (v0.966 (1), v1.051): a lost connection while reading a candidate (the detail, a
+// payment dialog's data, the compare, an admin's row ⋯) shows the bar with Retry, which repeats
+// THAT read; the row ⋯ shows busy while it reads (`menuLoading`). A refusal has × only.
+// Pass-1 shared-parts switch: every save and read goes through the shared save line (lib/saveLine.js,
+// R2-05), so a toast's Undo pressed during another save WAITS ("Undoing…") and the line, not this file,
+// says how it went; refusals and failures use the shared sentences (R2-07, via text.js); the payment toasts
+// are the shared "marked paid" / "Payment undone" words (R1-07); a read that can't load always has Retry (S-2).
+// BB15 / BB7 (v1.008 / v1.102): the compare, the duplicate box and the confirm boxes are the shared
+// parts; this file only says which button is busy (`busyKind`) and keeps the state.
 //
 // Privacy (§3.1): the detail's date of birth, email and the signature live only inside `dlg`,
 // which is emptied when the dialog closes. Nothing here writes them to storage, the console, a
@@ -48,9 +57,10 @@ import {
   withdrawCandidate,
 } from '../../../lib/blackBelt/api.js';
 import { amountInputText } from '../../../lib/blackBelt/money.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { defaultTicks, sumRemaining, trimSpaces } from '../../../lib/blackBelt/rules.js';
 import { normalizeName } from '../../../lib/testing/names.js';
-import { addProblems, anyProblem, detailsProblems, editValuesToSave, paymentProblems, restoreHasUndo } from './checks.js';
+import { addProblems, anyProblem, detailsProblems, editValuesToSave, isMoneyChild, paymentProblems, restoreHasUndo } from './checks.js';
 import * as T from '../text.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -94,7 +104,7 @@ const inItemOrder = (codes, money) => {
   return [...codes].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 };
 
-export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner }) {
+export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, deviceLocation, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner }) {
   const [dlg, setDlgState] = useState(null);
   const dlgRef = useRef(null);
   const setDlg = (next) => {
@@ -105,21 +115,53 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // The newest props, for the async calls below (an answer may arrive after a re-render).
   const latest = useRef({});
   useLayoutEffect(() => {
-    latest.current = { cycle, isAdmin, today, paymentsHidden, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner };
+    latest.current = { cycle, isAdmin, today, paymentsHidden, deviceLocation, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, setBanner };
   });
 
-  // One write at a time (a double click must not record a payment twice).
-  const busyRef = useRef(false);
-  const [busy, setBusy] = useState(false);
+  // One write at a time (a double click must not record a payment twice), through the shared save line
+  // (lib/saveLine.js, R2-05): a toast's Undo pressed while a save or a read runs WAITS its turn ("Undoing…")
+  // and runs when that ends, instead of being dropped without a word. The Make-up picker uses the same
+  // line (it gets `line` from here), so the whole Candidates tab has one.
+  //   beginWrite()  true when this call got the line (it is false while a save or an Undo runs)
+  //   endWrite(status, retry)  the save ended — exactly once per beginWrite. status: the answer's status
+  //                 ('ok' or a failure); retry: how to do the same save again (kept for "Neither change saved").
+  const saveLine = useSaveLine({ section: T.UNDO_SECTION, showToast: (text, options) => latest.current.showToast(text, options), undoBar });
+  const tokenRef = useRef(null);
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = saveLine.begin();
+    if (!token) return false;
+    tokenRef.current = token; // only one save holds the line at a time, so one token is enough
     return true;
   }
-  function endWrite() {
-    busyRef.current = false;
-    setBusy(false);
+  function endWrite(status = 'ok', retry = null) {
+    saveLine.end(status, { retry, token: tokenRef.current });
+  }
+  // One save call on the line, always ended (C8): even if the call throws, the line is freed (as 'error')
+  // in a finally, so a waiting Undo never waits forever. The throw itself still goes on up.
+  //   call   the database call → { status, … }
+  //   retry  how to do the same save again (kept for "Neither change saved", v1.127)
+  async function saveCall(call, retry) {
+    let result = { status: 'error' };
+    try {
+      result = await call();
+    } finally {
+      endWrite(result.status, retry);
+    }
+    return result;
+  }
+  const busy = saveLine.busy;
+
+  // True while the amber bar on screen is the Retry of a MONEY opener's failed read (Record payment,
+  // Record refund, Edit / Undo payment from a row's ⋯): it goes away when Hide private details turns on
+  // (paymentsHiddenNow), so its Retry can never open a money dialog on a mat tablet (P1).
+  const moneyBannerRef = useRef(false);
+
+  // A money toast (payment recorded / undone / changed, refund, returned check, plan change, and the
+  // Undo answers) is never shown while Hide private details is on: a save that was already in flight
+  // may finish after the switch turned on (P2). The save itself still counts; only the words are held back.
+  function showMoneyToast(text, options) {
+    if (latest.current.paymentsHidden) return;
+    latest.current.showToast(text, options);
   }
 
   const patchChild = (changes) =>
@@ -148,6 +190,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   //   opener   the ⋯ the action came from: focus goes back to it (v0.966 review: never the page
   //            body). Inside an open detail, to the detail's ⋯ when that one is gone.
   function report(banner, { from = latest.current, opener = null } = {}) {
+    moneyBannerRef.current = false; // a new bar replaces the old one (loadProblem marks a money one after this)
     if (dlgRef.current?.detail) {
       const inside = opener?.isConnected && opener.closest('[role="dialog"]');
       patchDetail({ banner, focusKey: inside ? null : 'detail-more' });
@@ -156,6 +199,24 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       from.setBanner(banner);
       if (opener?.isConnected) focusSoon(opener);
     }
+  }
+  // The bar the save line (R2-05) shows when an Undo didn't work: "Undo didn't save. Check the connection,
+  // then retry." with Retry, or "Couldn't undo: …" / "Someone else changed … Their change is shown." with ×
+  // only. It goes the same way every other problem goes (report): inside the open detail, else the tab's
+  // bar. bar = { text, retry, retrying, takeFocus } or null — null means an Undo worked: the bar goes, but only
+  // if it is still the line's own, never another problem's.
+  // C7: the line's bar carries its own mark (fromUndo), so "is it still the line's?" is read from the bar
+  // that is on screen, not from a flag that could go stale when the person closes the bar with ×. S2: a bar
+  // of a MONEY Undo also carries moneyUndo, so turning on Hide private details can remove it (paymentsHiddenNow).
+  const lastUndoMoney = useRef(false); // whether the Undo that ran last was a money one (set by undoRun)
+  function undoBar(bar) {
+    const ours = (b) => Boolean(b?.fromUndo);
+    if (!bar) {
+      latest.current.setBanner((current) => (ours(current) ? null : current));
+      if (ours(dlgRef.current?.detail?.banner)) patchDetail({ banner: null });
+      return;
+    }
+    report({ text: bar.text, retry: bar.retry ?? undefined, retrying: bar.retrying, takeFocus: bar.takeFocus, fromUndo: true, moneyUndo: lastUndoMoney.current });
   }
   // × on the detail's bar: the bar goes and focus moves to the detail's ⋯ (the shared ErrorBanner
   // would leave it on the page body).
@@ -166,14 +227,21 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // ----- Loading one candidate (the detail and every dialog that needs the money items) -----
   // → the detail's data { candidate, waiver, needsParentSignature, payments, money } or null
   // (the problem is already shown: lock screen or the amber bar).
-  function loadProblem(status) {
+  // retry: what the amber bar's Retry does — it repeats THIS read (v0.966 (1), R4-11, S-2: a read that
+  // didn't load always has Retry in the bar, whatever the status was).
+  function loadProblem(status, retry = null, { money = false } = {}) {
     const a = latest.current;
     if (status === 'no_access') a.onNoAccess();
     else if (status === 'not_found') {
       // "This candidate was deleted." goes in the Candidates tab's bar: the detail closes (v0.966).
       a.setBanner({ text: T.CANDIDATE_GONE });
       a.reloadRoster();
-    } else report({ text: T.LOAD_FAILED });
+    } else {
+      // S-2 (v1.051 (2)): the one shared sentence, always with Retry that repeats THIS read — a lost
+      // connection and any other read that didn't answer ok (the old no-Retry "try again" line is gone here).
+      report({ text: T.LOAD_FAILED, retry: retry ?? undefined });
+      moneyBannerRef.current = money && Boolean(retry);
+    }
   }
   async function fetchCandidate(candidateId) {
     const result = await loadCandidate({ candidateId });
@@ -181,12 +249,22 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const { status: _status, ...data } = result;
     return { data };
   }
-  async function withCandidate(candidateId, use) {
-    if (!beginWrite()) return;
-    const { data, problem } = await fetchCandidate(candidateId);
-    endWrite();
+  // Reads one candidate, then `use(data)`. A lost connection shows the bar with Retry, and Retry
+  // repeats THIS read (`retry` — by default the same call again; the row ⋯ passes its own so the
+  // ⋯ shows busy again while it reads).
+  // money: true when use opens a money dialog (its Retry bar is cleared when the switch turns on).
+  async function withCandidate(candidateId, use, { retry = () => withCandidate(candidateId, use, { money }), onSettled = null, money = false } = {}) {
+    if (!beginWrite()) return; // another read or write is running: this call did not start, so it settles nothing
+    let fetched = { problem: 'error' };
+    try {
+      fetched = await fetchCandidate(candidateId);
+    } finally {
+      endWrite();
+    }
+    const { data, problem } = fetched;
+    onSettled?.();
     if (problem) {
-      loadProblem(problem);
+      loadProblem(problem, retry, { money });
       return;
     }
     use(data);
@@ -198,8 +276,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // menu opens. Nothing opens either if a dialog came up meanwhile.
   // Privacy (§3.1): the menu keeps only what Edit / Undo payment need — the name, version and
   // plan, the payment lines and the money — never the date of birth, the email or the waiver.
+  // While it reads, `menuLoading` holds the candidate's id, so the row's ⋯ can show busy (R4-11);
+  // after a lost connection the bar's Retry reads again, and the ⋯ shows busy again.
+  const [menuLoading, setMenuLoading] = useState(null);
   function loadForMenu(candidateId, use) {
-    return withCandidate(candidateId, (data) => {
+    const useData = (data) => {
       if (dlgRef.current) return;
       const c = data.candidate;
       use({
@@ -207,7 +288,15 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
         payments: data.payments ?? [],
         money: data.money,
       });
-    });
+    };
+    const run = () => {
+      // Only a call that really starts the read shows the ⋯ busy and clears it again (C8): while
+      // another read is running nothing starts, and that read's own end must not be cut short.
+      if (saveLine.isBusy()) return;
+      setMenuLoading(candidateId);
+      return withCandidate(candidateId, useData, { retry: run, onSettled: () => setMenuLoading(null), money: true });
+    };
+    return run();
   }
 
   // ----- The detail (Candidates 3) -----
@@ -286,15 +375,26 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // open (R4-04, v1.037, as Star's): its date of birth and email turn into the gray "Hidden on this
   // tablet" (CandidateDialog.jsx) and Save keeps their stored values (editValuesToSave). The
   // detail itself redraws with "Hidden on this tablet"; Compare and Add hide their parts themselves.
-  const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt', 'plan'];
   // Also closed when the switch turns on: Add candidate and the Delete confirm.
   // (Not the signature: View signature now also shows for admins while hidden, M-04, v1.055 (c).)
   const CLOSE_ON_HIDE = ['add', 'deleteConfirm'];
   function paymentsHiddenNow() {
     const d = dlgRef.current;
+    // (A money toast whose Undo is already running ("Undoing…") is NOT removed by clearToast: the shared toast
+    // line keeps a busy toast. Dropping it needs App.jsx — see the report of review batch 4 / S1.)
     latest.current.clearToast();
+    // The Retry bar of a failed money read goes too (P1): its Retry would reopen a money dialog.
+    if (moneyBannerRef.current) {
+      moneyBannerRef.current = false;
+      latest.current.setBanner(null);
+      if (d?.detail?.banner) patchDetail({ banner: null });
+    }
+    // S2: so does the failed-Undo bar of a MONEY Undo (its words are neutral now, but its Retry would run a
+    // payment Undo on a mat tablet). Only the line's own money bar goes, never another problem's.
+    latest.current.setBanner((current) => (current?.moneyUndo ? null : current));
+    if (d?.detail?.banner?.moneyUndo) patchDetail({ banner: null });
     if (!d) return;
-    if (d.child && MONEY_CHILDREN.includes(d.child.kind)) {
+    if (d.child && isMoneyChild(d.child.kind)) {
       if (d.detail) {
         // (back to the detail's view, as before; a money dialog never opens over Edit details)
         setDlg({ detail: { ...d.detail, mode: 'view', edit: null, menu: null }, child: null });
@@ -371,15 +471,15 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     return false;
   }
 
-  // A toast's Undo (or a one-click action): its own small write. A lost connection → the amber
-  // bar with Retry (retryLabel = its words); a refusal → the amber bar with × only, shown once the
+  // A one-click action (Restore, Waiver signed on paper): its own small write on the save line. A lost
+  // connection → the amber bar with Retry; a refusal → the amber bar with × only, shown once the
   // list (and the open detail) has been read again, so "Their change is shown" is true (v0.966).
+  // (A toast's Undo is not run here any more: it goes through undoToast, so it waits its turn, R2-05.)
   // opener: the ⋯ a menu item came from (focus goes back there after a problem), or null.
-  async function runQuick(call, { ok, statuses = {}, countChanged = false, retryLabel = null, opener = null }) {
+  async function runQuick(call, { ok, statuses = {}, countChanged = false, opener = null }) {
     const a = latest.current;
     if (!beginWrite()) return;
-    const result = await call();
-    endWrite();
+    const result = await saveCall(() => call(), () => runQuick(call, { ok, statuses, countChanged, opener }));
     if (result.status === 'ok') {
       afterWrite({ countChanged });
       if (dlgRef.current?.detail) refreshDetail();
@@ -392,7 +492,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     }
     a.clearToast();
     if (result.status === 'error') {
-      report({ text: retryLabel ?? T.ACTION_FAILED, retry: () => runQuick(call, { ok, statuses, countChanged, retryLabel, opener }) }, { from: a, opener });
+      report({ text: T.ACTION_FAILED, retry: () => runQuick(call, { ok, statuses, countChanged, opener }) }, { from: a, opener });
       return;
     }
     if (result.status === 'not_found' && !statuses.not_found) {
@@ -405,7 +505,54 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     await Promise.all([afterWrite({ countChanged }), dlgRef.current?.detail ? refreshDetail() : null]);
     report({ text: words }, { from: a, opener });
   }
-  const undoAction = (onAction) => ({ action: { label: T.UNDO, onAction }, icon: false });
+  // A toast's Undo (R2-05): it goes through the save line, so pressed while another save or read runs it
+  // WAITS its turn (the toast says "Undoing…") and runs when that ends. The line, not this file, then says
+  // how it went: "Undone" when it worked, "Undo didn't save. Check the connection, then retry." with Retry
+  // when the connection failed, and a refusal's own words (below) with × only.
+  //   words    the toast's own words — the line names them if the person has left the page meanwhile
+  //   call     the database call that undoes it → { status, … }
+  //   statuses what to say for each refusal status (a "Couldn't undo: …" reason or "Someone else changed …")
+  // Returns the toast's options: { icon: false, action }.
+  //   money    true for a payment, refund, returned-check or plan Undo: its failed-Undo bar is removed when Hide
+  //            private details turns on (S2). The `words` of a money Undo never hold an amount (S4): the line shows
+  //            them on any page, after the person left (text.js paymentUndoWords and its siblings).
+  function undoToast(words, call, { statuses = {}, countChanged = false, money = false } = {}) {
+    return { icon: false, action: saveLine.undoAction(undoRun(call, { statuses, countChanged, money }), { words }) };
+  }
+  // What the line runs for an Undo: the call, then the roster (and the open detail) read again, and a
+  // { status, reason } answer for the line. A refusal is shown once the list has been read again, so
+  // "Their change is shown" is true.
+  function undoRun(call, { statuses, countChanged, money = false }) {
+    return async () => {
+      const a = latest.current;
+      lastUndoMoney.current = money; // the bar the line may show for this Undo is a money bar (undoBar)
+      const result = await call();
+      if (result.status === 'ok') {
+        afterWrite({ countChanged });
+        if (dlgRef.current?.detail) refreshDetail();
+        return { status: 'ok' };
+      }
+      if (result.status === 'no_access') {
+        a.onNoAccess();
+        return { status: 'no_access' };
+      }
+      if (result.status === 'error') return { status: 'error' };
+      if (result.status === 'not_found' && !statuses.not_found) {
+        // The candidate is gone: "This candidate was deleted." (the tab's bar), nothing more to say here
+        if (dlgRef.current?.detail) closeAll();
+        loadProblem('not_found');
+        return { status: 'not_found' };
+      }
+      if (result.status === 'not_allowed') a.onRefreshProfile();
+      // S3: an Undo queued before Hide private details turned on must not say WHY it was refused ("a payment is
+      // recorded", "has payment records", "already undone"): that tells paid from unpaid on a mat tablet.
+      const reason = latest.current.paymentsHidden
+        ? T.UNDO_AT_DESK
+        : (statuses[result.status] ?? (result.status === 'not_allowed' ? T.undoWhy.notAllowed : T.undoWhy.invalid));
+      await Promise.all([afterWrite({ countChanged }), dlgRef.current?.detail ? refreshDetail() : null]);
+      return { status: result.status, reason };
+    };
+  }
 
   // ===== Record payment (Candidates 4) =====
   function paymentValues(money, method = null) {
@@ -414,10 +561,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     return { ticks, amount: cents > 0 ? amountInputText(cents) : '', amountTyped: false, method, note: '' };
   }
   function openRecordPayment(candidateId, opener) {
+    if (latest.current.paymentsHidden) return; // money waits for the desk (also after a failed read's Retry)
     const from = dlgRef.current?.detail?.data;
-    const start = (data) => openChild({ kind: 'record', candidateId, data, version: data.candidate.version, values: paymentValues(data.money) }, opener);
+    const start = (data) => !latest.current.paymentsHidden && openChild({ kind: 'record', candidateId, data, version: data.candidate.version, values: paymentValues(data.money) }, opener);
     if (from && dlgRef.current.detail.candidateId === candidateId) start(from);
-    else withCandidate(candidateId, start);
+    else withCandidate(candidateId, start, { money: true });
   }
   // A tick changes: the Amount follows the ticked items until someone types in it (OP-B6).
   function setTicks(ticks) {
@@ -442,27 +590,21 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!beginWrite()) return;
     patchChild({ saving: true, failed: false, note: null });
     const name = T.candidateName(c.data.candidate);
-    const result = await recordPayment({
+    const result = await saveCall(() => recordPayment({
       candidateId: c.candidateId,
       expectedVersion: c.version,
       amountCents: cents,
       method: c.values.method,
       forItems: inItemOrder(c.values.ticks, c.data.money),
       note: trimSpaces(c.values.note),
-    });
-    endWrite();
+      school: latest.current.deviceLocation, // the desk's school (R1-01); unknown → nothing sent
+    }), () => saveRecordPayment({ another }));
     if (result.status === 'ok') {
       afterWrite();
       const paymentId = result.paymentId;
-      latest.current.showToast(
-        T.toastPaymentRecorded(cents, name),
-        undoAction(() =>
-          runQuick(() => undoPayment({ paymentId }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-            statuses: { not_allowed: T.TOO_LATE_TO_UNDO, stale: T.PAYMENT_GONE, invalid: T.INVALID },
-          }),
-        ),
-      );
+      // R1-07: "Sam Lee marked paid · $330 cash" (the shared words); none while hidden (showMoneyToast)
+      const words = T.toastPaymentRecorded(cents, c.values.method, name);
+      showMoneyToast(words, undoToast(T.paymentUndoWords(name), () => undoPayment({ paymentId }), { money: true, statuses: { not_allowed: T.undoWhy.tooLate, stale: T.undoWhy.paymentGone, invalid: T.undoWhy.invalid } }));
       if (another) {
         // The dialog stays with the answer's money: the next unpaid item ticked, its amount, the
         // method kept, the note cleared, the new version.
@@ -501,6 +643,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
   // loaded: from the roster row's ⋯ only (its line is the candidate's latest payment, v0.963)
   function openEditPayment(line, opener, loaded = null) {
+    if (latest.current.paymentsHidden) return;
     const data = paymentData(loaded);
     if (!data) return;
     const ticks = stillInPlan(line.forItems, data.money);
@@ -523,26 +666,23 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     // items just saved), so the undo is never refused for an item that no longer exists.
     const oldTicks = stillInPlan(old.forItems, c.data.money);
     const undoTicks = oldTicks.length > 0 ? inItemOrder(oldTicks, c.data.money) : inItemOrder(c.values.ticks, c.data.money);
-    const result = await editPayment({
+    const result = await saveCall(() => editPayment({
       paymentId: old.id,
       amountCents: cents,
       method: c.values.method,
       forItems: inItemOrder(c.values.ticks, c.data.money),
       note: trimSpaces(c.values.note),
       reason: trimSpaces(c.values.reason),
-    });
-    endWrite();
+    }), () => saveEditPayment());
     if (result.status === 'ok') {
       afterWrite();
       const newId = result.paymentId;
-      latest.current.showToast(
+      showMoneyToast(
         T.TOAST_PAYMENT_CHANGED,
-        undoAction(() =>
-          runQuick(
-            () => editPayment({ paymentId: newId, amountCents: old.amountCents, method: old.method, forItems: undoTicks, note: old.note ?? '', reason: T.UNDO_EDIT_REASON }),
-            { ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }), statuses: { stale: T.PAYMENT_GONE } },
-          ),
-        ),
+        undoToast(T.paymentUndoWords(name), () => editPayment({ paymentId: newId, amountCents: old.amountCents, method: old.method, forItems: undoTicks, note: old.note ?? '', reason: T.UNDO_EDIT_REASON }), {
+          money: true,
+          statuses: { stale: T.undoWhy.paymentGone },
+        }),
       );
       patchChild({ saving: false });
       closeChild();
@@ -563,6 +703,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // OP-B1: a short confirmation, then a toast WITHOUT Undo (an undo can't be undone).
   // loaded: from the roster row's ⋯ only (as openEditPayment)
   function openUndoPayment(line, what, opener, loaded = null) {
+    if (latest.current.paymentsHidden) return;
     const data = paymentData(loaded);
     if (!data) return;
     openChild({ kind: 'undo', candidateId: data.candidate.id, data, line, what, values: null }, opener);
@@ -573,19 +714,18 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!beginWrite()) return;
     patchChild({ saving: true, failed: false, note: null });
     const name = T.candidateName(c.data.candidate);
-    const line = c.line;
-    const result = await undoPayment({ paymentId: line.id });
-    endWrite();
+    const payment = c.line;
+    const result = await saveCall(() => undoPayment({ paymentId: payment.id }), () => confirmUndoPayment());
     if (result.status === 'ok') {
       afterWrite();
-      const cents = Math.abs(line.amountCents);
+      const cents = Math.abs(payment.amountCents);
       const text =
-        line.kind === 'refund'
+        payment.kind === 'refund'
           ? T.toastRefundUndone(cents, name)
-          : line.kind === 'returned'
+          : payment.kind === 'returned'
             ? T.toastReturnedUndone(cents, name)
-            : T.toastPaymentUndone(cents, line.method, name);
-      latest.current.showToast(text, { icon: false });
+            : T.toastPaymentUndone(name); // R1-07: "Payment undone for Sam Lee" (the shared words)
+      showMoneyToast(text, { icon: false });
       patchChild({ saving: false });
       closeChild();
       return;
@@ -595,7 +735,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       return;
     }
     if (result.status === 'invalid') {
-      patchChild({ saving: false, note: line.returned ? T.RETURNED_FIRST : line.kind === 'payment' ? T.UNDO_NET_FLOOR : T.INVALID, blocking: true });
+      patchChild({ saving: false, note: payment.returned ? T.RETURNED_FIRST : payment.kind === 'payment' ? T.UNDO_NET_FLOOR : T.INVALID, blocking: true });
       return;
     }
     if (commonProblem(result.status, name)) return;
@@ -603,13 +743,15 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
 
   function openRefund(candidateId, opener) {
+    if (latest.current.paymentsHidden) return;
     const start = (data) => {
+      if (latest.current.paymentsHidden) return;
       const over = data.money?.overpaidCents ?? 0;
       openChild({ kind: 'refund', candidateId, data, version: data.candidate.version, values: { amount: over > 0 ? amountInputText(over) : '', method: null, note: '' } }, opener);
     };
     const from = dlgRef.current?.detail;
     if (from?.data && from.candidateId === candidateId) start(from.data);
-    else withCandidate(candidateId, start);
+    else withCandidate(candidateId, start, { money: true });
   }
   async function saveRefund() {
     const c = dlgRef.current?.child;
@@ -623,20 +765,12 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!beginWrite()) return;
     patchChild({ saving: true, failed: false, note: null });
     const name = T.candidateName(c.data.candidate);
-    const result = await recordRefund({ candidateId: c.candidateId, expectedVersion: c.version, amountCents: cents, method: c.values.method, note: trimSpaces(c.values.note) });
-    endWrite();
+    const result = await saveCall(() => recordRefund({ candidateId: c.candidateId, expectedVersion: c.version, amountCents: cents, method: c.values.method, note: trimSpaces(c.values.note), school: latest.current.deviceLocation }), () => saveRefund());
     if (result.status === 'ok') {
       afterWrite();
       const refundId = result.paymentId;
-      latest.current.showToast(
-        T.toastRefund(cents, name),
-        undoAction(() =>
-          runQuick(() => undoPayment({ paymentId: refundId }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-            statuses: { stale: T.PAYMENT_GONE },
-          }),
-        ),
-      );
+      const words = T.toastRefund(cents, name);
+      showMoneyToast(words, undoToast(T.refundUndoWords(name), () => undoPayment({ paymentId: refundId }), { money: true, statuses: { stale: T.undoWhy.paymentGone } }));
       patchChild({ saving: false });
       closeChild();
       return;
@@ -650,6 +784,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
 
   function openReturned(line, what, opener) {
+    if (latest.current.paymentsHidden) return;
     const d = dlgRef.current?.detail;
     if (!d?.data) return;
     openChild({ kind: 'returned', candidateId: d.candidateId, data: d.data, line, what, values: { note: '' } }, opener);
@@ -665,20 +800,12 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     patchChild({ saving: true, failed: false, note: null });
     const name = T.candidateName(c.data.candidate);
     const cents = c.line.amountCents;
-    const result = await markCheckReturned({ paymentId: c.line.id, note: trimSpaces(c.values.note) });
-    endWrite();
+    const result = await saveCall(() => markCheckReturned({ paymentId: c.line.id, note: trimSpaces(c.values.note) }), () => saveReturned());
     if (result.status === 'ok') {
       afterWrite();
       const returnedId = result.paymentId;
-      latest.current.showToast(
-        T.toastReturned(cents, name),
-        undoAction(() =>
-          runQuick(() => undoPayment({ paymentId: returnedId }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-            statuses: { stale: T.PAYMENT_GONE },
-          }),
-        ),
-      );
+      const words = T.toastReturned(cents, name);
+      showMoneyToast(words, undoToast(T.returnedUndoWords(name), () => undoPayment({ paymentId: returnedId }), { money: true, statuses: { stale: T.undoWhy.paymentGone } }));
       patchChild({ saving: false });
       closeChild();
       return;
@@ -705,7 +832,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       openChild({ kind: 'plan', candidateId, data, version: data.candidate.version, values: { planId: data.candidate.cyclePlanId, kukkiwon: data.candidate.kukkiwon === true } }, opener);
     const from = dlgRef.current?.detail;
     if (from?.data && from.candidateId === candidateId) start(from.data);
-    else withCandidate(candidateId, start);
+    else withCandidate(candidateId, start, { money: true });
   }
   async function saveChangePlan() {
     const c = dlgRef.current?.child;
@@ -719,19 +846,17 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const name = T.candidateName(c.data.candidate);
     const candidateId = c.candidateId;
     const old = c.initial;
-    const result = await changePlan({ candidateId, expectedVersion: c.version, planId: c.values.planId, kukkiwon: c.values.kukkiwon });
-    endWrite();
+    const result = await saveCall(() => changePlan({ candidateId, expectedVersion: c.version, planId: c.values.planId, kukkiwon: c.values.kukkiwon }), () => saveChangePlan());
     if (result.status === 'ok') {
       afterWrite();
       const version = result.version;
-      latest.current.showToast(
-        T.toastPlanChanged(name),
-        undoAction(() =>
-          runQuick(() => changePlan({ candidateId, expectedVersion: version, planId: old.planId, kukkiwon: old.kukkiwon }), {
-            ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-            statuses: { stale: T.candidateStale(name), not_allowed: T.PAYMENT_RECORDED_ASK_ADMIN, withdrawn: T.planWithdrawn(name) },
-          }),
-        ),
+      const words = T.toastPlanChanged(name);
+      showMoneyToast(
+        words,
+        undoToast(T.planUndoWords(name), () => changePlan({ candidateId, expectedVersion: version, planId: old.planId, kukkiwon: old.kukkiwon }), {
+          money: true,
+          statuses: { stale: T.candidateStale(name), not_allowed: T.undoWhy.planPaid, withdrawn: T.undoWhy.planWithdrawn(name) },
+        }),
       );
       patchChild({ saving: false });
       closeChild();
@@ -774,7 +899,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!beginWrite()) return;
     patchChild({ saving: true, failed: false, note: null });
     const name = `${normalizeName(v.first)} ${normalizeName(v.last)}`;
-    const result = await addCandidate({
+    const result = await saveCall(() => addCandidate({
       cycleId: a.cycle.id,
       first: v.first,
       last: v.last,
@@ -785,24 +910,21 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       planId: v.planId,
       kukkiwon: v.kukkiwon === true,
       paperWaiver: true,
-    });
-    endWrite();
+    }), () => saveAdd());
     if (result.status === 'ok') {
       afterWrite({ countChanged: true });
       const { id, version, reference } = result;
       // OP-B2: admins get Undo (= Delete permanently; nothing is paid yet). Staff don't, unless
       // Jeffrey decides otherwise (text.js ADD_UNDO_FOR_STAFF).
       const canUndo = a.isAdmin || T.ADD_UNDO_FOR_STAFF;
+      const words = T.toastAdded(name, reference);
       a.showToast(
-        T.toastAdded(name, reference),
+        words,
         canUndo
-          ? undoAction(() =>
-              runQuick(() => deleteCandidate({ candidateId: id, expectedVersion: version }), {
-                ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-                countChanged: true,
-                statuses: { stale: T.candidateStale(name), has_payments: T.hasPaymentRecords(name), has_grades: T.hasGrades(name) },
-              }),
-            )
+          ? undoToast(words, () => deleteCandidate({ candidateId: id, expectedVersion: version }), {
+              countChanged: true,
+              statuses: { stale: T.candidateStale(name), has_payments: T.undoWhy.hasPayments(name), has_grades: T.undoWhy.hasGrades(name) },
+            })
           : { icon: false },
       );
       patchChild({ saving: false });
@@ -869,7 +991,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (!beginWrite()) return;
     patchDetail({ edit: { ...e, saving: true, failed: false, note: null } });
     const name = T.candidateName(c);
-    const result = await updateCandidate({
+    const result = await saveCall(() => updateCandidate({
       candidateId: c.id,
       expectedVersion: e.version,
       first: v.first,
@@ -878,8 +1000,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       email: purged ? null : trimSpaces(v.email),
       locationCode: v.school,
       dan: Number(v.dan),
-    });
-    endWrite();
+    }), () => saveEdit());
     const setEdit = (changes) => patchDetail((x) => (x.edit ? { edit: { ...x.edit, ...changes } } : {}));
     if (result.status === 'ok') {
       afterWrite();
@@ -893,30 +1014,27 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       const newVersion = result.version;
       latest.current.showToast(
         T.TOAST_CHANGES_SAVED,
-        undoAction(() =>
-          runQuick(
-            () =>
-              updateCandidate({
-                candidateId,
-                expectedVersion: newVersion,
-                first: old.first,
-                last: old.last,
-                dateOfBirth: purged ? null : old.dob,
-                email: purged ? null : trimSpaces(old.email),
-                locationCode: old.school,
-                dan: Number(old.dan),
-              }),
-            {
-              ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-              retryLabel: T.UNDO_FAILED,
-              statuses: {
-                stale: T.candidateStale(savedName),
-                has_grades: T.undoDanHasGrades(savedName),
-                already_added: T.danChangeMakeupLater(savedName),
-                not_allowed: T.DAN_LOCKED_STAFF,
-              },
+        undoToast(
+          T.TOAST_CHANGES_SAVED,
+          () =>
+            updateCandidate({
+              candidateId,
+              expectedVersion: newVersion,
+              first: old.first,
+              last: old.last,
+              dateOfBirth: purged ? null : old.dob,
+              email: purged ? null : trimSpaces(old.email),
+              locationCode: old.school,
+              dan: Number(old.dan),
+            }),
+          {
+            statuses: {
+              stale: T.candidateStale(savedName),
+              has_grades: T.undoWhy.danHasGrades(savedName),
+              already_added: T.undoWhy.makeupLater(savedName),
+              not_allowed: T.undoWhy.danLockedStaff,
             },
-          ),
+          },
         ),
       );
       // A save that worked closes the detail back to the roster, as Star and Camps do (v1.047
@@ -985,7 +1103,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const v = c.editValues;
     const purged = cand.dateOfBirth === null;
     const name = T.candidateName(cand);
-    const result = await updateCandidateClear({
+    const result = await saveCall(() => updateCandidateClear({
       candidateId: cand.id,
       expectedVersion: d.edit.version,
       first: v.first,
@@ -997,8 +1115,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       expectedGradeCount: c.counts.gradeCount,
       expectedCountCount: c.counts.countCount,
       expectedChosenCount: c.counts.chosenCount,
-    });
-    endWrite();
+    }), () => confirmDanChange());
     if (result.status === 'ok') {
       afterWrite();
       latest.current.showToast(T.TOAST_CHANGES_SAVED, { icon: false });
@@ -1047,22 +1164,19 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const a = latest.current;
     if (!beginWrite()) return;
     const name = T.candidateName(target);
-    const result = await withdrawCandidate({ candidateId: target.id, expectedVersion: target.version });
-    endWrite();
+    const result = await saveCall(() => withdrawCandidate({ candidateId: target.id, expectedVersion: target.version }), () => withdraw(target, opener));
     const inDetail = Boolean(dlgRef.current?.detail);
     if (result.status === 'ok' || result.status === 'withdrawn') {
       afterWrite({ countChanged: true });
       const version = result.version;
+      const words = T.toastWithdrawn(name);
       a.showToast(
-        T.toastWithdrawn(name),
+        words,
         result.status === 'ok'
-          ? undoAction(() =>
-              runQuick(() => restoreCandidate({ candidateId: target.id, expectedVersion: version }), {
-                ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-                countChanged: true,
-                statuses: { stale: T.candidateStale(name), already_added: T.restoreAlreadyAdded(name) },
-              }),
-            )
+          ? undoToast(words, () => restoreCandidate({ candidateId: target.id, expectedVersion: version }), {
+              countChanged: true,
+              statuses: { stale: T.candidateStale(name), already_added: T.undoWhy.alreadyAdded(name) },
+            })
           : { icon: false },
       );
       if (inDetail) {
@@ -1104,8 +1218,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     patchChild({ saving: true, failed: false, note: null });
     const t = c.target;
     const name = T.candidateName(t);
-    const result = await deleteCandidate({ candidateId: t.id, expectedVersion: t.version });
-    endWrite();
+    const result = await saveCall(() => deleteCandidate({ candidateId: t.id, expectedVersion: t.version }), () => confirmDelete());
     if (result.status === 'ok') {
       afterWrite({ countChanged: true });
       latest.current.showToast(T.toastDeleted(name), { icon: false });
@@ -1140,15 +1253,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
           // A "Duplicate copy" restored: no Undo (R2-03, v1.043; restoreHasUndo in checks.js)
           !restoreHasUndo(target)
             ? { icon: false }
-            : undoAction(() =>
-            runQuick(() => withdrawCandidate({ candidateId: target.id, expectedVersion: result.version }), {
-              ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-              countChanged: true,
-              retryLabel: T.UNDO_FAILED,
-              // 'withdrawn' = someone else withdrew them meanwhile: nothing was done here either
-              statuses: { stale: T.candidateStale(name), withdrawn: T.candidateStale(name) },
-            }),
-          ),
+            : undoToast(T.toastRestored(name), () => withdrawCandidate({ candidateId: target.id, expectedVersion: result.version }), {
+                countChanged: true,
+                // 'withdrawn' = someone else withdrew them meanwhile: nothing was done here either
+                statuses: { stale: T.candidateStale(name), withdrawn: T.candidateStale(name) },
+              }),
         ),
       countChanged: true,
       statuses: { stale: T.candidateStale(name), already_added: T.restoreAlreadyAdded(name) },
@@ -1159,11 +1268,16 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   async function openCompare(row, partner, opener) {
     if (dlgRef.current || !partner) return;
     if (!beginWrite()) return;
-    const [a, b] = await Promise.all([fetchCandidate(row.id), fetchCandidate(partner.id)]);
-    endWrite();
+    let pair = [{ problem: 'error' }, { problem: 'error' }];
+    try {
+      pair = await Promise.all([fetchCandidate(row.id), fetchCandidate(partner.id)]);
+    } finally {
+      endWrite();
+    }
+    const [a, b] = pair;
     const problem = a.problem ?? b.problem;
     if (problem) {
-      loadProblem(problem);
+      loadProblem(problem, () => openCompare(row, partner, opener));
       return;
     }
     // The earlier registration is "First registration" (by the moment itself, not its text — two
@@ -1179,10 +1293,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const c = dlgRef.current?.child;
     if (!c || c.saving || c.blocking) return;
     if (!beginWrite()) return;
-    patchChild({ saving: true, failed: false, note: null });
+    // busyKind: which button was pressed, so the shared compare can say "Keeping…" on that one
+    const busyKind = keepBoth ? 'keep-both' : keep.candidate.id === c.first?.candidate?.id ? 'keep-first' : 'keep-second';
+    patchChild({ saving: true, busyKind, failed: false, note: null });
     const name = T.candidateName(keep.candidate);
-    const result = await resolveDuplicate({ keepId: keep.candidate.id, keepVersion: keep.candidate.version, otherId: other.candidate.id, otherVersion: other.candidate.version, keepBoth });
-    endWrite();
+    const result = await saveCall(() => resolveDuplicate({ keepId: keep.candidate.id, keepVersion: keep.candidate.version, otherId: other.candidate.id, otherVersion: other.candidate.version, keepBoth }), () => resolve(keep, other, keepBoth));
     if (result.status === 'ok') {
       afterWrite({ countChanged: !keepBoth });
       if (keepBoth) latest.current.showToast(T.TOAST_BOTH_KEPT, { icon: false });
@@ -1190,15 +1305,14 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
         const otherId = other.candidate.id;
         const otherVersion = result.otherVersion;
         // Staff may undo their own "keep one" for 10 seconds (the database checks it).
+        const words = T.toastKeptOne(name);
+        const otherName = T.candidateName(other.candidate);
         latest.current.showToast(
-          T.toastKeptOne(name),
-          undoAction(() =>
-            runQuick(() => restoreCandidate({ candidateId: otherId, expectedVersion: otherVersion }), {
-              ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
-              countChanged: true,
-              statuses: { not_allowed: T.TOO_LATE_TO_UNDO, stale: T.DUPLICATE_CHANGED },
-            }),
-          ),
+          words,
+          undoToast(words, () => restoreCandidate({ candidateId: otherId, expectedVersion: otherVersion }), {
+            countChanged: true,
+            statuses: { not_allowed: T.undoWhy.tooLate, stale: T.candidateStale(otherName) },
+          }),
         );
       }
       patchChild({ saving: false });
@@ -1219,7 +1333,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     // Admins may open View signature while private details are hidden, as Star's (v1.055 (c))
     if (!d?.data) return;
     openChild({ kind: 'signature', candidateId: d.candidateId, status: 'loading', result: null, values: null }, opener);
-    const result = await loadSignature({ candidateId: d.candidateId });
+    await readSignature(d.candidateId);
+  }
+  async function readSignature(candidateId) {
+    const result = await loadSignature({ candidateId });
     if (dlgRef.current?.child?.kind !== 'signature') return; // closed meanwhile
     if (result.status === 'no_access') {
       latest.current.onNoAccess();
@@ -1228,7 +1345,15 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (result.status === 'not_allowed') latest.current.onRefreshProfile();
     patchChild({ status: result.status === 'ok' ? 'ready' : result.status, result: result.status === 'ok' ? result : null });
   }
-  // The receipt reads its own data (ReceiptDialog). It also needs the day the Kukkiwon fee was
+  // S-2 (v1.051 (2)): the signature box's "Couldn't load. Check the connection, then retry." has a Retry
+  // that reads the signature again (the box shows its loading lines meanwhile).
+  function retrySignature() {
+    const c = dlgRef.current?.child;
+    if (c?.kind !== 'signature' || c.status === 'loading') return;
+    patchChild({ status: 'loading', result: null });
+    readSignature(c.candidateId);
+  }
+  // The receipt reads its own data (CandidateReceipt, which hands it to the shared receipt box). It also needs the day the Kukkiwon fee was
   // added (the receipt data doesn't carry it): from the open detail, or — from a row's ⋯ — read
   // once here, keeping ONLY those two dates (nothing else of the detail is kept).
   function openReceipt(candidateId, opener) {
@@ -1252,6 +1377,8 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   return {
     dlg,
     busy,
+    saveLine, // the tab's one save line: the make-up picker's Add and Undo use it too (R2-05)
+    menuLoading,
     openDetail,
     refreshDetail,
     requestCloseDetail,
@@ -1290,6 +1417,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     openCompare,
     resolve,
     openSignature,
+    retrySignature,
     openReceipt,
     setDetailMenu,
     confirmDanChange,

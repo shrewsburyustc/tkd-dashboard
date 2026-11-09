@@ -12,6 +12,7 @@
 // name rules …) come from Color Belt's src/screens/testing/text.js, unchanged — the same as Star's
 // Rubrics and prices screens do.
 import * as CB from '../../text.js';
+import { PAST_DAYS_HINT } from '../../../../components/text.js';
 
 import { testingTimeLabel } from '../../../../lib/star/starEventRules.js';
 import { weekdayMonthDay } from '../../../../lib/calendarDates.js';
@@ -20,7 +21,7 @@ export * from '../../../../lib/star/eventsText.js';
 
 // ----- House words (Color Belt's text.js, unchanged) -----
 export const {
-  UNDO, TOAST_UNDONE, UNDO_STALE, UNDO_FAILED, CANCEL, SAVE, SAVING, CLOSE, MORE_DETAILS, UNSAVED, DISCARD_CHANGES,
+  UNDO, CANCEL, SAVE, SAVING, CLOSE, MORE_DETAILS, UNSAVED, DISCARD_CHANGES,
   REGISTRATION, REG_OPEN, REG_CLOSED, CLOSE_AUTOMATICALLY, CLOSE_AUTOMATICALLY_LABEL, CLOSING_DATE_LABEL,
   CLOSE_AUTOMATICALLY_HINT, NOTE_FOR_FAMILIES, NOTE_HINT, NOTE_TOO_LONG, ENTER_EVENT_NAME, ENTER_TESTING_DATE,
   TESTING_DATE_PAST, CLOSING_IN_PAST, ENTER_CLOSING_DATE, EVENT_NAME, TESTING_DATE, UPCOMING, PAST,
@@ -62,7 +63,9 @@ export const WHERE_HINT = 'Where testing takes place. Candidates from both schoo
 export const CHOOSE = 'Choose…';
 export const copiedFromEvent = (name) => `Start time and Where copied from ${name}. Change if needed.`;
 // The calendar (v0.502, v0.503 — calendar mockups C1–C4)
-export const TESTING_DATE_HINT = "Past dates can’t be chosen.";
+// R3-13 (v1.045, v1.051): the gray line under the calendar says "days", in the one shared sentence
+// (src/components/text.js). The testing date's first choosable day is always today, so it is always true.
+export const TESTING_DATE_HINT = PAST_DAYS_HINT;
 export const MARKED_TESTING_DATE = 'Testing date.'; // after the dot, while the testing date's month is on show
 export const MARKED_TESTING_DATE_SR = 'testing date'; // what a screen reader adds to that day
 export const closingRangeHint = (testingDate) => `The closing date can be from today up to ${weekdayMonthDay(testingDate)}.`;

@@ -1,14 +1,19 @@
 // CandidatesTab.jsx — the Candidates tab of a Black Belt testing cycle's page.
 // Why it exists: contract CONTRACT-0016-B2 §3.2, approved mockups Candidates 1–7 and 9. Top to
-// bottom:
-//   - (one school on the location switcher) "Showing Worcester candidates only · Show both schools"
-//   - the amber possible-duplicate box with Review (DuplicateBox.jsx)
-//   - the four summary cards that filter the list (SummaryCards.jsx)
+// bottom, on every size (R3-10, v1.047 (15): one order above every roster):
+//   - the amber possible-duplicate box with Review (the shared DuplicateBox)
+//   - the count cards that filter the list (the shared CountCards, BB15: four plan cards, two by
+//     two on phones; the gray note about duplicates left out; "Showing late only · Show all").
+//     Hide private details on: ONE Candidates card instead of the money cards (v1.046 (9)).
+//     Nobody registered yet (at the shown school): no cards at all (C-05 (a))
+//   - (one school on the location switcher) "Showing Worcester candidates only · Show both
+//     schools", drawn as the shared "Showing … only" line (R3-05)
 //   - Find a candidate (tablet: the full width; its ✕ is the shared icon button), and on the PC the
 //     caption "9 candidates · Dan, then school, then last name" right beside it. When nobody
 //     matches, one gray line replaces the list: 'No candidates match "x". · Clear search'
-//   - phones: Search first, then the two filter pills and the gray duplicates line (mockup 1)
-//   - the roster (RosterRows.jsx) with each row's ⋯ menu, and the Removed group at the bottom
+//   - the roster (RosterRows.jsx) with each row's ⋯ menu, and the Removed group at the bottom.
+//     A count card that leaves nobody says what is true for that card (C-05 (b)); an empty roster
+//     is one gray line that names Add candidate (v1.028), with no search box and no table head
 //   - every dialog: the candidate detail and what opens from it (useCandidateActions.js decides)
 // "+ Add candidate" sits in the cycle page's header (CyclePage.jsx); through `actionsRef` it opens
 // a small menu here (contract 0025 §14.5, mockup G06 proposal 24): "New candidate" (the desk
@@ -18,15 +23,17 @@
 // their ⋯ has no Record payment, Change plan or refund (G 27).
 // The row ⋯ (v0.963, mockup A option 2; the order of v1.011): three groups with a line between —
 // Edit details · Change plan or Kukkiwon — Record payment (tablets / phones) · Edit payment ·
-// Undo payment · Record refund · Print receipt — Withdraw · Delete permanently. A withdrawn row:
-// Record refund · Print receipt — Restore — Delete permanently (its own line, C-04 / v1.055). A row
+// Undo payment · Record refund · Print receipt (only with a payment or refund that still stands,
+// M-03 / v1.055 (b); never while hidden) — Withdraw · Delete permanently. A withdrawn row:
+// Record refund · Print receipt (same rule: a removed person's money still counts) — Restore —
+// Delete permanently (its own line, C-04 / v1.055). A row
 // marked "Possible duplicate" has no Record payment (R3-02) until the pair is resolved. For an
 // admin, a row with payment rows is read first (Edit / Undo payment act on the LATEST payment,
 // which the row doesn't carry).
 //
 // It follows the location switcher (v0.118): on Worcester or Shrewsbury the list, the cards and
 // the duplicate box show that school only; Both shows everyone. With the device's Hide payments
-// switch on (v0.215, OP-B7) there are no cards, no money columns and no payment actions, and
+// switch on (v0.215, OP-B7) there is only the Candidates card, no money columns and no payment actions, and
 // nothing in a ⋯ tells who has paid (R1-04, R4-01 / v1.036): on EVERY row, for admins and staff,
 // Change plan or Kukkiwon is grayed "Change the plan at the desk." and (admins) Delete
 // permanently is grayed "Delete candidates at the desk."; Edit details opens (R4-04, v1.037). The
@@ -36,22 +43,24 @@
 // unlocks or the browser tab comes back, and quietly every 15 seconds — never touching an open
 // dialog or what someone is typing.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import CompareDialog from '../../../components/CompareDialog.jsx';
+import CountCards from '../../../components/CountCards.jsx';
+import DuplicateBox from '../../../components/DuplicateBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadRoster, schoolToday } from '../../../lib/blackBelt/api.js';
 import { duplicatePairs, rosterCards, rosterFilter } from '../../../lib/blackBelt/rules.js';
+import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { PHONE_QUERY, WIDE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
-import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
-import ReceiptDialog from '../receipt/ReceiptDialog.jsx';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
+import CandidateReceipt from '../receipt/CandidateReceipt.jsx';
 import AddCandidateDialog from './AddCandidateDialog.jsx';
 import CandidateDialog, { lineWords } from './CandidateDialog.jsx';
 import ChangePlanDialog from './ChangePlanDialog.jsx';
-import CompareDialog from './CompareDialog.jsx';
+import { compareRows } from './compareRows.js';
 import DanChangeDialog from './DanChangeDialog.jsx';
-import DuplicateBox from './DuplicateBox.jsx';
 import MakeupPickerDialog from './MakeupPickerDialog.jsx';
 import MakeupSubjectsDialog from '../grading/MakeupSubjectsDialog.jsx';
 import EditPaymentDialog from './EditPaymentDialog.jsx';
@@ -61,11 +70,10 @@ import DeleteConfirm from './DeleteConfirm.jsx';
 import ReturnedDialog from './ReturnedDialog.jsx';
 import RosterRows from './RosterRows.jsx';
 import SignatureDialog from './SignatureDialog.jsx';
-import SummaryCards from './SummaryCards.jsx';
 import UndoPaymentDialog from './UndoPaymentDialog.jsx';
 import { useCandidateActions } from './useCandidateActions.js';
 import { useMakeupPicker } from './useMakeupPicker.js';
-import { canRecordPayment } from './checks.js';
+import { canRecordPayment, isMoneyChild, printReceiptOffered, rosterCardList, rosterEmptyText } from './checks.js';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
@@ -107,6 +115,7 @@ export default function CandidatesTab({
   isAdmin,
   location = 'Both',
   onLocationChange,
+  deviceLocation, // This device's school: where a payment or refund counts (R1-01)
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -122,7 +131,7 @@ export default function CandidatesTab({
   const live = useLiveLoad({ key: cycle.id, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const rows = useMemo(() => live.data?.rows ?? [], [live.data]);
   const today = schoolToday();
-  const [hidden] = usePaymentsHidden();
+  const [hidden] = usePrivateDetailsHidden();
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const isTouch = useMediaQuery(TOUCH_QUERY);
@@ -159,6 +168,7 @@ export default function CandidatesTab({
     isAdmin,
     today,
     paymentsHidden: hidden,
+    deviceLocation,
     reloadRoster,
     onCandidatesChanged,
     showToast,
@@ -178,7 +188,7 @@ export default function CandidatesTab({
     setFlashId(id);
     flashTimer.current = window.setTimeout(() => setFlashId(null), FLASH_MS);
   }, []);
-  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash, setBanner });
+  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash, setBanner, saveLine: actions.saveLine, paymentsHidden: hidden });
 
   // The page header's "+ Add candidate" (and N) open the Add candidate menu (G 24) through this.
   const schoolCode = SCHOOL_CODE[location] ?? null;
@@ -231,9 +241,18 @@ export default function CandidatesTab({
   const school = location ?? 'Both';
   // Make-ups have no fee, so they aren't in the money cards or their filters (G 27)
   const counts = useMemo(() => rosterCards(rows.filter((r) => !r.isMakeup), { school }), [rows, school]);
-  const shown = useMemo(() => rosterFilter(rows, { school, card, search }).filter((r) => !card || !r.isMakeup), [rows, school, card, search]);
+  // Everyone registered at the shown school(s), active or removed: none → no cards (C-05 (a), as
+  // Star's hasAny); and how many are active (the Candidates card while private details are hidden)
+  const inSchool = useMemo(() => rosterFilter(rows, { school }), [rows, school]);
+  const hasAny = inSchool.length > 0;
+  const activeTotal = useMemo(() => inSchool.filter((r) => r.status === 'active').length, [inSchool]);
+  const cardList = rosterCardList({ counts, total: activeTotal, hidden, hasAny });
+  // While hidden there is no card filter: a card chosen just before the switch turned on must not
+  // filter even one frame of the list (the effect above clears it a moment later; P3).
+  const activeCard = hidden ? null : card;
+  const shown = useMemo(() => rosterFilter(rows, { school, card: activeCard, search }).filter((r) => !activeCard || !r.isMakeup), [rows, school, activeCard, search]);
   const activeRows = shown.filter((r) => r.status === 'active');
-  const removedRows = card ? [] : shown.filter((r) => r.status === 'withdrawn');
+  const removedRows = activeCard ? [] : shown.filter((r) => r.status === 'withdrawn');
   const pairs = useMemo(() => duplicatePairs(rosterFilter(rows, { school })), [rows, school]);
   const rowById = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
   const partnerOf = (row) => (row.duplicateOf ? rowById.get(row.duplicateOf) ?? null : rows.find((r) => r.duplicateOf === row.id && r.status === 'active') ?? null);
@@ -250,6 +269,19 @@ export default function CandidatesTab({
   // ----- The row ⋯ menu (only what this person may do; contract §3.2, v0.963) -----
   // Three groups in a fixed order; what doesn't apply is left out, the rest keep their order, and
   // a group's first item gets the line above it only when an earlier group has items.
+  // Print receipt (BB2 / M-03): only with a payment or refund that still stands, active or
+  // withdrawn; never while hidden. An admin's ⋯ that read the candidate first knows the live lines
+  // exactly; every other ⋯ goes by the row's own money facts (see printReceiptOffered).
+  function offersPrint(row, loaded) {
+    return printReceiptOffered({
+      hidden,
+      isMakeup: row.isMakeup === true,
+      lines: loaded?.payments ?? null,
+      paidCents: row.money?.paidCents ?? 0,
+      hasPaymentRows: row.hasPaymentRows,
+      tag: row.money?.tag ?? null,
+    });
+  }
   function rowMenuItems(row, loaded = null) {
     const name = T.candidateName(row);
     const m = row.money ?? {};
@@ -261,7 +293,7 @@ export default function CandidatesTab({
     const off = [];
     if (row.status === 'withdrawn') {
       if (isAdmin && !hidden && !makeup && m.paidCents > 0) money.push({ key: 'refund', label: T.RECORD_REFUND, Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
-      if (!hidden) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
+      if (offersPrint(row, loaded)) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
       if (isAdmin) {
         off.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, disabled: actions.busy, onSelect: () => actions.restore(target, anchor) });
         // Payment records, and (0025, Q-G3 v0.950) grades, block deleting (the short reason: they
@@ -331,7 +363,7 @@ export default function CandidatesTab({
       // bb-menu-fit: "Record refund · $50 overpaid" is a little wider than the 200 px menu (blackBelt.css)
       money.push({ key: 'refund', label: <span className="bb-menu-fit">{T.RECORD_REFUND} <span className="bb-menu-keep">{T.overpaidPart(m.overpaidCents)}</span></span>, Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
     }
-    if (!hidden) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
+    if (offersPrint(row, loaded)) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
 
     // (3) Taking someone off (admins, v1.007): Withdraw is plain and acts at once (with Undo);
     // Delete permanently is red and asks first, grayed with what to do instead (v0.904, v0.950).
@@ -366,7 +398,9 @@ export default function CandidatesTab({
   // Pressing a row's ⋯: pressing it again closes the menu. An admin's ⋯ for a candidate who may
   // have payments (payment rows, payments shown, not a make-up) reads the candidate first
   // (actions.loadForMenu, with the detail's problem handling) and opens when it arrives; while it
-  // loads the tab is busy, so another press does nothing. Everyone else's opens at once.
+  // loads the tab is busy, so another press does nothing, and that row's ⋯ shows busy
+  // (actions.menuLoading). If the read fails, the bar's Retry reads the same candidate again and the
+  // menu opens when it works (R4-11). Everyone else's opens at once.
   function openRowMenu(row, anchor) {
     if (menu?.row?.id === row.id) {
       setMenu(null);
@@ -395,6 +429,7 @@ export default function CandidatesTab({
     nav,
     hidden,
     busy: actions.busy,
+    menuLoading: actions.menuLoading, // the row whose ⋯ is reading the candidate first (R4-11): its ⋯ shows busy
     menuFor: menu?.row?.id ?? null,
     flashId,
     hasMenu: (row) => rowMenuItems(row).length > 0,
@@ -428,9 +463,11 @@ export default function CandidatesTab({
   }
 
   const searchText = search.trim();
-  let emptyText = T.NO_CANDIDATES;
-  if (searchText) emptyText = T.noMatch(searchText);
-  else if (card) emptyText = T.NO_FILTER_MATCH;
+  // What an empty list says: the search, or what is true for the chosen card (C-05 (b)), or the
+  // empty-roster line that names Add candidate
+  const emptyText = rosterEmptyText({ searchText, card: activeCard });
+  // The count cards (BB15): the data from checks.js, the icons from icons.js
+  const CARD_ICON = { all: ICONS.cardCandidates, paidInFull: ICONS.cardPaidInFull, onSchedule: ICONS.cardOnSchedule, late: ICONS.cardLate, notPaid: ICONS.cardNotPaid };
   // Nobody at all matches the search (no active row and nothing in Removed): the roster gives way
   // to the one "No candidates match … · Clear search" line (R3-09).
   const searchMissing = Boolean(searchText) && activeRows.length === 0 && removedRows.length === 0;
@@ -439,17 +476,49 @@ export default function CandidatesTab({
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={tabId} className="tpanel bb-candidates">
+      {/* The one order above every roster (R3-10, v1.047 (15)), on every size: the duplicate box,
+          the count cards with their "Showing … only" line, the one-school line, the search, then
+          the table. The shared duplicate box: the count on the first line only; each Review passes
+          itself, so focus returns to it when the compare closes. */}
+      <DuplicateBox
+        countText={T.possibleDuplicates(pairs.length)}
+        pairs={pairs.map(({ row, partner }) => {
+          const name = T.candidateName(row);
+          return {
+            key: row.id,
+            text: T.registeredTwice(name, row.dan),
+            reviewLabel: T.reviewDuplicateLabel(name),
+            canReview: Boolean(partner), // the other copy is at the other school: nothing to compare here
+            onReview: (opener) => !actions.busy && actions.openCompare(row, partner, opener),
+          };
+        })}
+      />
+      {/* The shared count cards (v1.013 / v1.107): the four plan cards filter the list; two by two
+          on phones. Possible duplicates stay out of them, with the gray note under the row. No
+          cards while nobody is registered (C-05 (a)). */}
+      <CountCards
+        cards={cardList.cards.map((c) => ({ ...c, Icon: CARD_ICON[c.key] }))}
+        selected={activeCard}
+        onSelect={setCard}
+        showingText={activeCard ? T.SHOWING_FILTER[activeCard] : ''}
+        showAllLabel={T.SHOW_ALL}
+        note={cardList.note}
+      />
+      {/* The shared "Showing … only" line (R3-05, v1.117): an inline link with an invisible 44px tap
+          box, which only works inside .cards-showing */}
       {schoolCode && (
-        <p className="bb-school-line">
+        <p className="ev-filter-line cards-showing">
           {T.showingSchoolOnly(location)} ·{' '}
-          <button type="button" className="link-button" onClick={() => onLocationChange?.('Both')}>
+          <button type="button" className="link-button inline-link" onClick={() => onLocationChange?.('Both')}>
             {T.SHOW_BOTH_SCHOOLS}
           </button>
         </p>
       )}
-      <DuplicateBox pairs={pairs} busy={actions.busy} onReview={(row, partner, opener) => actions.openCompare(row, partner, opener)} />
-      {!hidden && !isPhone && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone={false} />}
-
+      {!hasAny ? (
+        // Nobody registered at the shown school(s): one gray line that names the button (v1.028)
+        <p className="tempty ev-empty">{T.NO_CANDIDATES}</p>
+      ) : (
+      <>
       <div className={`bb-list-bar${layout.isWide ? ' is-wide' : ''}`}>
         {/* A div, not a label: the ✕ is the shared icon button (tooltip "Clear search", R3-09), and a
             button inside a label would be read as part of the box's name. */}
@@ -460,8 +529,6 @@ export default function CandidatesTab({
         </div>
         {layout.isWide && <p className="bb-caption">{T.listCaption(activeRows.length)}</p>}
       </div>
-      {/* Phones: the Late / Not paid pills and the gray line come after Search (mockup 1) */}
-      {!hidden && isPhone && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone />}
 
       {/* The search found nobody: one gray line in the roster's place, drawn like the cards'
           "Showing … only · Show all" line (the shared .ev-filter-line.cards-showing, whose touch
@@ -483,6 +550,8 @@ export default function CandidatesTab({
           caption={T.listCaption(activeRows.length)}
           ctx={ctx}
         />
+      )}
+      </>
       )}
 
       {/* The row ⋯ (its subtitle while hidden: Dan and school only, no plan words — v1.036) */}
@@ -526,7 +595,7 @@ export default function CandidatesTab({
         />
       )}
 
-      {!screenLocked && dlg && <Dialogs actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} showToast={showToast} onNoAccess={onNoAccess} />}
+      {!screenLocked && dlg && <Dialogs actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} onNoAccess={onNoAccess} />}
       {!screenLocked && !dlg && picker.state && <Picker picker={picker} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} onNoAccess={onNoAccess} />}
     </div>
   );
@@ -565,9 +634,12 @@ function Picker({ picker, cycle, isAdmin, isPhone, onNoAccess }) {
 }
 
 // The one dialog on screen: a child (Record payment, …) or else the detail.
-function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast, onNoAccess }) {
+function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, onNoAccess }) {
   const { dlg } = actions;
   const c = dlg.child;
+  // Belt and braces (P1): while Hide private details is on, no money dialog is ever drawn, whatever
+  // opened it. Under it the detail (if any) shows.
+  if (hidden && c && isMoneyChild(c.kind)) return dlg.detail ? <CandidateDialog actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} onNoAccess={onNoAccess} /> : null;
   const common = { state: c, cycle, isPhone, today, onChange: actions.changeChild, onCancel: actions.closeChild, onRequestClose: actions.requestCloseChild };
   if (c) {
     switch (c.kind) {
@@ -588,20 +660,38 @@ function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast, o
       case 'deleteConfirm':
         return <DeleteConfirm {...common} onConfirm={actions.confirmDelete} />;
       case 'danChange':
-        return <DanChangeDialog state={c} isPhone={isPhone} onConfirm={actions.confirmDanChange} onCancel={actions.closeChild} />;
-      case 'compare':
-        return <CompareDialog {...common} hidden={hidden} onKeep={(keep, other) => actions.resolve(keep, other, false)} onKeepBoth={() => actions.resolve(c.first, c.second, true)} />;
+        return <DanChangeDialog state={c} onConfirm={actions.confirmDanChange} onCancel={actions.closeChild} />;
+      case 'compare': {
+        // The shared compare (BB15, v1.102): our rows and words; the shared dialog marks the
+        // differences, says "Keeping…" on the pressed button and shows a failure under the buttons.
+        const heads = [T.FIRST_REGISTRATION, T.SECOND_REGISTRATION];
+        const busyKind = c.saving ? c.busyKind ?? 'keep-first' : null;
+        return (
+          <CompareDialog
+            title={T.compareTitle(T.candidateName(c.first.candidate))}
+            sub={T.COMPARE_SUB}
+            heads={heads}
+            rows={compareRows(c.first, c.second, { hidden })}
+            note={T.COMPARE_NOTE}
+            busy={busyKind}
+            failed={c.failed ? T.SAVE_FAILED : c.blocking ? null : c.note}
+            blockingNote={c.blocking ? c.note : null}
+            onKeep={(index) => (index === 0 ? actions.resolve(c.first, c.second, false) : actions.resolve(c.second, c.first, false))}
+            onKeepBoth={() => actions.resolve(c.first, c.second, true)}
+            onClose={actions.closeChild}
+            isPhone={isPhone}
+          />
+        );
+      }
       case 'signature':
-        return <SignatureDialog {...common} />;
+        return <SignatureDialog {...common} onRetry={actions.retrySignature} />;
       case 'receipt':
         return (
-          <ReceiptDialog
+          <CandidateReceipt
             candidateId={c.candidateId}
             cycle={cycle}
             isPhone={isPhone}
             onClose={actions.closeChild}
-            showToast={showToast}
-            nested={false}
             onNoAccess={onNoAccess}
             kukkiwonAddedOn={c.kukkiwonDates?.kukkiwonAddedOn ?? null}
             registeredOn={c.kukkiwonDates?.registeredOn ?? null}

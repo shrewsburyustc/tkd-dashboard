@@ -1,13 +1,15 @@
 // SlotDialog.jsx — "Add time slot" and "Edit time slot" (approved mockup screens 2 and 3).
 // Why it exists: one form for both. Add can tick several days at once (one slot per day,
 // v0.233); Edit changes one slot and has Remove (instant, with Undo — no confirmation).
-//   Class  — this school's classes from Testing → Classes and ranks: tick ONE, or several that
+//   Class  — this school's classes from Settings → Classes and ranks: tick ONE, or several that
 //            are taught together ("White + Little Tiger", v0.237)
 //   Color  — belongs to each CLASS (one row per ticked class): changing it recolors every slot
 //            of that class
 //   Ages   — also belongs to each class (v0.619): From / To, shown next to the class on the
 //            booking forms ("Ages 7–12", "Ages 7+"); both empty = none
-//   Days / Day, Starts, Ends — checked as you type (5-minute steps, 15 min – 4 h)
+//   Days / Day, Starts, Ends — checked as you pick (5-minute steps, 15 min – 4 h). Starts and Ends
+//            are the shared time list (components/TimeList.jsx, N7 / v1.109: 6:00 AM–10:00 PM in
+//            5-minute steps); an edited slot's Day is the shared dropdown (S-10, v1.048 (20)).
 // Overlapping another class is allowed (two mats); an amber note says so, Save still works.
 //
 // Like Testing's dialogs, the typed values live in the parent (ScheduleSchool) so they survive
@@ -15,6 +17,8 @@
 import { IconCheck, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
+import Select from '../../components/Select.jsx';
+import TimeList from '../../components/TimeList.jsx';
 import { CLASS_COLORS } from '../../lib/schedule/colors.js';
 import { agesLabel, agesProblem, readAges } from '../../lib/schedule/ages.js';
 import { findOverlaps, parseTime, timeProblem } from '../../lib/schedule/time.js';
@@ -66,6 +70,9 @@ export function checkSlotForm(state, versionSlots) {
       : null,
   };
 }
+
+// The edited slot's Day choices for the shared dropdown.
+const DAY_CHOICES = WEEKDAYS.map((d) => ({ value: d, label: T.DAY_LONG[d] }));
 
 const PHONE_DISCARD_NOTES = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED', 'PAST_NOT_ALLOWED'];
 const NOTES = {
@@ -140,7 +147,15 @@ export default function SlotDialog({
       <p className="tdialog-sub">{T.slotSubtitle(school, versionLabel)}</p>
       <form onSubmit={handleSubmit} noValidate>
         {classes.length === 0 ? (
-          <Notice>{T.NO_CLASSES_IN_TESTING}</Notice>
+          <Notice>
+            {T.NO_CLASSES_BEFORE}
+            {/* N11 (CB14 Q2 "C"): a link to Settings → Classes and ranks. The dialog closes first (it has
+                nothing typed yet: there are no classes to choose), then the address opens that part. */}
+            <a className="snote-link" href={T.CLASSES_AND_RANKS_ADDRESS} onClick={onCancel}>
+              {T.CLASSES_AND_RANKS_LINK}
+            </a>
+            {T.NO_CLASSES_AFTER}
+          </Notice>
         ) : (
           <>
             <fieldset className="field sdialog-fieldset" aria-describedby={check.classError ? `${idBase}-class-error` : `${idBase}-class-hint`}>
@@ -287,54 +302,52 @@ export default function SlotDialog({
               </fieldset>
             ) : (
               <div className="field">
-                <label htmlFor={`${idBase}-day`}>{T.DAY}</label>
-                <select
+                <span id={`${idBase}-day-label`} className="field-label">
+                  {T.DAY}
+                </span>
+                <Select
                   id={`${idBase}-day`}
-                  className="input sdialog-select"
-                  disabled={readOnly}
+                  labelId={`${idBase}-day-label`}
                   value={state.values.day}
-                  onChange={(e) => onChange({ day: Number(e.target.value) })}
-                >
-                  {WEEKDAYS.map((d) => (
-                    <option key={d} value={d}>
-                      {T.DAY_LONG[d]}
-                    </option>
-                  ))}
-                </select>
+                  options={DAY_CHOICES}
+                  placeholder={T.DAY}
+                  readOnly={readOnly}
+                  onChange={(day) => onChange({ day: Number(day) })}
+                />
               </div>
             )}
 
             <div className="stimes">
               <div className="field">
-                <label htmlFor={`${idBase}-start`}>{T.STARTS}</label>
-                <input
+                <span id={`${idBase}-start-label`} className="field-label">
+                  {T.STARTS}
+                </span>
+                <TimeList
                   id={`${idBase}-start`}
-                  className="input"
-                  type="time"
-                  step={300}
+                  labelId={`${idBase}-start-label`}
+                  describedBy={check.timeError ? `${idBase}-time-error` : undefined}
+                  value={state.values.start || null}
                   readOnly={readOnly}
-                  value={state.values.start}
-                  aria-invalid={check.timeError ? true : undefined}
-                  aria-describedby={check.timeError ? `${idBase}-time-error` : undefined}
-                  onChange={(e) => {
-                    onChange({ start: e.target.value });
+                  invalid={Boolean(check.timeError)}
+                  onChange={(start) => {
+                    onChange({ start: start ?? '' });
                     onTouch(['start']);
                   }}
                 />
               </div>
               <div className="field">
-                <label htmlFor={`${idBase}-end`}>{T.ENDS}</label>
-                <input
+                <span id={`${idBase}-end-label`} className="field-label">
+                  {T.ENDS}
+                </span>
+                <TimeList
                   id={`${idBase}-end`}
-                  className="input"
-                  type="time"
-                  step={300}
+                  labelId={`${idBase}-end-label`}
+                  describedBy={check.timeError ? `${idBase}-time-error` : undefined}
+                  value={state.values.end || null}
                   readOnly={readOnly}
-                  value={state.values.end}
-                  aria-invalid={check.timeError ? true : undefined}
-                  aria-describedby={check.timeError ? `${idBase}-time-error` : undefined}
-                  onChange={(e) => {
-                    onChange({ end: e.target.value });
+                  invalid={Boolean(check.timeError)}
+                  onChange={(end) => {
+                    onChange({ end: end ?? '' });
                     onTouch(['end']);
                   }}
                 />

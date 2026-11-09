@@ -2,7 +2,10 @@
 // Why it exists: the same look as the Schedule (times down the left, box height = length), but
 // with real dates:
 //   - an "All day" row on top: all-day and several-day events, closures, the day a planned
-//     schedule starts, testing events from Testing
+//     schedule starts, other sections' all-day items, deadlines (dashed, ti-flag) and the
+//     new-sign-ups count (v0.645)
+//   - other sections' timed items (testing days, private tests, Black Belt days, camp days) as
+//     blocks in their hours, each with its section's icon; a click opens the item there (v0.645)
 //   - classes in their colors; cancelled ones crossed out on amber stripes; a whole closed day
 //     is striped amber
 //   - timed one-day events in their type's color with a thicker left edge
@@ -14,13 +17,17 @@
 // Clicking an event or a closure opens it (edit for admins, view for staff). Class boxes are
 // not buttons here — classes are changed in the Schedule.
 //
-// Props: dates (7), today, infoFor, typeColor, both, onOpenEvent, onOpenClosure
-import { IconAlertTriangle, IconCalendarEvent, IconCertificate, IconUserPlus } from '@tabler/icons-react';
+// Props: dates (7), today, infoFor, typeColor, both, onOpenEvent, onOpenClosure, onOpenItem(item),
+//   itemsFailed (true = the amber line "Couldn't load the other sections' dates. Check the connection,
+//   then retry." with Retry (onRetryItems) above the grid, so a
+//   week that looks empty isn't taken for a week with nothing on)
+import { IconAlertTriangle, IconCalendarEvent, IconUserPlus } from '@tabler/icons-react';
+import ErrorBanner from '../../components/ErrorBanner.jsx'; // the amber line with Retry (S-2, v1.051 (2))
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, hourLabel } from '../../lib/schedule/time.js';
 import { layoutDay } from '../schedule/TimeGrid.jsx';
-import { FollowChip, followChips, schoolLetters } from './MonthGrid.jsx';
+import { FollowChip, ItemIcon, SignupChip, followChips, itemColor, schoolLetters, signupChips } from './MonthGrid.jsx';
 import * as T from './text.js';
 
 const PX_PER_MIN = 0.85;
@@ -31,7 +38,7 @@ function splitFill(colorKeys) {
   return `linear-gradient(90deg, ${colors.map((c, i) => `${c.fill} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(', ')})`;
 }
 
-export default function WeekView({ dates, today, infoFor, typeColor, both, onOpenEvent, onOpenClosure }) {
+export default function WeekView({ dates, today, infoFor, typeColor, both, onOpenEvent, onOpenClosure, onOpenItem, itemsFailed = false, onRetryItems }) {
   const infos = dates.map((d) => infoFor(d));
 
   // Everything with a time on each day: classes + timed one-day events.
@@ -46,6 +53,10 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
       const time = eventTimeOn(e.event, dates[i]);
       if (time.kind === 'range') list.push({ id: `e-${e.event.id}`, kind: 'event', start: time.start, end: time.end, e });
     }
+    // other sections' timed items (v0.645); no end time = a 30-minute block
+    for (const it of info.items) {
+      if (it.start !== null) list.push({ id: `i-${it.id}`, kind: 'section', start: it.start, end: it.end ?? it.start + 30, it });
+    }
     return list;
   });
   const all = items.flat();
@@ -58,6 +69,11 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
 
   return (
     <div className="cweek">
+      {itemsFailed && (
+        <div className="cweek-failed">
+          <ErrorBanner text={T.OTHER_SECTIONS_FAILED} onRetry={onRetryItems} />
+        </div>
+      )}
       <div className="cweek-heads" aria-hidden="true">
         <span />
         {dates.map((d, i) => (
@@ -111,17 +127,38 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
                     </button>
                   );
                 })}
-              {info.testing.map((t) => {
-                const c = colorOf('purple');
-                return (
-                  <span key={t.id} className="cchip cchip--testing" style={{ '--chip-fill': c.fill, '--chip-edge': c.edge, '--chip-text': c.text }} title={T.TESTING_FROM}>
-                    <IconCertificate size={12} aria-hidden="true" />
-                    <span className="cchip-text">{t.title}</span>
-                  </span>
-                );
-              })}
+              {info.items
+                .filter((it) => it.start === null)
+                .map((it) => {
+                  const c = itemColor(it);
+                  return (
+                    <button
+                      key={it.id}
+                      type="button"
+                      className={`cchip cchip--${it.kind === 'camp_day' ? 'camp' : 'testing'} cchip--btn`}
+                      data-item={it.id}
+                      style={{ '--chip-fill': c.fill, '--chip-edge': c.edge, '--chip-text': c.text }}
+                      aria-label={T.openItem(it)}
+                      onClick={() => onOpenItem(it)}
+                    >
+                      <ItemIcon item={it} />
+                      {both && <b className="cchip-letters">{schoolLetters(it.locationCode)}</b>}
+                      <span className="cchip-text">{T.itemText(it)}</span>
+                    </button>
+                  );
+                })}
+              {info.deadlines.map((it) => (
+                <button key={it.id} type="button" className="cchip cchip--deadline cchip--btn" data-item={it.id} aria-label={T.openItem(it)} onClick={() => onOpenItem(it)}>
+                  <ItemIcon item={it} />
+                  {both && <b className="cchip-letters">{schoolLetters(it.locationCode)}</b>}
+                  <span className="cchip-text">{T.itemText(it)}</span>
+                </button>
+              ))}
               {followChips(info, d, today, both).map((chip) => (
                 <FollowChip key={chip.key} chip={chip} />
+              ))}
+              {signupChips(info, both).map((chip) => (
+                <SignupChip key={chip.key} chip={chip} />
               ))}
             </div>
           );
@@ -180,6 +217,23 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
                           </span>
                           {tall && <span className="sslot-time">{formatRange(item.start, item.end)}</span>}
                         </div>
+                      </div>
+                    );
+                  }
+                  if (item.kind === 'section') {
+                    const it = item.it;
+                    const c = itemColor(it);
+                    const label = `${T.openItem(it)}, ${formatRange(item.start, item.end, true)}`;
+                    return (
+                      <div key={item.id} role="listitem" className="sslot-wrap" style={{ ...style, '--slot-fill': c.fill, '--slot-edge': c.edge, '--slot-text': c.text }}>
+                        <button type="button" className="sslot cevent-box" data-item={it.id} aria-label={label} title={`${T.itemText(it)} · ${formatRange(item.start, item.end, true)}`} onClick={() => onOpenItem(it)}>
+                          <span className="sslot-name">
+                            <ItemIcon item={it} />
+                            {both && <b className="cchip-letters">{schoolLetters(it.locationCode)}</b>}
+                            {T.itemText(it)}
+                          </span>
+                          {tall && <span className="sslot-time">{formatRange(item.start, item.end)}</span>}
+                        </button>
                       </div>
                     );
                   }

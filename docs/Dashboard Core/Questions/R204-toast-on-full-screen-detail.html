@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>R2-04: the toast on a full-screen detail with its own bottom buttons</title>
+<style>
+:root{--ink:#1d2330;--mute:#5b6577;--line:#d8dde6;--bg:#f4f6fa;--green:#166534}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Segoe UI,Arial,sans-serif;padding:26px}
+h1{font-size:23px;margin:0 0 4px}h2{font-size:17px;margin:26px 0 6px}p{max-width:1000px;margin:0 0 10px}.mute{color:var(--mute)}
+.row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+.col{width:400px}.col h3{margin:0 0 6px;font-size:15px}
+.phone{position:relative;width:390px;height:560px;background:#fff;border:2px solid #333;border-radius:22px;overflow:hidden;font-size:14px}
+.top{height:44px;border-bottom:1px solid var(--line);padding:12px 14px;font-weight:600}
+.body{padding:12px 14px;color:#333}.body div{padding:7px 0;border-bottom:1px solid #eee}
+.bar{position:absolute;left:0;right:0;display:flex;gap:10px;padding:10px 14px;background:#fff;border-top:1px solid var(--line)}
+.btn{flex:1;text-align:center;border:1px solid #9aa3b5;border-radius:8px;padding:11px 6px;background:#fff}.btn.p{background:#2563eb;color:#fff;border-color:#2563eb}
+.toast{position:absolute;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;background:#1f1f1f;color:#fff;border-radius:8px;padding:0 6px 0 12px;height:44px;font-size:13px}
+.toast b{font-weight:500;border-left:1px solid #4a4a4a;padding:0 10px;line-height:32px}
+.tag{position:absolute;right:8px;top:8px;background:#fde68a;border:1px solid #d97706;border-radius:4px;font-size:11px;padding:1px 6px}
+.note{margin-top:8px;font-size:13.5px}.good{color:var(--green);font-weight:600}.bad{color:#a16207;font-weight:600}
+.rec{background:#fff;border:2px solid #2f8a52;border-radius:8px;padding:12px 16px;max-width:1000px}
+</style></head><body>
+<h1>R2-04: the toast on a full-screen detail that has its own bottom buttons</h1>
+<p>Decided already (v1.042, "A: own room") and built: on every normal page the scrolling area, and any open ⋯ sheet, end above the toast while it shows, so its Undo never covers anything. <b>One case isn't settled</b>: a full-screen detail on a phone whose buttons are a fixed bar at the bottom (Black Belt's candidate detail: Record payment · Print receipt). Two ways, drawn at phone size (390 wide). Toast in each: "Changes saved · Undo".</p>
+
+<h2>The detail with a fixed button bar</h2>
+<div class="row">
+<div class="col"><h3>Now, before a toast</h3>
+<div class="phone"><div class="top">Mia Chen · 1st Dan</div><div class="body"><div>Plan · 3 payments</div><div>Kukkiwon · not included</div><div>Payments · 2 recorded</div><div>History · 4 changes</div></div>
+<div class="bar" style="bottom:0"><span class="btn p">Record payment</span><span class="btn">Print receipt</span></div></div></div>
+
+<div class="col"><h3>A. Room: the bar moves up</h3>
+<div class="phone"><div class="top">Mia Chen · 1st Dan</div><div class="body"><div>Plan · 3 payments</div><div>Kukkiwon · not included</div><div>Payments · 2 recorded</div><div>History · 4 changes</div></div>
+<div class="bar" style="bottom:62px"><span class="btn p">Record payment</span><span class="btn">Print receipt</span><span class="tag">jumps up 62px</span></div>
+<div class="toast" style="bottom:10px"><span>Changes saved</span><b>↶ Undo</b></div></div>
+<p class="note"><span class="bad">The buttons jump up 62px</span> when the toast comes and back down 5 seconds later, under a thumb that may be aiming at them. Consistent with every other page; the toast is at the very bottom.</p></div>
+
+<div class="col"><h3>B. Lift: the toast goes above the bar</h3>
+<div class="phone"><div class="top">Mia Chen · 1st Dan</div><div class="body"><div>Plan · 3 payments</div><div>Kukkiwon · not included</div><div>Payments · 2 recorded</div><div>History · 4 changes</div></div>
+<div class="bar" style="bottom:0"><span class="btn p">Record payment</span><span class="btn">Print receipt</span></div>
+<div class="toast" style="bottom:68px"><span>Changes saved</span><b>↶ Undo</b></div></div>
+<p class="note"><span class="good">Nothing moves.</span> The toast sits just above the bar (Black Belt's v0.967 (3) today); the page text above is clear because the toast is over blank space or the end of the page.</p></div>
+</div>
+
+<h2>The detail whose buttons scroll with the page (New students' profile, Book a free class)</h2>
+<div class="row"><div class="col"><h3>Room (as built)</h3>
+<div class="phone"><div class="top">Ava N. · profile</div><div class="body"><div>Status · Booked</div><div>Parent · Dana N.</div><div>Notes · 2</div><div><span class="btn p" style="display:block">Book a free class</span></div></div>
+<div class="toast" style="bottom:10px"><span>Status: Booked</span><b>↶ Undo</b></div></div>
+<p class="note">No fixed bar, so room is enough: the page ends above the toast and the last button can be scrolled clear of it. New students' own padding patch for this page (U-06) can go.</p></div></div>
+
+<h2>Recommendation</h2>
+<div class="rec"><b>B for a detail with a fixed bottom bar, room for everything else.</b> One rule, no jump: "a fixed bottom bar keeps its place and the toast sits above it; anything that scrolls ends above the toast." That is what Black Belt does today, so only the rule is written down. A makes the most-used buttons jump on every Undo toast.
+<br><br><b>Reply:</b> A, B, or "B for fixed bars, room for the rest" (the recommendation).</div>
+</body></html>

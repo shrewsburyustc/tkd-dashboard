@@ -20,6 +20,8 @@ import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from
 import { addDays } from '../testing/eventRules.js';
 import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
 import * as FT from '../../screens/finance/text.js';
+import * as SHARED from '../../components/text.js';
+import { someoneElseChanged } from '../../components/text.js';
 import { parseMoney, money } from '../../screens/finance/format.js';
 
 let count = 0;
@@ -1359,6 +1361,95 @@ check('money(): Finance keeps $65.00 through the shared helper (F5)', () => {
   assert.equal(money(0), '$0.00');
   assert.equal(money(-0), '$0.00');
   assert.equal(money(290.5), ''); // not whole cents: nothing (callers always pass whole cents)
+});
+
+// Batch A (R1-01 / U-1): an edit that changed the school says so. Row text, plain rows, CSV note.
+check('Batch A: edited row text names the school; plain when nothing differs; CSV note adds "at <school>"', () => {
+  const base = { state: 'edited', amount_cents: 6500, method: 'cash', was_amount_cents: 6500, was_method: 'cash', was_school: null };
+  // Nothing differs, school included -> counts as a plain payment (v0.824 rule unchanged).
+  assert.equal(FT.editChangedNothing(base), true);
+  assert.equal(FT.wasText(base), '');
+  // School only -> not plain; "Was Worcester".
+  const schoolOnly = { ...base, was_school: 'worcester' };
+  assert.equal(FT.editChangedNothing(schoolOnly), false);
+  assert.equal(FT.wasText(schoolOnly), 'Worcester');
+  assert.ok(FT.editedLine(FT.wasText(schoolOnly), 'Jeffrey Berg', '2026-10-26').startsWith('Was Worcester · edited by Jeffrey Berg'));
+  // Amount only / amount + method: unchanged words.
+  assert.equal(FT.wasText({ ...base, was_amount_cents: 7000 }), '$70.00');
+  assert.equal(FT.wasText({ ...base, was_amount_cents: 7000, was_method: 'check' }), '$70.00 check');
+  assert.equal(FT.wasText({ ...base, was_method: 'check' }), 'check');
+  // Amount + method + school.
+  assert.equal(FT.wasText({ ...base, was_amount_cents: 7000, was_method: 'check', was_school: 'shrewsbury' }), '$70.00 check, Shrewsbury');
+  // The detail dialog's Was line uses the same helper (D_WAS label).
+  assert.equal(FT.D_WAS, 'Was');
+  // CSV: the school is added only with was_school; other rows are untouched.
+  const row = { day: '2026-10-26', school: 'shrewsbury', time: '10:00', first_name: 'Kim', last_name: 'Lee', what: 'camp', kind: 'payment', method: 'card', amount_cents: 6500, counted_cents: 6500, recorded_by_name: 'Staff', state: 'edited', note: 'was $70.00 cash' };
+  assert.match(toCsv([{ ...row, was_school: 'worcester' }]), /,Edited,was \$70\.00 cash at Worcester\r\n/);
+  assert.equal(toCsv([{ ...row, was_school: null }]), toCsv([row]));
+  assert.match(toCsv([{ ...row, was_school: 'worcester' }], { labels: { was_at: 'in' } }), /was \$70\.00 cash in Worcester\r\n/);
+});
+
+check('Batch A (mock): was_school on Star lines edited at another school; null when the school stayed', () => {
+  const E = '00000000-0000-4000-8000-0000000005e1';
+  const row = (id, fields) => ({
+    id, candidate_id: 'sc1', kind: 'payment', amount_cents: 14000, method: 'card', paid_on: T, recorded_at: at(T, '10:00'),
+    recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, school: 'worcester', ...fields,
+  });
+  const a = (n) => `00000000-0000-4000-8000-00000000066${n}`;
+  const starStore = {
+    events: [{ id: E, name: 'Winter Star Testing', testing_date: '2026-12-05' }],
+    candidates: [{ id: 'sc1', event_id: E, first_name: 'Rita', last_name: 'Vance', location_code: 'worcester', private_on: null }],
+    payments: [
+      row(a(1), {}),
+      // Edited at 11:00 by Jeffrey: the reversal plus the new row, the new row at Shrewsbury.
+      row(a(2), { kind: 'reversal', amount_cents: -14000, reverses_payment_id: a(1), recorded_at: at(T, '11:00'), recorded_by: 'adm', recorded_by_name: 'Jeffrey Berg' }),
+      row(a(3), { recorded_at: at(T, '11:00'), recorded_by: 'adm', recorded_by_name: 'Jeffrey Berg', school: 'shrewsbury' }),
+    ],
+  };
+  let store = null;
+  const b = createFinanceBackend({
+    loadStore: () => store, saveStore: (x) => { store = JSON.parse(JSON.stringify(x)); },
+    readColorBelt: () => JSON.parse(JSON.stringify(cbStore)), readStar: () => JSON.parse(JSON.stringify(starStore)),
+    now: () => clock, today: () => T, newId: () => randomUUID(),
+  });
+  const items = b.rpc('finance_day', dayArgs('shrewsbury'), ADMIN_CTX).data.items.filter((it) => it.source === 'star');
+  assert.equal(items.length, 1);
+  assert.equal(items[0].state, 'edited');
+  assert.equal(items[0].was_school, 'worcester');
+  // Plain lines carry the key as null.
+  assert.ok(b.rpc('finance_day', dayArgs('shrewsbury'), ADMIN_CTX).data.items.filter((it) => it.source !== 'star').every((it) => it.was_school === null));
+  const det = b.rpc('finance_payment_detail', { p_source: 'star', p_payment_id: a(1) }, ADMIN_CTX).data;
+  assert.equal(det.item.was_school, 'worcester');
+  const exp = b.rpc('finance_export', { p_location_code: 'shrewsbury', p_from: T, p_to: T }, ADMIN_CTX).data.rows.filter((r) => r.what === 'star');
+  assert.equal(exp.length, 1);
+  assert.equal(exp[0].was_school, 'worcester');
+});
+
+// ======================= The shared sentences and back link (Batch B: R2-07, R3-06) =======================
+// Finance says a refused change and a failed Undo in the shared words (src/components/text.js, rulebook v1.045 (4),
+// v1.051 (2)), naming what changed; it keeps no copy of them.
+check('shared sentences: a refused change names what changed; a failed Undo is the shared sentence', () => {
+  assert.equal(FT.STALE_DAY, 'Someone else changed the day just now, so nothing was done. Their change is shown.');
+  assert.equal(FT.STALE_SETTING, 'Someone else changed the setting just now, so nothing was done. Their change is shown.');
+  assert.equal(FT.STALE_DAY, someoneElseChanged('the day'));
+  assert.equal(FT.UNDO_FAILED, "Undo didn't save. Check the connection, then retry.");
+  assert.equal(FT.UNDO_FAILED, SHARED.UNDO_DIDNT_SAVE);
+  assert.equal(FT.STALE, undefined); // the old Finance-only sentence is gone
+  // the words after an Undo that worked and "too late" stay Finance's own
+  assert.equal(FT.TOO_LATE_UNDO, 'Too late to undo here. Ask an admin to reopen the day.');
+  assert.equal(FT.CLOSE_UNDONE, 'Undone. The day is open again.');
+});
+
+// ======================= Finance's own failure sentences say "retry" (v0.825) =======================
+check('failure sentences: every Finance sentence that mentions the connection ends "Check the connection, then retry."', () => {
+  const failures = Object.entries(FT).filter(([, v]) => typeof v === 'string' && /connection/i.test(v));
+  assert.ok(failures.length >= 8, `found ${failures.length} sentences about the connection`);
+  for (const [name, text] of failures) {
+    assert.ok(/Check the connection, then retry\.$/.test(text), `${name}: ${text}`);
+    assert.ok(!/try again/i.test(text), `${name} still says "try again"`);
+  }
+  assert.equal(FT.CLOSE_FAILED, 'Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.');
+  assert.equal(FT.SETTINGS_SAVE_FAILED, 'Couldn’t save. Check the connection, then retry.');
 });
 
 console.log(`${count} groups of checks ran.`);

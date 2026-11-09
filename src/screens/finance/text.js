@@ -12,7 +12,9 @@
 // (docs/Finance/TKD-Finance-BlackBelt-Mockups.html, rulebook v0.814 / v0.815). Words the
 // mockups don't draw (plural forms) are marked  // NOT IN MOCKUPS (B…)
 import { money, dayShort, timeOfDay } from './format.js';
+import { someoneElseChanged } from '../../components/text.js';
 import { blackBeltItemsText } from '../../lib/finance/csv.js';
+import { LOCATION_NAME } from '../../lib/device.js';
 
 // ----- Page, tabs -----
 export const PAGE_TITLE = 'Finance';
@@ -107,7 +109,7 @@ export const RETRY_CLOSE = 'Retry close the day';
 export const FILL_ALL_FIRST = 'Fill in all three counts first.';
 export const SAVES_WITH_NAME = 'Saves the count with your name.';
 export const NOT_SAVED = 'Not saved';
-export const CLOSE_FAILED = 'Couldn’t close the day. Nothing you typed is lost. Check the connection and try again.';
+export const CLOSE_FAILED = 'Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
 
 // Tags (D2). Success tags have no icon (v0.207).
 export const MATCHES = 'Matches';
@@ -198,16 +200,20 @@ export const UNDO = 'Undo';
 export const UNDONE = 'Undone'; // the toast after an Undo that worked (v1.051)
 export const CLOSE_UNDONE = 'Undone. The day is open again.'; // two sentences: keeps its full stops (v1.051)
 export const TOO_LATE_UNDO = 'Too late to undo here. Ask an admin to reopen the day.'; // D3 proposal text
-export const UNDO_FAILED = 'Couldn’t undo. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
+// A failed Undo: the shared sentence (v1.051 (2): "Undo didn't save. Check the connection, then retry."), typed once in
+// src/components/text.js; the page's bar offers Retry with it (R2-07, v1.045 (4)).
+export { UNDO_DIDNT_SAVE as UNDO_FAILED } from '../../components/text.js';
 export const DAY_REOPENED = 'Day reopened. It can be counted again.'; // NOT IN MOCKUPS — for CP1
-export const REOPEN_FAILED = 'Couldn’t reopen the day. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
+export const REOPEN_FAILED = 'Couldn’t reopen the day. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
 export const NOT_CLOSED_ANY_MORE = 'This day isn’t closed any more. Someone reopened it just now.'; // NOT IN MOCKUPS — for CP1
 export const ALREADY_CLOSED = 'Someone else closed this day just now. Check their count below.'; // NOT IN MOCKUPS — for CP1
 export const NOTHING_TO_CLOSE_NOW = 'There’s nothing to close any more: the payments were undone.'; // NOT IN MOCKUPS — for CP1
 
 // ----- Shared messages -----
-// The same sentence the Testing screens use for a stale write (contract §4: amber + reload).
-export const STALE = 'Someone else changed this just now. Your change wasn’t saved.';
+// A refused change: the one sentence every section says (R2-07, v1.045 (4)), naming what changed. The screen
+// reloads, so "Their change is shown" is true (contract §4: amber + reload).
+export const STALE_DAY = someoneElseChanged('the day'); // the Daily report, and the Close the day box
+export const STALE_SETTING = someoneElseChanged('the setting'); // Settings
 export const NOT_ALLOWED = 'Only an admin can do that.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_FAILED = 'Couldn’t load the daily report. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const LOAD_HISTORY_FAILED = 'Couldn’t load History. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
@@ -268,6 +274,33 @@ export const methodLower = (m) => (METHOD[m] ?? m ?? '').toLowerCase();
 // Tags on a payment row (one per row, rule 8)
 export const TAG_UNDONE = 'Undone';
 export const TAG_EDITED = 'Edited';
+export const D_WAS = 'Was'; // the detail's line under Amount on an edited payment: "Was Worcester" (Batch A)
+// What an edited payment was before the edit, in the words after "Was": "$70.00", "$70.00 cash",
+// "cash", "Worcester" (only the school changed) or "$70.00 cash, Worcester" (Batch A, R1-01 / U-1:
+// the school is named only when the server sends was_school, i.e. the first desk differs).
+export function wasText(item) {
+  let was = '';
+  if (item.was_amount_cents !== null && item.was_amount_cents !== undefined && item.was_amount_cents !== item.amount_cents) {
+    was = money(item.was_amount_cents);
+    if (item.was_method && item.was_method !== item.method) was += ` ${methodLower(item.was_method)}`;
+  } else if (item.was_method && item.was_method !== item.method) {
+    was = methodLower(item.was_method);
+  }
+  if (item.was_school) {
+    const school = LOCATION_NAME[item.was_school] ?? item.was_school;
+    was = was ? `${was}, ${school}` : school;
+  }
+  return was;
+}
+// True when an edited payment ended up exactly as first recorded: the same amount, the same way to
+// pay AND the same school (a changed date is "moved", a different state). Such a payment shows as
+// a plain one, on screen, on paper and in its detail (v0.824).
+export function editChangedNothing(item) {
+  if (item.state !== 'edited') return false;
+  const sameAmount = item.was_amount_cents === null || item.was_amount_cents === undefined || item.was_amount_cents === item.amount_cents;
+  const sameMethod = !item.was_method || item.was_method === item.method;
+  return sameAmount && sameMethod && !item.was_school;
+}
 export const TAG_MOVED = 'Moved'; // NOT IN MOCKUPS — for CP1 (D4 proposal shows only "Moved to <date>")
 export const TAG_ADDED_AFTER = 'Added after closing';
 export const TAG_REFUND = 'Refund'; // #q12 A
@@ -346,7 +379,7 @@ export const FROM_TOP_BAR = '(from the top bar)';
 export const exportSummary = (count, cents) => `${paymentsCount(count)} · ${money(cents)}`;
 export const EXPORT_COUNTING = 'Counting…'; // NOT IN MOCKUPS — for CP1
 export const DOWNLOAD_CSV = 'Download CSV';
-export const EXPORT_FAILED = 'Couldn’t make the file. Check the connection, then try again.'; // NOT IN MOCKUPS — for CP1
+export const EXPORT_FAILED = 'Couldn’t make the file. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825); the Download button is the retry
 export const EXPORT_DONE = 'CSV downloaded'; // NOT IN MOCKUPS — for CP1
 // Date problems. NOT IN MOCKUPS — for CP1
 export const DATE_MISSING = 'Pick a date.';
@@ -436,7 +469,7 @@ export const REMINDER_ON_TOAST = 'Reminder turned on';
 export const REMINDER_OFF_TOAST = 'Reminder turned off';
 export const timeSavedToast = (weekday, school) => `${weekday} at ${school} saved`;
 export const COPIED_TOAST = 'Monday copied to Tue–Fri';
-export const SETTINGS_SAVE_FAILED = 'Couldn’t save. Check the connection, then try again.';
+export const SETTINGS_SAVE_FAILED = 'Couldn’t save. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
 
 // ----- Home (D10) -----
 export const DRAWER_NOT_CLOSED = 'Today’s drawer isn’t closed yet.';

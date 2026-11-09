@@ -5,6 +5,8 @@
 // turns them into plain English.
 import { formatDate, localDay } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
+// The sentences every section says the same way (R2-07, S-2; rulebook v1.045 (4), v1.051 (2)) live in the shared file.
+import { UNDO_DIDNT_SAVE, couldntUndo, loadFailedNamed, someoneElseChanged } from '../../components/text.js';
 
 export const PAGE_TITLE = 'Forms';
 // Staff can fill in and share forms, so the line says what they can do first (the second pattern in v1.021).
@@ -12,7 +14,11 @@ export const VIEW_ONLY_LINE = 'Staff can fill in and share forms. Ask an admin t
 export const NEW_FORM = 'New form';
 export const NEW_SHORT = 'New';
 export const LOADING = 'Loading forms';
-export const LOAD_FAILED = "Couldn't load the forms. Check the connection and try again.";
+// S-2: "Couldn't load the forms. Check the connection, then retry." (the list; its bar has Retry)
+export const LOAD_FAILED = loadFailedNamed('the forms');
+// … and opening one form in the builder (its bar has a Retry that opens it again)
+export const LOAD_FORM_FAILED = loadFailedNamed('the form');
+export const RETRY = 'Retry';
 export const BOTH_SCHOOLS = 'Both schools';
 export const SCHOOL_NAME = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
 export const SCHOOL_LETTER = { worcester: 'W', shrewsbury: 'S' };
@@ -33,12 +39,13 @@ export const STATUS = { draft: 'Draft', live: 'Live', closed: 'Closed' };
 export const KIND = { free_class: 'Free class', walk_in: 'Walk-in', event: 'Event', blank: 'Blank' };
 export const signups = (n) => (n === 1 ? '1 sign-up' : `${n} sign-ups`);
 export const thisMonth = (n) => `${n} this month`;
-export const NO_FORMS = 'No forms yet.';
+export const NO_FORMS = 'No forms yet. An admin adds them.'; // v0.53 (§8 Empty states): says who adds them
 export const NO_FORMS_ADMIN = 'No forms yet. Start one with "New form".';
 export const FILL_IN = 'Fill in';
 export const FILL_IN_ITEM = 'Fill in for a family';
 // while Hide private details is on, Fill in is desk-only (v0.616): the page line and the menu item's reason
-export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answers are hidden on this tablet.';
+// (M-05, v1.055: every child on these forms has a date of birth, and the switch hides it too)
+export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Dates of birth, email and form answers are hidden on this tablet.';
 export const SHARE = 'Share';
 export const DUPLICATE = 'Duplicate';
 export const CLOSE_FORM = 'Close form';
@@ -51,9 +58,10 @@ export const withSchool = (name, school) => (school ? `${name}, ${school}` : nam
 export const shareLabel = (name) => `Share ${name}`;
 export const moreLabel = (name) => `More actions for ${name}`;
 export const openLabel = (name) => `Open ${name}`;
-export const duplicated = (name) => `Copied as "${name}" (a Draft).`;
-export const closedToast = (name) => `${name} is closed — the link now says so.`;
-export const reopenedToast = (name) => `${name} is taking sign-ups again.`;
+// One-sentence toasts have no closing full stop and no check mark (v1.051 (5), v1.046 (7)); a dash doesn't make two sentences
+export const duplicated = (name) => `Copied as "${name}" (a Draft)`;
+export const closedToast = (name) => `${name} is closed — the link now says so`;
+export const reopenedToast = (name) => `${name} is taking sign-ups again`;
 // "Copy to Worcester / Shrewsbury" (rulebook v0.642): the ⋯ item names the other school, and the
 // toast says where the Draft copy went. A form with a booking step adds what still has to be done:
 // the other school's class times are picked in the copy's Booking settings.
@@ -68,13 +76,20 @@ export const COPY_REFUSED = "This form couldn't be copied. Open it and check its
 export const copyTooMany = (school) => `This form has been copied to ${school} too many times. Delete an old copy, then try again.`;
 export const UNDO = 'Undo'; // on the Close / Open and Copy toasts (v1.006, N2; v0.642)
 export const UNDONE = 'Undone'; // after an Undo worked (v0.618)
-export const UNDO_STALE = "Couldn't undo. Someone else changed this form just now."; // like Schedule's and Star's
+// after an Undo that opened a form again (v1.051 (1), R2-07's open part): two sentences keep their full stops
+export const UNDONE_OPEN = 'Undone. The form is open again.';
+// R2-07: a change or an Undo that the database refused because someone else changed the form first
+// (the shared sentence, naming the form; the list or builder then shows their change)
+export const staleForm = (name) => someoneElseChanged(name);
 // A save or an Undo that failed on the connection: the bar has Retry, which does the same again
 // (v1.004; Black Belt's and the Schedule's words). Used by Copy to the other school (v0.642);
 // design review R2-01 moves the list's other actions to them.
 export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
-export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry.";
-export const deletedToast = (name) => `${name} was deleted.`;
+export const UNDO_FAILED = UNDO_DIDNT_SAVE; // the shared sentence (R2-07)
+export const deletedToast = (name) => `${name} was deleted`;
+// Delete form on a form someone else changed or deleted meanwhile (U-03): the box closes and the page's bar says
+// it, with staleForm's words above.
+export const FORM_GONE = 'That form no longer exists.';
 export const DELETE_TITLE = 'Delete this form?';
 export const KEEP_FORM = 'Keep form'; // the confirm box's "changes nothing" button (N3)
 export const DELETING = 'Deleting…';
@@ -121,11 +136,10 @@ export function statusLine(form, { dirty, saving, failed }) {
   if (dirty) return { text: parts.join(' · '), extra: 'unpublished changes', warn: true };
   return { text: parts.join(' · '), extra: null, warn: false };
 }
-export const published = (name) => `${name} is published — families see the new version.`;
+export const published = (name) => `${name} is published — families see the new version`;
 export const NOT_PUBLISHABLE = 'Write the waiver wording before publishing (select the Waiver block).';
 export const NOTHING_TO_PUBLISH = 'Nothing new to publish.';
 export const SAVE_FAILED_BAR = "Your last change wasn't saved. Check the connection — it will try again with your next change.";
-export const STALE_BUILDER = 'Someone else changed this form. It was reloaded — please redo your last change.';
 export const INVALID_SAVE = 'That change was refused. It was undone — please try it another way.';
 export const NOT_ALLOWED = 'Only an admin can change forms.';
 export const DUPLICATE_SLUG = 'Another form already uses that web address. Pick another one.';
@@ -159,7 +173,8 @@ export const MOVE_UP = 'Move up';
 export const MOVE_DOWN = 'Move down';
 export const DELETE_FIELD = 'Delete field';
 // The toast after deleting a field, with Undo (rulebook v0.630)
-export const UNDO_FIELD_CHANGED = "Couldn't undo — the form has changed since.";
+// A refused Undo of Delete field shows in the builder's amber bar, not a toast (U-02; v1.045 (4) pattern)
+export const UNDO_FIELD_CHANGED = couldntUndo('the form has changed since'); // the shared "Couldn't undo: [reason]."
 export const fieldDeleted = (label) => (String(label ?? '').trim() ? `“${String(label).trim()}” deleted` : 'Field deleted');
 export const EDIT_FIELD = 'Edit';
 export const FORM_SETTINGS = 'Form settings';
@@ -194,7 +209,13 @@ export const DELETE_THIS_FIELD = 'Delete this field';
 // ----- Booking settings -----
 export const BOOK_A_CLASS = 'Book a class';
 export const CLASSES_OFFERED = 'Classes offered';
-export const NO_CLASSES = 'This school has no classes yet (Testing → Classes and ranks).';
+// N11 (rulebook v0.427, v1.023): the hint points to Settings → Classes and ranks, and those words are a link
+// (BookingSettings.jsx draws them; the address is #settings/classes-and-ranks)
+export const NO_CLASSES_BEFORE = 'This school has no classes yet (';
+export const NO_CLASSES_LINK = 'Settings → Classes and ranks';
+export const NO_CLASSES_AFTER = ').';
+export const NO_CLASSES = `${NO_CLASSES_BEFORE}${NO_CLASSES_LINK}${NO_CLASSES_AFTER}`;
+export const SETTINGS_CLASSES_ADDRESS = '#settings/classes-and-ranks';
 export const timesAndSpots = (name) => `Times and spots · ${name}`;
 // classes taught together (rulebook v0.620)
 export const TOGETHER_TITLE = 'Taught together · times and spots';
@@ -209,7 +230,7 @@ export const BOOK_AHEAD = 'Book at least';
 export const HOURS_AHEAD = 'hours ahead';
 export const LIVE_RIGHT_AWAY = 'Changes here go live right away.';
 export const SAVE_BOOKING = 'Save booking settings';
-export const BOOKING_SAVED = 'Booking settings saved — they are live now.';
+export const BOOKING_SAVED = 'Booking settings saved — they are live now';
 export const spotsFor = (time) => `Spots for ${time}`;
 export const offerTime = (time) => `Offer ${time}`;
 export const BOOKING_BAD = 'Spots are 0–20 a time (1–20 for the usual number), days 1–60, hours 0–72.';
@@ -237,6 +258,8 @@ export const shareTitle = (name) => `Share "${name}"`;
 export const LINK = 'Link';
 export const COPY = 'Copy';
 export const COPIED = 'Copied';
+// Share's Copy failed (U-05): the shared words, as the Registration link box says them
+export { COPY_FAILED } from '../../components/text.js';
 export const QR_CODE = 'QR code';
 export const DOWNLOAD = 'Download';
 export const PRINT_SIGN = 'Print a sign';
@@ -283,7 +306,8 @@ export const FIRST_NAME = 'First name';
 export const LAST_NAME = 'Last name'; // v0.637
 export const DOB = 'Date of birth'; // v0.634: the age is worked out from it
 // inside the date of birth's calendar (the same set-up as Star's date of birth)
-export const DOB_CALENDAR_HINT = "Pick the month and year first, then the day. Future dates can't be chosen.";
+// (L-09: one agreed hint, with the curly apostrophe; kept here until Dashboard core's shared file holds it)
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then the day. Future dates can’t be chosen.';
 export const yearsOld = (n) => (n === 1 ? '1 year old' : `${n} years old`); // under the date of birth once picked
 export const ADD_CHILD = 'Add another child';
 // The Address question's four boxes (v0.634; the question's own label, e.g. "Home address", is above them)
@@ -301,7 +325,7 @@ export const NEXT_WEEK = 'Next week';
 export const weekOf = (date) => `Week of ${date}`;
 export const spotsLeft = (n) => (n === 1 ? '1 spot left' : `${n} spots left`);
 export const LOADING_TIMES = 'Loading open times…';
-export const TIMES_FAILED = "Couldn't load the open times. Check the connection.";
+export const TIMES_FAILED = loadFailedNamed('the open times'); // S-2 (Fill in's notice has a Retry beside it)
 export const AGREE = 'I have read and agree to the waiver';
 export const SIGN_HERE = 'Signature';
 export const SIGN_HINT = 'Sign with a finger, pen or mouse.';
@@ -328,7 +352,7 @@ export const FIELD_PROBLEM = {
   child_age: 'Each child needs to be 2 to 99 years old. Check the date of birth.',
   // the Address question (v0.634): put together by addressProblemLine below
   address: 'Enter the whole address: street, city, state and ZIP code.',
-  zip: 'Enter a 5-digit ZIP code.',
+  zip: 'Enter a 5-digit ZIP code, like 01604.', // L-09: Settings → Schools' words
   signature: 'Please sign in the box.',
   booking_pick: 'Pick a time for each child, or "No time yet".',
   booking_full: 'Two children picked a time with fewer spots left. Pick another time for one of them.',

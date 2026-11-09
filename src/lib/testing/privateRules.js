@@ -14,6 +14,18 @@
 //   upcoming   active and its day is today or later; past = its day is before today, or cancelled
 //   row        a private testing as privateApi.js returns it (camelCase)
 import { isIsoDate } from './eventRules.js';
+import { standingPayments } from './receipt.js';
+
+// ----- The list's room (Color Belt batch 3, Q1) -----
+
+// The narrowest room beside the left panel (px) in which the Private testing list keeps its tablet columns
+// (Color Belt batch 3, Q1 A; same idea as eventRules.ROSTER_ROOM, rulebook v0.431). "Room" is Dashboard core's
+// measure (src/lib/pageRoom.js). Measured in preview on 2026-11-07 with the sample list (Upcoming and Past, a
+// cancelled row's tag included): with a mouse the first text-on-text overlap comes at 608 px of room and the
+// list is clean from 616; with touch the same (592 overlaps, 616 clean), so 632 keeps 16 px to spare. Narrower
+// than this the list draws the stacked rows phones show, whatever the window's own width. If names or tags ever
+// grow, measure again.
+export const PRIVATE_ROOM = 632;
 
 // ----- Day and time (contract 0014 §1.2) -----
 
@@ -75,20 +87,29 @@ export function owesMore(row) {
   return row?.paid === true && row.amountDueCents > 0;
 }
 
+// The summary's Payment lines (pass 2 C-03, rule v1.009 "the payment with its date"): one part per
+// payment that still stands, oldest first, each { cents, method, paidOn }. It is the receipt's own
+// list (receipt.standingPayments), so the summary and the receipt always agree. With no payment rows
+// to go on (they load together with the list, so this is only a safety net), the row's own summary
+// is the one part, as before.
+export function summaryPaymentParts(row, payments) {
+  const mine = (payments ?? []).filter((p) => p.privateId === row.id);
+  const standing = standingPayments(mine);
+  if (standing.length > 0) return standing.map((p) => ({ cents: p.amountCents, method: p.method, paidOn: p.paidOn }));
+  return [{ cents: row.paidCents, method: row.paidMethod, paidOn: row.paidOn }];
+}
+
 // Does the row show Mark paid? Active and something to collect (also next to a Paid tag while a
 // top-up is owed). A $0 price never shows it (E10).
 export function showMarkPaid(row) {
   return row?.status === 'active' && row.amountDueCents > 0;
 }
 
-// Where the family chose "Paying by", for the Mark paid box's hint (CB1): 'form' ("They chose
-// Cash on the form.") only when the private testing was moved from an event registration the
-// family made on the event's form (movedFromSource 'form'); otherwise 'desk' ("… at the desk.") —
-// added here at the desk, moved from a student staff added at the desk ('staff'), or the old
-// registration couldn't be read (null; privateApi.loadPrivateTestings).
-export function markPaidChoiceWhere(row) {
-  return row?.movedFromSource === 'form' ? 'form' : 'desk';
-}
+// Where the family chose "Paying by", for the Mark paid box's hint: the same rule as the event
+// roster (eventRules.markPaidChoiceWhere, M-01 / migration 0044) — 'form' only while Paying by
+// still equals the choice the family made on the event's form (kept when a form registration was
+// moved here); otherwise, and for one added at the desk, 'desk'.
+export { markPaidChoiceWhere } from './eventRules.js';
 
 // May the desk change how they'll pay? Active, and not paid yet or still owing.
 export function canChangePayingBy(row) {
@@ -148,7 +169,8 @@ export function privateCards(rows) {
 //              changePayingBy the same AND canChangePayingBy · admins: editPayment / undoPayment
 //              when paid, delete · printReceipt (staff and admins) when paid — a payment that
 //              still stands (design review CB2, rulebook v0.420: it ends the money group)
-//   cancelled: admins only — restore while its day is today or later, delete
+//   cancelled: printReceipt (staff and admins) when a payment still stands (pass 2 M-03, v0.428) ·
+//              admins only — restore while its day is today or later, delete
 //   hidden:    "Hide private details" is on (v0.506) → no payment items: changePayingBy,
 //              editPayment, undoPayment and printReceipt are false (as Star's ⋯ menus, v0.508 G4;
 //              Print receipt: v0.518 Q8 B)
@@ -159,7 +181,7 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     undoPayment: false, printReceipt: false, cancel: false, restore: false, delete: false,
   };
   if (row?.status === 'cancelled') {
-    return { ...none, restore: admin && row.privateDate >= today, delete: admin };
+    return { ...none, printReceipt: canPrintPrivateReceipt(row, hidden), restore: admin && row.privateDate >= today, delete: admin };
   }
   if (row?.status !== 'active') return none;
   const result = row.result ?? null;
@@ -173,10 +195,18 @@ export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
     grade: true,
     editPayment: money && admin && row.paid === true,
     undoPayment: money && admin && row.paid === true,
-    printReceipt: money && row.paid === true, // CB2: staff and admins
+    printReceipt: canPrintPrivateReceipt(row, hidden), // CB2: staff and admins
     cancel: open,
     delete: admin,
   };
+}
+
+// Print receipt's one rule for a private testing, shared by the row's ⋯ button, its ⋯ menu and the
+// summary (CB2, v0.420; pass 2 M-03, v1.055 (b) and v0.428): a payment that still stands (paid), on
+// an active OR a cancelled private testing, for staff and admins — staff's ⋯ on a cancelled one then
+// holds only this item; never while Hide private details is on.
+export function canPrintPrivateReceipt(row, hidden = false) {
+  return hidden !== true && row?.paid === true && (row.status === 'active' || row.status === 'cancelled');
 }
 
 // ----- Move to private testing (event page, P5) -----

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>R1-07: one set of payment-line and History words</title>
+<style>
+:root{--ink:#1d2330;--mute:#5b6577;--line:#d8dde6;--bg:#f4f6fa;--amber:#b45309;--green:#166534;--blue:#1e4fa3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Segoe UI,Arial,sans-serif;padding:28px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:30px 0 8px}p.lead{color:var(--mute);margin:0 0 14px;max-width:980px}
+table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--line)}
+th,td{border:1px solid var(--line);padding:9px 11px;vertical-align:top;text-align:left}
+th{background:#eaeef5;font-size:13px}th.rec{background:#dcefe2;color:var(--green)}td.rec{background:#f2faf5}
+td.sec{background:#f0f2f7;font-weight:700;width:11%}
+.k{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin-top:7px}.k:first-child{margin-top:0}
+.w{display:block;font-family:Consolas,monospace;font-size:13px;background:#fff;border:1px solid #e4e8ef;border-radius:4px;padding:3px 6px;margin-top:2px}
+.chg{border-color:#f2c48a;background:#fff7ec}
+.cons{display:block;margin-top:8px;font-size:12.5px;color:var(--mute)}
+.rec-box{background:#fff;border:2px solid #2f8a52;border-radius:8px;padding:12px 16px;max-width:980px}
+.sizes{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.frame{background:#fff;border:1px solid #9aa3b5;border-radius:6px;padding:10px}.frame h4{margin:0 0 8px;font-size:12px;color:var(--mute)}
+.row{border-top:1px solid var(--line);padding:7px 0;font-size:14px}.row:first-of-type{border-top:0}
+.top{display:flex;justify-content:space-between;gap:8px;font-weight:600}.sub{color:var(--mute);font-size:13px}
+.legend{font-size:12.5px;color:var(--mute);margin:6px 0 0}
+</style></head><body>
+<h1>R1-07, second part: one set of payment-line and History words</h1>
+<p class="lead">The toasts are already one set (v1.045 (3)): "Leo Kim marked paid · $350 cash" and "Payment undone for Leo Kim". What still differs is the <b>payment line</b> in a person's detail, the <b>History line</b> for a payment, and the <b>Paying by line</b>. Below, each section's words today (exact, from the code on main), then three ways to make them one set. Orange = changes from today.</p>
+
+<h2>Today, and the three options, section by section</h2>
+<table>
+<tr><th></th><th>Today (nothing changes)</th><th>A. Star's words everywhere</th><th>B. Camps' full line everywhere</th><th class="rec">C. One base line, extras only where a section needs them (recommended)</th></tr>
+
+<tr><td class="sec">Camps</td>
+<td><span class="k">Toast</span><span class="w">Leo Kim marked paid · $350 cash</span>
+<span class="k">Payment line</span><span class="w">$335 card · Worcester · Apr 19 · Jeffrey</span><span class="w">Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg</span>
+<span class="k">History</span><span class="w">Marked paid $350 cash</span><span class="w">Payment undone: $350 cash</span>
+<span class="k">Paying by line</span><span class="w">Card</span></td>
+<td><span class="k">Toast</span><span class="w">Leo Kim marked paid · $350 cash</span>
+<span class="k">Payment line</span><span class="w chg">$335 card · paid Apr 19</span><span class="w chg">refunded $23 cash Apr 21</span>
+<span class="k">History</span><span class="w chg">Payment recorded: $350 cash, paid Apr 19</span><span class="w chg">Payment undone: $350</span>
+<span class="k">Paying by line</span><span class="w chg">Card (chosen on the form)</span>
+<span class="cons">Loses the school and who recorded it from the line (History still names who).</span></td>
+<td><span class="k">Toast</span><span class="w">Leo Kim marked paid · $350 cash</span>
+<span class="k">Payment line</span><span class="w">$335 card · Worcester · Apr 19 · Jeffrey</span><span class="w">Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg</span>
+<span class="k">History</span><span class="w">Marked paid $350 cash</span><span class="w">Payment undone: $350 cash</span>
+<span class="k">Paying by line</span><span class="w">Card</span>
+<span class="cons">Same as today for Camps; the other three grow to match.</span></td>
+<td class="rec"><span class="k">Toast</span><span class="w">Leo Kim marked paid · $350 cash</span>
+<span class="k">Payment line</span><span class="w chg">$335 card · paid Apr 19 · Worcester · by Jeffrey</span><span class="w chg">refunded $23 cash Apr 21 · Worcester · by Jeffrey Berg</span>
+<span class="k">History</span><span class="w chg">Payment recorded: $350 cash, paid Apr 19</span><span class="w chg">Payment undone: $350</span>
+<span class="k">Paying by line</span><span class="w chg">Card (chosen on the form)</span></td></tr>
+
+<tr><td class="sec">Color Belt</td>
+<td><span class="k">Toast</span><span class="w">Ana Ruiz marked paid · $65 check</span>
+<span class="k">Payment line</span><span class="w">$65 check · paid Nov 3</span><span class="w">phone: Check · paid Nov 3</span>
+<span class="k">History</span><span class="w">Payment recorded: $65 check, paid Nov 1</span><span class="w">Payment undone: $65</span>
+<span class="k">Paying by line</span><span class="w">Check</span></td>
+<td><span class="k">Toast</span><span class="w">same</span><span class="k">Payment line</span><span class="w">$65 check · paid Nov 3</span><span class="k">History</span><span class="w">same</span>
+<span class="k">Paying by line</span><span class="w chg">Check (chosen on the form)</span></td>
+<td><span class="k">Toast</span><span class="w">same</span>
+<span class="k">Payment line</span><span class="w chg">$65 check · Worcester · Nov 3 · Jeffrey Berg</span>
+<span class="k">History</span><span class="w chg">Marked paid $65 check</span><span class="w chg">Payment undone: $65 check</span>
+<span class="k">Paying by line</span><span class="w">Check</span></td>
+<td class="rec"><span class="k">Toast</span><span class="w">same</span><span class="k">Payment line</span><span class="w">$65 check · paid Nov 3 (no extras: the school and who are already columns)</span><span class="k">History</span><span class="w">same</span>
+<span class="k">Paying by line</span><span class="w chg">Check (chosen on the form)</span></td></tr>
+
+<tr><td class="sec">Star</td>
+<td><span class="k">Toast</span><span class="w">Lily Brooks marked paid · $140 card</span>
+<span class="k">Payment line</span><span class="w">$140 card · paid Nov 3</span><span class="w">refunded $23 cash Nov 3</span><span class="w">phone: Card · paid Nov 3</span>
+<span class="k">History</span><span class="w">Payment recorded: $140 card, paid Nov 3</span><span class="w">Payment undone: $140</span>
+<span class="k">Paying by line</span><span class="w">Card (chosen on the form)</span></td>
+<td><span class="k">Toast</span><span class="w">same</span><span class="k">Payment line</span><span class="w">same</span><span class="k">History</span><span class="w">same</span><span class="k">Paying by line</span><span class="w">same</span>
+<span class="cons">Star is the model; nothing changes here.</span></td>
+<td><span class="k">Toast</span><span class="w">same</span>
+<span class="k">Payment line</span><span class="w chg">$140 card · Worcester · Nov 3 · Jeffrey Berg</span><span class="w chg">Refunded $23 cash · Worcester · Nov 3 · Jeffrey Berg</span>
+<span class="k">History</span><span class="w chg">Marked paid $140 card</span><span class="w chg">Payment undone: $140 card</span>
+<span class="k">Paying by line</span><span class="w chg">Card</span></td>
+<td class="rec"><span class="k">Toast</span><span class="w">same</span><span class="k">Payment line</span><span class="w">same</span><span class="k">History</span><span class="w">same</span><span class="k">Paying by line</span><span class="w">same</span>
+<span class="cons">Nothing changes: Star's words are the base.</span></td></tr>
+
+<tr><td class="sec">Black Belt<br><small>(three payments paid at once)</small></td>
+<td><span class="k">Toast</span><span class="w">Mia Chen marked paid · $870 card</span>
+<span class="k">Payment line (table row)</span><span class="w">Mar 20 | Payments 1, 2 and 3 | Card | $870 | — | Jeffrey Berg</span>
+<span class="k">Payment line (phone)</span><span class="w">Payments 1, 2 and 3 … $870</span><span class="w">Mar 20 · Card · by Jeffrey Berg</span>
+<span class="k">Undo box</span><span class="w">Paid on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it.</span>
+<span class="k">History</span><span class="w">Payment recorded: $870 card, paid Mar 20</span><span class="w">Payment undone: $870</span>
+<span class="k">Paying by line</span><span class="w">none in the staff detail (the family form asks it)</span></td>
+<td><span class="k">Toast</span><span class="w">same</span>
+<span class="k">Payment line</span><span class="w chg">$870 card · paid Mar 20</span><span class="cons">The installments (what it was for) leave the line; they stay in the Undo box.</span>
+<span class="k">History</span><span class="w">same</span>
+<span class="k">Paying by line</span><span class="w chg">Card (chosen on the form)</span></td>
+<td><span class="k">Toast</span><span class="w">same</span>
+<span class="k">Payment line</span><span class="w chg">$870 card · Worcester · Mar 20 · Jeffrey Berg</span>
+<span class="k">History</span><span class="w chg">Marked paid $870 card</span><span class="w chg">Payment undone: $870 card</span>
+<span class="k">Paying by line</span><span class="w chg">Card</span></td>
+<td class="rec"><span class="k">Toast</span><span class="w">same (it stays short; the installments are in the line and the Undo box)</span>
+<span class="k">Payment line (phone and table)</span><span class="w chg">$870 card · paid Mar 20 · for payments 1, 2 and 3 · by Jeffrey Berg</span>
+<span class="k">Undo box</span><span class="w">same</span><span class="k">History</span><span class="w">same</span>
+<span class="k">Paying by line</span><span class="w chg">Card (chosen on the form)</span><span class="cons">The table keeps its columns; the words in each cell follow the same order.</span></td></tr>
+</table>
+<p class="legend">"Chosen on the form / at the desk" is the shared wording already in the code (theyChose, Star's Paying by detail). Hide private details: every payment line, History payment line and Paying by line stays hidden, as today (v0.249).</p>
+
+<h2>Option C at the four review sizes (the longest lines: Camps and Black Belt)</h2>
+<div class="sizes">
+<div class="frame" style="width:560px"><h4>PC 1280 and tablet 820: one line each</h4>
+<div class="row">$335 card · paid Apr 19 · Worcester · by Jeffrey</div>
+<div class="row">refunded $23 cash Apr 21 · Worcester · by Jeffrey Berg</div>
+<div class="row">$870 card · paid Mar 20 · for payments 1, 2 and 3 · by Jeffrey Berg</div></div>
+<div class="frame" style="width:350px"><h4>Phone 390: the Black Belt block, two lines</h4>
+<div class="row"><div class="top"><span>Payments 1, 2 and 3</span><span>$870</span></div><div class="sub">card · paid Mar 20 · by Jeffrey Berg</div></div>
+<div class="row"><div class="top"><span>Camps: $335 card</span></div><div class="sub">paid Apr 19 · Worcester · by Jeffrey</div></div></div>
+<div class="frame" style="width:280px"><h4>Small phone 320: wraps, nothing cut</h4>
+<div class="row"><div class="top"><span>Payments 1, 2 and 3</span><span>$870</span></div><div class="sub">card · paid Mar 20 · by Jeffrey Berg</div></div>
+<div class="row"><div class="top"><span>Camps: $335 card</span></div><div class="sub">paid Apr 19 · Worcester · by Jeffrey</div></div></div>
+</div>
+
+<h2>Recommendation: C</h2>
+<div class="rec-box"><b>Pick C.</b> One base ("$140 card · paid Nov 3") and one History wording ("Payment recorded: $140 card, paid Nov 3" / "Payment undone: $140"), the words Star, Color Belt and Black Belt already use, so only Camps' History changes. A section adds what only it has, always in the same order: <i>paid date · for what · school · by who</i>. Paying by reads "Card (chosen on the form)" or "(chosen at the desk)" in all four, so Camps and Black Belt gain the line they miss. A: shortest, but Camps loses its school and who. B: complete, but long on phones and it rewrites three sections' History for no gain. Today: leaves Camps' History saying "Marked paid" and no date, the only odd one out.
+<br><br><b>Reply with one letter:</b> A, B, C or "Keep today". Whatever you pick, each section switches in its own next batch.</div>
+</body></html>

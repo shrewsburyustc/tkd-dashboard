@@ -92,13 +92,8 @@
 
 /* ===== C3 Add / Edit camp: folded sections ===== */
 
-/* Lists (<select>) use the page font, not the browser's default Arial */
-.cp-select,
-.cp-cal-month,
-.cp-cal-year,
-.cp-count {
-  font-family: inherit;
-}
+/* (Start from, Days per week, Month and Year are the shared dropdown now, S-10: it takes the page
+   font and the .fa-* look from shared.css. The wrappers below only give it a width.) */
 
 .cp-loading {
   padding: var(--space-16) 0;
@@ -220,12 +215,17 @@
   margin-bottom: var(--space-8);
 }
 
+/* The wrappers around the shared dropdowns in the header row: Month takes the spare room (min-width 0
+   so a narrow phone can squeeze it), Year is fixed. 96px, not the old 88: the field also holds the
+   chevron, and "2027" must not be cut with an ellipsis. */
 .cp-cal-month {
   flex: 1;
+  min-width: 0;
 }
 
 .cp-cal-year {
-  width: 88px;
+  flex: none;
+  width: 96px;
 }
 
 .cp-cal-grid {
@@ -878,7 +878,8 @@ button.cp-dc:focus-visible {
   outline-offset: 1px;
 }
 
-/* Touch: 36px cells with a 44px tap area */
+/* Touch: 36px cells with a 44px tap area. The click box is measured from inside the 1px border (a 34px
+   padding box), so inset -5px gives 34 + 5 + 5 = 44 (pass 2 L-03; -4px gave only 42). */
 .cp-rtable.is-touch .cp-dc {
   height: var(--control-height-touch);
 }
@@ -886,7 +887,7 @@ button.cp-dc:focus-visible {
 .cp-rtable.is-touch button.cp-dc::after {
   content: '';
   position: absolute;
-  inset: -4px 0;
+  inset: -5px 0;
 }
 
 /* Phones: one card per child */
@@ -1035,6 +1036,18 @@ button.cp-dc:focus-visible {
   color: var(--color-delete-text);
 }
 
+/* …and while it can't be pressed (a busy save: aria-disabled), the shared unavailable gray wins over
+   the red, fully, hover included — this sheet loads after shared.css at the same specificity, so
+   without this the busy button was red words on a gray fill (independent re-check of the shared batch) */
+.btn.cp-btn-danger[aria-disabled='true'],
+.btn.cp-btn-danger[aria-disabled='true']:hover,
+.btn.cp-btn-danger[aria-disabled='true']:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
 /* A gray button there: Edit payment / Undo payment while a refund stands (rulebook v0.743 (4),
    picture 22 3e) — the plain button's approved gray (as Fill in's .cp-fill rule below and shared.css
    .cfm-actions). Still focusable (aria-disabled); pressing it does nothing. */
@@ -1087,7 +1100,7 @@ button.cp-dc:focus-visible {
   .cp-daychip::after {
     content: '';
     position: absolute;
-    inset: -4px 0;
+    inset: -5px 0; /* 44px: measured from inside the 1px border, as .cp-dc above (L-03) */
   }
 
   .cp-fold-head {
@@ -1221,13 +1234,8 @@ button.cp-dc:focus-visible {
   }
 }
 
-/* ===== The camp page's amber-bar slot (CampPage.jsx) =====
-   A wrapper only so the page can find its own bar (to scroll it into view and focus Retry, design
-   review S-2). display: contents = it draws no box of its own: the bar inside is laid out exactly
-   as if the wrapper weren't there. */
-.cp-bar-slot {
-  display: contents;
-}
+/* (The camp page's back link is the shared BackLink; its "only the link is the button" line,
+   align-self: flex-start, now lives in shared.css's .back-link, v1.136.) */
 
 /* ===== Print roster: only on paper ===== */
 .camp-print {

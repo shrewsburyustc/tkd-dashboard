@@ -3,8 +3,11 @@
 //   - "← Black Belt testing", the cycle name as the page title, and the summary line
 //     "First day Sat, Apr 3, 2027 · 3 testing days · both schools · 9 candidates"
 //     (14px, normal text color; it wraps under the title on phones)
-//   - a ⋯ menu opposite the title: Edit cycle (admins) · Registration links · Close / Open
-//     registration (staff: Open grayed after the application date, with the reason)
+//   - a ⋯ menu opposite the title: Edit cycle (admins) · Close / Open registration (staff: Open
+//     grayed after the application date, with the reason)
+//   - an outline "Registration link" button (Star's, BB10 / v1.015; staff and admins) beside Add
+//     candidate: it opens the shared box with both schools' links and QR codes (LinksDialog.jsx).
+//     Phones: a row under the summary line, side by side like Star's (Q3, Jeffrey); at 320 the second wraps under the first.
 //   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
 //     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason only when the cycle
 //     is past ("This cycle is finished, so candidates can't be added."); the reason is one gray line
@@ -32,12 +35,14 @@
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
-import Dialog from '../../../components/Dialog.jsx';
+import { IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
+import BackLink from '../../../components/BackLink.jsx';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadCycle, schoolToday } from '../../../lib/blackBelt/api.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import CandidatesTab from '../candidates/CandidatesTab.jsx';
@@ -49,6 +54,8 @@ import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/us
 import { showOnCyclesList } from '../cycles/CyclesTab.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import NoIcon from '../parts/NoIcon.jsx';
+import LineBar from '../parts/LineBar.jsx';
+import { undoBarFor } from '../parts/undoBar.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
 import LinksDialog from './LinksDialog.jsx';
@@ -66,7 +73,7 @@ function TwoLines({ label, reason }) {
   );
 }
 
-export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, deviceLocation, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const live = useLiveLoad({ key: cycleId, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const cycle = live.data?.cycle ?? null;
   const today = schoolToday();
@@ -120,19 +127,24 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   const rubricLive = useCycleRubricLoad({ cycleId, version: cycle?.version ?? null, enabled: !screenLocked && tab === 'rubric', onNoAccess });
 
   const [menu, setMenu] = useState(null); // { anchor }
-  const [links, setLinks] = useState(null); // { opener } while Registration links is open
+  const [links, setLinks] = useState(null); // { opener } while the Registration link box is open
   const [banner, setBanner] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
+  // One change at a time, and an Undo pressed meanwhile waits its turn (the shared save line, R2-05).
+  // The line's own bar is the page's bar: a failed Undo shows on whichever tab is open (never silent).
+  const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
+  const busy = line.busy;
+  // The token is this save's own: end() frees the line only for the save that holds it (lib/saveLine.js).
+  // endWrite(status, retry): the database's real answer and how to do the same save again, so a waiting Undo
+  // can build "Neither change saved" with its Retry (C1, v1.127).
+  const tokenRef = useRef(null);
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = line.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  function endWrite(status = 'ok', retry = null) {
+    line.end(status, { retry, token: tokenRef.current });
     if (status && status !== 'ok') clearToast();
   }
   const reloadQuiet = () => liveRef.current.reload();
@@ -180,7 +192,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   }, [screenLocked]);
 
   const moreRef = useRef(null);
-  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload: reloadQuiet, setBanner: tabBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
+  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, undoAction: line.undoAction, reload: reloadQuiet, setBanner: tabBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
   const editor = useCycleEditor({
     isAdmin,
     today,
@@ -188,6 +200,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     screenLocked,
     beginWrite,
     endWrite,
+    undoAction: line.undoAction,
     setBanner: tabBanner,
     onNoAccess,
     onRefreshProfile,
@@ -225,13 +238,8 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   }, [modalShown, onModalOpenChange]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
 
-  const backLink = (
-    <button type="button" className="link-button ev-back bb-back" onClick={() => onBack()}>
-      {/* ti-arrow-left = back */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {T.BACK_TO_BLACK_BELT}
-    </button>
-  );
+  // The shared back link (R3-06, v1.048): 24px with a mouse, a 44px tap box on touch, the title never moves
+  const backLink = <BackLink label={T.BACK_TO_BLACK_BELT} onClick={() => onBack()} className="bb-back-link" />;
 
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'noAccess' || live.status === 'notFound') {
     return (
@@ -276,6 +284,16 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       </button>
     </>
   );
+  // "Registration link" (BB10, v1.015): Star's outline button — same word, same icon (ti-qrcode =
+  // registration link / QR code) — for staff and admins, in the header beside Add candidate (phones:
+  // a full-width row under it). It opens the shared box with both schools' links.
+  const registrationLinkButton = (
+    <button type="button" className="btn bb-reg-link" onClick={(event) => setLinks({ opener: event.currentTarget })}>
+      {/* ti-qrcode = registration link / QR code */}
+      <IconQrcode size={16} aria-hidden="true" />
+      {T.REGISTRATION_LINK}
+    </button>
+  );
   // Why it is grayed: one gray line under the page title, Prospects' place and look (v0.616 /
   // v0.966 option A) — on phones between the summary line and the full-width button. The button
   // points at it (aria-describedby), so a screen reader reads the reason with the button.
@@ -290,7 +308,6 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   function menuItems() {
     const items = [];
     if (isAdmin) items.push({ key: 'edit', label: T.EDIT_CYCLE, Icon: IconEdit, disabled: busy, onSelect: () => editor.openEdit(cycle.id, moreRef.current) });
-    items.push({ key: 'links', label: T.REGISTRATION_LINKS, Icon: IconQrcode, onSelect: () => setLinks({ opener: moreRef.current }) });
     if (!isPast) {
       if (state.registration === 'open') {
         items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: NoIcon, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
@@ -309,6 +326,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     }
     return items;
   }
+  const hasMenu = menuItems().length > 0;
 
   const firstDay = state.firstDay ?? cycle.days?.[0]?.date ?? null;
   // The tabs, in order (v0.946). The ids match what each tab's panel names (ResultsTab: bb-cycle-results-…).
@@ -328,21 +346,31 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
           <p className="ev-summary bb-summary">{T.cycleSummary(firstDay, cycle.days?.length ?? 0, cycle.candidateCount ?? 0)}</p>
         </div>
         {!isPhone && addButton}
-        <span ref={moreRef} className="bb-head-more">
-          <IconButton
-            label={T.moreFor(cycle.name)}
-            Icon={IconDots}
-            aria-haspopup="menu"
-            aria-expanded={menu ? 'true' : 'false'}
-            onClick={(event) => {
-              const anchor = event.currentTarget;
-              setMenu((current) => (current ? null : { anchor }));
-            }}
-          />
-        </span>
+        {!isPhone && registrationLinkButton}
+        {/* Only when it has something in it: a finished cycle has no ⋯ items for staff now that
+            Registration link is its own button (an empty menu would be a dead end). */}
+        {hasMenu && (
+          <span ref={moreRef} className="bb-head-more">
+            <IconButton
+              label={T.moreFor(cycle.name)}
+              Icon={IconDots}
+              aria-haspopup="menu"
+              aria-expanded={menu ? 'true' : 'false'}
+              onClick={(event) => {
+                const anchor = event.currentTarget;
+                setMenu((current) => (current ? null : { anchor }));
+              }}
+            />
+          </span>
+        )}
       </div>
       {addReasonLine}
-      {isPhone && <div className="bb-phone-add">{addButton}</div>}
+      {isPhone && (
+        <div className="bb-phone-actions">
+          {addButton}
+          {registrationLinkButton}
+        </div>
+      )}
       <div
         className="ttabs ev-tabs bb-cycle-tabs"
         role="tablist"
@@ -377,7 +405,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
         <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} gradingStartedAt={rubricLive.data.gradingStartedAt ?? null} onGoToDefaultRubric={onGoToDefaultRubric} />
       )}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={dismissBanner} />}
+      {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={dismissBanner} />}
       {tab === 'rubric' && (
         <CycleRubricTab
           cycle={cycle}
@@ -436,6 +464,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         isAdmin={isAdmin}
         location={location}
         onLocationChange={onLocationChange}
+        deviceLocation={deviceLocation}
         screenLocked={screenLocked}
         onNoAccess={onNoAccess}
         onRefreshProfile={onRefreshProfile}
@@ -450,7 +479,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       />
       </div>
 
-      {menu && !screenLocked && (
+      {menu && hasMenu && !screenLocked && (
         <RowMenu
           anchor={menu.anchor}
           isSheet={isPhone}
@@ -467,32 +496,39 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       )}
       {!screenLocked && editor.element}
       {grading.leave && !screenLocked && (
-        // Star's / Color Belt v0.192's box (G 8): nothing is deleted, so no red — "Stay on this page"
-        // is the blue default (Enter, Esc, backdrop, Back).
-        <Dialog key={grading.leave.key} title={grading.leave.title} variant="confirm" describedBy={`bb-leave-${cycle.id}`} onRequestClose={grading.stayOnPage}>
-          <p id={`bb-leave-${cycle.id}`} className="tdialog-sub tdialog-body">
-            {grading.leave.body}
-          </p>
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={grading.leaveAnyway}>
-              {GT.S.LEAVE_ANYWAY}
-            </button>
-            <button type="button" className="btn btn-primary" data-autofocus onClick={grading.stayOnPage}>
-              {GT.S.STAY_ON_PAGE}
-            </button>
-          </div>
-        </Dialog>
+        // Star's / Color Belt v0.192's box (G 8), drawn with the shared ConfirmBox (BB7, v1.008, D1c):
+        // the safe "Stay on this page" on the left and focused first (Enter, Esc, backdrop and Back
+        // also mean Stay); "Leave anyway" on the right and red (leaving loses the Not saved grades
+        // for good). When the two don't fit side by side (a 320 phone) the box stacks them, Stay on top.
+        <ConfirmBox
+          key={grading.leave.key}
+          title={grading.leave.title}
+          keepLabel={GT.S.STAY_ON_PAGE}
+          actionLabel={GT.S.LEAVE_ANYWAY}
+          loses="forGood"
+          onKeep={grading.stayOnPage}
+          onConfirm={grading.leaveAnyway}
+        >
+          {grading.leave.body}
+        </ConfirmBox>
       )}
       {links && !screenLocked && (
         <LinksDialog
           cycle={cycle}
           isPhone={isPhone}
-          onCopy={(code) => actions.copyLink(code)}
           showToast={showToast}
           onClose={() => {
+            // Back to the button that opened it, once the page is no longer inert (the App lifts
+            // "inert" a moment after a dialog closes, so try again on the next frames).
             const opener = links.opener;
             setLinks(null);
-            window.requestAnimationFrame(() => opener?.querySelector?.('button')?.focus());
+            let tries = 0;
+            const tryFocus = () => {
+              if (!opener?.isConnected) return;
+              if (opener.closest('[inert]') && tries++ < 30) window.requestAnimationFrame(tryFocus);
+              else opener.focus();
+            };
+            window.requestAnimationFrame(tryFocus);
           }}
         />
       )}

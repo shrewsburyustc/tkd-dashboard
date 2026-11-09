@@ -36,7 +36,7 @@
 //   showToast(text, { action, icon }) / clearToast()   the toast at the bottom (with Undo)
 //   onModalOpenChange(open)  tells the App a dialog is open (the page behind becomes inert)
 import { useId, useRef } from 'react';
-import { IconArrowLeft } from '@tabler/icons-react';
+import BackLink from '../../../components/BackLink.jsx'; // the shared "← Testing" link (R3-06, v1.048 (12))
 import RubricsTab from './RubricsTab.jsx';
 import StarEventsTab, { returnFocusTo } from './events/StarEventsTab.jsx';
 import StarEventPage from './event/StarEventPage.jsx';
@@ -66,6 +66,7 @@ export default function StarTesting({
   clearToast,
   onModalOpenChange,
   onLeaveGuardChange,
+  deviceLocation = null, // This device's school ('Worcester' | 'Shrewsbury'): where payments are counted (R1-01)
 }) {
   const baseId = useId();
   const tabRefs = useRef({});
@@ -94,6 +95,7 @@ export default function StarTesting({
         showToast={showToast}
         clearToast={clearToast}
         onModalOpenChange={onModalOpenChange}
+        deviceLocation={deviceLocation}
       />
     );
   }
@@ -119,11 +121,7 @@ export default function StarTesting({
       <div className="phead st-phead">
         <div className="phead-titles">
           {/* A link-styled button: it goes back inside the app (App.jsx changes the address). */}
-          <button type="button" className="link-button st-back" aria-label={T.BACK_TO_TESTING_LABEL} onClick={() => onBack()}>
-            {/* ti-arrow-left = back */}
-            <IconArrowLeft size={16} aria-hidden="true" />
-            {T.BACK_TO_TESTING}
-          </button>
+          <BackLink label={T.BACK_TO_TESTING} ariaLabel={T.BACK_TO_TESTING_LABEL} onClick={() => onBack()} />
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>
         </div>
         {action}

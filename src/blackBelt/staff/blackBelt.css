@@ -15,9 +15,6 @@
 */
 
 /* ===== Home: "← Testing", title, tabs ===== */
-.bb-back {
-  margin-bottom: var(--space-4);
-}
 
 /* Cycles list: Cycle · First testing day · Candidates · Status · actions */
 .bb-row {
@@ -42,82 +39,10 @@
   flex: none;
 }
 
-/* ===== Dialogs on top of a dialog (testing day, Add plan, Save and delete) ===== */
-.bb-inner {
-  z-index: 42;
-}
-
-/* ===== Custom dropdown (SelectField.jsx, v0.51) ===== */
-.bb-select {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  text-align: left;
-  color: var(--color-text);
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.bb-select.is-empty .bb-select-text {
-  color: var(--color-text-secondary);
-}
-
-.bb-select-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bb-select-chevron {
-  flex: none;
-  color: var(--color-text-secondary);
-}
-
-.bb-select[aria-invalid='true'],
 .bb-date > .dp-field[aria-invalid='true'],
 .bb-cycle-form .input[aria-invalid='true'],
 .money.is-invalid {
   border-color: var(--color-warning-text);
-}
-
-.bb-select-list {
-  position: fixed;
-  z-index: 46; /* above dialogs (40), dialogs on top (42) and menus (45) */
-  margin: 0;
-  padding: var(--space-4) 0;
-  overflow-y: auto;
-  list-style: none;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.bb-select-list[hidden] {
-  display: none;
-}
-
-.bb-select-option {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 var(--space-12);
-  font-size: var(--text-13);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.bb-select-option.is-current {
-  background: var(--color-blue-tint);
-  color: var(--color-blue);
-  font-weight: 500;
-}
-
-.bb-select-option.is-active {
-  outline: 2px solid var(--color-blue);
-  outline-offset: -2px;
 }
 
 /* ===== Add / Edit cycle ===== */
@@ -649,49 +574,14 @@
   text-align: center;
 }
 
-/* ===== Registration links ===== */
-.bb-link-line {
-  line-height: 1.5;
-}
-
-.bb-link-cards {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-12);
-}
-
-/* The registration link, as drawn: a gray box, and the address breaks anywhere (never as two
-   pieces at the hyphen) */
-.bb-link-card .ev-link-url {
-  background: var(--color-surface);
-  word-break: break-all;
-}
-
-.bb-dan-hint {
-  margin-top: var(--space-12);
-}
-
-.bb-dan-hint code {
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-}
-
-.tdialog .notice + .bb-link-cards {
-  margin-top: var(--space-12);
-}
+/* ===== Registration link: since the design review's part 2 (BB10, v1.015) the shared
+   RegistrationLinkBox draws the box (shared.css .ev-link-*, .lnk-*); only the header's second
+   button on phones sits beside Add candidate in Black Belt's own row (.bb-phone-actions) ===== */
 
 /* ===== Touch screens: bigger rows and tap areas (guidelines 2.5) ===== */
 @media (pointer: coarse) {
   .bb-day {
     min-height: 56px;
-  }
-
-  .bb-select-option {
-    min-height: var(--tap-size);
-  }
-
-  .bb-select {
-    height: var(--control-height-touch);
-    font-size: var(--text-16);
   }
 
   /* Touch: the due date's text is 16px, so the Due column is wider and "Sat, Sep 25, 2027" isn't
@@ -780,22 +670,6 @@
     max-width: none;
   }
 
-  .bb-link-cards {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Phones: the two link buttons stacked, full width, 44px tall */
-  .bb-link-buttons {
-    flex-direction: column;
-    align-self: stretch;
-  }
-
-  .bb-link-buttons .btn {
-    width: 100%;
-    height: var(--tap-size);
-    justify-content: center;
-  }
-
   .bb-second {
     margin-left: 0;
   }
@@ -823,66 +697,38 @@
   flex: none;
 }
 
-.bb-phone-add {
-  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+/* Phones: Add candidate and Registration link sit side by side under the summary line, each at its
+   own size, like Star's event page header (Q3, Jeffrey). The row's -4px top margin runs into the
+   title block's gap; below 360px (320 phones) the two don't fit, so the second wraps under the
+   first, both left-aligned with their labels on one line. */
+/* The shared back link ("← Testing", "← Black Belt testing") sits in a column, which would stretch it
+   across the whole row so a click in the empty space leaves the page: size it to its label, as in
+   Star (design review, batch 4) */
+.bb-back-link {
+  align-self: flex-start;
 }
 
-.bb-phone-add .bb-add-candidate {
-  width: 100%;
-}
-
-/* ----- Above the list ----- */
-.bb-school-line,
-.bb-cards-note {
-  margin: 0 0 var(--space-12);
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-}
-
-.bb-cards {
-  margin-bottom: var(--space-8);
-}
-
-.bb-cards + .bb-cards-note {
-  margin-top: 0;
-}
-
-/* Phones: the Late / Not paid filter pills (v0.219) */
-.bb-pills {
+.bb-phone-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-8);
-  margin-bottom: var(--space-8);
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
 }
 
-.bb-pill {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-8);
-  height: var(--control-height-touch);
-  padding: 0 var(--space-12);
-  border: 1px solid var(--color-border-control);
-  border-radius: 999px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: var(--text-13);
+.bb-phone-actions .btn {
+  white-space: nowrap;
 }
 
-.bb-pill::after {
-  content: ''; /* 44px tap area around a 36px pill */
-  position: absolute;
-  inset: -4px 0;
+/* "Registration link" (BB10, v1.015): beside Add candidate in the header on PC and tablet; on phones
+   in the row above */
+.bb-reg-link {
+  flex: none;
 }
 
-.bb-pill.is-selected {
-  border-color: var(--color-blue);
-  box-shadow: inset 0 0 0 1px var(--color-blue);
-}
-
-.bb-pill-count {
-  font-weight: 500;
-}
+/* ----- Above the list ----- */
+/* (The count cards, the duplicate box and the "Showing … only" lines are the shared parts now,
+   BB15 — CountCards, DuplicateBox and .cards-showing in shared.css; the Late / Not paid pills,
+   the school line and the duplicates note of the old Black Belt cards are gone.) */
 
 /* Search candidates · caption (PC: the caption right beside Search; tablet and phone: Search
    across the full width, no caption — mockup Candidates 1) */
@@ -1000,20 +846,6 @@
 /* The balance stays at the right edge even when a long tag wraps onto two lines (320px) */
 .bb-ctagline .bb-balance {
   margin-left: auto;
-}
-
-/* The duplicate box: Review at the box's right edge (PC and tablet, as drawn; phones too) */
-.bb-dupbox .ev-dupbox-lines {
-  flex: 1;
-}
-
-.bb-dupbox .ev-dupbox-line {
-  flex-wrap: nowrap;
-  justify-content: space-between;
-}
-
-.bb-dupbox .ev-dupbox-review {
-  flex: none;
 }
 
 .bb-balance.is-over {
@@ -1240,21 +1072,10 @@
   border-color: var(--color-warning-text);
 }
 
-/* Joined buttons as drawn: School, Testing for and Kukkiwon fill the dialog's width in equal parts;
-   Method (Cash · Check · Card) is only as wide as its words. (Black Belt only.) */
-.bb-segmented--fill {
-  display: flex;
-  width: 100%;
-}
-
-.bb-segmented--fill .segment {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0 var(--space-4);
-}
-
-.bb-segmented--compact {
-  align-self: flex-start;
+/* A bold word inside a sentence (<b> / <strong>) at weight 500: the dashboard allows only 400 and 500
+   (§7), and the browser's own bold is 700. */
+.bb-medium {
+  font-weight: 500;
 }
 
 /* ----- Record payment / Edit payment / Refund / Mark check returned ----- */
@@ -1458,17 +1279,6 @@
   margin: 0 0 var(--space-12);
 }
 
-/* Compare: a difference is marked with a small ⚠ and the word, not only the amber color */
-.bb-diff-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: var(--space-8);
-  color: var(--color-warning-text);
-  font-size: var(--text-12);
-  white-space: nowrap;
-}
-
 /* ----- The roster row's ⋯: "Record refund · $50 overpaid" fits (v0.963) -----
    The shared menu is 200 px wide (shared.css, not changed here) and that item was 2 px too wide.
    Inside Black Belt only: its right padding is 4 px smaller (it fits on one line) and, for a
@@ -1581,12 +1391,8 @@
     margin-bottom: var(--space-4);
   }
 
-  /* A toast sits just above the bottom bar, where the ⋯ sheet's last items are: while one shows
-     on a Black Belt cycle page, the sheet leaves room under its items so nothing is covered. */
-  body:has(.bb-candidates):has(.toast-region .toast) .tsheet {
-    /* the toast's own place (above the bottom bar) + a two-line toast + a gap */
-    padding-bottom: calc(var(--bottombar-height) + var(--space-8) + 72px + env(safe-area-inset-bottom));
-  }
+  /* (The ⋯ sheet's room under a toast is the shared one now: .tsheet ends above the toast, shared.css,
+     R2-04 / v1.138. Black Belt's own copy of that rule is gone.) */
 
   /* BB5 (v0.967): on the full-screen candidate detail the toast ("Changes saved · Undo") sits just
      ABOVE the bottom buttons (Record payment · Print receipt), never over them. CandidateDialog.jsx
@@ -2829,7 +2635,8 @@
     padding-left: var(--space-12);
   }
 
-  .bbr-dans {
+  /* the shared ChoiceGroup sits inside the switcher box (.bbr-dans), so the stretch goes on the group */
+  .bbr-dans .segmented {
     display: flex;
     width: 100%;
   }
@@ -3049,14 +2856,6 @@
   margin: 0 0 var(--space-12);
 }
 
-/* ----- DC 3: the Dan-change dialog on phones — full screen, the red button on top ----- */
-.bb-dan-change-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  margin-top: var(--space-16);
-}
-
 /* ----- S2: a testing day that grading locks (Edit cycle) ----- */
 .bb-day-locked {
   margin: 2px 0 0;
@@ -3065,11 +2864,6 @@
 /* Touch: 44px tap areas (rule 2.5) */
 @media (pointer: coarse) {
   .bb-mk-btn {
-    min-height: var(--tap-size);
-  }
-
-  .bb-dan-change-stack .btn,
-  .bb-dan-change .btn {
     min-height: var(--tap-size);
   }
 }

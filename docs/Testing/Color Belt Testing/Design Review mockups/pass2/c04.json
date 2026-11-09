@@ -1,0 +1,32 @@
+{
+  "title": "Pass 2 · C-04 — A line between Restore and the red Delete permanently",
+  "subtitle": "Rulebook v1.055 (f) (you approved A: “Approve all”). On a removed student's ⋯ and a cancelled private testing's ⋯, Restore sits above a line and the red Delete permanently below it, as Star and Camps already do, so the harmless and the permanent action aren't side by side. Only the line is new; nothing else in the menus changes. The menu's own separator (the shared ⋯ menu's line) is used. Shown at 1280 and 390, as the fix file asks; the tablet looks like PC and 320 like 390. The After column is drawn on top of the real preview page.",
+  "width": 1500,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "c04-pc-event-today.png", "crop": [760, 640, 520, 160], "scale": 1, "caption": "PC 1280: a removed student (Owen Reed) on the event roster.", "marks": [[1047, 717, 200, 74]] },
+        { "src": "c04-pc-private-today.png", "crop": [760, 380, 520, 160], "scale": 1, "caption": "PC 1280: a cancelled private testing (Emma Ross).", "marks": [[1047, 458, 200, 74]] },
+        { "row": [
+          { "src": "c04-w390-event-today.png", "shotWidth": 390, "crop": [0, 600, 390, 244], "scale": 0.85, "caption": "Phone 390: removed student.", "marks": [[0, 680, 390, 110]] },
+          { "src": "c04-w390-private-today.png", "shotWidth": 390, "crop": [0, 600, 390, 244], "scale": 0.85, "caption": "Phone 390: cancelled private testing.", "marks": [[0, 680, 390, 110]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "c04-pc-event-after.png", "crop": [760, 640, 520, 160], "scale": 1, "caption": "PC 1280: Restore, a line, then the red Delete permanently.", "marks": [[1047, 717, 200, 83]] },
+        { "src": "c04-pc-private-after.png", "crop": [760, 380, 520, 160], "scale": 1, "caption": "PC 1280: the same on the cancelled private testing.", "marks": [[1047, 458, 200, 83]] },
+        { "row": [
+          { "src": "c04-w390-event-after.png", "shotWidth": 390, "crop": [0, 600, 390, 244], "scale": 0.85, "caption": "Phone 390: the sheet already has a line under every item, so the change is barely visible here (Star's sheet looks the same).", "marks": [[0, 675, 390, 110]] },
+          { "src": "c04-w390-private-after.png", "shotWidth": 390, "crop": [0, 600, 390, 244], "scale": 0.85, "caption": "Phone 390: cancelled private testing.", "marks": [[0, 675, 390, 110]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "Staff: these rows have no ⋯ for staff today; who gets which item there is drawn in M-03's mockup (Print receipt on removed rows), next."
+}

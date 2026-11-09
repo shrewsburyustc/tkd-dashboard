@@ -15,14 +15,9 @@
     Hover          (hover: hover)     → mouse-only highlights
 */
 
-/* ===== Page header: "← Testing", "Star testing" ===== */
-.st-back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 24px;
-  margin-bottom: 2px;
-}
+/* ===== Page header: "← Testing", "Star testing" =====
+   The back link is the shared one (components/BackLink.jsx, shared.css ".back-link"; R3-06); Star's own
+   ".st-back" is gone. */
 
 /* The tab is a button: drawn exactly like Color Belt's tabs (the same rule lives in
    testing-events.css, which this page can't count on being loaded) */
@@ -584,11 +579,6 @@
 
 /* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
 @media (pointer: coarse) {
-  .st-back {
-    min-height: var(--tap-size);
-    margin: -10px 0 -8px;
-  }
-
   .st-dline {
     gap: var(--space-4);
     min-height: 48px;
@@ -774,7 +764,6 @@
    with the shared styles (shared.css .ev-link-*, .lnk-*). ----- */
 
 /* ----- Focus (Star phase 1's ring: 2px blue) on the new buttons ----- */
-.st-page .st-back:focus-visible,
 .st-page .ev-sort:focus-visible {
   outline: 2px solid var(--color-blue);
   outline-offset: 2px;

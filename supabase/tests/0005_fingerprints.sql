@@ -24,6 +24,10 @@
 --   connection and every line must match. That proves production has
 --   exactly the code, rights and rules that passed the tests.
 --
+-- AFTER 0035 the testing_mark_paid(...) line is missing on purpose: 0035
+-- removed that function (the app uses 0030's testing_mark_paid_by, listed
+-- in 0030_fingerprints.sql). Every other line stays as it was.
+--
 -- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
 -- the words the Supabase connection refuses (the two function names that
 -- contain one are spelled in pieces, and removed columns are skipped by

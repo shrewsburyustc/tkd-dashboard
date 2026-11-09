@@ -5,18 +5,23 @@
 //
 // Props:
 //   notice   — optional message from the App (e.g. "Sign in with your password to unlock.")
+//   onRetryNotice — optional: the notice has a Retry button (S-2, v1.051: "Couldn't load your
+//              account. Check the connection, then retry."); it reads the account again
 //   onSignIn — async (email, password) => { error: 'credentials' | 'connection' | 'tooMany' } | { ok: true }
 import { useState } from 'react';
+import { IconRefresh } from '@tabler/icons-react';
 import Logo from '../components/Logo.jsx';
 import Notice from '../components/Notice.jsx';
+import { RETRY } from '../components/text.js';
 
 const ERROR_TEXT = {
   credentials: "That email or password doesn't match. Try again.",
-  connection: "Couldn't reach the server. Check the connection and try again.",
+  connection: "Couldn't reach the server. Check the connection, then retry.",
   tooMany: 'Too many sign-in tries. Wait a minute and try again.',
 };
 
-export default function SignIn({ notice, onSignIn }) {
+export default function SignIn({ notice, onRetryNotice = null, onSignIn }) {
+  const [retrying, setRetrying] = useState(false); // the notice's Retry is on its way
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false); // true while waiting for the server
@@ -89,6 +94,29 @@ export default function SignIn({ notice, onSignIn }) {
 
           {/* The error / notice slot sits right above the button. */}
           {message && <Notice>{message}</Notice>}
+          {/* A notice with a Retry (the account couldn't load): a plain button that tries again */}
+          {message && message === notice && onRetryNotice && (
+            <div className="signin-actions">
+              <button
+                type="button"
+                className="btn"
+                aria-disabled={retrying ? 'true' : undefined}
+                onClick={async () => {
+                  if (retrying) return;
+                  setRetrying(true);
+                  try {
+                    await onRetryNotice();
+                  } finally {
+                    setRetrying(false);
+                  }
+                }}
+              >
+                {/* ti-refresh = Retry */}
+                <IconRefresh size={16} aria-hidden="true" />
+                {RETRY}
+              </button>
+            </div>
+          )}
 
           <div className="signin-actions">
             <button type="submit" className="btn btn-primary signin-button" disabled={busy}>

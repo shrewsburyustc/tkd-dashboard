@@ -9,7 +9,7 @@
 // Top to bottom:
 //   the day switch (G 1): one choice per testing day ("Today · Sat, Apr 3 / Physical"), then Other
 //     requirements and Extra points ("Any day"); gray selected side (it only changes the view);
-//     phones and 320px: a Day dropdown instead. It opens on today's testing day, else the next one
+//     phones and 320px: a Day dropdown instead (the shared Select). It opens on today's testing day, else the next one
 //     with the gray "No testing today. Showing the next testing day.", after the last day the last
 //     one (G 28) — `today` comes from the database. Results' "Open grades" opens a given Dan and day.
 //   "Showing Worcester candidates only · Show both schools" on a one-school device (G 29)
@@ -42,12 +42,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconChevronDown, IconChevronLeft, IconChevronRight, IconInfoCircle, IconPrinter } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import Select from '../../../components/Select.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../lib/device.js';
 import { NARROW_PHONE_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { RUBRIC_DANS } from '../../../lib/blackBelt/rubric.js';
 import { danLabel as danLabelOf } from '../../../lib/blackBelt/resultEmail.js';
-import ChoiceGroup from '../../../screens/testing/events/ChoiceGroup.jsx';
-import SelectField from '../parts/SelectField.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { placeText, shortDate, timeRange, weekdayMonthDay } from '../text.js';
 import GradeCard from './GradeCard.jsx';
 import GradeGrid from './GradeGrid.jsx';
@@ -224,7 +224,7 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
         <span id={dayLabelId} className="field-label">
           {T.DAY_LABEL}
         </span>
-        <SelectField
+        <Select
           id={`${panelId}-dayfield`}
           labelId={dayLabelId}
           value={choice?.key ?? null}

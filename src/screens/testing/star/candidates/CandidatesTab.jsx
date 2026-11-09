@@ -23,11 +23,17 @@
 //     and the summary, on top of it), the one-line History (S6) and formatMoney (S10)
 //   - the shared count cards (S11, v0.518 / v1.115): blue selected edge, 16 px icons, Payments
 //     recorded a plain total (no longer a filter), the Candidates card's two school lines on Both
+//   - Step B of the design review's pass 1 (rulebook v1.038, v1.055): the numbers come from
+//     src/lib/star/candidateCards.js (removed candidates' money in Payments recorded, possible
+//     duplicates left out of Paid / Not paid with one gray line, Worcester first), each filter card
+//     has its own empty line, and a removed candidate who paid can have Print receipt (M-03)
 // The data (event, its rubric copy and the candidates) is loaded by StarEventPage with the 15-second
 // quiet refresh (v0.507 Q3); this tab reloads through `reload()` after every change.
 //
 // Rules worth knowing (the same as Color Belt's tabs):
-//   - ONE change at a time: while a save is on its way, other changes are ignored.
+//   - ONE change at a time: while a save is on its way, other changes are ignored. The "line" that keeps
+//     this (lib/saveLine.js, Step D, R2-05) also QUEUES a toast's Undo pressed meanwhile: it waits its
+//     turn, the toast says "Undoing…", and it runs as soon as the save ends (rulebook v1.125–v1.129).
 //   - Dialog saves WAIT for the database; nothing is shown as saved before it is.
 //   - The dialog's values live HERE, so a screen lock hides the dialog and brings it back.
 //   - "stale" = someone else changed the same thing: nothing is overwritten, the person is told,
@@ -46,8 +52,8 @@ import CompareDialog from '../../../../components/CompareDialog.jsx';
 import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import CountCards from '../../../../components/CountCards.jsx';
 import DuplicateBox from '../../../../components/DuplicateBox.jsx';
-import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import MarkPaidBox from '../../../../components/MarkPaidBox.jsx';
+import PageBar from '../../../../components/PageBar.jsx';
 import ReceiptDialog from '../../../../components/Receipt.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
 import { centsToInputText, formatMoney } from '../../../../lib/money.js';
@@ -60,6 +66,7 @@ import {
   viewSignature, withdrawCandidate,
 } from '../../../../lib/star/candidatesApi.js';
 import { usePageRoomBelow } from '../../../../lib/pageRoom.js';
+import { useSaveLine } from '../../../../lib/saveLine.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
 import CandidateDialog, { checkCandidateForm, isCandidateDirty } from './CandidateDialog.jsx';
@@ -68,6 +75,9 @@ import MakeupPickerDialog from './MakeupPickerDialog.jsx';
 import PrivateDialog, { checkPrivate, isPrivateDirty } from './PrivateDialog.jsx';
 import { takeSnapshot, writeArgs } from '../../../../lib/star/dialogSnapshot.js';
 import { candidateMenuKeys } from '../../../../lib/star/candidateMenu.js';
+import { deskSchoolFor } from '../../../../lib/star/deskSchool.js';
+import { payingByWhere } from '../../../../lib/star/payingByWhere.js';
+import { candidateCardNumbers, emptyLineKind, filterRows } from '../../../../lib/star/candidateCards.js';
 import SignatureDialog from './SignatureDialog.jsx';
 import { checkRecordPayment, EditPaymentDialog, isRecordDirty, PayingByDialog, RefundDialog } from './StarPaymentDialogs.jsx';
 import * as T from './text.js';
@@ -100,6 +110,7 @@ export default function CandidatesTab({
   isAdmin,
   hidden, // Hide private details (v0.506)
   location, // the top-bar switcher: 'Worcester' | 'Shrewsbury' | 'Both'
+  deviceLocation = null, // This device's school (account menu): the desk whose Daily report a payment counts in (R1-01)
   onLocationChange,
   panelId,
   tabId,
@@ -131,8 +142,17 @@ export default function CandidatesTab({
   const [dialog, setDialog] = useState(null);
   const [overlay, setOverlay] = useState(null); // a second, small dialog over `dialog` (Dan confirm, signature)
   const [menu, setMenu] = useState(null); // { id, anchor } or { id: 'add', anchor }
-  const [banner, setBanner] = useState(null); // { text, retry?, kind? }
-  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState(null); // { text, retry?, kind?, retrying?, takeFocus? }
+  // The save line (R2-05): one change at a time, and an Undo pressed meanwhile waits its turn. Its
+  // undoBar is this tab's one amber bar: an Undo that didn't save shows there (kind 'undo'), and an
+  // Undo that worked clears it again.
+  const line = useSaveLine({
+    section: T.SAVE_LINE_SECTION,
+    showToast,
+    undoBar: (next) => setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current)),
+  });
+  const busy = line.busy;
+  const writeTokenRef = useRef(null); // the token of the save that holds the line (begin → end)
   const [notSavedId, setNotSavedId] = useState(null);
   // The shared Mark paid box under a row's Mark paid (S1): { rowId, anchor, snap } or null. `snap`
   // keeps the version and the fee shown when it opened (dialogSnapshot.js), which is what it saves.
@@ -141,7 +161,6 @@ export default function CandidatesTab({
   // from the summary, drawn on top of it (Dialog onTop, v1.100); from ⋯ it opens on its own.
   const [receipt, setReceipt] = useState(null);
   const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
-  const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   const candidatesRef = useRef(candidates);
   useLayoutEffect(() => {
@@ -173,16 +192,44 @@ export default function CandidatesTab({
   }
 
   // ----- One change at a time -----
+  // The line gives each save a token and wants it back (and the way to do the save again, for a row
+  // action's Retry: lib/saveLine.js says why). Only one save holds the line at a time, so the token is
+  // kept in a ref instead of being passed through every save below.
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = line.begin(); // false while a save or an Undo runs
+    if (!token) return false;
+    writeTokenRef.current = token;
     return true;
   }
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  function endWrite(status, retry = null) {
+    line.end(status, { retry, token: writeTokenRef.current });
     if (status && status !== 'ok') clearToast();
+  }
+  // Runs the one call a save makes (building its arguments too) and ends the save line from a
+  // `finally`, as lib/saveLine.js asks: if anything throws between begin and end (writeArgs,
+  // deskSchoolFor …) the line is freed as "didn't save" and the error goes on, instead of the line
+  // staying busy for good with a queued Undo waiting behind it. `status` maps an answer to what the
+  // line is told (the default is the answer's own status).
+  async function inWrite(call, retry = null, status = (answer) => answer.status) {
+    let ended = 'error'; // stays so when the call throws
+    try {
+      const answer = await call();
+      ended = status(answer);
+      return answer;
+    } finally {
+      endWrite(ended, retry);
+    }
+  }
+  // A toast with an Undo that goes through the line (R2-05). `undo` = null → a toast without Undo.
+  // undo: { call, focus, action, row, words }; the words name the change on the bar an Undo that fails
+  // after the person left the page shows (v1.129). They default to the toast's own text, but a toast
+  // with money in it (the amount, the way, a fee) passes `words` without it: that bar can show on
+  // another page and isn't cleared when Hide private details goes on later.
+  function showUndoToast(text, undo) {
+    showToast(text, {
+      icon: false,
+      ...(undo ? { action: line.undoAction(() => runUndo(undo.call, undo.focus ?? null, undo.action, undo.row ?? null), { words: undo.words ?? text }) } : {}),
+    });
   }
 
   // ----- Keyboard focus after a dialog closes (Color Belt's approach) -----
@@ -261,16 +308,11 @@ export default function CandidatesTab({
   const schoolCode = location === 'Both' ? null : LOCATION_CODE[location];
   const oneSchool = schoolCode !== null && schoolCode !== undefined;
   const inSchool = (c) => !oneSchool || c.locationCode === schoolCode;
-  const active = candidates.filter((c) => c.status === 'active' && inSchool(c));
+  // The card numbers and their rules live in candidateCards.js (R5-05, R3-02, S-1).
+  const cards = candidateCardNumbers(candidates, inSchool);
+  const { active, countable } = cards;
   const removedAll = candidates.filter((c) => c.status === 'withdrawn' && inSchool(c));
-  const nonMakeup = active.filter((c) => !c.isMakeup);
-  const cards = {
-    candidates: active.length,
-    bySchool: ['shrewsbury', 'worcester'].map((code) => ({ code, n: active.filter((c) => c.locationCode === code).length })), // as drawn: Shrewsbury, Worcester
-    paid: nonMakeup.filter((c) => c.paid).length,
-    notPaid: nonMakeup.filter((c) => !c.paid && c.feeKind !== 'none').length,
-    payments: active.reduce((sum, c) => sum + (c.paidCents ?? 0), 0),
-  };
+  const removedPaidCents = cards.removedPaidCents;
   const danCount = (dan) => active.filter((c) => c.dan === dan).length;
   const passFor = (dan) => dans.find((d) => d.dan === dan)?.passMark ?? null;
   const categoryName = new Map();
@@ -278,20 +320,21 @@ export default function CandidatesTab({
   const subjectNames = (row) => (row.makeupSubjects ?? []).map((s) => categoryName.get(s.eventCategoryId)).filter(Boolean);
   const belowPassMark = (row) => ((row.makeupSubjects ?? []).some((s) => s.kind === 'chosen') ? passFor(row.dan) : null);
 
-  let shown = active.filter((c) => c.dan === danSel);
-  if (filter === 'paid') shown = shown.filter((c) => !c.isMakeup && c.paid);
-  if (filter === 'notPaid') shown = shown.filter((c) => !c.isMakeup && !c.paid && c.feeKind !== 'none');
+  const shown = filterRows(active.filter((c) => c.dan === danSel), countable, filter);
   const removedRows = removedAll.filter((c) => c.dan === danSel);
   const rowsInView = [...shown, ...(removedOpen ? removedRows : [])];
   // G4: while hidden, the Status column shows only when a shown row has a status tag.
   const showStatusCol = !hidden || rowsInView.some((c) => statusTagKind(c, notSavedId) !== null);
 
   // Possible duplicates (v0.114): one line per pair, in the whole event (both schools' view).
+  // Built from the whole event (not the school filter), so a pair split across the two schools is
+  // still reviewable while one school is shown, and the gray line under the cards counts the same pairs.
+  const wholeEventActive = candidates.filter((c) => c.status !== 'withdrawn');
   const pairs = [];
   const seen = new Set();
-  for (const c of active) {
+  for (const c of wholeEventActive) {
     if (c.duplicateState !== 'possible' || seen.has(c.id)) continue;
-    const other = active.find((o) => o.id !== c.id && o.duplicateState === 'possible' && (o.duplicateOf === c.id || c.duplicateOf === o.id));
+    const other = wholeEventActive.find((o) => o.id !== c.id && o.duplicateState === 'possible' && (o.duplicateOf === c.id || c.duplicateOf === o.id));
     if (!other) continue;
     seen.add(c.id);
     seen.add(other.id);
@@ -484,8 +527,7 @@ export default function CandidatesTab({
     const p = check.payload;
     const name = `${p.firstName} ${p.lastName}`;
     if (d.mode === 'new') {
-      const result = await addCandidate({ eventId, firstName: p.firstName, lastName: p.lastName, dateOfBirth: p.dateOfBirth, email: p.email, locationCode: p.locationCode, dan: p.dan, starsFrom: p.starsFrom, payingBy: p.payingBy });
-      endWrite(result.status);
+      const result = await inWrite(() => addCandidate({ eventId, firstName: p.firstName, lastName: p.lastName, dateOfBirth: p.dateOfBirth, email: p.email, locationCode: p.locationCode, dan: p.dan, starsFrom: p.starsFrom, payingBy: p.payingBy }));
       if (result.status !== 'ok') {
         dialogProblem('add', result.status, name);
         return;
@@ -496,19 +538,17 @@ export default function CandidatesTab({
       const reloaded = reload();
       // Undo = delete the candidate just added — admins only (staff can't delete or withdraw, v0.110).
       const newId = result.id;
-      showToast(T.candidateAddedToast(name), {
-        icon: false,
-        action: isAdmin ? { label: T.UNDO, onAction: () => runUndo(() => deleteCandidate({ candidateId: newId, expectedVersion: result.version, expectedPaymentIds: [] }), null) } : undefined,
-      });
+      showUndoToast(T.candidateAddedToast(name), isAdmin ? { call: () => deleteCandidate({ candidateId: newId, expectedVersion: result.version, expectedPaymentIds: [] }) } : null);
       focusLater(() => rowEl(newId), addEl, reloaded);
       return;
     }
     // Edit details
     const row = rowOf(d.rowId);
-    const result = await updateCandidate(
-      writeArgs('edit', d.snap, { ...p, dateOfBirth: hidden ? d.initial.dateOfBirth || null : p.dateOfBirth, clearGradeCount }),
+    const result = await inWrite(
+      () => updateCandidate(writeArgs('edit', d.snap, { ...p, dateOfBirth: hidden ? d.initial.dateOfBirth || null : p.dateOfBirth, clearGradeCount })),
+      null,
+      (answer) => (answer.status === 'grades_exist' ? 'ok' : answer.status),
     );
-    endWrite(result.status === 'grades_exist' ? 'ok' : result.status);
     if (result.status === 'grades_exist') {
       // The Dan-change confirmation (G2, v0.164), with the number the database counted.
       patchDialog({ saving: false });
@@ -531,15 +571,16 @@ export default function CandidatesTab({
     setDialog(null);
     if (p.dan !== danSel) setDan(p.dan);
     const reloaded = reload();
-    const undo = result.clearedGradeCount > 0 ? undefined : {
-      label: T.UNDO,
-      onAction: () =>
-        runUndo(
-          () => updateCandidate({ candidateId: d.rowId, expectedVersion: result.version, firstName: previous.firstName, lastName: previous.lastName, dateOfBirth: previous.dateOfBirth || null, email: previous.email, locationCode: previous.locationCode, dan: previous.dan, starsFrom: previous.starsFrom, clearGradeCount: null }),
-          { find: () => rowEl(d.rowId) },
-        ),
-    };
-    showToast(T.TOAST_CHANGES_SAVED, { icon: false, action: undo });
+    showUndoToast(
+      T.TOAST_CHANGES_SAVED,
+      result.clearedGradeCount > 0
+        ? null
+        : {
+            call: () => updateCandidate({ candidateId: d.rowId, expectedVersion: result.version, firstName: previous.firstName, lastName: previous.lastName, dateOfBirth: previous.dateOfBirth || null, email: previous.email, locationCode: previous.locationCode, dan: previous.dan, starsFrom: previous.starsFrom, clearGradeCount: null }),
+            focus: { find: () => rowEl(d.rowId) },
+            row: row ?? null,
+          },
+    );
     focusLater(() => rowEl(d.rowId), null, reloaded);
   }
   // "Keep 1st Dan" on the Dan-change confirmation (G2): the form goes back to the SAVED Dan and stars
@@ -559,43 +600,57 @@ export default function CandidatesTab({
     const d = dialogRef.current;
     if (!d?.rowId) return;
     setOverlay({ type: 'signature', signature: null, failed: false });
-    const result = await viewSignature(d.rowId);
+    readSignature(d.rowId);
+  }
+  async function readSignature(rowId) {
+    const result = await viewSignature(rowId);
     if (result.status === 'no_access') {
       onNoAccess();
       return;
     }
     setOverlay((current) => (current?.type === 'signature' ? (result.status === 'ok' ? { ...current, signature: result } : { ...current, failed: true }) : current));
   }
+  // S-2 (v1.051 (2)): a failed read of the signature offers Retry, which reads it again.
+  function retrySignature() {
+    const d = dialogRef.current;
+    if (!d?.rowId) return;
+    setOverlay((current) => (current?.type === 'signature' ? { ...current, failed: false } : current));
+    readSignature(d.rowId);
+  }
 
   // ----- Undo (a toast's action) -----
-  async function runUndo(call, focus, action = 'undo_payment', row = null, doneText = T.TOAST_UNDONE) {
-    if (!beginWrite()) return;
+  // The line (lib/saveLine.js) has already waited for the save that was running and now holds the
+  // line for this Undo; it also says "Undone" (toast) and shows the bar when it didn't work. So this
+  // only does the call and answers { status, reason?, noRetry? } as the line asks:
+  //   'ok'         it worked: the list reloads and focus goes back to where it was
+  //   'error'      it didn't reach the database: the line's bar says "Undo didn't save. Check the
+  //                connection, then retry." with Retry (v1.045 (4), C-06 b); while Hide private details
+  //                is on, the same words without a Retry that could move money (see hiddenNowRef)
+  //   'no_access'  the database locked this sign-in: the screen locks (the line leaves its bar for after)
+  //   anything else (stale …) the database refused it: `reason` is the bar's line, no Retry.
+  async function runUndo(call, focus, action = 'undo_payment', row = null) {
     const result = await call();
-    endWrite(result.status);
     if (result.status === 'ok') {
-      setBanner((current) => (current?.kind === 'undo' ? null : current));
-      showToast(doneText, { icon: false });
       const reloaded = reload();
       if (focus) focusLater(focus.find, addEl, reloaded);
-      return;
+      return { status: 'ok' };
     }
     if (result.status === 'no_access') {
       onNoAccess();
-      return;
+      return { status: 'no_access' };
     }
     if (result.status === 'error') {
-      // Private details hidden meanwhile: no money Retry (see hiddenNowRef) — just show the latest.
       if (hiddenNowRef.current) {
         reload();
-        return;
+        return { status: 'error', reason: T.UNDO_DIDNT_SAVE, noRetry: true };
       }
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus, action, row, doneText) });
-      return;
+      return { status: 'error' };
     }
-    const msg = T.statusMessage(action, result.status, { name: row ? T.candidateName(row) : '' });
-    // (While hidden, the general "changed" line instead of one that names a payment.)
-    setBanner({ text: hiddenNowRef.current ? T.ROW_STALE : (msg?.text ?? T.ROW_STALE) });
+    const name = row ? T.candidateName(row) : '';
+    const msg = T.statusMessage(action, result.status, { name });
     reload();
+    // (While hidden, the general "changed" line instead of one that names a payment.)
+    return { status: result.status, reason: hiddenNowRef.current ? T.rowStale(name) : (msg?.text ?? T.rowStale(name)) };
   }
 
   // ----- Mark paid (S1, DR2-P3, v0.518) -----
@@ -613,8 +668,11 @@ export default function CandidatesTab({
   async function saveMarkPaid(rowId, snap, method) {
     const row = rowOf(rowId);
     if (!row || !beginWrite()) return;
-    const result = await recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today }));
-    endWrite(result.status);
+    // The money counts at the desk that takes it: This device's school (R1-01, v1.035).
+    const result = await inWrite(
+      () => recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today, school: deskSchoolFor(deviceLocation) })),
+      () => saveMarkPaid(rowId, snap, method),
+    );
     if (result.status !== 'ok') {
       rowProblem('mark_paid', result, row, () => saveMarkPaid(rowId, snap, method));
       return;
@@ -623,13 +681,12 @@ export default function CandidatesTab({
     const reloaded = reload();
     const paymentId = result.paymentId;
     // Staff can undo their own payment from the toast within the database's 10 seconds (v0.110).
-    // (Switched on meanwhile: no money toast - see hiddenNowRef.)
-    if (!hiddenNowRef.current) {
-      showToast(T.TOAST_PAYMENT_RECORDED, {
-        icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(rowId) }, 'undo_payment', row) },
-      });
-    }
+    // R1-07: "Lily Brooks marked paid · $140 card" + Undo. Switched on meanwhile (see hiddenNowRef): the
+    // words without the amount and way, and no Undo (a payment's Undo isn't offered while hidden).
+    showUndoToast(
+      T.paymentRecordedToast(T.candidateName(row), snap.expectedFeeCents, method, hiddenNowRef.current),
+      hiddenNowRef.current ? null : { call: () => undoPayment({ paymentId }), focus: { find: () => rowEl(rowId) }, action: 'undo_payment', row, words: T.markedPaidWords(T.candidateName(row)) }, // no amount or way in the words
+    );
     // The Mark paid button goes away with the payment: focus moves to the row.
     focusLater(() => rowEl(rowId), null, reloaded);
   }
@@ -697,8 +754,7 @@ export default function CandidatesTab({
       }
       if (!beginWrite()) return;
       patchDialog({ saving: true, note: null });
-      const result = await changePayingBy(writeArgs('payingBy', d.snap, d.values));
-      endWrite(result.status);
+      const result = await inWrite(() => changePayingBy(writeArgs('payingBy', d.snap, d.values)));
       if (result.status !== 'ok') {
         dialogProblem('paying_by', result.status, name);
         return;
@@ -709,16 +765,12 @@ export default function CandidatesTab({
       // — but not once Hide private details went on during the save (how a family pays is a payment
       // detail; the same rule as Record payment and Edit payment, see hiddenNowRef).
       const oldPayingBy = d.initial.payingBy;
-      showToast(T.TOAST_CHANGES_SAVED, {
-        icon: false,
-        action: hiddenNowRef.current
-          ? undefined
-          : {
-              label: T.UNDO,
-              onAction: () =>
-                runUndo(() => changePayingBy({ candidateId: row.id, expectedVersion: result.version, payingBy: oldPayingBy }), { find: () => rowEl(row.id) }, 'undo_paying_by', row),
-            },
-      });
+      showUndoToast(
+        T.TOAST_CHANGES_SAVED,
+        hiddenNowRef.current
+          ? null
+          : { call: () => changePayingBy({ candidateId: row.id, expectedVersion: result.version, payingBy: oldPayingBy }), focus: { find: () => rowEl(row.id) }, action: 'undo_paying_by', row },
+      );
       return;
     }
     const check = checkRecordPayment(d, today, d.type === 'refund' ? d.overpaidCents : null);
@@ -734,8 +786,7 @@ export default function CandidatesTab({
     patchDialog({ saving: true, note: null });
     const p = check.payload;
     if (d.type === 'editPayment') {
-      const result = await editPayment(writeArgs('editPayment', d.snap, p));
-      endWrite(result.status);
+      const result = await inWrite(() => editPayment(writeArgs('editPayment', d.snap, p)));
       if (result.status !== 'ok') {
         dialogProblem('edit_payment', result.status, name);
         return;
@@ -750,19 +801,17 @@ export default function CandidatesTab({
       // as Edit payment is.
       const newPaymentId = result.paymentId;
       const old = d.old;
-      showToast(T.TOAST_PAYMENT_CHANGED, {
-        icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () =>
-            runUndo(() => editPayment({ paymentId: newPaymentId, method: old.method, amountCents: old.amountCents, paidOn: old.paidOn }), { find: () => rowEl(row.id) }, 'undo_edit_payment', row),
-        },
+      showUndoToast(T.TOAST_PAYMENT_CHANGED, {
+        call: () => editPayment({ paymentId: newPaymentId, method: old.method, amountCents: old.amountCents, paidOn: old.paidOn }),
+        focus: { find: () => rowEl(row.id) },
+        action: 'undo_edit_payment',
+        row,
       });
       return;
     }
     // Record refund
-    const result = await recordRefund(writeArgs('refund', d.snap, p));
-    endWrite(result.status);
+    // A refund counts at the desk that hands the money back: This device's school (R1-01, v1.040).
+    const result = await inWrite(() => recordRefund(writeArgs('refund', d.snap, { ...p, school: deskSchoolFor(deviceLocation) })));
     if (result.status === 'refund_too_large') {
       const msg = T.statusMessage('refund', 'refund_too_large', { overpaidCents: result.overpaidCents ?? 0 });
       if (msg.field) patchDialog({ saving: false, fieldNote: msg.text, overpaidCents: result.overpaidCents });
@@ -778,10 +827,7 @@ export default function CandidatesTab({
     const reloaded = reload();
     const refundId = result.paymentId;
     if (!hiddenNowRef.current) { // switched on meanwhile: no money toast
-      showToast(T.TOAST_REFUND_RECORDED, {
-        icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId: refundId }), { find: () => rowEl(row.id) }, 'undo_refund', row) },
-      });
+      showUndoToast(T.TOAST_REFUND_RECORDED, { call: () => undoPayment({ paymentId: refundId }), focus: { find: () => rowEl(row.id) }, action: 'undo_refund', row });
     }
     focusLater(() => rowEl(row.id), null, reloaded);
   }
@@ -792,8 +838,7 @@ export default function CandidatesTab({
   }
   async function openUndoRefund(row, opener) {
     if (!beginWrite()) return;
-    const detail = await loadCandidateDetail(row.id);
-    endWrite(detail.status);
+    const detail = await inWrite(() => loadCandidateDetail(row.id));
     if (detail.status !== 'ok') {
       // A failed READ (nothing was saved) — the same as startDelete: "Couldn't load this candidate"
       // with Retry, no "Not saved" mark; gone meanwhile (not_found): the list just reloads.
@@ -815,8 +860,7 @@ export default function CandidatesTab({
     if (!d || d.saving || !beginWrite()) return;
     const row = rowOf(d.rowId);
     patchDialog({ saving: true, failed: false });
-    const result = await undoPayment(d.type === 'undoRefund' ? { paymentId: d.refund.id } : writeArgs('undoPayment', d.snap));
-    endWrite(result.status);
+    const result = await inWrite(() => undoPayment(d.type === 'undoRefund' ? { paymentId: d.refund.id } : writeArgs('undoPayment', d.snap)));
     if (result.status === 'ok') {
       closeDialog(d);
       reload();
@@ -852,8 +896,7 @@ export default function CandidatesTab({
     const row = rowOf(d.rowId);
     if (!row || !beginWrite()) return;
     patchDialog({ saving: true, note: null });
-    const result = await setPrivate(writeArgs('private', d.snap, check.payload));
-    endWrite(result.status);
+    const result = await inWrite(() => setPrivate(writeArgs('private', d.snap, check.payload)));
     if (result.status !== 'ok') {
       dialogProblem('private', result.status, T.candidateName(row));
       return;
@@ -864,47 +907,38 @@ export default function CandidatesTab({
     // (Change), or clears a new one (Set), with the version this save returned.
     const old = { day: row.privateOn, time: row.privateTime };
     const wasSet = Boolean(old.day);
-    showToast(T.TOAST_PRIVATE_SET, {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () =>
-          runUndo(
-            () => (wasSet
-              ? setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time })
-              : clearPrivate({ candidateId: row.id, expectedVersion: result.version })),
-            { find: () => rowEl(row.id) },
-            'undo_private',
-            row,
-          ),
-      },
+    showUndoToast(T.TOAST_PRIVATE_SET, {
+      call: () => (wasSet
+        ? setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time })
+        : clearPrivate({ candidateId: row.id, expectedVersion: result.version })),
+      focus: { find: () => rowEl(row.id) },
+      action: 'undo_private',
+      row,
     });
   }
   async function backToTestingDay(row) {
     if (!beginWrite()) return;
     const old = { day: row.privateOn, time: row.privateTime };
-    const result = await clearPrivate({ candidateId: row.id, expectedVersion: row.version });
-    endWrite(result.status);
+    const result = await inWrite(() => clearPrivate({ candidateId: row.id, expectedVersion: row.version }), () => backToTestingDay(row));
     if (result.status !== 'ok') {
       rowProblem('private', result, row, () => backToTestingDay(row));
       return;
     }
     rowOk(row);
     reload();
-    showToast(T.movedBackToast(T.candidateName(row), hiddenNowRef.current ? null : result.expectedFeeCents), {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () => runUndo(() => setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time }), { find: () => rowEl(row.id) }, 'undo_private', row),
-      },
+    showUndoToast(T.movedBackToast(T.candidateName(row), hiddenNowRef.current ? null : result.expectedFeeCents), {
+      call: () => setPrivate({ candidateId: row.id, expectedVersion: result.version, privateOn: old.day, privateTime: old.time }),
+      focus: { find: () => rowEl(row.id) },
+      action: 'undo_private',
+      row,
+      words: T.movedBackToast(T.candidateName(row), null), // the fee stays out of the words
     });
   }
 
   // ----- Withdraw / Restore / Delete permanently (v0.113, G13) -----
   async function withdraw(row) {
     if (!beginWrite()) return;
-    const result = await withdrawCandidate({ candidateId: row.id, expectedVersion: row.version });
-    endWrite(result.status);
+    const result = await inWrite(() => withdrawCandidate({ candidateId: row.id, expectedVersion: row.version }), () => withdraw(row));
     if (result.status !== 'ok') {
       rowProblem('withdraw', result, row, () => withdraw(row));
       return;
@@ -912,15 +946,16 @@ export default function CandidatesTab({
     rowOk(row);
     setRemovedOpen(true); // the Removed group opens, so the row can be seen (G13)
     reload();
-    showToast(T.withdrawnToast(T.candidateName(row)), {
-      icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => restoreCandidate({ candidateId: row.id, expectedVersion: result.version }), { find: () => rowEl(row.id) }, 'restore', row) },
+    showUndoToast(T.withdrawnToast(T.candidateName(row)), {
+      call: () => restoreCandidate({ candidateId: row.id, expectedVersion: result.version }),
+      focus: { find: () => rowEl(row.id) },
+      action: 'restore',
+      row,
     });
   }
   async function restore(row) {
     if (!beginWrite()) return;
-    const result = await restoreCandidate({ candidateId: row.id, expectedVersion: row.version });
-    endWrite(result.status);
+    const result = await inWrite(() => restoreCandidate({ candidateId: row.id, expectedVersion: row.version }), () => restore(row));
     if (result.status !== 'ok') {
       rowProblem('restore', result, row, () => restore(row));
       return;
@@ -931,18 +966,15 @@ export default function CandidatesTab({
     // except for a "Duplicate copy" (G3 choice = A): withdrawing again would tag it "Removed" and lose
     // the reason, so no Undo; the compare box (Review, then Keep this one) puts it back properly.
     const wasDuplicateCopy = row.withdrawnReason === 'duplicate_copy';
-    showToast(T.restoredToast(T.candidateName(row)), {
-      icon: false,
-      action: wasDuplicateCopy
-        ? undefined
-        : { label: T.UNDO, onAction: () => runUndo(() => withdrawCandidate({ candidateId: row.id, expectedVersion: result.version }), { find: () => rowEl(row.id) }, 'withdraw', row) },
-    });
+    showUndoToast(
+      T.restoredToast(T.candidateName(row)),
+      wasDuplicateCopy ? null : { call: () => withdrawCandidate({ candidateId: row.id, expectedVersion: result.version }), focus: { find: () => rowEl(row.id) }, action: 'withdraw', row },
+    );
     focusLater(() => rowEl(row.id), null, reloaded);
   }
   async function startDelete(row, opener) {
     if (!beginWrite()) return;
-    const detail = await loadCandidateDetail(row.id);
-    endWrite(detail.status);
+    const detail = await inWrite(() => loadCandidateDetail(row.id));
     if (detail.status !== 'ok') {
       // A failed READ (nothing was saved): "Couldn't load this candidate" with Retry — no "Not
       // saved" mark. Gone meanwhile (not_found): the list just reloads.
@@ -971,8 +1003,7 @@ export default function CandidatesTab({
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
     patchDialog({ saving: true, failed: false });
-    const result = await deleteCandidate(d.args);
-    endWrite(result.status);
+    const result = await inWrite(() => deleteCandidate(d.args));
     if (result.status === 'ok') {
       setDialog(null);
       const reloaded = reload();
@@ -1017,15 +1048,15 @@ export default function CandidatesTab({
     const d = dialogRef.current;
     if (!d || d.saving || !d.details || !beginWrite()) return;
     patchDialog({ saving: true, failed: false, busyKey });
-    const result = await resolveDuplicate({ keepId: keep.id, keepVersion: shownVersion(d, keep.id), otherId: other.id, otherVersion: shownVersion(d, other.id), keepBoth: false });
-    endWrite(result.status);
+    const result = await inWrite(() => resolveDuplicate({ keepId: keep.id, keepVersion: shownVersion(d, keep.id), otherId: other.id, otherVersion: shownVersion(d, other.id), keepBoth: false }));
     if (result.status === 'ok') {
       closeDialog(d);
       setRemovedOpen(true);
       reload();
-      showToast(T.duplicateRemovedToast(T.candidateName(keep)), {
-        icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => restoreCandidate({ candidateId: other.id, expectedVersion: result.otherVersion }), null, 'undo_duplicate', other) },
+      showUndoToast(T.duplicateRemovedToast(T.candidateName(keep)), {
+        call: () => restoreCandidate({ candidateId: other.id, expectedVersion: result.otherVersion }),
+        action: 'undo_duplicate',
+        row: other,
       });
       return;
     }
@@ -1042,8 +1073,7 @@ export default function CandidatesTab({
     const second = rowOf(d?.secondId);
     if (!d || d.saving || !first || !second || !d.details || !beginWrite()) return;
     patchDialog({ saving: true, failed: false, busyKey: 'keep-both' });
-    const result = await resolveDuplicate({ keepId: first.id, keepVersion: shownVersion(d, first.id), otherId: second.id, otherVersion: shownVersion(d, second.id), keepBoth: true });
-    endWrite(result.status);
+    const result = await inWrite(() => resolveDuplicate({ keepId: first.id, keepVersion: shownVersion(d, first.id), otherId: second.id, otherVersion: shownVersion(d, second.id), keepBoth: true }));
     if (result.status === 'ok') {
       closeDialog(d);
       reload();
@@ -1075,8 +1105,7 @@ export default function CandidatesTab({
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
     patchDialog({ saving: true, note: null });
-    const result = await addMakeup({ eventId, earlierCandidateId: row.candidateId });
-    endWrite(result.status);
+    const result = await inWrite(() => addMakeup({ eventId, earlierCandidateId: row.candidateId }));
     const name = `${row.firstName} ${row.lastName}`;
     if (result.status === 'ok') {
       // R2-08 (mockup A3b): the picker CLOSES after an add (as Black Belt's does), so its "Already
@@ -1088,16 +1117,10 @@ export default function CandidatesTab({
       const reloaded = reload();
       const newId = result.id;
       const newVersion = result.version;
-      showToast(T.makeupAddedToast(name), {
-        icon: false,
-        action: isAdmin
-          ? {
-              label: T.UNDO,
-              onAction: () =>
-                runUndo(() => deleteCandidate({ candidateId: newId, expectedVersion: newVersion, expectedPaymentIds: [] }), { find: addEl }, 'undo_makeup'),
-            }
-          : undefined,
-      });
+      showUndoToast(
+        T.makeupAddedToast(name),
+        isAdmin ? { call: () => deleteCandidate({ candidateId: newId, expectedVersion: newVersion, expectedPaymentIds: [] }), focus: { find: addEl }, action: 'undo_makeup' } : null,
+      );
       focusLater(addEl, null, reloaded);
       return;
     }
@@ -1268,8 +1291,9 @@ export default function CandidatesTab({
   const schoolNote = oneSchool ? T.schoolName(schoolCode) : cards.bySchool.map((s) => `${T.schoolName(s.code)} ${s.n}`); // one line each (screen 1)
   const hasAny = candidates.some(inSchool);
   const danLabelId = `${panelId}-dan`;
-  let emptyText = T.NO_CANDIDATES_DAN;
-  if (filter) emptyText = T.NO_MATCHES;
+  // C-05 (b): a card's own empty line; a Dan with nobody in it keeps 'No candidates for this Dan.'
+  const emptyKind = emptyLineKind(filter, active.some((c) => c.dan === danSel));
+  const emptyText = emptyKind === 'noPaid' ? T.NO_PAID_DAN : emptyKind === 'everyPaid' ? T.EVERY_PAID_DAN : T.NO_CANDIDATES_DAN;
 
   // ----- The open dialog -----
   let dialogElement = null;
@@ -1309,7 +1333,7 @@ export default function CandidatesTab({
     } else if (dialog.type === 'undoPayment' && row) {
       dialogElement = (
         <ConfirmBox
-          title={T.undoPaymentTitle(T.candidateName(row))}
+          title={T.undoPaymentTitle(T.candidateName(row), row.paidCents, row.paidMethod)}
           keepLabel={T.KEEP_PAYMENT}
           actionLabel={T.UNDO_PAYMENT}
           actionIcon={IconArrowBackUp}
@@ -1320,7 +1344,7 @@ export default function CandidatesTab({
           onConfirm={confirmUndo}
           onKeep={cancelDialog}
         >
-          {T.undoPaymentBody(row.paidCents, row.paidMethod, row.paidOn)}
+          {T.undoPaymentBody(row.paidOn)}
         </ConfirmBox>
       );
     } else if (dialog.type === 'undoRefund' && row) {
@@ -1448,6 +1472,7 @@ export default function CandidatesTab({
           name={row ? T.candidateName(row) : ''}
           eventName={event.name}
           isPhone={isPhone}
+          onRetry={retrySignature}
           onClose={() => {
             setOverlay(null);
             patchDialog({ focusSig: true }); // the detail comes back with focus on "View signature"
@@ -1498,7 +1523,7 @@ export default function CandidatesTab({
         name={T.candidateName(markPaidRow)}
         amountCents={snap.expectedFeeCents}
         familyChoice={markPaidRow.payingBy}
-        choiceWhere={markPaidRow.source === 'form' ? 'form' : 'desk'}
+        choiceWhere={payingByWhere(markPaidRow)}
         onMarkPaid={(method) => saveMarkPaid(rowId, snap, method)}
         onClose={(restoreFocus) => {
           setMarkPaid(null);
@@ -1514,8 +1539,16 @@ export default function CandidatesTab({
     <>
       {renderHeader(addButton)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel st-cand-panel">
+        {/* The page's amber bar shows under the top bar (v1.128); an Undo that didn't save brings its
+            own Retry state (`retrying`) and takes the keyboard focus when nothing else has it. */}
         {banner && (
-          <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
+          <PageBar
+            text={banner.text}
+            onRetry={banner.retry ? () => banner.retry() : undefined}
+            retrying={Boolean(banner.retrying) || busy}
+            takeFocus={Boolean(banner.takeFocus)}
+            onDismiss={() => setBanner(null)}
+          />
         )}
         {/* The shared duplicate box (v1.102): the count on the first line only; each Review passes
             itself, so focus returns to it when the compare closes. */}
@@ -1539,13 +1572,14 @@ export default function CandidatesTab({
                 : [
                     { key: 'paid', Icon: IconCheck, label: T.CARD_PAID, value: cards.paid, kind: 'filter' },
                     { key: 'notPaid', Icon: IconCircleX, label: T.CARD_NOT_PAID, value: cards.notPaid, kind: 'filter' }, // ti-circle-x = not paid (S9, 16a)
-                    { key: 'payments', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(cards.payments), kind: 'total' }, // ti-sum = a money total (v0.303)
+                    { key: 'payments', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(cards.payments), note: removedPaidCents > 0 ? T.includesRemoved(removedPaidCents) : null, kind: 'total' }, // ti-sum = a money total (v0.303)
                   ]),
             ]}
             selected={filter}
             onSelect={setFilter}
             showingText={filter ? T.FILTER_LINE[filter] : ''}
             showAllLabel={T.SHOW_ALL_LINK}
+            note={!hidden && cards.dupLeftOut > 0 ? T.dupNotCounted(cards.dupLeftOut) : null}
           />
         )}
         {oneSchool && (

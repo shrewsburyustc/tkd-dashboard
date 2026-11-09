@@ -11,11 +11,17 @@
 //     / Open sign-up and Print roster only
 //   - a click on a row opens the camp's page (App.jsx gives it the #camps/camp/<id> address)
 //
+// The page's save line and amber bar come from Camps.jsx (design review R2-05, rulebook v1.125-v1.129,
+// v1.128): line is the list page's line of saves (Close / Open sign-up, Save as template and their
+// Undos go through it, CampRowMenu.jsx) and setBanner puts this tab's bars (a failed read or save)
+// into the page's ONE bar, a PageBar under the top bar that Camps.jsx draws. This tab draws no bar
+// of its own, except a page that can't load at all.
+//
 // Columns (PC and tablet): Camp · [School on Both] · Dates (all days + how many) · Campers ·
 // Status · Edit + ⋯. Phone: a card per camp — name, "dates · N days · N campers", school line, tag.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconDots, IconEdit } from '@tabler/icons-react';
-import ErrorBanner from '../../components/ErrorBanner.jsx';
+import PageBar from '../../components/PageBar.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { loadCamps, campToday } from '../../lib/camps/campsApi.js';
@@ -25,7 +31,6 @@ import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useCampActions } from './CampRowMenu.jsx';
-import { useRevealRetryBar } from './revealRetryBar.js';
 import * as T from './text.js';
 
 // Upcoming / Past, per school, kept while the page is open (like Color Belt's Events tab).
@@ -71,6 +76,8 @@ export default function CampsTab({
   showToast,
   clearToast,
   onModalOpenChange,
+  line, // the page's line of saves (from Camps.jsx)
+  setBanner, // puts a bar into the page's one amber bar (from Camps.jsx)
 }) {
   const live = useLiveLoad({ key: locationKey, enabled: !screenLocked, load: loadCamps, refreshMs: LIVE_REFRESH_MS });
   const today = live.data?.today ?? campToday();
@@ -87,7 +94,6 @@ export default function CampsTab({
   const [side, setSideState] = useState(() => sideBySchool.get(locationKey) ?? 'upcoming');
   const [sort, setSort] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor }
-  const [banner, setBanner] = useState(null);
 
   function setSide(next) {
     sideBySchool.set(locationKey, next);
@@ -101,7 +107,8 @@ export default function CampsTab({
     previousRef.current = locationKey;
     setSideState(sideBySchool.get(locationKey) ?? 'upcoming');
     setSort(null);
-    setBanner(null);
+    // This tab's bars belonged to the old school; a failed Undo's bar stays (it belongs to the page).
+    setBanner((current) => (current?.kind === 'undo' ? current : null));
     setMenu(null);
   }, [locationKey]);
 
@@ -126,6 +133,7 @@ export default function CampsTab({
     isAdmin,
     today,
     screenLocked,
+    line,
     showToast,
     clearToast,
     onNoAccess,
@@ -133,10 +141,6 @@ export default function CampsTab({
     setBanner,
     reload: reloadQuiet,
   });
-  // ⋯ Delete camp's failed read (S-2): its amber bar (the first thing in this tab's panel) is
-  // brought into view with focus on its Retry — the list may be scrolled far below it.
-  const panelRef = useRef(null);
-  useRevealRetryBar(banner, () => panelRef.current?.querySelector(':scope > .errbar') ?? null);
   useEffect(() => {
     onModalOpenChange(actions.dialogOpen);
   }, [actions.dialogOpen, onModalOpenChange]);
@@ -215,7 +219,7 @@ export default function CampsTab({
       </div>
     );
   } else if (live.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_CAMPS_FAILED} onRetry={() => liveRef.current.reload()} />;
+    body = <PageBar text={T.LOAD_CAMPS_FAILED} onRetry={() => liveRef.current.reload()} />;
   } else if (live.status === 'noAccess') {
     body = null;
   } else if (shown.length === 0) {
@@ -321,8 +325,7 @@ export default function CampsTab({
   const sideLabelId = `${panelId}-side`;
   return (
     <>
-      <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel" ref={panelRef}>
-        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={actions.busy} onDismiss={() => setBanner(null)} />}
+      <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
         {live.status === 'ready' && (
           <div className="ev-side">
             <span id={sideLabelId} className="visually-hidden">

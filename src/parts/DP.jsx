@@ -23,7 +23,7 @@ import { pressLikeMouse, useLater } from './act.js';
 const TODAY = '2026-10-28';
 const DAY = '2026-10-26';
 const DAY_HINT = "Days after today can't be chosen."; // Finance's line (v0.817)
-const PAST_HINT = "Past dates can't be chosen."; // the picker's usual line when today is the first day
+const PAST_HINT = "Past days can't be chosen."; // the picker's usual line when today is the first day
 
 // The day as Finance's heading writes it: in full on PC, short with the year on tablet, short on phones.
 function dayTitle(iso, wide, isPhone) {

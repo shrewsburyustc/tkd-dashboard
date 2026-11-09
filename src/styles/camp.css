@@ -29,6 +29,8 @@
 .camp-child__head .reg-card__title {
   margin-bottom: 0;
 }
+/* (The "Date signed" box under the signature is the shared components/DateSigned.jsx with its own
+   stylesheet, styles/date-signed-public.css — rulebook v0.638 / v0.749.) */
 /* First and last name side by side, also on phones (C7a). */
 .camp-two {
   display: grid;

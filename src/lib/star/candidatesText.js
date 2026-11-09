@@ -10,6 +10,8 @@
 // proposals for the design review.
 
 import { formatMoney } from '../money.js';
+// The shared sentences (Dashboard core, rulebook v1.045): a refused change names who changed, and the payment-undone toast.
+import { paymentUndoneToast as sharedPaymentUndoneToast, someoneElseChanged } from '../../components/text.js';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 // Money is written with the dashboard's one helper, formatMoney (src/lib/money.js; rulebook v1.026,
@@ -19,7 +21,9 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 export const dollars = formatMoney;
 
 // ----- Banners for row actions (G11; Color Belt's live lines) -----
-export const ROW_STALE = "Someone else changed this just now. Your change wasn't saved.";
+// R2-07 (v1.045 (4)): "Someone else changed [Name] just now, so nothing was done. Their change is shown."
+// (the screen reloads when it is shown, so the second sentence is true).
+export const rowStale = (name) => someoneElseChanged(name || 'this candidate');
 export const ROW_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const ROW_FAILED = "That didn't save. Check the connection, then retry."; // + Retry; the row's tag reads "Not saved"
 export const isWithdrawn = (name) => `${name} was withdrawn. An admin can restore them first.`;
@@ -34,7 +38,7 @@ export const EVENT_FINISHED_ADD = 'This testing has finished, so candidates can�
 export const DIALOG_STALE = "Someone else changed this just now. Your change wasn’t saved. Cancel, then open it again to see the latest.";
 export const DIALOG_STALE_PHONE = "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const DIALOG_INVALID = "That didn't save. Check the fields and try again.";
-export const DIALOG_FAILED = "Couldn't save. Check the connection, then try again."; // G11
+export const DIALOG_FAILED = "Couldn't save. Check the connection, then retry."; // G11
 export const ALREADY_PAID_DIALOG = 'Already marked paid. Close this and use ⋯ → Edit payment instead.'; // G16
 export const DAN_NEEDS_ADMIN = 'Only an admin can change the Dan after a payment is recorded.'; // G2
 export const DAN_AT_THE_DESK = 'Change the Dan at the desk.'; // G2/G8, while Hide private details is on
@@ -79,7 +83,7 @@ export const candidateAddedToast = (name) => `${name} added`; // + Undo (G7)
 export const TOAST_CHANGES_SAVED = 'Changes saved';
 export const TOAST_PAYMENT_CHANGED = 'Payment changed'; // Edit payment (G16) + Undo, admins (DR G2, v0.517)
 export const TOAST_REFUND_RECORDED = 'Refund recorded'; // + Undo (G1)
-export const paymentUndoneToast = (name) => `Payment undone for ${name}`; // admin, no Undo (G16)
+export const paymentUndoneToast = sharedPaymentUndoneToast; // admin, no Undo (G16); the shared words (R1-07): "Payment undone for [Name]"
 export const withdrawnToast = (name) => `${name} withdrawn`;
 export const restoredToast = (name) => `${name} restored`;
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
@@ -104,7 +108,7 @@ export const TOAST_KEPT_BOTH = 'Kept both registrations';
 export function statusMessage(action, status, { name = '', phone = false, overpaidCents = 0, gradeCount = 0 } = {}) {
   if (status === 'ok' || status === 'no_access') return null;
   const rowAction = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'add_makeup', 'undo_edit_payment', 'undo_paying_by', 'undo_private', 'undo_makeup', 'mark_paid'].includes(action);
-  const stale = rowAction ? { text: ROW_STALE } : { text: phone ? DIALOG_STALE_PHONE : DIALOG_STALE };
+  const stale = rowAction ? { text: rowStale(name) } : { text: phone ? DIALOG_STALE_PHONE : DIALOG_STALE };
   switch (status) {
     case 'stale':
     case 'not_found': // deleted elsewhere: the same as "someone else changed it"

@@ -16,19 +16,20 @@
 // "Sat, Sep 25, 2027" fits (blackBelt.css).
 // A plan's name is plain text, as drawn: it is typed (and checked — empty, same as another plan)
 // only in the Add plan dialog, and plans are not renamed afterwards (the drawing has no rename).
+// The Total row shows a dash for a Dan while any of its prices is invalid (never a wrong sum).
 // This file only draws; the values live in useCycleEditor.jsx.
 import { Fragment, useId, useState } from 'react';
 import { IconArrowDown, IconArrowUp, IconDots, IconPlus, IconTrash } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
-import { formatDollars } from '../../../lib/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import { effectiveDueOn, planTotals } from '../../../lib/blackBelt/rules.js';
 import { useReorderDrag } from '../../../lib/useReorderDrag.js';
 import { cycleDateYears, pastHint } from '../../../lib/blackBelt/dateLimits.js';
 import DateField from '../parts/DateField.jsx';
-import Grip from '../parts/Grip.jsx';
-import { DANS, priceTextProblem } from './formValues.js';
+import Grip from '../../../components/Grip.jsx';
+import { DANS, dollarsText, priceTextProblem } from './formValues.js';
 import * as T from '../text.js';
 
 // One price box with a "$" in front (a typed price stays exactly as typed). As drawn, the
@@ -65,12 +66,6 @@ function PriceInput({ value, label, invalid, onChange }) {
     </span>
   );
 }
-
-// The text a read-only cell shows: "$870", or '' for a missing price.
-const dollarsText = (text) => {
-  const cents = Number(String(text).replace(/[$,]/g, '')) * 100;
-  return Number.isFinite(cents) && String(text).trim() !== '' ? formatDollars(cents) : '';
-};
 
 export default function PricesSection({ mode, values, formForRules, problems, triedSave, isPhone, readOnly, today, dueMin = () => today, onAmount, onDueDate, onKukkiwon, onRemove, onMove, onReorder, onAddPlan }) {
   const id = useId();
@@ -115,7 +110,7 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
           today={today}
           min={min}
           years={cycleDateYears(today, { min, value: dueOf(pay) })}
-          hint={pastHint(today, min, T.PAST_DATES_HINT)}
+          hint={pastHint(today, min, T.PAST_DAYS_HINT)}
           isPhone={isPhone}
           disabled={readOnly}
           invalid={Boolean(dueShown[i])}
@@ -241,7 +236,9 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
                   <td />
                   {DANS.map((dan) => (
                     <td key={dan} className="num">
-                      {totals[dan] !== null ? formatDollars(totals[dan]) : ''}
+                      {/* An invalid price is read by the rules as -1 cent, so the plain sum would be wrong:
+                          while any price in this column is invalid, the Total says so with a dash (D1). */}
+                      {(plan.amounts[dan] ?? []).some((text) => priceTextProblem(text) === 'invalid') ? T.PLAN_TOTAL_NONE : totals[dan] !== null ? formatMoney(totals[dan]) : ''}
                     </td>
                   ))}
                 </tr>

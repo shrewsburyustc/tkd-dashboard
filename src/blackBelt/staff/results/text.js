@@ -14,6 +14,8 @@ import { DAN_LABELS, DAN_SHORT, monthDay, monthDayYear, weekdayMonthDay, schoolN
 import { joinNames, trimScaleText } from '../../../lib/blackBelt/grading.js';
 import { MAX_RESULT_TEXT_LENGTH } from '../../../lib/blackBelt/resultEmail.js';
 import { bracketLabel } from '../../../lib/blackBelt/rubric.js';
+// The sentences every section says (S-2: a page that can't load; R2-07: a failed Undo): typed once in the shared words.
+import { UNDO_DIDNT_SAVE, loadFailedNamed } from '../../../components/text.js';
 
 export { schoolName };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -109,15 +111,15 @@ export const EMAIL_OFF_HIDDEN = 'Email result is off while private details are h
 
 // ----- Loading and empty (proposals 31, 37) -----
 export const LOADING_RESULTS = 'Loading results…'; // screen readers
-export const LOAD_FAILED = 'Couldn’t load the results. Check the connection, then try again.'; // + Retry
+export const LOAD_FAILED = loadFailedNamed('the results'); // + Retry (S-2: ends "then retry")
 // The empty Dan on a one-school device: the link sits inside the sentence.
 export const emptyOneSchoolParts = (school, dan) => [`No ${school} ${danLabel(dan)} candidates. `, SHOW_BOTH_SCHOOLS, ' to see the rest.'];
 export const emptyDanBoth = (dan) => `No ${danLabel(dan)} candidates. Add candidates on the Candidates tab.`;
 
 // ----- Email result's banners (proposal 19) -----
 export const COPY_BLOCKED = 'Couldn’t copy the message, so the email opened empty. Close it and try Email result again.';
-export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then try again.`; // + Retry
-export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then try again.'; // new wording, not in the mockups (Star's)
+export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then retry.`; // + Retry (S-2)
+export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then retry.'; // new wording, not in the mockups (Star's)
 // Email result refused by the database at the click (nothing opens). new wording, not in the mockups
 export function emailRefusal(status, name) {
   switch (status) {
@@ -141,7 +143,7 @@ export function markSentRefusal(status, name) {
     case 'withdrawn': return `${name} was removed from this cycle. It wasn’t marked as sent.`;
     case 'not_found': return `${name} was deleted on another device. Nothing was marked.`;
     case 'no_email': return `No email on file for ${name}, so it wasn’t marked as sent.`; // new wording, not in the mockups
-    default: return `Couldn’t mark ${name} as sent. Check the connection, then try again.`; // + Retry
+    default: return `Couldn’t mark ${name} as sent. Check the connection, then retry.`; // + Retry
   }
 }
 export function undoSentRefusal(status) {
@@ -150,20 +152,22 @@ export function undoSentRefusal(status) {
     case 'not_allowed': return 'Too late to undo here. Ask an admin to undo Mark as sent.';
     case 'not_found': return 'That send record isn’t there any more. Nothing was changed.';
     case 'invalid': return 'That couldn’t be undone. The list has been reloaded.';
-    default: return 'Couldn’t undo Mark as sent. Check the connection, then try again.';
+    default: return UNDO_DIDNT_SAVE; // R2-07: the shared failed-Undo sentence
   }
 }
 export const undoConfirmTitle = (name) => `Undo Mark as sent for ${name}?`;
 export const undoConfirmBody = (day) =>
   `This removes the ${monthDay(day)} send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn’t really sent.`;
 export const UNDO_CONFIRM_GO = 'Undo Mark as sent';
+export const UNDO_CONFIRM_BUSY = 'Undoing…'; // the button's words while the Undo works (shared ConfirmBox, BB7)
+export const UNDO_CONFIRM_KEEP = 'Keep send record'; // same word as Star's Undo Mark as sent box, rulebook v1.008: the left button, the one that changes nothing
 export const CANCEL = 'Cancel';
 
 // ----- Print results and Download CSV (proposals 43, 46) -----
-export const PRINT_FAILED = 'Couldn’t load the results to print. Check the connection, then try again.'; // new wording, not in the mockups (+ Retry)
+export const PRINT_FAILED = loadFailedNamed('the results to print'); // new wording, not in the mockups (+ Retry; S-2)
 export const csvDownloaded = (fileName, n) =>
   `Downloaded ${fileName} (${plural(n, 'candidate', 'candidates')}). It has dates of birth, emails and payments — keep it private.`;
-export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then try again.'; // + Retry
+export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then retry.'; // + Retry
 export const CSV_NOT_ALLOWED = 'Only an admin can download the CSV.';
 
 // ----- The printed results sheet (R05, proposals 38–44) -----
@@ -212,7 +216,7 @@ export const SUBJECT_FIXED_NOTE = 'The same for every email; it can’t be chang
 export const TEXTS_USED_WHEN_CLICKED = 'Email result always uses these texts as they are when it’s clicked.';
 export const KIND_NAME = { passed: 'Passed', makeup_d: 'Make-up with a D', makeup_below: 'Make-up below the pass mark' };
 export const editTextLabel = (kind) => `Edit the ${KIND_NAME[kind]} email`; // screen readers
-export const TEXTS_LOAD_FAILED = 'Couldn’t load the result emails. Check the connection, then try again.'; // new wording, not in the mockups (+ Retry)
+export const TEXTS_LOAD_FAILED = loadFailedNamed('the result emails'); // new wording, not in the mockups (+ Retry; S-2)
 
 // ----- The "Edit result email" dialog (proposals 24, 25, 27) -----
 export const EDIT_RESULT_EMAIL = 'Edit result email';
@@ -235,7 +239,6 @@ export const SAMPLE_CANDIDATE = { firstName: 'Sam', lastName: 'Example' }; // ne
 export const SAMPLE_NOTE = 'a made-up candidate (no real one has this result yet)'; // new wording, not in the mockups
 export const SAMPLE_CYCLE_NAME = 'Black Belt testing'; // new wording, not in the mockups
 export const RESULT_TEXT_SAVED = 'Result email saved'; // toast, with Undo
-export const TOAST_UNDONE = 'Undone';
 export const SAVE = 'Save';
 export const SAVING = 'Saving…';
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
@@ -244,9 +247,7 @@ export const TEXT_STALE = 'Someone else changed this just now. Your change wasn�
 export const TEXT_STALE_PHONE = 'Someone else changed this just now. Your change wasn’t saved. Discard changes, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
 export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubric and waiver. Your change wasn’t saved.'; // new wording, not in the mockups (Star's)
 export const TEXT_INVALID = 'This text can’t be saved. Check the message under the box.'; // new wording, not in the mockups
-export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then try again.';
-export const UNDO_FAILED = 'Undo didn’t save. Check the connection, then retry.';
-export const UNDO_STALE = 'Couldn’t undo. Someone else changed this email text just now.'; // new wording, not in the mockups
+export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then retry.';
 // Where a blank works, for "{D subjects} only works in a Make-up with a D email."
 const BLANK_HOME = {
   'subjects to work on': 'a make-up email',

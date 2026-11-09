@@ -177,6 +177,7 @@ export function EditPaymentDialog({ state, candidate, today, isPhone, onChange, 
           min={state.minDate}
           readOnly={readOnly}
           error={check.dateError}
+          hint={T.EDIT_PAYMENT_DATE_HINT}
           isPhone={isPhone}
           onChange={(paidOn) => {
             onChange({ paidOn });

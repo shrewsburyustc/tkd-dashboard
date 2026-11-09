@@ -2,9 +2,10 @@
 // Why it exists: the lists show as little as possible (privacy, rulebook §5: no phones or family
 // details in lists). Everything else about a camper is here, one tap away from any name:
 //   - age and membership, days, extras with their days, how the price was worked out, paying by
-//   - Payments: the status tag, the payments list (date, amount, method, who recorded it) — a
-//     refund is its own line, "Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg" (rulebook
-//     v0.743 (3)), and its Undo a "(reversed)" line like a payment's; when days or extras were taken
+//   - Payments: the status tag, the payments list ("$335 card · paid Apr 19 · Worcester · by Jeffrey":
+//     Star's words, then the school and who recorded it; rulebook v1.135 / v0.751) — a refund is its
+//     own line, "refunded $23 cash Apr 21 · Worcester · by Jeffrey Berg" (rulebook v0.743 (3)), and
+//     its Undo a "(reversed)" line like a payment's; when days or extras were taken
 //     off after paying: "Total now $315 · paid $390 · Paid $75 more than the total" (amber part) and,
 //     for everyone, "An admin records money handed back with ⋯ → Record refund." (v0.743 (6); on
 //     touch screens "… with More → …", where the item is); both go once paid equals the total
@@ -64,7 +65,7 @@ import Notice from '../../components/Notice.jsx';
 import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
 // Print receipt's one rule, the same as the ⋯ menu's (v0.734)
 import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
-import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
+import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, payingByChoiceWhere, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { CamperTag } from './CampRoster.jsx';
@@ -264,7 +265,7 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                 : T.priceBreakdownLine(b, allDays)}
             </Row>
           )}
-          <Row label={T.DETAIL_PAYING_BY}>{detailsHidden ? hiddenValue : T.payingByText(camper.payingBy)}</Row>
+          <Row label={T.DETAIL_PAYING_BY}>{detailsHidden ? hiddenValue : T.payingByDetail(camper.payingBy, payingByChoiceWhere(camper))}</Row>
           {camper.status !== 'active' && <Row label={T.DETAIL_REMOVED}>{T.removedDetail(camper)}</Row>}
         </dl>
 

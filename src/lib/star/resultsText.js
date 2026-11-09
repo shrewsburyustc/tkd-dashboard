@@ -11,6 +11,7 @@
 //
 // Dates are 'YYYY-MM-DD' text, shown US style ("Nov 16", "Tue, Dec 1"); read as calendar dates, so
 // they never shift a day because of time zones.
+import { UNDO_DIDNT_SAVE } from '../../components/text.js';
 import { monthDay, weekdayMonthDay } from './eventsText.js';
 import { startTimeLabel } from './starEventRules.js';
 import { scoreText, joinNames } from './gradingText.js';
@@ -95,13 +96,13 @@ export const EMAIL_OFF_WHILE_HIDDEN = 'Email result is off while private details
 // ----- Email result's banners (R4: 17–19) -----
 export const COPY_BLOCKED = 'Couldn’t copy the message, so the email opened empty. Close it and try Email result again.';
 export const noEmailOnFile = (name) => `${name} has no email for results. Add it with Edit details on the Candidates tab, then try again.`;
-export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then try again.`; // + Retry
+export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then retry.`; // + Retry
 // The email text wasn't loaded / the row changed so it gets no email (not in the mockups)
-export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then try again.';
+export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then retry.';
 
 // ----- Mark as sent (20–24) -----
 export const markedAsSent = (name) => `Marked as sent · ${name}`; // the toast, with Undo
-export const TOAST_UNDONE = 'Undone'; // after the toast's Undo (R2-07, v1.051)
+// (After the toast's Undo the save line says "Undone" itself: R2-05 / R2-07, v1.051; src/lib/saveLine.js.)
 // Refusals of Mark as sent: banner with ✕ only (the connection one has Retry). name: "Noah Chen"
 export function markSentRefusal(status, name) {
   switch (status) {
@@ -111,7 +112,7 @@ export function markSentRefusal(status, name) {
     case 'not_finished': return `${name}’s result isn’t finished any more, so it wasn’t marked as sent.`;
     case 'withdrawn': return `${name} was removed from this testing. It wasn’t marked as sent.`;
     case 'not_found': return `${name} was deleted on another device. Nothing was marked.`;
-    default: return `Couldn’t mark ${name} as sent. Check the connection, then try again.`; // + Retry
+    default: return `Couldn’t mark ${name} as sent. Check the connection, then retry.`; // + Retry
   }
 }
 // Refusals of Undo (24; not_found and the connection one are not in the mockups)
@@ -121,7 +122,7 @@ export function undoSentRefusal(status) {
     case 'not_allowed': return 'Too late to undo here. Ask an admin to undo Mark as sent.';
     case 'not_found': return 'That send record isn’t there any more. Nothing was changed.';
     case 'invalid': return 'That couldn’t be undone. The list has been reloaded.';
-    default: return 'Couldn’t undo Mark as sent. Check the connection, then try again.';
+    default: return UNDO_DIDNT_SAVE; // R2-07 (v1.045 (4)): the one shared failed-Undo sentence
   }
 }
 // The admins' Undo question (21)
@@ -136,7 +137,7 @@ export const UNDOING = 'Undoing…';
 // ----- Download CSV (29–33) -----
 export const csvDownloaded = (fileName, n) =>
   `Downloaded ${fileName} (${plural(n, 'candidate', 'candidates')}). It has dates of birth, emails and payments — keep it private.`;
-export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then try again.'; // + Retry
+export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then retry.'; // + Retry
 export const CSV_NOT_ALLOWED = 'Only an admin can download the CSV.';
 // The 15 column headings, exactly v0.144's, in order (32)
 export const CSV_HEADINGS = [
@@ -150,7 +151,7 @@ export const ADMIN_CHOOSES_CSV = 'Admin chooses'; // Needs, below the pass mark 
 export const csvEarlierSent = (status, date) => `${NOT_SENT_YET} (${STATUS_WORD[status] ? `${STATUS_WORD[status]} sent` : 'sent'} ${date})`;
 
 // ----- Loading and empty (40, 41) -----
-export const LOAD_FAILED = 'Couldn’t load the results. Check the connection, then try again.'; // + Retry
+export const LOAD_FAILED = 'Couldn’t load the results. Check the connection, then retry.'; // + Retry
 export const emptyDanOneSchool = (school, danLabel) => `No ${school} ${danLabel} candidates. Show both schools to see the rest.`;
 export const emptyDanBoth = (danLabel) => `No ${danLabel} candidates. Add candidates on the Candidates tab.`;
 
@@ -164,7 +165,7 @@ export const SAMPLE_CANDIDATE = { firstName: 'Sam', lastName: 'Example' }; // th
 export const TEXT_STALE = 'Someone else changed this just now. Your change wasn’t saved. Cancel, then open it again to see the latest.';
 export const TEXT_STALE_PHONE = 'Someone else changed this just now. Your change wasn’t saved. Discard changes, then open it again to see the latest.';
 export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubrics and prices. Your change wasn’t saved.';
-export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then try again.'; // not in the mockups (the Star dialogs' line)
+export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then retry.'; // not in the mockups (the Star dialogs' line)
 // The block on Rubrics and prices (R11, 42–45). passMark: the Dans' pass mark when they all share
 // one (245); otherwise null → "the pass mark" (not in the mockups — every Dan is 245 today).
 export const RESULT_EMAILS_SUB = 'What Email result copies for each family (Results tab). Blanks in {braces} fill in for each candidate.';

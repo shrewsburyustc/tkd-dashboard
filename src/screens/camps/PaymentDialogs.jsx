@@ -261,7 +261,8 @@ export function EditPaymentDialog({ name, payment, today, isPhone, form, onForm,
         </div>
         <div className="field">
           {/* Date paid: the dashboard's own calendar (Star's shared DatePicker, rulebook v0.727).
-              Days after today are gray and can't be picked (max = today), as the old box's max did. */}
+              Days after today are gray and can't be picked (max = today), as the old box's max did, and
+              the calendar says why (pass 1 R3-13): "Days after today can't be chosen." (shared words). */}
           <span id={`${idBase}-date-label`} className="field-label">
             {T.DATE_PAID}
           </span>
@@ -272,6 +273,7 @@ export function EditPaymentDialog({ name, payment, today, isPhone, form, onForm,
             today={today}
             max={today || null}
             years={yearsAround(today, [values.paidOn, payment.paidOn], false)}
+            hint={T.FUTURE_DAYS_HINT}
             disabled={saving}
             invalid={Boolean(dateError)}
             describedBy={dateError ? `${idBase}-date-error` : undefined}

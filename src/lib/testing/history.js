@@ -31,6 +31,7 @@
 //     registration too) says nothing; an edit of several details is ONE entry, joined with "; ";
 //     Edit payment (a reversal + a new payment in one save) is ONE entry, "Payment changed: …";
 //     a move or its Undo is ONE entry too — the payments that move with it say nothing of their own;
+//     a payment save that also changed Paying by is ONE entry, money first (pass 2 M-02, v1.055 (a));
 //   - money rows (payments, undos, edits, Paying by, a private price) are left out while Hide
 //     private details is on — the shared line then says "Payment history is hidden on this tablet.";
 //     "Registered on the family form" / "Added at the desk" stay (Star's Q4 A);
@@ -128,7 +129,51 @@ export function combineHistoryRows(list) {
   // A reversal of an edit whose new payment isn't in the list (the 500-row limit cut it off) still
   // says that the payment changed.
   for (const r of reversals) if (!used.has(r)) out.push({ ...r, editLeftover: true });
-  return foldMovePayments(out);
+  return foldPayingBy(foldMovePayments(out));
+}
+
+// ----- A payment that also changed Paying by: one entry, not two (pass 2 M-02, v1.055 (a)) -----
+// Mark paid, Undo payment or Edit payment by another way changes Paying by too (v0.418 / v0.419),
+// in the same save (one database transaction). Its two rows, the payment row and the record's own
+// update ("Paying by changed: …"), are ONE entry, money first: "Payment recorded: $20 cash, paid
+// Nov 5; Paying by changed: Card → Cash", as Camps does (v0.736: one save that changes several
+// things is one entry). Pairs are the record's table with its payment table, the same action and
+// the nearest time within 5 seconds (the database gives both rows the same time; the preview's can
+// differ by a few milliseconds). The payment row gets `payingByChange` ({ from, to }) and the
+// record's row `payingByJoined`, so it no longer says it. Without the payment row (the 500-row
+// limit), or for ⋯ Change how they'll pay (no payment in that save), Paying by keeps its own entry.
+const PAYMENT_TABLE_OF = { testing_registrations: 'testing_payments', testing_private: 'testing_private_payments' };
+const PAY_ACTIONS = new Set(['mark_paid', 'undo_payment', 'edit_payment', 'private_mark_paid', 'private_undo_payment', 'private_edit_payment']);
+function foldPayingBy(rows) {
+  const isChange = (r) => RECORD_TABLES.has(r?.table_name) && r.op === 'update' && PAY_ACTIONS.has(r.action)
+    && has(r.after, 'paying_by') && Boolean(r.before?.paying_by) && Boolean(r.after?.paying_by)
+    && r.before.paying_by !== r.after.paying_by;
+  const changes = rows.filter(isChange);
+  if (changes.length === 0) return rows;
+  const joinedTo = new Map(); // payment row → { from, to }
+  const absorbed = new Set(); // record rows whose Paying by part moved to their payment row
+  for (const change of changes) {
+    const at = Date.parse(change.occurred_at);
+    let best = null;
+    for (const r of rows) {
+      if (joinedTo.has(r) || r.table_name !== PAYMENT_TABLE_OF[change.table_name] || r.op !== 'insert' || r.action !== change.action) continue;
+      // The way to pay must match too, so a Paying by change whose own payment row was cut off (the
+      // 500-row limit) never joins another save's payment: Mark paid / Edit payment record the new
+      // way (Paying by after); Undo payment's reversal undoes the old one (Paying by before).
+      const wantMethod = r.after?.kind === 'reversal' ? change.before.paying_by : change.after.paying_by;
+      if (r.after?.method !== wantMethod) continue;
+      const gap = Math.abs(Date.parse(r.occurred_at) - at);
+      if (gap <= 5000 && (best === null || gap < best.gap)) best = { r, gap };
+    }
+    if (!best) continue;
+    joinedTo.set(best.r, { from: change.before.paying_by, to: change.after.paying_by });
+    absorbed.add(change);
+  }
+  return rows.map((r) => {
+    if (joinedTo.has(r)) return { ...r, payingByChange: joinedTo.get(r) };
+    if (absorbed.has(r)) return { ...r, payingByJoined: true };
+    return r;
+  });
 }
 
 // ----- A move: one entry, not one per payment -----
@@ -221,8 +266,14 @@ function paymentChange(old, now) {
   return historyPaymentChanged(join(from), join(to));
 }
 
-// A payment row (event or private). Every part is about money.
+// A payment row (event or private). Every part is about money. A Paying by change of the same save
+// follows the payment's own words (foldPayingBy, M-02).
 function paymentParts(row) {
+  const parts = paymentMoneyParts(row);
+  if (row.payingByChange) parts.push(money(historyPayingBy(row.payingByChange.from, row.payingByChange.to)));
+  return parts;
+}
+function paymentMoneyParts(row) {
   if (row.op !== 'insert') return [money(HISTORY_PAYMENT_CHANGED)]; // payments are append-only; never expected
   const a = row.after ?? {};
   const cents = Math.abs(a.amount_cents ?? 0);
@@ -344,7 +395,10 @@ function recordParts(row, ctx) {
     parts.push(plain(historyDayChanged(from, to)));
   }
   // How they'll pay (P3: Mark paid or Edit payment by another way changes it too, v0.418 / v0.419).
-  if (has(after, 'paying_by') && before.paying_by && after.paying_by) parts.push(money(historyPayingBy(before.paying_by, after.paying_by)));
+  // When it was part of a payment's save, the payment's entry says it (foldPayingBy, M-02).
+  if (has(after, 'paying_by') && before.paying_by && after.paying_by && !row.payingByJoined) {
+    parts.push(money(historyPayingBy(before.paying_by, after.paying_by)));
+  }
   // The 90-day signature clean-up.
   if (has(after, 'signature') && after.signature === null && before.signature) parts.push(plain(HISTORY_SIGNATURE_DELETED));
   // Anything else (version, updated_at, *_by_name, withdrawn_at …) says nothing on its own.

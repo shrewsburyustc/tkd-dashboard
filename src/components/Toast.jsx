@@ -12,19 +12,83 @@
 // The 5-second timer PAUSES while the pointer is over the toast or keyboard focus is inside it,
 // and resumes with the time that was left (decided v0.54 — people need time to reach Undo).
 //
+// The queued Undo (rulebook v1.125; design review R2-05; lib/toastLine.js decides what happens):
+//   - pressing Undo turns the toast's button into "Undoing…" until the Undo is done, in the busy look
+//     of the "Are you sure?" box's pressed button (v1.008, v1.103): grayed words and the busy cursor.
+//     It stays a Tab stop, marked unavailable for screen readers, and a second press does nothing.
+//     The toast doesn't go after 5 seconds meanwhile.
+//   - the button is as wide as "Undoing…" from the start, so nothing moves when its words change:
+//     both words sit in one spot, and the hidden one keeps the width (CSS only, no measuring).
+//
 // Props:
-//   toast     { id, text, action: { label, onAction } | null, icon: boolean } or null.
-//             A new id restarts the 5 seconds (even for the same text).
-//   onDismiss called when the time is up, or right after Undo was pressed
+//   toast     { id, text, action: { label, onAction, queued? } | null, icon: boolean, busy: boolean }
+//             or null. A new id restarts the 5 seconds (even for the same text).
+//   onDismiss(id)  the 5 seconds are up
+//   onUndo(id)     the Undo button was pressed (the toast line runs it and says how it went)
 //
 // The outer box is ALWAYS on the page with role="status": screen readers only announce text
 // that appears inside a "live" area that already existed, so it can't come and go with the toast.
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { IconArrowBackUp, IconCheck } from '@tabler/icons-react';
+import { UNDOING } from './text.js';
 
 const TOAST_MS = 5000; // 5 seconds
+const ROOM_GAP = 8; // the clear gap kept between what is above and the toast (px)
 
-export default function Toast({ toast, onDismiss }) {
+// The toast's own room (rulebook v1.042, v1.138; design review R2-04). The toast is drawn on top of the
+// page, so its Undo used to cover whatever sat under it (Check in, a row's ⋯, "Delete permanently").
+// While a toast shows, this tells the styles how much room it takes, in two CSS variables on <html>:
+//   --toast-room          from the bottom of the page area (.shell-content) up to the toast's top edge + a
+//                         gap: the page area ends this far above its usual bottom (app.css)
+//   --toast-room-window   the same measured from the bottom of the window: an open ⋯ sheet ends above it
+//                         (shared.css)
+// Both are removed the moment the toast goes, so the room goes with it. Measured from the toast's own
+// box, so a wrapped two-line toast and any place it is moved to (Black Belt's lift) are covered.
+// The control that has the keyboard is scrolled into view if the room covered it (§4 check 3).
+function useToastRoom(toastId) {
+  useLayoutEffect(() => {
+    if (toastId === null) return undefined;
+    const root = document.documentElement;
+    const toastEl = () => document.querySelector('.toast-region .toast');
+    let last = '';
+    const measure = () => {
+      const el = toastEl();
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const fromWindow = Math.max(0, window.innerHeight - top + ROOM_GAP);
+      // The page area's usual bottom: the top of the phone bottom bar when it shows, else the window's.
+      const bar = document.querySelector('.bottombar');
+      const barTop = bar && bar.offsetParent !== null ? bar.getBoundingClientRect().top : window.innerHeight;
+      const content = document.querySelector('.shell-content');
+      const natural = content ? content.getBoundingClientRect().bottom + parseFloat(getComputedStyle(content).marginBottom || '0') : barTop;
+      const fromContent = Math.max(0, Math.round(natural - (top - ROOM_GAP)));
+      const next = `${fromContent}|${Math.round(fromWindow)}`;
+      if (next === last) return;
+      last = next;
+      root.style.setProperty('--toast-room', `${fromContent}px`);
+      root.style.setProperty('--toast-room-window', `${Math.round(fromWindow)}px`);
+      // The room may now cover the control the keyboard is on: bring it back into sight.
+      const focused = document.activeElement;
+      if (focused && content && content.contains(focused)) {
+        const edge = content.getBoundingClientRect().bottom - fromContent;
+        if (focused.getBoundingClientRect().bottom > edge) focused.scrollIntoView({ block: 'nearest' });
+      }
+    };
+    measure();
+    const el = toastEl();
+    const observer = el ? new ResizeObserver(measure) : null;
+    if (el) observer.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+      root.style.removeProperty('--toast-room');
+      root.style.removeProperty('--toast-room-window');
+    };
+  }, [toastId]);
+}
+
+export default function Toast({ toast, onDismiss, onUndo }) {
   const onDismissRef = useRef(onDismiss);
   useEffect(() => {
     onDismissRef.current = onDismiss;
@@ -37,11 +101,13 @@ export default function Toast({ toast, onDismiss }) {
   const startedAtRef = useRef(null);
   const hoverRef = useRef(false);
   const focusRef = useRef(false);
+  const idRef = useRef(null); // the toast the countdown is for
 
   function startCountdown() {
     window.clearTimeout(timerRef.current);
     startedAtRef.current = Date.now();
-    timerRef.current = window.setTimeout(() => onDismissRef.current(), remainingRef.current);
+    const id = idRef.current;
+    timerRef.current = window.setTimeout(() => onDismissRef.current(id), remainingRef.current);
   }
 
   function pause() {
@@ -52,14 +118,18 @@ export default function Toast({ toast, onDismiss }) {
   }
 
   function resumeIfFree() {
-    // Only resume when neither the pointer nor the keyboard focus is on the toast.
-    if (hoverRef.current || focusRef.current || startedAtRef.current !== null) return;
+    // Only resume when neither the pointer nor the keyboard focus is on the toast, and no Undo runs.
+    if (hoverRef.current || focusRef.current || startedAtRef.current !== null || toast?.busy) return;
     startCountdown();
   }
 
-  // A new toast: a fresh 5 seconds. Cancel the timer if the toast goes early.
+  // A new toast: a fresh 5 seconds. Cancel the timer if the toast goes early. While its Undo runs
+  // ("Undoing…") there is no countdown: the toast stays until the Undo is done.
+  const id = toast ? toast.id : null;
+  const busy = Boolean(toast?.busy);
   useEffect(() => {
-    if (!toast) return undefined;
+    if (id === null || busy) return undefined;
+    idRef.current = id;
     remainingRef.current = TOAST_MS;
     hoverRef.current = false;
     focusRef.current = false;
@@ -68,13 +138,10 @@ export default function Toast({ toast, onDismiss }) {
       window.clearTimeout(timerRef.current);
       startedAtRef.current = null;
     };
-  }, [toast]);
+    // (Only the toast's id and its busy state restart this: startCountdown reads nothing but refs.)
+  }, [id, busy]);
 
-  function handleUndo() {
-    const action = toast.action;
-    onDismissRef.current(); // the toast goes first, so only one Undo can ever run
-    action.onAction();
-  }
+  useToastRoom(toast ? toast.id : null); // R2-04: the page area and an open ⋯ sheet end above the toast
 
   // Account toasts keep their check icon unless the caller says icon: false.
   const showIcon = toast ? toast.icon !== false : false;
@@ -108,10 +175,26 @@ export default function Toast({ toast, onDismiss }) {
           {showIcon && <IconCheck size={16} aria-hidden="true" className="toast-icon" />}
           <span className="toast-text">{toast.text}</span>
           {toast.action && (
-            <button type="button" className="toast-undo" onClick={handleUndo}>
-              {/* ti-arrow-back-up = Undo */}
-              <IconArrowBackUp size={16} aria-hidden="true" />
-              {toast.action.label}
+            <button
+              type="button"
+              className="toast-undo"
+              aria-disabled={busy ? 'true' : undefined}
+              onClick={() => {
+                if (!busy) onUndo(toast.id);
+              }}
+            >
+              {/* Both words in one spot: the hidden one keeps the button as wide as "Undoing…" */}
+              <span className="toast-undo-words">
+                <span className={`toast-undo-word${busy ? ' is-hidden' : ''}`}>
+                  {/* ti-arrow-back-up = Undo */}
+                  <IconArrowBackUp size={16} aria-hidden="true" />
+                  {toast.action.label}
+                </span>
+                <span className={`toast-undo-word${busy ? '' : ' is-hidden'}`}>
+                  <IconArrowBackUp size={16} aria-hidden="true" />
+                  {UNDOING}
+                </span>
+              </span>
             </button>
           )}
         </div>

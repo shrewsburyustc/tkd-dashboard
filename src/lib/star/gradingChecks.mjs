@@ -280,9 +280,13 @@ await check('star_event_results / loadGrading: belt order, private candidates le
   const rig = makeRig();
   const g = await grid(rig);
   const first = g.dans[1].rows;
-  // belt order: stars, Shrewsbury before Worcester, last name, first name
+  // belt order: stars, WORCESTER before Shrewsbury (0038, S-1: Mia Patel and Chris Kim are the Shrewsbury
+  // ones, so each now comes after the Worcester candidates of the same star level), last name, first name
   assert.deepEqual(first.map((r) => `${r.firstName} ${r.lastName}`), [
-    'Mia Patel', 'Noah Chen', 'Ava Reed', 'Ava Reed', 'Chris Kim', 'Lily Brooks', 'Sam Ortiz', 'Sofia Reyes', 'Grace Liu', 'Ethan Lopez',
+    'Noah Chen', 'Ava Reed', 'Ava Reed', 'Mia Patel', 'Lily Brooks', 'Sam Ortiz', 'Sofia Reyes', 'Chris Kim', 'Grace Liu', 'Ethan Lopez',
+  ]);
+  assert.deepEqual(first.map((r) => `${r.starsFrom} ${r.locationCode}`), [
+    '0 worcester', '0 worcester', '0 worcester', '0 shrewsbury', '1 worcester', '1 worcester', '1 worcester', '1 shrewsbury', '2 worcester', '2 worcester',
   ]);
   assert.equal(first.some((r) => r.firstName === 'Alex'), false); // testing privately: own page (v0.151)
   assert.equal(g.dans[3].rows.length, 0); // Ruby Diaz is private too
@@ -487,9 +491,9 @@ await check('typed letters on a PC: A, B, C, D then "+", Delete clears', async (
 
 await check('banner, offline, leave and kept texts (proposals 3, 6, 7, 9–12)', async () => {
   assert.equal(T.saveFailedBanner(3, 1, ['Mia Patel', 'Noah Chen', 'Ethan Lopez']),
-    'Couldn’t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection, then try again.');
-  assert.equal(T.saveFailedBanner(2, 0, ['Noah Chen']), 'Couldn’t save 2 grades (Noah Chen). Check the connection, then try again.');
-  assert.equal(T.saveFailedBanner(5, 0, ['A B', 'C D', 'E F', 'G H', 'I J']), 'Couldn’t save 5 grades (A B, C D, E F and 2 more). Check the connection, then try again.');
+    'Couldn’t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection, then retry.');
+  assert.equal(T.saveFailedBanner(2, 0, ['Noah Chen']), 'Couldn’t save 2 grades (Noah Chen). Check the connection, then retry.');
+  assert.equal(T.saveFailedBanner(5, 0, ['A B', 'C D', 'E F', 'G H', 'I J']), 'Couldn’t save 5 grades (A B, C D, E F and 2 more). Check the connection, then retry.');
   assert.equal(T.offlineBanner(9, 1), 'You’re offline. 9 grades and 1 count aren’t saved yet. They save by themselves when the connection is back. Keep this page open.');
   assert.equal(T.offlineBanner(1, 0), 'You’re offline. 1 grade isn’t saved yet. They save by themselves when the connection is back. Keep this page open.');
   assert.equal(T.leaveTitle(3, 1), '3 grades and 1 count aren’t saved');

@@ -216,11 +216,9 @@ export function checkAnswers(fields, answers, children, signature) {
         if (!realDate(v)) return false;
         break;
       case 'address':
-        // 0036: exactly { street, city, state, zip }, all four filled — or a plain text of up to 200
-        // characters (only what a page opened before the Address question existed sends)
-        if (typeof v === 'string') {
-          if (!textOk(v, 200)) return false;
-        } else if (!isObject(v) || Object.keys(v).some((k) => !ADDRESS_KEYS.includes(k))
+        // 0036 / 0040: exactly { street, city, state, zip }, all four filled. One plain text is not
+        // accepted any more (0036 took it for a while, for pages opened before the Address question)
+        if (!isObject(v) || Object.keys(v).some((k) => !ADDRESS_KEYS.includes(k))
           || !textOk(v.street, 120) || !textOk(v.city, 60) || !textOk(v.state, 30) || typeof v.zip !== 'string' || !ZIP_PATTERN.test(v.zip)) return false;
         break;
       case 'choice':
@@ -243,15 +241,11 @@ export function checkAnswers(fields, answers, children, signature) {
   if (!Array.isArray(children) || children.length < 1 || children.length > 6) return false;
   for (const c of children) {
     if (!isObject(c)) return false;
-    const keys = Object.keys(c).sort().join(',');
-    if (keys === 'age,first_name') {
-      // the old shape (a page opened before 0036): the typed age, 2-99
-      if (!textOk(c.first_name, 40) || !Number.isInteger(c.age) || c.age < 2 || c.age > 99) return false;
-    } else if (keys === 'dob,first_name,last_name') {
-      // the new shape (0036): names like the first name, a real date of birth; its age (2-99) is
-      // checked by submitCore, which knows today's date
-      if (!textOk(c.first_name, 40) || !textOk(c.last_name, 40) || !realDate(c.dob)) return false;
-    } else return false;
+    // 0040: exactly { first_name, last_name, dob }: names like the first name, a real date of birth;
+    // its age (2-99) is checked by submitCore, which knows today's date. The old shape
+    // { first_name, age } (0036 took it for a while) is refused.
+    if (Object.keys(c).sort().join(',') !== 'dob,first_name,last_name') return false;
+    if (!textOk(c.first_name, 40) || !textOk(c.last_name, 40) || !realDate(c.dob)) return false;
   }
   return true;
 }
@@ -538,13 +532,12 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     if (again) return answerOf(db, again.id, true);
     if (a.p_published_version !== form.published_version) return st('form_changed', { published_version: form.published_version });
     if (!checkAnswers(form.published, a.p_answers, a.p_children, a.p_signature)) return st('invalid');
-    // 0036: a child sent with a date of birth is saved as { first_name, last_name, dob, age }, the
-    // age worked out on the school's today; one who isn't 2-99 years old is refused. A child in
-    // the old shape is saved as before ({ first_name, age }).
+    // 0036 / 0040: every child is saved as { first_name, last_name, dob, age }, the age worked out on
+    // the school's today; one who isn't 2-99 years old is refused (checkAnswers already refused
+    // any child without a date of birth).
     const day = today();
-    const children = a.p_children.map((c) => ('dob' in c
-      ? { first_name: cleanText(c.first_name), last_name: cleanText(c.last_name), dob: c.dob, age: ageOn(c.dob, day) }
-      : { first_name: cleanText(c.first_name), age: c.age }));
+    const children = a.p_children.map((c) => (
+      { first_name: cleanText(c.first_name), last_name: cleanText(c.last_name), dob: c.dob, age: ageOn(c.dob, day) }));
     if (children.some((c) => !Number.isInteger(c.age) || c.age < CHILD_AGE_MIN || c.age > CHILD_AGE_MAX)) return st('invalid');
     const answers = a.p_answers;
     const bookingField = form.published.find((e) => e.type === 'booking'

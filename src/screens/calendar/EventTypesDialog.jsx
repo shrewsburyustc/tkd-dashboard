@@ -17,6 +17,7 @@ import Dialog from '../../components/Dialog.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
+import Select from '../../components/Select.jsx';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import Grip from '../../components/Grip.jsx'; // the shared drag handle (v1.100)
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
@@ -50,12 +51,13 @@ const NOTES = {
   DELETE_FAILED: T.DELETE_FAILED,
 };
 
-export default function EventTypesDialog({ state, types, isPhone, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
+export default function EventTypesDialog({ state, types, isPhone, busy = false, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
   const idBase = `types-dialog-${state.key}`;
   const [menu, setMenu] = useState(null); // { anchor, type, index } — a row's ⋯ menu
   // Drag a row by its grip (mouse, finger or pen), as in Testing (v0.43 / v0.63).
   const drag = useReorderDrag({
-    enabled: state.step === 'list' && !state.saving && menu === null,
+    // Off while a save runs (busy: the page's save line), so the grips show gray and don't start a drag (L-06)
+    enabled: state.step === 'list' && !state.saving && !busy && menu === null,
     onDrop: (group, id, toIndex) => onReorder(types.find((t) => t.id === id), toIndex),
   });
   const type = types.find((t) => t.id === state.typeId) ?? null;
@@ -172,15 +174,19 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
         </p>
         {count > 0 && !blockedLast && (
           <div className="field">
-            <label htmlFor={`${idBase}-move`}>{T.MOVE_TO}</label>
-            <select id={`${idBase}-move`} className="input sdialog-select" value={state.moveTo ?? ''} disabled={state.saving} onChange={(e) => onChange({ moveTo: e.target.value || null }, 'delete')}>
-              <option value="">{T.CHOOSE_TYPE}</option>
-              {others.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <span id={`${idBase}-move-label`} className="field-label">
+              {T.MOVE_TO}
+            </span>
+            {/* The shared dropdown (S-10, v1.048 (20)) */}
+            <Select
+              id={`${idBase}-move`}
+              labelId={`${idBase}-move-label`}
+              value={state.moveTo ?? null}
+              options={others.map((t) => ({ value: t.id, label: t.name }))}
+              placeholder={T.CHOOSE_TYPE}
+              readOnly={state.saving}
+              onChange={(moveTo) => onChange({ moveTo: moveTo || null }, 'delete')}
+            />
           </div>
         )}
         <ConfirmButtons

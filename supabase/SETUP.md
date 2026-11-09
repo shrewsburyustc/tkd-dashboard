@@ -2900,6 +2900,113 @@ Tested in PGlite on every run (`run.mjs` step0032: the History line on a seeded 
 
 ---
 
+## Migration 0046: Black Belt: payments count at the desk's school
+
+**Status: APPLIED to production 2026-11-07 and verified** (Jeffrey pasted it; after-paste checks: the two function fingerprints equal the tested ones, pre-apply check false / true / false / true / 1 / 1, security advisor nothing new; `0046_tests.sql` and the 0016, 0024, 0025, 0026, 0032 and 0034 tests all passed on production). Reserved 2026-11-06. Built on `black-belt`, design-review item R1-01 (rulebook v1.035 and v1.040, Jeffrey 2026-11-04; fix list `docs/Design Review/Rolling check/Pass 1/Fix-BlackBelt.md`). Apply it **before** the app version that sends the desk's school. The app that is live today keeps working unchanged after it (its Record payment / Record refund calls don't send the new input; the default covers that — tested as role `authenticated`, by position and by name).
+
+**Production order:** … 0016 → 0024 → 0025 → 0026 → 0032 → 0034 (live) → **0046**. It needs 0016 (it stops with "0046 needs migration 0016 … first" otherwise). Finance's 0026 already reads the school stored on each payment, so no Finance function changes. Color Belt (0044) and Star (0038) do the same for their own payments in their own migrations; none of the three depends on another.
+
+**What it does** (`supabase/migrations/0046_black_belt_payment_school.sql`): replaces **two** functions and nothing else. Every Black Belt payment counts at the school of the **desk** that took it (the school under This device in the account menu), stored on the payment when it is recorded — not at the candidate's school.
+- **`bb_record_payment(p_candidate_id uuid, p_expected_version integer, p_amount_cents integer, p_method text, p_for_items text[], p_note text, p_school text default null)`** (0016 15o). `p_school` is a school code (`worcester` / `shrewsbury`, a code in `public.locations`, the table `bb_payments.location_code` points to); it is stored on the new row instead of the candidate's school. Blank (null, empty or only spaces) = the candidate's school, as before. Any other value → `{"status":"invalid"}` and nothing is stored.
+- **`bb_record_refund(p_candidate_id uuid, p_expected_version integer, p_amount_cents integer, p_method text, p_note text, p_school text default null)`** (0016 15r). A refund counts at the desk that hands the money back: the given code is stored; blank = the school of the candidate's latest live payment (as before). The cycle name still comes from that payment.
+- **Not changed (checked):** `bb_undo_payment`, `bb_edit_payment` and `bb_mark_check_returned` already copy the school from the very row they correct (v0.903's chain rule; `bb_payments_guard` also refuses a reversal or returned row with another school), so an undo, an edit and a returned check follow the payment's school with no change. Existing payments keep their stored school (no backfill).
+- Both functions keep every 0016 rule: `security definer`, `search_path = ''`, `has_data_access()` first, `is_admin()` for the refund, a write logged in `change_log` with the same action tags, `{"status": …}` answers. Revoked from public, anon, authenticated and service_role; granted to `authenticated` only. Nothing for anon. Each body is 0016's word for word except the school source.
+- **The old versions are removed in the same file:** an input with a default makes a second version next to the old one, and the server then refuses every call as "not unique" (Camps' 0033 did the same). So the file has **two `drop function if exists`** lines, followed at once by the new `create function` in the same transaction. **Because of those words the Supabase connection cancels this file — Jeffrey pastes it himself in the SQL Editor, after a security review and his OK.**
+
+**Each step needs Jeffrey's OK.**
+
+### 0046a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0046_preapply_check.sql` must answer `payment_is_0016 = true`, `payment_is_0046 = false`, `refund_is_0016 = true`, `refund_is_0046 = false`, `payment_versions = 1`, `refund_versions = 1`. A false / false pair → someone changed the function since 0016 — stop and tell Claude (0046 must be rebuilt on the newer code). All four `is_` true / false the other way round = already applied.
+2. Claude runs `supabase/tests/0016_fingerprints.sql` and keeps the result (the "before" record for 0046c and the undo).
+
+### 0046b. Apply 0046 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0046_black_belt_payment_school.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase warns about destructive operations: the two `drop function if exists` lines are real on the first run (the old 6-input Record payment and 5-input Record refund, made again with the new input right after, in the same transaction). No data is removed. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept.
+4. Running it again is safe. **Re-running 0016 after this** brings the old 6-input / 5-input versions back **next to** the new ones (every Record payment would then fail as "not unique") → run 0046 straight after, or the undo first.
+
+### 0046c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0046_fingerprints.sql` — the two lines must match what `run.mjs` printed ("0046 fingerprints"): `bb_record_payment(… p_note text, p_school text)` and `bb_record_refund(… p_note text, p_school text)`, each `lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0016_fingerprints.sql`: **only** those two lines differ from 0046a's record (the inputs and the body md5). Every other fingerprint file unchanged (`run.mjs` step0046 checks exactly that).
+3. `0046_preapply_check.sql` again: `false / true / false / true / 1 / 1`.
+4. **Security advisor:** nothing new.
+
+### 0046d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0046_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0046 TESTS PASSED**. It checks the app that is live today (no school: the candidate's), a Worcester candidate's payment recorded with `shrewsbury` stored (and logged) as shrewsbury, blank = the candidate's school, an unknown school refused with nothing stored, Undo / Edit / Mark check returned / Undo returned keeping the payment's school, Record refund with and without a school, who may call them (anon, the family form's login and service_role may not; no sign-in or an ended PIN unlock → `no_access`), and that only one version of each function is left. It rolls everything back.
+2. Then `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql`, `0026_tests.sql`, `0032_tests.sql` and `0034_tests.sql` — all must still pass (`0016_tests.sql` C4 knows both the old and the new signatures). Put the placeholders back afterwards.
+
+### 0046e. Undo 0046 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that doesn't send `p_school` (a call with it fails against the old functions).
+2. Paste **the whole file** `supabase/manual/0046u_undo_black_belt_payment_school.sql` → **Run**. It removes 0046's two functions and puts back 0016's exact `bb_record_payment` and `bb_record_refund` (word for word, same revoke and grant). No table or data is touched: payments already recorded keep the school they were stored with. One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. Claude checks `0016_fingerprints.sql` (must equal 0046a's record) and `0046_preapply_check.sql` (`true / false / true / false / 1 / 1`). Then run `0016_tests.sql` and `0026_tests.sql`. To redo: paste 0046 again.
+
+Tested in PGlite on every run (`run.mjs` step0046: a payment made before 0046 kept exactly as it was, the pre-apply check, only the two functions' lines move, the tests, the live app's calls as role `authenticated`, re-run safety, the undo file exactly as named here, then the redo).
+
+**Why:**
+- **The desk's school as an input, not worked out in the database:** the database can't know which desk is at the keyboard (This device is a per-browser setting), so the app sends it and the database only checks that it is a real school and stores it.
+- **A blank means today's rule:** the app live today doesn't send it, and a desk that has no school set keeps the old behaviour.
+- **This device is a convenience, not a permission** (security review 2026-11-07, Low): anyone who may record payments (staff and admins) can send either school's code, so a payment can be booked to the other school's drawer. That is no wider than before (staff could already take a payment for any candidate at either school); the row is logged with the person's name and Finance's close-the-day and History show it. Staff are not limited to one school anywhere in this system.
+- **After any re-run of 0016, run `0046_preapply_check.sql`** (security review, Low): it must still say `payment_versions = 1` and `refund_versions = 1`. If it says 2, run 0046 again straight away (see 0046b step 4).
+- **Undo, Edit and Mark check returned left alone:** they already copy the corrected row's school, and the table's own guard refuses a reversal or returned row whose school differs, so they can't drift from the payment.
+- **Old versions removed in the same file:** one version of each function, so a call is never "not unique".
+
+## Migration 0048: Black Belt: the results CSV lists Worcester before Shrewsbury
+
+**Status: APPLIED to production 2026-11-07 and verified** (Jeffrey pasted it: "success no rows returned"; after-paste checks: the function fingerprint equals the tested one (0a0e6884e67191fbd7379ca7fc40905a), pre-apply check false / true / 1, security advisor nothing new; `0048_tests.sql` passed on production, "pass") (reserved 2026-11-07). Built on `black-belt`, rulebook v1.047 (19) (Jeffrey 2026-11-04, "Approve all", and his "C" on 2026-11-07): wherever both schools are listed, Worcester comes before Shrewsbury, as the school switcher does. Apply it any time after 0025; the app does not depend on it (the CSV is downloaded as the database sends it, and the CSV's own sort is the only thing that changes). It is independent of 0046.
+
+**Production order:** … 0016 → 0024 → 0025 → 0026 → 0032 → 0034 (live) → 0046 (independent) → **0048**. It needs 0025 (it stops with "0048 needs migration 0025 … first" otherwise).
+
+**What it does** (`supabase/migrations/0048_black_belt_results_csv_order.sql`): replaces **one** function and nothing else. **`bb_results_csv(p_cycle_id uuid)`** (0025, section 8e), the admin-only download of a whole cycle's results, sorted its rows by Dan, then the school with **Shrewsbury** first, then last name, first name, id. Now it is by Dan, then **Worcester** first, then last name, first name, id. That is one line (`case x.location_code when 'worcester' then 0 else 1 end`); the body is 0025's word for word otherwise: same signature, same `jsonb` answer, same rows and columns, same download log row, same rules (`security definer`, `search_path = ''`, `has_data_access()` first, then admin only — staff get `not_allowed`), revoked from public, anon, authenticated and service_role and granted to `authenticated` only (restated in the file). Nothing for anon.
+- **Not changed, on purpose (Jeffrey's "C"):** `bb_cycle_roster`, `bb_grading_grid`, `bb_cycle_results` and `bb_makeup_list` — the screens sort those themselves. No table, no row, no other function, no other section is touched.
+- **Connector-safe:** the file has none of the words the Supabase connection refuses (the signature doesn't change, so `create or replace function` is enough: no function has to be removed). Jeffrey still pastes it himself in the SQL Editor, after his OK, as with every migration; Claude uses the connection only for the read-only checks below.
+
+**Each step needs Jeffrey's OK.**
+
+### 0048a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0048_preapply_check.sql` must answer `csv_is_0025 = true`, `csv_is_0048 = false`, `csv_versions = 1`. A false / false pair → someone changed the function since 0025 — stop and tell Claude (0048 must be rebuilt on the newer code). `false / true` = already applied.
+2. Claude runs `supabase/tests/0016_fingerprints.sql` and `supabase/tests/0025_fingerprints.sql` and keeps the result (the "before" record for 0048c and the undo).
+
+### 0048b. Apply 0048 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0048_black_belt_results_csv_order.sql`, **SQL Editor → New query**, paste, **Run**.
+2. "Success. No rows returned." One transaction: on any error nothing is kept. No data is touched.
+3. Running it again is safe. **Re-running 0025 after this** puts 0025's order (Shrewsbury first) back → run 0048 straight after.
+
+### 0048c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0048_fingerprints.sql` — the one line must match what `run.mjs` printed ("0048 fingerprints"): `bb_results_csv(p_cycle_id uuid)`, `lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0016_fingerprints.sql` and `0025_fingerprints.sql` (each lists every Black Belt function): **only** the `bb_results_csv` line differs from 0048a's record (the body md5). Every other fingerprint file unchanged (`run.mjs` step0048 checks exactly that).
+3. `0048_preapply_check.sql` again: `false / true / 1`.
+4. **Security advisor:** nothing new.
+
+### 0048d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0048_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0048 TESTS PASSED**. It checks the new order (a cycle with both schools in the same Dan and two of the same last name), that a copy of the old function gives the old order and that every row is otherwise exactly the same in both, a one-school cycle unchanged, the download log (one row per download, none for a refused one), who may call it (the desk → `not_allowed`; an ended PIN unlock or no sign-in → `no_access`; anon, the family form's login and service_role may not), and the catalog (one version, security definer, `search_path = ''`). It rolls everything back.
+2. Then `0025_tests.sql` (and `0016_tests.sql`, `0024_tests.sql`, `0026_tests.sql`, `0032_tests.sql`, `0034_tests.sql`) — all must still pass. Put the placeholders back afterwards.
+
+### 0048e. Undo 0048 (only with Jeffrey's OK)
+
+1. Paste **the whole file** `supabase/manual/0048u_undo_black_belt_results_csv_order.sql` → **Run**. It puts back 0025's exact `bb_results_csv` (word for word, same revoke and grant). No table or data is touched. One transaction.
+2. Claude checks `0016_fingerprints.sql` and `0025_fingerprints.sql` (must equal 0048a's record) and `0048_preapply_check.sql` (`true / false / 1`). Then run `0025_tests.sql`. To redo: paste 0048 again.
+
+Tested in PGlite on every run (`run.mjs` step0048: the pre-apply check, only that function's line moves, the tests, 0016's, 0024's, 0025's, 0026's, 0032's and 0034's tests after it, re-run safety, the undo file exactly as named here, then the redo; and also on a database where 0046 is applied).
+
+**Why:**
+- **One rule everywhere:** the school switcher already lists Worcester first; the CSV was the one place that still said Shrewsbury first.
+- **Only the CSV's sort changes:** the download is a file Jeffrey opens in a spreadsheet; the screens sort their own lists, so the other four functions stay as they are.
+- **`create or replace`, same signature:** nothing is removed and nothing is made twice, so there is no "not unique" risk.
+- **After any re-run of 0025, run `0048_preapply_check.sql`:** it must say `false / true / 1`; if it says `true / false / 1`, paste 0048 again.
+
+---
+
+---
+
 ## Migration 0034: Black Belt History names the subject of a correction (record_id)
 
 **Status: applied 2026-11-04** (0034a pre-check as expected; 0034c: only `bb_candidate_history` changed — the other 541 public functions have the same checksum before and after — its line matches PGlite, security advisor nothing new; 0034d `0034_tests.sql` passed; 0032/0016/0024/0025/0026 tests re-run on live the same day: all passed). Built on `black-belt`, design-review item BB8 (rulebook v0.971 / v0.972).
@@ -3006,6 +3113,57 @@ Tested in PGlite on every run (`run.mjs` step0033: the undo file exactly as name
 - **Edit payment copies Color Belt 0030 exactly** (plan §1c): Paying by follows any edit that changes the way, not only an edit of the newest payment.
 - **A partial index:** the reader finds a camper's days, extras and payments by the camper id inside the history rows; the index covers only those insert rows, so other history writes cost nothing extra. EXPLAIN in PGlite shows it used.
 - **The form's choice from the history:** every camper since 0013 has an insert row in change_log written by the family form, which holds the way they chose; today's Paying by is only the fallback.
+
+---
+
+## Migration 0035: Color Belt — the old one-click Mark paid functions removed
+
+**Status: APPLIED 2026-11-07** (built on `color-belt` 2026-11-04, security-reviewed; Jeffrey pasted it with 0044 on tkd-dashboard; the read-only after-checks were clean and `0035_tests.sql` and the other test files passed on production). The clean-up 0030 promised ("a later small migration removes them").
+
+**Production order:** … 0030 (live) → 0032 → 0033 → 0034 (live) → **0035**. It needs 0030 — it stops with "0035 needs migration 0030 (Color Belt: Mark paid with a way to pay) first" if `testing_mark_paid_by` or `testing_private_mark_paid_by` is missing. **Apply it only while the live app is main 801b757 or newer** (since then the app calls only the `*_by` functions; an older app's Mark paid button would fail).
+
+**What it does** (`supabase/migrations/0035_color_belt_cleanup.sql`): removes **only** `public.testing_mark_paid(uuid, integer)` (0005 section 14i) and `public.testing_private_mark_paid(uuid, integer)` (0014 section 8e), with `drop function if exists` (no `cascade`). No table, column, row, right, rule, trigger or other function changes; payments the old functions recorded stay as they are. Before removing anything, a guard stops it if 0030's replacements are missing, **or if another function's code, a view or a read rule still names an old function** (it lists them). Checked 2026-11-04: no migration and nothing on production calls either one (no function body, view, read rule, trigger or `pg_depend` row).
+
+### 0035a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0035_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `old_event_is_0005 true`, `old_private_is_0014 true`, `old_versions 2`, `by_functions true`, `by_bodies_are_0030 true`, `other_users` empty (NULL). Anything else → **stop** (an old function changed since, 0030 isn't what was tested, or something still uses them). Answer on 2026-11-04: ready.
+2. Claude runs `supabase/tests/0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` and keeps the results (the "before" record for 0035c and the undo).
+3. Claude checks the live site is main 801b757 or newer (its Mark paid box calls `testing_mark_paid_by` / `testing_private_mark_paid_by`).
+4. **If 0044 is already applied** (it was, on 2026-11-07), `by_functions` and `by_bodies_are_0030` read false: 0044 replaced the two 4-input functions with 5-input ones. That is expected. Read 0044's own pre-apply check instead (`new_signatures 2`, `applied_as_tested 8`); the migration's guard accepts either.
+
+### 0035b. Apply 0035 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0035_color_belt_cleanup.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase **will** warn about destructive operations. This time they are real: the two `drop function if exists` lines remove the old functions. Confirm only if you mean it.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint change). **If 0005 or 0014 is ever re-run after 0035**, it puts the old function back — re-run 0030 and then 0035 straight after it. **Re-running 0030 after 0035 is fine:** its guard (a DO block, so no fingerprint moves) accepts either the old functions or its own `*_by` ones (tested: no fingerprint change).
+
+### 0035c. Read-only checks (Claude runs these through the connection)
+
+1. The pre-apply check again: `false / false / 0 / true / true / NULL`.
+2. Compared with 0035a: `0003_fingerprints.sql` has **only** the `testing_mark_paid` and `testing_private_mark_paid` lines fewer; `0005_fingerprints.sql` **only** the `testing_mark_paid(…)` line fewer; `0014_fingerprints.sql` **only** the `testing_private_mark_paid(…)` line fewer; nothing added anywhere; `0030_fingerprints.sql` and every other file unchanged (`run.mjs` step0035 checks exactly that).
+3. **Security advisor:** nothing new.
+
+### 0035d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0035_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0035 TESTS PASSED**. It checks both old functions are gone (calling one fails as "no such function"), that 0030's event and private Mark paid still work (price changed, ok, double click, already paid, Undo, a top-up), and that every other Color Belt app function from 0005, 0010, 0014 and 0030 is there with the same rights. It makes its own `zz cb35 …` class and event and rolls everything back.
+2. Then `0005_tests.sql`, `0010_tests.sql`, `0011_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql` and `0030_tests.sql` again — all must still pass. Their test payments go through a small temporary helper in each file (`pg_temp.t_mark_paid` / `pg_temp.t_private_mark_paid`): it calls the old function while it exists and, after 0035, 0030's `*_by` version with the family's way and the worked-out amount, and returns the old answer's keys — so the files run before and after 0035 and check the same things.
+3. Put the placeholders back afterwards.
+
+### 0035e. Undo 0035 (only with Jeffrey's OK)
+
+1. The app does **not** need to be rolled back (it doesn't call the old functions).
+2. Paste **the whole file** `supabase/manual/0035u_undo_color_belt_cleanup.sql` in the SQL Editor → **Run**. It puts back `testing_mark_paid(uuid, integer)` and `testing_private_mark_paid(uuid, integer)` copied word for word from 0005 (14i) and 0014 (8e) — byte for byte what was live before 0035 — with their exact revoke and grant (only `authenticated` may run them). Nothing is removed, so Supabase should not warn.
+3. Claude checks: the pre-apply check answers as in 0035a; `0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` match 0035a's record. Then run `0005_tests.sql`, `0010_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql`, `0030_tests.sql`.
+4. To redo: paste 0035 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0035: the guard refuses without 0030 and while another function still calls an old one; only the two old lines leave the fingerprint files; all seven test files pass before and after 0035; 0030 re-run after 0035 moves no fingerprint; the undo file exactly as named here brings both back byte for byte with the same fingerprints and the tests pass; 0035 again gives the tested fingerprints and `0035_tests.sql` passes).
+
+**Why:**
+- **Remove them at all:** two unused doors into the payment tables; with them gone there is one Mark paid per kind, the one that records the way they paid and refuses a changed price.
+- **A guard that searches for callers:** `drop function` without `cascade` already stops on a recorded dependency, but a plpgsql function's call to another function isn't recorded — so the guard searches every function's code, the views and the read rules by name.
+- **The older test files keep working through a helper, not a rewrite:** before 0035 the helper IS the old function, so they test 0005 / 0014 / 0030 exactly as built; after 0035 the same checks run through 0030's functions. 0005's C5, 0014's V1 and 0030's K1 (the exact-signature / count checks) accept the removal, and 0005's T2d ignores the session's own temporary schema (where the helper lives).
 
 ---
 
@@ -3143,7 +3301,7 @@ Tested in PGlite on every run (`run.mjs` step0041: an event from before 0041 kep
 
 **Status: applied 2026-11-05** (pasted by Jeffrey in the SQL Editor: "pass"; 0042a pre-check 0 / false / true / 2 before, 1 / true / true / 2 after; 0042c: `0042_fingerprints.sql` equals the PGlite line, `0009_fingerprints.sql` is 0042a's 196 lines unchanged plus exactly the two new lines, the security advisor adds only the expected "security definer function executable by authenticated" for `forms_copy_to_school`; the 0042d tests file waits for his UIDs). Built on `claude/prospect-form-system-cd893d` (rulebook v0.642 and v0.644: "Copy to Worcester / Shrewsbury" in a form's ⋯ menu on the Forms list).
 
-**Production order:** … 0034 → 0036 → Star's 0041 → **0042** (all live; 0042 since 2026-11-05). 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (those not live yet go after it): 0037–0039 and 0041 are other sections' (of these only Star's 0041 is live, checked 2026-11-05; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is — like 0040's once written — it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
+**Production order:** … 0034 → 0036 → Star's 0041 → **0042** (all live; 0042 since 2026-11-05). 0037–0041 touch nothing 0042 uses, so it doesn't depend on them (those not live yet go after it): 0037–0039 and 0041 are other sections' (of these only Star's 0041 is live, checked 2026-11-05; PGlite's step0042 applies 0041 first; 0038's file isn't on this branch yet, and when it is it goes into step0042's list of migrations, in production's order), and 0040, this branch's clean-up after 0036, replaces only `forms_check_answers` and `forms_submit_core`, which 0042 never calls. 0040 is **not** in step0042's list: the Forms tests that step runs (0009, 0012, 0015, 0021, 0031, 0036) send the old child shape on purpose, and 0040 refuses it. It needs 0009 (Forms): it stops with "0042 needs migration 0009 (Forms) first" otherwise. **It must be live before the app version that shows "Copy to …"** (that app calls `forms_copy_to_school`). The app that is live today keeps working with it applied: it never calls the new name.
 
 **What it does** (`supabase/migrations/0042_forms_copy_to_school.sql`): adds **one** function, `public.forms_copy_to_school(p_form_id uuid, p_location_code text)`, admins only, and changes nothing else (no table, rule, other function, right or data). It makes a **Draft copy of a form at the other school**:
 - the same kind, draft (questions + waiver) and settings (thank-you words, the family's confirmation email, add to calendar), **but no alert email** (v0.644: the new-sign-up alert address is the first school's; the copy starts without one);
@@ -3191,6 +3349,55 @@ Tested in PGlite on every run (`run.mjs` step0042: the pre-apply check; only 000
 - **The same name unless taken:** a straight copy reads exactly like the original at the other school; "Copy of" only when that school already has a form called that, so the copy doesn't take the name of a form that school already has (a third copy gets a second "Copy of …", as Duplicate does).
 - **No alert email on the copy (v0.644):** the alert address belongs to the first school's front desk; copied, the other school's sign-up alerts (a family's name, phone and email) would go to it once emails are on. The rest of the settings is copied.
 - **A new function, not an argument on `forms_duplicate`:** Duplicate's call stays exactly as the live app uses it (an argument with a default would make the web API's choice between two versions ambiguous).
+
+---
+
+## Migration 0040: New students — the old child shape and the plain-text Address removed
+
+**Status: APPLIED 2026-11-08** (pasted by Jeffrey in the SQL Editor: "success no rows returned"; 0040a pre-check true / false / true / false / true, 0 old-shape sign-ups saved; 0040c: `0040_fingerprints.sql` on production equals the PGlite output exactly (both functions security invoker, `search_path=""`, `postgres:EXECUTE` only), pre-apply check after: false / true / false / true; the security advisor mentions neither function; 0040d: Jeffrey ran `0040_tests.sql` with the admin and desk UIDs: "pass" = ALL 0040 TESTS PASSED). Written and tested in PGlite 2026-11-07; security-reviewed, no findings. Built on `claude/prospect-form-system-cd893d` (rulebook v0.640; the clean-up 0036 promised: "a later small migration removes both old ways, at least 12 hours after the new app is pushed" — the new app went live 2026-11-04, main a5d0e1d).
+
+**Production order:** … 0036 → 0041 → 0042 → … → **0040** (it needs only 0036, 0031 and 0009; nothing after 0036 replaced the two functions it replaces — checked 2026-11-07). It stops with "0040 needs migration 0036 … first" otherwise.
+
+**What it does** (`supabase/migrations/0040_forms_old_shapes_removed.sql`): replaces **two internal functions** and nothing else (no table, column, rule, grant or other function; nothing for anon):
+- `forms_check_answers` (0036's version): a child must be exactly `{ first_name, last_name, dob }`; an Address answer must be the object `{ street, city, state, zip }`. The old child shape `{ first_name, age }` and an Address sent as one plain text are refused (`invalid`). Every other rule is word for word as in 0036.
+- `forms_submit_core` (0036's version): every child has a date of birth now, so the "if it has one" branches go; each child is saved as `{ first_name, last_name, dob, age }`.
+Same arguments, owner, security invoker, `search_path = ''`, rights for nobody (the revokes are restated). **No data is read or written:** sign-ups already saved with the old shape (and their prospects) stay as they are (0009's trigger refuses any change to a sign-up).
+
+**Who it affects:** only a page that is still open from before 2026-11-04 (a kiosk tablet or a family's phone left open for days). Its Send is answered `invalid` and the page shows its normal "try again / reload" message; a reload gets the new page. Staff Fill in, the public page and the kiosk all go through the same core.
+
+**Each step needs Jeffrey's OK.**
+
+### 0040a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0040_preapply_check.sql` must answer `check_is_0036 = true`, `check_is_0040 = false`, `submit_is_0036 = true`, `submit_is_0040 = false`, `profile_in = true` (and `old_shape_signups`, which may be above 0 — they are history). Any other answer before 0040 → a function changed since 0036 was tested: stop and tell Claude (0040 would silently undo that change).
+2. Claude runs `supabase/tests/0036_fingerprints.sql` and `0009_fingerprints.sql` and keeps the result (the "before" record for 0040c and the undo).
+
+### 0040b. Apply 0040 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0040_forms_old_shapes_removed.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The word "dropdown" appears inside a function (a question type), so Supabase may show a warning — nothing is removed; confirm.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0040c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0040_fingerprints.sql` — four lines that must match what `run.mjs` printed ("0040 fingerprints"): `forms_check_answers` (`9f091ef38f440d9d812d8bce7f3fd4dc`) and `forms_submit_core` (`36f2025c9c15c5473f64ad498dd1e99b`), both `definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`, plus their `function-kind` lines.
+2. `0009_fingerprints.sql`, `0031_fingerprints.sql` and `0036_fingerprints.sql`: **only** those functions' body md5 moved (to the two above); everything else in them, and every other fingerprint file, is byte-identical (`run.mjs` step0040 checks exactly that).
+3. `0040_preapply_check.sql` again: `false / true / false / true / true`.
+4. **Security advisor:** nothing new.
+
+### 0040d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0040_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0040 TESTS PASSED**. It makes its own `zz test …` Walk-in form, checks that only the new child shape and the object Address are accepted (and that 0036's other rules still hold), that families sent the old way are refused with nothing saved (public page and staff Fill in), ages 2–99, and the two functions' rights. It rolls everything back.
+2. **Do not** run `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0021_tests.sql`, `0031_tests.sql` or `0036_tests.sql` after 0040: they send the old child shape on purpose and now fail by design. `0007_tests.sql` and `0019_tests.sql` still pass. Put the placeholders back afterwards.
+
+### 0040e. Undo 0040 (only with Jeffrey's OK)
+
+1. There is no separate undo file: **paste `supabase/migrations/0036_new_students_profile.sql` again** (it is safe to re-run; it puts back the two functions that accept both old ways). Claude checks `0036_fingerprints.sql` and `0009_fingerprints.sql` equal 0040a's record and `0040_preapply_check.sql` answers `true / false / true / false / true`. Then the six Forms tests above pass again. To redo: paste 0040 again.
+
+Tested in PGlite on every run (`run.mjs` step0040: the pre-apply check; only the two functions' body md5 moves in 0009's, 0031's and 0036's files; 0040 writes nothing — an old-shape sign-up made before it is unchanged; 0040's tests; re-run safety; the undo exactly as named here, then the redo).
+
+**Why:**
+- **Why now:** 0036 had to take both ways during the switch (a kiosk page stays open up to 12 hours). The new app has been live for days, so the old ways are only a way to put data without a date of birth in.
+- **Why no undo file:** the undo is "put 0036 back", which already exists and is tested as safe to re-run.
 
 ---
 
@@ -3333,6 +3540,73 @@ Tested in PGlite on every run (`run.mjs` step0039: a camper paid, then overpaid,
 
 ---
 
+## Migration 0044: Color Belt — the form's own Paying by, Edit event Undo in one call, each payment's school
+
+**Status: APPLIED 2026-11-07** (Jeffrey pasted it on tkd-dashboard: "Paste both now"; the read-only after-checks were clean, and `0044_tests.sql` and the eight other test files passed on production). Built on `color-belt` (rolling check step A, plan `docs/Testing/Color Belt Testing/TKD-ColorBelt-RollingCheck-Plan.md`: pass 2's **M-01 = C-01**, pass 1's **R2-02** and **R1-01** / rulebook v1.035). It was security-reviewed first. Apply it **before** the app version that sends `p_school`, reads `paying_by_on_form` or calls `testing_undo_event_edit` is deployed. The live app keeps working after it (see "the live app" below).
+
+**Production order:** … 0034 → 0036 → 0041 → 0042 → 0043 → 0039 (all live) → **0044**. It needs 0005, 0010, 0014, 0018 and 0030 — it stops with "0044 needs migration 00NN (…) first" if one is missing. It does **not** need 0035, and the two may be pasted **in either order**: 0035's guard (updated 2026-11-06) accepts the 4-input `testing_mark_paid_by` (0030) or 0044's 5-input one (tested both ways round, with 0035's and 0044's tests). No Finance function is touched: Finance keeps counting Color Belt money at the event's / private testing's school until its own later migration reads the new `school` column (order: 0044 → Finance's reader migration → the app push).
+
+**What it does** (`supabase/migrations/0044_color_belt_rolling_check.sql`):
+- **M-01 — the family form's own Paying by:** new column **`paying_by_on_form`** (cash / check / card, or empty) on `testing_registrations` and `testing_private`.
+  - Set once, on insert, by two small new triggers (`testing_registrations_before_form_choice` → `testing_registrations_keep_form_choice()`, `testing_private_before_form_choice` → `testing_private_keep_form_choice()`): a family-form registration gets its `paying_by`; a desk registration gets none; a private testing moved from an event gets the registration's value; one added at the desk gets none. On every update the old value is put back, so nothing can change it (the triggers run before 0005's / 0014's "before write" triggers, so such an update is "no change": no version bump, no history row).
+  - Rules: `testing_registrations_paying_by_on_form_check` (empty, or a form row with cash / check / card) and `testing_private_paying_by_on_form_check` (empty, or a moved one).
+  - **Existing rows:** a form registration takes the `paying_by` of its own change_log **insert** row; **no insert row → empty** (Camps' 0033 falls back to today's Paying by; Color Belt doesn't, because today's may already be a desk change). Desk rows: empty. A moved private testing: its registration's value (or, if that registration was removed for good, its insert row). Filled once, with the tables' own triggers off for that one statement: no history row, no version moved.
+  - Move to private carries it (the trigger copies it); Undo move needs nothing — the registration row keeps its own value the whole time.
+  - The app may read it (`grant select (paying_by_on_form)` on both tables, to `authenticated`), and the views **`testing_roster`** and **`testing_private_list`** show it as their **last** column (same columns, order, options and grant otherwise). Hint rule for the app: `paying_by = paying_by_on_form` → "… on the form."; otherwise (empty included) → "… at the desk."
+- **R1-01 — each payment's school (v1.035):** new column **`school`** (never empty, foreign key to `locations (code)`; `testing_payments_school_fk`, `testing_private_payments_school_fk`) on `testing_payments` and `testing_private_payments`.
+  - **Existing rows:** the school Finance shows today — the event's school for event payments, the private testing's school for private payments (filled once with the payment guards and log triggers off for that statement: no history row).
+  - Two new BEFORE INSERT triggers (`testing_payments_school` → `testing_payments_set_school()`, `testing_private_payments_school` → `testing_private_payments_set_school()`): a reversal **always** has the school of the payment it reverses (another school is refused — the chain rule, v0.903); a payment written without one (the old 2-input Mark paid until 0035, or the SQL Editor) gets the event's school (a private one: the event payment it was moved from, else the private testing's school).
+  - Read rights follow each table's own rule: **not** readable on `testing_payments` (0005 lists its columns), readable by `authenticated` on `testing_private_payments` (0014: every column but the login ids).
+  - **Mark paid takes This device's school — signature change:** `testing_mark_paid_by(p_registration_id, p_expected_version, p_method, p_expected_cents, p_school text default null)` and `testing_private_mark_paid_by(p_private_id, p_expected_version, p_method, p_expected_cents, p_school text default null)`. Empty (null or blank) = the event's / private testing's own school, so the live app's 4-input call keeps working; a school not in `locations` → `{"status":"invalid","field":"school"}` (nothing written). Everything else, and the answer, is 0030's. **The old 4-input versions are removed** (`drop function if exists … (uuid, integer, text, integer)`, two lines) and the 5-input ones made straight after in the same transaction — two versions side by side would make every 4-input call "ambiguous".
+  - **Replaced in place** (same names, arguments, rights, statuses and answers; bodies are 0030's plus the school): `testing_undo_payment` / `testing_private_undo_payment` (the reversal copies the undone payment's school), `testing_edit_payment` / `testing_private_edit_payment` (the reversal **and** the new payment copy the edited payment's school — Edit payment never moves money between schools; v1.035: undo it and record it again on the right device), `testing_move_to_private` (the event reversal and the private payment keep the event payment's school: a move stays a transfer, v0.407) and `testing_private_undo_move` (the event payments recorded again keep the private payment's school).
+- **R2-02 — Edit event's Undo in one call:** new **`testing_undo_event_edit(p_event_id, p_expected_version, p_name, p_testing_date, p_classes, p_auto_close_on, p_note, p_open)`** (model: 0032's `bb_undo_cycle_edit`). Admins only. Locks the school, then the event; `stale` if the version moved; then calls `testing_update_event` with the old values and, when `p_open` is not null, `testing_set_registration` with the version that returned — **together or not at all**: if either refuses, everything it did is undone and its answer is returned as it came (`duplicate_name`, `has_results`, `not_empty`, `finished`, …). Writes only through those two functions (their rules and history rows), nothing of its own. Ok: `{"status":"ok","version":n,"state":"open"|…}`. A new name, so the live app keeps calling its two functions.
+- Every app function: security definer, `search_path = ''`, `has_data_access()` first, revoked from public, anon, authenticated and service_role, granted to `authenticated` only. The 4 trigger functions: not security definer, nobody may run them. Nothing for anon or `testing_registrar`.
+- **The live app:** it calls `testing_mark_paid_by` / `testing_private_mark_paid_by` with 4 named inputs (the default covers `p_school`: the payment is booked to the event's / private testing's school, exactly as Finance counts it today), and never calls the new function. The extra view column is ignored by a reader that names its columns.
+
+**Each step needs Jeffrey's OK.**
+
+### 0044a. Before you apply (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql`, `0030_fingerprints.sql` and `0044_fingerprints.sql` and keeps the results (the "before" record for 0044c). Before 0044, `0044_fingerprints.sql` shows the six live functions it replaces and the two 4-input Mark paid functions; their body md5s must equal 0030's tested ones (SETUP 0030c: `testing_undo_payment` `288ea3ca644ad5301e584cf060ff40c9`, `testing_private_undo_payment` `8aaf68d52f2f65a05e0e9aa65666cfae`, `testing_edit_payment` `64fd0630522388407b26a5924095ee8c`, `testing_private_edit_payment` `be2497fb4d2f02dc7840782cff5a0acc`, `testing_move_to_private` `219d283d6a015c58ed04793e622367da`, `testing_private_undo_move` `402f97bafff85e609d0d5204fef47f8f`, `testing_mark_paid_by` `d43f4bab7a1fdf970eed5a7851a4b326`, `testing_private_mark_paid_by` `fb09eddf5771f5adfa3919164770f0d2`). **Different → stop**: the live function changed since and 0044 must be rebuilt on the newer code first.
+2. **Pre-apply check:** Claude runs `supabase/tests/0044_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `new_columns 0`, `old_signatures 2`, `new_signatures 0`, `undo_event_edit 0`, `replaced_found 8`, `replaced_as_tested 8`, `applied_as_tested 0`, `form_rows_no_history 0` (form registrations without their change_log insert row — they would read "at the desk"; above 0 → tell Jeffrey how many before pasting), `payments_off_school 0`. **`replaced_as_tested` below 8 → stop**: one of the eight functions changed since 0044 was built, and pasting would undo that change. `4 / 0 / 2 / 1 / 8 / 0 / 8 / … / n` = already applied.
+
+### 0044b. Apply 0044 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0044_color_belt_rolling_check.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about destructive operations: the two `drop function if exists` lines remove the old 4-input `testing_mark_paid_by` / `testing_private_mark_paid_by` (made again with 5 inputs straight after, same transaction); the four `drop trigger if exists` lines only make re-running safe. No data is removed. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested: no fingerprint, row or history change). **Don't re-run 0005, 0014 or 0030 after it** without asking Claude: 0005's / 0014's views have one column fewer (their "create or replace view" fails) and they take the new column rights away; 0030 would add its 4-input Mark paid next to the 5-input one (every 4-input call then fails as "ambiguous"). If it happens, re-run 0044 straight after. 0035 before or after 0044: either is fine.
+
+### 0044c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0044_fingerprints.sql` must match what `run.mjs` printed ("0044 fingerprints"): 27 rows — 13 functions (the 9 app functions `definer=true settings=search_path="" … rights=authenticated:EXECUTE,postgres:EXECUTE`, the two Mark paid ones with `defaults=1`; the 4 trigger functions `definer=false … rights=postgres:EXECUTE`), 4 columns (`testing_payments.school text notnull=true rights=`, `testing_private_payments.school text notnull=true rights=authenticated:SELECT`, both `paying_by_on_form text notnull=false rights=authenticated:SELECT`), 2 views (`options=security_invoker=true rights=authenticated:SELECT`), 4 triggers (`enabled=O`) and 4 rules. Tested body md5s: `testing_mark_paid_by` `ea95d04d98082e63f8ebcc5778bfd274`, `testing_private_mark_paid_by` `def53887d96ce8f875d1fe65828ff336`, `testing_undo_payment` `a7825fe60dfe4b530305f7d7c110edaf`, `testing_private_undo_payment` `5f1f36328e76bbf35ae11496d3120882`, `testing_edit_payment` `179ce3dbe53de9123123f88c298b76f0`, `testing_private_edit_payment` `bd23c0ad3687ff4875f72ad9b3ac9849`, `testing_move_to_private` `4e92e3611ca81417e4c1b4ceb2b607a0`, `testing_private_undo_move` `7cbb20dccaf715e16a9f59a981dc9e72`, `testing_undo_event_edit` `f121a939ef995ef10d5e2fbef94077e5`, `testing_registrations_keep_form_choice` `848bbf6c3c0d95a6f41d06ea6619798e`, `testing_private_keep_form_choice` `e1b18814caac29e731116003e189ce66`, `testing_payments_set_school` `af55ca53a4ab371a8ab7a699e01d0fa1`, `testing_private_payments_set_school` `13cd6fd4386cd2b5e318a4feb86c5a26`; views `testing_roster` `06980eeefaeb3745b3f386ef40b435e4`, `testing_private_list` `4e147a07edcf566d0df1fec16d2c633c`. The file contains neither of the words the connection refuses.
+2. Compared with 0044a: only Color Belt lines move, in `0003_fingerprints.sql` (the 8 replaced functions' lines, the Mark paid ones with the new input; 5 new `testing_*` lines), `0005_fingerprints.sql` (`testing_undo_payment`, `testing_edit_payment`, the `testing_registrations` table line (+ `paying_by_on_form>authenticated:SELECT`), the `testing_roster` view line, 2 new trigger lines), `0014_fingerprints.sql` (the four replaced functions, the `testing_private` and `testing_private_payments` table lines (+ the new column rights), the `testing_private_list` view line, 2 new trigger lines, 2 new rule lines) and `0030_fingerprints.sql` (the 8 function lines; the two Mark paid items now end `…, p_school text)`). Every other migration's fingerprints: unchanged (`run.mjs` step0044 checks exactly that).
+3. **Security advisor:** nothing new (the new function may show under the usual "security definer function executable by authenticated", like every `testing_*` app function).
+
+### 0044d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0044_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0044 TESTS PASSED**. It makes its own `zz cb44 …` class and Worcester events and checks who may run what, the form's own choice (kept, never changed, carried by Move, still there after Undo move, shown in both views), the school on every kind of payment row (4-input call = the event's school, `p_school`, blank, an unknown school refused; Undo, Edit, Move, Undo move copy it; the table rules), Edit event's Undo (both back in one call; refusals write nothing; a refused second step undoes the first) and the catalog. Everything is rolled back.
+2. Then `0005_tests.sql`, `0010_tests.sql`, `0011_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql` and `0030_tests.sql` again — all must still pass (0005's, 0014's and 0030's accept the state before and after 0044). Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0044e. Undo 0044 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that doesn't send `p_school`, read `paying_by_on_form` or call `testing_undo_event_edit`.
+2. Claude runs `supabase/tests/0044_preapply_check.sql`: `payments_off_school` must be **0**. Above 0 → that many payment rows were taken at the other school's desk; the undo would lose that (Finance would count them at the event's school again), so the undo file refuses. Move that money first (Undo payment, then Mark paid on a device set to the event's school) or keep 0044.
+3. Paste **the whole file** `supabase/manual/0044u_undo_color_belt_rolling_check.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0044 undo refused: N payment row(s) …") while any payment's school differs, then removes `testing_undo_event_edit`, the 4 triggers and their functions and the 5-input Mark paid functions, puts back 0030's two 4-input Mark paid functions and 0030's six bodies (word for word, with their rights), re-makes `testing_roster` (0005) and `testing_private_list` (0014) without the column (with their rights), and removes the 2 rules, the 2 foreign keys and the 4 columns. One transaction. It does **not** refuse for `paying_by_on_form`: that value is worked out from history rows and registrations that stay, and pasting 0044 again fills it the same way. Supabase warns about destructive operations — they are the planned removals. Confirm only if you mean it.
+4. Claude checks afterwards: the pre-apply check answers `0 / 2 / 0 / 0 / 8 / 8 / 0 / … / 0` again; `0003_`, `0005_`, `0014_`, `0030_` and `0044_fingerprints.sql` match 0044a's record. Then run `0005_tests.sql`, `0010_tests.sql`, `0011_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql`, `0030_tests.sql`.
+5. To redo: paste 0044 again (safe). Running the undo twice is safe too.
+
+Tested in PGlite on every run (`run.mjs` step0044: rows made before 0044 the app's way, a form row without its insert row; 0035 then 0044 both go in; the fill, no history row, no version moved; only Color Belt fingerprint lines move; 0044's tests and the Color Belt + Finance tests before and after; re-run safety; 0044 then 0035 goes in and 0035's tests pass; the undo file exactly as named here — first refused with a planted Shrewsbury payment, then on the clean database: every fingerprint file equals the one before 0044, the pre-apply check answers as before, the Color Belt + Finance tests pass, a second undo changes nothing, and the redo gives the tested fingerprints, the same fill and a passing `0044_tests.sql`).
+
+**Why:**
+- **A column kept by a trigger, not by the functions:** the family form's function (`testing_public_register_core`) isn't touched, and no function can ever change it by mistake (Camps 0033's pattern).
+- **Empty means "at the desk":** a missing value can only be a desk row or a form row whose history was lost; claiming "on the form" for those would repeat the bug.
+- **The school on the row, filled by a trigger when a writer leaves it out:** the old 2-input Mark paid (until 0035) and any older code still write correct rows, and a reversal can never land at another school than its payment.
+- **A default on the new Mark paid input:** the database goes live before the app; the live app's 4-input call keeps working and books to the event's school, exactly as Finance counts it today.
+- **Undo in one database call:** two calls can stop halfway (details back, switch not), and the Retry then sent an old version. One transaction can't.
+
+---
+
 ## Migration 0037: Finance — Export keeps "private"
 
 **What it does** (`supabase/migrations/0037_finance_export_private.sql`; design review rolling check pass 1, Fix-Finance.md "Smaller"): every row of the admin's **Export…** download (`finance_export`) now carries `is_private` (true / false), taken from the same place the Daily report takes it. With the app change in `src/lib/finance/csv.js`, the CSV's **For** cell then says "Star testing, private" / "Color belt testing, private" for a private testing's payment, as the Daily report already does. It replaces **one** function, `finance_export(text, date, date)`, starting from 0026's live version; the only change in its text is the one new key. Same checks (`has_data_access()` first, then admins only), same date rules, same log row in `finance_exports`, same `security definer` with `search_path = ''`, same owner and rights (authenticated only; nothing for anon). No table, table rule, other function, right or row changes. `is_private` only says which kind of testing the money was for — no private data.
@@ -3366,5 +3640,180 @@ Tested in PGlite on every run (`run.mjs` step0037, or `node run.mjs --only-step0
 **Why:**
 - **The database sends it, the app words it:** the export already sends codes (`what`, `kind`, `state`) and the app turns them into words; `is_private` follows that, with the same words as the Daily report (`screens/finance/text.js`).
 - **A new migration, not an edit of 0026:** 0026 is live; replacing one function in a later file keeps the history clear.
+
+---
+
+## Migration 0045: Calendar reader (calendar_items)
+
+**Status: APPLIED 2026-11-08** (pasted by Jeffrey in the SQL Editor: "success no rows returned"; 0045a pre-check 0 / false / 64 before; 0045c: the function's fingerprint equals the PGlite line exactly, the rest of the Calendar fingerprint record is unchanged (99 rows, md5 `4d556f0966618491c5f3256300471671` before and after), pre-apply check after: 1 / true; the security advisor adds only the expected "security definer function executable by authenticated" for `calendar_items`; 0045d: Jeffrey ran `0045_tests.sql` with the admin and desk UIDs: "tests pass" = ALL 0045 TESTS PASSED). Built on `claude/prospect-form-system-cd893d` (rulebook v0.645: the Calendar shows every section's dated things; Jeffrey 2026-11-06: "B: one reader", "A: show them", "OK, build it"; contract `docs/Prospects/CONTRACT-0045.md`; plan `docs/Prospects/TKD-Calendar-AllEvents-Plan.md`). Apply it **before** the app version whose Calendar calls it. The app that is live today keeps working: it never calls the new name.
+
+**Production order:** it needs 0005, 0006, 0012, 0013, 0014, 0016, 0022, 0036 and 0041 (all live) and nothing else; it touches no other migration's function, so it may go before or after 0037–0044 (PGlite's step0045 applies the live ones first). Its guard checks every table and column the function reads (64 columns of 12 tables) and stops with "0045 needs migrations … first (missing: …)", changing nothing, if one is missing.
+
+**What it does** (`supabase/migrations/0045_calendar_items.sql`): adds **one** function, `public.calendar_items(p_from date, p_to date)`, and changes nothing else (no table, rule, other function, right or data). It is **read only**: declared `STABLE` (Postgres refuses any write inside it), no insert/update/other write in its code, no history row, no clean-up, no SQL built from text. It answers `{"status":"ok","items":[…]}` (one item per dated thing, sorted by date, then start with all-day first, then kind, then id; Massachusetts days), `{"status":"no_access"}` (not signed in, PIN-locked, no staff row — checked first) or `{"status":"invalid"}` (a missing or infinite date, an end before the start, or more than 63 days: `p_to - p_from > 62`). Every item has the same 13 keys (`kind`, `id`, `date`, `start`, `end`, `location_code`, `title`, `child`, `what`, `place`, `opens`, `ref_id`, `event_id`; null when one doesn't apply). The kinds: `colorbelt_event`, `colorbelt_private` (active only), `star_event`, `star_private` (a candidate with a private day, not withdrawn), `camp_day`, `bb_day`, `signup` (one per child) and `deadline` (`registration_closes`, `signup_opens`, `signup_closes`, `early_price_ends`, `applications_due`, `submissions_due`).
+- **Never returned:** dates of birth, ages, phone, email, address, form answers, notes, payments, last names, signatures, a child's full name, Finance. A child is only ever "Ava N." (first name + the first letter of the child's own last name; for a sign-up from before last names were asked, the first letter of the parent's last word; the first name alone when there is neither). The parent's name and the last names are read **inside** the function to make that one letter and never leave it.
+- Security definer, `search_path = ''`, fully qualified names, `has_data_access()` first (never `is_admin()`: staff and admins both may call it, like `prospects_list`); `EXECUTE` revoked from public, anon, authenticated and service_role, granted to `authenticated` only. **Nothing for anon.**
+- **The only new exposure:** the Calendar now shows, to staff, things that were each on another section's own screen already — but this one function lets any signed-in staff session list them for any dates: Star private tests and Color Belt private testings as "Ava N." (the Star and Color Belt screens show full names), and new sign-ups as "Ava N." with the form's name. No column that holds a date of birth, contact detail, answer, payment or note is selected.
+
+**Each step needs Jeffrey's OK.**
+
+### 0045a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0045_preapply_check.sql` must answer `calendar_versions = 0`, `calendar_is_0045 = false`, `needs_found = 64`. `needs_found` below 64 → an earlier migration (or a column of 0036 / 0041) is missing — stop and tell Claude.
+2. Claude runs `supabase/tests/0008_fingerprints.sql` (it lists every function whose name starts `calendar_`, so it will also list the new one) and keeps the result (the "before" record for 0045c and the undo).
+
+### 0045b. Apply 0045 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0045_calendar_items.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The file has none of the words the Supabase connection refuses, so it should not warn.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0045c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0045_fingerprints.sql` — the one line must match what `run.mjs` printed ("0045 fingerprints"): `calendar_items(p_from date, p_to date)` with `903a135a992584d3215447e1d2545495 lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. `0008_fingerprints.sql`: 0045a's record **plus exactly two lines** for `calendar_items(p_from date, p_to date)` — `function` (the same md5, `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`) and `function-kind` (`volatility=s returns=jsonb`). Nothing else in it changes, and every other fingerprint file is unchanged (`run.mjs` step0045 checks exactly that).
+3. `0045_preapply_check.sql` again: `1 / true / 64`.
+4. **Security advisor:** nothing new. (If it lists "security definer function executable by authenticated" for `calendar_items`, that is expected: the Calendar calls it, like the other staff readers.)
+
+### 0045d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0045_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0045 TESTS PASSED**. It first checks that March – mid April **2037** is empty, then seeds its own `zz test …` things dated in that window (Color Belt events and private testings, Star events and private tests, two camps, a Black Belt cycle with two days, two forms with three sign-ups) and checks who may call it (anon refused, the front desk allowed, a PIN-locked admin and no session → `no_access`), the range rules (incl. infinity), the whole answer (26 items, every key, the contract's order), what is left out (cancelled / withdrawn private tests, empty deadlines), the Massachusetts-day edges (11:30 pm sign-ups in summer and winter time), privacy (no last name, date of birth, email, phone or parent name in the answer's text), that it writes nothing (every table it reads and the history unchanged) and the function's rights and code (STABLE, no write, no dynamic SQL, schemas, `has_data_access()` first). It rolls everything back. Supabase may warn about destructive operations (the cancelled and withdrawn seeds are changed inside the rolled-back transaction) — confirm.
+2. For one line it switches the database's own triggers off (`session_replication_role`, to give three seeded sign-ups a time; inside the rolled-back test). If your SQL Editor role is not allowed to, the test stops at "TEST SETUP: could not set a sign-up's time" — tell Claude.
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0045e. Undo 0045 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version whose Calendar doesn't call `calendar_items` (with the function gone, the other sections' dates would show only "Couldn't load the other sections' dates.").
+2. Paste **the whole file** `supabase/manual/0045u_undo.sql` → **Run**. It removes the one function; Supabase warns about a destructive operation — that is the function, no data. Confirm.
+3. Claude checks `0008_fingerprints.sql` (must equal 0045a's record), `0045_fingerprints.sql` (no row) and `0045_preapply_check.sql` (`0 / false / 64`). To redo: paste 0045 again. Running the undo twice is safe.
+
+Tested in PGlite on every run (`run.mjs` step0045: the pre-apply check before, after and after the undo; only 0008's file gains two lines; 0045 writes nothing; 0045's tests and the Forms / Prospects tests (0007, 0009, 0012, 0036) before and after; re-run safety; the undo file exactly as named here, then the redo).
+
+**Why:**
+- **One reader, not one per section:** the Calendar makes one call per month or week; no section's own readers change, and the rules for what the Calendar may show are in one place.
+- **STABLE and no history:** a read must never write — not a clean-up, not a status row — so Postgres itself refuses it (unlike `prospects_list`, which tidies old rows).
+- **Initials made inside the database:** the last names never leave it, so the app can't show or log what it never receives.
+- **A 63-day cap:** the answer stays small whatever the app asks for.
+- **`"C"` collation on the sort:** PGlite and Supabase sort text differently; `kind` and `id` are compared byte by byte so the order is the same everywhere.
+## Migration 0038: Star design-review database fixes
+
+**Status: applied 2026-11-07** (pasted by Jeffrey; 0038a pre-apply check `0 / 2 / 0 / 7 / 7 / 0 / 0 / 0`; after: `3 / 0 / 3 / 7 / 0 / 9 / 0 / 0`; 0038c all 9 function body md5s equal the tested ones, rights `authenticated:EXECUTE,postgres:EXECUTE` (trigger functions `postgres:EXECUTE`), `search_path=""`, the trigger enabled, `star_roster` security_invoker; 0038d security advisor: only the usual "security definer function executable by authenticated" warnings for the six callable functions; 0038e Jeffrey ran `0038_tests` and the older Star tests: both pass). Was: not applied yet. Written on `star-testing` 2026-11-07 (rulebook v1.035 / v1.040 = R1-01, R1-02, R2-02, S-1 v1.047 / v0.519; plan `docs/Testing/Star Testing/TKD-StarTesting-Pass1-Plan.md`, Step C). Needs a **security review** and Jeffrey's OK before it is pasted. Apply it **before** the app that sends `p_school`, shows the form's own choice, or calls `star_undo_event_edit` is deployed; the live app keeps working after it (see "the old app" below). **Order:** 0038 live → Finance's R1-01 migration live → the Star app push.
+
+**Production order:** … 0036 → 0041 → 0042 → 0043 → 0039 → 0037 (all live) → **0038**. It needs 0006, 0023, 0028 and 0041 — it stops with "0038 needs migration 0006 / 0023 / 0028 / 0041 … first" if one is missing. It touches **no Finance function** and no other section.
+
+**What it does** (`supabase/migrations/0038_star_design_review.sql`):
+- **R2-02 — new `star_undo_event_edit(p_event_id, p_expected_version, p_name, p_testing_date, p_start_time, p_where_code, p_auto_close_on, p_note, p_end_time, p_open)`** (admins only): puts the old details (end time included) and, if `p_open` is not null, the old Registration switch back in **one transaction**, through 0041's `star_update_event` and 0006's `star_set_registration`. A refusal in either step (stale, invalid, duplicate_name, finished …) is returned as it came and **everything the call did is undone**. A wrong version → `stale`, no event → `not_found`, the desk → `not_allowed`; nothing written. Model: Black Belt's `bb_undo_cycle_edit` (0032).
+- **R1-01 — `star_payments.school`** (new column, not empty, a real school code; staff may read it). Existing payments take their candidate's school as it is when the file runs (the guard and log triggers are switched off for that one statement, so no history row is written). `star_record_payment` and `star_record_refund` get a last input **`p_school text default null`** (the desk's school; blank = the candidate's; a value that isn't a school → `{"status":"invalid","field":"school"}`); the old 5-input versions are removed in the same file. `star_undo_payment` and `star_edit_payment` (reversal **and** new payment) copy the school from the payment they correct; the payments guard trigger also refuses a reversal at another school and fills in a missing school on any insert (so older tests and seeds still land right).
+- **R1-02 — `star_candidates.paying_by_on_form`** (the form's own choice; staff may read it; shown as the **last column of `star_roster`**, and `star_candidate_detail` already returns every candidate column) and **`star_payments.paying_by_before`** (not readable by the app). A trigger (`star_candidates_before_form_choice`) sets the form's choice when a **form** sign-up is added, leaves it **empty** for a candidate added at the desk, and keeps the old value on every update. Existing **form** sign-ups get the Paying by of their own history insert row; one with no such row, and every desk candidate, stay empty (the app reads empty as "at the desk"; 0038 never falls back to today's Paying by). `star_record_payment` with a way other than Paying by also changes Paying by (same update, logged) and remembers the old one; `star_undo_payment` puts it back unless someone changed it since; `star_edit_payment` follows Camps' 0033 / Color Belt's 0030 rule exactly.
+- **S-1 — belt order:** `star_event_results` (0006) and `star_results_csv` (0023) replaced with the same arguments, checks, answers, owner and rights; rows now sort stars, then **Worcester before Shrewsbury** (an explicit rank, not a text sort), then last and first name.
+- **Not changed:** `star_candidate_history` (it already returns every change-log row of a candidate and its payments; the new columns just appear in them; "one save = one History entry" is the app joining the rows of one batch, M-02), `star_change_paying_by`, the family form's functions, Finance. The answers of the four payment functions have **no new key**.
+- **The old app:** it calls `star_record_payment` / `star_record_refund` by argument name without `p_school`; the default makes those calls work (school = the candidate's, the school Finance already uses). It never calls `star_undo_event_edit`. Until the new app is live a payment taken at the other desk is stored with the candidate's school. **One more change the old app will notice (intended):** once 0038 is live, the old app's Record payment also changes the candidate's Paying by when the way you record differs from it (the same rule as Camps), and Undo payment puts it back.
+- **Existing payments and the school (a limit to know before you paste):** each old payment takes its candidate's school as it is **when 0038 runs**. If a candidate's school was edited after they paid, their money moves to the new school in Finance's view from then on. Claude can count such candidates first (a read-only check on the change log); the effect is what Finance already shows today, so nothing visibly moves.
+- **Paste when nobody is recording payments:** the file locks `star_payments` and then `star_candidates`, while the app locks the candidate first, so a payment recorded at the very same moment could deadlock one of them (the loser just retries; nothing is half-saved). Pick a quiet moment, not the day of a testing.
+- **Paste it in the SQL Editor only:** the Supabase connector cancels any SQL containing the words `drop` or `delete`, and this file legitimately contains `drop function` (the two old Record payment / refund versions).
+
+**Each step needs Jeffrey's OK.**
+
+### 0038a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0038_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `new_columns 0`, `old_signatures 2`, `new_signatures 0`, `replaced_found 7`, `replaced_as_tested 7`, `applied_as_tested 0`, `payments_elsewhere 0`, `payments_with_way 0` (**`0 / 2 / 0 / 7 / 7 / 0 / 0 / 0`**). **`replaced_as_tested` below 7 → stop**: one of the seven functions changed since 0038 was built, and pasting would undo that change — 0038 must be rebuilt on the newer code first. `3 / 0 / 3 / 7 / 0 / 9 / …` = already applied.
+2. Claude runs `0006_fingerprints.sql`, `0023_fingerprints.sql` and `0038_fingerprints.sql` and keeps the results (the "before" record for 0038c and the undo).
+
+### 0038b. Apply 0038 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0038_star_design_review.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about destructive operations. Two lines are real: `drop function if exists` for the old 5-input `star_record_payment` and `star_record_refund` (made again straight after with 6 inputs, same transaction). The other `drop … if exists` lines only make re-running safe. No data is removed. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested: no fingerprint, row or history change). **Re-running 0006 or 0023 after this** would add the old 5-input Record payment / refund next to the new ones (every Record payment then fails as "ambiguous") and 0006's roster view would fail — don't; if it happens, run the undo (0038f) first. **Don't paste 0041's undo (0041f) after 0038 without asking Claude** (0038's `star_undo_event_edit` calls 0041's 9-input `star_update_event`).
+
+### 0038c. Fingerprints (Claude, read-only through the connection)
+
+1. **Pre-apply check again:** `3 / 0 / 3 / 7 / 0 / 9 / 0 / 0`.
+2. `supabase/tests/0038_fingerprints.sql` must match what `run.mjs` printed ("0038 fingerprints"), 17 rows (md5 = code without comments and spaces):
+   - `column  star_candidates.paying_by_on_form  text notnull=false rights=authenticated:SELECT`
+   - `column  star_payments.paying_by_before  text notnull=false rights=` (nobody)
+   - `column  star_payments.school  text notnull=true rights=authenticated:SELECT`
+   - `constraint  star_candidates.star_candidates_paying_by_on_form_check`, `star_payments.star_payments_paying_by_before_check`, `star_payments.star_payments_school_fk  f FOREIGN KEY (school) REFERENCES locations(code)`
+   - `function  star_candidates_keep_form_choice()  848bbf6c3c0d95a6f41d06ea6619798e … returns=trigger definer=false … rights=postgres:EXECUTE`
+   - `function  star_edit_payment(…)  5c08d55187f9dbc6eecfabb589e35166`
+   - `function  star_event_results(…)  c23995089fb031496f6116fd0ae637fd … volatility=s`
+   - `function  star_payments_guard()  ad70a9e9591445ad3bb4841898182a02 … returns=trigger definer=false … rights=postgres:EXECUTE`
+   - `function  star_record_payment(…, p_paid_on date, p_school text)  431c70f5097f24f9537f99de40df80a1`
+   - `function  star_record_refund(…, p_refunded_on date, p_school text)  ef664aed576ac48acdd7078da2ca05a4`
+   - `function  star_results_csv(…)  2d10258952aab9a2374547a131a4313d`
+   - `function  star_undo_event_edit(p_event_id uuid, p_expected_version integer, p_name text, p_testing_date date, p_start_time time without time zone, p_where_code text, p_auto_close_on date, p_note text, p_end_time time without time zone, p_open boolean)  3afcaaa2e7588c187616c74381f3ec8e`
+   - `function  star_undo_payment(…)  0dc00bd6b208c9bd606f6ea3412e5991`
+   - `trigger  star_candidates.star_candidates_before_form_choice  … BEFORE INSERT OR UPDATE … enabled=O`
+   - `view  star_roster  21b5a914dc250808a2144086e03c0e39 options=security_invoker=true rights=authenticated:SELECT`
+   Every function above except the two trigger functions: `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+3. `0006_fingerprints.sql` differs from 0038a's record **only** in: the `star_record_payment(…)` and `star_record_refund(…)` lines (the item now ends `…, p_school text)`, body md5 changed), the `star_undo_payment`, `star_edit_payment`, `star_event_results`, `star_results_csv` and `star_payments_guard` lines (body md5 only), the `table  star_candidates` and `table  star_payments` lines (their `columns=` lists gain `paying_by_on_form>authenticated:SELECT` and `school>authenticated:SELECT`, nothing else), one **added** `trigger` line (`star_candidates_before_form_choice`) and the `view  star_roster` md5. `0023_fingerprints.sql` differs only in the `star_results_csv(…)` line (body md5). Every other migration's fingerprints: unchanged (`run.mjs` step0038 checks exactly that).
+
+### 0038d. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection): **nothing new.** Every function keeps `search_path = ''` and rights for signed-in staff only; the new columns are readable by signed-in staff only (`paying_by_before` by nobody).
+
+### 0038e. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0038_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0038 TESTS PASSED**. It checks the catalog (columns, rules, trigger, one version of every function, `p_school` last with a default, rights, the roster view's last column), the form's choice (empty for desk candidates, never changed), Record payment (by name without `p_school`; at another school; a bad school; another way changes Paying by, one batch), Undo payment (school copied; Paying by back, but not if changed since), Edit payment (both rows' school; Paying by follows a changed way), Record refund, the payments guard, the belt order of `star_event_results` and `star_results_csv`, and `star_undo_event_edit` (all of it back in one call; refusals leave nothing; a refusal in the second step undoes the first) — on its own `zz test …` events. Everything is rolled back.
+2. Then `0006_tests.sql`, `0023_tests.sql`, `0028_tests.sql`, `0041_tests.sql`, `0011_tests.sql`, `0018_tests.sql` and `0026_tests.sql` again — all must still pass (0006's and 0023's now accept the old and the new signatures, trigger and column counts and the belt order, so they pass before and after 0038).
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0038f. Undo 0038 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that doesn't send `p_school` and doesn't call `star_undo_event_edit`.
+2. Claude runs `supabase/tests/0038_preapply_check.sql`: `payments_elsewhere` and `payments_with_way` must both be **0**. Above 0 → some payments were taken at another school than their candidate's, or also changed a Paying by; the undo would lose that, so it refuses (an admin decides what to do with them first).
+3. Paste **the whole file** `supabase/manual/0038u_undo_star_design_review.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0038 undo refused: …") while those payments exist, then removes `star_undo_event_edit` and 0038's 6-input functions, puts back 0006's `star_record_payment`, `star_undo_payment`, `star_edit_payment`, `star_record_refund`, `star_event_results` and `star_payments_guard` and 0023's `star_results_csv` (word for word, with their rights) and 0006's `star_roster` view, and removes the trigger and its function, the three table rules, the read rights and the three columns (one transaction). Supabase warns about destructive operations — they are the planned removals. Confirm only if you mean it.
+4. Claude checks afterwards: the pre-apply check answers `0 / 2 / 0 / 7 / 7 / 0 / 0 / 0` again; `0006_fingerprints.sql`, `0023_fingerprints.sql` and `0038_fingerprints.sql` match 0038a's record. Then run `0006_tests.sql`, `0023_tests.sql`, `0028_tests.sql`, `0041_tests.sql`.
+5. To redo: paste 0038 again (safe). Running the undo twice is safe too.
+
+Tested in PGlite on every run (`run.mjs` step0038, or `node run.mjs --only-step0038`): a database built in the production order with every live migration (… 0036 → 0041 → 0042 → 0043 → 0039 → 0037), data made before 0038 the live app's way (a form sign-up whose Paying by was later changed, one with no history insert row, desk candidates, payments, an undone payment, a refund), the pre-apply check, the Star and Finance tests before and after, the fingerprint comparison above, the backfill (the form's choice from the insert row, the others empty, every payment at its candidate's school, nothing else changed, no history row or version moved), `0038_tests.sql`, a second run, and the undo file exactly as named here (refused with a payment at another school, and again with a payment that changed a Paying by; then on the clean database: every fingerprint file equals the one before 0038, the data is as before, the baseline tests pass, a second undo changes nothing; 0038 again gives the tested fingerprints and `0038_tests.sql` passes).
+
+**Why:**
+- **A default on the new inputs:** the database goes live before the app; the live app calls by argument name without `p_school`, and the default keeps those calls working.
+- **The school is stored on the payment (and copied by Undo / Edit):** Finance can then count money at the desk that took it (rulebook v1.035), and editing a candidate's school later no longer moves money already counted.
+- **The form's choice is kept by a trigger, not by the functions:** no function can ever change it, whatever it is later told to write; an empty value reads "at the desk" and is never guessed.
+- **One database call for Edit event's Undo:** two separate saves could stop halfway (R2-02); one transaction closes that gap.
+- **The undo refuses instead of losing data:** the stored school and the remembered way cannot be rebuilt once their columns are gone.
+
+---
+
+## Migration 0047: Finance — lines count at the school stored on the payment, and was_school
+
+**What it does** (`supabase/migrations/0047_finance_stored_school.sql`; Finance Batch A, design review rolling check pass 1: R1-01 and the school-only edit left open by U-1):
+1. **R1-01.** A Star or Color Belt payment line (event or private, refunds included) now counts on the report of the school **stored on the payment row shown** — the desk that took the money (`star_payments.school`, `testing_payments.school`, `testing_private_payments.school`, put there by Star's **0038** and Color Belt's **0044**). Until now Star counted at the candidate's school and Color Belt at the event's / private testing's school, whatever desk took the money. Camps (`camp_payments.school`) and Black Belt (`bb_payments.location_code`) already counted at their stored school (0017 / 0026) and are unchanged. A payment with no stored school (none exist after 0038 / 0044, which fill every old row) keeps the old school.
+2. **`was_school`.** A new text key on every line: for an **edited** or **moved-in** line, the school of the chain's first payment when it is not the line's own school (Camps' Edit payment can correct "the desk that took it"); null for every other line. The app writes "Edited · Was Worcester · edited by …" and the CSV note "was $70.00 cash at Worcester".
+
+It replaces **five** functions, each starting from the live text: `finance_money_rows_core` (0026), `finance_money_rows` (0011), `finance_day` (0026), `finance_payment_detail` (0026), `finance_export` (0037). The two internal helpers (`finance_money_rows_core`, `finance_money_rows`) get one more result column, which `create or replace` cannot do, so the file **drops and creates them again** (so Supabase shows a destructive-operations warning: expected). Same names, arguments, security (`security definer` / `search_path = ''` as before), owner and grant lines (helpers: owner only; the three app functions: authenticated only; nothing for anon). No table, table rule, other function, right or row changes.
+
+**Order:** after Star's **0038** and Color Belt's **0044** (the file refuses to run without their `school` columns). It must be live **before** the Star and Color Belt apps that send a school are pushed: until then Finance counts those payments at the old school anyway, so nothing breaks either way. Existing days do not move (0038 / 0044 fill old rows with the school they were counted at). A **guard** stops it — and changes nothing — if a school column is missing or if any of the five live functions is not exactly the live text (or 0047's, on a re-run), compared by the md5 of its code without comments and white space. **Forward-only** — no undo file (the app works with or without `was_school`). Each step needs Jeffrey's OK.
+
+### 0047a. Before you apply 0047 (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0047_fingerprints.sql` and keeps the result (10 rows). The five `function` lines' md5s must be (the ones the guard accepts as the live text): `finance_money_rows_core` **`77bc764dfe331a09919ac7c72962b76c`**, `finance_money_rows` **`6882b0a0f80407ba97864f47feae0e7f`**, `finance_day` **`3f6831f61735e1447c5974cc1dcba2ff`**, `finance_payment_detail` **`31e25e5951b33aeac8ee4900271f885a`**, `finance_export` **`f812a5b147fda8d8603afe907abd2137`** (0037's). A different md5: stop — 0047 must be rebuilt (the guard would refuse it anyway). (Checked on production 2026-11-07, after 0038 and 0044 were live: all five match.)
+2. Claude checks that the three columns exist (`star_payments.school`, `testing_payments.school`, `testing_private_payments.school`) and that no payment row has a NULL school.
+3. **No past day may move.** Claude checks that 0038 / 0044 filled every old payment with the school it was counted at until now: the number of Star payments whose `school` differs from their candidate's school, of Color Belt event payments whose `school` differs from the event's, and of private testing payments whose `school` differs from the private testing's must each be 0 (until the first app that sends a school is live; a later difference is a real desk correction and is fine). Any other number: stop and tell Jeffrey which days would move. (Checked on production 2026-11-07: all three school columns exist and are required, and the three tables hold no payments yet, so every number is 0.) (The migration cannot check this itself: it cannot tell a wrong backfill from a later correction.)
+
+### 0047b. Apply 0047 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0047_finance_stored_school.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase shows a destructive-operations warning (the two `drop function` lines for the internal helpers, created again right after): confirm it.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: no fingerprint changes).
+
+### 0047c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0047_fingerprints.sql` must match what `run.mjs` printed ("0047 fingerprints"): the md5s `finance_money_rows_core` **`11479fb6451a956b5f8bb5bc6b5c0366`**, `finance_money_rows` **`6882b0a0f80407ba97864f47feae0e7f`** (unchanged: only its result table changed), `finance_day` **`8cb806284e54443fb73bd4a8f679b617`**, `finance_payment_detail` **`cc90ec717325831a58a3063c9cb73c12`**, `finance_export` **`0f4b678f757bca72fec14bb78aacd37d`**; the three app functions `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`; the two helpers `definer=false … rights=postgres:EXECUTE`; the two helpers' `function-kind` results end with `was_school text`. The file contains neither of the words the connection refuses.
+2. `0011_fingerprints.sql`, camps' `0017_fingerprints.sql`, `0018_fingerprints.sql`, `0026_fingerprints.sql` and `0037_fingerprints.sql`: **only** these functions' lines differ from before (code md5; the helpers' result tables) — every other line the same. Every other migration's fingerprints: unchanged (`run.mjs` step0047 checks exactly that).
+3. **Security advisor:** nothing new (no new function or table).
+
+### 0047d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0047_tests.sql`: replace `<paste-admin-UID-here>`, paste, **Run** → **ALL 0047 TESTS PASSED**. It makes a Star payment taken at Worcester for a Shrewsbury candidate, a Star refund handed back at Shrewsbury, a Color Belt event payment taken at Shrewsbury, a private testing payment taken at Worcester, one payment with no stored school, and two Star edits (one that moves the payment from Worcester to Shrewsbury, one at the same school) — all on September 2021 days inside the test only — then checks: each line is on the right school's report and export, the Refunds figures and totals, `was_school` on the Daily report, the payment detail and the export (null for a same-school edit, and the key on every row), the five functions' security and rights, and Finance's privacy key list. Everything is rolled back.
+2. Then `0037_tests.sql`, `0011_tests.sql`, `0018_tests.sql` and `finance_camp_refunds_tests.sql` again - each must still pass (their exact-row and key-list checks know the new key; the Color Belt fixed copies of 0011 / 0018 that main carries since 2026-11-07 are the ones to paste).
+3. Put the placeholders back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0047, or `node run.mjs --only-step0047`): a database built in the production order with every live migration (… 0039 → 0037), then Color Belt's 0035 and 0044 and Star's 0038 (the real files, all on main), the five functions being the live text before, the guard refusing a changed function, the fingerprint comparison above, `0047_tests.sql` then `0037_tests.sql`, `0011_tests.sql`, camps' `0017_tests.sql`, `0018_tests.sql`, `0026_tests.sql` and `finance_camp_refunds_tests.sql`, and a second run of 0047.
+
+**Why:**
+- **One rule for every section:** each drawer's report matches what went in and out of that drawer (rulebook v1.040); Camps and Black Belt already did, now Star and Color Belt do too.
+- **was_school is worked out in the database:** the report, the payment detail and the export all read the same value, so they cannot disagree.
+- **Black Belt's 0046 is not needed for the SQL:** `bb_payments.location_code` already stores the school and 0026 already reads it; 0046 only changes which school the Black Belt app sends.
 
 ---

@@ -1,0 +1,36 @@
+{
+  "title": "Pass 2 · C-03 — A private testing paid in two parts lists each payment",
+  "subtitle": "Today the summary's Payment row writes the TOTAL with the LATEST payment's way and day: Ava Chen paid $65 cash on Oct 30 (it moved with her from the event) and $20 by card on Nov 6, and her summary says “Paid · $85 card · paid Nov 6”, a payment that never happened. After (rule v1.009, “the payment with its date”): one line per payment that still stands, oldest first, each with its own way and day, the same parts the receipt and the Edit payment subtitle already list. When something is still owed, “$X more to collect” follows on its own line. A private testing paid once keeps today's one line, so nothing else changes. The After column is drawn on top of the real preview page.",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "row": [
+          { "src": "c03-pc-today.png", "crop": [420, 80, 440, 520], "scale": 0.8, "caption": "PC 1280: “$85 card · paid Nov 6”.", "marks": [[568, 378, 200, 22]] },
+          { "src": "c03-w820-today.png", "shotWidth": 820, "crop": [180, 70, 470, 560], "scale": 0.75, "caption": "Tablet 820 (touch).", "marks": [[338, 394, 268, 22]] }
+        ] },
+        { "row": [
+          { "src": "c03-w390-today.png", "shotWidth": 390, "crop": [0, 0, 390, 540], "scale": 0.8, "caption": "Phone 390.", "marks": [[124, 306, 250, 22]] },
+          { "src": "c03-w320-today.png", "shotWidth": 320, "crop": [0, 0, 320, 560], "scale": 0.85, "caption": "320.", "marks": [[124, 327, 180, 22]] }
+        ] }
+      ]
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "row": [
+          { "src": "c03-pc-after.png", "crop": [420, 80, 440, 520], "scale": 0.8, "caption": "PC 1280: “$65 cash · paid Oct 30”, then “$20 card · paid Nov 6”.", "marks": [[568, 378, 268, 48]] },
+          { "src": "c03-w820-after.png", "shotWidth": 820, "crop": [180, 70, 470, 560], "scale": 0.75, "caption": "Tablet 820 (touch).", "marks": [[338, 394, 268, 48]] }
+        ] },
+        { "row": [
+          { "src": "c03-w390-after.png", "shotWidth": 390, "crop": [0, 0, 390, 540], "scale": 0.8, "caption": "Phone 390.", "marks": [[124, 306, 250, 48]] },
+          { "src": "c03-w320-after.png", "shotWidth": 320, "crop": [0, 0, 320, 560], "scale": 0.85, "caption": "320: each payment still fits on one line.", "marks": [[124, 327, 180, 48]] }
+        ] }
+      ]
+    }
+  ],
+  "footer": "Undone payments (and the payments they reversed) are left out, as on the receipt. The Paid tag stays on the first line. Print receipt, the History line and everything else in the summary stay as today."
+}

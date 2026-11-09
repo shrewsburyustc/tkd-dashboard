@@ -39,8 +39,6 @@ export const monthDay = (dateIso) => MONTH_DAY.format(utcDate(dateIso));
 export const longDay = (dateIso) => LONG_DAY.format(utcDate(dateIso));
 // "Mar 4, 2012"
 export const dobLabel = (dateIso) => DOB.format(utcDate(dateIso));
-// "Mar 10, 2027" — the "Date signed" box under the signature (v0.638): month day, year, no weekday
-export const signedDayLabel = (dateIso) => DOB.format(utcDate(dateIso));
 
 // A due date in a list: "Mar 27", or "Today" when it has already passed (a late family pays
 // passed payments on the day they register — contract 0016-B1 §7 OP-12).

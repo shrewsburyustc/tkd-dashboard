@@ -14,6 +14,7 @@ import { IconCheck, IconClipboardText, IconTrash, IconUserCheck } from '@tabler/
 import ConfirmBox from '../../components/ConfirmBox.jsx';
 import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
+import ErrorBanner from '../../components/ErrorBanner.jsx';
 import Notice from '../../components/Notice.jsx';
 import { weekStart } from '../../lib/calendar/days.js';
 import { addDays } from '../../lib/schedule/versions.js';
@@ -55,7 +56,7 @@ function Footer({ isPhone, onCancel, note = null, children }) {
   );
 }
 
-export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel, onTop = false }) {
+export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel, onRetryTimes, onTop = false }) {
   const times = state.times;
   const groups = [];
   if (Array.isArray(times)) {
@@ -72,7 +73,8 @@ export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel
   return (
     <Dialog title={T.bookTitle(state.name, state.change)} size="detail" fullScreen={isPhone} onTop={onTop} returnFocusTo={onTop ? state.opener ?? null : null} onRequestClose={onCancel}>
       {times === null && <p className="field-hint">{T.LOADING_TIMES}</p>}
-      {times === 'error' && <Notice>{T.SAVE_FAILED}</Notice>}
+      {/* S-2: a read that fails inside a box ends "then retry" and has its own Retry */}
+      {times === 'error' && <ErrorBanner text={T.TIMES_FAILED} onRetry={onRetryTimes} />}
       {Array.isArray(times) && times.length === 0 && <p className="fnotimes">{T.NO_TIMES}</p>}
       {groups.length > 0 && (
         <fieldset className="field cfieldset">
@@ -187,7 +189,7 @@ export function CameDialog({ state, onSave, onCancel }) {
   );
 }
 
-export function AddProspectDialog({ state, isPhone, onPickSchool, onPick, onCancel }) {
+export function AddProspectDialog({ state, isPhone, onPickSchool, onPick, onCancel, onRetryForms }) {
   return (
     <Dialog title={T.ADD_TITLE} size="detail" fullScreen={isPhone} onRequestClose={onCancel}>
       {state.both && (
@@ -205,7 +207,8 @@ export function AddProspectDialog({ state, isPhone, onPickSchool, onPick, onCanc
       )}
       <p className="tdialog-sub">{T.WHICH_FORM}</p>
       {state.forms === null && <p className="field-hint">{T.LOADING_PANEL}</p>}
-      {state.forms === 'error' && <Notice>{T.LOAD_FAILED}</Notice>}
+      {/* S-2: the words name the forms (not "the prospects") and the bar has Retry */}
+      {state.forms === 'error' && <ErrorBanner text={T.FORMS_LOAD_FAILED} onRetry={onRetryForms} />}
       {Array.isArray(state.forms) && (state.forms.length === 0 ? (
         <p className="fnotimes">{T.NO_LIVE_FORMS}</p>
       ) : (

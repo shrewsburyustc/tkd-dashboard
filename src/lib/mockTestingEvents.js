@@ -66,6 +66,18 @@
 //     the list `downloads` (the table testing_downloads) for every download.
 //   Preview only (CB7): a store value `fail_history_reads` (a number) makes that many History reads
 //     fail like a dropped connection, to see the History line's amber bar with Retry (see rpc).
+//
+// Migration 0044 (the rolling check's database fixes) adds:
+//   M-01  paying_by_on_form on registrations and private testings: the family form's own "Paying
+//     by", set once (a form registration: what the form sent; a desk add: none; a private testing
+//     moved from a registration: that registration's value) and never changed. Readable, and on
+//     the roster / private list. The Mark paid hint compares it with Paying by.
+//   R1-01 school on every payment (the desk that took it): Mark paid takes p_school (an input with
+//     a default; blank = the event's / private testing's school; an unknown code → invalid, field
+//     'school'); Undo, Edit payment, Move and Undo move copy it from the payment they correct or
+//     move. Hidden on testing_payments, readable on testing_private_payments (as the database).
+//   R2-02 testing_undo_event_edit (admins): Edit event's Undo in one call, all or nothing.
+//   A store saved before 0044 gets the columns filled as the migration fills them (fillFrom0044).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { RESULTS, normalizeGradingNote, gradingNoteProblem } from './testing/gradingRules.js';
 import { defaultTestingData } from './mockTesting.js';
@@ -228,6 +240,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
       signed_at: fromForm ? at : null, signature_deleted_at: null, ack_version: fromForm ? ACK_VERSION : null,
       registered_at: at, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
       duplicate_state: 'none', duplicate_of: null,
+      paying_by_on_form: fromForm ? payingBy : null, // 0044 (M-01): the form's own choice; none at the desk
       ...stamps(at, fromForm ? 'Family form' : 'Staff'),
     };
     if (extra.withdrawn) {
@@ -247,6 +260,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
         amount_cents: feeFor(rank, paidOn, event.testing_date), method: payingBy, paid_on: paidOn,
         recorded_at: paidAt, recorded_by: paid.desk ? DESK_USER_ID : ADMIN_USER_ID,
         recorded_by_name: paid.desk ? 'Staff' : 'Jeffrey Berg', reverses_payment_id: null,
+        school: event.location_code, // 0044 (R1-01): the desk that took it
       });
       reg.version += 1; // Mark paid bumps the registration's version
       reg.updated_at = paidAt;
@@ -291,14 +305,14 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
     stripes_confirmed: true, private_date: privateDate, private_time: privateTime, status: 'active',
     cancelled_at: null, cancelled_by_name: null, cancelled_by: null,
     moved_from_event_id: null, moved_from_registration_id: null, moved_from_event_name: null,
-    moved_cleared_no_show: false, moved_registration_version: null,
+    moved_cleared_no_show: false, moved_registration_version: null, paying_by_on_form: null, // 0044: added at the desk
     version: 1, created_at: createdAt, updated_at: createdAt, created_by: DESK_USER_ID, updated_by: DESK_USER_ID,
     created_by_name: 'Staff', updated_by_name: 'Staff', ...extra,
   });
   const privatePayment = (n, row, amount, method, daysBack, at, extra = {}) => ({
     id: fixedId('f1', n), private_id: row.id, kind: 'payment', amount_cents: amount, method, paid_on: addDays(today, -daysBack),
     recorded_at: daysAgo([daysBack, at]), recorded_by: DESK_USER_ID, recorded_by_name: 'Staff', reverses_payment_id: null,
-    moved_from_payment_id: null, ...extra,
+    moved_from_payment_id: null, school: row.location_code, ...extra,
   });
   const T = testingDate;
   const privateList = [];
@@ -319,13 +333,14 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
     paying_by: 'cash', stripes_confirmed: true, source: 'form', reference: `CB-${REFERENCE_START + DEFAULT_STUDENTS.length}`,
     submission_id: fixedId('e5', DEFAULT_STUDENTS.length + 1), signature: SAMPLE_SIGNATURE, signed_at: avaAt, signature_deleted_at: null,
     ack_version: ACK_VERSION, registered_at: avaAt, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null,
-    withdrawn_by_name: null, duplicate_state: 'none', duplicate_of: null, ...stamps(avaAt, 'Family form'),
+    withdrawn_by_name: null, duplicate_state: 'none', duplicate_of: null, paying_by_on_form: 'cash', ...stamps(avaAt, 'Family form'),
   };
   registrations.push(avaReg);
   const avaPaidAt = daysAgo([7, '17:15']);
   const avaEventPayment = {
     id: fixedId('e4', payments.length + 1), registration_id: avaReg.id, kind: 'payment', amount_cents: avaRank.early_cents, method: 'cash',
     paid_on: addDays(today, -7), recorded_at: avaPaidAt, recorded_by: DESK_USER_ID, recorded_by_name: 'Staff', reverses_payment_id: null,
+    school: event.location_code,
   };
   payments.push(avaEventPayment);
   Object.assign(avaReg, { version: 2, updated_at: avaPaidAt, updated_by_name: 'Staff' });
@@ -334,7 +349,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
   payments.push({
     id: fixedId('e4', payments.length + 1), registration_id: avaReg.id, kind: 'reversal', amount_cents: -avaEventPayment.amount_cents,
     method: avaEventPayment.method, paid_on: avaEventPayment.paid_on, recorded_at: movedAt, recorded_by: DESK_USER_ID, recorded_by_name: 'Staff',
-    reverses_payment_id: avaEventPayment.id,
+    reverses_payment_id: avaEventPayment.id, school: avaEventPayment.school,
   });
   Object.assign(avaReg, {
     status: 'withdrawn', withdrawn_reason: 'withdrawn', withdrawn_at: movedAt, withdrawn_by: DESK_USER_ID, withdrawn_by_name: 'Staff',
@@ -348,6 +363,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
   const ava = privateRow(3, 'Ava', 'Chen', avaCopy, 'cash', addDays(T, 11), '16:00:00', movedAt, {
     moved_from_event_id: event.id, moved_from_registration_id: avaReg.id, moved_from_event_name: event.name,
     moved_cleared_no_show: false, moved_registration_version: avaReg.version,
+    paying_by_on_form: avaReg.paying_by_on_form, // 0044: the move carries the form's choice
   });
   privatePayments.push(privatePayment(2, ava, avaEventPayment.amount_cents, 'cash', 7, '17:15', { moved_from_payment_id: avaEventPayment.id })); // the original's recorded_at
 
@@ -395,7 +411,8 @@ const FA_COLS = BELT_KEYS.map((k) => `fa_${k}`);
 const EVENT_CLASS_COLS = ['id', 'event_id', 'class_id', 'class_name', 'position', 'start_time', 'end_time', 'final_award_kind', 'final_award_name', ...FA_COLS];
 const EVENT_RANK_COLS = ['id', 'event_class_id', 'rank_id', 'name', 'position', ...BELT_KEYS, 'early_cents', 'day_cents', 'private_cents', 'sparring_gear'];
 // Registrations: everything except the signature, the form's submission id and who-as-an-id.
-const REG_COLS = ['id', 'event_id', 'event_rank_id', 'first_name', 'last_name', 'paying_by', 'stripes_confirmed', 'source', 'reference', 'signed_at', 'signature_deleted_at', 'ack_version', 'registered_at', 'status', 'withdrawn_reason', 'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', 'version', 'created_at', 'created_by_name', 'updated_at', 'updated_by_name'];
+const REG_COLS = ['id', 'event_id', 'event_rank_id', 'first_name', 'last_name', 'paying_by', 'stripes_confirmed', 'source', 'reference', 'signed_at', 'signature_deleted_at', 'ack_version', 'registered_at', 'status', 'withdrawn_reason', 'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', 'version', 'created_at', 'created_by_name', 'updated_at', 'updated_by_name',
+  'paying_by_on_form']; // 0044 (M-01): the family form's own choice, readable (and the roster's last column)
 const PAYMENT_COLS = ['id', 'registration_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id'];
 // Grading results (phase 3, 0010 §1.4): everything except who-as-an-id (updated_by).
 const RESULT_COLS = ['registration_id', 'result', 'note', 'updated_at', 'updated_by_name'];
@@ -409,9 +426,11 @@ const ROSTER_COLS = [...REG_COLS, 'signed', 'event_class_id', 'class_id', 'class
 const PRIVATE_COLS = ['id', 'location_code', 'first_name', 'last_name', 'class_id', 'class_name', 'rank_id', 'rank_name', ...BELT_KEYS,
   'to_kind', 'to_name', ...BELT_KEYS.map((k) => `to_${k}`), 'private_cents', 'paying_by', 'stripes_confirmed', 'private_date', 'private_time',
   'status', 'cancelled_at', 'cancelled_by_name', 'moved_from_event_id', 'moved_from_registration_id', 'moved_from_event_name',
-  'moved_cleared_no_show', 'moved_registration_version', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'];
-// 0030 adds paying_by_before; 0014's rule ("every column but the login ids") makes it readable here.
-const PRIVATE_PAYMENT_COLS = ['id', 'private_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id', 'moved_from_payment_id', 'paying_by_before'];
+  'moved_cleared_no_show', 'moved_registration_version', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name',
+  'paying_by_on_form']; // 0044 (M-01): the family form's choice, carried from a moved form registration
+// 0030 adds paying_by_before and 0044 adds school; 0014's rule ("every column but the login ids")
+// makes both readable here.
+const PRIVATE_PAYMENT_COLS = ['id', 'private_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id', 'moved_from_payment_id', 'paying_by_before', 'school'];
 const PRIVATE_RESULT_COLS = ['private_id', 'result', 'note', 'updated_at', 'updated_by_name'];
 // The view: every granted column + the payment summary + what is owed (computed inline).
 const PRIVATE_LIST_COLS = [...PRIVATE_COLS, 'paid_cents', 'paid', 'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'amount_due_cents'];
@@ -437,7 +456,7 @@ const HIDDEN = {
   testing_event_classes: [],
   testing_event_ranks: [],
   testing_registrations: ['signature', 'submission_id', 'withdrawn_by', 'created_by', 'updated_by'],
-  testing_payments: ['recorded_by', 'paying_by_before'], // 0030's column: 0005 lists the readable ones one by one, and it isn't added
+  testing_payments: ['recorded_by', 'paying_by_before', 'school'], // 0030's / 0044's columns: 0005 lists the readable ones one by one, and they aren't added
   testing_roster: [],
   testing_public_attempts: ['id', 'client_key', 'event_id', 'at', 'outcome'],
   testing_results: ['updated_by'],
@@ -458,7 +477,6 @@ const RPC_ARGS = {
   testing_add_student: [ID('p_event_id'), ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id'), ['p_stripes', 'bool'], ['p_paying_by', 'text']],
   testing_update_student: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id')],
   testing_change_paying_by: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
-  testing_mark_paid: [ID('p_registration_id'), ['p_expected_version', 'int']],
   testing_undo_payment: [ID('p_payment_id')],
   testing_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
   testing_resolve_duplicate: [ID('p_keep_id'), ['p_keep_version', 'int'], ID('p_other_id'), ['p_other_version', 'int'], ['p_keep_both', 'bool']],
@@ -476,7 +494,6 @@ const RPC_ARGS = {
   testing_private_update: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_first', 'text'], ['p_last', 'text'], ID('p_rank_id')],
   testing_private_change_day: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
   testing_private_change_paying_by: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
-  testing_private_mark_paid: [ID('p_private_id'), ['p_expected_version', 'int']],
   testing_private_undo_payment: [ID('p_payment_id')],
   testing_private_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
   testing_private_cancel: [ID('p_private_id'), ['p_expected_version', 'int']],
@@ -487,8 +504,11 @@ const RPC_ARGS = {
   testing_move_to_private: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
   testing_private_undo_move: [ID('p_private_id'), ['p_expected_version', 'int']],
   // 0030 (S unless marked A): Mark paid with a way to pay, History, the results CSV.
-  testing_mark_paid_by: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_expected_cents', 'int']],
-  testing_private_mark_paid_by: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_expected_cents', 'int']],
+  // 0044 (R1-01): + p_school, an input with a default (left out or blank = the record's school).
+  testing_mark_paid_by: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_expected_cents', 'int'], ['p_school', 'text', true]],
+  testing_private_mark_paid_by: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_method', 'text'], ['p_expected_cents', 'int'], ['p_school', 'text', true]],
+  // 0044 (R2-02, A): Edit event's Undo in one call.
+  testing_undo_event_edit: [ID('p_event_id'), ['p_expected_version', 'int'], ['p_name', 'text'], ['p_testing_date', 'date'], ['p_classes', 'jsonb'], ['p_auto_close_on', 'date'], ['p_note', 'text'], ['p_open', 'bool']],
   testing_registration_history: [ID('p_registration_id')],
   testing_private_history: [ID('p_private_id')],
   testing_results_csv: [ID('p_event_id')], // A
@@ -503,6 +523,7 @@ const ADMIN_ONLY = new Set([
   'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address', 'settings_update_school_contact',
   'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete', // phase 4
   'testing_results_csv', // 0030: no_access first, then not_allowed for staff (as the SQL)
+  'testing_undo_event_edit', // 0044 (R2-02): Edit event is admin only, so is its Undo
 ]);
 export const EVENT_RPC_NAMES = Object.keys(RPC_ARGS);
 // Functions that exist but that a signed-in staff member may NOT call (only testing_registrar, or
@@ -571,10 +592,11 @@ function readArgs(name, args) {
   const spec = RPC_ARGS[name];
   const sent = Object.keys(args ?? {}).filter((key) => args[key] !== undefined);
   const known = new Set(spec.map(([key]) => key));
-  if (spec.some(([key]) => !sent.includes(key)) || sent.some((key) => !known.has(key))) {
+  // An input with a default (a third item `true`, e.g. 0044's p_school) may be left out: it is then null.
+  if (spec.some(([key, , hasDefault]) => !hasDefault && !sent.includes(key)) || sent.some((key) => !known.has(key))) {
     throw new DbError('PGRST202', `Could not find the function public.${name}(${[...sent].sort().join(', ')}) in the schema cache`, 404);
   }
-  return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key], type)]));
+  return Object.fromEntries(spec.map(([key, type]) => [key, args[key] === undefined ? null : toDbType(args[key], type)]));
 }
 
 // ----- Small helpers -----
@@ -654,7 +676,46 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     }
     // 0030: the results CSV download log (testing_downloads). Missing → an empty list.
     if (!Array.isArray(store.downloads)) store.downloads = [];
+    fillFrom0044(store);
     return store;
+  }
+
+  // 0044: a store saved before it has no paying_by_on_form and no payment school. Filled as the
+  // migration fills existing rows (and as its insert triggers fill a row a writer left empty):
+  //   a form registration → the Paying by of its own history insert row, else EMPTY (never
+  //     today's Paying by: that may already be a desk change); a desk registration → empty;
+  //   a moved private testing → the value of the registration it came from; else empty;
+  //   a payment → the event's / private testing's school; a reversal → the school of the payment
+  //     it reverses; a moved-in private payment → the school of the event payment it came from.
+  function fillFrom0044(store) {
+    for (const reg of store.registrations) {
+      if (reg.paying_by_on_form !== undefined) continue;
+      const logged = reg.source === 'form'
+        ? store.change_log.find((l) => l.table_name === 'testing_registrations' && l.op === 'insert' && l.record_id === reg.id)
+        : null;
+      const fromLog = logged?.after?.paying_by;
+      reg.paying_by_on_form = PAYING_BY.includes(fromLog) ? fromLog : null;
+    }
+    for (const row of store.private) {
+      if (row.paying_by_on_form !== undefined) continue;
+      const from = store.registrations.find((r) => r.id === row.moved_from_registration_id);
+      row.paying_by_on_form = from?.paying_by_on_form ?? null;
+    }
+    const eventSchool = (registrationId) => {
+      const reg = store.registrations.find((r) => r.id === registrationId);
+      return store.events.find((e) => e.id === reg?.event_id)?.location_code ?? null;
+    };
+    for (const p of store.payments) {
+      if (p.school !== undefined && p.school !== null) continue;
+      const reversed = p.reverses_payment_id ? store.payments.find((x) => x.id === p.reverses_payment_id) : null;
+      p.school = reversed?.school ?? eventSchool(p.registration_id);
+    }
+    for (const p of store.private_payments) {
+      if (p.school !== undefined && p.school !== null) continue;
+      const reversed = p.reverses_payment_id ? store.private_payments.find((x) => x.id === p.reverses_payment_id) : null;
+      const movedFrom = p.moved_from_payment_id ? store.payments.find((x) => x.id === p.moved_from_payment_id) : null;
+      p.school = reversed?.school ?? movedFrom?.school ?? store.private.find((r) => r.id === p.private_id)?.location_code ?? null;
+    }
   }
   const write = (db) => saveStore?.(db);
 
@@ -1147,6 +1208,10 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       version: 1, created_at: at, updated_at: at, created_by: ctx.userId ?? null, updated_by: ctx.userId ?? null,
       created_by_name: ctx.actorName, updated_by_name: ctx.actorName,
     };
+    // 0044's insert trigger (M-01): moved from a registration → that registration's form choice
+    // (whatever the caller sent); added at the desk → none.
+    const from = row.moved_from_registration_id ? db.registrations.find((r) => r.id === row.moved_from_registration_id) : null;
+    row.paying_by_on_form = from?.paying_by_on_form ?? null;
     db.private.push(row);
     return row;
   }
@@ -1157,6 +1222,13 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     if (row.version !== before) row.updated_by = ctx.userId ?? null;
     return row.version !== before;
   }
+  // 0044 (R1-01): the p_school Mark paid sent. null / blank → null (the record's own school is
+  // used); a code that isn't a school → false (the answer is invalid, field 'school').
+  const sentSchool = (db, value) => {
+    const code = typeof value === 'string' ? value.trim() : '';
+    if (code === '') return null;
+    return db.locations.some((l) => l.code === code) ? code : false;
+  };
   const newPrivatePayment = (db, fields, ctx) => {
     const payment = {
       id: newId(), kind: 'payment', reverses_payment_id: null, moved_from_payment_id: null,
@@ -1298,23 +1370,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', version: row.version };
     },
 
-    // Mark paid: records what is owed (the price, or just the difference), by today's date.
-    testing_private_mark_paid(db, a, ctx) {
-      if (a.p_private_id === null || a.p_expected_version === null) return st('invalid');
-      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
-      if (refusal) return refusal;
-      const owed = privateAmountDue(db, row);
-      if (owed <= 0) return st('already_paid'); // also a $0 price: nothing is inserted (E10)
-      if (owed > MAX_PAYMENT_CENTS) return st('invalid'); // the payments table's own limit
-      const batchId = newId();
-      const payment = newPrivatePayment(db, { private_id: row.id, amount_cents: owed, method: row.paying_by, paid_on: today() }, ctx);
-      updatePrivate(row, {}, ctx, true); // a double click with the old version now gets 'stale'
-      logChange(db, batchId, 'private_mark_paid', 'testing_private_payments', 'insert', payment.id, ctx);
-      logChange(db, batchId, 'private_mark_paid', 'testing_private', 'update', row.id, ctx);
-      return { status: 'ok', payment_id: payment.id, amount_cents: owed, method: payment.method, version: row.version };
-    },
-
-    // 0030 (CB1): Mark paid with a way to pay. The same as testing_private_mark_paid, plus:
+    // 0030 (CB1): Mark paid with a way to pay. What the old one-click testing_private_mark_paid
+    // did (migration 0035 removes that one, so the preview has only this one, as live), plus:
     //   p_method         cash / check / card — the payment's way (Finance's totals read only this)
     //   p_expected_cents what the Mark paid box SHOWED. The amount is still worked out here (what
     //                    is owed: the price, or the rest after a part payment); if they differ,
@@ -1326,6 +1383,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     testing_private_mark_paid_by(db, a, ctx) {
       if (a.p_private_id === null || a.p_expected_version === null || !PAYING_BY.includes(a.p_method)
         || a.p_expected_cents === null || a.p_expected_cents < 0) return st('invalid');
+      const deskSchool = sentSchool(db, a.p_school); // 0044 (R1-01)
+      if (deskSchool === false) return { status: 'invalid', field: 'school' };
       const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
       if (refusal) return refusal;
       const owed = privateAmountDue(db, row);
@@ -1336,6 +1395,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const batchId = newId();
       const payment = newPrivatePayment(db, {
         private_id: row.id, amount_cents: owed, method: a.p_method, paid_on: today(), paying_by_before: before,
+        school: deskSchool ?? row.location_code, // 0044: This device's school; empty = the private testing's
       }, ctx);
       // One update: the version goes up (a double click gets 'stale') and "Paying by" = the way they paid.
       updatePrivate(row, { paying_by: a.p_method }, ctx, true);
@@ -1374,6 +1434,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const batchId = newId();
       const reversal = newPrivatePayment(db, {
         private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
+        school: payment.school, // 0044: a reversal keeps the school of the payment it undoes
       }, ctx);
       updatePrivate(row, payingByBack(row, payment), ctx, true);
       logChange(db, batchId, 'private_undo_payment', 'testing_private_payments', 'insert', reversal.id, ctx);
@@ -1396,10 +1457,12 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const batchId = newId();
       const reversal = newPrivatePayment(db, {
         private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
+        school: payment.school, // 0044: an edit never changes the desk
       }, ctx);
       const follow = editPayingBy(row, payment, a.p_method);
       const replacement = newPrivatePayment(db, {
         private_id: row.id, amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, paying_by_before: follow.before,
+        school: payment.school,
       }, ctx);
       updatePrivate(row, follow.changes, ctx, true);
       for (const p of [reversal, replacement]) logChange(db, batchId, 'private_edit_payment', 'testing_private_payments', 'insert', p.id, ctx);
@@ -1505,6 +1568,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         const reversal = {
           id: newId(), registration_id: reg.id, kind: 'reversal', amount_cents: -p.amount_cents, method: p.method, paid_on: p.paid_on,
           recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: p.id,
+          school: p.school, // 0044: a move stays a transfer — the same desk
         };
         db.payments.push(reversal);
         logChange(db, batchId, 'move_to_private', 'testing_payments', 'insert', reversal.id, ctx);
@@ -1534,6 +1598,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         const moved = newPrivatePayment(db, {
           private_id: row.id, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, moved_from_payment_id: p.id, recorded_at: p.recorded_at,
           paying_by_before: p.paying_by_before ?? null,
+          school: p.school, // 0044: the event payment's desk
         }, ctx);
         logChange(db, batchId, 'move_to_private', 'testing_private_payments', 'insert', moved.id, ctx);
       }
@@ -1570,6 +1635,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
           id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on,
           recorded_at: p.recorded_at, recorded_by: null, recorded_by_name: ctx.actorName, reverses_payment_id: null, // its original moment (M1)
           paying_by_before: p.paying_by_before ?? null, // 0030 (v0.419): the family's choice comes back with it
+          school: p.school, // 0044: the private payment's desk
         };
         db.payments.push(back);
         logChange(db, batchId, 'undo_move_to_private', 'testing_payments', 'insert', back.id, ctx);
@@ -1682,6 +1748,27 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', version: event.version, state: eventState(event, today()) };
     },
 
+    // 0044 (R2-02, admins): Edit event's Undo in ONE call — the old details (as
+    // testing_update_event) and, when p_open isn't null, the old switch (as
+    // testing_set_registration), together or not at all. `db` is this call's private copy, so a
+    // refusal from either step simply isn't saved (the whole call is rolled back), and the answer
+    // is that step's refusal as it came.
+    testing_undo_event_edit(db, a, ctx) {
+      if (a.p_event_id === null || a.p_expected_version === null) return st('invalid');
+      const event = findEvent(db, a.p_event_id);
+      if (!event) return st('not_found');
+      if (event.version !== a.p_expected_version) return st('stale');
+      const details = handlers.testing_update_event(db, a, ctx);
+      if (details.status !== 'ok') return details;
+      let version = details.version;
+      if (a.p_open !== null) {
+        const switched = handlers.testing_set_registration(db, { p_event_id: a.p_event_id, p_expected_version: version, p_open: a.p_open }, ctx);
+        if (switched.status !== 'ok') return switched;
+        version = switched.version;
+      }
+      return { status: 'ok', version, state: eventState(findEvent(db, a.p_event_id), today()) };
+    },
+
     testing_delete_event(db, a) {
       if ([a.p_event_id, a.p_expected_version, a.p_expected_registration_count, a.p_expected_payment_total_cents].includes(null)) return st('invalid');
       const event = findEvent(db, a.p_event_id);
@@ -1715,6 +1802,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         stripes_confirmed: true, source: 'staff', reference: nextReference(db), submission_id: null, signature: null,
         signed_at: null, signature_deleted_at: null, ack_version: null, registered_at: at, status: 'active',
         withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
+        paying_by_on_form: null, // 0044 (M-01): added at the desk — no form choice
         ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last),
       }, ctx);
       return { status: 'ok', id: reg.id, reference: reg.reference, version: reg.version };
@@ -1755,28 +1843,6 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return { status: 'ok', version: reg.version };
     },
 
-    testing_mark_paid(db, a, ctx) {
-      if (a.p_registration_id === null || a.p_expected_version === null) return st('invalid');
-      const reg = findReg(db, a.p_registration_id);
-      if (!reg) return st('not_found');
-      if (reg.version !== a.p_expected_version) return st('stale');
-      if (reg.status === 'withdrawn') return st('withdrawn');
-      if (paymentSummary(db, reg.id).paid) return st('already_paid');
-      const event = findEvent(db, reg.event_id);
-      const t = today();
-      // The database decides: early price before the testing day, testing-day price on it.
-      const amount = feeFor(rankRow(db, reg.event_rank_id), t, event.testing_date);
-      if (!(amount > 0 && amount <= MAX_PAYMENT_CENTS)) return st('invalid'); // a $0 rank can't be "paid"
-      const payment = {
-        id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: amount, method: reg.paying_by,
-        paid_on: t, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
-      };
-      db.payments.push(payment);
-      updateRow(reg, {}, ctx, true); // a double click with the old version now gets 'stale'
-      purgeOldSignatures(db); // the last step (§1.5)
-      return { status: 'ok', payment_id: payment.id, amount_cents: amount, method: payment.method, version: reg.version };
-    },
-
     testing_undo_payment(db, a, ctx) {
       if (a.p_payment_id === null) return st('invalid');
       const payment = db.payments.find((p) => p.id === a.p_payment_id);
@@ -1790,13 +1856,15 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       db.payments.push({
         id: newId(), registration_id: reg.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method,
         paid_on: today(), recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: payment.id,
+        school: payment.school, // 0044: a reversal keeps the school of the payment it undoes
       });
       // 0030: the old "Paying by" back, if Mark paid changed it and nobody changed it since.
       updateRow(reg, payingByBack(reg, payment), ctx, true);
       return { status: 'ok', version: reg.version };
     },
 
-    // 0030 (CB1): Mark paid with a way to pay — testing_mark_paid plus p_method and
+    // 0030 (CB1): Mark paid with a way to pay — the old one-click testing_mark_paid (removed by
+    // migration 0035, so the preview has only this one, as live) plus p_method and
     // p_expected_cents, exactly as testing_private_mark_paid_by above. The amount is still worked
     // out here (the early price before the testing day, the testing-day price on and after it).
     // Refused in this order: (no_access in rpc) invalid → not_found → stale → withdrawn →
@@ -1804,6 +1872,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     testing_mark_paid_by(db, a, ctx) {
       if (a.p_registration_id === null || a.p_expected_version === null || !PAYING_BY.includes(a.p_method)
         || a.p_expected_cents === null || a.p_expected_cents < 0) return st('invalid');
+      const deskSchool = sentSchool(db, a.p_school); // 0044 (R1-01): a school that was sent must exist
+      if (deskSchool === false) return { status: 'invalid', field: 'school' };
       const reg = findReg(db, a.p_registration_id);
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
@@ -1818,6 +1888,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: amount, method: a.p_method,
         paid_on: t, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
         paying_by_before: a.p_method !== reg.paying_by ? reg.paying_by : null,
+        school: deskSchool ?? event.location_code, // 0044: This device's school; empty = the event's
       };
       db.payments.push(payment);
       // One update: the version goes up (a double click gets 'stale') and "Paying by" = the way they paid.
@@ -1893,12 +1964,13 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const reg = findReg(db, payment.registration_id);
       const at = stamp();
       const common = { registration_id: reg.id, recorded_at: at, recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName };
-      db.payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id });
+      // 0044: both copy the school of the payment being edited (an edit never changes the desk).
+      db.payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id, school: payment.school });
       // 0030 (v0.419): a changed way changes "Paying by" too; the new payment keeps the family's choice.
       const follow = editPayingBy(reg, payment, a.p_method);
       const replacement = {
         id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null,
-        paying_by_before: follow.before,
+        paying_by_before: follow.before, school: payment.school,
       };
       db.payments.push(replacement);
       updateRow(reg, follow.changes, ctx, true);
@@ -2163,6 +2235,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         paying_by: args.payingBy, stripes_confirmed: true, source: 'form', reference: nextReference(db), submission_id: submissionId,
         signature: args.signature, signed_at: at, signature_deleted_at: null, ack_version: args.ackVersion, registered_at: at,
         status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
+        paying_by_on_form: args.payingBy, // 0044 (M-01): the family form's own choice, kept for good
         ...duplicateFlagsFor(db, event.id, args.first, args.last), // flagged silently — the family isn't told
       }, ctx);
       return registeredAnswer(db, reg);

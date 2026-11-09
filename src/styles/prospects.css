@@ -120,11 +120,8 @@
   margin-bottom: var(--space-12);
 }
 
-.pchips-gap {
-  flex: 1;
-}
-
 .pchip {
+  position: relative; /* the invisible tap box on touch (L-10) is placed from the chip */
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
@@ -156,11 +153,15 @@
   outline-offset: 2px;
 }
 
+/* "Find a prospect" (R3-09, v1.050): on the left above the list, after the "Showing … only" line, no
+   longer in the chip row. Camps' "Find a camper" is 360px at most; on a phone it takes the full width. */
 .psearch {
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  width: 240px;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: var(--space-12);
   height: var(--control-height);
   padding: 0 var(--space-8) 0 var(--space-12);
   border: 1px solid var(--color-border-control);
@@ -244,9 +245,10 @@
   color: var(--color-warning-text);
 }
 
-.pbar--phone .psearch {
-  width: 100%;
-  margin-bottom: var(--space-12);
+/* "No prospects match “zz”. · Clear search" in the list's place: it sits right under the box, so it
+   doesn't pull itself up toward the cards as the shared line does (as Camps' .cp-nomatch). */
+.pnomatch.ev-filter-line {
+  margin-top: 0;
 }
 
 /* ----- List ----- */
@@ -1295,6 +1297,11 @@ body.is-card-dragging * {
   background: var(--color-surface);
 }
 
+/* Copy number's failure note (U-05): a full-width line in the number's box, under the button */
+.pbignumber-fail {
+  flex: 1 0 100%;
+}
+
 .pbignumber-n {
   font-size: var(--text-20);
   font-weight: 500;
@@ -1502,6 +1509,42 @@ body.is-card-dragging * {
   font-size: var(--text-12);
 }
 
+/* Edit statuses on a phone: "No-show" and "Not interested" keep their name on one line; it is the gray
+   kind words ("Side exit (a chip) · used by the app") that wrap, to the right of the name. A very long
+   custom name still wraps, at 65% of the row, so it can't push the kind words out. */
+.ctypes-row .ctypes-name {
+  flex: 0 0 auto;
+  max-width: 65%;
+  overflow-wrap: anywhere;
+}
+
+.ctypes-row .pkind {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: right;
+}
+
+/* On a narrow phone the gray kind words drop below the name, lined up with it (swatch 12 px + gap 12 px),
+   instead of being squeezed into 3 or 4 short lines beside it (design review of batch 5). */
+@media (max-width: 480px) {
+  .ctypes-row {
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-4);
+  }
+
+  .ctypes-row .ctypes-name {
+    max-width: calc(100% - 24px);
+  }
+
+  .ctypes-row .pkind {
+    flex: 1 1 100%;
+    padding-left: 24px;
+    text-align: left;
+  }
+}
+
 /* Calendar day panel: Check in */
 .cpanel-checkin {
   margin-left: auto;
@@ -1520,10 +1563,19 @@ body.is-card-dragging * {
     padding: var(--space-12);
   }
 
-  .pview-btn::after {
+  .pview-btn::after,
+  .pchip::after {
     position: absolute;
     inset: -5px 0; /* invisible: 36px button + 2 × 4px (+ the border) = 44px tap height */
     content: '';
+  }
+
+  /* L-10: the chips ("No-show · 1", "Not interested · 1", "Follow up today · 5") are 36px tall with
+     this invisible box around them, like the List / Board switch — the 8px gaps between chips (and
+     between wrapped rows) give each 44px without overlap. The row is 4px roomier under the chips so
+     the "Show all" link's own 44px box (shared.css, .cards-showing) never touches the chips' box. */
+  .pchips {
+    margin-bottom: var(--space-16);
   }
 
   .psearch {
@@ -1556,10 +1608,6 @@ body.is-card-dragging * {
     column-gap: var(--space-8);
   }
 
-  .psearch {
-    width: 200px;
-  }
-
   /* a cancelled-class warning keeps its words (it wraps instead of being cut) */
   .plist-row > span.is-warn {
     white-space: normal;
@@ -1583,6 +1631,15 @@ body.is-card-dragging * {
 
   .pp-answer.is-top + .pp-answer.is-top {
     border-top: 1px solid var(--color-border);
+  }
+
+  /* U-06: on the profile page (the full-screen window) the toast ("Status: Booked · Undo") sits above
+     where the bottom bar would be and used to cover the last buttons ("Book a free class"). While a toast
+     shows, the page gets its own height of room below the last button, so it can be scrolled clear of it
+     (the toast's bottom offset + a two-line toast + a gap). Shared parts' own room for the toast (R2-04) is
+     Dashboard core's; this only covers the profile page, and goes if that already does. */
+  body:has(.toast-region .toast) .dialog-page.pp-dialog .dialog-page-body {
+    padding-bottom: calc(var(--bottombar-height) + var(--space-8) + 56px + var(--space-16) + env(safe-area-inset-bottom));
   }
 }
 

@@ -48,6 +48,14 @@ export const MAX_PAYMENT_CENTS = 100000;
 // pretend date. Kept here so the preview database and eventsApi.js read the same key.
 export const PREVIEW_TODAY_KEY = 'tkd.preview.today';
 
+// The narrowest room beside the left panel (px) in which the event roster keeps its tablet columns
+// (design review pass 2 L-02, rulebook v0.431). "Room" is Dashboard core's measure (src/lib/pageRoom.js):
+// the page area's width, the page's own side margins included. Measured in preview on 2026-11-06 with
+// every class of the sample event: with a mouse the first text-on-text overlap comes at 636 px of room,
+// with touch at 611, so 648 keeps a few px to spare. Narrower than this the roster draws the stacked
+// rows phones show, whatever the window's own width. If class or rank names ever grow, measure again.
+export const ROSTER_ROOM = 648;
+
 // The five event states, in the order eventState checks them.
 export const EVENT_STATES = ['finished', 'open', 'closed_by_date', 'not_open_yet', 'closed'];
 
@@ -237,6 +245,65 @@ export function feeFor(rank, dateIso, testingDateIso) {
 // Paid = more than nothing recorded (net of reversals). No partial payments exist (§1.6).
 export function isPaid(paidCents) {
   return typeof paidCents === 'number' && paidCents > 0;
+}
+
+// Where the family chose today's "Paying by", for the Mark paid box's hint (M-01 = C-01, migration
+// 0044; rulebook v0.418, v0.420): 'form' ("They chose Cash on the form.") only while Paying by is
+// still the family form's own choice (payingByOnForm); 'desk' ("… at the desk.") once staff
+// changed it (Change how they'll pay, Mark paid or Edit payment by another way) — and ALSO when
+// there is no form choice (null or missing: added at the desk). That last part is the difference
+// from Camps' payingByChoiceWhere (campRules.js), where a missing choice means "a database from
+// before 0033" and says 'form'. Used by the event roster and the Private testing tab alike.
+export function markPaidChoiceWhere(row) {
+  const onForm = row?.payingByOnForm;
+  if (typeof onForm !== 'string' || onForm === '') return 'desk';
+  return row.payingBy === onForm ? 'form' : 'desk';
+}
+
+// Print receipt's one rule for an event registration, shared by the row's ⋯ button, its ⋯ menu and
+// the summary's Payment row (CB2, rulebook v0.420; pass 2 M-03, v1.055 (b) and v0.428): a payment
+// that still stands (paid), on an active OR a removed row (withdrawn, or a duplicate copy), for staff
+// and admins — staff's ⋯ on a removed row then holds only this item; never while Hide private
+// details is on. A student moved to private testing has no payment left here (it moved with them).
+export function canPrintReceipt(row, hidden = false) {
+  return hidden !== true && row?.paid === true && !row?.movedTo;
+}
+
+// The student summary's "Date signed" row (rule v0.638, v0.430): the moment the family form saved the
+// signature (signed_at), for a student who registered on the family form with the signature still on
+// file. A student added at the desk has no signature (no row); one whose signature was deleted 90 days
+// after testing keeps "Signed on the form, Oct 29 (the signature is deleted …)", which already says
+// the day. → the timestamp, or null for no row.
+export function dateSignedOf(row) {
+  if (!row || row.source !== 'form' || row.signatureDeletedAt || !row.signedAt) return null;
+  return row.signedAt;
+}
+
+// The event roster's count cards (CB9) and their filters. A row marked "Possible duplicate" stays out
+// of Paid and Not paid until the pair is resolved (pass 1 R3-02, rulebook v1.046 (8), as Black Belt's
+// rosterFilter); Students counts every active row. active: the event's active rows.
+// → { students, paid, notPaid, flagged } (flagged = the possible-duplicate rows left out)
+export function rosterCounts(active) {
+  const list = active ?? [];
+  const countable = list.filter((r) => r.duplicateState !== 'possible');
+  const paid = countable.filter((r) => r.paid === true).length;
+  return { students: list.length, paid, notPaid: countable.length - paid, flagged: list.length - countable.length };
+}
+
+// Does a row show while a Paid / Not paid card is pressed? (filter null = no card pressed: everyone.)
+// A possible duplicate is in neither until it's resolved (R3-02).
+export function inCardFilter(row, filter) {
+  if (filter === null || filter === undefined) return true;
+  if (row?.duplicateState === 'possible') return false;
+  return filter === 'paid' ? row?.paid === true : row?.paid !== true;
+}
+
+// The Students roster's own layout (pass 2 L-02, rulebook v0.431): the window's, except that in a room
+// narrower than ROSTER_ROOM (narrowRoom, from Dashboard core's usePageRoomBelow) it draws its phone
+// rows even in a tablet-sized window. Only isPhone changes: a mouse keeps its mouse sizes (isTouch)
+// and a wide window its wide columns (isWide). layout = { isPhone, isTouch, isWide }, from the window.
+export function rosterLayoutFor(layout, narrowRoom) {
+  return narrowRoom && !layout.isPhone ? { ...layout, isPhone: true } : layout;
 }
 
 // ----- Class times (§1.4, E4–E6) -----

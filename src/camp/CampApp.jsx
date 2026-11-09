@@ -34,6 +34,7 @@ import { getTurnstileToken, removeTurnstile } from '../register/turnstile.js';
 import { buildBody, detailsErrors, emptyChild, emptyPerson, familyTotalFor, fieldId, signatureIsValid, tidyChild } from './form.js';
 import { longDate } from './format.js';
 import { MAX_CHILDREN, toCamel } from '../lib/camps/campRules.js';
+import { PREVIEW_TODAY_KEY, isIsoDate, todayInSchoolTime } from '../lib/testing/eventRules.js';
 import * as T from './text.js';
 
 const isPreview = import.meta.env.MODE === 'preview';
@@ -50,6 +51,21 @@ function codeFromAddress() {
   } catch {
     return null;
   }
+}
+
+// Today at the school, for the "Date signed" box (rulebook v0.638). In preview mode the staff preview
+// can pretend it's another day (__tkdPreview.setToday), so the page follows the same pretend date
+// (as Star's family page).
+function schoolToday() {
+  if (isPreview) {
+    try {
+      const pretend = window.localStorage.getItem(PREVIEW_TODAY_KEY);
+      if (isIsoDate(pretend)) return pretend;
+    } catch {
+      // storage blocked: use the real date
+    }
+  }
+  return todayInSchoolTime();
 }
 
 const newSubmissionId = () => crypto.randomUUID();
@@ -378,6 +394,7 @@ export default function CampApp() {
         onBack={onBack}
         refs={checkRefs}
         headingRef={headingRef}
+        today={schoolToday()}
       />
     );
   } else {

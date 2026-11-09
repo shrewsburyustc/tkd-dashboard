@@ -3,7 +3,7 @@
 // Why it exists: contract CONTRACT-0016-B1 §3 (Cycles 4 and 5). The dialog's values live HERE,
 // not in the dialog, so a screen lock hides the dialog and brings it back exactly as it was.
 //
-//   const editor = useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, setBanner,
+//   const editor = useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, undoAction, setBanner,
 //                                   onNoAccess, onRefreshProfile, showToast, clearToast,
 //                                   onSaved, onClosed, onGone });
 //   editor.openAdd(opener) · editor.openEdit(cycleId, opener) · editor.element · editor.isOpen
@@ -18,10 +18,14 @@
 //   If the second call fails, the cycle IS saved: the dialog closes and the screen behind shows
 //   "The cycle was saved, but registration didn't change: …" with Retry.
 // After a save (BB5, v0.967): "Cycle added · Undo" (deletes the new cycle) and "Changes saved ·
-// Undo" (puts the old values and the registration switch back) — see undoAdd / undoEdit below.
+// Undo" (puts the old values and the registration switch back) — see runUndoAdd / runUndoEdit below.
 // Migration 0032: "Changes saved · Undo" is ONE database call (undoCycleEdit), so it can no longer
 // stop halfway, and a family that registers between the Save and the Undo is always caught.
-// Status words come from text.js; the database decides, the screen only grays Save early.
+// The two Undos run through the page's shared save line (lib/saveLine.js, R2-05): `undoAction` is
+// that line's undoAction. An Undo pressed while another save runs waits its turn ("Undoing…") and
+// runs when that save ends; its answer comes back as { status, reason?, doneText? } and the line
+// shows "Undone" or the bar. Status words come from text.js; the database decides, the screen only
+// grays Save early.
 // Migration 0025 (contract §14.5, S2): Edit cycle also reads bb_cycle_grading_state. A past day
 // whose part already has grades can't be moved or deleted (nor that part unticked), and once
 // grading started the first day can't be moved or deleted and no day can come before it — those
@@ -76,7 +80,7 @@ export function undoForm(original, saved) {
   return { ...form, days: form.days.map((day) => (kept.has(day.id) ? day : { ...day, id: null })) };
 }
 
-export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, setBanner, onNoAccess, onRefreshProfile, showToast, clearToast, onSaved, onClosed, onGone, reload }) {
+export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, undoAction, setBanner, onNoAccess, onRefreshProfile, showToast, clearToast, onSaved, onClosed, onGone, reload }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [dialog, setDialog] = useState(null);
   const dialogRef = useRef(dialog);
@@ -111,7 +115,8 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
   }
 
   // ----- Opening -----
-  function handleLoadProblem(status) {
+  // retry: repeats the same read (S-2: a failed read behind a button always has Retry)
+  function handleLoadProblem(status, retry) {
     if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: T.NOT_ALLOWED });
@@ -119,7 +124,15 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     } else if (status === 'not_found') {
       setBanner({ text: T.CYCLE_DELETED });
       onGone?.();
-    } else setBanner({ text: T.LOAD_FAILED });
+    } else {
+      setBanner({
+        text: T.LOAD_FAILED,
+        retry: () => {
+          setBanner(null);
+          retry();
+        },
+      });
+    }
   }
 
   function open(next) {
@@ -142,10 +155,14 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
 
   async function openAdd(opener) {
     if (!isAdmin || dialogRef.current || !beginWrite()) return;
-    const result = await loadCycleDefaults();
-    endWrite(result.status === 'ok' ? 'ok' : result.status);
+    let result = { status: 'error' };
+    try {
+      result = await loadCycleDefaults();
+    } finally {
+      endWrite(result.status);
+    }
     if (result.status !== 'ok') {
-      handleLoadProblem(result.status);
+      handleLoadProblem(result.status, () => openAdd(opener));
       return;
     }
     const values = formToValues({ ...result.form, registrationOpen: false });
@@ -154,10 +171,15 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
 
   async function openEdit(cycleId, opener) {
     if (!isAdmin || dialogRef.current || !beginWrite()) return;
-    const [result, grading] = await Promise.all([loadCycle({ cycleId }), loadGradingState({ cycleId })]);
-    endWrite(result.status === 'ok' ? 'ok' : result.status);
+    let result = { status: 'error' };
+    let grading = { status: 'error' };
+    try {
+      [result, grading] = await Promise.all([loadCycle({ cycleId }), loadGradingState({ cycleId })]);
+    } finally {
+      endWrite(result.status);
+    }
     if (result.status !== 'ok') {
-      handleLoadProblem(result.status);
+      handleLoadProblem(result.status, () => openEdit(cycleId, opener));
       return;
     }
     const values = formToValues(cycleToForm(result.cycle));
@@ -208,32 +230,45 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     if (!beginWrite()) return;
     patch({ saving: true, note: null, failed: false });
     const form = { ...c.form, name: normalizeName(c.form.name) };
+    // The line is freed exactly once, with the database's real answer and how to do this save again (C1,
+    // v1.127), even if a call throws (C8: the catch below frees it, then lets the error go on up).
+    let ended = false;
+    const finish = (status) => {
+      if (ended) return;
+      ended = true;
+      endWrite(status, () => save());
+    };
 
     let result;
     let switchWanted = false;
     // For Edit cycle's Undo (BB5): who was registered BEFORE this save. The database refuses the
-    // Undo when a family registered after it (see undoEdit). Read before the save, so a family
+    // Undo when a family registered after it (see runUndoEdit). Read before the save, so a family
     // that registers while the save is on its way counts as "after" (the safe side). A cycle never
     // opened for registration can't have families, so nothing is read (an empty list). If the
     // read fails, this save gets NO Undo (plain "Changes saved"): comparing the database's
     // registration times with this computer's clock could let an Undo through after a family
     // registered.
     let known = null;
-    if (d.mode === 'add') {
-      result = await addCycle({ form: { ...form, registrationOpen: false }, sourceCycleId: d.sourceCycleId });
-      switchWanted = false; // v0.933: Add cycle always saves the cycle closed
-    } else {
-      if (!d.original.firstOpenedAt) known = new Set();
-      else {
-        const before = await loadRoster({ cycleId: d.cycleId });
-        if (before.status === 'ok') known = new Set(before.rows.map((r) => r.id));
+    try {
+      if (d.mode === 'add') {
+        result = await addCycle({ form: { ...form, registrationOpen: false }, sourceCycleId: d.sourceCycleId });
+        switchWanted = false; // v0.933: Add cycle always saves the cycle closed
+      } else {
+        if (!d.original.firstOpenedAt) known = new Set();
+        else {
+          const before = await loadRoster({ cycleId: d.cycleId });
+          if (before.status === 'ok') known = new Set(before.rows.map((r) => r.id));
+        }
+        result = await updateCycle({ cycleId: d.cycleId, expectedVersion: d.original.version, form });
+        switchWanted = Boolean(d.original.firstOpenedAt) && form.registrationOpen !== d.original.registrationOpen;
       }
-      result = await updateCycle({ cycleId: d.cycleId, expectedVersion: d.original.version, form });
-      switchWanted = Boolean(d.original.firstOpenedAt) && form.registrationOpen !== d.original.registrationOpen;
+    } catch (error) {
+      finish('error');
+      throw error;
     }
 
     if (result.status !== 'ok') {
-      endWrite(result.status);
+      finish(result.status);
       const status = result.status;
       if (status === 'no_access') {
         patch({ saving: false });
@@ -266,11 +301,17 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     let version = result.version;
     if (switchWanted) {
       const open = form.registrationOpen === true;
-      const switched = await setRegistration({ cycleId, expectedVersion: version, open });
+      // The cycle IS saved by now: a switch call that throws counts as one that didn't reach the database.
+      let switched = { status: 'error' };
+      try {
+        switched = await setRegistration({ cycleId, expectedVersion: version, open });
+      } catch {
+        switched = { status: 'error' };
+      }
       if (switched.status === 'ok') version = switched.version;
       else switchFailed = switched.status;
     }
-    endWrite('ok');
+    finish('ok');
     setDialog(null);
     // BB5 (v0.967): "Cycle added · Undo" (Undo deletes the new cycle) and "Changes saved · Undo"
     // (Undo puts back everything this save changed, the registration switch included).
@@ -286,11 +327,17 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
       oldOpen: d.original?.registrationOpen === true,
       known,
     };
-    let undo = null;
-    if (d.mode === 'add') undo = () => undoAdd({ cycleId, version, name });
-    else if (known) undo = () => undoEdit({ ...editUndo });
+    // The toast's Undo goes through the page's save line (R2-05). `words` names the change if the
+    // Undo fails after the person left the page.
     const toastText = d.mode === 'add' ? T.TOAST_CYCLE_ADDED : T.TOAST_CHANGES_SAVED;
-    showToast(toastText, undo ? { icon: false, action: { label: T.UNDO, onAction: undo } } : { icon: false });
+    const words = `${toastText} · ${name}`;
+    let undo = null;
+    if (d.mode === 'add') undo = undoAction(() => runUndoAdd({ cycleId, version, name }), { words });
+    else if (known) {
+      // Read when the Undo RUNS: a Retry of the registration switch may have moved the version on.
+      undo = undoAction(() => runUndoEdit({ ...editUndo }), { words });
+    }
+    showToast(toastText, undo ? { icon: false, action: undo } : { icon: false });
     if (switchFailed) {
       if (switchFailed === 'no_access') onNoAccess();
       else {
@@ -311,9 +358,14 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
   async function retrySwitch(cycleId, wanted, done) {
     const a = latest.current;
     if (!a.beginWrite()) return;
-    const fresh = await loadCycle({ cycleId });
-    const again = fresh.status === 'ok' ? await setRegistration({ cycleId, expectedVersion: fresh.cycle.version, open: wanted }) : fresh;
-    a.endWrite(again.status);
+    let again = { status: 'error' };
+    try {
+      const fresh = await loadCycle({ cycleId });
+      again = fresh.status === 'ok' ? await setRegistration({ cycleId, expectedVersion: fresh.cycle.version, open: wanted }) : fresh;
+    } finally {
+      // Always ended (C8), with the real status and how to try again (C1)
+      a.endWrite(again.status, () => retrySwitch(cycleId, wanted, done));
+    }
     if (again.status === 'ok') {
       a.setBanner(null);
       done?.(again.version);
@@ -321,24 +373,16 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     else a.setBanner({ text: T.registrationNotChanged(T.switchProblem(again.status)), retry: again.status === 'error' ? () => retrySwitch(cycleId, wanted, done) : undefined });
   }
 
-  // ----- Undo (BB5, v0.967) — every problem goes in the amber bar (v0.966) -----
-  // `a` is always the props as they were when Undo was PRESSED: on the cycle page each tab has its
-  // own bar setter, so an answer that arrives after a tab change is dropped, not shown on the new tab.
-  // Undo's own lost connection → the bar with Retry (the same Undo again); a refusal → × only.
-  function undoFailed(a, retry) {
-    a.setBanner({
-      text: T.UNDO_FAILED,
-      retry: () => {
-        a.setBanner(null);
-        retry();
-      },
-    });
-  }
-  // A refusal: read the list again first (so "Their change is shown" is true), then the bar.
-  async function undoRefused(a, status, text) {
-    a.endWrite(status);
+  // ----- Undo (BB5, v0.967; R2-05) — every problem goes in the amber bar (v0.966) -----
+  // Each runs inside the page's save line (lib/saveLine.js): it does the Undo, reads the list again
+  // when the database refused it (so "Their change is shown" is true) and answers
+  //   { status: 'ok', doneText? }   it worked ("Undone", or doneText)
+  //   { status: 'error' }           it didn't reach the database: the line's bar "Undo didn't save…" + Retry
+  //   { status: 'no_access' }       the screen locks (the line leaves its bar for after the unlock)
+  //   { status, reason }            the database refused it: the reason in the bar, × only
+  async function refused(a, status, reason) {
     await a.reload?.();
-    a.setBanner({ text });
+    return { status, reason };
   }
 
   // "Cycle added · Undo": delete the new cycle with the version and candidate count (0) it was
@@ -346,36 +390,28 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
   // changed it, or a candidate was added). Which one is read from the roster: a family's
   // registration (source 'form') → "Can't undo: a family has already registered."; anything else
   // → "Someone else changed Spring 2027 just now, so nothing was done. Their change is shown."
-  async function undoAdd({ cycleId, version, name }) {
+  async function runUndoAdd({ cycleId, version, name }) {
     const a = latest.current;
-    if (!a.beginWrite()) return;
     const result = await deleteCycle({ cycleId, expectedVersion: version, expectedCandidateCount: 0 });
     const status = result.status;
     if (status === 'ok') {
-      a.endWrite('ok');
-      a.reload?.();
-      a.showToast(T.TOAST_UNDONE, { icon: false });
-      return;
+      await a.reload?.();
+      return { status: 'ok' };
     }
     if (status === 'no_access') {
-      a.endWrite(status);
       a.onNoAccess();
-      return;
+      return { status };
     }
-    if (status === 'error') {
-      a.endWrite(status);
-      undoFailed(a, () => undoAdd({ cycleId, version, name }));
-      return;
-    }
-    if (status === 'not_found') return undoRefused(a, status, T.CYCLE_DELETED);
+    if (status === 'error') return { status };
+    if (status === 'not_found') return refused(a, status, T.CYCLE_DELETED);
     if (status === 'not_allowed') {
       a.onRefreshProfile();
-      return undoRefused(a, status, T.NOT_ALLOWED);
+      return refused(a, status, T.NOT_ALLOWED);
     }
-    if (status === 'has_waivers') return undoRefused(a, status, T.CANT_UNDO_REGISTERED); // a family signed
+    if (status === 'has_waivers') return refused(a, status, T.CANT_UNDO_REGISTERED); // a family signed
     const roster = await loadRoster({ cycleId });
     const familyCame = roster.status === 'ok' && roster.rows.some((r) => r.source === 'form');
-    return undoRefused(a, status, familyCame ? T.CANT_UNDO_REGISTERED : T.candidateStale(name));
+    return refused(a, status, familyCame ? T.CANT_UNDO_REGISTERED : T.candidateStale(name));
   }
 
   // "Changes saved · Undo" of Edit cycle: ONE database call (migration 0032, bb_undo_cycle_edit).
@@ -389,9 +425,8 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
   //     close included). If either is refused, NEITHER is kept, so the Undo can't stop halfway.
   // A refusal → its words in the bar (× only); a lost connection → the bar with Retry (the same
   // Undo again).
-  async function undoEdit(u) {
+  async function runUndoEdit(u) {
     const a = latest.current;
-    if (!a.beginWrite()) return;
     const back = await undoCycleEdit({
       cycleId: u.cycleId,
       expectedVersion: u.version,
@@ -401,22 +436,15 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     });
     const status = back.status;
     if (status === 'ok') {
-      a.endWrite('ok');
-      a.reload?.();
+      await a.reload?.();
       // When this Undo put registration back to open (the save had closed it), the toast says so (R2-07)
-      a.showToast(u.switched && u.oldOpen === true ? T.TOAST_UNDONE_OPEN_AGAIN : T.TOAST_UNDONE, { icon: false });
-      return undefined;
+      return { status: 'ok', doneText: u.switched && u.oldOpen === true ? T.TOAST_UNDONE_OPEN_AGAIN : null };
     }
     if (status === 'no_access') {
-      a.endWrite(status);
       a.onNoAccess();
-      return undefined;
+      return { status };
     }
-    if (status === 'error') {
-      a.endWrite(status);
-      undoFailed(a, () => undoEdit(u));
-      return undefined;
-    }
+    if (status === 'error') return { status };
     if (status === 'not_allowed') a.onRefreshProfile();
     let text = T.UNDO_CYCLE_INVALID; // invalid (e.g. an old date is in the past now), duplicate_name …
     if (status === 'registered') text = T.CANT_UNDO_REGISTERED;
@@ -425,7 +453,7 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     else if (status === 'has_grades') text = T.UNDO_CYCLE_HAS_GRADES;
     else if (status === 'not_allowed') text = T.NOT_ALLOWED;
     else if (status === 'finished' || status === 'waiver_needed') text = T.switchProblem(status);
-    return undoRefused(a, status, text);
+    return refused(a, status, text);
   }
 
   // ----- The testing-day dialog (on top) -----

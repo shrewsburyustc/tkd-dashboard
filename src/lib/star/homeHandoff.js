@@ -44,5 +44,6 @@ export function clearPrivateHandoff() {
 
 // Signing out empties it too (App.jsx sends 'tkd:signed-out'), so the next person to sign in on
 // this device can never land on the previous person's private grading page — even inside the
-// 60 seconds. (This file only loads while the Star testing switch is on.)
+// 60 seconds. (Home and the Calendar both import this file; the Calendar hides Star items itself while
+// the Star testing switch is off, so a private test is never handed over then.)
 if (typeof window !== 'undefined') window.addEventListener('tkd:signed-out', clearPrivateHandoff);

@@ -51,6 +51,9 @@
 --   their owner).
 --
 -- BEFORE YOU RUN IT
+--   0. It runs before AND after 0035 (which removes testing_mark_paid): its
+--      test payments go through pg_temp.t_mark_paid below, and C5 accepts
+--      the removal.
 --   1. 0001-0005 are applied. You need TWO existing, ACTIVE staff rows: an
 --      admin (Main Admin) and the shared front desk (Staff, role staff).
 --   2. Replace <paste-admin-UID-here> and <paste-desk-UID-here> below with
@@ -68,6 +71,50 @@
 -- =====================================================================
 
 begin;
+
+-- ---------------------------------------------------------------------
+-- Test payments (migration 0035): 0035 removed the old one-click Mark paid
+-- (testing_mark_paid / testing_private_mark_paid, 2 arguments). The test
+-- payments below go through these helpers, which call the old function
+-- while it exists and otherwise 0030's *_by version the way the old one
+-- worked: the family's "Paying by" as the way and the worked-out amount
+-- (asked for with 0 cents expected first: that price_changed answer
+-- writes nothing). An ok answer keeps only the old keys (status,
+-- payment_id, amount_cents, method, version), so every check reads the
+-- same answer as before. They run with the caller's rights (as whoever
+-- t_call / "set local role" made the caller), like the call they stand in
+-- for. Temporary: they vanish with the session and the rollback.
+-- ---------------------------------------------------------------------
+
+create function pg_temp.t_mark_paid(p_registration_id uuid, p_expected_version integer)
+returns jsonb
+language plpgsql
+as $t$
+declare
+  v_r   jsonb;
+  v_way text;
+begin
+  if to_regprocedure('public.testing_mark_paid(uuid, integer)') is not null then
+    execute 'select public.testing_mark_paid($1, $2)' into v_r using p_registration_id, p_expected_version;
+    return v_r;
+  end if;
+  select x.paying_by into v_way from public.testing_registrations x where x.id = p_registration_id;
+  v_way := coalesce(v_way, 'cash');
+  execute 'select public.testing_mark_paid_by($1, $2, $3, 0)' into v_r using p_registration_id, p_expected_version, v_way;
+  if v_r ->> 'status' = 'price_changed' then
+    execute 'select public.testing_mark_paid_by($1, $2, $3, $4)' into v_r
+      using p_registration_id, p_expected_version, v_way, (v_r ->> 'amount_cents')::integer;
+  end if;
+  if v_r ->> 'status' = 'ok' then
+    v_r := v_r - 'paid_on' - 'paying_by';
+  end if;
+  return v_r;
+end;
+$t$;
+-- Callable by the logged-in role too: the test calls it inside "set local role authenticated", and
+-- production gives functions made by the SQL Editor's role no rights for anyone else.
+grant execute on function pg_temp.t_mark_paid(uuid, integer) to public;
+
 
 do $$
 declare
@@ -253,7 +300,7 @@ begin
     format('public.testing_add_student(%L::uuid, %L, %L, %L::uuid, true, %L)', v_rand, 'Ann', 'Lee', v_rand2, 'cash'),
     format('public.testing_update_student(%L::uuid, 1, %L, %L, %L::uuid)', v_rand, 'Ann', 'Lee', v_rand2),
     format('public.testing_change_paying_by(%L::uuid, 1, %L)', v_rand, 'cash'),
-    format('public.testing_mark_paid(%L::uuid, 1)', v_rand),
+    format('pg_temp.t_mark_paid(%L::uuid, 1)', v_rand),
     format('public.testing_undo_payment(%L::uuid)', v_rand),
     format('public.testing_edit_payment(%L::uuid, %L, 100, %L::date)', v_rand, 'cash', v_today),
     format('public.testing_resolve_duplicate(%L::uuid, 1, %L::uuid, 1, true)', v_rand, v_rand2),
@@ -407,8 +454,12 @@ begin
   if v_txt is not null then raise exception 'TEST FAILED: T2c testing_registrar has rights on: %', v_txt; end if;
 
   -- T2d. it can't create anything in any schema, nor in the database
+  --      (this session's OWN temporary schema doesn't count: it exists only
+  --      because this file made its pg_temp helpers, and PostgreSQL reports
+  --      every role as able to use the current session's temp schema)
   select string_agg(n.nspname, ', ') into v_txt
-    from pg_namespace n where has_schema_privilege('testing_registrar', n.oid, 'CREATE');
+    from pg_namespace n where has_schema_privilege('testing_registrar', n.oid, 'CREATE')
+                          and n.oid <> pg_my_temp_schema();
   if v_txt is not null then raise exception 'TEST FAILED: T2d testing_registrar can CREATE in schema(s): %', v_txt; end if;
   if has_database_privilege('testing_registrar', current_database(), 'CREATE') then
     raise exception 'TEST FAILED: T2d testing_registrar can CREATE in the database';
@@ -1104,16 +1155,16 @@ begin
   -- T6b. Mark paid before the testing day: the early price, paying_by,
   --      today; the version goes up; a double click (old version) = stale;
   --      again with the new version = already_paid
-  v_r := public.testing_mark_paid(v_s1, 1);
+  v_r := pg_temp.t_mark_paid(v_s1, 1);
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'amount_cents')::int <> 6500 or v_r ->> 'method' <> 'cash'
      or (v_r ->> 'version')::int <> 2
      or (select array_agg(k order by k) from jsonb_object_keys(v_r) as k) <> array['amount_cents', 'method', 'payment_id', 'status', 'version'] then
     raise exception 'TEST FAILED: T6b mark_paid expected {ok, 6500, cash, version 2}, got %', v_r;
   end if;
   v_p1 := (v_r ->> 'payment_id')::uuid;
-  v_r := public.testing_mark_paid(v_s1, 1);
+  v_r := pg_temp.t_mark_paid(v_s1, 1);
   if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: T6b double click expected stale, got %', v_r; end if;
-  v_r := public.testing_mark_paid(v_s1, 2);
+  v_r := pg_temp.t_mark_paid(v_s1, 2);
   if v_r ->> 'status' <> 'already_paid' then raise exception 'TEST FAILED: T6b paid again expected already_paid, got %', v_r; end if;
   v_r := public.testing_change_paying_by(v_s1, 2, 'card');
   if v_r ->> 'status' <> 'already_paid' then raise exception 'TEST FAILED: T6b change_paying_by on a paid student expected already_paid, got %', v_r; end if;
@@ -1139,12 +1190,12 @@ begin
   if exists (select 1 from public.testing_roster v where v.id = v_s1 and (v.paid or v.paid_cents <> 0 or v.last_payment_id is not null)) then
     raise exception 'TEST FAILED: T6c after undo the student must be Not paid';
   end if;
-  v_r := public.testing_mark_paid(v_s1, 3);   -- paid again after the undo
+  v_r := pg_temp.t_mark_paid(v_s1, 3);   -- paid again after the undo
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T6c mark_paid after undo expected ok, got %', v_r; end if;
   v_p2 := (v_r ->> 'payment_id')::uuid;
   -- someone else's payment (the admin's) -> the desk may not undo it
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.testing_mark_paid(v_s2, 2);
+  v_r := pg_temp.t_mark_paid(v_s2, 2);
   v_pa := (v_r ->> 'payment_id')::uuid;
   if (v_r ->> 'method') <> 'card' then raise exception 'TEST FAILED: T6c mark_paid must use paying_by (card), got %', v_r; end if;
   perform set_config('request.jwt.claims', v_c_d1, true);
@@ -1199,8 +1250,8 @@ begin
   v_stom := (public.testing_add_student(v_etom, 'Tom', 'One',
                (select k.id from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
                  where c.event_id = v_etom and k.rank_id = v_ta_orange), true, 'cash') ->> 'id')::uuid;
-  v_r := public.testing_mark_paid(v_sday, 1);
-  v_r2 := public.testing_mark_paid(v_stom, 1);
+  v_r := pg_temp.t_mark_paid(v_sday, 1);
+  v_r2 := pg_temp.t_mark_paid(v_stom, 1);
   if (v_r ->> 'amount_cents')::int is distinct from 7500 or (v_r2 ->> 'amount_cents')::int is distinct from 6500 then
     raise exception 'TEST FAILED: T6e on the testing day expected 7500 (got %), the day before 6500 (got %)', v_r, v_r2;
   end if;
@@ -1215,7 +1266,7 @@ begin
   v_r := public.testing_withdraw_student(v_s4, 2);
   if v_r ->> 'status' <> 'withdrawn' then raise exception 'TEST FAILED: T6f withdraw twice expected withdrawn, got %', v_r; end if;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.testing_mark_paid(v_s4, 2);
+  v_r := pg_temp.t_mark_paid(v_s4, 2);
   if v_r ->> 'status' <> 'withdrawn' then raise exception 'TEST FAILED: T6f mark_paid withdrawn expected withdrawn, got %', v_r; end if;
   v_r := public.testing_change_paying_by(v_s4, 2, 'card');
   if v_r ->> 'status' <> 'withdrawn' then raise exception 'TEST FAILED: T6f change_paying_by withdrawn expected withdrawn, got %', v_r; end if;
@@ -1230,7 +1281,7 @@ begin
   select e.version into v_v from public.testing_events e where e.id = v_efin;
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.testing_mark_paid(v_sfin, 1);
+  v_r := pg_temp.t_mark_paid(v_sfin, 1);
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'amount_cents')::int <> 7500 then
     raise exception 'TEST FAILED: T6g mark_paid on a finished event expected ok 7500, got %', v_r;
   end if;
@@ -1350,7 +1401,7 @@ begin
   -- the clean-up runs as the last step of Mark paid (any registration)
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.testing_mark_paid(v_fkeep, 1);
+  v_r := pg_temp.t_mark_paid(v_fkeep, 1);
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T7 mark_paid expected ok, got %', v_r; end if;
   reset role;
   if not exists (select 1 from public.testing_registrations r
@@ -1713,7 +1764,10 @@ begin
     'testing_payments.reverses_payment_id']
     -- 0019 (school phone, new-students branch) adds exactly one read right on locations
     || case when to_regprocedure('public.settings_update_school_contact(text, integer, text, text, text, text, text)') is not null
-            then array['locations.phone'] else array[]::text[] end;
+            then array['locations.phone'] else array[]::text[] end
+    -- 0044 (Color Belt rolling check, M-01) adds exactly one read right on registrations
+    || case when to_regprocedure('public.testing_undo_event_edit(uuid, integer, text, date, jsonb, date, text, boolean)') is not null
+            then array['testing_registrations.paying_by_on_form'] else array[]::text[] end;
   for v_tbl, v_col in
     select c.relname::text, a.attname::text
       from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
@@ -1746,6 +1800,14 @@ begin
 
   -- C5. every 0005 function: one version only, search_path pinned, who may
   --     run it, and which ones run as their owner (security definer)
+  -- After 0035 the old one-click testing_mark_paid is gone on purpose (the
+  -- app uses 0030's testing_mark_paid_by), so it is not expected then.
+  -- (0030's testing_mark_paid_by has 4 inputs; 0044 gives it a 5th)
+  if to_regprocedure('public.testing_mark_paid(uuid, integer)') is null
+     and (to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer)') is not null
+          or to_regprocedure('public.testing_mark_paid_by(uuid, integer, text, integer, text)') is not null) then
+    v_staff_fns := array_remove(v_staff_fns, 'testing_mark_paid');
+  end if;
   v_n := 0;
   for v_fn in
     select p.oid, p.proname::text as name, p.prosecdef, p.proconfig
@@ -1790,7 +1852,8 @@ begin
       'public.settings_update_school_address(text, integer, text, text, text, text)',
       'public.testing_public_event(text)',
       'public.testing_public_register(text, text, uuid, text, text, uuid, text, boolean, text, text)']) as x(sig)
-   where to_regprocedure(x.sig) is null;
+   where to_regprocedure(x.sig) is null
+     and (x.sig <> 'public.testing_mark_paid(uuid, integer)' or 'testing_mark_paid' = any (v_staff_fns));
   if v_txt is not null then raise exception 'TEST FAILED: C5 missing function signature(s): %', v_txt; end if;
   if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
               where n.nspname = 'public' and p.proname = any (v_staff_fns || v_public_fns) and p.pronargdefaults > 0) then

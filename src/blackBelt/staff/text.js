@@ -9,8 +9,13 @@
 // THIS computer's calendar with new Date(year, month - 1, day) — never new Date('YYYY-MM-DD'),
 // which would read the text as UTC midnight and could show the day before.
 
-import { formatCents } from '../../lib/blackBelt/money.js';
+import { formatMoney } from '../../lib/money.js';
 import { HIDDEN_ON_THIS_TABLET } from '../../lib/privateDetails.js';
+// More of the shared sentences (R2-07, R3-13): the refused-change line and the calendars' gray line, typed once in the shared words.
+import { PAST_DAYS_HINT, someoneElseChanged } from '../../components/text.js';
+export { PAST_DAYS_HINT, someoneElseChanged };
+// The payment sentences every section says (R1-06, R1-07; rulebook v1.045): one copy, here only formatted.
+import { couldntUndo, markedPaidToast, paidOnOpening, paymentUndoneToast, undoPaymentTitle as sharedUndoPaymentTitle } from '../../components/text.js';
 
 // ===== Dates, times, money =====
 function parseDay(iso) {
@@ -74,7 +79,6 @@ export const DISCARD_CHANGES = 'Discard changes'; // phones: the link inside the
 export const NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const STALE_DIALOG = 'Someone else changed this cycle just now. Close and open it again to see their change.';
 export const STALE_SETTINGS = 'Someone else changed this just now. Close and open it again to see their change.'; // Rubric and waiver (not in the mockups)
-export const SWITCH_STALE = "Couldn't change registration. Someone else changed this cycle just now.";
 export const duplicateCycle = (name) => `There's already a cycle called ${name}. Try another name.`;
 export const WAIVER_NEEDED = "Save the school's waiver on the Rubric and waiver tab first.";
 export const FINISHED = "This cycle is finished, so registration can't change."; // (not in the mockups)
@@ -82,24 +86,22 @@ export const HAS_PAYMENTS = 'Payments are recorded for this cycle.';
 export const HAS_WAIVERS = 'Families signed waivers on the form for this cycle.'; // (not in the mockups, OP-6)
 export const CYCLE_DELETED = 'This cycle was deleted.';
 export const INVALID = "That didn't save. Check the fields and try again.";
-export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
-export const LOAD_FAILED = "Couldn't load. Check the connection, then try again.";
-export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again."; // (not in the mockups)
-export const DELETE_STALE = "Couldn't delete. Someone else changed this cycle just now."; // (not in the mockups)
-export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry."; // (not in the mockups)
-export const UNDO_STALE = "Couldn't undo. Someone else changed this cycle just now."; // (not in the mockups)
+export const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";
+export { LOAD_FAILED } from '../../components/text.js'; // S-2 / R4-11 (v1.051): the one sentence, with Retry (the shared words)
+// (S-2: every read that fails now has a Retry, so the old no-Retry "try again" sentence is gone.)
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then retry."; // (not in the mockups)
+export { UNDO_DIDNT_SAVE as UNDO_FAILED } from '../../components/text.js'; // R2-07 (v1.045 (4)): the shared failed-Undo sentence
 export const REOPEN_NEEDS_ADMIN = 'The application date has passed. Ask an admin to open it.'; // R4-13 (v1.045): "open", not "reopen"
 // OP-4: the cycle saved, the Registration switch (a second call) didn't. (not in the mockups)
 export const registrationNotChanged = (reason) => `The cycle was saved, but registration didn't change: ${reason}`;
-export const COPY_FAILED = "Couldn't copy the link. Open Registration links on the cycle page and copy it from there."; // (not in the mockups)
-export const QR_FAILED = "Couldn't make the QR code picture. Try again."; // (not in the mockups)
+export const COPY_FAILED = "Couldn't copy the link. Open Registration link on the cycle page and copy it from there."; // BB10: the button is now "Registration link" (no longer a ⋯ item); new sentence, not in the mockups
 
 // The reason words used inside registrationNotChanged / banners, by status.
 export function switchProblem(status) {
   if (status === 'waiver_needed') return WAIVER_NEEDED;
   if (status === 'finished') return FINISHED;
   if (status === 'not_allowed') return NOT_ALLOWED;
-  if (status === 'stale') return SWITCH_STALE;
+  if (status === 'stale') return someoneElseChanged('this cycle');
   return SAVE_FAILED;
 }
 
@@ -115,8 +117,9 @@ export const TOAST_CYCLE_ADDED = 'Cycle added';
 export const TOAST_CHANGES_SAVED = 'Changes saved';
 export const toastWaiverSaved = (version) => `Waiver saved · version ${version}`;
 export const TOAST_KEEPING_SAVED = 'Keeping time saved'; // (not in the mockups, OP-8)
-export const TOAST_UNDONE = 'Undone';
+export { UNDONE as TOAST_UNDONE } from '../../components/text.js'; // the shared word (v1.051 (1))
 export const TOAST_UNDONE_OPEN_AGAIN = 'Undone. Registration is open again.'; // R2-07 (rulebook v1.051): an Undo that puts registration back to open says so
+export const UNDO_SECTION = 'Black Belt'; // the section's name in the bar a failed Undo leaves after the person left the page (lib/saveLine.js, v1.129)
 
 // ===== Cycles 2 / 3 · Black Belt home and the Cycles tab =====
 export const BACK_TO_TESTING = 'Testing';
@@ -177,12 +180,13 @@ export const editCycleLabel = (name) => `Edit ${name}`;
 export const moreFor = (name) => `More actions for ${name}`;
 export const COPY_WORCESTER_LINK = 'Copy Worcester link';
 export const COPY_SHREWSBURY_LINK = 'Copy Shrewsbury link';
-export const copySchoolLink = (school) => `Copy ${school} link`;
 export const CLOSE_REGISTRATION = 'Close registration';
 export const OPEN_REGISTRATION = 'Open registration';
 export const DELETE_CYCLE = 'Delete cycle';
+export const KEEP_CYCLE = 'Keep cycle'; // Delete cycle's left button (BB7, v1.008)
 export const EDIT_CYCLE = 'Edit cycle';
-export const REGISTRATION_LINKS = 'Registration links';
+export const REGISTRATION_LINK = 'Registration link'; // the cycle page header's button (BB10, v1.015: Star's word)
+export const REGISTRATION_LINKS = 'Registration links'; // the box's title (both schools)
 
 // OP-6: the Delete cycle confirmation (not in the mockups)
 export const deleteCycleTitle = (name) => `Delete ${name}?`;
@@ -245,6 +249,7 @@ export const DUE_DATES = 'Due dates';
 export const paymentLabel = (n) => `Payment ${n}`;
 export const payShort = (n) => `Pay ${n}`;
 export const TOTAL = 'Total';
+export const PLAN_TOTAL_NONE = '—'; // the Total of a plan column while one of its prices is not a valid price: never a wrong sum
 export const PLAN_NAME_LABEL = 'Plan name'; // the name field in the Add plan dialog
 export const amountLabel = (planName, dan, n) => `${planName || 'Plan'}, ${DAN_LABELS[dan]}, payment ${n}`;
 export const dueDateLabel = (planName, n) => `${planName || 'Plan'}, payment ${n} due date`;
@@ -331,7 +336,7 @@ export const DAY_NAME_HINT = 'Shown to families on the form and the confirmation
 export const DATE = 'Date';
 // Every Black Belt date field is the dashboard's calendar (v1.018, design review BB12):
 export const CHOOSE_DATE = 'Choose…'; // an empty date field (as Star's)
-export const PAST_DATES_HINT = 'Past dates can’t be chosen.'; // the testing day's and the payment due dates' calendars
+// The testing day's and the payment due dates' calendars say PAST_DAYS_HINT (R3-13: the shared "Past days can't be chosen.")
 export const START_TIME = 'Start time';
 export const END_TIME = 'End time';
 export const PLACE = 'Place';
@@ -406,6 +411,8 @@ export const keepConfirmBody = (n) =>
   `Saving deletes the signature, signer's name, date of birth and email of ${candidatesCount(n)} now. This can't be undone.`;
 export const KEEP_CONFIRM_TITLE = 'Delete personal details now?';
 export const SAVE_AND_DELETE = 'Save and delete';
+export const KEEP_CONFIRM_KEEP = 'Keep details'; // Jeffrey's word (Q1): the left button, the one that changes nothing
+// (DELETING, the red button's words while a delete works, is defined once further down.)
 
 // ===== Cycles 7 · Registration links =====
 export const linksSub = (name) => `${name} Black Belt testing`;
@@ -420,9 +427,6 @@ export function linksStateLine(state, cycle) {
   return "Registration is closed, so families can't sign up right now.";
 }
 export const LINKS_EXPLAIN = 'Each school has its own link; the link sets the candidate’s school. Families choose their Dan on the form.';
-export const schoolTitle = (school) => `${school} school`;
-export const DOWNLOAD_QR = 'Download QR code';
-export const qrAlt = (link) => `QR code for ${link}`;
 export const DAN_HINT_START = 'To choose the Dan for a family, add ';
 export const DAN_HINT_END = ' to the end of a link.';
 
@@ -438,12 +442,12 @@ export const LOADING_CYCLE = 'Loading the cycle';
 export const ENTRY_LABEL = 'Black Belt testing';
 
 // ===== B2 · Candidates tab (contract CONTRACT-0016-B2 §3, mockups Candidates 1–7 and 9) =====
-// Money is shown with formatCents ("$290", "$290.50", "−$50"; OP-B15). Every sentence the
+// Money is shown with formatMoney (the dashboard's one helper, src/lib/money.js; "$290", "$290.50", "−$50"; OP-B15). Every sentence the
 // mockups don't draw is marked "(not in the mockups)" for Jeffrey's walkthrough (CP2, OP-B12).
 // The points still open for Jeffrey (contract §7.1) are kept in one place each so they are easy
 // to change: OP-B1 (Undo payment) → UNDO_PAYMENT_*, OP-B2 (Add's Undo for staff) →
 // ADD_UNDO_FOR_STAFF, OP-B3 (icons) → candidates/icons.js.
-const money = (cents) => formatCents(cents);
+const money = (cents) => formatMoney(cents);
 
 // "Mar 4, 2012"
 export const monthDayYear = (iso) => dayText(iso, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -513,9 +517,9 @@ export const CARD_PAID_IN_FULL = 'Paid in full';
 export const CARD_ON_SCHEDULE = 'Paying on schedule';
 export const CARD_LATE = 'Late';
 export const CARD_NOT_PAID = 'Not paid';
+export const CARD_CANDIDATES = 'Candidates'; // the one card left while Hide private details is on (v1.046 (9))
 export const duplicatesLeftOut = (n) =>
   n === 1 ? "The possible duplicate row isn't counted in the cards until it's resolved." : `The ${n} possible duplicate rows aren’t counted in the cards until they’re resolved.`;
-export const duplicatesLeftOutPhone = (n) => (n === 1 ? "1 possible duplicate isn't counted until resolved." : `${n} possible duplicates aren’t counted until resolved.`);
 export const SHOWING_FILTER = {
   paidInFull: 'Showing paid in full only',
   onSchedule: 'Showing paying on schedule only',
@@ -539,9 +543,17 @@ export const planCell = (planName, kukkiwon) => (kukkiwon ? `${planName} · Kukk
 // (Hide private details on, v1.036: the Plan column and the phone line's plan words read the gray
 // HIDDEN_ON_DEVICE instead — RosterRows.jsx; the ⋯ menu's subtitle is then danSchool alone.)
 export const phoneSubline = (row) => `${danSchool(row.dan, row.locationCode)} · ${planCell(row.planName, row.kukkiwon)}`;
-export const NO_CANDIDATES = "No candidates yet. Families register with the cycle's links, or add one here."; // (not in the mockups)
+export const NO_CANDIDATES = "No candidates yet. Families register with the cycle's links, or staff add them with Add candidate."; // the empty roster's one line names the button (v1.028, as Star's)
 export const noMatch = (text) => `No candidates match "${text}".`; // (not in the mockups)
-export const NO_FILTER_MATCH = 'No candidates in this group.'; // a card filter with no rows (not in the mockups)
+// A count card's filter that leaves nobody says what is true for THAT card (C-05 (b), v1.055,
+// Color Belt's pattern: "No paid students in this class." / "Everyone in this class has paid.").
+export const EMPTY_FOR_CARD = {
+  paidInFull: 'No one has paid in full yet.',
+  onSchedule: 'No one is paying on schedule right now.',
+  late: 'No one is late.',
+  notPaid: 'No one is overdue with nothing paid.',
+};
+export const NO_FILTER_MATCH = 'No candidates in this group.'; // a card with no line of its own (should not happen)
 export const removedGroup = (n) => `Removed (${n})`; // (not in the mockups, OP-B10)
 export const NOT_IN_COUNTS = 'Not in the counts'; // (not in the mockups, OP-B10)
 export const TAG_REMOVED = 'Removed';
@@ -590,10 +602,29 @@ export const RESTORE = 'Restore';
 export const DELETE_PERMANENTLY = 'Delete permanently';
 
 // Statuses → words (B returns codes only)
-// The someone-else-changed refusal (v0.966). Used where the screen has already reloaded, so
+// The someone-else-changed refusal (v0.966; R2-07 / R4-14: now the shared sentence, one copy in
+// components/text.js as someoneElseChanged). Used where the screen has already reloaded, so
 // "Their change is shown" is true: a row's refusal, the detail's, a toast Undo of BB5 (v0.967).
 // The name can be a candidate's or a cycle's ("Someone else changed Spring 2027 …").
-export const candidateStale = (name) => `Someone else changed ${name} just now, so nothing was done. Their change is shown.`;
+export { someoneElseChanged as candidateStale } from '../../components/text.js';
+// A refused Undo that has its own reason reads "Couldn't undo: [reason]." (R2-07, v1.045 (4): the shared
+// couldntUndo adds "Couldn't undo: " and the closing period, so a reason here never ends with one).
+// One reason per refusal; the candidates screens call these where a toast Undo is refused.
+export const undoWhy = {
+  paymentGone: couldntUndo('this payment was already undone or changed'),
+  tooLate: couldntUndo("it's too late here, so ask an admin"),
+  notAllowed: couldntUndo('only an admin can do that'),
+  invalid: couldntUndo("it can't be done any more"),
+  candidateGone: couldntUndo('this candidate was already deleted'),
+  planPaid: couldntUndo('a payment is recorded, so ask an admin'),
+  planWithdrawn: (name) => couldntUndo(`${name} was withdrawn, so the plan can't change`),
+  hasPayments: (name) => couldntUndo(`${name} has payment records, so they can't be deleted. Withdraw them instead`),
+  hasGrades: (name) => couldntUndo(`${name} has grades, so they can't be deleted. Withdraw them instead`),
+  danHasGrades: (name) => couldntUndo(`grades were already entered for ${name}'s new Dan`),
+  danLockedStaff: couldntUndo('a payment is recorded, so ask an admin to change the Dan'),
+  makeupLater: (name) => couldntUndo(`${name}’s make-up is already on a later cycle. Undo that make-up first, then change the Dan`),
+  alreadyAdded: (name) => couldntUndo(`another make-up of ${name} is already on a cycle, so this one can’t be restored`),
+};
 // The same refusal as a NOTE inside an open dialog (Record payment, Edit details …): the dialog
 // still shows what was typed, not the other person's change, so it keeps the old words (v0.966:
 // "inside the open box these stay a note, as today").
@@ -602,8 +633,18 @@ export const CANDIDATE_GONE = 'This candidate was deleted.'; // (not in the mock
 export const CANDIDATE_FINISHED = "This cycle is finished, so candidates can't be added.";
 export const PAPER_WAIVER_FINISHED = "This cycle is finished, so the waiver can't be recorded here."; // (not in the mockups)
 export const PURGED_INVALID = "This candidate's personal details were deleted after the keeping time, so this can't be saved."; // (not in the mockups)
-export const TOO_LATE_TO_UNDO = 'Too late to undo here. Ask an admin.'; // (not in the mockups)
-export const ACTION_FAILED = "That didn't work. Check the connection, then try again."; // a toast Undo or a one-click action (not in the mockups)
+export const ACTION_FAILED = "That didn't work. Check the connection, then retry."; // a one-click action that didn't reach the database (not in the mockups); an Undo's own failures are said by the save line (lib/saveLine.js)
+// While Hide private details is on, a refused Undo says nothing about why: "a payment is recorded", "has payment
+// records", "already undone" would tell a mat tablet who has paid and who has not (v0.249, v1.036, v1.037). So every
+// refusal of an Undo that was pressed before the switch turned on shows this one neutral sentence (with × only).
+export const UNDO_AT_DESK = "Couldn't undo. Do it at the desk.";
+// The words a money Undo gives the save line (lib/saveLine.js) for the bar it leaves after the person left the page
+// ("Undo didn't save: “Sam Lee’s payment” (Black Belt)"). They name who and what, never an amount: that bar
+// can show on any page, with no Hide private details check (v0.249).
+export const paymentUndoWords = (name) => `${name}’s payment`;
+export const refundUndoWords = (name) => `${name}’s refund`;
+export const returnedUndoWords = (name) => `${name}’s returned check`;
+export const planUndoWords = (name) => `${name}’s plan change`;
 
 // ----- Candidates 3 · Candidate detail -----
 export const SECTION_CANDIDATE = 'Candidate';
@@ -695,6 +736,20 @@ export const RETURNED_NOTE = 'returned'; // "post-dated Apr 24 · returned"
 export const NO_NOTE = '—';
 export const NO_PAYMENTS_YET = 'No payments recorded yet.'; // (not in the mockups)
 export const byName = (name) => `by ${name}`;
+// ----- The payment line (rulebook v1.135, Jeffrey "C" 2026-11-08) -----
+// words of rulebook v1.135; Black Belt switches to the shared copy once Dashboard core's src/components/text.js has it
+// One base, Star's: "$140 card · paid Nov 3", a refund "refunded $23 cash Nov 3", phones "Card · paid Nov 3".
+// A section adds only what it alone has, always in this order: paid date, what it was for, school, by who.
+// Black Belt adds the "for what" and "by who" and NO school (the candidate detail already shows it).
+export const paidDetail = (cents, method, iso) => `${formatMoney(cents)} ${methodName(method).toLowerCase()} · paid ${monthDay(iso)}`;
+export const refundedDetail = (cents, method, iso) => `refunded ${formatMoney(cents)} ${methodName(method).toLowerCase()} ${monthDay(iso)}`;
+export const paidOnPhone = (method, iso) => `${methodName(method)} · paid ${monthDay(iso)}`;
+export const refundedOnPhone = (method, iso) => `${methodName(method)} · refunded ${monthDay(iso)}`;
+// "$870 card · paid Mar 20 · for payments 1, 2 and 3 · by Jeffrey Berg" (the pieces that are empty drop out)
+export const paymentLine = ({ kind, cents, method, iso, what, by }) =>
+  [kind === 'refund' ? refundedDetail(Math.abs(cents), method, iso) : paidDetail(Math.abs(cents), method, iso), what && kind !== 'refund' ? `for ${what}` : '', by ? byName(by) : '']
+    .filter(Boolean)
+    .join(' · ');
 export const paymentMoreLabel = (what, date) => `More actions for ${what} of ${monthDay(date)}`;
 export const TOTAL_DUE = 'Total due';
 export const PAID = 'Paid';
@@ -773,7 +828,7 @@ export const FOR_LABEL = 'For';
 export const itemLine = (item, dueOn) => `${itemLabel(item)} · due ${monthDay(dueOn)}`;
 export const PAID_MARK = '(paid)';
 export const AMOUNT = 'Amount';
-export const METHOD = 'Method';
+export const REFUNDED_BY = 'Refunded by'; // Record refund's label (BB1; Star's and Finance's words). Record / Edit payment say "Paid by" (the shared PaidByField)
 export const NOTE_OPTIONAL = 'Note (optional)';
 export const NOTE_PLACEHOLDER = 'e.g. post-dated Apr 24';
 export const countsToday = (today) => `Counts as paid today, ${weekdayMonthDay(today)}, like every check handed in today.`;
@@ -788,7 +843,10 @@ export const ERR_AMOUNT = {
 };
 export const ERR_METHOD = 'Choose cash, check or card.';
 export const ERR_NOTE = 'Use 600 characters or fewer.';
-export const toastPaymentRecorded = (cents, name) => `Payment recorded · ${money(cents)} · ${name}`;
+// The toast after Record payment (R1-07): "Sam Lee marked paid · $330 cash" (the shared words, as Camps and
+// Color Belt say them). While Hide private details is on this screen shows no money toast at all (the
+// shared markedPaidToastHidden, "Sam Lee marked paid", is not needed here: showMoneyToast holds it back).
+export const toastPaymentRecorded = (cents, method, name) => markedPaidToast(name, money(cents), methodName(method).toLowerCase());
 export const withdrawnNoPayment = (name) => `${name} was withdrawn, so no payment can be recorded.`;
 
 // ----- Candidates 5 · Admin payment actions -----
@@ -809,7 +867,8 @@ export const PAYMENT_GONE = 'This payment was already undone or changed.';
 // payment (v0.964, mockup C option A): the title is Star's shape with the amount and how, never
 // built from the installments; the second line says when it was paid and what it was for (v0.965).
 // "Undo Mia Chen’s $870 card payment?"
-export const undoPaymentTitle = (name, cents, method) => `Undo ${name}’s ${money(cents)} ${methodName(method).toLowerCase()} payment?`;
+// (the title is the shared one, R1-06; only the amount and the way are formatted here)
+export const undoPaymentTitle = (name, cents, method) => sharedUndoPaymentTitle(name, money(cents), methodName(method).toLowerCase());
 // What a payment was for, inside a sentence (v0.964, v0.965): "payment 1", "payments 1, 2 and 3",
 // "the full fee" (a one-payment plan's only payment), "the Kukkiwon certificate", "payment 2 and the
 // Kukkiwon certificate", "payments 1, 2 and the Kukkiwon certificate". '' when nothing is known.
@@ -829,17 +888,27 @@ export function forSentence(items, { paymentsCount = null } = {}) {
 // "Paid on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
 // The date is the day the family paid (line.paidOn), not the day it was typed in.
 export const undoPaymentBody = (paidOn, what) =>
-  `Paid on ${monthDay(paidOn)}${what ? ` for ${what}` : ''}. It comes off the balance; the history keeps it.`;
+  `${paidOnOpening(monthDay(paidOn))}${what ? ` for ${what}` : ''}. It comes off the balance; the history keeps it.`;
 export const UNDO_PAYMENT_CONFIRM = 'Undo payment';
-// The toast after it: "Payment undone · $870 card · Mia Chen"
-export const toastPaymentUndone = (cents, method, name) => `Payment undone · ${money(cents)} ${methodName(method).toLowerCase()} · ${name}`;
+// The toast after it (R1-07, the shared words): "Payment undone for Mia Chen"
+export const toastPaymentUndone = (name) => paymentUndoneToast(name);
 export const UNDO_REFUND_TITLE = 'Undo the refund?'; // (not in the mockups)
 export const undoRefundBody = (cents, paidOn, name) => `The ${money(cents)} refund of ${monthDay(paidOn)} comes off ${name}'s history. The change log keeps it.`; // (not in the mockups)
 export const toastRefundUndone = (cents, name) => `Refund undone · ${money(cents)} · ${name}`; // (not in the mockups)
 export const UNDO_RETURNED_TITLE = 'Undo the returned-check mark?'; // (not in the mockups)
 export const undoReturnedBody = (what, cents) => `${what} (${money(cents)} check) counts as paid again. The change log keeps the mark.`; // (not in the mockups)
 export const toastReturnedUndone = (cents, name) => `Returned-check mark undone · ${money(cents)} · ${name}`; // (not in the mockups)
-export const UNDO_RETURNED_CONFIRM = 'Undo the mark'; // (not in the mockups)
+export const UNDO_RETURNED_CONFIRM = 'Undo returned mark'; // repeats the menu's words (BB7)
+// The shared confirm box's words (BB7, v1.008 / v1.103): the safe button on the left says what stays
+// ("Keep payment" / "Keep refund" / "Keep mark"), the busy words say what is being done.
+export const KEEP_PAYMENT = 'Keep payment'; // Star's words
+export const KEEP_REFUND = 'Keep refund'; // Star's words
+export const KEEP_MARK = 'Keep mark'; // the returned-check mark
+export const UNDOING = 'Undoing…';
+export const DELETING = 'Deleting…';
+export const CHANGING = 'Changing…'; // the Dan-change box's red button while it works
+export const keepDan = (dan) => `Keep ${DAN_LABELS[dan] ?? 'Dan'}`; // "Keep 1st Dan" — the current Dan (BB19, as Star's)
+export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then retry."; // under an Undo box's buttons (Star's words)
 export const UNDO_REFUND_CONFIRM = 'Undo refund'; // (not in the mockups)
 export const undoBlockedReturned = RETURNED_FIRST;
 export const UNDO_NET_FLOOR = 'Undoing this would take the paid total below zero. Undo the refund first.';
@@ -1002,7 +1071,7 @@ export const editDan = (dan) => `Edit ${DAN_LABELS[dan] ?? ''}`;
 export const DAN_SWITCHER = 'Dan shown'; // screen readers: the name of the 1st–4th Dan switcher (new wording, not in the mockups)
 export const DEFAULT_USED_BY = 'Used by every new cycle. A cycle’s copy can be changed until its registration first opens.';
 export const LOADING_RUBRIC_CARD = 'Loading the rubric'; // (new wording, not in the mockups)
-export const RUBRIC_LOAD_FAILED = "Couldn't load the rubric. Check the connection, then try again."; // (new wording, not in the mockups)
+export const RUBRIC_LOAD_FAILED = "Couldn't load the rubric. Check the connection, then retry."; // + Retry; S-2 ending (v1.051)
 export const TO_PASS = 'To pass';
 export const toPassPoints = (points) => `${points} points`;
 export const bracketPoints = (label, points) => `${label} ${points} points`;
@@ -1207,7 +1276,6 @@ export const CHECK_SUBJECT = 'Check this subject'; // (new wording, not in the m
 
 // ----- R11: saved, Undo, another admin -----
 export const danRubricSaved = (dan) => `${DAN_LABELS[dan] ?? ''} rubric saved`;
-export const UNDO_RUBRIC_STALE = 'Someone else changed this just now.';
 export const otherAdminSaved = (dan) => `Another admin saved ${DAN_LABELS[dan] ?? ''} just now. Reload to see it — your changes would overwrite theirs.`;
 export const RELOAD = 'Reload';
 export const RELOAD_FIRST = 'Reload first — another admin saved';
@@ -1218,7 +1286,6 @@ export const HIDE = 'Hide';
 export const RUBRIC_NOT_ALLOWED = "Only an admin can change the rubric. Your changes weren't saved."; // (new wording, not in the mockups)
 export const RUBRIC_INVALID_UNKNOWN = 'The database refused this rubric. Check the fields and try again.'; // a problem the screen can't place (new wording, not in the mockups)
 export const RUBRIC_LOCKED_NOW = "Registration opened, so this rubric is locked now. Your changes weren't saved."; // (new wording, not in the mockups)
-export const RUBRIC_UNDO_FAILED = "Undo didn't save. Check the connection, then retry."; // (new wording, not in the mockups)
 export const timeOfDay = (stamp) => {
   const date = new Date(stamp);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
@@ -1234,7 +1301,6 @@ export const GO_TO_DEFAULT = 'Go to the default rubric';
 export const FIRST_OPEN_ADMIN = 'An admin opens it the first time (it locks the rubric).';
 export const CANT_UNDO_REGISTERED = "Can't undo: a family has already registered."; // (new wording, not in the mockups)
 // BB5 (v0.967): the refusals of the new Undos (Edit details, Add / Edit cycle, Keeping time)
-export const undoDanHasGrades = (name) => `Can't undo: grades were already entered for ${name}'s new Dan.`; // (new wording, not in the mockups)
 export const UNDO_CYCLE_HAS_GRADES = "Can't undo: grades were already entered on a testing day this save changed."; // (new wording, not in the mockups)
 export const UNDO_CYCLE_INVALID = "Can't undo this save any more (a date may be in the past now). Use Edit cycle to change it back."; // (new wording, not in the mockups)
 export const UNDO_KEEP_STALE = 'Someone else changed the keeping time just now, so nothing was done. Their change is shown.'; // (new wording, not in the mockups)
@@ -1345,7 +1411,7 @@ export const RUBRIC_LOCKED_GRADING_NOW = "Grading started, so this rubric is loc
 // The words for one change in the candidate's history (candidates/historyWords.js picks which).
 // Lines drawn in the approved pictures (images/bb8-bb13/BB8-history*.png) carry no mark; every
 // other line is marked PROPOSAL (not in the pictures) for Jeffrey's walkthrough.
-// Money is written as on the rest of the page (formatCents: "$870").
+// Money is written as on the rest of the page (formatMoney: "$870").
 export const HISTORY_STAFF = 'Staff'; // the actor when the log has no name
 // The candidate row
 export const HISTORY_REGISTERED_FORM = 'Registered on the family form';
@@ -1383,13 +1449,13 @@ export const HISTORY_WAIVER_FORM = 'Waiver signed on the family form';
 export const HISTORY_WAIVER_PAPER = 'Waiver signed on paper'; // PROPOSAL
 export const HISTORY_SIGNATURE_REMOVED = 'Signature removed (after the keeping time)'; // PROPOSAL
 // Money (left out while Hide private details is on)
-export const historyPayment = (cents, method, iso) => `Payment recorded: ${formatCents(cents)} ${methodName(method).toLowerCase()}, paid ${monthDay(iso)}`;
-export const historyPaymentChanged = (cents, method, iso) => `Payment changed: ${formatCents(cents)} ${methodName(method).toLowerCase()}, paid ${monthDay(iso)}`; // PROPOSAL (Edit payment)
-export const historyRefund = (cents, method, iso) => `Refund recorded: ${formatCents(cents)} ${methodName(method).toLowerCase()}, ${monthDay(iso)}`; // PROPOSAL (Star's words)
-export const historyPaymentUndone = (cents) => `Payment undone: ${formatCents(cents)}`; // PROPOSAL (Star's words)
-export const historyRefundUndone = (cents) => `Refund undone: ${formatCents(cents)}`; // PROPOSAL (Star's words)
-export const historyCheckReturned = (cents) => `Check returned: ${formatCents(cents)}`; // PROPOSAL
-export const historyReturnedUndone = (cents) => `Returned check undone: ${formatCents(cents)}`; // PROPOSAL
+export const historyPayment = (cents, method, iso) => `Payment recorded: ${formatMoney(cents)} ${methodName(method).toLowerCase()}, paid ${monthDay(iso)}`;
+export const historyPaymentChanged = (cents, method, iso) => `Payment changed: ${formatMoney(cents)} ${methodName(method).toLowerCase()}, paid ${monthDay(iso)}`; // PROPOSAL (Edit payment)
+export const historyRefund = (cents, method, iso) => `Refund recorded: ${formatMoney(cents)} ${methodName(method).toLowerCase()}, ${monthDay(iso)}`; // PROPOSAL (Star's words)
+export const historyPaymentUndone = (cents) => `Payment undone: ${formatMoney(cents)}`; // PROPOSAL (Star's words)
+export const historyRefundUndone = (cents) => `Refund undone: ${formatMoney(cents)}`; // PROPOSAL (Star's words)
+export const historyCheckReturned = (cents) => `Check returned: ${formatMoney(cents)}`; // PROPOSAL
+export const historyReturnedUndone = (cents) => `Returned check undone: ${formatMoney(cents)}`; // PROPOSAL
 // Grades (v0.971 option C: every grade, naming the subject). Without the subject's name (the
 // rubric couldn't be read, or the history is from before migration 0034): the same words without it.
 export const HISTORY_SUBJECT_UNKNOWN = 'a subject'; // a subject the cycle's rubric doesn't have (PROPOSAL)

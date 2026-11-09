@@ -58,8 +58,11 @@ import {
 import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
 import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
+import PageBar from '../../../../components/PageBar.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../../lib/device.js';
+import { useSaveLine } from '../../../../lib/saveLine.js';
+import { SECTION_NAME } from '../../../../lib/star/eventsText.js';
 import { gradeLetters } from '../../../../lib/star/gradingApi.js';
 import {
   canMarkSent, downloadCsv, isSent, loadEmailAddress, markSent, schoolDateOf, summaryCounts, undoSent, undoTimeLeft,
@@ -133,14 +136,22 @@ export default function ResultsTab({
   const dans = copy?.dans ?? [];
   const [danSel, setDanSelState] = useState(() => danByEvent.get(eventId) ?? dans[0]?.dan ?? 1);
   const [menu, setMenu] = useState(null); // { id, anchor }
-  const [banner, setBanner] = useState(null); // { text, retry? }
+  const [banner, setBanner] = useState(null); // { text, retry?, kind?, retrying?, takeFocus? }
   const [busyId, setBusyId] = useState(null); // the row with a save / address read on its way
   const [csvBusy, setCsvBusy] = useState(false);
   const [confirm, setConfirm] = useState(null); // admin Undo Mark as sent: { row, sentId, day, saving, failed, opener }
   const [choose, setChoose] = useState(null); // Choose subjects: { row, opener }
   const [announce, setAnnounce] = useState(''); // "Message copied" for screen readers
   const [, setAskedVersion] = useState(0); // redraws after the page-memory Map changes
-  const busyRef = useRef(false);
+  // R2-05 (v1.125–v1.129): this page's line of saves. One at a time; an Undo pressed while a save or an
+  // address read runs waits its turn ("Undoing…" on the toast). A failed Undo's bar goes to `banner`
+  // (kind 'undo') through undoBar.
+  const saveLine = useSaveLine({
+    section: SECTION_NAME,
+    showToast,
+    undoBar: (next) => setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current)),
+  });
+  const tokenRef = useRef(null); // the token of the save that holds the line (only one does)
   const undoToastRef = useRef(null); // the token of the Mark as sent toast still showing (the 9 s cap)
   const capTimerRef = useRef(null);
   const dataRef = useRef(results.data);
@@ -212,15 +223,16 @@ export default function ResultsTab({
     setAskedVersion((v) => v + 1);
   }
 
-  // ----- One write at a time -----
+  // ----- One write at a time (the save line holds it; an Undo waits for it) -----
   function begin(rowId) {
-    if (busyRef.current) return false;
-    busyRef.current = true;
+    const token = saveLine.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     setBusyId(rowId);
     return true;
   }
-  function end() {
-    busyRef.current = false;
+  function end(status = 'ok') {
+    saveLine.end(status, { token: tokenRef.current });
     setBusyId(null);
   }
   function toast(text, options) {
@@ -231,7 +243,7 @@ export default function ResultsTab({
   // ----- Email result (R2, R4) -----
   // Everything up to the clipboard runs straight inside the click: no waiting before the copy.
   async function emailResult(row) {
-    if (hidden || busyRef.current) return;
+    if (hidden || saveLine.isBusy()) return;
     const current = findRow(row.id) ?? row;
     const name = nameOf(current);
     const label = dans.find((d) => d.dan === current.dan)?.label ?? T.danLabelOf(current.dan);
@@ -250,9 +262,15 @@ export default function ResultsTab({
     }
     if (!begin(current.id)) return;
     setBanner(null);
-    const copied = await copyPromise.then(() => true, () => false);
-    const answer = await loadEmailAddress(current.id);
-    end();
+    // The line is ended from a `finally` (lib/saveLine.js): a throw frees it as "didn't save".
+    let copied = false;
+    let answer;
+    try {
+      copied = await copyPromise.then(() => true, () => false);
+      answer = await loadEmailAddress(current.id);
+    } finally {
+      end(answer ? 'ok' : 'error');
+    }
     // The screen locked, or Hide private details went on, while the address was being read:
     // nothing opens (no family address behind the lock screen or against the switch). Refs, not
     // `hidden` / `screenLocked`: those are the values from when the click started.
@@ -293,17 +311,27 @@ export default function ResultsTab({
     setBanner(null);
     clearToast();
     const clickedAt = Date.now();
-    const answer = await markSent({ candidateId: current.id, resultKey: current.result.resultKey });
+    // The line is ended from a `finally` (lib/saveLine.js): a throw frees it as "didn't save".
+    let answer;
+    let ended = 'error';
+    try {
+      answer = await markSent({ candidateId: current.id, resultKey: current.result.resultKey });
+      if (answer.status === 'ok') {
+        // The row keeps its question (busy) until the reload shows "Sent Nov 16 · …" — no flash of
+        // "Not sent yet" in between.
+        await reload();
+        forget(current.id);
+      }
+      ended = answer.status === 'ok' ? 'ok' : answer.status;
+    } finally {
+      end(ended);
+    }
     if (answer.status === 'ok') {
-      // The row keeps its question (busy) until the reload shows "Sent Nov 16 · …" — no flash of
-      // "Not sent yet" in between.
-      await reload();
-      forget(current.id);
-      end();
       const token = {};
-      showToast(R.markedAsSent(name), {
+      const words = R.markedAsSent(name);
+      showToast(words, {
         icon: false,
-        action: { label: R.UNDO, onAction: () => undoFromToast(answer.sentId) },
+        action: saveLine.undoAction(() => undoFromToast(answer.sentId), { words }),
       });
       undoToastRef.current = token;
       window.clearTimeout(capTimerRef.current);
@@ -317,7 +345,6 @@ export default function ResultsTab({
       }, undoTimeLeft(clickedAt, Date.now()));
       return;
     }
-    end();
     if (answer.status === 'no_access') {
       onNoAccess();
       return;
@@ -331,22 +358,23 @@ export default function ResultsTab({
     // The connection: Retry; the row goes back to its question.
     setBanner({ text: R.markSentRefusal('error', name), retry: () => markAsSent(current) });
   }
+  // The toast's Undo, run by the save line (R2-05): it waits its turn, and the line says how it went.
+  // "Undone" after it worked (R2-07, v1.051); the amber bar with Retry when it didn't reach the
+  // database ("Undo didn't save. Check the connection, then retry."); a refusal's own words, no Retry.
   async function undoFromToast(sentId) {
-    undoToastRef.current = null;
-    if (!begin(null)) return;
+    undoToastRef.current = null; // the 9-second cap must not clear what the toast says next
     const answer = await undoSent(sentId);
-    end();
+    if (answer.status === 'ok') {
+      await reload();
+      return { status: 'ok' };
+    }
     if (answer.status === 'no_access') {
       onNoAccess();
-      return;
+      return { status: 'no_access' };
     }
-    if (answer.status !== 'ok') {
-      const retry = answer.status === 'error' ? () => undoFromToast(sentId) : undefined;
-      setBanner({ text: R.undoSentRefusal(answer.status), retry });
-    } else {
-      toast(R.TOAST_UNDONE, { icon: false }); // R2-07: after an Undo the toast says "Undone"
-    }
+    if (answer.status === 'error') return { status: 'error' };
     reload();
+    return { status: answer.status, reason: R.undoSentRefusal(answer.status) };
   }
   // Admins: ⋯ → Undo Mark as sent asks first (proposal 22); no Undo toast afterwards.
   function openUndoConfirm(row, opener) {
@@ -367,8 +395,12 @@ export default function ResultsTab({
     const d = confirm;
     if (!d || !begin(d.row.id)) return;
     setConfirm({ ...d, saving: true, failed: false });
-    const answer = await undoSent(d.sentId);
-    end();
+    let answer;
+    try {
+      answer = await undoSent(d.sentId);
+    } finally {
+      end(answer ? 'ok' : 'error'); // from a `finally` (lib/saveLine.js)
+    }
     if (answer.status === 'no_access') {
       setConfirm(null);
       onNoAccess();
@@ -621,7 +653,16 @@ export default function ResultsTab({
     <>
       {renderHeader(addButton)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel str-panel">
-        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busyId !== null || csvBusy} onDismiss={() => setBanner(null)} />}
+        {/* The page's bar shows under the top bar (PageBar, v1.128); an Undo's bar comes with takeFocus */}
+        {banner && (
+          <PageBar
+            text={banner.text}
+            onRetry={banner.retry ? () => banner.retry() : undefined}
+            retrying={busyId !== null || csvBusy || Boolean(banner.retrying)}
+            takeFocus={banner.takeFocus}
+            onDismiss={() => setBanner(null)}
+          />
+        )}
         {oneSchool && (
           <p className="ev-filter-line st-school-line">
             {oneSchoolLine(schoolLabel)} ·{' '}

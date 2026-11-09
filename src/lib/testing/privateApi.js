@@ -35,7 +35,7 @@ const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
 const BELT = 'belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color';
 const TO_BELT = 'to_belt_pattern, to_belt_color, to_belt_color_2, to_belt_end_stripes, to_belt_end_stripe_color';
 // The view testing_private_list: the private testing + its payment summary + what is owed.
-const LIST_COLUMNS = `id, location_code, first_name, last_name, class_id, class_name, rank_id, rank_name, ${BELT}, to_kind, to_name, ${TO_BELT}, private_cents, paying_by, stripes_confirmed, private_date, private_time, status, cancelled_at, cancelled_by_name, moved_from_event_id, moved_from_registration_id, moved_from_event_name, version, created_at, created_by_name, updated_at, updated_by_name, paid, paid_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, amount_due_cents`;
+const LIST_COLUMNS = `id, location_code, first_name, last_name, class_id, class_name, rank_id, rank_name, ${BELT}, to_kind, to_name, ${TO_BELT}, private_cents, paying_by, stripes_confirmed, private_date, private_time, status, cancelled_at, cancelled_by_name, moved_from_event_id, moved_from_registration_id, moved_from_event_name, version, created_at, created_by_name, updated_at, updated_by_name, paid, paid_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, amount_due_cents, paying_by_on_form`;
 const PAYMENT_COLUMNS = 'id, private_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name, reverses_payment_id, moved_from_payment_id';
 const RESULT_COLUMNS = 'private_id, result, note, updated_at, updated_by_name';
 // How many ids go into one "id is one of these" filter (they travel in the web address).
@@ -68,10 +68,10 @@ function toResult(row) {
 }
 
 // A row of testing_private_list (+ its results row) → the app's private testing.
-// movedFromSource: for one moved from an event, how its old registration was made — 'form' (the
-// family's form) or 'staff' (added at the desk) — read from testing_registrations; null when it
-// wasn't moved or that read failed (loadPrivateTestings). The Mark paid box's hint uses it.
-function toPrivateRow(row, resultRow, today, movedFromSource = null) {
+// payingByOnForm (migration 0044, M-01): the way the family chose on the event's form, kept when a
+// form registration was moved here; null when it was added at the desk (here or on the event).
+// The Mark paid box's hint compares it with payingBy (eventRules.markPaidChoiceWhere).
+function toPrivateRow(row, resultRow, today) {
   const testingFor = row.to_kind === 'rank'
     ? { kind: 'rank', name: row.to_name, belt: beltOf(row, 'to_') }
     : { kind: 'none', name: null, belt: null };
@@ -97,7 +97,7 @@ function toPrivateRow(row, resultRow, today, movedFromSource = null) {
     movedFromEventId: row.moved_from_event_id ?? null,
     movedFromRegistrationId: row.moved_from_registration_id ?? null,
     movedFromEventName: row.moved_from_event_name ?? null,
-    movedFromSource: movedFromSource === 'form' || movedFromSource === 'staff' ? movedFromSource : null,
+    payingByOnForm: row.paying_by_on_form ?? null,
     version: row.version,
     createdAt: row.created_at,
     createdByName: row.created_by_name,
@@ -161,7 +161,7 @@ async function selectIn(table, columns, column, ids) {
 
 // One school's private testings (both sides — the screen splits them with
 // privateRules.splitPrivate). → { status:'ok', today, rows:[…], payments:[…] } (payments oldest
-// first; each row has movedFromSource, see toPrivateRow) · 'no_access' · 'error'
+// first; each row has payingByOnForm, see toPrivateRow) · 'no_access' · 'error'
 export async function loadPrivateTestings(locationCode) {
   try {
     if (!KNOWN_LOCATIONS.has(locationCode)) return failure(new Error(`Unknown school: ${locationCode}`));
@@ -175,25 +175,14 @@ export async function loadPrivateTestings(locationCode) {
     if (listRes?.error) return failure(listRes.error);
     if (!Array.isArray(listRes.data)) return unexpected('testing_private_list');
     const ids = listRes.data.map((r) => r.id);
-    // The old event registrations of the moved ones (moving only withdraws a registration, never
-    // deletes it): how each was made, 'form' or 'staff', for the Mark paid box's hint (CB1).
-    const movedIds = [...new Set(listRes.data.map((r) => r.moved_from_registration_id).filter(isText))];
-    const [resultRes, paymentRes, sourceRes] = await Promise.all([
+    const [resultRes, paymentRes] = await Promise.all([
       selectIn('testing_private_results', RESULT_COLUMNS, 'private_id', ids),
       selectIn('testing_private_payments', PAYMENT_COLUMNS, 'private_id', ids),
-      selectIn('testing_registrations', 'id, source', 'id', movedIds).catch((error) => ({ error })),
     ]);
     if (resultRes.error) return failure(resultRes.error);
     if (paymentRes.error) return failure(paymentRes.error);
     const resultOf = new Map(resultRes.rows.map((r) => [r.private_id, r]));
-    // If that read fails the list still loads: every moved row gets movedFromSource null, which
-    // the hint shows as "… at the desk." (privateRules.markPaidChoiceWhere). The shared box always
-    // shows a hint, and "at the desk" is the safer guess: "on the form" would claim the family
-    // chose it themselves, which isn't known. (A registration whose event was later deleted is
-    // missing too and gets the same.)
-    const sourceOf = new Map((sourceRes.rows ?? []).map((r) => [r.id, r.source]));
-    const rows = listRes.data.map((row) =>
-      toPrivateRow(row, resultOf.get(row.id) ?? null, today, sourceOf.get(row.moved_from_registration_id) ?? null));
+    const rows = listRes.data.map((row) => toPrivateRow(row, resultOf.get(row.id) ?? null, today));
     return { status: 'ok', today, rows, payments: paymentRes.rows.map(toPayment).sort(byRecordedAt) };
   } catch (error) {
     return failure(error);
@@ -203,8 +192,7 @@ export async function loadPrivateTestings(locationCode) {
 // One private testing (its grading page). → { status:'ok', today, startedAt, row, payments } ·
 // 'not_found' (deleted, or a wrong link) · 'no_access' · 'error'. startedAt = Date.now() when
 // this call STARTED (as eventsApi.loadEvent): the grading engine compares it with the time a
-// save answered, so it never shows a read older than its own save. The grading page has no Mark
-// paid, so its row's movedFromSource stays null (not read).
+// save answered, so it never shows a read older than its own save.
 export async function loadPrivateTesting(privateId) {
   const startedAt = Date.now();
   try {
@@ -329,15 +317,17 @@ export async function changePrivatePayingBy({ privateId, expectedVersion, paying
 //                   changed while the box was open) it saves nothing and answers 'price_changed'
 //                   with amountCents, so the page can name the new amount (v0.423).
 // A way that isn't the family's "Paying by" changes "Paying by" too (v0.418 Q2); Undo payment puts
-// the family's choice back. (It replaces the old one-click testing_private_mark_paid, which the
-// database keeps until a later small migration removes it; nothing in the app calls that one.)
+// the family's choice back. (It replaced the old one-click testing_private_mark_paid, which
+// migration 0035 removes from the database.)
 // → { status:'ok', paymentId, amountCents, method, paidOn, payingBy, version } · 'price_changed'
 //   (+ amountCents) · 'already_paid' (nothing owed — also a $0 price) · 'cancelled' · 'stale'
 //   (e.g. a double click) · 'not_found' · 'invalid' · 'no_access' · 'error'
-export async function markPrivatePaidBy({ privateId, expectedVersion, method, expectedCents } = {}) {
+//   school          This device's school code, or null when the device has none — the database
+//                   then uses the private testing's school (migration 0044, R1-01, v1.035).
+export async function markPrivatePaidBy({ privateId, expectedVersion, method, expectedCents, school = null } = {}) {
   return callRpc(
     'testing_private_mark_paid_by',
-    { p_private_id: privateId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents },
+    { p_private_id: privateId, p_expected_version: expectedVersion, p_method: method, p_expected_cents: expectedCents, p_school: school ?? null },
     (d) => (isText(d.payment_id) && isInt(d.amount_cents) && isText(d.method) && isInt(d.version)
       ? { paymentId: d.payment_id, amountCents: d.amount_cents, method: d.method, paidOn: d.paid_on ?? null, payingBy: d.paying_by ?? d.method, version: d.version }
       : null),

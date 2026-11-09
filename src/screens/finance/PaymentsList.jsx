@@ -61,15 +61,10 @@ export function forTextOf(item) {
   return item.what === 'camp' ? `${T.WHAT_CAMP} · ${campName ?? monthDay(item.event_date)}` : `${whatText(item)} · ${monthDay(item.event_date)}`;
 }
 
-// True when an edited payment ended up exactly as first recorded: the same amount and the same way
-// to pay (a changed date is "moved", a different state). Edit payment followed by the toast's Undo
-// does this. Such a payment shows as a plain one, on screen, on paper and in its detail (v0.824).
-export function editChangedNothing(item) {
-  if (item.state !== 'edited') return false;
-  const sameAmount = item.was_amount_cents === null || item.was_amount_cents === undefined || item.was_amount_cents === item.amount_cents;
-  const sameMethod = !item.was_method || item.was_method === item.method;
-  return sameAmount && sameMethod;
-}
+// True when an edited payment ended up exactly as first recorded: the same amount, the same way to
+// pay and the same school (v0.824; school added in Batch A). The rule lives in text.js so Node's
+// checks can test it; it is re-exported here for the screens that import it from this file.
+export const editChangedNothing = T.editChangedNothing;
 
 // Everything a row shows, as text. Shared with the printed page (PrintPage.jsx), so paper and
 // screen always say the same thing (D8: "corrections print as on screen").
@@ -80,13 +75,8 @@ export function rowText(item, layout) {
   const isRefund = item.kind === 'refund';
   const isReturnedCheck = item.kind === 'returned';
   // What it was before an edit: "$70.00", "$70.00 check" (amount and method changed) or "check".
-  let was = '';
-  if (item.was_amount_cents !== null && item.was_amount_cents !== undefined && item.was_amount_cents !== item.amount_cents) {
-    was = money(item.was_amount_cents);
-    if (item.was_method && item.was_method !== item.method) was += ` ${T.methodLower(item.was_method)}`;
-  } else if (item.was_method && item.was_method !== item.method) {
-    was = T.methodLower(item.was_method);
-  }
+  // (Batch A: a school that changed is named too: "Worcester" or "$70.00 cash, Worcester".)
+  const was = T.wasText(item);
   // One tag per row (rule 8), the most important first.
   let tag = null;
   let tagWarn = false;

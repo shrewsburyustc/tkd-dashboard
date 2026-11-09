@@ -4,7 +4,10 @@
 // Color Belt's file. They live here now, typed once. Testing's, Staff accounts' and Settings' words
 // files re-export them, so nothing that imports those changes.
 // Only the shared parts' OWN words are here. A part never holds a section's words (its noun, its
-// questions, its error sentences): the section passes those in (plan §1).
+// questions, its error sentences): the section passes those in (plan §1). One kind of exception
+// (rulebook v1.045 (4), v1.051 (2)): a sentence EVERY section says (a refused change, a failed Undo,
+// a page that can't load, the toasts after Mark paid and Undo payment, the Undo payment box's title)
+// is typed once, at the end of this file, so the sections can't drift apart.
 
 // ----- Words the existing shared parts show -----
 export const BACK = 'Back'; // Dialog's and AccountDialog's phone back arrow (screen-reader name); the PIN screens' Back link
@@ -63,7 +66,7 @@ export const OVERPAID = 'overpaid'; // "−$50 · overpaid"
 export const NON_REFUNDABLE = 'Fees are non-refundable.';
 // "Printed Oct 22, 2026 by Jeffrey Berg. Fees are non-refundable."
 export const receiptPrinted = (date, name) => `Printed ${date}${name ? ` by ${name}` : ''}. ${NON_REFUNDABLE}`;
-export const RECEIPT_LOAD_FAILED = "Couldn't load the receipt. Check the connection, then try again.";
+export const RECEIPT_LOAD_FAILED = "Couldn't load the receipt. Check the connection, then retry."; // S-2 ending (v1.051)
 export const RECEIPT_LOADING = 'Loading the receipt'; // screen readers only (the gray placeholder page)
 export const RECEIPT_PAGE_LABEL = 'Receipt page as it will print'; // screen readers only
 
@@ -81,6 +84,8 @@ export const qrAlt = (shortLink) => `QR code for ${shortLink}`;
 export const qrAltSchool = (school, shortLink) => `QR code for the ${school} link, ${shortLink}`;
 // A failed copy or download: the amber note inside the box (v1.106 detail a)
 export const COPY_FAILED = "Couldn't copy the link. Select the link and copy it yourself.";
+// (Stays "Try again.": the picture is made in this browser with no network call, so a "check the
+// connection" sentence would send the person the wrong way; v1.137, "A for both".)
 export const QR_FAILED = "Couldn't make the QR code picture. Try again.";
 
 // ----- M6: the count cards (CountCards.jsx) -----
@@ -91,7 +96,7 @@ export const HISTORY = 'History';
 export const historyCount = (n) => `${HISTORY} · ${n === 1 ? '1 change' : `${n} changes`}`; // "History · 3 changes"
 export const HISTORY_NONE = 'no changes yet'; // "History · no changes yet"
 export const HISTORY_LOADING = 'Loading…';
-export const HISTORY_LOAD_FAILED = "Couldn't load the history. Check the connection, then try again.";
+export const HISTORY_LOAD_FAILED = "Couldn't load the history. Check the connection, then retry."; // S-2 ending (v1.051)
 export const HISTORY_PAYMENTS_HIDDEN = 'Payment history is hidden on this tablet.'; // Star's words (v0.506)
 // "Oct 22 · Jeffrey Berg"; with only one of the two (no date, or no name), just that one — no " · ".
 export const historyWhen = (date, who) => [date, who].filter((part) => typeof part === 'string' && part.trim() !== '').join(' · ');
@@ -105,5 +110,61 @@ export const OFFLINE_BAR = 'You’re offline. Changes won’t save until the con
 
 // ----- Date signed (rulebook v0.522, v0.638): New students' and Star's family forms both show it -----
 // Moved here from src/screens/forms/text.js, which still re-exports them, so the two sections share one wording.
+// DateSigned.jsx (the shared "Date signed" box, rulebook v0.430) draws these same words for Color Belt's family form and student summary.
 export const DATE_SIGNED = 'Date signed';
 export const DATE_SIGNED_HINT = "Filled in automatically with today's date.";
+
+// ----- R2-05: the queued Undo (Toast.jsx, lib/toastLine.js, lib/saveLine.js; rulebook v1.125–v1.129) -----
+export const UNDO = 'Undo'; // the toast's button
+export const UNDOING = 'Undoing…'; // the toast's button while its Undo waits or runs (v1.125)
+export const UNDONE = 'Undone'; // the toast after an Undo that worked (v1.051)
+export const UNDO_DIDNT_SAVE = "Undo didn't save. Check the connection, then retry."; // the page's bar (v1.051 (2))
+export const NEITHER_SAVED = 'Neither change saved. Check the connection, then retry.'; // an Undo that waited for a save that failed, and failed too (v1.127)
+// After the person left the page (v1.129): the bar under the top bar names the change (the toast's
+// own words) and the section. "Undo didn't save: “Zoe Park withdrawn” (Camps). Check the connection, then retry."
+export const undoLeftDidntSave = (words, section) => `Undo didn't save: “${words}” (${section}). Check the connection, then retry.`;
+// … and when the database refused it (e.g. the staff 10-second limit passed while it waited): the
+// section's own reason after it, with no Retry.
+// A page's reason is often R2-07's whole sentence ("Couldn't undo: it's too late."): then the change and
+// the section go into that sentence ("Couldn't undo “Zoe Park withdrawn” (Camps): it's too late."),
+// instead of a second "Couldn't undo" in front of it.
+export const undoLeftRefused = (words, section, reason) =>
+  /^Couldn't undo\b/.test(reason)
+    ? reason.replace(/^Couldn't undo/, `Couldn't undo “${words}” (${section})`)
+    : `Couldn't undo “${words}” (${section}). ${reason}`;
+// The same two bars while private details are hidden on this device (v0.249): they name only the
+// section, never the change, because the change's words (a toast like "Sam Lee marked paid · $330
+// cash") can hold an amount or a name. The page's own reason is that section's to keep amount-free.
+export const undoLeftDidntSavePlain = (section) => `Undo didn't save (${section}). Check the connection, then retry.`;
+export const undoLeftRefusedPlain = (section, reason) =>
+  /^Couldn't undo\b/.test(reason) ? reason.replace(/^Couldn't undo/, `Couldn't undo (${section})`) : `Couldn't undo (${section}). ${reason}`;
+
+// ===== Sentences every section repeats (rulebook v1.045, v1.051; pass 1: R1-06, R1-07, R2-07, S-2, R3-13) =====
+// The first line of this file says a part never holds a section's own words. These are not a section's:
+// they are the one wording every section says, typed once here. A section passes in only what differs
+// (a name, an amount, a reason), already formatted.
+
+// R2-07 (v1.045 (4)): a refused change or Undo, and a failed Undo. (The words after an Undo that
+// worked are each section's own: v1.051 (1). UNDO_DIDNT_SAVE is above.)
+export const someoneElseChanged = (name) => `Someone else changed ${name} just now, so nothing was done. Their change is shown.`;
+export const couldntUndo = (reason) => `Couldn't undo: ${reason}.`;
+
+// S-2 (v1.051 (2)): a page that can't load. The sentence alone, or naming what didn't load.
+export const LOAD_FAILED = "Couldn't load. Check the connection, then retry.";
+export const loadFailedNamed = (what) => `Couldn't load ${what}. Check the connection, then retry.`;
+
+// R3-13 (v0.623 N6, v0.817 / v0.818): the gray line under a calendar whose gray days can't be chosen
+export const PAST_DAYS_HINT = "Past days can't be chosen.";
+export const FUTURE_DAYS_HINT = "Days after today can't be chosen.";
+
+// R1-07 (v1.045 (3)): the toasts after Mark paid and Undo payment. money and way arrive formatted
+// ("$140", "card"). While private details are hidden: no amount or way (v0.722).
+export const markedPaidToast = (name, money, way) => `${name} marked paid · ${money} ${way}`;
+export const markedPaidToastHidden = (name) => `${name} marked paid`;
+export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
+
+// R1-06 (v1.045 (2)): the Undo payment box. The title, and the second line's opening, which each
+// section continues with its own consequence ("the row goes back to Not paid", "… is owed again",
+// "It comes off the balance"). paidOn is the day the family paid, formatted ("Mar 20").
+export const undoPaymentTitle = (name, money, way) => `Undo ${name}’s ${money} ${way} payment?`;
+export const paidOnOpening = (paidOn) => `Paid on ${paidOn}`;

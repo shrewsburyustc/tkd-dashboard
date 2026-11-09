@@ -15,6 +15,10 @@
     Phone          (max-width: 639.98px)
     PC             (min-width: 1024px)            → every column
     Touch screens  (pointer: coarse)              → 48px rows, 44px tap areas
+  The event roster's own rows are the exception (pass 2 L-02, rulebook v1.053, v1.130): they follow the
+  room beside the left panel, not the window. When that room is under ROSTER_ROOM (eventRules.js) the
+  roster carries the class .is-phone, as on a phone, even in a tablet-sized window, so the roster's
+  row rules hang on .is-phone and never on a phone-width @media rule.
 */
 
 /* ===== Small pieces ===== */
@@ -41,9 +45,20 @@
   display: inline-flex;
   align-items: center;
   column-gap: var(--space-4);
+  max-width: 100%;
   white-space: nowrap;
 }
 
+/* …but a name too long for its column (an admin can call a rank "Bo Dan - 1 Big Stripe") wraps
+   beside its belt instead of running into the next column (pass 2 L-02). The belt (testing.css) and the → keep their size. */
+.ev-tf-pair > span:not([aria-hidden]) {
+  min-width: 0;
+  white-space: normal;
+}
+
+.ev-tf-pair > span[aria-hidden] {
+  flex: none;
+}
 .ev-tf-none {
   color: var(--color-text-secondary);
 }
@@ -271,6 +286,8 @@
 }
 
 /* ===== Event page (R1) ===== */
+/* (The shared back link, components/BackLink.jsx, keeps itself to its own width: align-self in shared.css, v1.136.) */
+
 .ev-back {
   display: inline-flex;
   align-items: center;
@@ -416,6 +433,17 @@
   cursor: pointer;
 }
 
+/* A click box above and below the tag, with a mouse too (pass 1 R4-09, pass 2 L-03; rulebook v1.033):
+   the tag draws 22px tall and anything you click is at least 24 × 24. An absolutely placed box is
+   measured from inside the tag's 1px border (its padding box, 20px tall), so inset -2px gives
+   20 + 2 + 2 = 24px. (-1px would give only 22: pass 2's correction.) Invisible: the tag looks the
+   same and rows don't grow. On touch the bigger box in the touch rules below replaces it. */
+.ev-tag-button::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
 .ev-srow.is-removed .ev-sname,
 .ev-srow.is-removed .ev-scell {
   color: var(--color-text-secondary);
@@ -549,6 +577,13 @@
 /* "Added Nov 21 by Jeffrey Berg (admin)" — its own line under the name (plan Q1) */
 .ev-added-after {
   flex-basis: 100%;
+}
+
+/* "Moved to private testing, Tue, Dec 1" wraps inside the Student column instead of running into
+   Testing for at tablet widths (pass 2 L-02) */
+.ev-added-after .ttag {
+  max-width: 100%;
+  white-space: normal;
 }
 
 /* Edit details, staff after the testing day: class and belt shown but locked (G8) */
@@ -1086,6 +1121,11 @@
   .ev-removed-toggle,
   .ev-sort {
     min-height: var(--tap-size);
+  }
+
+  /* A short sort word ("Event", "Camp", "Status") is still 44px wide (pass 2 L-10) */
+  .ev-sort {
+    min-width: var(--tap-size);
   }
 
   .ev-crow {

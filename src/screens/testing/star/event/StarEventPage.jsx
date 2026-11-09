@@ -69,9 +69,11 @@
 // The event's details and the candidate count only in the header; the roster's privacy rules are
 // in the Candidates tab (no date of birth or email in a list, v0.160; Hide private details, v0.506).
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowLeft, IconQrcode } from '@tabler/icons-react';
+import { IconQrcode } from '@tabler/icons-react';
+import BackLink from '../../../../components/BackLink.jsx';
 import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
+import PageBar from '../../../../components/PageBar.jsx';
 import { loadStarEvent } from '../../../../lib/star/eventsApi.js';
 import { loadCandidates } from '../../../../lib/star/candidatesApi.js';
 import { loadGrading, loadPrivateGrading, judgedSubjects } from '../../../../lib/star/gradingApi.js';
@@ -148,6 +150,7 @@ export default function StarEventPage({
   showToast,
   clearToast,
   onModalOpenChange,
+  deviceLocation = null, // This device's school: Record payment / Record refund count at it (R1-01)
 }) {
   const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEventPage, refreshMs: LIVE_REFRESH_MS });
   const event = live.data?.event ?? null;
@@ -611,7 +614,7 @@ export default function StarEventPage({
   function focusBackLinkSoon() {
     let tries = 0;
     const tryFocus = () => {
-      const link = document.querySelector('.st-page .st-back');
+      const link = document.querySelector('.st-page .back-link'); // the shared back link (R3-06)
       if (!link || link.closest('[inert]')) {
         if (tries++ < 30) window.requestAnimationFrame(tryFocus);
         return;
@@ -718,13 +721,8 @@ export default function StarEventPage({
     });
   }
 
-  const backLink = (
-    <button type="button" className="link-button st-back" aria-label={T.BACK_TO_STAR_LABEL} onClick={() => onBack(eventId)}>
-      {/* ti-arrow-left = back */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {T.BACK_TO_STAR}
-    </button>
-  );
+  // The shared back link (R3-06, v1.048 (12)): it moves inside the app, back to the Events list.
+  const backLink = <BackLink label={T.BACK_TO_STAR} ariaLabel={T.BACK_TO_STAR_LABEL} onClick={() => onBack(eventId)} />;
 
   // G2: loading — gray bars for the name and the summary line (three on phones, where it wraps)
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'noAccess') {
@@ -825,7 +823,7 @@ export default function StarEventPage({
         })}
       </div>
       {/* Back from a private grading page that had to close (not drawn; ✕ only) */}
-      {tab === 'candidates' && privateNotice && <ErrorBanner text={privateNotice} onDismiss={() => setPrivateNotice(null)} />}
+      {tab === 'candidates' && privateNotice && <PageBar text={privateNotice} onDismiss={() => setPrivateNotice(null)} />}
     </>
   );
 
@@ -915,6 +913,7 @@ export default function StarEventPage({
           isAdmin={isAdmin}
           hidden={hidden}
           location={location}
+          deviceLocation={deviceLocation}
           onLocationChange={onLocationChange}
           panelId={panelId}
           tabId={tabId}

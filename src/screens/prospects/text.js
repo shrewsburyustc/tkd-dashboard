@@ -8,14 +8,20 @@ import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 import { addDays, localDay } from '../../lib/schedule/versions.js';
 import { addressLine } from '../../lib/prospects/child.js';
+// The sentences every section says come from the shared words file (R2-07 and S-2, rulebook v1.045
+// (4) and v1.051 (2)): a refused change or Undo, a failed Undo, a page that can't load. Typed once there.
+import { UNDO, UNDONE, UNDO_DIDNT_SAVE, couldntUndo, loadFailedNamed, someoneElseChanged } from '../../components/text.js';
 
 export const PAGE_TITLE = 'Prospects';
 export const ADD_PROSPECT = 'Add prospect';
 export const ADD_SHORT = 'Add';
 // while Hide private details is on, + Add prospect is desk-only (v0.616): the line under the title
-export const ADD_AT_DESK = 'Add prospects at the desk. Email and form answers are hidden on this tablet.';
+// (M-05, v1.055: it names the date of birth too, as Star's line does)
+export const ADD_AT_DESK = 'Add prospects at the desk. Dates of birth, email and form answers are hidden on this tablet.';
 export const LOADING = 'Loading prospects';
-export const LOAD_FAILED = "Couldn't load the prospects. Check the connection and try again.";
+export const LOAD_FAILED = loadFailedNamed('the prospects'); // "Couldn't load the prospects. Check the connection, then retry." (S-2)
+export const FORMS_LOAD_FAILED = loadFailedNamed('the forms'); // Add prospect's list of forms, with its own Retry (S-2)
+export const RETRY = 'Retry';
 export const BOTH_SCHOOLS = 'Both schools';
 export const SCHOOL_NAME = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
 export const CANCEL = 'Cancel';
@@ -28,12 +34,20 @@ export const MORE_ACTIONS = 'More actions';
 export const FOLLOW_UP_TODAY = 'Follow up today';
 export const STAGES = 'Stages';
 export const SIDE_EXITS = 'Side exits';
-export const SEARCH = 'Search name or phone';
-export const SEARCH_LABEL = 'Search prospects by child, parent or phone';
+// The search box (R3-09, v1.050): it reads "Find a prospect" like Camps' "Find a camper" and Black Belt's
+// "Find a candidate"; it still finds by phone, and its screen-reader name says so.
+export const SEARCH = 'Find a prospect';
+export const SEARCH_LABEL = 'Find a prospect by child, parent or phone';
 export const CLEAR_SEARCH = 'Clear search';
+// The gray line under the stage bar while the List is filtered (R3-03, v1.047 (10)): "Showing follow
+// up today only · Show all". `name` is the status's name, lower-cased like the other sections' words
+// ("Showing not paid only").
+export const SHOW_ALL = 'Show all';
+export const showingOnly = (name) => `Showing ${name.toLowerCase()} only`;
+// On Both each school has its own "Clear search" link: its name says which school's line it is under
+export const clearSearchFor = (school) => `Clear search for ${school}`;
 export const stageButton = (name, n, on) => `${name}: ${n === 1 ? '1 child' : `${n} children`}${on ? ', shown' : ''}`;
 export const chipCount = (name, n) => `${name} · ${n}`;
-export const SHOWING_ALL = 'Everyone';
 export const TODAY_TILE = 'Today';
 
 // ----- List -----
@@ -45,7 +59,8 @@ export const COL_STATUS = 'Status';
 export const NOBODY = 'Nobody here.';
 export const NOBODY_TODAY = 'Nobody to follow up today.';
 export const NO_PROSPECTS = 'No prospects yet. They appear here when a family sends a form, or with "Add prospect".';
-export const NO_MATCH = 'No one matches that search.';
+// A search that finds nobody (R3-09): the line is followed by a "Clear search" link (as Camps' line)
+export const noMatch = (text) => `No prospects match “${text}”.`;
 // "Ava N.": the initial is the child's own last initial, or the parent's for older sign-ups (v0.637)
 export const childLabel = (p, initial) => (initial ? `${p.childFirstName} ${initial}.` : p.childFirstName);
 export const NONE = '—';
@@ -115,7 +130,7 @@ export const SCROLL_HINT = 'Scroll sideways for more stages';
 export const DRAG_HINT = 'Drag a card to another stage, or open it and change the status.';
 export const DRAG_HINT_TOUCH = 'Press and hold a card, then drag it to another stage.';
 export const NEW_WORD = 'new';
-export const MOVED = (name, to) => `${name} moved to ${to}.`;
+export const MOVED = (name, to) => `${name} moved to ${to}`;
 
 // ----- "Came" when a card is dropped on Came -----
 export const cameTitle = (name) => `Did ${name} come to the free class?`;
@@ -129,13 +144,16 @@ export const keepIn = (column) => `Keep in ${column}`;
 // ----- The profile window (v0.639; was the side panel, v0.236) -----
 export const BACK = 'Back';
 export const CLOSE_PANEL = 'Close';
-export const UNSAVED_NOTE = 'Unsaved note. Save it or cancel first.';
+// The note box's warning (default 2: the shared words, N15, as Edit statuses' UNSAVED below)
+export const UNSAVED_NOTE = 'Unsaved changes. Save or cancel first.';
 export const CALL = 'Call';
 export const TEXT = 'Text';
 export const EMAIL = 'Email';
 export const EMAIL_OFF_WHILE_HIDDEN = 'Email is off while private details are hidden. Email the family at the desk.'; // v1.000 (D2a)
 export const COPY_NUMBER = 'Copy number';
 export const COPIED = 'Copied';
+// Copy number when the clipboard refuses (U-05, default words): the note beside the button
+export const COPY_NUMBER_FAILED = "Couldn't copy the number. Select it and copy it yourself.";
 export const callTitle = (name) => `Call ${name}`;
 export const STATUS = 'Status';
 export const statusButton = (name) => `${STATUS}: ${name}`; // the status tag button's name (no "Status" label is shown)
@@ -198,7 +216,7 @@ export const WAIVER_TEXT = 'Waiver text';
 export const PRINT = 'Print';
 export const PRINT_PREPARING = 'Preparing…';
 export const PRINT_OFF_WHILE_HIDDEN = 'Print is off while private details are hidden. Print at the desk.';
-export const PRINT_FAILED = "Couldn't get the pages ready to print. Check the connection and try again.";
+export const PRINT_FAILED = "Couldn't get the pages ready to print. Check the connection, then retry."; // S-2 ending
 export const printOnly = (name) => `${name} only`;
 // "Ava and Noah · 2 sheets", "Ava, Noah and Mia · 3 sheets" — one visitor sheet per child (a
 // sheet that doesn't fit runs to a second page, so the menu counts sheets, not pages)
@@ -226,12 +244,14 @@ export const CURRENT = '(now)';
 export const EDIT_STATUSES = 'Edit statuses';
 export const SHOW_SIGNATURE = 'Show signature';
 export const SIGNATURE = 'Signature';
-export const SIGNATURE_GONE = 'The picture was deleted 90 days after the free class. The waiver was signed on the date above.';
-export const SIGNATURE_FAILED = "Couldn't load the signature. Check the connection and try again.";
+// The picture is deleted 90 days after the free class, or 90 days after signing when no class was
+// booked (v0.242 (1)); `afterClass` is the same flag the "Kept until" line uses (P-03).
+export const signatureGone = (afterClass) => `The picture was deleted 90 days after ${afterClass ? 'the free class' : 'signing'}. The waiver was signed on the date above.`;
+export const SIGNATURE_FAILED = loadFailedNamed('the signature'); // S-2; a Retry link sits beside it
 export const LOADING_PANEL = 'Loading…';
 // The profile window's read failed (pass 2 P-02): the shared amber bar with Retry, in place of
 // "Loading…" (v1.051 (2)'s ending).
-export const loadDetailFailed = (firstName) => `Couldn't load ${firstName ? `${firstName}'s` : 'the'} details. Check the connection, then retry.`;
+export const loadDetailFailed = (firstName) => loadFailedNamed(`${firstName ? `${firstName}'s` : 'the'} details`);
 
 // ----- Dates and times as the profile and the sheet show them -----
 // 'YYYY-MM-DD' → "Mon, Mar 4, 2019"; withWeekday false → "Mar 4, 2019"
@@ -317,14 +337,31 @@ export const whenLine = (at, who) => `${shortDate(localDay(at)).slice(4)} · ${w
 
 // ----- Toasts and problems -----
 export const STATUS_SAVED = (name) => `Status: ${name}`;
-export const NOTE_SAVED = 'Note saved.';
-export const CHECKED_IN = (name) => `${name} checked in.`;
-export const MARKED_NOSHOW = (name) => `${name} didn't show — call back tomorrow.`; // matches the card line (v0.610)
-export const BOOKED = (name) => `Free class booked for ${name}.`;
-export const CANCELLED_BOOKING = (name) => `${name}'s free class was cancelled.`;
-export const DELETED = (name) => `${name} was deleted.`;
-export const STALE = 'Someone else changed this prospect. It was reloaded — please try again.';
-export const SAVE_FAILED = "It wasn't saved. Check the connection and try again.";
+// A one-sentence toast has no full stop at the end, and none has the ✓ (R2-09, v1.046 (7), v1.051 (5))
+export const NOTE_SAVED = 'Note saved';
+export const CHECKED_IN = (name) => `${name} checked in`;
+export const MARKED_NOSHOW = (name) => `${name} didn't show — call back tomorrow`; // matches the card line (v0.610)
+export const BOOKED = (name) => `Free class booked for ${name}`;
+export const CANCELLED_BOOKING = (name) => `${name}'s free class was cancelled`;
+export const DELETED = (name) => `${name} was deleted`;
+// The follow-up date changed from the profile (it has a 5-second Undo, v1.006): the same words as the History line
+export const FOLLOW_UP_SAVED = (date) => (date ? `Follow-up set for ${shortDate(date)}` : 'Follow-up removed');
+// A refused change or Undo names the prospect (R2-07, v1.045 (4)): "Someone else changed Ava just now, so
+// nothing was done. Their change is shown." The page has just reloaded, so their change is on screen.
+export const stale = (name) => someoneElseChanged(name || 'this prospect');
+export const STALE = stale(''); // for a box that has no name to give
+// Delete status / Edit statuses when someone else changed (or deleted) that status meanwhile (U-03): the
+// box steps back to the list, which now shows their change, with this note.
+export const staleStatus = (name) => someoneElseChanged(name || 'this status');
+export const STALE_STATUSES = someoneElseChanged('the statuses'); // a reorder refused
+// An Undo the database refused (R2-07): "Couldn't undo: [reason]." — shown in the page's bar, with no Retry
+export const UNDO_NOT_ALLOWED = couldntUndo("that can't be done right now");
+export const UNDO_INVALID = couldntUndo('it was refused');
+export const UNDO_TIME_TAKEN = couldntUndo('that time was taken meanwhile');
+export const SAVE_FAILED = "Couldn't save. Check the connection, then try again."; // Black Belt's and the Schedule's words (R2-01)
+export const UNDO_FAILED = UNDO_DIDNT_SAVE; // a failed Undo: "Undo didn't save. Check the connection, then retry." (shared; the save line shows it)
+export const LOAD_ONE_FAILED = loadFailedNamed('that child'); // reading a card's child before a Board drop's box (S-2; has Retry)
+export const TIMES_FAILED = loadFailedNamed('the times'); // Book a free class' list of times (S-2; the box has Retry)
 // A box that stays open when its save fails (pass 2 U-01, rulebook v1.103): the amber note in the box.
 // Delete prospect and Delete status use the dashboard's delete words (U-08: Forms, Schedule, Color
 // Belt, Star and Black Belt say the same); Came, Joined and Book a free class the save words.
@@ -399,5 +436,4 @@ export const deleteBody = (name, siblings) => (siblings
 export const KEEP_PROSPECT = 'Keep prospect';
 export const KEEP_STATUS = 'Keep status';
 export const DELETING = 'Deleting…';
-export const UNDO = 'Undo';
-export const UNDONE = 'Undone'; // after an Undo worked (v0.618), as the other sections say
+export { UNDO, UNDONE }; // the toast's button and the words after an Undo that worked (v0.618): the shared ones

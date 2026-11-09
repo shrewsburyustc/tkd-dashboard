@@ -372,7 +372,7 @@ h2:focus,
 }
 .reg-fee__amount b {
   font-size: 26px;
-  font-weight: 600;
+  font-weight: 500; /* 500, not 600: §7 allows 400 and 500 on screen (pass 1 R4-06, v1.051 (4)) */
   letter-spacing: -0.5px;
 }
 .reg-fee__amount span {
@@ -391,7 +391,7 @@ h2:focus,
   border-top: 1px solid var(--color-tag-warn-border);
 }
 .reg-fwarn b {
-  font-weight: 600;
+  font-weight: 500; /* R4-06, as above */
 }
 .reg-warn-text {
   color: var(--color-warning-text);
@@ -656,7 +656,7 @@ section.reg-card .reg-review {
 }
 .reg-total b {
   font-size: 26px;
-  font-weight: 600;
+  font-weight: 500; /* R4-06, as above (Camps' family page shows this total too) */
   letter-spacing: -0.5px;
 }
 .reg-visit__warn {

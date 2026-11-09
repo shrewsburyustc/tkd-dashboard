@@ -11,7 +11,8 @@
 //     ("Fri, Nov 20, 2026 · Worcester school · 14 students · registration open until Nov 13")
 //   - header buttons: Add student (blue, N on the PC) and Registration link (outline)
 //   - the one tab, Students
-//   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115);
+//   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115), drawn
+//     only once someone is registered, active or removed (pass 2 C-05 (a));
 //     Paid / Not paid filter the roster, Students clears the filter
 //   - the amber "possible duplicate" box with Review (Star v0.114), when there is one
 //   - the class switch (classes in this event, with counts) and the class line (time + gear);
@@ -34,6 +35,8 @@
 // testing, Tue, Dec 1") and their payment moves with them to the Private testing tab. A moved
 // Removed row has no ⋯ for staff; admins get Open private testing and a grayed Restore (with the
 // reason) — no Delete permanently. Everything else on this page is phase 3 exactly.
+// (Pass 2 M-03, v0.428: any other removed row whose payment still stands gets Print receipt first in
+// its ⋯, for staff and admins — staff's ⋯ there holds only it; eventRules.canPrintReceipt.)
 //
 // The design review's part 2 (rulebook v0.420 / v0.421, mockups P1 and P3; Star's v0.518 copied):
 //   - CB1: Mark paid opens the shared Mark paid box (amount worked out by the database, Paid by
@@ -56,11 +59,21 @@
 // (it may name money or carry a payment Undo). Color Belt keeps no date of birth or email, so it is
 // money only.
 // The Grading tab's gray "Not paid" tag stays (exception, v0.250).
+//
+// Color Belt batch 2 (design review pass 1: R2-05, R2-07, R1-06, R1-07's toasts, R1-08, R3-06):
+//   - every save goes through ONE save line (lib/saveLine.js, `line` below) instead of this page's own
+//     busy flag, and every toast with an Undo is made by line.undoAction: an Undo pressed while another
+//     save runs now waits its turn ("Undoing…") instead of being dropped. The line also shows "Undone"
+//     and any failed-Undo bar itself, so this page no longer does;
+//   - the page's amber bars are drawn with PageBar (under the top bar, in view however far the page is
+//     scrolled); a bar inside a dialog or the Mark paid box stays an ErrorBanner;
+//   - a refused change says "Someone else changed [Name] just now…" and a refused Undo says
+//     "Couldn't undo: …" (the shared sentences, text.js);
+//   - the back link is the shared BackLink.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
-  IconArrowLeft,
   IconArrowRight,
   IconSum,
   IconCashEdit,
@@ -75,12 +88,13 @@ import {
   IconUserMinus,
   IconUsers,
 } from '@tabler/icons-react';
+import BackLink from '../../../components/BackLink.jsx';
 import CompareDialog from '../../../components/CompareDialog.jsx';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import CountCards from '../../../components/CountCards.jsx';
 import DuplicateBox from '../../../components/DuplicateBox.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import MarkPaidBox from '../../../components/MarkPaidBox.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import ReceiptDialog from '../../../components/Receipt.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
@@ -88,7 +102,7 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText, formatMoney } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
-import { classTimeLabel, feeFor } from '../../../lib/testing/eventRules.js';
+import { ROSTER_ROOM, canPrintReceipt, classTimeLabel, feeFor, inCardFilter, markPaidChoiceWhere, rosterCounts, rosterLayoutFor } from '../../../lib/testing/eventRules.js';
 import { buildColorBeltReceipt, eventTotalDueCents } from '../../../lib/testing/receipt.js';
 import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
 import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
@@ -117,6 +131,7 @@ import {
   testingGroups,
 } from '../../../lib/testing/gradingRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
+import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
@@ -130,7 +145,19 @@ import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
 import RosterRows, { hasStatusTag } from './RosterRows.jsx';
 import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDialog.jsx';
 import { useGradingSaves } from './useGradingSaves.js';
+import { useSaveLine } from '../../../lib/saveLine.js';
 import * as T from '../text.js';
+
+// batch 2 words — the reasons of a refused Undo, in the shared sentence "Couldn't undo: [reason]."
+// (T.couldntUndo wants a lowercase reason with no final full stop). Each keeps the meaning of the
+// old sentence it replaces (the owner of text.js moves them later).
+const REASON_ONLY_ADMIN = 'only an admin can do that';
+const REASON_PAYMENT_TOO_LATE = 'too late here, an admin can undo the payment'; // was UNDO_PAYMENT_TOO_LATE
+const REASON_DUPLICATE_TOO_LATE = 'too late here, an admin can restore the copy from Removed'; // was UNDO_DUPLICATE_TOO_LATE
+const REASON_MOVE_TOO_LATE = 'too late here, the private testing stays on the Private testing tab'; // was UNDO_MOVE_TOO_LATE
+const REASON_HAS_RESULT = 'a result was recorded just now'; // was UNDO_HAS_RESULT
+const reasonChanged = (name) => `someone else changed ${name} just now`; // was UNDO_STALE
+const THIS_STUDENT_LOWER = 'this student'; // for someoneElseChanged when a row's name isn't known
 
 // The class chosen on each event's page, kept while the page is open.
 const classByEvent = new Map();
@@ -180,6 +207,7 @@ export default function EventPage({
   school,
   isAdmin,
   onBack,
+  deviceLocation, // 'Worcester' | 'Shrewsbury' — This device's school: where Mark paid's money counts (R1-01)
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -211,6 +239,12 @@ export default function EventPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  // Only the Students roster follows the room beside the left panel (pass 2 L-02, rulebook v1.053,
+  // v1.130; lib/pageRoom.js): narrower than ROSTER_ROOM its tablet columns would run text into text,
+  // so it draws its phone rows. Dialogs, ⋯ menus, the Grading tab and the rest of the page keep
+  // following the window (isPhone).
+  const narrowRoom = usePageRoomBelow(ROSTER_ROOM);
+  const rosterLayout = rosterLayoutFor(layout, narrowRoom);
   const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
 
   // ----- State -----
@@ -219,8 +253,10 @@ export default function EventPage({
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByEvent.get(eventId) ?? true);
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor }
+  // The page's ONE amber bar (drawn with PageBar): { kind, text, retry, retrying, takeFocus, csv }.
+  // kind: 'row' (a row action that didn't save), 'price' (Mark paid's price changed), 'undo' (the
+  // save line's bar for an Undo that didn't work) or none (a refused change, a load failure …).
   const [banner, setBanner] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
   const [schools, setSchools] = useState(null); // for the flyer's address
   const [printing, setPrinting] = useState(null); // { printedAt, opener } while the grading sheet prints
@@ -238,7 +274,6 @@ export default function EventPage({
   const tab = TABS.includes(eventTab) ? eventTab : localTab;
   const baseId = useId();
   const tabIds = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
-  const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
@@ -253,17 +288,36 @@ export default function EventPage({
     setRemovedOpenState(open);
   }
 
-  // ----- One change at a time -----
-  function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
-    return true;
-  }
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  // ----- One change at a time: the save line (R2-05, lib/saveLine.js) -----
+  // line.begin() answers false while a save or an Undo runs (the save is then dropped, as before) and
+  // otherwise a token that goes back to line.end() EXACTLY once, from a finally, even when the save
+  // threw. An Undo pressed meanwhile waits and runs when the line is free. line.busy is true while
+  // anything runs: the Mark paid buttons and the menu's items look and act unavailable meanwhile.
+  // undoBar is the line's way to put its bar (a failed or refused Undo) into this page's one bar.
+  const undoBar = (next) => setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current));
+  const line = useSaveLine({ section: 'Color belt testing', showToast, undoBar });
+  const busy = line.busy;
+  // A save ended: tell the line, and clear the toast when it didn't work (as before).
+  function endLine(token, status, retry = null) {
+    line.end(status, { retry, token });
     if (status && status !== 'ok') clearToast();
+  }
+  // One call on the line: answers its { status }, or null when the line was busy (nothing was done).
+  // retry: what the page's bar's Retry would call (the line uses it when an Undo waited for this save).
+  async function onLine(call, retry = null) {
+    const token = line.begin();
+    if (!token) return null;
+    let result = { status: 'error' };
+    try {
+      result = await call();
+    } finally {
+      endLine(token, result.status, retry);
+    }
+    return result;
+  }
+  // A toast with a queued Undo (R2-05): the Undo waits for the line, runs, and the line says "Undone".
+  function undoToast(text, run, options = {}) {
+    showToast(text, { icon: false, action: line.undoAction(run, { words: text, ...options }) });
   }
 
   // ----- Focus after a dialog closes -----
@@ -354,7 +408,7 @@ export default function EventPage({
   useEffect(() => {
     if (!menuRowGone) return;
     setMenu(null);
-    if (!document.activeElement || document.activeElement === document.body) document.querySelector('.ev-back')?.focus();
+    if (!document.activeElement || document.activeElement === document.body) document.querySelector('.back-link')?.focus();
   }, [menuRowGone]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
 
@@ -368,7 +422,8 @@ export default function EventPage({
   isAdminNowRef.current = isAdmin;
   // A money save's answer that arrives while hidden: the general words only — no amount, no paid
   // status, no Retry that would record money (Mark paid / Undo payment / Edit payment …).
-  function hiddenMoneyProblem(status) {
+  // name: the student's name (R2-07: "Someone else changed [Name] just now…").
+  function hiddenMoneyProblem(status, name) {
     if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: T.ROSTER_NOT_ALLOWED });
@@ -377,7 +432,7 @@ export default function EventPage({
     } else if (status === 'error') {
       setBanner({ text: T.SAVE_FAILED });
     } else {
-      setBanner({ text: T.ROSTER_STALE });
+      setBanner({ text: T.someoneElseChanged(name || THIS_STUDENT_LOWER) });
       reloadQuiet();
     }
   }
@@ -429,12 +484,39 @@ export default function EventPage({
     if (markPaidGone) setMarkPaidBox(null);
   }, [markPaidGone]);
 
+  // The roster draws its rows again when its layout flips (a window resized, a tablet turned, Panel
+  // size changed: pass 2 L-02): a row's ⋯ and Mark paid buttons are then new buttons in other places,
+  // so an open ⋯ menu or Mark paid box would point at a button that is gone. Both close, and also when
+  // the window itself becomes a phone (the ⋯ popover turns into the bottom sheet there, which would stay
+  // open with no key to close it). Nothing is lost: the Mark paid box only asks how they paid.
+  const rosterIsPhone = rosterLayout.isPhone;
+  useEffect(() => {
+    setMenu(null);
+    setMarkPaidBox(null);
+  }, [rosterIsPhone, isPhone]);
+
   // ===== Derived data =====
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
   const classById = new Map(classes.map((c) => [c.id, c]));
   const active = roster.filter((r) => r.status === 'active');
   const removed = roster.filter((r) => r.status !== 'active');
-  const paidCount = active.filter((r) => r.paid).length;
+  // Anyone registered at all, active or removed? Until then the count cards would only read 0, so
+  // they aren't drawn (pass 2 C-05 (a), v1.028; as the Private testing tab, Star and Camps' hasCampers).
+  const hasRegistrations = roster.length > 0;
+  // The last registration went (deleted permanently): a Paid / Not paid filter left on would come
+  // back by itself with the cards when a family registers again, hiding the new student, so it is
+  // turned off here (Add student already turns it off).
+  const noOneRegistered = data != null && !hasRegistrations;
+  useEffect(() => {
+    if (noOneRegistered) setFilter(null);
+  }, [noOneRegistered]);
+  // A row marked "Possible duplicate" stays out of Paid and Not paid (the cards and their filters)
+  // until the pair is resolved (pass 1 R3-02, v1.046 (8); eventRules.rosterCounts / inCardFilter);
+  // Students still counts it, and Payments recorded keeps any money it paid. One gray line under the
+  // cards says so.
+  const counts = rosterCounts(active);
+  const paidCount = counts.paid;
+  const notPaidCount = counts.notPaid;
   // Payments recorded = every recorded payment of this event, net of reversals (incl. withdrawn
   // students, whose payment stays on record; a deleted student's payment is gone).
   const paymentsTotal = data?.paymentTotalCents ?? payments.reduce((sum, p) => sum + p.amountCents, 0);
@@ -458,10 +540,13 @@ export default function EventPage({
   const groupOrder = (a, b) => (classPos.get(a.eventClassId) ?? 0) - (classPos.get(b.eventClassId) ?? 0) || order(a, b);
   let rows = active.filter(inGroup).sort(groupOrder);
   // (No Paid / Not paid filter while private details are hidden, even for the one drawing before
-  // the switch-on effect above clears it.)
-  const shownFilter = hidden ? null : filter;
-  if (shownFilter === 'paid') rows = rows.filter((r) => r.paid);
-  if (shownFilter === 'notPaid') rows = rows.filter((r) => !r.paid);
+  // the switch-on effect above clears it; nor while nobody is registered, when there are no cards
+  // to turn it off with.)
+  const shownFilter = hidden || !hasRegistrations ? null : filter;
+  // (A possible duplicate is in neither filter until it's resolved, R3-02.) Remember if one of them is
+  // an unpaid row here, so an empty Not paid can say so (batch 3 Q2 c).
+  const unpaidDuplicateHere = rows.some((r) => r.duplicateState === 'possible' && r.paid !== true);
+  rows = rows.filter((r) => inCardFilter(r, shownFilter));
   // Removed students of the whole group, in one Removed group after the classes.
   const removedRows = group && shownFilter === null ? removed.filter(inGroup).sort(groupOrder) : [];
   // v0.195: a small heading per class when classes test together ("Group B · 3 students");
@@ -734,9 +819,10 @@ export default function EventPage({
     // The private price is TODAY's price in Classes and ranks for the student's rank (v0.404); only
     // when that rank no longer exists there, the event's own copy. Read fresh before the dialog opens.
     const copy = rankById.get(row.eventRankId);
-    if (!copy || !beginWrite()) return;
-    const result = await loadClassesAndRanks(event.locationCode);
-    endWrite(result.status === 'ok' ? 'ok' : result.status);
+    if (!copy) return;
+    // (A read, but it holds the line like a save: nothing else changes while the dialog opens.)
+    const result = await onLine(() => loadClassesAndRanks(event.locationCode));
+    if (!result) return; // the line was busy
     if (result.status === 'no_access') {
       onNoAccess();
       return;
@@ -758,10 +844,11 @@ export default function EventPage({
       patchDialog({ triedSave: true });
       return;
     }
-    if (!beginWrite()) return;
-    patchDialog({ saving: true, note: null });
-    const result = await moveToPrivate({ registrationId: d.rowId, expectedVersion: d.snapshot.version, privateDate: d.values.day, privateTime: d.values.time });
-    endWrite(result.status);
+    const result = await onLine(() => {
+      patchDialog({ saving: true, note: null });
+      return moveToPrivate({ registrationId: d.rowId, expectedVersion: d.snapshot.version, privateDate: d.values.day, privateTime: d.values.time });
+    });
+    if (!result) return; // the line was busy
     const status = result.status;
     const name = T.studentLabel(d.snapshot);
     if (status === 'ok') {
@@ -769,14 +856,14 @@ export default function EventPage({
       const reloaded = reloadQuiet();
       // Undo only when no testing-day result was cleared (the No show can't come back, §10 point 5).
       const privateId = result.privateId;
-      const action = result.resultCleared
-        ? null
-        : {
-            label: T.UNDO,
-            onAction: () =>
-              runUndo(() => undoMoveToPrivate({ privateId, expectedVersion: 1 }), { find: () => rowEl(d.rowId) }, { notAllowedText: T.UNDO_MOVE_TOO_LATE }),
-          };
-      showToast(T.movedToast(name), action ? { icon: false, action } : { icon: false });
+      const text = T.movedToast(name);
+      if (result.resultCleared) {
+        showToast(text, { icon: false });
+      } else {
+        undoToast(text, () =>
+          runUndo(() => undoMoveToPrivate({ privateId, expectedVersion: 1 }), { find: () => rowEl(d.rowId), name, notAllowed: T.couldntUndo(REASON_MOVE_TOO_LATE) }),
+        );
+      }
       focusLater(() => rowEl(d.rowId), addStudentEl, reloaded);
     } else if (status === 'past_day') {
       patchDialog({ saving: false, pastDay: d.values.day });
@@ -923,14 +1010,19 @@ export default function EventPage({
       cancelDialog();
       return;
     }
-    if (!beginWrite()) return;
+    const token = line.begin();
+    if (!token) return;
     patchDialog({ saving: true, note: null });
     const p = check.payload;
     const name = `${p.firstName} ${p.lastName}`;
     const newClassId = rankById.get(p.eventRankId)?.eventClassId ?? d.values.classId;
     if (d.mode === 'add') {
-      const result = await addStudent({ eventId, firstName: p.firstName, lastName: p.lastName, eventRankId: p.eventRankId, stripes: true, payingBy: p.payingBy });
-      endWrite(result.status);
+      let result = { status: 'error' };
+      try {
+        result = await addStudent({ eventId, firstName: p.firstName, lastName: p.lastName, eventRankId: p.eventRankId, stripes: true, payingBy: p.payingBy });
+      } finally {
+        endLine(token, result.status);
+      }
       if (result.status !== 'ok') {
         handleDialogProblem(result.status);
         return;
@@ -947,34 +1039,47 @@ export default function EventPage({
     // Phase 3 (contract 0010 §4.7): a belt or class change clears a recorded result. Read the
     // student's result again first; if it changed since the dialog opened (a grader tapped just
     // now), show the new state and let the person read it and press Save again.
-    if (p.eventRankId !== snap.eventRankId) {
-      const fresh = await loadResult(d.rowId);
-      if (fresh.status !== 'ok') {
-        endWrite('error');
-        patchDialog({ saving: false, note: 'SAVE_FAILED' });
-        return;
+    // (The line is held across both calls and let go from the finally, however this ends.)
+    let result = { status: 'error' };
+    let regraded = null; // the student's result changed since the dialog opened: show it, don't save
+    let readFailed = false;
+    try {
+      if (p.eventRankId !== snap.eventRankId) {
+        const fresh = await loadResult(d.rowId);
+        if (fresh.status !== 'ok') {
+          readFailed = true;
+        } else if (Boolean(fresh.graded) !== Boolean(d.graded?.graded)) {
+          regraded = { graded: Boolean(fresh.graded), result: fresh.result ?? null, note: fresh.note ?? null };
+          result = { status: 'ok' }; // nothing failed: the line is freed as after a good save
+        }
       }
-      if (Boolean(fresh.graded) !== Boolean(d.graded?.graded)) {
-        endWrite('ok');
-        const graded = { graded: Boolean(fresh.graded), result: fresh.result ?? null, note: fresh.note ?? null };
-        // Staff after the testing day: the choices lock — put the saved class and belt back.
-        const locks = graded.graded && dayWindow === 'after' && !isAdmin;
-        setDialog((current) =>
-          current
-            ? { ...current, saving: false, graded, values: locks ? { ...current.values, classId: current.initial.classId, rankId: current.initial.rankId } : current.values }
-            : current,
-        );
-        return;
+      if (!readFailed && !regraded) {
+        result = await updateStudent({
+          registrationId: d.rowId,
+          expectedVersion: snap.version,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          eventRankId: p.eventRankId,
+        });
       }
+    } finally {
+      endLine(token, result.status);
     }
-    const result = await updateStudent({
-      registrationId: d.rowId,
-      expectedVersion: snap.version,
-      firstName: p.firstName,
-      lastName: p.lastName,
-      eventRankId: p.eventRankId,
-    });
-    endWrite(result.status);
+    if (readFailed) {
+      patchDialog({ saving: false, note: 'SAVE_FAILED' });
+      return;
+    }
+    if (regraded) {
+      const graded = regraded;
+      // Staff after the testing day: the choices lock — put the saved class and belt back.
+      const locks = graded.graded && dayWindow === 'after' && !isAdmin;
+      setDialog((current) =>
+        current
+          ? { ...current, saving: false, graded, values: locks ? { ...current.values, classId: current.initial.classId, rankId: current.initial.rankId } : current.values }
+          : current,
+      );
+      return;
+    }
     if (result.status === 'not_allowed') {
       // The student is graded and the testing day is over: only an admin can change their belt.
       patchDialog({ saving: false, note: 'STUDENT_LOCKED', blocked: true });
@@ -995,25 +1100,18 @@ export default function EventPage({
       focusLater(() => rowEl(d.rowId), () => d.opener, reloaded);
       return;
     }
-    showToast(T.TOAST_CHANGES_SAVED, {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () => {
-          // A result saved during the 5 seconds doesn't change the row's version, and putting the
-          // old belt back would clear it. So when the Undo changes the belt, look at the latest
-          // loaded row first; if it has a result now, say so and don't undo.
-          const fresh = (liveRef.current.data?.roster ?? []).find((r) => r.id === d.rowId);
-          if (p.eventRankId !== snap.eventRankId && fresh?.result) {
-            setBanner({ text: T.UNDO_HAS_RESULT });
-            return;
-          }
-          runUndo(
-            () => updateStudent({ registrationId: d.rowId, expectedVersion: savedVersion, firstName: snap.firstName, lastName: snap.lastName, eventRankId: snap.eventRankId }),
-            { find: () => rowEl(d.rowId) },
-          );
-        },
-      },
+    undoToast(T.TOAST_CHANGES_SAVED, () => {
+      // A result saved during the 5 seconds doesn't change the row's version, and putting the
+      // old belt back would clear it. So when the Undo changes the belt, look at the latest
+      // loaded row first (now, when the Undo's turn comes); if it has a result, say so and don't undo.
+      const fresh = (liveRef.current.data?.roster ?? []).find((r) => r.id === d.rowId);
+      if (p.eventRankId !== snap.eventRankId && fresh?.result) {
+        return { status: 'has_result', reason: T.couldntUndo(REASON_HAS_RESULT) };
+      }
+      return runUndo(
+        () => updateStudent({ registrationId: d.rowId, expectedVersion: savedVersion, firstName: snap.firstName, lastName: snap.lastName, eventRankId: snap.eventRankId }),
+        { find: () => rowEl(d.rowId), name: T.studentLabel(snap) },
+      );
     });
     focusLater(() => rowEl(d.rowId), () => d.opener, reloaded);
   }
@@ -1026,15 +1124,17 @@ export default function EventPage({
       cancelDialog();
       return;
     }
-    if (!beginWrite()) return;
-    patchDialog({ saving: true, note: null });
-    const result = await changePayingBy({ registrationId: d.rowId, expectedVersion: d.snapshot.version, payingBy: d.values.payingBy });
-    endWrite(result.status);
+    const result = await onLine(() => {
+      patchDialog({ saving: true, note: null });
+      return changePayingBy({ registrationId: d.rowId, expectedVersion: d.snapshot.version, payingBy: d.values.payingBy });
+    });
+    if (!result) return; // the line was busy
     const open = stillOpen(d);
     if (result.status !== 'ok') {
+      const name = T.studentLabel(d.snapshot);
       if (open) handleDialogProblem(result.status);
-      else if (hiddenNowRef.current) hiddenMoneyProblem(result.status);
-      else setBanner({ text: result.status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
+      else if (hiddenNowRef.current) hiddenMoneyProblem(result.status, name);
+      else setBanner({ text: result.status === 'error' ? T.SAVE_FAILED : T.someoneElseChanged(name) });
       return;
     }
     if (open) setDialog(null);
@@ -1046,13 +1146,9 @@ export default function EventPage({
       showToast(T.TOAST_CHANGES_SAVED, { icon: false });
       return;
     }
-    showToast(T.TOAST_CHANGES_SAVED, {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () => runUndo(() => changePayingBy({ registrationId: d.rowId, expectedVersion: savedVersion, payingBy: back }), { find: () => rowEl(d.rowId) }, { money: true }), // how they pay counts as money while hidden
-      },
-    });
+    undoToast(T.TOAST_CHANGES_SAVED, () =>
+      runUndo(() => changePayingBy({ registrationId: d.rowId, expectedVersion: savedVersion, payingBy: back }), { find: () => rowEl(d.rowId), name: T.studentLabel(d.snapshot), money: true }), // how they pay counts as money while hidden
+    );
     focusLater(() => d.opener, () => rowEl(d.rowId), reloaded);
   }
 
@@ -1069,15 +1165,17 @@ export default function EventPage({
       cancelDialog();
       return;
     }
-    if (!beginWrite()) return;
-    patchDialog({ saving: true, note: null });
-    const result = await editPayment({ paymentId: d.paymentId, ...check.payload });
-    endWrite(result.status);
+    const result = await onLine(() => {
+      patchDialog({ saving: true, note: null });
+      return editPayment({ paymentId: d.paymentId, ...check.payload });
+    });
+    if (!result) return; // the line was busy
     const open = stillOpen(d);
     if (result.status !== 'ok') {
+      const name = T.studentLabel(d.snapshot);
       if (open) handleDialogProblem(result.status);
-      else if (hiddenNowRef.current) hiddenMoneyProblem(result.status);
-      else setBanner({ text: result.status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
+      else if (hiddenNowRef.current) hiddenMoneyProblem(result.status, name);
+      else setBanner({ text: result.status === 'error' ? T.SAVE_FAILED : T.someoneElseChanged(name) });
       return;
     }
     if (open) setDialog(null);
@@ -1093,18 +1191,17 @@ export default function EventPage({
     // back to the old way to pay, amount and date — the same function, nothing new in the database.
     const newPaymentId = result.paymentId;
     const back = d.undoTo;
-    showToast(T.TOAST_PAYMENT_CHANGED, {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () =>
-          runUndo(
-            () => editPayment({ paymentId: newPaymentId, method: back.method, amountCents: back.amountCents, paidOn: back.paidOn }),
-            { find: () => rowEl(d.rowId) },
-            { money: true },
-          ),
-      },
-    });
+    // (words: the general ones, so a bar shown after leaving the page never names a payment, even if
+    // Hide private details gets switched on meanwhile)
+    undoToast(
+      T.TOAST_PAYMENT_CHANGED,
+      () =>
+        runUndo(
+          () => editPayment({ paymentId: newPaymentId, method: back.method, amountCents: back.amountCents, paidOn: back.paidOn }),
+          { find: () => rowEl(d.rowId), name: T.studentLabel(d.snapshot), money: true },
+        ),
+      { words: `${T.TOAST_CHANGES_SAVED} for ${T.studentLabel(d.snapshot)}` },
+    );
   }
 
   // ----- Save: the grading note (G2, contract 0010 §4.5) -----
@@ -1168,41 +1265,46 @@ export default function EventPage({
   }
 
   // ===== Undo =====
-  // options.notAllowedText: what to say if the database refuses the Undo for this person (e.g. a
-  // staff member's payment Undo after the 10-second window).
+  // The body of a toast's Undo (R2-05): line.undoAction runs it when the line is free, and shows
+  // "Undone" / the failed-Undo bar from the answer, so this page no longer does either. Answers:
+  //   { status: 'ok' }                 it worked (the reload and the focus move are started here)
+  //   { status: 'error' }              it didn't reach the database: the line's bar says so, with Retry
+  //   { status: 'no_access' }          the screen locks (onNoAccess) and the line leaves its bar for later
+  //   { status, reason }               the database refused: reason (T.couldntUndo(…)) is the bar, no Retry
+  // options.find / options.fallback: where focus goes after an Undo that worked.
+  // options.name: the student the Undo concerns (for "someone else changed [Name] just now").
+  // options.notAllowed: the reason (a whole "Couldn't undo: …" sentence) when the database refuses the
+  //   Undo for this person (e.g. a staff member's payment Undo after the 10-second window).
   // options.money: the Undo of a payment — while hidden on arrival, the general words, no Retry.
-  async function runUndo(call, focus = null, options = {}) {
-    if (!beginWrite()) return;
+  async function runUndo(call, options = {}) {
     const result = await call();
-    endWrite(result.status);
     const status = result.status;
-    if (options.money && hiddenNowRef.current && status !== 'ok') {
-      hiddenMoneyProblem(status);
-      return;
-    }
     if (status === 'ok') {
-      setBanner((current) => (current?.kind === 'undo' ? null : current));
-      showToast(T.TOAST_UNDONE, { icon: false });
       const reloaded = reloadQuiet();
-      if (focus) focusLater(focus.find, focus.fallback ?? addStudentEl, reloaded);
-    } else if (status === 'no_access') {
-      onNoAccess();
-    } else if (status === 'not_allowed') {
-      setBanner({ text: options.notAllowedText ?? T.ROSTER_NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (status === 'error') {
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus, options) });
-    } else {
-      setBanner({ text: T.UNDO_STALE });
-      reloadQuiet();
+      if (options.find) focusLater(options.find, options.fallback ?? addStudentEl, reloaded);
+      return { status: 'ok' };
     }
+    const hiddenMoney = options.money && hiddenNowRef.current;
+    if (status === 'no_access') {
+      onNoAccess();
+      return hiddenMoney ? { status, reason: T.SAVE_FAILED, noRetry: true } : { status };
+    }
+    if (status === 'error') return hiddenMoney ? { status, reason: T.SAVE_FAILED, noRetry: true } : { status };
+    if (status === 'not_allowed') {
+      onRefreshProfile();
+      if (hiddenMoney) reloadQuiet();
+      return { status, reason: !hiddenMoney && options.notAllowed ? options.notAllowed : T.couldntUndo(REASON_ONLY_ADMIN) };
+    }
+    // stale, not_found, anything else the database refused
+    reloadQuiet();
+    return { status, reason: T.couldntUndo(reasonChanged(options.name || THIS_STUDENT_LOWER)) };
   }
 
   // A row action (Mark paid, Withdraw …) that the database didn't accept.
   // money: Mark paid / Undo payment — while hidden on arrival, the general words, no Retry.
   function rowProblem(status, row, retry, money = false) {
     const name = T.studentLabel(row);
-    if (money && hiddenNowRef.current) hiddenMoneyProblem(status);
+    if (money && hiddenNowRef.current) hiddenMoneyProblem(status, name);
     else if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: T.ROSTER_NOT_ALLOWED });
@@ -1222,7 +1324,7 @@ export default function EventPage({
       setNotSavedId(row.id);
       setBanner({ kind: 'row', text: retry.text, retry: retry.run });
     } else {
-      setBanner({ text: T.ROSTER_STALE });
+      setBanner({ text: T.someoneElseChanged(name) });
       reloadQuiet();
     }
   }
@@ -1231,7 +1333,8 @@ export default function EventPage({
   // The row's Mark paid opens the box under it (a second press closes it): the name and the amount
   // (the price the database charges today — the early price before the testing day, the
   // testing-day price on it — shown, never typed), Paid by preset to the row's Paying by with
-  // "They chose … on the form." / "… at the desk.", then "Mark paid $X" (first focus). The box
+  // "They chose … on the form." (only while Paying by is still the family form's own choice,
+  // M-01) / "… at the desk.", then "Mark paid $X" (first focus). The box
   // closes when pressed; the database records today's date. A different way also changes Paying
   // by (the database does it; the reload shows it). Staff and admins see the same box.
   function openMarkPaid(row, anchor) {
@@ -1243,26 +1346,37 @@ export default function EventPage({
     setMarkPaidBox((current) => (current?.rowId === row.id ? null : { key: Date.now(), rowId: row.id, anchor, snap: row, amountCents }));
   }
   async function saveMarkPaid(rowId, snap, method, amountCents, anchor) {
-    if (!beginWrite()) return;
-    const result = await markPaidBy({ registrationId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents });
+    const token = line.begin();
+    if (!token) return;
     const row = roster.find((r) => r.id === rowId) ?? snap;
     const name = T.studentLabel(row);
-    if (result.status === 'price_changed' && !hiddenNowRef.current) {
-      // v0.423 (changes v0.418 Q1): nothing was saved (the testing-day price started, or an admin
-      // changed the price, while the box was open). The box stays closed and the amber bar says
-      // why; staff press Mark paid again and pick the way again, so a way picked before can't be
-      // recorded by a stray Enter.
-      setBanner({ kind: 'price', text: T.priceChangedNote(name, result.amountCents) });
-      // The box's amount is feeFor(rank, today, …) with `today` and the prices from the LAST load,
-      // so the page reloads first (a new `today` and the new prices) and the write stays "busy"
-      // until it lands: the rows' Mark paid is unavailable meanwhile, so a quick second press
-      // can't open the box with the old price. Then focus goes back to the row's Mark paid.
-      await reloadQuiet();
-      endWrite(result.status);
+    const again = () => saveMarkPaid(rowId, snap, method, amountCents, anchor); // the bar's Retry
+    let result = { status: 'error' };
+    let priceChanged = false;
+    try {
+      // school: This device's school — the payment counts at the desk that took it (R1-01, v1.035);
+      // null (no school) lets the database use the event's.
+      result = await markPaidBy({ registrationId: rowId, expectedVersion: snap.version, method, expectedCents: amountCents, school: LOCATION_CODE[deviceLocation] ?? null });
+      if (result.status === 'price_changed' && !hiddenNowRef.current) {
+        // v0.423 (changes v0.418 Q1): nothing was saved (the testing-day price started, or an admin
+        // changed the price, while the box was open). The box stays closed and the amber bar says
+        // why; staff press Mark paid again and pick the way again, so a way picked before can't be
+        // recorded by a stray Enter.
+        priceChanged = true;
+        setBanner({ kind: 'price', text: T.priceChangedNote(name, result.amountCents) });
+        // The box's amount is feeFor(rank, today, …) with `today` and the prices from the LAST load,
+        // so the page reloads first (a new `today` and the new prices) and the write stays "busy"
+        // until it lands: the rows' Mark paid is unavailable meanwhile, so a quick second press
+        // can't open the box with the old price. Then focus goes back to the row's Mark paid.
+        await reloadQuiet();
+      }
+    } finally {
+      endLine(token, result.status, again);
+    }
+    if (priceChanged) {
       focusLater(() => anchor, () => rowEl(rowId));
       return;
     }
-    endWrite(result.status);
     if (result.status !== 'ok') {
       // price_changed while Hide private details came on: the general "changed just now" words.
       rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => saveMarkPaid(rowId, snap, method, amountCents, anchor) }, true);
@@ -1274,28 +1388,28 @@ export default function EventPage({
     // The Mark paid button goes away with the payment: focus moves to the row.
     focusLater(() => rowEl(rowId), addStudentEl, reloaded);
     const paymentId = result.paymentId;
-    // Hide private details switched on while this was saving: the general words, no Undo payment.
+    // Hide private details switched on while this was saving (read now, R1-07): no amount, no way
+    // in the words, and no Undo payment.
     if (hiddenNowRef.current) {
-      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      showToast(T.markedPaidToastHidden(name), { icon: false });
       return;
     }
-    showToast(T.markedPaidToast(name, result.amountCents, result.method), {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id) }, { notAllowedText: T.UNDO_PAYMENT_TOO_LATE, money: true }),
-      },
-    });
+    // (words: the hidden version, so a bar shown after leaving the page never carries the amount or the way)
+    undoToast(
+      T.markedPaidToast(name, result.amountCents, result.method),
+      () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id), name, notAllowed: T.couldntUndo(REASON_PAYMENT_TOO_LATE), money: true }),
+      { words: T.markedPaidToastHidden(name) },
+    );
   }
 
   // ===== Withdraw / Restore (admins, Star v0.113) =====
   async function doWithdraw(row, restore = false) {
-    if (!beginWrite()) return;
     const call = restore ? restoreStudent : withdrawStudent;
-    const result = await call({ registrationId: row.id, expectedVersion: row.version });
-    endWrite(result.status);
+    const again = () => doWithdraw(row, restore); // the bar's Retry
+    const result = await onLine(() => call({ registrationId: row.id, expectedVersion: row.version }), again);
+    if (!result) return; // the line was busy
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doWithdraw(row, restore) });
+      rowProblem(result.status, row, { text: T.actionFailed, run: again });
       return;
     }
     setNotSavedId(null);
@@ -1303,13 +1417,17 @@ export default function EventPage({
     const name = T.studentLabel(row);
     const newVersion = result.version;
     const undoCall = restore ? withdrawStudent : restoreStudent;
-    showToast(restore ? T.restoredToast(name) : T.withdrawnToast(name), {
-      icon: false,
-      action: {
-        label: T.UNDO,
-        onAction: () => runUndo(() => undoCall({ registrationId: row.id, expectedVersion: newVersion }), { find: () => rowEl(row.id) }),
-      },
-    });
+    // Restoring a "Duplicate copy": no Undo (pass 1 R2-03, v1.043, Star's G3) — an Undo would put the
+    // row back as a plain Removed with a history that says Withdrawn; to change it back an admin
+    // uses Review → Keep this one again. Every other restore keeps its 5-second Undo (v1.006).
+    if (restore && row.withdrawnReason === 'duplicate_copy') {
+      showToast(T.restoredToast(name), { icon: false });
+      focusLater(() => rowEl(row.id), addStudentEl, reloaded);
+      return;
+    }
+    undoToast(restore ? T.restoredToast(name) : T.withdrawnToast(name), () =>
+      runUndo(() => undoCall({ registrationId: row.id, expectedVersion: newVersion }), { find: () => rowEl(row.id), name }),
+    );
     focusLater(() => rowEl(row.id), addStudentEl, reloaded);
   }
 
@@ -1325,10 +1443,12 @@ export default function EventPage({
   }
   async function confirmUndoPayment() {
     const d = dialogRef.current;
-    if (!d || d.saving || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false });
-    const result = await undoPayment({ paymentId: d.payment.id });
-    endWrite(result.status);
+    if (!d || d.saving) return;
+    const result = await onLine(() => {
+      patchDialog({ saving: true, failed: false });
+      return undoPayment({ paymentId: d.payment.id });
+    });
+    if (!result) return; // the line was busy
     // Hide private details came on meanwhile: the box already closed (a payment dialog).
     const open = stillOpen(d);
     if (result.status === 'ok') {
@@ -1362,21 +1482,22 @@ export default function EventPage({
 
   // ===== Delete permanently (admins; read fresh first so the warning names the real payment) =====
   async function startDelete(row, anchor) {
-    if (!isAdmin || !beginWrite()) return;
-    const fresh = await loadEvent(eventId);
-    endWrite(fresh.status === 'ok' ? 'ok' : fresh.status);
+    if (!isAdmin) return;
+    // (A read, but it holds the line like a save while the warning is prepared.)
+    const fresh = await onLine(() => loadEvent(eventId));
+    if (!fresh) return; // the line was busy
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
     }
     if (fresh.status !== 'ok') {
-      setBanner({ text: fresh.status === 'not_found' ? T.ROSTER_STALE : T.LOAD_EVENT_FAILED, retry: fresh.status === 'error' ? retryLoad : undefined });
+      setBanner({ text: fresh.status === 'not_found' ? T.someoneElseChanged(T.studentLabel(row)) : T.LOAD_EVENT_FAILED, retry: fresh.status === 'error' ? retryLoad : undefined });
       return;
     }
     live.setLocal(fresh);
     const freshRow = fresh.roster.find((r) => r.id === row.id);
     if (!freshRow) {
-      setBanner({ text: T.ROSTER_STALE });
+      setBanner({ text: T.someoneElseChanged(T.studentLabel(row)) });
       return;
     }
     const mine = fresh.payments.filter((p) => p.registrationId === row.id);
@@ -1403,10 +1524,12 @@ export default function EventPage({
   }
   async function confirmDelete() {
     const d = dialogRef.current;
-    if (!d || d.saving || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false });
-    const result = await deleteStudent(d.args);
-    endWrite(result.status);
+    if (!d || d.saving) return;
+    const result = await onLine(() => {
+      patchDialog({ saving: true, failed: false });
+      return deleteStudent(d.args);
+    });
+    if (!result) return; // the line was busy
     const status = result.status;
     if (status === 'ok') {
       setDialog(null);
@@ -1428,7 +1551,7 @@ export default function EventPage({
       patchDialog({ saving: false, failed: true });
     } else {
       setDialog(null);
-      setBanner({ text: status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      setBanner({ text: status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.someoneElseChanged(d.name) });
       if (status === 'not_allowed') onRefreshProfile();
       reloadQuiet();
       focusLater(() => moreEl(d.rowId));
@@ -1443,10 +1566,13 @@ export default function EventPage({
   // busyKey: which button of the shared Compare dialog says "Keeping…" ('keep-first' / 'keep-second').
   async function keepOne(keep, other, busyKey) {
     const d = dialogRef.current;
-    if (!d || d.saving || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false, busyKey });
-    const result = await resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
-    endWrite(result.status);
+    if (!d || d.saving) return;
+    const result = await onLine(() => {
+      patchDialog({ saving: true, failed: false, busyKey });
+      return resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
+    });
+    if (!result) return; // the line was busy
+    const name = T.studentLabel(other);
     if (result.status === 'error') {
       patchDialog({ saving: false, failed: true });
       return;
@@ -1455,40 +1581,37 @@ export default function EventPage({
     if (result.status !== 'ok') {
       // not_allowed (v0.194): the testing day is over — keeping one is admin-only now.
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.someoneElseChanged(name) });
       if (result.status === 'not_allowed') onRefreshProfile();
       reloadQuiet();
       return;
     }
     const reloaded = reloadQuiet();
-    const name = T.studentLabel(other);
     // Undo = Restore the copy (R7). Everyone gets the 5-second Undo: the database lets the staff
     // member who removed the copy restore it within 10 seconds (admins any time, from Removed too).
-    const action = {
-      label: T.UNDO,
-      onAction: () =>
-        runUndo(
-          async () => {
-            const fresh = await loadEvent(eventId);
-            if (fresh.status !== 'ok') return { status: fresh.status === 'not_found' ? 'stale' : fresh.status };
-            const copy = fresh.roster.find((r) => r.id === other.id);
-            if (!copy) return { status: 'stale' };
-            return restoreStudent({ registrationId: other.id, expectedVersion: copy.version });
-          },
-          { find: () => rowEl(other.id) },
-          { notAllowedText: T.UNDO_DUPLICATE_TOO_LATE },
-        ),
-    };
-    showToast(T.duplicateRemovedToast(name), { icon: false, action });
+    undoToast(T.duplicateRemovedToast(name), () =>
+      runUndo(
+        async () => {
+          const fresh = await loadEvent(eventId);
+          if (fresh.status !== 'ok') return { status: fresh.status === 'not_found' ? 'stale' : fresh.status };
+          const copy = fresh.roster.find((r) => r.id === other.id);
+          if (!copy) return { status: 'stale' };
+          return restoreStudent({ registrationId: other.id, expectedVersion: copy.version });
+        },
+        { find: () => rowEl(other.id), name, notAllowed: T.couldntUndo(REASON_DUPLICATE_TOO_LATE) },
+      ),
+    );
     focusLater(() => rowEl(keep.id), addStudentEl, reloaded);
   }
   async function keepBoth() {
     const d = dialogRef.current;
-    if (!d || d.saving || !beginWrite()) return;
+    if (!d || d.saving) return;
     const { first, second } = d.pair;
-    patchDialog({ saving: true, failed: false, busyKey: 'keep-both' });
-    const result = await resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
-    endWrite(result.status);
+    const result = await onLine(() => {
+      patchDialog({ saving: true, failed: false, busyKey: 'keep-both' });
+      return resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
+    });
+    if (!result) return; // the line was busy
     if (result.status === 'error') {
       patchDialog({ saving: false, failed: true });
       return;
@@ -1496,7 +1619,7 @@ export default function EventPage({
     setDialog(null);
     if (result.status !== 'ok') {
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.someoneElseChanged(T.studentLabel(first)) });
       reloadQuiet();
       return;
     }
@@ -1571,10 +1694,15 @@ export default function EventPage({
       // CB2 (v0.420): Print receipt ends the money group, for staff and admins, on a row with a
       // payment that still stands; hidden while Hide private details is on (v0.518 Q8 B). Staff's
       // money group holds only this item.
-      if (moneyShown && row.paid) {
+      if (canPrintReceipt(row, hidden)) {
         const startsGroup = !isAdmin; // admins: it follows Undo payment in the same group
         items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, separatorBefore: startsGroup && groupStart(), onSelect: () => openReceipt(row, anchor) });
       }
+    } else if (canPrintReceipt(row, hidden)) {
+      // pass 2 M-03 (v1.055 (b), v0.428): a removed student whose payment still stands — Print
+      // receipt first, for staff and admins (staff's ⋯ holds only this item); Restore and Delete
+      // permanently follow in their own groups (admins).
+      items.push({ key: 'receipt', label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor) });
     }
     if (isAdmin) {
       if (row.status === 'active') {
@@ -1583,8 +1711,13 @@ export default function EventPage({
         // ti-arrow-back-up = bring back (v1.024)
         items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
       }
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
+      // On a removed row, the red Delete permanently starts its own group under Restore (pass 2
+      // C-04, v1.055 (f), as Star's); on an active row it stays with Withdraw.
+      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: row.status !== 'active', disabled: busy, onSelect: () => startDelete(row, anchor) });
     }
+    // Nothing left to offer (say staff's ⋯ on a removed row, after Hide private details was switched
+    // on or the payment was undone on another device): no menu, as the Private testing tab.
+    if (items.length === 0) return null;
     const rank = rankById.get(row.eventRankId);
     const subtitle = rank ? `${rank.name} → ${rank.testingFor?.name ?? T.NO_NEW_RANK}` : '';
     return { title: name, subtitle, label: T.moreForStudent(name), items };
@@ -1607,13 +1740,8 @@ export default function EventPage({
   });
 
   // ===== Drawing =====
-  const backLink = (
-    <button type="button" className="link-button ev-back" onClick={() => onBack()}>
-      {/* ti-arrow-left = back */}
-      <IconArrowLeft size={16} aria-hidden="true" />
-      {T.BACK_TO_COLOR_BELT}
-    </button>
-  );
+  // The shared back link (R3-06): class .back-link, which Testing.jsx's focus helper finds.
+  const backLink = <BackLink label={T.BACK_TO_COLOR_BELT} onClick={() => onBack()} />;
 
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'noAccess' || wrongSchool) {
     return (
@@ -1642,7 +1770,7 @@ export default function EventPage({
     return (
       <>
         {backLink}
-        <ErrorBanner text={T.LOAD_EVENT_FAILED} onRetry={() => liveRef.current.reload()} />
+        <PageBar text={T.LOAD_EVENT_FAILED} onRetry={() => liveRef.current.reload()} />
       </>
     );
   }
@@ -1668,7 +1796,7 @@ export default function EventPage({
   const allCards = [
     { key: 'all', label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length, kind: 'all' },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount, kind: 'filter' },
-    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: active.length - paidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
+    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: notPaidCount, kind: 'filter' }, // ti-circle-x = not paid (v1.024)
     {
       key: 'money',
       label: T.CARD_PAYMENTS,
@@ -1685,7 +1813,7 @@ export default function EventPage({
   const showStatusCol = !hidden || [...rows, ...(removedOpen ? removedRows : [])].some((r) => hasStatusTag(r, notSavedId));
 
   const ctx = {
-    layout,
+    layout: rosterLayout, // the room beside the panel decides the roster's own layout (L-02)
     nav,
     rankById,
     busy,
@@ -1707,7 +1835,7 @@ export default function EventPage({
 
   let emptyText = T.EMPTY_CLASS_ROSTER;
   if (shownFilter === 'paid') emptyText = T.NO_STUDENTS_FILTERED_PAID;
-  if (shownFilter === 'notPaid') emptyText = T.NO_STUDENTS_FILTERED_NOT_PAID;
+  if (shownFilter === 'notPaid') emptyText = unpaidDuplicateHere ? T.NO_STUDENTS_FILTERED_NOT_PAID_DUPLICATE : T.NO_STUDENTS_FILTERED_NOT_PAID;
 
   // ----- The open dialog (never while locked: it comes back after unlocking) -----
   let dialogElement = null;
@@ -1725,9 +1853,10 @@ export default function EventPage({
           today={today}
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
-          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — an active student
-          // with a payment that still stands, money shown; staff and admins.
-          canPrintReceipt={record?.status === 'active' && record?.paid === true && !hidden}
+          // CB2 (P3): the summary's Print receipt follows the ⋯ item's rule — a student (active, or
+          // removed since pass 2 M-03, v0.428) with a payment that still stands, money shown; staff
+          // and admins.
+          canPrintReceipt={canPrintReceipt(record, hidden)}
           onPrintReceipt={(opener) => record && openReceipt(record, opener, true)}
           onNoAccess={onNoAccess}
           graded={dialog.graded ?? null}
@@ -1829,7 +1958,7 @@ export default function EventPage({
       dialogElement = (
         <ConfirmBox
           key={dialog.key}
-          title={T.undoPaymentTitle(T.studentLabel(dialog.snapshot))}
+          title={T.undoPaymentTitle(T.studentLabel(dialog.snapshot), dialog.payment.amountCents, dialog.payment.method)}
           keepLabel={T.KEEP_PAYMENT}
           actionLabel={T.UNDO_PAYMENT}
           actionIcon={IconArrowBackUp}
@@ -1914,7 +2043,7 @@ export default function EventPage({
         name={T.studentLabel(markPaidBoxRow)}
         amountCents={amountCents}
         familyChoice={markPaidBoxRow.payingBy}
-        choiceWhere={markPaidBoxRow.source === 'form' ? 'form' : 'desk'}
+        choiceWhere={markPaidChoiceWhere(markPaidBoxRow)}
         onMarkPaid={(method) => saveMarkPaid(rowId, snap, method, amountCents, anchor)}
         onClose={(restoreFocus) => {
           setMarkPaidBox(null);
@@ -1967,10 +2096,16 @@ export default function EventPage({
       {/* G5: results that didn't save — on both tabs, until they save (they retry by themselves,
           v0.192) or the person closes it. */}
       {grading.banner && (
-        <ErrorBanner text={grading.banner.text} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />
+        <PageBar text={grading.banner.text} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />
       )}
       {banner && (
-        <ErrorBanner text={banner.text} onRetry={banner.retry && !(banner.csv && (hidden || !isAdmin)) ? () => banner.retry() : undefined} retrying={busy || csvBusy} onDismiss={() => setBanner(null)} />
+        <PageBar
+          text={banner.text}
+          onRetry={banner.retry && !(banner.csv && (hidden || !isAdmin)) ? () => banner.retry() : undefined}
+          retrying={banner.retrying || busy || csvBusy}
+          takeFocus={banner.takeFocus}
+          onDismiss={() => setBanner(null)}
+        />
       )}
 
       {tab === 'grading' ? (
@@ -1992,17 +2127,8 @@ export default function EventPage({
         />
       ) : (
         <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
-          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
-              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
-              recorded is a plain total. Hide private details: the Students card alone. */}
-          <CountCards
-            cards={cards}
-            selected={shownFilter}
-            onSelect={setFilter}
-            showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
-            showAllLabel={T.SHOW_ALL}
-          />
-
+          {/* One order above every roster (pass 1 R3-10, v1.047 (15)): the duplicate box first, then
+              the count cards and their lines, then the class switch. */}
           {/* Possible duplicates (Star v0.114) in the shared duplicate box (v1.102, v0.422): the
               count on the first line only (its own line on phones), then one line per pair, each
               with Review; Review passes itself, so focus returns to it when the compare closes. */}
@@ -2014,6 +2140,23 @@ export default function EventPage({
               onReview: (opener) => openCompare(pair, opener),
             }))}
           />
+
+          {/* The shared count cards (CB9, v1.013 / v1.107, v0.420): Students shows everyone,
+              Paid / Not paid filter the roster ("Showing not paid only · Show all"), Payments
+              recorded is a plain total. Hide private details: the Students card alone. Nobody
+              registered yet (active or removed): no cards, only the empty line (C-05 (a)). A
+              possible duplicate is out of Paid / Not paid, and the gray line under the cards says
+              so (R3-02; not while hidden, when only Students shows). */}
+          {hasRegistrations && (
+            <CountCards
+              cards={cards}
+              selected={shownFilter}
+              onSelect={setFilter}
+              showingText={shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID}
+              showAllLabel={T.SHOW_ALL}
+              note={!hidden && counts.flagged > 0 ? T.duplicatesLeftOut(counts.flagged, pairs.length) : null}
+            />
+          )}
 
           {classes.length === 0 ? (
             <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>
