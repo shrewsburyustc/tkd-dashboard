@@ -11,6 +11,7 @@
 //
 // Dates are 'YYYY-MM-DD' text, shown US style ("Nov 16", "Tue, Dec 1"); read as calendar dates, so
 // they never shift a day because of time zones.
+import { UNDO_DIDNT_SAVE } from '../../components/text.js';
 import { monthDay, weekdayMonthDay } from './eventsText.js';
 import { startTimeLabel } from './starEventRules.js';
 import { scoreText, joinNames } from './gradingText.js';
@@ -101,7 +102,7 @@ export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connec
 
 // ----- Mark as sent (20–24) -----
 export const markedAsSent = (name) => `Marked as sent · ${name}`; // the toast, with Undo
-export const TOAST_UNDONE = 'Undone'; // after the toast's Undo (R2-07, v1.051)
+// (After the toast's Undo the save line says "Undone" itself: R2-05 / R2-07, v1.051; src/lib/saveLine.js.)
 // Refusals of Mark as sent: banner with ✕ only (the connection one has Retry). name: "Noah Chen"
 export function markSentRefusal(status, name) {
   switch (status) {
@@ -121,7 +122,7 @@ export function undoSentRefusal(status) {
     case 'not_allowed': return 'Too late to undo here. Ask an admin to undo Mark as sent.';
     case 'not_found': return 'That send record isn’t there any more. Nothing was changed.';
     case 'invalid': return 'That couldn’t be undone. The list has been reloaded.';
-    default: return 'Couldn’t undo Mark as sent. Check the connection, then try again.';
+    default: return UNDO_DIDNT_SAVE; // R2-07 (v1.045 (4)): the one shared failed-Undo sentence
   }
 }
 // The admins' Undo question (21)

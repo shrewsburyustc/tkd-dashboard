@@ -29,7 +29,10 @@ import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
 import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import IconButton from '../../../../components/IconButton.jsx';
+import PageBar from '../../../../components/PageBar.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
+import { someoneElseChanged } from '../../../../components/text.js';
+import { useSaveLine } from '../../../../lib/saveLine.js';
 import {
   addStarEvent,
   deleteStarEvent,
@@ -123,14 +126,21 @@ export default function StarEventsTab({
   const [sort, setSort] = useState(null); // { key, dir: 1 | -1 } or null (the side's own order)
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor }
-  const [banner, setBanner] = useState(null); // { text, retry?, kind? }
-  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState(null); // { text, retry?, kind?, retrying?, takeFocus? }
   const [notSavedId, setNotSavedId] = useState(null); // screen 14: the row whose switch change failed
-  const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
   });
+  // R2-05 (v1.125–v1.129): this page's line of saves. One save at a time, and an Undo pressed while a
+  // save runs waits its turn (its toast says "Undoing…"). The line shows a failed Undo's bar through
+  // `undoBar`: one bar for the page, kept with the others in `banner` (kind 'undo').
+  const saveLine = useSaveLine({
+    section: T.SECTION_NAME,
+    showToast,
+    undoBar: (next) => setBanner((current) => (next ? { kind: 'undo', ...next } : current?.kind === 'undo' ? null : current)),
+  });
+  const busy = saveLine.busy;
 
   // The sort clears when the side changes (v0.501).
   function setSide(next) {
@@ -139,17 +149,34 @@ export default function StarEventsTab({
     setSort(null);
   }
 
-  // ----- One change at a time -----
+  // ----- One change at a time (the save line holds it; an Undo waits for it) -----
+  // beginWrite() takes the line (false while a save or an Undo runs); endWrite(status) gives it back
+  // with the token it took, exactly once per beginWrite. Only one save holds the line at a time, so
+  // one token is enough.
+  const tokenRef = useRef(null);
   function beginWrite() {
-    if (busyRef.current) return false;
-    busyRef.current = true;
-    setBusy(true);
+    const token = saveLine.begin();
+    if (!token) return false;
+    tokenRef.current = token;
     return true;
   }
-  function endWrite(status) {
-    busyRef.current = false;
-    setBusy(false);
+  function endWrite(status, retry = null) {
+    saveLine.end(status, { token: tokenRef.current, retry });
     if (status && status !== 'ok') clearToast();
+  }
+  // Runs the call a save makes (arguments included) and ends the line from a `finally`, as
+  // lib/saveLine.js asks: a throw between begin and end frees the line as "didn't save" and goes on,
+  // instead of leaving it busy for good with a queued Undo waiting. `status` maps an answer to what
+  // the line is told (default: the answer's own status).
+  async function inWrite(call, status = (answer) => answer.status) {
+    let ended = 'error'; // stays so when the call throws
+    try {
+      const answer = await call();
+      ended = status(answer);
+      return answer;
+    } finally {
+      endWrite(ended);
+    }
   }
 
   // ----- Keyboard focus after a dialog closes (Color Belt's approach) -----
@@ -267,7 +294,7 @@ export default function StarEventsTab({
   }
 
   function openAddEvent(opener) {
-    if (!isAdmin || busyRef.current) return;
+    if (!isAdmin || saveLine.isBusy()) return;
     // Start time and Where are copied from the event added most recently (v0.87); the very first
     // event starts with both on "Choose…" (screen 4).
     const last = latestCreatedEvent(eventsRef.current);
@@ -286,7 +313,7 @@ export default function StarEventsTab({
   }
 
   function openEditEvent(event, opener) {
-    if (!isAdmin || busyRef.current) return;
+    if (!isAdmin || saveLine.isBusy()) return;
     const values = {
       name: event.name,
       testingDate: event.testingDate,
@@ -400,8 +427,7 @@ export default function StarEventsTab({
     const p = check.payload;
 
     if (d.mode === 'add') {
-      const result = await addStarEvent(p);
-      endWrite(result.status);
+      const result = await inWrite(() => addStarEvent(p));
       if (result.status !== 'ok') {
         handleDialogProblem(result.status, p.name);
         return;
@@ -413,14 +439,11 @@ export default function StarEventsTab({
       const newVersion = result.version;
       showToast(T.TOAST_EVENT_ADDED, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          // Undo = delete the event that was just added (it has no candidates yet).
-          onAction: () =>
-            runUndo(() => deleteStarEvent({ eventId: newId, expectedVersion: newVersion, expectedCandidateCount: 0, expectedPaymentTotalCents: 0 }), {
-              find: addEventEl,
-            }),
-        },
+        // Undo = delete the event that was just added (it has no candidates yet).
+        action: undoToast(
+          () => deleteStarEvent({ eventId: newId, expectedVersion: newVersion, expectedCandidateCount: 0, expectedPaymentTotalCents: 0 }),
+          { words: T.TOAST_EVENT_ADDED, name: p.name, find: addEventEl },
+        ),
       });
       focusLater(() => rowEl(newId), addEventEl, reloaded);
       return;
@@ -428,29 +451,37 @@ export default function StarEventsTab({
 
     // Edit: the details first, then (only if it changed) the Registration switch, which has its
     // own database function with its own role rules (contract 0006 §11 item 7).
-    const result = await saveStarEventEdit({
-      eventId: d.eventId,
-      expectedVersion: record.version,
-      name: p.name,
-      testingDate: p.testingDate,
-      startTime: p.startTime,
-      endTime: p.endTime,
-      whereCode: p.whereCode,
-      autoCloseOn: p.autoCloseOn,
-      note: p.note,
-      registrationOpen: p.registrationOpen,
-      previousRegistrationOpen: record.registrationOpen,
-      // v0.504: never reopen registration by itself (its state is worked out fresh at save time)
-      previous: { testingDate: record.testingDate, registrationOpen: record.registrationOpen, autoCloseOn: record.autoCloseOn, firstOpenedAt: record.firstOpenedAt },
-    });
+    const result = await inWrite(
+      () =>
+        saveStarEventEdit({
+          eventId: d.eventId,
+          expectedVersion: record.version,
+          name: p.name,
+          testingDate: p.testingDate,
+          startTime: p.startTime,
+          endTime: p.endTime,
+          whereCode: p.whereCode,
+          autoCloseOn: p.autoCloseOn,
+          note: p.note,
+          registrationOpen: p.registrationOpen,
+          previousRegistrationOpen: record.registrationOpen,
+          // v0.504: never reopen registration by itself (its state is worked out fresh at save time)
+          previous: { testingDate: record.testingDate, registrationOpen: record.registrationOpen, autoCloseOn: record.autoCloseOn, firstOpenedAt: record.firstOpenedAt },
+        }),
+      // What the line is told: the details' own status, else the switch's, else the kept-closed close's.
+      (answer) => {
+        if (answer.status !== 'ok') return answer.status;
+        const failedSwitch = answer.registration && answer.registration.status !== 'ok' ? answer.registration.status : null;
+        const closed = answer.keptClosed ?? null;
+        return failedSwitch ?? (closed && closed.status !== 'ok' ? closed.status : 'ok');
+      },
+    );
     if (result.status !== 'ok') {
-      endWrite(result.status);
       handleDialogProblem(result.status, p.name);
       return;
     }
     const switchFailed = result.registration && result.registration.status !== 'ok' ? result.registration.status : null;
     const keptClosed = result.keptClosed ?? null; // v0.504
-    endWrite(switchFailed ?? (keptClosed && keptClosed.status !== 'ok' ? keptClosed.status : 'ok'));
     setDialog(null);
     const reloaded = reloadQuiet();
     if (keptClosed) {
@@ -461,14 +492,12 @@ export default function StarEventsTab({
         const closedVersion = result.version;
         showToast(T.TOAST_CHANGES_SAVED_KEPT_CLOSED, {
           icon: false,
-          action: {
-            label: T.UNDO,
-            onAction: () =>
-              runUndo(() => setStarRegistration({ eventId: d.eventId, expectedVersion: closedVersion, open: true }), {
-                find: () => rowEl(d.eventId),
-                doneText: T.TOAST_UNDONE_REGISTRATION_OPEN, // it reopens, so it says so
-              }),
-          },
+          action: undoToast(() => setStarRegistration({ eventId: d.eventId, expectedVersion: closedVersion, open: true }), {
+            words: T.TOAST_CHANGES_SAVED_KEPT_CLOSED,
+            name: p.name,
+            find: () => rowEl(d.eventId),
+            doneText: T.TOAST_UNDONE_REGISTRATION_OPEN, // it reopens, so it says so
+          }),
         });
       } else {
         // The details were saved but the close didn't go through: registration IS open. No
@@ -506,21 +535,22 @@ export default function StarEventsTab({
       const openAgain = switchChanged ? record.registrationOpen : null;
       showToast(T.TOAST_CHANGES_SAVED, {
         icon: false,
-        action: {
-          label: T.UNDO,
-          onAction: () =>
-            runUndo(
-              async () => {
-                const back = await undoStarEventEdit({ eventId: d.eventId, expectedVersion: savedVersion, ...previous, open: openAgain });
-                // A refusal undid nothing. "Someone else changed it" is only true for a stale (or
-                // vanished) event; any other refusal is shown as "didn't save", with Retry.
-                if (['ok', 'no_access', 'not_allowed', 'stale', 'not_found'].includes(back.status)) return back;
-                return { status: 'error' };
-              },
-              // Undo that puts registration back to Open says so (R2-07, v1.051).
-              { find: () => rowEl(d.eventId), doneText: record.registrationOpen && switchChanged ? T.TOAST_UNDONE_REGISTRATION_OPEN : undefined },
-            ),
-        },
+        action: undoToast(
+          async () => {
+            const back = await undoStarEventEdit({ eventId: d.eventId, expectedVersion: savedVersion, ...previous, open: openAgain });
+            // A refusal undid nothing. "Someone else changed it" is only true for a stale (or
+            // vanished) event; any other refusal is shown as "didn't save", with Retry.
+            if (['ok', 'no_access', 'not_allowed', 'stale', 'not_found'].includes(back.status)) return back;
+            return { status: 'error' };
+          },
+          // Undo that puts registration back to Open says so (R2-07, v1.051).
+          {
+            words: T.TOAST_CHANGES_SAVED,
+            name: p.name,
+            find: () => rowEl(d.eventId),
+            doneText: record.registrationOpen && switchChanged ? T.TOAST_UNDONE_REGISTRATION_OPEN : undefined,
+          },
+        ),
       });
     }
     focusLater(() => d.opener, () => rowEl(d.eventId), reloaded);
@@ -530,9 +560,24 @@ export default function StarEventsTab({
   // version may have changed since), closes it only if it is still open.
   async function closeAfterEdit(eventId) {
     if (!beginWrite()) return;
-    const fresh = await loadStarEvent(eventId);
+    // The line is held across both calls and ended from a `finally` (a throw frees it as "didn't save").
+    let ended = 'error';
+    let fresh;
+    let result;
+    try {
+      fresh = await loadStarEvent(eventId);
+      if (fresh.status !== 'ok') {
+        ended = fresh.status === 'not_found' ? 'ok' : fresh.status;
+      } else if (fresh.event.state !== 'open') {
+        ended = 'ok';
+      } else {
+        result = await setStarRegistration({ eventId, expectedVersion: fresh.event.version, open: false });
+        ended = result.status;
+      }
+    } finally {
+      endWrite(ended);
+    }
     if (fresh.status !== 'ok') {
-      endWrite(fresh.status === 'not_found' ? 'ok' : fresh.status);
       if (fresh.status === 'no_access') onNoAccess();
       else if (fresh.status === 'not_found') {
         setBanner(null);
@@ -540,15 +585,12 @@ export default function StarEventsTab({
       }
       return; // offline: the banner stays, Retry again
     }
-    if (fresh.event.state !== 'open') {
-      endWrite('ok');
+    if (!result) {
       setBanner(null);
       setNotSavedId(null);
       reloadQuiet();
       return;
     }
-    const result = await setStarRegistration({ eventId, expectedVersion: fresh.event.version, open: false });
-    endWrite(result.status);
     if (result.status === 'ok') {
       setBanner(null);
       setNotSavedId(null);
@@ -561,52 +603,74 @@ export default function StarEventsTab({
   }
 
   // ===== Undo =====
-  async function runUndo(call, focus = null) {
-    if (!beginWrite()) return;
-    const result = await call();
-    endWrite(result.status);
-    const status = result.status;
-    if (status === 'ok') {
-      setBanner((current) => (current?.kind === 'undo' ? null : current));
-      showToast(focus?.doneText ?? T.TOAST_UNDONE, { icon: false });
-      const reloaded = reloadQuiet();
-      if (focus) focusLater(focus.find, focus.fallback ?? addEventEl, reloaded);
-    } else if (status === 'no_access') {
-      onNoAccess();
-    } else if (status === 'not_allowed') {
-      setBanner({ text: T.EVENTS_NOT_ALLOWED });
-      onRefreshProfile();
-    } else if (['stale', 'not_found', 'duplicate_name', 'invalid', 'finished'].includes(status)) {
-      setBanner({ text: T.UNDO_STALE });
-      reloadQuiet();
-    } else {
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus) });
-    }
+  // R2-05: a toast's Undo goes through the save line (lib/saveLine.js). It waits for a save that is
+  // running ("Undoing…" on the toast), runs, and the line says how it went: "Undone" (or doneText), or
+  // the page's bar with Retry ("Undo didn't save. Check the connection, then retry.", R2-07 / C-06).
+  //   call      () → the database answer { status, … }
+  //   words     the toast's own text (the bar names it when the person has left the page, v1.129)
+  //   name      the event's name, for "Someone else changed [name] just now …" (R2-07)
+  //   find / fallback   where keyboard focus goes after it worked
+  //   doneText  what the toast says when it worked (default "Undone")
+  //   failedText(status)  the refusal's words when the database said no (default: someone else changed it)
+  //   mark      the event whose row shows "Not saved" while this Undo hasn't reached the database (C-06 c)
+  function undoToast(call, { words, name, find = null, fallback = null, doneText, failedText = null, notAllowedText = T.EVENTS_NOT_ALLOWED, mark = null }) {
+    const run = async () => {
+      const result = await call();
+      const status = result.status;
+      if (status === 'ok') {
+        if (mark) setNotSavedId((current) => (current === mark ? null : current));
+        const reloaded = reloadQuiet();
+        if (find) focusLater(find, fallback ?? addEventEl, reloaded);
+        await reloaded;
+        return { status: 'ok' };
+      }
+      if (status === 'no_access') {
+        onNoAccess(); // the screen locks; the line keeps the "Undo didn't save" bar for after unlocking
+        return { status };
+      }
+      if (status === 'not_allowed') {
+        onRefreshProfile();
+        return { status, reason: notAllowedText };
+      }
+      if (['stale', 'not_found', 'duplicate_name', 'invalid', 'finished'].includes(status)) {
+        reloadQuiet();
+        return { status, reason: failedText?.(status) ?? someoneElseChanged(name) };
+      }
+      if (mark) setNotSavedId(mark); // didn't reach the database: the row says so until a Retry works
+      return { status: 'error' };
+    };
+    return saveLine.undoAction(run, { words, doneText });
   }
 
   // ===== Close / Open registration (instant, with a 5-second Undo — v0.85, v0.86) =====
-  async function switchRegistration(event, open, isUndo = false, expectedVersion = event.version) {
+  // The Undo of this switch is the toast's queued Undo (R2-05, undoToast above): the opposite switch
+  // with the version this one returned. If it can't reach the database (C-06 c) the line says "Undo
+  // didn't save. Check the connection, then retry." with Retry, and the row keeps its "Not saved" mark.
+  async function switchRegistration(event, open, expectedVersion = event.version) {
     if (!beginWrite()) return;
-    const result = await setStarRegistration({ eventId: event.id, expectedVersion, open });
-    endWrite(result.status);
+    const result = await inWrite(() => setStarRegistration({ eventId: event.id, expectedVersion, open }));
     const status = result.status;
     const action = open ? 'open' : 'close';
     if (status === 'ok') {
       setNotSavedId(null);
       setBanner((current) => (current?.kind === 'switch' ? null : current));
       const reloaded = reloadQuiet();
-      if (isUndo) {
-        // R2-07: an Undo that opens registration again says so.
-        showToast(open ? T.TOAST_UNDONE_REGISTRATION_OPEN : T.TOAST_UNDONE, { icon: false });
-        return;
-      }
       // An admin opening after the closing date has passed also removes the date (v0.85, screen 9).
       const removedDate = open && event.autoCloseOn !== null && today > event.autoCloseOn;
       const text = open ? (removedDate ? T.TOAST_REGISTRATION_OPEN_DATE_REMOVED : T.TOAST_REGISTRATION_OPEN) : T.TOAST_REGISTRATION_CLOSED;
       const newVersion = result.version;
+      const undoAction = open ? 'close' : 'open';
       showToast(text, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => switchRegistration(event, !open, true, newVersion) },
+        action: undoToast(() => setStarRegistration({ eventId: event.id, expectedVersion: newVersion, open: !open }), {
+          words: text,
+          name: event.name,
+          // R2-07: the Undo of Close opens registration again, and says so (the Undo of Open closes it).
+          doneText: open ? undefined : T.TOAST_UNDONE_REGISTRATION_OPEN,
+          notAllowedText: T.statusMessage(undoAction, 'not_allowed', { name: event.name }).text,
+          failedText: (refused) => (refused === 'finished' ? T.statusMessage(undoAction, 'finished', { name: event.name }).text : someoneElseChanged(event.name)),
+          mark: event.id,
+        }),
       });
       await reloaded;
     } else if (status === 'no_access') {
@@ -616,7 +680,7 @@ export default function StarEventsTab({
       onRefreshProfile();
       reloadQuiet();
     } else if (['finished', 'stale', 'not_found', 'invalid'].includes(status)) {
-      setBanner({ text: isUndo && status !== 'finished' ? T.UNDO_STALE : T.statusMessage(action, status, { name: event.name }).text });
+      setBanner({ text: T.statusMessage(action, status, { name: event.name }).text });
       reloadQuiet();
     } else {
       // Didn't reach the database (screen 14): the row shows "Not saved", the banner offers Retry
@@ -625,7 +689,7 @@ export default function StarEventsTab({
       setBanner({
         kind: 'switch',
         text: T.statusMessage(action, 'error', { name: event.name }).text,
-        retry: () => switchRegistration(event, open, isUndo, expectedVersion),
+        retry: () => switchRegistration(event, open, expectedVersion),
       });
     }
   }
@@ -651,14 +715,13 @@ export default function StarEventsTab({
   // ===== Delete event (permanent; the numbers in the sentence are read fresh first) =====
   async function startDelete(event, anchor) {
     if (!isAdmin || !beginWrite()) return;
-    const fresh = await loadStarEvent(event.id);
-    endWrite(fresh.status === 'not_found' ? 'ok' : fresh.status);
+    const fresh = await inWrite(() => loadStarEvent(event.id), (answer) => (answer.status === 'not_found' ? 'ok' : answer.status));
     if (fresh.status === 'no_access') {
       onNoAccess();
       return;
     }
     if (fresh.status === 'not_found') {
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.stale(event.name) });
       reloadQuiet();
       return;
     }
@@ -685,8 +748,7 @@ export default function StarEventsTab({
     const d = dialogRef.current;
     if (!d || d.saving || !beginWrite()) return;
     patchDialog({ saving: true, failed: false });
-    const result = await deleteStarEvent(d.args);
-    endWrite(result.status);
+    const result = await inWrite(() => deleteStarEvent(d.args));
     const status = result.status;
     if (status === 'ok') {
       setDialog(null);
@@ -711,7 +773,7 @@ export default function StarEventsTab({
       focusLater(() => moreEl(d.id));
     } else if (['stale', 'not_found', 'invalid'].includes(status)) {
       setDialog(null);
-      setBanner({ text: T.STALE });
+      setBanner({ text: T.stale(d.name) });
       reloadQuiet();
       focusLater(() => moreEl(d.id));
     } else {
@@ -986,12 +1048,14 @@ export default function StarEventsTab({
           empty line: there is no ⋯ to use). While loading it still shows (G1). */}
       {renderHeader(addEventButton, isAdmin || (live.status === 'ready' && events.length === 0) ? null : T.STAFF_LINE)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
+        {/* The page's bar shows under the top bar (PageBar, v1.128); an Undo's bar comes with takeFocus */}
         {banner && (
-          <ErrorBanner
+          <PageBar
             text={banner.text}
             onRetry={banner.retry ? () => banner.retry() : undefined}
             retryLabel={banner.retryLabel ?? null}
-            retrying={busy}
+            retrying={busy || Boolean(banner.retrying)}
+            takeFocus={banner.takeFocus}
             onDismiss={() => setBanner(null)}
           />
         )}
