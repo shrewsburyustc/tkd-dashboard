@@ -38,7 +38,7 @@ export { CANCEL, BACK } from '../../components/text.js';
 export const OWN_PASSWORD_ERRORS = {
   empty: 'Enter your password to continue.',
   credentials: "That password doesn't match. Try again.",
-  connection: "Couldn't reach the server. Check the connection and try again.",
+  connection: "Couldn't reach the server. Check the connection, then retry.",
   tooMany: 'Too many tries. Wait a few minutes and try again.',
   // the database said the password check is more than 10 minutes old
   expired: 'For security, enter your password again.',

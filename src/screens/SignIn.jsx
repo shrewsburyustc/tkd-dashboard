@@ -16,7 +16,7 @@ import { RETRY } from '../components/text.js';
 
 const ERROR_TEXT = {
   credentials: "That email or password doesn't match. Try again.",
-  connection: "Couldn't reach the server. Check the connection and try again.",
+  connection: "Couldn't reach the server. Check the connection, then retry.",
   tooMany: 'Too many sign-in tries. Wait a minute and try again.',
 };
 

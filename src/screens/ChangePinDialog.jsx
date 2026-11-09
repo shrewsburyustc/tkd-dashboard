@@ -27,12 +27,12 @@ import { PIN_HINT, PIN_TOO_EASY_MESSAGE } from '../lib/pinRules.js';
 const PASSWORD_ERRORS = {
   empty: 'Enter your password to continue.',
   credentials: "That password doesn't match. Try again.",
-  connection: "Couldn't reach the server. Check the connection and try again.",
+  connection: "Couldn't reach the server. Check the connection, then retry.",
   tooMany: 'Too many tries. Wait a minute and try again.',
   // set_my_pin said the password check is too old (it allows 10 minutes): ask again.
   expired: 'For security, enter your password again.',
 };
-const SAVE_ERROR = "Couldn't save your PIN. Check the connection and try again.";
+const SAVE_ERROR = "Couldn't save your PIN. Check the connection, then retry.";
 
 export default function ChangePinDialog({ profile, onCancel, onChanged }) {
   const isPhone = useMediaQuery(PHONE_QUERY); // phone → full-screen page instead of a dialog

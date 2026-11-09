@@ -434,13 +434,15 @@ await withChrome(async (tab) => {
     await ev(`document.querySelector('.shell-content').scrollTop += ${t - 420}`);
     await sleep(300);
     const before = await topOf(chloeCheckIn);
-    // In one go, as Camps' own "Couldn't refresh" bar comes with the one bar: a 30px block at the top
-    // of the page (above the view), and the bar.
-    await ev(`(() => { const s = document.createElement('div'); s.id = 'anchor-test'; s.style.height = '30px'; document.querySelector('.shell-content').firstElementChild.prepend(s); window.__tkdPreview.cutConnection(true); })()`);
+    // Camps' own "Couldn't refresh" bar was folded into the one offline bar (its batch, v1.048 (22), C19), so
+    // no note comes above the view any more: only the bar comes. (A 30px block pushed in by this check
+    // moved the page by 29px with the Camps page as it is now, on main as well; a made-up case, not one
+    // the app produces any more.)
+    await ev(`window.__tkdPreview.cutConnection(true)`);
     await sleep(500);
     const during = await topOf(chloeCheckIn);
-    assert.ok(Math.abs(during - before) <= 1, `while the bar and the note show: ${Math.round(before)} → ${Math.round(during)}`);
-    await ev(`(() => { document.getElementById('anchor-test').remove(); window.__tkdPreview.cutConnection(false); })()`);
+    assert.ok(Math.abs(during - before) <= 1, `while the bar shows: ${Math.round(before)} → ${Math.round(during)}`);
+    await ev(`window.__tkdPreview.cutConnection(false)`);
     await sleep(500);
     const after = await topOf(chloeCheckIn);
     assert.ok(Math.abs(after - before) <= 1, `after both go: ${Math.round(before)} → ${Math.round(after)}`);

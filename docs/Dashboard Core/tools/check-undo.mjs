@@ -14,7 +14,7 @@
 //     the app with the connection cut: the offline bar first, then the page's own bar);
 //   - v1.129: leaving the page while the Undo waits: nothing more if it saves; if it fails, the bar
 //     under the top bar names it, and its Retry runs it again;
-//   - a section that hasn't switched to the save line yet keeps today's Undo (Camps).
+//   - Camps, on the save line since its v0.750 batch: the real app's toast (236 px), then "Undone".
 // Why: pictures show how it looks; these show how it behaves. A hidden Chrome (chrome.mjs).
 //
 // Usage: node check-undo.mjs <preview address, e.g. http://localhost:5190/> [words]
@@ -271,7 +271,7 @@ await withChrome(async (tab) => {
     }
     await sleep(900);
   }
-  await check('the app, PC: Camps (not switched to the save line yet) keeps today\'s Undo; its toast is 236 px wide (v1.125)', async () => {
+  await check('the app, PC: Camps (on the save line since its v0.750 batch): the toast is 236 px wide, its Undo keeps the toast, then says Undone (v1.125)', async () => {
     await size(1280, 800, false);
     await openApp('camps');
     // (Opened with a script click on the row, as the picture scripts do: the row's own press handler.)
@@ -286,8 +286,9 @@ await withChrome(async (tab) => {
     assert.ok(Math.abs(t.width - 236) <= 1, `the toast is ${t.width} px wide`);
     // (A script click: after the script clicks above, this hidden Chrome drops real mouse presses.)
     await ev(`${UNDO_BUTTON}.click()`);
-    const right = await toast();
-    assert.ok(right === null || right.text !== 'Zoe Park withdrawn', 'today\'s Undo: the toast goes first');
+    await sleep(30);
+    const busy = await toast();
+    assert.ok(busy === null || busy.text === 'Zoe Park withdrawn' || busy.text === 'Undone', 'the same toast stays while it undoes (or already says Undone)');
     await sleep(1500);
     assert.equal((await toast())?.text, 'Undone');
   });

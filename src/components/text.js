@@ -84,6 +84,8 @@ export const qrAlt = (shortLink) => `QR code for ${shortLink}`;
 export const qrAltSchool = (school, shortLink) => `QR code for the ${school} link, ${shortLink}`;
 // A failed copy or download: the amber note inside the box (v1.106 detail a)
 export const COPY_FAILED = "Couldn't copy the link. Select the link and copy it yourself.";
+// (Stays "Try again.": the picture is made in this browser with no network call, so a "check the
+// connection" sentence would send the person the wrong way; v1.137, "A for both".)
 export const QR_FAILED = "Couldn't make the QR code picture. Try again.";
 
 // ----- M6: the count cards (CountCards.jsx) -----
@@ -123,12 +125,19 @@ export const NEITHER_SAVED = 'Neither change saved. Check the connection, then r
 export const undoLeftDidntSave = (words, section) => `Undo didn't save: “${words}” (${section}). Check the connection, then retry.`;
 // … and when the database refused it (e.g. the staff 10-second limit passed while it waited): the
 // section's own reason after it, with no Retry.
-export const undoLeftRefused = (words, section, reason) => `Couldn't undo “${words}” (${section}). ${reason}`;
+// A page's reason is often R2-07's whole sentence ("Couldn't undo: it's too late."): then the change and
+// the section go into that sentence ("Couldn't undo “Zoe Park withdrawn” (Camps): it's too late."),
+// instead of a second "Couldn't undo" in front of it.
+export const undoLeftRefused = (words, section, reason) =>
+  /^Couldn't undo\b/.test(reason)
+    ? reason.replace(/^Couldn't undo/, `Couldn't undo “${words}” (${section})`)
+    : `Couldn't undo “${words}” (${section}). ${reason}`;
 // The same two bars while private details are hidden on this device (v0.249): they name only the
 // section, never the change, because the change's words (a toast like "Sam Lee marked paid · $330
 // cash") can hold an amount or a name. The page's own reason is that section's to keep amount-free.
 export const undoLeftDidntSavePlain = (section) => `Undo didn't save (${section}). Check the connection, then retry.`;
-export const undoLeftRefusedPlain = (section, reason) => `Couldn't undo (${section}). ${reason}`;
+export const undoLeftRefusedPlain = (section, reason) =>
+  /^Couldn't undo\b/.test(reason) ? reason.replace(/^Couldn't undo/, `Couldn't undo (${section})`) : `Couldn't undo (${section}). ${reason}`;
 
 // ===== Sentences every section repeats (rulebook v1.045, v1.051; pass 1: R1-06, R1-07, R2-07, S-2, R3-13) =====
 // The first line of this file says a part never holds a section's own words. These are not a section's:

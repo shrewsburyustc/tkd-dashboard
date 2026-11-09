@@ -248,6 +248,13 @@ await withChrome(async (tab) => {
     assert.ok(m.boxBottom <= m.pageBottom - 7.5, `the box ends at ${Math.round(m.boxBottom)}, the page area at ${Math.round(m.pageBottom)} (the bottom bar starts there)`);
     assert.ok(m.boxTop < m.tagTop, 'it flipped above the tag');
   });
+  await check('touch 820 and 390: an amber bar\'s Retry (the failed-Undo bar) is a 44px tap target: a click 3.5px above and below it lands on it', async () => {
+    for (const [w, h] of [[820, 1180], [390, 844]]) {
+      await open(w, h, true);
+      const m = await ev(`(() => { const b = document.querySelector('[data-sh="bar"] .errbar-retry'); const r = b.getBoundingClientRect(); const at = (x, y) => document.elementFromPoint(x, y)?.closest('.errbar-retry') === b; return { h: r.height, above: at(r.left + r.width / 2, r.top - 3.5), below: at(r.left + r.width / 2, r.bottom + 3.5) }; })()`);
+      assert.ok(m.above && m.below, `${w}px wide: the Retry button is ${m.h}px tall; a click 3.5px above lands on it: ${m.above}, below: ${m.below}`);
+    }
+  });
   await check('Select: 44px tall on touch (36 with a mouse); grouped options show a heading (seen, not read), a choice says its group, and the arrow keys move by choice only', async () => {
     await open(1280, 800, false);
     const pc = await ev(`document.querySelector('#sh-select').getBoundingClientRect().height`);
@@ -279,6 +286,21 @@ await withChrome(async (tab) => {
     const hit = await ev(`(() => { const b = document.querySelector('[data-sh="buttons"] .btn'); const r = b.getBoundingClientRect(); const a = document.elementFromPoint(r.left + 20, r.top - 3.5); const c = document.elementFromPoint(r.left + 20, r.bottom + 3.5); return [a === b, c === b, r.height]; })()`);
     assert.equal(hit[0], true, 'above');
     assert.equal(hit[1], true, 'below');
+  });
+  await check('PC: the back link inside a page that is a flex column is only as wide as itself, so a click right of it does not go back (v1.136)', async () => {
+    await open(1280, 800, false);
+    const w = await ev(`(() => {
+      const back = document.querySelector('.back-link');
+      const parent = back.parentElement;
+      const was = [parent.style.display, parent.style.flexDirection];
+      parent.style.display = 'flex'; parent.style.flexDirection = 'column'; // the shape of Camps' and Color Belt's pages
+      const r = back.getBoundingClientRect();
+      const out = { link: r.width, page: parent.getBoundingClientRect().width, align: getComputedStyle(back).alignSelf };
+      [parent.style.display, parent.style.flexDirection] = was;
+      return out;
+    })()`);
+    assert.equal(w.align, 'flex-start');
+    assert.ok(w.link < w.page / 2, `the link is ${Math.round(w.link)}px in a ${Math.round(w.page)}px page`);
   });
 });
 
