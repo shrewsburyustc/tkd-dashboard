@@ -8,7 +8,8 @@
 //     School · Testing for
 //   - Registration: Registered · Reference · Waiver (+ View signature for admins) · Removed
 //   - Payments: Plan · Kukkiwon certificate · every payment (Date · For · How · Amount · Note ·
-//     Recorded by; phones: two lines each) with a ⋯ per line for admins · the totals
+//     Recorded by; phones: two lines each, "Card · paid Mar 20 · by name" = the shared payment line, v1.135; the ⋯ sheet's
+//     subtitle is the full line "$870 card · paid Mar 20 · for payments 1, 2 and 3 · by Jeffrey Berg") with a ⋯ per line for admins · the totals
 //   - History · N changes › (BB8, v0.972: the shared line, CandidateHistory.jsx; not in Edit details)
 //   - Close · Print receipt (only with a payment or refund that still stands) · Record payment (primary), and ⋯: Edit details · Change plan or
 //     Kukkiwon — (admins) Withdraw · Delete permanently, or on a withdrawn candidate Restore ·
@@ -82,6 +83,12 @@ export function lineWords(line, payments, plan) {
   }
   return { what: T.forText(line.forItems, ctx), how: T.methodName(line.method) };
 }
+// The ⋯ sheet's subtitle is the shared payment line (v1.135): "$870 card · paid Mar 20 · for payments 1, 2 and 3 · by
+// Jeffrey Berg"; a refund "refunded $23 cash Mar 20 · by …"; a returned check keeps "Mar 20 · $870".
+function lineSubtitle(line, plan) {
+  if (line.kind === 'returned') return `${T.monthDay(line.paidOn)} · ${formatCents(line.amountCents)}`;
+  return T.paymentLine({ kind: line.kind, cents: line.amountCents, method: line.method, iso: line.paidOn, what: T.forSentence(line.forItems, { paymentsCount: plan?.paymentsCount ?? null }), by: line.recordedByName });
+}
 function noteWords(line) {
   if (line.returned) return line.note ? `${line.note} · ${T.RETURNED_NOTE}` : T.RETURNED_NOTE;
   return line.note || T.NO_NOTE;
@@ -139,7 +146,9 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
             const w = words(line);
             // Phones leave the note out when there is none (no lone "—" between the dots)
             const note = line.note || line.returned ? noteWords(line) : null;
-            const second = [T.monthDay(line.paidOn), w.how, note, T.byName(line.recordedByName)].filter(Boolean);
+            // The shared payment line's phone variant (v1.135): "Card · paid Mar 20", then the note and "by name"
+            const when = line.kind === 'refund' ? T.refundedOnPhone(line.method, line.paidOn) : line.kind === 'returned' ? `${w.how} · ${T.monthDay(line.paidOn)}` : T.paidOnPhone(line.method, line.paidOn);
+            const second = [when, note, T.byName(line.recordedByName)].filter(Boolean);
             return (
               <li key={line.id} className={`bb-pay-block${line.returned ? ' is-returned' : ''}`}>
                 <span className="bb-pay-block-text">
@@ -553,7 +562,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         anchor={menu.anchor}
         isSheet={isPhone}
         title={menu.kind === 'line' ? menu.what : title}
-        subtitle={menu.kind === 'line' ? `${T.monthDay(menu.line.paidOn)} · ${formatCents(menu.line.amountCents)}` : T.detailSub(cycle.name, c.dan, c.locationCode)}
+        subtitle={menu.kind === 'line' ? lineSubtitle(menu.line, c.plan) : T.detailSub(cycle.name, c.dan, c.locationCode)}
         label={menu.kind === 'line' ? T.paymentMoreLabel(menu.what, menu.line.paidOn) : T.MORE_FOR_DETAIL(title)}
         items={menu.kind === 'line' ? lineItems(menu.line, menu.what) : detailItems()}
         onClose={(reason) => {

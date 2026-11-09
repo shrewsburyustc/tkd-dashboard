@@ -141,3 +141,9 @@ Jeffrey: "Yes, build it". Main released it once Dashboard core's shared batch an
 - **Not verified in a browser:** Fill in's open-times Retry (no helper makes that read fail), the booking settings link, Add prospect's forms-list Retry, the Schedule picker's Past group, Prospects at 820 touch, the Calendar's queued Undo while a second save runs.
 - **Picture:** `docs/Prospects/Batch5-SharedParts-after.png`.
 - **Still open for Jeffrey:** L-10's Schedule slot height design choice.
+
+## L-10: the Schedule's 30-minute slots (2026-11-08, rulebook v0.649)
+
+- **Jeffrey: "A"** (picture `docs/Prospects/L10-Schedule-slot-options.png`). Built, uncommitted: on touch a slot under 44 px tall keeps its look and gets an invisible tap box out to 44 px, only into free room next to it (`TimeGrid.jsx` sets `--tap-top` / `--tap-bottom`; `schedule.css` touch block). Touching slots stay at their own size.
+- **Checked:** hit-test at 820 in the preview: 5 px above or below a 30-minute slot picks it, 6 px away does not, the box is 44 px. Both builds and all 19 check files pass.
+- With this, every item of the pass 1 and pass 2 fix lists for New students is built, except what waits on others (Dashboard core's R2-04 for U-06's patch, N16's Show menu) and the real-use tests.

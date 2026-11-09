@@ -804,20 +804,29 @@ export function priceBreakdownLine(b, allDays, weekCount = 1) {
   }
   return `${parts.join(' + ')} = ${formatMoney(b.totalCents)}`;
 }
-// Camper detail's payment lines — every row, oldest first, with the school whose drawer has it (v0.707):
-//   "$166 cash · Shrewsbury · Mar 3 · Jeffrey"                  a payment
-//   "−$335 card (reversed) · Worcester · Apr 19 · Jeffrey"       the row that undid (or edited) a payment
-//   "Refunded $23 cash · Worcester · Apr 21 · Jeffrey Berg"      a refund (v0.743 (3)), at the desk that
-//                                                                handed the money back (v1.040)
-//   "$23 cash (reversed) · Worcester · Apr 22 · Jeffrey Berg"    the row that undid a refund (Undo refund):
-//                                                                the same "(reversed)" line as a payment's,
-//                                                                with the reversal's own (plus) amount
+// Camper detail's payment lines — every row, oldest first (rulebook v1.135, R1-07 second part, "C"):
+// Star's base line, with only what Camps alone has added after it, always in the order paid date,
+// school (the drawer that has it, v0.707), by who:
+//   "$166 card · paid Mar 3 · Shrewsbury · by Jeffrey"            a payment (Star's "$140 card · paid Nov 3")
+//   "refunded $23 cash Apr 21 · Worcester · by Jeffrey Berg"      a refund (v0.743 (3)), at the desk that
+//                                                                 handed the money back (v1.040); Star's
+//                                                                 "refunded $23 cash Nov 3"
+//   "−$335 card (reversed) · Apr 19 · Worcester · by Jeffrey"     the row that undid (or edited) a payment:
+//                                                                 its day is when it was undone, so no "paid"
+//   "$23 cash (reversed) · Apr 22 · Worcester · by Jeffrey Berg"  the row that undid a refund (Undo refund):
+//                                                                 the same "(reversed)" line, with the
+//                                                                 reversal's own (plus) amount
 export function paymentLine(p) {
   const how = payingByLower(p.method);
-  const what = p.kind === 'refund'
-    ? `Refunded ${formatMoney(Math.abs(p.amountCents))} ${how}`
-    : `${formatMoney(p.amountCents)} ${how}${p.kind === 'reversal' ? ' (reversed)' : ''}`;
-  return [what, schoolName(p.school), monthDay(p.paidOn), p.recordedByName].filter(Boolean).join(' · ');
+  const day = monthDay(p.paidOn);
+  const school = schoolName(p.school);
+  // A non-breaking space after "by", so a wrapped line never leaves "by" alone at the end of a row.
+  const who = p.recordedByName ? `by ${p.recordedByName}` : null;
+  let parts;
+  if (p.kind === 'refund') parts = [`refunded ${formatMoney(Math.abs(p.amountCents))} ${how}${day ? ` ${day}` : ''}`, school, who];
+  else if (p.kind === 'reversal') parts = [`${formatMoney(p.amountCents)} ${how} (reversed)`, day, school, who];
+  else parts = [`${formatMoney(p.amountCents)} ${how}`, day ? `paid ${day}` : null, school, who];
+  return parts.filter(Boolean).join(' · ');
 }
 export const overpaidLine = (total, paid) => `Total now ${formatMoney(total)} · paid ${formatMoney(paid)} · `;
 export const overpaidAmber = (cents) => `Paid ${formatMoney(cents)} more than the total`;
@@ -943,8 +952,11 @@ export const HISTORY_AGE = 'Age';
 export const HISTORY_MEMBER = 'Member';
 export const historyYesNo = (value) => (value ? 'Yes' : 'No');
 export const HISTORY_PAYING_BY = 'Paying by';
-export const historyMarkedPaid = (cents, method) => `Marked paid ${formatMoney(cents)} ${payingByLower(method)}`;
-export const historyPaymentUndone = (cents, method) => `Payment undone: ${formatMoney(cents)} ${payingByLower(method)}`;
+// Star's History words, now the same in all four sections (rulebook v1.135): "Payment recorded: $140 card,
+// paid Nov 3" (it used to say "Marked paid $350 cash" with no day) and "Payment undone: $140" (no way).
+export const historyMarkedPaid = (cents, method, paidOn) =>
+  `Payment recorded: ${formatMoney(cents)} ${payingByLower(method)}${paidOn ? `, paid ${monthDay(paidOn)}` : ''}`;
+export const historyPaymentUndone = (cents) => `Payment undone: ${formatMoney(cents)}`;
 export const historyPaymentChanged = (oldCents, oldMethod, newCents, newMethod) =>
   `Payment changed: ${formatMoney(oldCents)} ${payingByLower(oldMethod)} → ${formatMoney(newCents)} ${payingByLower(newMethod)}`;
 // Record refund (v0.743 (3), (4); Star's words): "Refund recorded: $23 cash, Apr 21" (the day the money
