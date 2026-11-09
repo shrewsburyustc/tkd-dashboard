@@ -27,7 +27,7 @@ export function bookingProblem(draft) {
 
 // groups = [{ key, classIds, weekday, start, end }] (Builder works them out from today's schedule);
 // groupDefault(classIds) = the number a combined time starts with; agesOf(classId) = { from, to }.
-export default function BookingSettings({ draft, dirty, classes, timesFor, groups = [], groupDefault, agesOf, readOnly, saving, note, idBase, onChange, onSave }) {
+export default function BookingSettings({ draft, dirty, classes, timesFor, groups = [], groupDefault, agesOf, readOnly, saving, note, idBase, onChange, onSave, onLeave }) {
   const bad = bookingProblem(draft);
   // What the forms show for a combined time: its classes and their joined ages (v0.620).
   const exampleOf = (classIds) => {
@@ -47,7 +47,26 @@ export default function BookingSettings({ draft, dirty, classes, timesFor, group
       </p>
       <fieldset className="field cfieldset">
         <legend className="field-label">{T.CLASSES_OFFERED}</legend>
-        {classes.length === 0 && <p className="field-hint">{T.NO_CLASSES}</p>}
+        {classes.length === 0 && (
+          <p className="field-hint">
+            {T.NO_CLASSES_BEFORE}
+            {/* N11: a link to Settings → Classes and ranks (v0.427, v1.023). The app reads the address like Back / Forward. */}
+            {/* The form's own unsaved edits are saved first (onLeave), then the address changes — a plain link
+                would leave the page inside the autosave wait and lose the last edit. */}
+            <a
+              className="link-button"
+              href={T.SETTINGS_CLASSES_ADDRESS}
+              onClick={(event) => {
+                if (!onLeave || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                event.preventDefault();
+                Promise.resolve(onLeave()).finally(() => { window.location.hash = T.SETTINGS_CLASSES_ADDRESS; });
+              }}
+            >
+              {T.NO_CLASSES_LINK}
+            </a>
+            {T.NO_CLASSES_AFTER}
+          </p>
+        )}
         {classes.map((c) => (
           <label key={c.id} className="cbox">
             <input
