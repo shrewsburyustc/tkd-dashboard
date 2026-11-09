@@ -536,9 +536,11 @@ html.is-reordering .tib-tip {
 .tsheet {
   position: absolute;
   right: 0;
-  bottom: 0;
+  /* While a toast shows, the sheet ends above it (R2-04, v1.138; Toast.jsx sets --toast-room-window), so
+     its last items ("Delete permanently") are never under the toast's Undo. */
+  bottom: var(--toast-room-window, 0px);
   left: 0;
-  max-height: 85vh;
+  max-height: min(85vh, calc(100dvh - var(--toast-room-window, 0px) - var(--space-16)));
   overflow-y: auto;
   padding: var(--space-8) 0 calc(var(--space-16) + env(safe-area-inset-bottom));
   border-radius: 16px 16px 0 0;
@@ -947,6 +949,20 @@ html.is-reordering .tib-tip {
   color: var(--color-disabled-text);
 }
 
+/* Unavailable (Select.jsx's `unavailable`, R3-12, v1.138; v1.103's look): staff can't change it right
+   now and the screen says why. The same gray as turned off, but the not-allowed cursor, and the field
+   stays a Tab stop so the reason is heard. */
+.fa-field.is-unavailable {
+  background: var(--color-surface);
+  cursor: not-allowed;
+}
+
+.fa-field.is-unavailable .fa-value,
+.fa-field.is-unavailable.is-empty .fa-value,
+.fa-field.is-unavailable .fa-chevron {
+  color: var(--color-disabled-text);
+}
+
 /* Windows High Contrast (forced colors): the browser swaps the colours above for the theme's own,
    and a turned-off field would look like one that works. The browser's own disabled dropdown uses
    the theme's GrayText for its words and border there, so this one does too. */
@@ -954,7 +970,11 @@ html.is-reordering .tib-tip {
   .fa-field.is-disabled,
   .fa-field.is-disabled .fa-value,
   .fa-field.is-disabled.is-empty .fa-value,
-  .fa-field.is-disabled .fa-chevron {
+  .fa-field.is-disabled .fa-chevron,
+  .fa-field.is-unavailable,
+  .fa-field.is-unavailable .fa-value,
+  .fa-field.is-unavailable.is-empty .fa-value,
+  .fa-field.is-unavailable .fa-chevron {
     border-color: GrayText;
     color: GrayText;
   }

@@ -287,6 +287,29 @@ await withChrome(async (tab) => {
     assert.equal(hit[0], true, 'above');
     assert.equal(hit[1], true, 'below');
   });
+  await check('PC: the Select\'s unavailable state: gray, not-allowed cursor, never opens, still a Tab stop, the reason is linked (R3-12)', async () => {
+    await open(1280, 800, false);
+    const s = await ev(`(() => {
+      const f = document.getElementById('sh-select-unavailable');
+      const cs = getComputedStyle(f); const v = getComputedStyle(f.querySelector('.fa-value'));
+      f.click();
+      const why = document.getElementById(f.getAttribute('aria-describedby'));
+      return { aria: f.getAttribute('aria-disabled'), tab: f.tabIndex, cursor: cs.cursor, bg: cs.backgroundColor, color: v.color, expanded: f.getAttribute('aria-expanded'), why: why ? why.textContent : null, readonly: f.getAttribute('aria-readonly') };
+    })()`);
+    assert.equal(s.aria, 'true');
+    assert.equal(s.tab, 0, 'still a Tab stop');
+    assert.equal(s.cursor, 'not-allowed');
+    assert.equal(s.expanded, 'false', 'a click does not open it');
+    assert.equal(s.readonly, null, 'not the busy (saving) state');
+    assert.notEqual(s.color, 'rgb(0, 0, 0)', 'gray words');
+    assert.match(s.why ?? '', /Ask an admin/, 'the reason is linked');
+    await ev(`document.getElementById('sh-select-unavailable').focus()`);
+    await tab.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+    await tab.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40 });
+    await sleep(150);
+    assert.equal(await ev(`document.getElementById('sh-select-unavailable').getAttribute('aria-expanded')`), 'false', 'a key does not open it');
+    assert.equal(await ev(`document.activeElement.id`), 'sh-select-unavailable', 'and the focus stays on it');
+  });
   await check('PC: the back link inside a page that is a flex column is only as wide as itself, so a click right of it does not go back (v1.136)', async () => {
     await open(1280, 800, false);
     const w = await ev(`(() => {
