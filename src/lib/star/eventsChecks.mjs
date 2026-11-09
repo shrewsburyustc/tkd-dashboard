@@ -1128,8 +1128,8 @@ await check('R2-05: an Undo pressed while a save runs waits and runs when the sa
 
 // Review of batch 4, SHOULD 3: every save ends its line from a `finally` (a throw can't leave it busy).
 await check('pass 3: the Events saves end the save line from a finally', async () => {
-  const { readFileSync } = await import('node:fs');
-  const tab = readFileSync(new URL('../../screens/testing/star/events/StarEventsTab.jsx', import.meta.url), 'utf8');
+  const { readSource } = await import('./readSource.js');
+  const tab = readSource(new URL('../../screens/testing/star/events/StarEventsTab.jsx', import.meta.url));
   assert.ok(tab.includes('} finally {\n      endWrite(ended);'), 'inWrite ends the line from a finally');
   assert.ok(tab.includes('} finally {\n      endWrite(ended);\n    }\n    if (fresh.status'), 'Retry close registration ends it from a finally too');
   assert.equal((tab.match(/\bendWrite\(/g) ?? []).length, 4, 'endWrite: a comment, its definition and the two finally blocks only');
