@@ -107,7 +107,7 @@ function StudentRow({ row, ctx }) {
   const markPaid = showMarkPaid ? (
     <button
       type="button"
-      className="btn btn-sm ev-markpaid"
+      className={`btn btn-sm ev-markpaid${ctx.busy ? ' is-unavailable' : ''}`}
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
       aria-haspopup="dialog"

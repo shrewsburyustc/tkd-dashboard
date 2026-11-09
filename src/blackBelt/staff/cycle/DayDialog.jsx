@@ -196,7 +196,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
           <span className="field-label">{T.DATE}</span>
           {/* Today or later (a saved past day keeps its date); once grading has started, not
               before lock.minDate — the save rule's own limits (v1.018). A locked date is dimmed.
-              "Past dates can't be chosen." only when no saved past date pulls the first day back. */}
+              "Past days can't be chosen." only when no saved past date pulls the first day back. */}
           <DateField
             id={`${id}-date`}
             label={T.DATE}
@@ -204,7 +204,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
             today={today}
             min={dateMin}
             years={cycleDateYears(today, { min: dateMin, value: v.date })}
-            hint={pastHint(today, dateMin, T.PAST_DATES_HINT)}
+            hint={pastHint(today, dateMin, T.PAST_DAYS_HINT)}
             isPhone={isPhone}
             disabled={Boolean(lock?.dateLocked)}
             invalid={Boolean(dateMsg)}

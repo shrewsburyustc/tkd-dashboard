@@ -51,12 +51,13 @@ const NOTES = {
   DELETE_FAILED: T.DELETE_FAILED,
 };
 
-export default function EventTypesDialog({ state, types, isPhone, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
+export default function EventTypesDialog({ state, types, isPhone, busy = false, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
   const idBase = `types-dialog-${state.key}`;
   const [menu, setMenu] = useState(null); // { anchor, type, index } — a row's ⋯ menu
   // Drag a row by its grip (mouse, finger or pen), as in Testing (v0.43 / v0.63).
   const drag = useReorderDrag({
-    enabled: state.step === 'list' && !state.saving && menu === null,
+    // Off while a save runs (busy: the page's save line), so the grips show gray and don't start a drag (L-06)
+    enabled: state.step === 'list' && !state.saving && !busy && menu === null,
     onDrop: (group, id, toIndex) => onReorder(types.find((t) => t.id === id), toIndex),
   });
   const type = types.find((t) => t.id === state.typeId) ?? null;

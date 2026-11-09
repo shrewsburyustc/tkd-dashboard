@@ -11,6 +11,9 @@
 // Money in the sentences below is written by the dashboard’s one money helper (rulebook
 // v1.026): "$65", with cents only when there are some ("$290.50").
 import { formatMoney } from '../../lib/money.js';
+// Batch 2 (pass 1 R1-06, R1-07, R2-07, R3-13): the sentences every section says come from Dashboard core's
+// src/components/text.js; each is re-exported below under the name the Color Belt screens use.
+import * as SHARED from '../../components/text.js';
 
 // ----- 7.1 Page, tabs, states -----
 export const PAGE_TITLE = 'Testing';
@@ -274,6 +277,14 @@ export const priceProblemText = (problem) => PRICE_PROBLEMS[problem] ?? null;
 // ----- 7.6 Notes, banners, toasts -----
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const DISCARD_CHANGES = 'Discard changes'; // phone only: the link inside UNSAVED (v0.56)
+// R2-07 (v1.045 (4)): a refused change says "Someone else changed [Name] just now, so nothing was done. Their
+// change is shown."; a refused Undo says "Couldn't undo: [reason]."; a failed Undo says "Undo didn't save.
+// Check the connection, then retry." The three come from the shared words; the Color Belt screens use these.
+// The old constants below (STALE, UNDO_STALE, UNDO_FAILED, ROSTER_STALE …) stay exported because Camps
+// re-exports them, until Camps has switched (its own R2-07).
+export const someoneElseChanged = SHARED.someoneElseChanged;
+export const couldntUndo = SHARED.couldntUndo; // couldntUndo('someone else changed Ava Chen just now') — no full stop in the reason
+export const UNDO_DIDNT_SAVE = SHARED.UNDO_DIDNT_SAVE;
 export const STALE = "Someone else changed this just now. Your change wasn't saved.";
 export const STALE_DIALOG =
   "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
@@ -486,7 +497,7 @@ export const CLOSING_DATE_LABEL = 'Closing date';
 export const CLOSE_AUTOMATICALLY_HINT = '11:59 PM, Massachusetts time. You can open or close registration yourself at any time.';
 // The calendar (Star's date picker, v1.018 / v0.414 — words copied from Star's v0.503)
 export const CHOOSE = 'Choose…'; // an empty date field
-export const PAST_DATES_HINT = "Past dates can’t be chosen."; // under the days: testing date, private day
+export const PAST_DATES_HINT = SHARED.PAST_DAYS_HINT; // under the days: testing date, private day (R3-13: the shared words, "Past days can't be chosen.")
 export const MARKED_TESTING_DATE = 'Testing date.'; // after the dot, while the testing date's month is on show
 export const MARKED_TESTING_DATE_SR = 'testing date'; // what a screen reader adds to that day
 export const closingRangeHint = (testingDate) => `The closing date can be from today up to ${weekdayMonthDay(testingDate)}.`;
@@ -657,7 +668,8 @@ export const REVIEW_DUPLICATE = 'Review possible duplicate';
 export const moreForStudent = (name) => `More actions for ${name}`;
 
 // Toasts
-export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${formatMoney(cents)} ${payingByLower(method)}`;
+export const markedPaidToast = (name, cents, method) => SHARED.markedPaidToast(name, formatMoney(cents), payingByLower(method));
+export const markedPaidToastHidden = SHARED.markedPaidToastHidden; // while Hide private details is on: no amount, no way (v0.722)
 export const withdrawnToast = (name) => `${name} withdrawn`;
 export const restoredToast = (name) => `${name} restored`;
 export const studentAddedToast = (name) => `${name} added`;
@@ -665,7 +677,7 @@ export const TOAST_CHANGES_SAVED = 'Changes saved';
 export const TOAST_PAYMENT_SAVED = 'Payment saved'; // not used by Color Belt now; Camps reuses it (camps/text.js)
 // After Edit payment, with Undo for 5 seconds (v1.003, CB3 — Black Belt's words)
 export const TOAST_PAYMENT_CHANGED = 'Payment changed';
-export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
+export const paymentUndoneToast = SHARED.paymentUndoneToast; // Camps re-exports this name: keep it until Camps has switched
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
 export const TOAST_KEPT_BOTH = 'Kept both registrations';
 
@@ -686,9 +698,11 @@ export const actionFailed = "That didn't save. Check the connection, then retry.
 export const priceChangedNote = (name, cents) =>
   `The price for ${name} is now ${formatMoney(cents)} (the testing-day price). Nothing was saved. Tap Mark paid again.`;
 // CB3, second half: Undo payment asks first (Star's words, v0.518; blue, Keep payment focused)
-export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
+// R1-06 (v1.045 (2)): Black Belt's words. The title carries the amount and the way ("Undo Ava Chen’s $65 cash
+// payment?"); the body opens "Paid on Nov 3." and keeps the section's own consequence.
+export const undoPaymentTitle = (name, cents, method) => SHARED.undoPaymentTitle(name, formatMoney(cents), payingByLower(method));
 export const undoPaymentBody = (cents, method, iso) =>
-  `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to Not paid. Both stay in the history.`;
+  `${SHARED.paidOnOpening(monthDay(iso))}. The row goes back to Not paid. Both stay in the history.`;
 export const KEEP_PAYMENT = 'Keep payment';
 export const UNDOING = 'Undoing…';
 export const UNDO_BOX_FAILED = "Undo didn't save. Check the connection, then retry."; // pass 2 C-06 (b), v1.045 (4) / v1.055 (j2)
@@ -746,6 +760,10 @@ export const DETAIL_TESTING_FOR = 'Testing for';
 export const DETAIL_STRIPES = '3 stripes';
 export const DETAIL_REGISTERED = 'Registered';
 export const DETAIL_PAYING_BY = 'Paying by';
+// R1-07 second part (rulebook v1.135, Jeffrey "C"): the Paying by line of the summary says where the CURRENT choice
+// was made, the same in Camps, Color Belt, Star and Black Belt: "Cash (chosen on the form)" / "Check (chosen at the
+// desk)". where = 'form' | 'desk' (eventRules.markPaidChoiceWhere: the answer the Mark paid box's hint uses).
+export const payingByDetail = (method, where) => `${payingByText(method)} (chosen ${where === 'form' ? 'on the form' : 'at the desk'})`;
 export const DETAIL_PAYMENT = 'Payment';
 export const DETAIL_SIGNED = 'Signed by';
 export const DETAIL_REMOVED = 'Removed';
@@ -760,6 +778,9 @@ export const REFERENCE_WORD = 'reference';
 export const SIGNED_FORM = 'Parent or guardian, on the form';
 export const signatureDeleted = (stamp) => `Signed on the form, ${stampDay(stamp)} (the signature is deleted 90 days after testing)`;
 export const NOT_SIGNED_DESK = 'Not signed here (added at the desk)';
+// The payment line (v1.135): Star's base — "$140 card · paid Nov 3" (the phone: paidOnPhone, "Card · paid Nov 3");
+// Color Belt adds nothing (the school and who are columns of its lists). History: "Payment recorded: $140 card,
+// paid Nov 3" and "Payment undone: $140" (historyPaymentRecorded / historyPaymentUndone below).
 export const paidDetail = (cents, method, paidOn) => `${formatMoney(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
 export const removedDetail = (stamp, name, reason) =>
   `${reason === 'duplicate_copy' ? 'Duplicate copy, removed' : 'Withdrawn'} ${stampDay(stamp)}${name ? ` by ${name}` : ''}`;
@@ -1084,12 +1105,12 @@ export const privatePriceChangedNote = (name, cents) =>
   `The amount owed for ${name} is now ${formatMoney(cents)}. Nothing was saved. Tap Mark paid again.`;
 // CB3, second half: the Undo payment box's sentence. It names the LATEST payment (on a top-up, the
 // top-up) and what the row becomes: after = { paidCents, dueCents } once it is undone.
-//   "The $20 cash payment recorded on Nov 3 is reversed and the row goes back to Paid $65 · $20
-//    more to collect. Both stay in the history."
+//   "Paid on Nov 3. The row goes back to Paid $65 · $20 more to collect. Both stay in the history."
+//   (R1-06: the title above it says the amount and the way.)
 export const privateUndoPaymentBody = (cents, method, iso, after) => {
   let becomes = TAG_NOT_PAID;
   if (after && after.paidCents > 0) becomes = after.dueCents > 0 ? owedLine(after.paidCents, after.dueCents) : TAG_PAID;
-  return `The ${formatMoney(cents)} ${payingByLower(method)} payment recorded on ${monthDay(iso)} is reversed and the row goes back to ${becomes}. Both stay in the history.`;
+  return `${SHARED.paidOnOpening(monthDay(iso))}. The row goes back to ${becomes}. Both stay in the history.`;
 };
 
 // ----- Add private testing / Edit details (P2) -----

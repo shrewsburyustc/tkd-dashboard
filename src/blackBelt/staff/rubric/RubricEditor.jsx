@@ -26,8 +26,8 @@ import RowMenu from '../../../components/RowMenu.jsx';
 import { bracketLabel, handedIn, mostPoints, partLetters, partMaxByBracket } from '../../../lib/blackBelt/rubric.js';
 import { nameKey as nameMatchKey } from '../../../lib/testing/names.js';
 import { useReorderDrag } from '../../../lib/useReorderDrag.js';
-import Choice from '../parts/Choice.jsx';
-import Grip from '../parts/Grip.jsx';
+import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
+import Grip from '../../../components/Grip.jsx';
 import { innerKind, isQuiet, where as whereOf } from './draft.js';
 import { FieldNote, NumberBox, TextBox } from './fields.jsx';
 import { describe } from './problemText.js';
@@ -542,16 +542,17 @@ export default function RubricEditor({
                 <div className="bbe-item-main">
                   <div className="bbe-item-top">
                     <TextBox label={T.itemNameLabel(item.name)} value={item.name} onChange={(text) => d.setItem(i, { name: text })} invalid={Boolean(msg)} place={key} className="bbe-item-name" maxLength={60} />
-                    <Choice
-                      labelId={`${baseId}-how-${i}`}
-                      className="bbr-gray bbe-kind"
-                      options={[
-                        { key: 'per_count', label: T.PER_COUNT },
-                        { key: 'steps', label: T.STEPS },
-                      ]}
-                      value={rule.kind}
-                      onChange={(kind) => d.setItemKind(i, kind)}
-                    />
+                    <div className="bbr-gray">
+                      <ChoiceGroup
+                        labelId={`${baseId}-how-${i}`}
+                        options={[
+                          { key: 'per_count', label: T.PER_COUNT },
+                          { key: 'steps', label: T.STEPS },
+                        ]}
+                        value={rule.kind}
+                        onChange={(kind) => d.setItemKind(i, kind)}
+                      />
+                    </div>
                     <span id={`${baseId}-how-${i}`} className="visually-hidden">
                       {T.howCountsLabel(item.name)}
                     </span>

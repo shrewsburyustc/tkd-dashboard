@@ -81,6 +81,7 @@
 //   __tkdPreview.forceStarRateLimited(true)    Star Sends answer "too many tries" until set false
 //   __tkdPreview.forceStarPageRateLimited(true) opening the Star page answers "too many tries"
 //   __tkdPreview.failNextStarLoad() / failNextStarSend()  the next page load / Send fails
+//   __tkdPreview.failNextStarRead()            fails one read (a candidate's summary, signature or history), once
 //   __tkdPreview.setStarPublicDelay(3000)      slow the Star page's answers down
 // Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave() cover grading too):
 //   __tkdPreview.failSavesUntilRetry()    from now on EVERY Events save fails like a dropped
@@ -1107,6 +1108,7 @@ export function createMockClient() {
       if (target !== undefined) return `The next read of ${target} will fail like a dropped connection. Press Retry to read it again.${target === 'camp_camper_detail' ? ' On touch screens, arm it AFTER Camper detail is open (opening it reads camp_camper_detail too).' : ''}`;
       return 'The next Camps read will fail like a dropped connection (e.g. Edit camp). The camp page and camp list refresh every 15 seconds, which can use it up: arm it right before pressing, or name a read, e.g. failNextCampRead(\'camp_camper_detail\') for ⋯ Undo payment (on touch screens, arm that one AFTER Camper detail is open: opening it reads camp_camper_detail too).';
     },
+    failNextStarRead: (target) => starCandidates.failNextRead(target) ?? "Use 'star_candidate_detail' (the summary, the default), 'star_view_signature' or 'star_candidate_history'.", // S-2: the next read of that one Star candidate read fails, to see its Retry
     resetStaffAccounts() {
       staffAccounts.reset();
       return 'Staff accounts are back to the defaults (the desk is signed in on 3 devices). Reload the page to see them.';

@@ -182,7 +182,7 @@ function CategoryRow({ dan, category, ctx, lifted = false }) {
 
   const grip = isAdmin && (
     <span role="cell" className="st-cgrip">
-      <Grip label={T.dragToReorder(category.name)} gripProps={gripProps(dragGroup(dan.dan), category.id)} tabIndex={tabIndex} />
+      <Grip label={T.dragToReorder(category.name)} gripProps={gripProps(dragGroup(dan.dan), category.id)} tabIndex={tabIndex} disabled={Boolean(ctx.gripsOff)} />
     </span>
   );
 

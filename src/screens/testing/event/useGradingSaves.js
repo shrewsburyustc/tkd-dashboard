@@ -159,9 +159,10 @@ export function useGradingSaves({
       dropEntry(id);
       p.showPageBanner(T.isWithdrawn(name));
     } else {
-      // invalid, not_found
+      // invalid, not_found (R2-07: names the student; "this student" if the row is already gone)
+      const name = nameOf(id);
       dropEntry(id);
-      p.showPageBanner(T.ROSTER_STALE);
+      p.showPageBanner(T.someoneElseChanged(name || 'this student'));
     }
     redraw();
     p.reload();

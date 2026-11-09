@@ -62,7 +62,7 @@ export const PRINT_SHEET = 'Print grading sheet';
 // ----- Loading -----
 export const LOADING_GRADES = 'Loading grades…';
 export const OFFLINE_NO_GRADES = 'You’re offline, so the grades couldn’t load. They load by themselves when the connection is back.'; // new wording, not in the mockups
-export const LOAD_GRADES_FAILED = 'Couldn’t load the grades. Check the connection, then try again.'; // Star v0.513's line
+export const LOAD_GRADES_FAILED = 'Couldn’t load the grades. Check the connection, then retry.'; // + Retry; S-2 ending (v1.051)
 
 // ----- Column headings (G 6) -----
 export const COL_CANDIDATE = 'Candidate';

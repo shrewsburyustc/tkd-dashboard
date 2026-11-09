@@ -75,7 +75,7 @@ function Problem({ id, code }) {
 // noAutofill (the front-desk kiosk and staff Fill in): the browser must not offer the previous
 // family's name, phone, email or address on a shared tablet or desk computer (kiosk plan; security
 // review), so every box says autocomplete="off". Only the family's own device gets the codes.
-export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, noAutofill = false, inlineDates = false, onAnswer, onChildren, onBooking, onSignature }) {
+export default function FormFields({ fields, values, problems, times, onRetryTimes, readOnly, idBase, noTimesText, noAutofill = false, inlineDates = false, onAnswer, onChildren, onBooking, onSignature }) {
   const off = noAutofill ? 'off' : undefined;
   // (on the kiosk the keyboard's spell-check and word suggestions are off too: they would learn
   // and offer one family's names and emails to the next — security review L4)
@@ -353,7 +353,19 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
 
   function bookingBlock(f) {
     if (times === null) return <p key={f.id} className="field-hint">{T.LOADING_TIMES}</p>;
-    if (times === 'error') return <Notice key={f.id}>{T.TIMES_FAILED}</Notice>;
+    if (times === 'error') {
+      // S-2: "… Check the connection, then retry." with a Retry (Fill in passes onRetryTimes; the family page never shows this line)
+      return (
+        <Notice key={f.id}>
+          {T.TIMES_FAILED}
+          {onRetryTimes && (
+            <button type="button" className="note-action" onClick={onRetryTimes}>
+              {T.RETRY}
+            </button>
+          )}
+        </Notice>
+      );
+    }
     return (
       <div key={f.id} className="fbooking">
         {/* With times showing, each child's own "Free class for …" is the label (F3 difference 2). */}

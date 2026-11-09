@@ -22,7 +22,7 @@
 // the migration's seed · star_set_result_text (admin, invalid, stale, same text, history).
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readSource } from './readSource.js';
 import { createStarBackend } from '../mockStarTesting.js';
 import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES } from '../mockStarEvents.js';
 import {
@@ -41,6 +41,7 @@ import {
 } from './resultEmail.js';
 import { csvCell, toCsv } from './csv.js';
 import * as T from './resultsText.js';
+import { createSaveLine } from '../saveLine.js';
 
 let count = 0;
 async function check(label, fn) {
@@ -241,6 +242,11 @@ await check('summary line (3) and the small wording rules', async () => {
   assert.equal(T.markSentRefusal('error', 'Noah Chen'), 'Couldn’t mark Noah Chen as sent. Check the connection, then try again.');
   assert.equal(T.undoSentRefusal('stale'), 'That was already undone.');
   assert.equal(T.undoSentRefusal('not_allowed'), 'Too late to undo here. Ask an admin to undo Mark as sent.');
+  // R2-07 (v1.045 (4)): an Undo that didn't reach the database says the one shared sentence (the admin's
+  // Undo Mark as sent box shows it too); the toast's own Undo goes through the save line (R2-05)
+  assert.equal(T.undoSentRefusal('error'), "Undo didn't save. Check the connection, then retry.");
+  assert.equal(T.undoSentRefusal('surprise'), T.undoSentRefusal('error'));
+  assert.equal(T.TOAST_UNDONE, undefined); // "Undone" is said by the save line now
   assert.equal(T.noEmailOnFile('Noah Chen'), 'Noah Chen has no email for results. Add it with Edit details on the Candidates tab, then try again.');
   assert.equal(T.addressFailed('Noah Chen'), 'Couldn’t get Noah Chen’s email address. Check the connection, then try again.');
   assert.equal(T.csvDownloaded('Fall-2026-Star-Testing-results-2026-11-16.csv', 11),
@@ -627,7 +633,7 @@ await check('loadEmailAddress: star_candidate_detail at the click, ONLY the addr
 
 // The 0023 seed texts, read from the migration file itself (E'…' strings: \n = line break, '' = ').
 function sqlSeedTexts() {
-  const sql = readFileSync(SQL_0023, 'utf8');
+  const sql = readSource(SQL_0023);
   const out = {};
   for (const m of sql.matchAll(/\('(passed|makeup_d|makeup_below)',\s*\r?\n\s*E'((?:[^']|'')*)'/g)) {
     out[m[1]] = m[2].replace(/''/g, "'").replace(/\\n/g, '\n');
@@ -695,7 +701,7 @@ await check('the text rules give the SAME answers as star_result_text_problem �
   assert.equal(resultTextProblem('passed', base + '😀'.repeat(2000 - 29)), null);
   assert.equal(resultTextProblem('passed', base + '😀'.repeat(2001 - 29)), 'too_long');
   // the 0023 tests file still has the cases this check copies (so a change there is noticed)
-  const tests = readFileSync(TESTS_0023, 'utf8');
+  const tests = readSource(TESTS_0023);
   for (const label of ['first line no-break sp', 'double braces', 'below no subjects', 'direction override']) assert.ok(tests.includes(label), label);
   // the editor's details and messages (48)
   assert.deepEqual(resultTextProblemDetail('passed', `${base} {frist name}`), { code: 'unknown_blank', blank: 'frist name' });
@@ -777,9 +783,48 @@ await check('the fake: every results write is a POST-only write, failNextSave re
   assert.deepEqual(rig.snap().downloads, []);
 });
 
-// R2-07 (v1.051): the Mark as sent Undo toast says "Undone".
-await check('R2-07 words: Mark as sent Undo says Undone', async () => {
-  assert.equal(T.TOAST_UNDONE, 'Undone');
+// R2-05 + R2-07 (v1.051): the Mark as sent toast's Undo is the save line's queued Undo. The line says
+// "Undone" when it worked (the toast), "Undo didn't save…" with Retry when it didn't reach the
+// database, and a refusal's own words with no Retry. The run() here is what ResultsTab's
+// undoFromToast does with the answer of undoSent.
+await check('R2-05 / R2-07: Mark as sent Undo through the save line: Undone · didn\'t save + Retry · refusal words', async () => {
+  const { UNDO_DIDNT_SAVE, UNDONE } = await import('../../components/text.js');
+  const rig = makeRig();
+  const lucas = rowOf(await results(rig), 'Lucas');
+  const sent = await rig.api.markSent({ candidateId: lucas.id, resultKey: lucas.result.resultKey });
+  const seen = { bars: [], toasts: [] };
+  const line = createSaveLine(() => ({ section: 'Star testing', showToast: (text) => seen.toasts.push(text), undoBar: (bar) => seen.bars.push(bar) }));
+  const runWith = (undo) => async () => {
+    const answer = await undo();
+    if (answer.status === 'ok') return { status: 'ok' };
+    if (answer.status === 'error') return { status: 'error' };
+    return { status: answer.status, reason: T.undoSentRefusal(answer.status) };
+  };
+  // 1. the connection drops: the page's bar says it, with Retry; the row is still sent
+  rig.cands.failNextSave();
+  const failed = await line.undoAction(runWith(() => rig.api.undoSent(sent.sentId)), { words: 'Marked as sent · Lucas' }).onAction();
+  assert.equal(failed.undone, false);
+  assert.equal(seen.bars.at(-1).text, UNDO_DIDNT_SAVE);
+  assert.equal(typeof seen.bars.at(-1).retry, 'function');
+  assert.equal(sentLine(rowOf(await results(rig), 'Lucas')).kind, 'sent');
+  // 2. Retry works: the line says "Undone" (from a bar the line says it itself) and the row is "Not sent yet"
+  await seen.bars.at(-1).retry();
+  assert.deepEqual(seen.toasts, [UNDONE]);
+  assert.equal(sentLine(rowOf(await results(rig), 'Lucas')).kind, 'not_sent');
+  // 3. a refusal (the staff 10 seconds passed): its own words, no Retry
+  const again = await rig.api.markSent({ candidateId: lucas.id, resultKey: lucas.result.resultKey });
+  rig.staff();
+  rig.tick(10001);
+  const refused = await line.undoAction(runWith(() => rig.api.undoSent(again.sentId)), { words: 'Marked as sent · Lucas' }).onAction();
+  assert.equal(refused.undone, false);
+  assert.equal(seen.bars.at(-1).text, T.undoSentRefusal('not_allowed'));
+  assert.equal(seen.bars.at(-1).retry, null);
 });
 
+// Review of batch 4, SHOULD 3: every save ends its line from a `finally` (a throw can't leave it busy).
+await check('pass 3: the Results saves end the save line from a finally', () => {
+  const tab = readSource(new URL('../../screens/testing/star/results/ResultsTab.jsx', import.meta.url));
+  assert.equal((tab.match(/\} finally \{\n\s+end\(/g) ?? []).length, 3, 'Email result, Mark as sent and Undo mark as sent end the line from a finally');
+  assert.equal((tab.match(/[^.\w]end\(/g) ?? []).length, 4, 'end( appears in its definition and the three finally blocks only');
+});
 console.log(`ALL STAR RESULTS CHECKS PASSED (${count} checks)`);

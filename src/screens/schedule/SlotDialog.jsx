@@ -1,7 +1,7 @@
 // SlotDialog.jsx — "Add time slot" and "Edit time slot" (approved mockup screens 2 and 3).
 // Why it exists: one form for both. Add can tick several days at once (one slot per day,
 // v0.233); Edit changes one slot and has Remove (instant, with Undo — no confirmation).
-//   Class  — this school's classes from Testing → Classes and ranks: tick ONE, or several that
+//   Class  — this school's classes from Settings → Classes and ranks: tick ONE, or several that
 //            are taught together ("White + Little Tiger", v0.237)
 //   Color  — belongs to each CLASS (one row per ticked class): changing it recolors every slot
 //            of that class
@@ -147,7 +147,15 @@ export default function SlotDialog({
       <p className="tdialog-sub">{T.slotSubtitle(school, versionLabel)}</p>
       <form onSubmit={handleSubmit} noValidate>
         {classes.length === 0 ? (
-          <Notice>{T.NO_CLASSES_IN_TESTING}</Notice>
+          <Notice>
+            {T.NO_CLASSES_BEFORE}
+            {/* N11 (CB14 Q2 "C"): a link to Settings → Classes and ranks. The dialog closes first (it has
+                nothing typed yet: there are no classes to choose), then the address opens that part. */}
+            <a className="snote-link" href={T.CLASSES_AND_RANKS_ADDRESS} onClick={onCancel}>
+              {T.CLASSES_AND_RANKS_LINK}
+            </a>
+            {T.NO_CLASSES_AFTER}
+          </Notice>
         ) : (
           <>
             <fieldset className="field sdialog-fieldset" aria-describedby={check.classError ? `${idBase}-class-error` : `${idBase}-class-hint`}>

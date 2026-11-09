@@ -10,6 +10,7 @@
 // shows under Days (errors.days).
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import Notice from '../../../components/Notice.jsx';
+import Select from '../../../components/Select.jsx';
 import DayCalendar from './DayCalendar.jsx';
 import { MAX_DAYS, MAX_WEEK_DAYS } from './campForm.js';
 import * as T from '../text.js';
@@ -20,6 +21,8 @@ const SCHOOLS = [
   { key: 'both', label: T.BOTH_SCHOOLS },
 ];
 const HELD_AT = SCHOOLS.slice(0, 2);
+// "Days per week" (Edit template): 1 day … 7 days. Values are strings, as the form keeps them.
+const DAY_COUNTS = Array.from({ length: MAX_WEEK_DAYS }, (_, i) => ({ value: String(i + 1), label: T.daysCount(i + 1) }));
 
 export default function CampSection({ mode, values, errors, show, today, keepDays, readOnly, idBase, onChange, onToggleDay }) {
   const isTemplate = mode === 'template';
@@ -68,23 +71,25 @@ export default function CampSection({ mode, values, errors, show, today, keepDay
 
       {isTemplate ? (
         <div className="field">
-          <label htmlFor={`${idBase}-count`}>{T.DAYS_PER_WEEK}</label>
-          <select
-            id={`${idBase}-count`}
-            className="input cp-count"
-            tabIndex={0}
-            disabled={readOnly}
-            value={values.dayCount}
-            aria-invalid={daysError ? 'true' : undefined}
-            onChange={(event) => onChange({ dayCount: event.target.value })}
-          >
-            {Array.from({ length: MAX_WEEK_DAYS }, (_, i) => String(i + 1)).map((n) => (
-              <option key={n} value={n}>
-                {T.daysCount(Number(n))}
-              </option>
-            ))}
-          </select>
-          {daysError && <Notice>{daysError}</Notice>}
+          {/* The shared dropdown (S-10, pass 1). A span, not a <label>: the field is a div (role combobox),
+              which a label can't point at; the Select reads its name from this span's id. */}
+          <span id={`${idBase}-count-label`} className="field-label">
+            {T.DAYS_PER_WEEK}
+          </span>
+          <div className="cp-count">
+            <Select
+              id={`${idBase}-count`}
+              labelId={`${idBase}-count-label`}
+              value={values.dayCount}
+              options={DAY_COUNTS}
+              placeholder={T.DAYS_PER_WEEK}
+              readOnly={readOnly}
+              invalid={Boolean(daysError)}
+              describedBy={daysError ? `${idBase}-count-error` : undefined}
+              onChange={(dayCount) => onChange({ dayCount })}
+            />
+          </div>
+          {daysError && <Notice id={`${idBase}-count-error`}>{daysError}</Notice>}
         </div>
       ) : (
         <div className="field">

@@ -9,7 +9,7 @@
 // paid: the screen refuses it first, the database too (refund_too_large).
 // Save → toast "Refund recorded · $50 · Grace Owens · Undo".
 import Dialog from '../../../components/Dialog.jsx';
-import { AmountField, FailedBanner, Footer, PrimaryButton, RefundedByBox, TextField } from './dialogParts.jsx';
+import { AmountField, FailedBanner, Footer, PaidByBox, PrimaryButton, TextField } from './dialogParts.jsx';
 import { ICONS } from './icons.js';
 import { paymentErrors } from './RecordPaymentDialog.jsx';
 import * as T from '../text.js';
@@ -40,7 +40,7 @@ export default function RefundDialog({ state, isPhone, onChange, onSave, onCance
           </p>
         )}
         <AmountField value={v.amount} error={errors.amount} readOnly={ro} autoFocus onChange={(amount) => onChange({ amount })} />
-        <RefundedByBox value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
+        <PaidByBox label={T.REFUNDED_BY} value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
         <TextField label={T.NOTE_OPTIONAL} value={v.note} error={errors.note} readOnly={ro} onChange={(note) => onChange({ note })} />
         <p className="field-hint">{T.refundHint(m.paidCents)}</p>
         <Footer state={state} isPhone={isPhone} onCancel={onCancel} divider primary={<PrimaryButton state={state} isPhone={isPhone} label={T.REFUND_TITLE} Icon={ICONS.save} />} />

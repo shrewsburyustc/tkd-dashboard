@@ -23,9 +23,11 @@
 // Props:
 //   date, today, info (buildDay result), schoolLabel, both, typeColor,
 //   isAdmin, onOpenEvent(event, element), onOpenClosure(closure, element),
-//   followUpsFailed (true = show "Couldn't load follow-ups."), onOpenFollowUp(follow-up),
-//   onOpenItem(item), itemsFailed (true = show "Couldn't load the other sections' dates.")
+//   followUpsFailed (true = show "Couldn't load follow-ups. Check the connection, then retry." with
+//   Retry: onRetryFollowUps), onOpenFollowUp(follow-up), onOpenItem(item), itemsFailed (true = the
+//   same kind of line for "the other sections' dates", Retry: onRetryItems)
 import { IconAlertTriangle, IconChevronRight, IconClockHour4, IconUserCheck, IconUserPlus } from '@tabler/icons-react';
+import ErrorBanner from '../../components/ErrorBanner.jsx'; // the amber line with Retry (S-2, v1.051 (2))
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, formatTime, parseTime } from '../../lib/schedule/time.js';
@@ -82,7 +84,7 @@ function ItemRow({ item, both, onOpen, timed = true }) {
   );
 }
 
-export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn, followUpsFailed = false, onOpenFollowUp, onOpenItem, itemsFailed = false }) {
+export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn, followUpsFailed = false, onOpenFollowUp, onOpenItem, itemsFailed = false, onRetryFollowUps, onRetryItems }) {
   const isToday = date === today;
   const showClasses = info.shows?.classes !== false;
   const followSchools = both ? info.schools.filter((s) => info.followUps.some((f) => f.code === s.code)) : [];
@@ -208,7 +210,7 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
             <FollowUps list={info.followUps.filter((f) => f.code === school.code)} date={date} today={today} onOpen={onOpenFollowUp} />
           </div>
         ))}
-      {followUpsFailed && <p className="cpanel-empty">{T.FOLLOW_UPS_FAILED}</p>}
+      {followUpsFailed && <ErrorBanner text={T.FOLLOW_UPS_FAILED} onRetry={onRetryFollowUps} />}
 
       {info.signupCount > 0 && !both && (
         <>
@@ -236,7 +238,7 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
               </ul>
             </div>
           ))}
-      {itemsFailed && <p className="cpanel-empty">{T.OTHER_SECTIONS_FAILED}</p>}
+      {itemsFailed && <ErrorBanner text={T.OTHER_SECTIONS_FAILED} onRetry={onRetryItems} />}
 
       {showClasses && info.schools.map((school) => (
         <div key={school.code}>

@@ -78,7 +78,7 @@ import Finance from './screens/Finance.jsx';
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePrivateDetailsHidden } from './lib/privateDetails.js';
 import { usePanelSize } from './lib/panelSize.js';
-import { useToastLine } from './lib/toastLine.js';
+import { useDropWhenPrivateHidden, useToastLine } from './lib/toastLine.js';
 import { endLeftUndoBarSession } from './lib/saveLine.js';
 import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
@@ -219,6 +219,9 @@ export default function App() {
   const panel = usePanelSize();
   // The one toast and its waiting slot (lib/toastLine.js; rulebook v1.125, v1.126).
   const { toast, line: toasts } = useToastLine();
+  // Hide private details turned ON: no toast (an "Undoing…" one included) may keep an amount or a name
+  // on the screen; its Undo carries on (lib/toastLine.js).
+  useDropWhenPrivateHidden(toasts);
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
   // `phaseRef` is a copy of `phase` that can be read instantly inside callbacks.

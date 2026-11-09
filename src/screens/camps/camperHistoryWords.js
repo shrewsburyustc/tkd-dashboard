@@ -2,7 +2,7 @@
 // (design review C7, rulebook v0.736; Star's style, v0.518: "what: before → after").
 // Why it exists: camp_camper_history (migration 0033) gives the raw change-log rows — one row per
 // table row a save touched. Staff need one line per SAVE in plain words: "Days: Wed, Nov 25 → Wed,
-// Nov 25 · Fri, Nov 27", "Marked paid $186 check", "Parent phone: (508) 555-0141 → (508)
+// Nov 25 · Fri, Nov 27", "Payment recorded: $186 check, paid Nov 3" (Star's words, v1.135), "Parent phone: (508) 555-0141 → (508)
 // 555-0109 (whole family)". This file is plain JavaScript with no React, so the Node checks
 // (src/lib/camps/checks.mjs) can test every word; CamperHistory.jsx draws it with the shared line.
 //
@@ -155,11 +155,11 @@ function partsOf(batch, { campDays = [], campExtras = [] }) {
     money.push({
       text: replacement
         ? T.historyPaymentChanged(cents, reversal.method, replacement.amountCents ?? 0, replacement.method)
-        : T.historyPaymentUndone(cents, reversal.method),
+        : T.historyPaymentUndone(cents),
       money: true,
     });
   }
-  for (const p of newPayments) money.push({ text: T.historyMarkedPaid(p.amountCents ?? 0, p.method), money: true });
+  for (const p of newPayments) money.push({ text: T.historyMarkedPaid(p.amountCents ?? 0, p.method, p.paidOn), money: true });
 
   // The camper's own columns.
   for (const r of rows.filter((x) => x.tableName === 'camp_campers' && x.op === 'update')) {

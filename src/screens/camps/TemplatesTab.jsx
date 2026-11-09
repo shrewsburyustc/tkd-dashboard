@@ -10,10 +10,12 @@
 //   - Delete template asks first in the shared "are you sure?" box (components/ConfirmBox.jsx,
 //     "Keep template" · red "Delete template", "Deleting…" while it works; rulebook v0.729)
 // Admins only: staff don't see this tab (C1, 2026-10-19).
+// Its amber bars go to the page's ONE bar, a PageBar under the top bar that Camps.jsx draws (rulebook
+// v1.128, design review R2-05): setBanner comes from there. A page that can't load at all draws its own.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconDots, IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
-import ErrorBanner from '../../components/ErrorBanner.jsx';
+import PageBar from '../../components/PageBar.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { deleteTemplate, loadTemplates } from '../../lib/camps/campsApi.js';
@@ -43,6 +45,7 @@ export default function TemplatesTab({
   showToast,
   clearToast,
   onModalOpenChange,
+  setBanner, // puts a bar into the page's one amber bar (from Camps.jsx)
 }) {
   const live = useLiveLoad({ key: TEMPLATES_KEY, enabled: !screenLocked, load: loadAll });
   const liveRef = useRef(live);
@@ -52,7 +55,6 @@ export default function TemplatesTab({
   const templates = [...(live.data?.templates ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
   const [menu, setMenu] = useState(null); // { id, anchor }
-  const [banner, setBanner] = useState(null);
   const [confirm, setConfirm] = useState(null); // { template, opener, deleting, failed }
 
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function TemplatesTab({
     setConfirm(null);
     if (result.status === 'no_access') onNoAccess();
     else {
-      setBanner({ text: result.status === 'not_allowed' ? T.CAMPS_NOT_ALLOWED : T.STALE });
+      setBanner({ text: result.status === 'not_allowed' ? T.CAMPS_NOT_ALLOWED : T.someoneElseChanged(template.name) }); // R2-07: names it
       if (result.status === 'not_allowed') onRefreshProfile();
       liveRef.current.reload();
     }
@@ -122,7 +124,7 @@ export default function TemplatesTab({
       </div>
     );
   } else if (live.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_TEMPLATES_FAILED} onRetry={() => liveRef.current.reload()} />;
+    body = <PageBar text={T.LOAD_TEMPLATES_FAILED} onRetry={() => liveRef.current.reload()} />;
   } else if (live.status === 'noAccess') {
     body = null;
   } else if (templates.length === 0) {
@@ -197,7 +199,6 @@ export default function TemplatesTab({
   return (
     <>
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
-        {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
         {body}
       </div>
       {menuTemplate && (
