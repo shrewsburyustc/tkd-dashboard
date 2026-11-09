@@ -24,8 +24,10 @@
 //                                 that hasn't switched to the save line yet keeps today's way: the
 //                                 toast goes first, then its Undo runs.
 // A toast is { id, text, action: { label, onAction, queued? } | null, icon, busy }.
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { UNDONE } from '../components/text.js';
+import { usePrivateDetailsHidden } from './privateDetails.js';
+import { hideLeftUndoBarWords } from './saveLine.js';
 
 const UNDO_GIVE_UP_MS = 30000; // see pressUndo
 
@@ -104,6 +106,20 @@ export function createToastLine({ giveUpMs = UNDO_GIVE_UP_MS } = {}) {
     },
   };
   return line;
+}
+
+// Hide private details (v0.249, v0.506, v1.133): when the switch turns ON, no toast may keep an amount or
+// a name on the screen, and a toast is also a "live" area read out to screen readers. So the toast and
+// the one waiting behind it go at once (drop()): a toast saying "Undoing…" goes too, and its Undo carries
+// on (v1.129; a failure shows the left bar, whose words become the plain ones, lib/saveLine.js). The app
+// (App.jsx) uses this once for every section; the parts page's sample uses it to show it.
+export function useDropWhenPrivateHidden(line) {
+  const [hidden] = usePrivateDetailsHidden();
+  useEffect(() => {
+    if (!hidden) return;
+    line.drop();
+    hideLeftUndoBarWords();
+  }, [hidden, line]);
 }
 
 // For a React screen: one toast line, kept for as long as the screen, and the toast it shows now.

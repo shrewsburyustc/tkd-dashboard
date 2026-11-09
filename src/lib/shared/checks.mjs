@@ -785,5 +785,33 @@ await check('R2-05 retry: a first save that hangs does not hold "Neither change 
   assert.deepEqual(toasts2, [], 'no "Undone" for the next person');
 });
 
+// ----- Hide private details turned ON while a toast or a left bar shows words (v1.134) -----
+await check('v1.134 privacy: a busy "Undoing…" toast is removed by drop(), the Undo carries on and says nothing more', async () => {
+  const line = TOASTS.createToastLine();
+  const gate = later();
+  let ran = false;
+  line.show('Sam Lee marked paid · $330 cash', {
+    action: { label: 'Undo', queued: true, onAction: async () => ((ran = true), await gate.promise, { undone: true }) },
+  });
+  const pressed = line.pressUndo(line.get().id);
+  assert.equal(line.get().busy, true, 'the toast is "Undoing…"');
+  line.clear(); // clear() alone never removes it: this was the bug
+  assert.ok(line.get(), 'clear() leaves a busy toast');
+  line.drop(); // Hide private details turned ON
+  assert.equal(line.get(), null, 'the toast with the name and amount is gone');
+  gate.settle();
+  await pressed;
+  assert.equal(ran, true, 'the Undo still ran');
+  assert.equal(line.get(), null, 'nothing is said afterwards (v1.129)');
+});
+
+await check('v1.134 privacy: the plain left-bar words name only the section, and hiding words with no bar showing is harmless', async () => {
+  assert.equal(SHARED.undoLeftDidntSavePlain('Camps'), "Undo didn't save (Camps). Check the connection, then retry.");
+  assert.equal(SHARED.undoLeftRefusedPlain('Camps', 'Someone else changed it.'), "Couldn't undo (Camps). Someone else changed it.");
+  assert.ok(!/\$|Zoe/.test(SHARED.undoLeftDidntSavePlain('Camps')), 'no name or amount');
+  LINE.endLeftUndoBarSession();
+  LINE.hideLeftUndoBarWords(); // nothing showing: no crash
+  assert.equal(LINE.leftUndoBar(), null);
+});
 console.log(`${count} groups of checks ran.`);
 console.log('ALL SHARED PARTS CHECKS PASSED');

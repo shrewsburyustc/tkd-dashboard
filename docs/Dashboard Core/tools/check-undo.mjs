@@ -292,6 +292,27 @@ await withChrome(async (tab) => {
     assert.equal((await toast())?.text, 'Undone');
   });
 
+  await check('PC: Hide private details turned ON while the toast says "Undoing…": the toast with the name goes at once, the Undo still runs (v1.134)', async () => {
+    await size(1280, 800, false);
+    await openSample();
+    await zoeWithdrawn();
+    await choose('Next saves take', '3 seconds');
+    await press(withdrawButton('Sofia Rivera'), 'Withdraw Sofia Rivera');
+    await sleep(300);
+    await press(UNDO_BUTTON, 'the toast\'s Undo');
+    await sleep(300);
+    assert.equal((await toast())?.button?.words, 'Undoing…', 'the toast says "Undoing…" first');
+    // the switch turns ON (the same way the account menu does it: the stored value, then the event)
+    await ev(`localStorage.setItem('tkd.device.hidePayments', 'true'); window.dispatchEvent(new CustomEvent('tkd:hide-payments'));`);
+    await sleep(300);
+    assert.equal(await toast(), null, 'no toast with a name on the screen');
+    await sleep(4200);
+    // (Sofia's own save, a separate toast, may show once it ends: that is a new toast, not the Undoing one.)
+    const later = await toast();
+    assert.ok(!later || (later.text !== 'Zoe Park withdrawn' && later.text !== 'Undone'), `nothing more is said about the Undo (v1.129): ${later?.text}`);
+    assert.equal(await state('zoe'), 'Signed up', 'the Undo still ran');
+    await ev(`localStorage.removeItem('tkd.device.hidePayments'); window.dispatchEvent(new CustomEvent('tkd:hide-payments'));`);
+  });
   await check('the app, PC: with the connection cut, Settings\' "couldn\'t load" bar shows under the top bar, after the offline bar (v1.128)', async () => {
     await size(1280, 800, false);
     await openApp('');

@@ -130,6 +130,12 @@ export const undoLeftRefused = (words, section, reason) =>
   /^Couldn't undo\b/.test(reason)
     ? reason.replace(/^Couldn't undo/, `Couldn't undo “${words}” (${section})`)
     : `Couldn't undo “${words}” (${section}). ${reason}`;
+// The same two bars while private details are hidden on this device (v0.249): they name only the
+// section, never the change, because the change's words (a toast like "Sam Lee marked paid · $330
+// cash") can hold an amount or a name. The page's own reason is that section's to keep amount-free.
+export const undoLeftDidntSavePlain = (section) => `Undo didn't save (${section}). Check the connection, then retry.`;
+export const undoLeftRefusedPlain = (section, reason) =>
+  /^Couldn't undo\b/.test(reason) ? reason.replace(/^Couldn't undo/, `Couldn't undo (${section})`) : `Couldn't undo (${section}). ${reason}`;
 
 // ===== Sentences every section repeats (rulebook v1.045, v1.051; pass 1: R1-06, R1-07, R2-07, S-2, R3-13) =====
 // The first line of this file says a part never holds a section's own words. These are not a section's:
