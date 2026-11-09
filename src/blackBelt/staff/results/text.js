@@ -119,7 +119,7 @@ export const emptyDanBoth = (dan) => `No ${danLabel(dan)} candidates. Add candid
 // ----- Email result's banners (proposal 19) -----
 export const COPY_BLOCKED = 'Couldn’t copy the message, so the email opened empty. Close it and try Email result again.';
 export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then retry.`; // + Retry (S-2)
-export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then try again.'; // new wording, not in the mockups (Star's)
+export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then retry.'; // new wording, not in the mockups (Star's)
 // Email result refused by the database at the click (nothing opens). new wording, not in the mockups
 export function emailRefusal(status, name) {
   switch (status) {
@@ -143,7 +143,7 @@ export function markSentRefusal(status, name) {
     case 'withdrawn': return `${name} was removed from this cycle. It wasn’t marked as sent.`;
     case 'not_found': return `${name} was deleted on another device. Nothing was marked.`;
     case 'no_email': return `No email on file for ${name}, so it wasn’t marked as sent.`; // new wording, not in the mockups
-    default: return `Couldn’t mark ${name} as sent. Check the connection, then try again.`; // + Retry
+    default: return `Couldn’t mark ${name} as sent. Check the connection, then retry.`; // + Retry
   }
 }
 export function undoSentRefusal(status) {
@@ -167,7 +167,7 @@ export const CANCEL = 'Cancel';
 export const PRINT_FAILED = loadFailedNamed('the results to print'); // new wording, not in the mockups (+ Retry; S-2)
 export const csvDownloaded = (fileName, n) =>
   `Downloaded ${fileName} (${plural(n, 'candidate', 'candidates')}). It has dates of birth, emails and payments — keep it private.`;
-export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then try again.'; // + Retry
+export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then retry.'; // + Retry
 export const CSV_NOT_ALLOWED = 'Only an admin can download the CSV.';
 
 // ----- The printed results sheet (R05, proposals 38–44) -----
@@ -247,7 +247,7 @@ export const TEXT_STALE = 'Someone else changed this just now. Your change wasn�
 export const TEXT_STALE_PHONE = 'Someone else changed this just now. Your change wasn’t saved. Discard changes, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
 export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubric and waiver. Your change wasn’t saved.'; // new wording, not in the mockups (Star's)
 export const TEXT_INVALID = 'This text can’t be saved. Check the message under the box.'; // new wording, not in the mockups
-export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then try again.';
+export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then retry.';
 // Where a blank works, for "{D subjects} only works in a Make-up with a D email."
 const BLANK_HOME = {
   'subjects to work on': 'a make-up email',

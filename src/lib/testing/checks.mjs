@@ -28,7 +28,7 @@ import {
   todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
-  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf, ROSTER_ROOM, rosterLayoutFor,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf, ROSTER_ROOM, rosterLayoutFor, markPaidChoiceWhere,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
@@ -2723,6 +2723,32 @@ check('batch 2: the back links are the shared BackLink (R3-06); .tc-back is gone
   // Testing's focus helper finds the shared link; its Black Belt link keeps the .ev-back look, so that rule stays
   assert.match(read('../../screens/Testing.jsx'), /querySelector\('\.back-link, /);
   assert.match(read('../../styles/testing-events.css'), /\.ev-back \{/);
+});
+
+check('R1-07 second part (v1.135, Jeffrey "C"): the payment line, History and Paying by words of Color belt testing', () => {
+  // The payment line is Star's base; Color Belt adds nothing (a regression pin: these exact strings)
+  assert.equal(CBT.paidDetail(14000, 'card', '2026-11-03'), '$140 card · paid Nov 3');
+  assert.equal(CBT.paidOnPhone('card', '2026-11-03'), 'Card · paid Nov 3'); // the phone line
+  // History, as Star's, Black Belt's and Camps' (Camps used to say "Marked paid $350 cash" with no day)
+  assert.equal(CBT.historyPaymentRecorded(14000, 'card', '2026-11-03'), 'Payment recorded: $140 card, paid Nov 3');
+  assert.equal(CBT.historyPaymentUndone(14000), 'Payment undone: $140');
+  // Paying by: "Card (chosen on the form)" / "(chosen at the desk)"
+  assert.equal(CBT.payingByDetail('card', 'form'), 'Card (chosen on the form)');
+  assert.equal(CBT.payingByDetail('check', 'desk'), 'Check (chosen at the desk)');
+  assert.equal(CBT.payingByDetail('cash', 'form'), 'Cash (chosen on the form)');
+  // Which one: the same answer as the Mark paid box's hint — still the form's choice → form; changed or none → desk
+  const where = markPaidChoiceWhere;
+  assert.equal(CBT.payingByDetail('cash', where({ payingBy: 'cash', payingByOnForm: 'cash' })), 'Cash (chosen on the form)');
+  assert.equal(CBT.payingByDetail('card', where({ payingBy: 'card', payingByOnForm: 'cash' })), 'Card (chosen at the desk)');
+  assert.equal(CBT.payingByDetail('cash', where({ payingBy: 'cash', payingByOnForm: null })), 'Cash (chosen at the desk)'); // added at the desk
+  // Both summaries draw it, and hide it (with the payment line) while Hide private details is on
+  const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+  for (const [name, path, rec] of [['event student summary', '../../screens/testing/event/StudentDialog.jsx', 'row'], ['private summary', '../../screens/testing/private/PrivateSummaryDialog.jsx', 'record']]) {
+    const src = read(path);
+    assert.match(src, new RegExp(`T\\.payingByDetail\\(${rec}\\.payingBy, markPaidChoiceWhere\\(${rec}\\)\\)`), `${name}: Paying by says where it was chosen`);
+    assert.doesNotMatch(src.replace(/\/\/[^\n]*/g, ''), new RegExp(`label=\\{T\\.DETAIL_PAYING_BY\\}>\\{T\\.payingByText\\(`), `${name}: no plain Paying by line left`);
+  }
+  assert.match(read('../../screens/testing/private/PrivateSummaryDialog.jsx'), /hidden \? \(\s+\/\/[^\n]*\n\s+<SummaryRow label=\{T\.DETAIL_PAYMENT\}>\s+<span className="ev-hidden-value">/); // hidden: one gray line instead
 });
 
 check('batch 2: the Undo payment box, the Mark paid toasts and the row buttons (R1-06, R1-07, R1-08)', () => {

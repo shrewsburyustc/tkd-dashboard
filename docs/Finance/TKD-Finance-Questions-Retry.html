@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finance: two small questions about the word "retry"</title>
+<!--
+  TKD-Finance-Questions-Retry.html - two questions Jeffrey still has to answer, drawn so each choice can be
+  seen before it is chosen (CLAUDE.md: show a visual with every choice, with a recommendation).
+  Why it exists: Main passed on two open questions after the "retry" wording batch (rulebook v0.825). The bars
+  below are drawn with the app's real colors and button shapes (src/styles/tokens.css, app.css .btn, .errbar);
+  nothing here is a build. Self-contained: open it in any browser, or look at the PNG next to it.
+-->
+<style>
+  :root { --amber-bg:#faeeda; --amber-text:#633806; --border:#8F8F8A; --hair:#e5e5e2; --text:#1f1f1f; --muted:#6b6b6b; --blue:#003595; --blue-tint:#e6ebf4; --good:#1e6b34; --good-bg:#e7f4ea; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:28px 32px 36px; width:1400px; background:#fff; color:var(--text); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  .lead { color:var(--muted); margin:0 0 22px; font-size:15px; }
+  .q { border:2px solid var(--hair); border-radius:12px; padding:20px 22px 22px; margin-bottom:26px; }
+  .qh { display:flex; gap:12px; align-items:baseline; margin-bottom:4px; }
+  .qn { background:var(--blue); color:#fff; border-radius:999px; padding:2px 12px; font-weight:700; font-size:15px; }
+  h2 { font-size:21px; margin:0; }
+  .when { color:var(--muted); margin:2px 0 16px; }
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .opt { border:2px solid var(--hair); border-radius:10px; padding:16px 18px 18px; position:relative; }
+  .opt.rec { border-color:var(--good); background:#fbfefb; }
+  .tag { display:inline-block; font-size:13px; font-weight:700; padding:2px 10px; border-radius:6px; margin-bottom:8px; }
+  .tag.rec { background:var(--good-bg); color:var(--good); }
+  .tag.alt { background:#eee; color:#444; }
+  h3 { font-size:17px; margin:0 0 6px; }
+  .stage { background:#f7f7f5; border:1px solid var(--hair); border-radius:8px; padding:12px; margin:8px 0 10px; }
+  .stage .cap { font-size:12px; color:var(--muted); margin:0 0 6px; text-transform:uppercase; letter-spacing:.04em; }
+  /* the app's amber bar (errbar) */
+  .bar { display:flex; align-items:flex-start; gap:8px; padding:8px 10px; border-radius:6px; background:var(--amber-bg); color:var(--amber-text); font-size:13px; }
+  .bar .ic { flex:none; margin-top:0; }
+  .bar .tx { flex:1; }
+  .bar .acts { display:flex; gap:8px; align-items:center; flex:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--border); border-radius:6px; background:#fff; color:var(--text); font-size:13px; white-space:nowrap; }
+  .btn.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .x { width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; color:var(--amber-text); font-size:15px; }
+  .new { outline:3px solid #d98a00; outline-offset:3px; border-radius:7px; }
+  .steps { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
+  .arrow { color:var(--muted); font-size:18px; }
+  .box { border:1px solid var(--border); border-radius:8px; padding:8px 10px; background:#fff; font-size:13px; }
+  ul { margin:6px 0 0 18px; padding:0; }
+  li { margin:2px 0; }
+  .pro { color:var(--good); font-weight:700; }
+  .con { color:#8a3b00; font-weight:700; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .ex { font-size:12.5px; color:var(--muted); margin:4px 0 0; }
+  .answer { background:var(--blue-tint); border-radius:10px; padding:14px 18px; font-size:16px; }
+  .answer b { color:var(--blue); }
+  mark { background:#ffe9a8; padding:0 2px; border-radius:3px; }
+  mark.new { display:inline-block; margin:0 5px; line-height:1.25; }
+</style>
+</head>
+<body>
+  <h1>Finance: two small questions about the word “retry”</h1>
+  <p class="lead">Both are optional polish. Nothing is broken and nothing is waiting on them. Green = my recommendation. Amber outline = the one thing that differs between the options.</p>
+
+  <!-- ============ QUESTION 1 ============ -->
+  <section class="q">
+    <div class="qh"><span class="qn">Question 1</span><h2>When closing the day fails, should the amber bar get its own Retry button?</h2></div>
+    <p class="when"><b>How often:</b> rarely. The bar below only appears when the Close the day box has <i>already closed</i> and the database then answers something unexpected. Your count is kept in both options; nothing you typed is lost.</p>
+    <div class="opts">
+      <div class="opt rec">
+        <span class="tag rec">A · Leave it as it is (recommended, also Main’s pick)</span>
+        <h3>The bar tells you what to do; you press the same button again</h3>
+        <div class="stage">
+          <p class="cap">What you see on the Daily report</p>
+          <div class="bar"><span class="ic">⚠</span><span class="tx">Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.</span><span class="acts"><span class="x">✕</span></span></div>
+        </div>
+        <div class="stage">
+          <p class="cap">What you do</p>
+          <div class="steps">
+            <span class="btn">Close the day…</span><span class="arrow">→</span>
+            <span class="box">Box opens, your count still typed in</span><span class="arrow">→</span>
+            <span class="btn primary">Retry close the day</span>
+          </div>
+        </div>
+        <ul>
+          <li><span class="pro">Good:</span> nothing to build, nothing new to test.</li>
+          <li><span class="pro">Good:</span> the same two taps as option B.</li>
+          <li><span class="con">Not so good:</span> the bar says “retry” but has no button on it, so you have to know to press Close the day again.</li>
+        </ul>
+      </div>
+      <div class="opt">
+        <span class="tag alt">B · Add a Retry button to the bar</span>
+        <h3>The button on the bar opens the box for you</h3>
+        <div class="stage">
+          <p class="cap">What you see on the Daily report</p>
+          <div class="bar"><span class="ic">⚠</span><span class="tx">Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.</span><span class="acts"><span class="btn new">↻ Retry</span><span class="x">✕</span></span></div>
+        </div>
+        <div class="stage">
+          <p class="cap">What you do</p>
+          <div class="steps">
+            <span class="btn new">↻ Retry</span><span class="arrow">→</span>
+            <span class="box">Box opens, your count still typed in</span><span class="arrow">→</span>
+            <span class="btn primary">Retry close the day</span>
+          </div>
+        </div>
+        <ul>
+          <li><span class="pro">Good:</span> the bar explains itself: the word “retry” sits next to a Retry button.</li>
+          <li><span class="con">Not so good:</span> still two taps: it cannot close the day by itself, because the box must check your count first. It only saves you from having to know where to press.</li>
+          <li><span class="con">Not so good:</span> a small change in Finance’s screens and its tests.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUESTION 2 ============ -->
+  <section class="q">
+    <div class="qh"><span class="qn">Question 2</span><h2>Should Black Belt and Star also say “retry” instead of “try again”?</h2></div>
+    <p class="when"><b>Why it comes up:</b> Finance now says “… Check the connection, then <mark>retry</mark>.” (your “Yes, small batch”). Black Belt and Star’s staff screens still say “… then <mark>try again</mark>.” right next to a button labelled <b>Retry</b>. Words only: no database change, no new screens.</p>
+    <div class="opts">
+      <div class="opt rec">
+        <span class="tag rec">A · Yes, align them (recommended)</span>
+        <h3>Same words in every section</h3>
+        <div class="stage">
+          <p class="cap">Example: Black Belt, Results, when the CSV fails</p>
+          <div class="bar"><span class="ic">⚠</span><span class="tx">Couldn’t download the CSV. Check the connection, then <mark class="new">retry</mark>.</span><span class="acts"><span class="btn">↻ Retry</span><span class="x">✕</span></span></div>
+          <p class="ex">Today: “… Check the connection, then try again.” beside the same Retry button.</p>
+        </div>
+        <div class="stage">
+          <p class="cap">Example: Star, saving grades</p>
+          <div class="bar"><span class="ic">⚠</span><span class="tx">Couldn’t save the grades. Check the connection, then <mark class="new">retry</mark>.</span><span class="acts"><span class="btn">↻ Retry</span><span class="x">✕</span></span></div>
+        </div>
+        <ul>
+          <li><span class="pro">Good:</span> one wording across the dashboard, as the rulebook’s shared sentences (v1.051) say; the sentence matches the button.</li>
+          <li><span class="con">Cost:</span> about <b>20</b> sentences in Black Belt’s staff screens, about <b>16</b> in Star’s, and <b>2</b> shared dialogs (Save failed, Delete failed). Each section’s own session does its part in its next batch. Words only; their word checks get updated.</li>
+        </ul>
+      </div>
+      <div class="opt">
+        <span class="tag alt">B · Leave them as they are</span>
+        <h3>Finance says “retry”, the others keep “try again”</h3>
+        <div class="stage">
+          <p class="cap">Example: Black Belt, Results, when the CSV fails</p>
+          <div class="bar"><span class="ic">⚠</span><span class="tx">Couldn’t download the CSV. Check the connection, then <mark class="new">try again</mark>.</span><span class="acts"><span class="btn">↻ Retry</span><span class="x">✕</span></span></div>
+          <p class="ex">The sentence says “try again”, the button says “Retry”: both mean the same thing.</p>
+        </div>
+        <div class="stage">
+          <p class="cap">Finance, for comparison (already live)</p>
+          <div class="bar"><span class="ic">⚠</span><span class="tx">Couldn’t reopen the day. Check the connection, then retry.</span><span class="acts"><span class="btn">↻ Retry</span><span class="x">✕</span></span></div>
+        </div>
+        <ul>
+          <li><span class="pro">Good:</span> no work, nothing to test, no risk.</li>
+          <li><span class="con">Not so good:</span> two wordings for the same failure depending on the section. It is the kind of small inconsistency the design review was set up to remove.</li>
+          <li class="ex">Not part of this question: the family sign-up forms keep “try again” on purpose, next to a “Try again” button.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="answer"><b>To answer, just say:</b> “Question 1: A” or “B”, and “Question 2: align” or “leave”. If you say nothing, both stay as they are today (Question 1 = A, Question 2 = leave).</div>
+</body>
+</html>

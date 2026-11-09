@@ -69,7 +69,7 @@ export const DELETE_CATEGORY = 'Delete category';
 // the action's words while it works, and the amber note under the buttons when it fails.
 export const KEEP_CATEGORY = 'Keep category';
 export const DELETING = 'Deleting…';
-export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then retry.";
 export const CANT_DELETE_REASON = "Can't delete — it's the only category graded from class count";
 // Phone sheet, line 2: "1st Dan · 5 credits"
 export const sheetLine = (danLabel, credits) => `${danLabel} · ${creditsText(credits)}`;
@@ -238,7 +238,7 @@ export const STALE_DIALOG_PHONE =
   "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const NOT_ALLOWED = "Only an admin can change Rubrics and prices. Your change wasn't saved.";
 export const INVALID_DIALOG = "That didn't save. Check the fields and try again.";
-export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";
+export const SAVE_FAILED = "Couldn't save. Check the connection, then retry.";
 export const ORDER_FAILED = "Category order didn't save. Check the connection, then retry.";
 export const LOAD_FAILED = "Couldn't load Rubrics and prices. Check the connection, then retry.";
 // (A failed Undo's bar and the "Undone" words are said by the save line itself: lib/saveLine.js.)

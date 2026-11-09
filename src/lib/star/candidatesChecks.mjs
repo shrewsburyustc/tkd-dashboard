@@ -1188,7 +1188,7 @@ await check('words: every status of every action has a message (ok and no_access
   assert.equal(statusMessage('add_makeup', 'already_added').row, 'already_added');
   assert.ok(statusMessage('edit', 'stale', { phone: true }).text.includes('Discard changes'));
   assert.equal(statusMessage('withdraw', 'error').text, "That didn't save. Check the connection, then retry.");
-  assert.equal(statusMessage('record_payment', 'error').text, "Couldn't save. Check the connection, then try again.");
+  assert.equal(statusMessage('record_payment', 'error').text, "Couldn't save. Check the connection, then retry.");
 });
 
 // =====================================================================================

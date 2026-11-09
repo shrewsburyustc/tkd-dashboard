@@ -491,9 +491,9 @@ await check('typed letters on a PC: A, B, C, D then "+", Delete clears', async (
 
 await check('banner, offline, leave and kept texts (proposals 3, 6, 7, 9–12)', async () => {
   assert.equal(T.saveFailedBanner(3, 1, ['Mia Patel', 'Noah Chen', 'Ethan Lopez']),
-    'Couldn’t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection, then try again.');
-  assert.equal(T.saveFailedBanner(2, 0, ['Noah Chen']), 'Couldn’t save 2 grades (Noah Chen). Check the connection, then try again.');
-  assert.equal(T.saveFailedBanner(5, 0, ['A B', 'C D', 'E F', 'G H', 'I J']), 'Couldn’t save 5 grades (A B, C D, E F and 2 more). Check the connection, then try again.');
+    'Couldn’t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection, then retry.');
+  assert.equal(T.saveFailedBanner(2, 0, ['Noah Chen']), 'Couldn’t save 2 grades (Noah Chen). Check the connection, then retry.');
+  assert.equal(T.saveFailedBanner(5, 0, ['A B', 'C D', 'E F', 'G H', 'I J']), 'Couldn’t save 5 grades (A B, C D, E F and 2 more). Check the connection, then retry.');
   assert.equal(T.offlineBanner(9, 1), 'You’re offline. 9 grades and 1 count aren’t saved yet. They save by themselves when the connection is back. Keep this page open.');
   assert.equal(T.offlineBanner(1, 0), 'You’re offline. 1 grade isn’t saved yet. They save by themselves when the connection is back. Keep this page open.');
   assert.equal(T.leaveTitle(3, 1), '3 grades and 1 count aren’t saved');
