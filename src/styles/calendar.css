@@ -329,6 +329,21 @@ button.cchip--btn:focus-visible {
   width: 280px;
 }
 
+/* An amber line with Retry inside the narrow day panel: the words get the full width and Retry sits
+   under them (beside them the words wrapped to five short lines; design review of batch 5). */
+.cpanel .errbar {
+  flex-wrap: wrap;
+}
+
+.cpanel .errbar-text {
+  flex: 1 1 calc(100% - 28px);
+  min-width: 0;
+}
+
+.cpanel .errbar-actions {
+  margin-left: 24px;
+}
+
 .cpanel-title {
   margin: 0;
   font-size: var(--text-16);
@@ -802,6 +817,21 @@ button.cchip--btn:focus-visible {
 
 /* ----- Touch: 44px tap areas (guidelines 2.5) ----- */
 @media (pointer: coarse) {
+  /* L-03: .cseg's overflow: hidden (above) clipped the items' invisible 44px tap box, so Month / Week
+     tapped at only 36px. On touch the box is let out, and the two outer items round the corners
+     themselves (a pixel less than the frame, which has a 1px border) so the look doesn't change. */
+  .cseg {
+    overflow: visible;
+  }
+
+  .cseg-item:first-child {
+    border-radius: calc(var(--radius-control) - 1px) 0 0 calc(var(--radius-control) - 1px);
+  }
+
+  .cseg-item:last-child {
+    border-radius: 0 calc(var(--radius-control) - 1px) calc(var(--radius-control) - 1px) 0;
+  }
+
   .cseg-item {
     height: var(--control-height-touch);
   }
@@ -879,6 +909,24 @@ button.cchip--btn:focus-visible {
   .cseg-item {
     flex: 1;
     min-width: 0;
+  }
+}
+
+/* The link inside the Schedule's "Add classes in Settings → Classes and ranks first" note (N11): the
+   note's own amber color, underlined like the note's other text link (.note-action). On touch an
+   invisible box around the words makes the tap area 44px tall (guidelines 2.5). */
+.snote-link {
+  position: relative;
+  color: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+@media (pointer: coarse) {
+  .snote-link::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px;
   }
 }
 

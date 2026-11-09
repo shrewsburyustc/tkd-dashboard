@@ -16,7 +16,8 @@
 // Only one save travels at a time (a queue); each one sends the version it last saw, so another
 // admin's change is noticed ('stale') instead of overwritten.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowDown, IconArrowLeft, IconArrowUp, IconDots, IconEye, IconGitBranch, IconLock, IconPlus, IconSettings, IconShare, IconTrash } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowUp, IconDots, IconEye, IconGitBranch, IconLock, IconPlus, IconSettings, IconShare, IconTrash } from '@tabler/icons-react';
+import BackLink from '../../components/BackLink.jsx'; // the shared "← Forms" link (R3-06, v1.048)
 import Dialog from '../../components/Dialog.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
@@ -172,7 +173,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       if (res.status === 'no_access') onNoAccess();
       else if (res.status === 'duplicate_slug') setSlugTaken(true);
       else if (res.status === 'stale' || res.status === 'not_found') {
-        setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+        setBanner({ kind: 'stale', text: T.staleForm(form.name) });
         onReload();
       } else if (res.status === 'not_allowed') {
         setBanner({ kind: 'stale', text: T.NOT_ALLOWED });
@@ -360,7 +361,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       showToast(T.BOOKING_SAVED, { icon: false });
     } else if (result.status === 'no_access') onNoAccess();
     else if (result.status === 'stale' || result.status === 'not_found') {
-      setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: T.staleForm(form.name) });
       onReload();
     } else if (result.status === 'invalid') setBookingNote(T.BOOKING_BAD);
     else setBookingNote(T.SAVE_FAILED); // under its Save button: pressing Save again is the retry
@@ -394,7 +395,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       setBanner({ kind: 'publish', text: T.NOT_PUBLISHABLE });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale' || res.status === 'not_found') {
-      setBanner({ kind: 'stale', text: T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: T.staleForm(form.name) });
       onReload();
     // a failed Publish keeps its bar with Retry, which publishes again (R2-01); its own kind, so a
     // later successful autosave doesn't wipe it
@@ -420,7 +421,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       onReload();
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
-      setBanner({ kind: 'stale', text: quiet ? T.UNDO_STALE : T.STALE_BUILDER });
+      setBanner({ kind: 'stale', text: T.staleForm(form.name) });
       onReload();
     // a failed switch or Undo keeps its bar with Retry, which flips the switch again (R2-01)
     } else setBanner({ kind: 'liveFailed', text: quiet ? T.UNDO_FAILED : T.SAVE_FAILED, retry: () => setAccepting(on, quiet) });
@@ -432,14 +433,14 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     <div className="fhead">
       <div className="fhead-titles">
         {/* "← Forms": saves the draft first, then goes back to the list (v1.020, v0.624) */}
-        <button type="button" className="link-button fb-back" aria-label={T.BACK_TO_FORMS} data-builder-back onClick={async () => {
-          await saveNow();
-          onBack();
-        }}>
-          {/* ti-arrow-left = back */}
-          <IconArrowLeft size={16} aria-hidden="true" />
-          {T.FORMS_LINK}
-        </button>
+        <BackLink
+          label={T.FORMS_LINK}
+          ariaLabel={T.BACK_TO_FORMS}
+          onClick={async () => {
+            await saveNow();
+            onBack();
+          }}
+        />
         <h1 className="ptitle">{cleanText(name) || form.name}</h1>
         <p className="psub" aria-live="polite">
           {line.text}
@@ -517,6 +518,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
             idBase={`${idBase}-booking`}
             onChange={(patch) => setBookingDraft((b) => ({ ...b, ...patch }))}
             onSave={saveBooking}
+            onLeave={saveNow}
           />
         )}
       </FieldEditor>

@@ -5,6 +5,11 @@
 // them into plain English.
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime } from '../../lib/schedule/time.js';
+// The dashboard's shared sentences (Dashboard core: v1.045 (4), v1.051 (2)) — the Calendar names what it means.
+import { loadFailedNamed, someoneElseChanged } from '../../components/text.js';
+
+export { someoneElseChanged }; // a refused change or Undo: "Someone else changed [name] just now, so nothing was done. Their change is shown."
+export const SECTION_NAME = 'Calendar'; // the section's name in the bar after leaving the page (lib/saveLine.js)
 
 export const PAGE_TITLE = 'Calendar';
 // The same words as Schedule and Testing (v1.021).
@@ -87,7 +92,7 @@ export const followName = (f) => `${f.childFirstName}${f.initial ? ` ${f.initial
 export const OVERDUE = 'Overdue';
 export const DUE_TODAY = 'Due today';
 export const openFollowUp = (f, tag) => `Open ${followName(f)} in Prospects${tag ? `, ${tag.toLowerCase()}` : ''}`;
-export const FOLLOW_UPS_FAILED = "Couldn't load follow-ups.";
+export const FOLLOW_UPS_FAILED = loadFailedNamed('follow-ups'); // "Couldn't load follow-ups. Check the connection, then retry." (S-2)
 export const SHOW = 'Show';
 export const SHOW_TITLE = 'Show on the calendar';
 export const SHOW_EVERYTHING = 'Show everything';
@@ -175,7 +180,7 @@ export const newSignups = (n) => (n === 1 ? '1 new sign-up' : `${n} new sign-ups
 export const NEW_SIGNUPS = 'New sign-ups';
 export const newSignupsOf = (school) => `New sign-ups · ${school}`;
 export const DEADLINES = 'Deadlines';
-export const OTHER_SECTIONS_FAILED = "Couldn't load the other sections' dates.";
+export const OTHER_SECTIONS_FAILED = loadFailedNamed("the other sections' dates"); // S-2 ending
 export const itemTime = (item) => (item.start === null ? ALL_DAY : formatTime(item.start, true));
 
 // ----- Week view -----
@@ -293,8 +298,7 @@ export const toastClosureRemoved = (reason) => `Removed closure: ${reason}`;
 export const TOAST_TYPE_ADDED = 'Event type added';
 export const TOAST_TYPE_SAVED = 'Event type saved';
 export const toastTypeDeleted = (name) => `${name} deleted`;
-export const TOAST_UNDONE = 'Undone';
-export const LOAD_FAILED = "Couldn't load the calendar. Check the connection and try again.";
-export const UNDO_STALE = "Couldn't undo: it changed meanwhile. The calendar now shows the latest.";
-export const UNDO_FAILED = "Couldn't undo. Check the connection and try again.";
-export const STALE = 'Someone else changed this. The calendar now shows the latest.';
+// ("Undone" and a failed Undo's bar come from the shared save line now: lib/saveLine.js, R2-05 / R2-07.)
+export const LOAD_FAILED = loadFailedNamed('the calendar'); // S-2: "Couldn't load the calendar. Check the connection, then retry."
+// A check-in that didn't save: its own words, with Retry (v1.004), not the load line (S-2).
+export const checkInFailed = (name) => `Couldn't check in ${name}. Check the connection, then retry.`;
