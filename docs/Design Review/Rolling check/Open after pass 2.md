@@ -20,9 +20,11 @@ Jeffrey, 2026-11-08 (relayed by Main): no pass 3; finish pass 2, then he looks a
 
 ## Needs Jeffrey (one decision each; recommendation in brackets)
 
+**Answered 2026-11-10:** Jeffrey took every recommendation (relayed by Main in his words: "Yes, take all"); recorded as rulebook v1.056. Left to build from the answers: (8) Color Belt changes "Paying by changed:" to "Paying by:"; (10) every section switches its curly apostrophes to straight in its next batch, Dashboard core first in `src/components/text.js` (about 375 lines in 30 files, with their word checks; see the correction under 10); (11) Camps grays the day boxes while a save runs. Nothing to build for 9, 12, 13 and 14.
+
 8. **History's Paying by line.** "Paying by: Cash → Check" (Star; Camps' approved v0.736) or "Paying by changed: Cash → Check" (Color Belt; the example in v1.055 (a))? The shared R1-07 picture never drew this line. [The first. Color Belt changes one line, and v1.055 gets a note.]
 9. **Black Belt's Paying by line** (v1.135 assumed Black Belt's form asks how they'll pay; it asks only for the plan). Add it (a migration and a form question), or leave Black Belt without one? [Leave it: each Black Belt payment keeps its own way to pay.]
-10. **Apostrophes in the app's words:** straight ' or curly ’? Both appear in one box today (Undo payment's title ’, its failure line '). [Straight: nearly every line already uses it; the shared file's three curly ones switch.]
+10. **Apostrophes in the app's words:** straight ' or curly ’? Both appear in one box today (Undo payment's title ’, its failure line '). [Straight: nearly every line already uses it; the shared file's three curly ones switch.] **Correction after the answer:** that is true of the shared file only; about 375 lines in 30 files use the curly one, so every section switches its own (the review of v1.056 counted them). The result-email texts stored in the database (Star 0023, Black Belt 0025) use it too; changing those is not part of the answer.
 11. **Camps' day boxes** are switched off while a save runs but don't look it (`CampRoster.jsx:219–223`). v1.131's gray covers only buttons and clickable tags. Extend it to the day boxes? [Yes.]
 12. **Camps' extras count** counts both rows of a possible duplicate (`campRules.js:403–405, 453`). No rule covers it. Keep it? [Keep: Coming counts the same way.]
 13. **A line for §4:** WCAG 1.4.3 (text contrast) doesn't apply to the text of a grayed, inactive control; the gray reason line under it is ordinary text and still needs 4.5:1. [Yes: reviews stop flagging the approved gray.]
@@ -32,7 +34,7 @@ Already with Main, not repeated here: New students' family-page Dropdown questio
 
 ## The design review's own
 
-- **Rulebook housekeeping:** an unescaped `|` splits a cell in the rows decided as v0.229, v0.707, v0.716 (two) and v0.523 (`isPhone || narrowRoom`); v1.010 says Star and Finance read `change_log`, but no Finance migration does. One small edit (v1.056), with the answers to 8 and 13 or on its own.
+- **Rulebook housekeeping:** an unescaped `|` splits a cell in the rows decided as v0.229, v0.707, v0.716 (two) and v0.523 (`isPhone || narrowRoom`); v1.010 says Star and Finance read `change_log`, but no Finance migration does. One small edit (v1.056), with the answers to 8 and 13 or on its own. **Done in v1.056** (2026-11-10), with v0.229's changelog line, which had one too.
 
 ## Not checked
 
