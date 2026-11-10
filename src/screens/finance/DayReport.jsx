@@ -26,6 +26,7 @@
 // Props (from Finance.jsx): location, isAdmin, today, day, onDay(day), onOpenHistory(),
 //   onLocationChange(name), profileName, screenLocked, onNoAccess, onRefreshProfile,
 //   showToast, clearToast, onModalOpenChange, onOpenTesting(schoolName, eventId, source, options)
+import NoIcon from '../../components/NoIcon.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   IconCalendar,
@@ -69,11 +70,6 @@ import PrintPage from './PrintPage.jsx';
 import { financeState } from './financeState.js';
 import { addDays, calendarYears, dayLong, dayLongNoYear, dayShort, dayShortYear, money } from './format.js';
 import * as T from './text.js';
-
-// A menu item with no icon (v0.819): keeps its words lined up with the items that have one.
-function NoIcon() {
-  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
-}
 
 // What people typed in Close the day, per school and day, kept in memory while the dashboard is
 // open — so closing the dialog early, switching school or tab, or a failed save (D13) never loses

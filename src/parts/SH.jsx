@@ -6,7 +6,9 @@
 //     still focusable), next to their usable twins.
 // Why it exists: the looks are built before any section switches to them, so they need a page where
 // they can be seen and measured. The browser check (docs/Dashboard Core/tools/check-batch.mjs) uses it.
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { IconEye } from '@tabler/icons-react';
+import RowMenu from '../components/RowMenu.jsx';
 import BackLink from '../components/BackLink.jsx';
 import Grip from '../components/Grip.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
@@ -27,6 +29,37 @@ const DANS = [
   { key: 'second', label: '2nd Dan' },
   { key: 'third', label: '3rd Dan' },
 ];
+
+// A ⋯ menu with tick-box rows that stay open (RowMenu checked, N16, v1.141)
+function TickMenu() {
+  const [open, setOpen] = useState(false);
+  const [shown, setShown] = useState({ classes: true, closures: false });
+  const buttonRef = useRef(null);
+  const items = [
+    { key: 'classes', label: 'Classes', checked: shown.classes, onSelect: () => setShown((s) => ({ ...s, classes: !s.classes })) },
+    { key: 'closures', label: 'Closures', checked: shown.closures, onSelect: () => setShown((s) => ({ ...s, closures: !s.closures })) },
+    { key: 'all', label: 'Show everything', Icon: IconEye, separatorBefore: true, onSelect: () => setShown({ classes: true, closures: true }) },
+  ];
+  return (
+    <>
+      <button ref={buttonRef} type="button" className="btn" id="sh-tick-button" aria-haspopup="menu" aria-expanded={open ? 'true' : 'false'} onClick={() => setOpen((o) => !o)}>
+        Show
+      </button>
+      {open && (
+        <RowMenu
+          anchor={buttonRef.current}
+          isSheet={false}
+          label="Show"
+          items={items}
+          onClose={(reason) => {
+            setOpen(false);
+            if (reason !== 'outside') buttonRef.current?.focus();
+          }}
+        />
+      )}
+    </>
+  );
+}
 
 function Looks() {
   const [picked, setPicked] = useState('a');
@@ -72,6 +105,9 @@ function Looks() {
         <span id="sh-select-why" className="field-hint">
           Only an admin can change this. Ask an admin.
         </span>
+      </div>
+      <div className="parts-sh-row" data-sh="tickmenu">
+        <TickMenu />
       </div>
       <div className="parts-sh-row" data-sh="choices">
         <span id={`${labelId}-locked`}>Dan (locked)</span>

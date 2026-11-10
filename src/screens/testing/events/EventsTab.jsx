@@ -22,6 +22,7 @@
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what.
 // Follows "Hide private details" (v0.506): while the device switch is on, the Delete event
 // warning says "any recorded payment" instead of the event's payment total.
+import NoIcon from '../../../components/NoIcon.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
@@ -58,12 +59,6 @@ const UNDO_REASON_REGISTERED = 'a student registered just now';
 const UNDO_REASON_FINISHED_REGISTRATION = 'this testing has finished, so registration can no longer change';
 const UNDO_REASON_FINISHED_EDIT = "this testing has finished, so it can't be put back";
 const undoReasonSomeoneElse = (name) => `someone else changed ${name} just now`;
-
-// A menu item with no icon (the approved menus draw Close / Open registration without one).
-// It keeps the label lined up with the items that have an icon.
-export function NoIcon() {
-  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
-}
 
 // Finding things on the page (for putting keyboard focus back after a dialog closes).
 const find = (selector) => document.querySelector(selector);

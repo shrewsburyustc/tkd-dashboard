@@ -4434,7 +4434,7 @@ await checkAsync('Candidates shared-parts switch (pass 1): shared words, queued 
   assert.equal(StaffWords.toastPaymentRecorded(29050, 'card', 'Mia Chen'), 'Mia Chen marked paid · $290.50 card');
   assert.equal(StaffWords.toastPaymentUndone('Sam Lee'), 'Payment undone for Sam Lee');
   // R1-06: the Undo payment box reads as before, its title and "Paid on" built from the shared words
-  assert.equal(StaffWords.undoPaymentTitle('Sam Lee', 33000, 'cash'), 'Undo Sam Lee’s $330 cash payment?');
+  assert.equal(StaffWords.undoPaymentTitle('Sam Lee', 33000, 'cash'), "Undo Sam Lee's $330 cash payment?");
   assert.equal(StaffWords.undoPaymentBody('2027-03-20', 'payments 1 and 2'), 'Paid on Mar 20 for payments 1 and 2. It comes off the balance; the history keeps it.');
   assert.equal(StaffWords.undoPaymentBody('2027-03-20', ''), 'Paid on Mar 20. It comes off the balance; the history keeps it.');
 

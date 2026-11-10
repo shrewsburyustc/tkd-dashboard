@@ -4494,7 +4494,7 @@ check('text: the private Undo payment box names the latest payment and what the 
 });
 
 check('words: batch 2 — the shared sentences reach Color Belt unchanged (R1-06, R1-07, R2-07, R3-13)', () => {
-  assert.equal(CBT.undoPaymentTitle('Ava Chen', 6500, 'cash'), 'Undo Ava Chen’s $65 cash payment?'); // R1-06
+  assert.equal(CBT.undoPaymentTitle('Ava Chen', 6500, 'cash'), "Undo Ava Chen's $65 cash payment?"); // R1-06
   assert.equal(CBT.undoPaymentBody(6500, 'cash', '2026-11-03'), 'Paid on Nov 3. The row goes back to Not paid. Both stay in the history.');
   assert.equal(CBT.markedPaidToast('Ava Chen', 6500, 'cash'), 'Ava Chen marked paid · $65 cash'); // R1-07
   assert.equal(CBT.markedPaidToastHidden('Ava Chen'), 'Ava Chen marked paid');

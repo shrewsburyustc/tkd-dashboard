@@ -1762,7 +1762,7 @@ await check('shared words: payment toast, Undo payment box, stale line, failed U
   assert.equal(paymentRecordedToast('Lily Brooks', 14000, 'card'), 'Lily Brooks marked paid · $140 card');
   assert.equal(paymentRecordedToast('Lily Brooks', 14000, 'card', true), 'Lily Brooks marked paid'); // hidden (v0.722)
   assert.equal(paymentUndoneToast('Lily Brooks'), 'Payment undone for Lily Brooks');
-  assert.equal(undoPaymentTitle('Lily Brooks', 14000, 'card'), 'Undo Lily Brooks’s $140 card payment?');
+  assert.equal(undoPaymentTitle('Lily Brooks', 14000, 'card'), "Undo Lily Brooks's $140 card payment?");
   assert.equal(undoPaymentBody('2026-11-03'), 'Paid on Nov 3. It is reversed and the row goes back to Not paid. Both stay in the history.');
   assert.ok(undoPaymentBody('2026-11-03').startsWith(paidOnOpening('Nov 3')));
   assert.equal(rowStale('Lily Brooks'), 'Someone else changed Lily Brooks just now, so nothing was done. Their change is shown.');

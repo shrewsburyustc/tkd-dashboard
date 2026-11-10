@@ -335,7 +335,7 @@ await withChrome(async (tab) => {
     })()`);
     await ev('window.__tkdPreview.cutConnection(false)');
     assert.ok(found.all.length >= 2, `bars: ${JSON.stringify(found.all)}`);
-    assert.equal(found.all[0].text.startsWith('You’re offline'), true, 'the offline bar first');
+    assert.equal(found.all[0].text.startsWith("You're offline"), true, 'the offline bar first');
     const pageBar = found.all.find((b) => b.slot);
     assert.ok(pageBar, 'the page\'s own bar is in the frame\'s place for page bars');
     assert.equal(pageBar.inPage, false, 'not inside the page');

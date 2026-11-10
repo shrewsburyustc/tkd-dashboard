@@ -37,7 +37,7 @@ import { withChrome } from './chrome.mjs';
 
 const base = process.argv[2] ?? 'http://localhost:5190/';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const WORDS = 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.';
+const WORDS = "You're offline. Changes won't save until the connection is back. Keep this page open — this bar goes away by itself.";
 let passed = 0;
 const failures = [];
 async function check(label, fn) {

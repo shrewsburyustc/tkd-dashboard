@@ -8,7 +8,9 @@
 // (rulebook v1.045 (4), v1.051 (2)): a sentence EVERY section says (a refused change, a failed Undo,
 // a page that can't load, the toasts after Mark paid and Undo payment, the Undo payment box's title)
 // is typed once, at the end of this file, so the sections can't drift apart.
-
+// Apostrophes are STRAIGHT everywhere (rulebook v1.141, Jeffrey: "Yes, take all"): type ' in a word like
+// "Couldn't" or "Jeong's", never the curly one. Curly double quotes around a quoted change's words
+// (
 // ----- Words the existing shared parts show -----
 export const BACK = 'Back'; // Dialog's and AccountDialog's phone back arrow (screen-reader name); the PIN screens' Back link
 export const CANCEL = 'Cancel'; // RowMenu's last row on phones; the account dialogs' and DeleteDialog's Cancel
@@ -21,7 +23,7 @@ export const GRIP_TOOLTIP = 'Drag to reorder'; // Grip's tooltip (its screen-rea
 // code", "Print flyer", "Paid by", "Mark paid", "Show all", "History", "Print or save as PDF",
 // "Fees are non-refundable." — plan §3, M11)
 // Each word is the one the approved mockup shows (rulebook v1.102–v1.109), copied exactly —
-// curly apostrophes included where the mockup has them. The two privacy words every section
+// (apostrophes straight since v1.141). The two privacy words every section
 // already takes from src/lib/privateDetails.js ("Hidden on this tablet", "Payment details are
 // hidden on this tablet.") stay there, and the parts take them from there too. The history line's
 // own sentence, "Payment history is hidden on this tablet." (Star's words, v0.506), is one of M7's
@@ -53,7 +55,7 @@ export const CHOOSE_HOW_PAID = 'Choose how they paid.'; // why Mark paid $X is g
 // ----- M4: the receipt (Receipt.jsx) -----
 export const RECEIPT = 'Receipt'; // the box's title
 export const PRINT_RECEIPT = 'Print or save as PDF';
-export const RECEIPT_SCHOOL = 'Jae H. Jeong’s U.S. Taekwondo Center'; // the page's first line
+export const RECEIPT_SCHOOL = "Jae H. Jeong's U.S. Taekwondo Center"; // the page's first line
 export const RECEIPT_DATE = 'Date';
 export const RECEIPT_FOR = 'For';
 export const RECEIPT_HOW = 'How paid';
@@ -106,7 +108,7 @@ export const CHOOSE_A_TIME = 'Choose a time'; // nothing chosen yet (gray)
 
 // ----- M12: the one offline bar (OfflineBar.jsx; rulebook v1.005, v1.123) -----
 // Adapted from Star's approved offline line (v0.513), as drawn in picture 05b.
-export const OFFLINE_BAR = 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.';
+export const OFFLINE_BAR = "You're offline. Changes won't save until the connection is back. Keep this page open — this bar goes away by itself.";
 
 // ----- Date signed (rulebook v0.522, v0.638): New students' and Star's family forms both show it -----
 // Moved here from src/screens/forms/text.js, which still re-exports them, so the two sections share one wording.
@@ -166,5 +168,31 @@ export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
 // R1-06 (v1.045 (2)): the Undo payment box. The title, and the second line's opening, which each
 // section continues with its own consequence ("the row goes back to Not paid", "… is owed again",
 // "It comes off the balance"). paidOn is the day the family paid, formatted ("Mar 20").
-export const undoPaymentTitle = (name, money, way) => `Undo ${name}’s ${money} ${way} payment?`;
+export const undoPaymentTitle = (name, money, way) => `Undo ${name}'s ${money} ${way} payment?`;
 export const paidOnOpening = (paidOn) => `Paid on ${paidOn}`;
+
+// R1-07, the last part (v1.135, option C; Jeffrey: "C"): the payment line, the History words and the Paying by line,
+// once. money arrives formatted ("$140"), way in lower case ("card"), dates formatted ("Nov 3").
+//   paymentLine("$140", "card", "Nov 3")                      "$140 card · paid Nov 3"          (Star's base)
+//   paymentLine("$870", "card", "Mar 20", { forWhat: "payments 1, 2 and 3", school: "Worcester", by: "Jeffrey Berg" })
+//     → "$870 card · paid Mar 20 · for payments 1, 2 and 3 · Worcester · by Jeffrey Berg"
+// A section adds only what it alone has, always in this order: paid date, what it was for, school, by who.
+// `by` is the stored FULL name of the person who recorded it. Hidden payment details are the section's to hide.
+export const paymentLine = (money, way, paidOn, extras = {}) =>
+  [`${money} ${way} · paid ${paidOn}`, extras.forWhat ? `for ${extras.forWhat}` : '', extras.school ?? '', extras.by ? `by ${extras.by}` : '']
+    .filter(Boolean)
+    .join(' · ');
+export const refundLine = (money, way, paidOn, extras = {}) =>
+  [`refunded ${money} ${way} ${paidOn}`, extras.school ?? '', extras.by ? `by ${extras.by}` : ''].filter(Boolean).join(' · ');
+// A phone row's short line: "Card · paid Nov 3"
+export const paymentLinePhone = (way, paidOn) => `${capitalFirst(way)} · paid ${paidOn}`;
+// History (Star's words, in every section): "Payment recorded: $140 card, paid Nov 3", "Payment undone: $140"
+export const historyPaymentRecorded = (money, way, paidOn) => `Payment recorded: ${money} ${way}, paid ${paidOn}`;
+export const historyPaymentUndone = (money) => `Payment undone: ${money}`;
+export const historyRefundRecorded = (money, way, paidOn) => `Refund recorded: ${money} ${way}, ${paidOn}`;
+export const historyRefundUndone = (money) => `Refund undone: ${money}`;
+// The Paying by line: "Card (chosen on the form)" or "Card (chosen at the desk)"
+export const payingByDetail = (way, where) => `${capitalFirst(way)} (chosen ${where === 'form' ? 'on the form' : 'at the desk'})`;
+function capitalFirst(word) {
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+}

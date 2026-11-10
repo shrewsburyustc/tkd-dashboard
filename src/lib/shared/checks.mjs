@@ -412,7 +412,7 @@ await check('M12 store: trouble while any screen reports failing reloads; each s
   assert.equal(CONNECTION.hasConnectionTrouble(), false);
 });
 await check('M12 words: the offline bar says the approved words (v1.005, v1.123; picture 05b)', () => {
-  assert.equal(SHARED.OFFLINE_BAR, 'You’re offline. Changes won’t save until the connection is back. Keep this page open — this bar goes away by itself.');
+  assert.equal(SHARED.OFFLINE_BAR, "You're offline. Changes won't save until the connection is back. Keep this page open — this bar goes away by itself.");
 });
 
 // ======================= L-02 — the room beside the panel (lib/pageRoom.js; v1.053, v1.130) =======================
@@ -812,6 +812,30 @@ await check('v1.134 privacy: the plain left-bar words name only the section, and
   LINE.endLeftUndoBarSession();
   LINE.hideLeftUndoBarWords(); // nothing showing: no crash
   assert.equal(LINE.leftUndoBar(), null);
+});
+await check('R1-07 (v1.135): the payment line, History and Paying by words, once: the Star base line, extras in the order date, for what, school, by who', () => {
+  assert.equal(SHARED.paymentLine('$140', 'card', 'Nov 3'), '$140 card · paid Nov 3');
+  assert.equal(SHARED.paymentLine('$335', 'card', 'Apr 19', { school: 'Worcester', by: 'Jeffrey' }), '$335 card · paid Apr 19 · Worcester · by Jeffrey');
+  assert.equal(
+    SHARED.paymentLine('$870', 'card', 'Mar 20', { forWhat: 'payments 1, 2 and 3', school: 'Worcester', by: 'Jeffrey Berg' }),
+    '$870 card · paid Mar 20 · for payments 1, 2 and 3 · Worcester · by Jeffrey Berg',
+  );
+  assert.equal(SHARED.paymentLine('$870', 'card', 'Mar 20', { by: 'Jeffrey Berg', forWhat: 'payment 1' }), '$870 card · paid Mar 20 · for payment 1 · by Jeffrey Berg', 'the order does not depend on how the extras are given');
+  assert.equal(SHARED.refundLine('$23', 'cash', 'Nov 3'), 'refunded $23 cash Nov 3');
+  assert.equal(SHARED.paymentLinePhone('card', 'Nov 3'), 'Card · paid Nov 3');
+  assert.equal(SHARED.historyPaymentRecorded('$140', 'card', 'Nov 3'), 'Payment recorded: $140 card, paid Nov 3');
+  assert.equal(SHARED.historyPaymentUndone('$140'), 'Payment undone: $140');
+  assert.equal(SHARED.historyRefundRecorded('$23', 'cash', 'Apr 21'), 'Refund recorded: $23 cash, Apr 21');
+  assert.equal(SHARED.historyRefundUndone('$23'), 'Refund undone: $23');
+  assert.equal(SHARED.payingByDetail('card', 'form'), 'Card (chosen on the form)');
+  assert.equal(SHARED.payingByDetail('check', 'desk'), 'Check (chosen at the desk)');
+});
+
+await check('v1.141: apostrophes in the shared sentences are straight', () => {
+  for (const [name, value] of Object.entries(SHARED)) {
+    const sample = typeof value === 'function' ? value('Ann', '$1', 'card', 'Mar 1') : value;
+    if (typeof sample === 'string') assert.ok(!/[\u2019\u2018]/.test(sample), `${name} has a curly apostrophe: ${sample}`);
+  }
 });
 console.log(`${count} groups of checks ran.`);
 console.log('ALL SHARED PARTS CHECKS PASSED');

@@ -1018,9 +1018,7 @@
 }
 
 /* ----- Hidden values (v0.507 Q2): gray "Hidden on this tablet" ----- */
-.st-hidden-value {
-  color: var(--color-text-secondary);
-}
+/* (.st-hidden-value's gray is the shared .hidden-value rule in shared.css, v1.141.) */
 
 .st-hidden-line {
   font-size: var(--text-13);

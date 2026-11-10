@@ -310,6 +310,33 @@ await withChrome(async (tab) => {
     assert.equal(await ev(`document.getElementById('sh-select-unavailable').getAttribute('aria-expanded')`), 'false', 'a key does not open it');
     assert.equal(await ev(`document.activeElement.id`), 'sh-select-unavailable', 'and the focus stays on it');
   });
+  await check('the ⋯ menu\'s tick-box rows (N16): role menuitemcheckbox with aria-checked, choosing one flips it and keeps the menu open, Esc closes and gives the focus back, 44px on touch', async () => {
+    await open(390, 844, true);
+    await ev(`document.getElementById('sh-tick-button').click()`);
+    await sleep(300);
+    const read = () => ev(`(() => { const r = [...document.querySelectorAll('[role=menuitemcheckbox]')]; return { checks: r.map((x) => x.getAttribute('aria-checked')), heights: r.map((x) => Math.round(x.getBoundingClientRect().height)), open: Boolean(document.querySelector('.tmenu, .tsheet')), role: r.length }; })()`);
+    const first = await read();
+    assert.equal(first.role, 2, 'two tick-box rows');
+    assert.deepEqual(first.checks, ['true', 'false']);
+    assert.ok(first.heights.every((h) => h >= 44), `44px on touch: ${first.heights}`);
+    await ev(`document.querySelectorAll('[role=menuitemcheckbox]')[1].click()`);
+    await sleep(200);
+    const second = await read();
+    assert.deepEqual(second.checks, ['true', 'true'], 'the choice flipped');
+    assert.equal(second.open, true, 'and the menu stays open');
+    await tab.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    await tab.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    await sleep(250);
+    assert.equal((await read()).open, false, 'Esc closes it');
+    assert.equal(await ev(`document.activeElement.id`), 'sh-tick-button', 'the focus is back on the button');
+  });
+  await check('PC: a locked ChoiceGroup says aria-disabled (group and buttons) and stays one Tab stop (v1.141)', async () => {
+    await open(1280, 800, false);
+    const s = await ev(`(() => { const g = document.querySelector('[data-sh="choices"] [role=radiogroup]'); const r = [...g.querySelectorAll('[role=radio]')]; return { group: g.getAttribute('aria-disabled'), radios: r.map((x) => x.getAttribute('aria-disabled')), tabStops: r.filter((x) => x.tabIndex === 0).length }; })()`);
+    assert.equal(s.group, 'true');
+    assert.ok(s.radios.every((x) => x === 'true'), `buttons: ${s.radios}`);
+    assert.equal(s.tabStops, 1, 'one Tab stop');
+  });
   await check('PC: the back link inside a page that is a flex column is only as wide as itself, so a click right of it does not go back (v1.136)', async () => {
     await open(1280, 800, false);
     const w = await ev(`(() => {

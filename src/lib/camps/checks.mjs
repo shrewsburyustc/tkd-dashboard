@@ -2457,7 +2457,7 @@ check('the family form\'s "Date signed" box is the shared one, with the shared w
 check('shared sentences and the Paying by line (batch of 2026-11-08: R1-06, R1-07, R2-07, R3-13, R1-02)', () => {
   const T = CampText;
   // R1-06: the Undo payment box takes Black Belt's words: the title names the amount and the way, the second line opens "Paid on [day]".
-  assert.equal(T.undoPaymentTitle('Leo Kim', 35000, 'cash'), 'Undo Leo Kim’s $350 cash payment?');
+  assert.equal(T.undoPaymentTitle('Leo Kim', 35000, 'cash'), "Undo Leo Kim's $350 cash payment?");
   assert.equal(T.undoPaymentBody({ amountCents: 35000, method: 'cash', paidOn: '2027-03-17' }, 35000), 'Paid on Mar 17. It is reversed, so $350 is owed again. Both stay in the history.');
   assert.equal(T.undoPaymentBody({ amountCents: 35000, method: 'cash', paidOn: '2027-03-17' }, 0), 'Paid on Mar 17. It is reversed. Both stay in the history.');
   // R1-07: the toasts are the shared ones.

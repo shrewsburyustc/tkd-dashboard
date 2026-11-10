@@ -37,7 +37,7 @@ import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { useCycleEditor } from '../cycle/useCycleEditor.jsx';
 import { useCycleActions } from './useCycleActions.js';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
-import NoIcon from '../parts/NoIcon.jsx';
+import NoIcon from '../../../components/NoIcon.jsx';
 import LineBar from '../parts/LineBar.jsx';
 import { undoBarFor } from '../parts/undoBar.js';
 import * as T from '../text.js';

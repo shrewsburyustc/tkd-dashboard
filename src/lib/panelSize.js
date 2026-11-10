@@ -47,7 +47,7 @@ export const PANEL_SIZES = ['standard', 'large', 'largest'];
 export const PANEL_SIZE = 'Panel size'; // the account-menu row, and its choices' group name
 export const PANEL_SIZE_LABELS = { standard: 'Standard', large: 'Large', largest: 'Largest' };
 export const PANEL_SIZE_NOT_SAVED =
-  "Couldn't save your panel size, so your other devices keep the old one. Check the internet, then Retry.";
+  "Couldn't save your panel size, so your other devices keep the old one. Check the connection, then retry.";
 
 const METADATA_KEY = 'panel_size'; // the key in Supabase's per-person settings
 const START = { size: 'standard', userId: null, changedAt: 0 }; // nobody signed in
