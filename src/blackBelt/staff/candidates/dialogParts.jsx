@@ -6,7 +6,7 @@
 // Why it exists: Record payment, Edit payment and Record refund (mockups Candidates 4 and 5) draw
 // the same fields the same way; writing them once keeps them identical.
 import { useId } from 'react';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import DialogBar from '../parts/DialogBar.jsx';
 import { PaidByField } from '../../../components/MarkPaidBox.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { PAID_BY } from '../../../components/text.js';
@@ -99,9 +99,10 @@ export function TextField({ label, value, onChange, placeholder, error, readOnly
   );
 }
 
-// The failed-connection banner at the top of a dialog (stays until Retry works).
+// The failed-connection banner at the top of a dialog (stays until Retry works). It scrolls itself into view
+// (DialogBar), so a phone's full-screen page scrolled down at the Save button still shows it (D2).
 export function FailedBanner({ state, onRetry }) {
-  return state.failed ? <ErrorBanner text={T.SAVE_FAILED} onRetry={onRetry} retrying={state.saving} /> : null;
+  return state.failed ? <DialogBar text={T.SAVE_FAILED} onRetry={onRetry} retrying={state.saving} /> : null;
 }
 
 // The bottom of a form dialog. PC / tablet: [extra buttons] Cancel · primary, with the note under

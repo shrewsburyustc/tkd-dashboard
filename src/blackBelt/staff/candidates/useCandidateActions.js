@@ -216,6 +216,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, dev
       if (ours(dlgRef.current?.detail?.banner)) patchDetail({ banner: null });
       return;
     }
+    // SEC1: a MONEY Undo that fails after Hide private details turned on shows no bar at all (the switch
+    // already removed the bars, paymentsHiddenNow, so nothing would remove this one, and its Retry would run
+    // a payment Undo from the hidden tablet). The toast side says UNDO_AT_DESK; here nothing is drawn.
+    if (lastUndoMoney.current && latest.current.paymentsHidden) return;
     report({ text: bar.text, retry: bar.retry ?? undefined, retrying: bar.retrying, takeFocus: bar.takeFocus, fromUndo: true, moneyUndo: lastUndoMoney.current });
   }
   // × on the detail's bar: the bar goes and focus moves to the detail's ⋯ (the shared ErrorBanner

@@ -20,7 +20,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { loadGradingGrid } from '../../../lib/blackBelt/gradingApi.js';
 import { subjectNames } from '../../../lib/blackBelt/grading.js';
 import { RUBRIC_DANS } from '../../../lib/blackBelt/rubric.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import { useBbGradingSaves } from './useBbGradingSaves.js';
 import * as T from './text.js';
 

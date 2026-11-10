@@ -61,8 +61,8 @@ export const PRINT_SHEET = 'Print grading sheet';
 
 // ----- Loading -----
 export const LOADING_GRADES = 'Loading grades…';
-export const OFFLINE_NO_GRADES = 'You’re offline, so the grades couldn’t load. They load by themselves when the connection is back.'; // new wording, not in the mockups
-export const LOAD_GRADES_FAILED = 'Couldn’t load the grades. Check the connection, then retry.'; // + Retry; S-2 ending (v1.051)
+export const OFFLINE_NO_GRADES = 'You\'re offline, so the grades couldn\'t load. They load by themselves when the connection is back.'; // new wording, not in the mockups
+export const LOAD_GRADES_FAILED = 'Couldn\'t load the grades. Check the connection, then retry.'; // + Retry; S-2 ending (v1.051)
 
 // ----- Column headings (G 6) -----
 export const COL_CANDIDATE = 'Candidate';
@@ -89,7 +89,7 @@ export const makeupBand = (n) => `Make-ups · ${n} — only the outlined subject
 // the phone card's header box: "Make-up from Spring 2027 Retests Free sparring. Every other grade is kept and can't be changed here."
 export const makeupCardFrom = (cycleName) => `from ${cycleName}`;
 export const makeupCardText = (retestNames) =>
-  `Retests ${joinNames(retestNames)}. Every other grade is kept and can’t be changed here.`;
+  `Retests ${joinNames(retestNames)}. Every other grade is kept and can't be changed here.`;
 
 // ----- Cells -----
 export const EMPTY_CELL = '·';
@@ -119,7 +119,7 @@ export const KEPT_NOTE_LABEL = 'Kept grade';
 // the kept note (Star's pattern with Black Belt's words)
 export const keptNoteTitle = (cycleName, value) => `Kept from ${cycleName} · ${value}`;
 export const keptNoteBody = (cycleName) =>
-  `Kept grades can’t be changed on this cycle. To correct one, fix it on ${cycleName}, then an admin removes this make-up and adds it again (if it’s still a make-up).`; // new wording, not in the mockups (Star's note, "cycle" for "testing")
+  `Kept grades can't be changed on this cycle. To correct one, fix it on ${cycleName}, then an admin removes this make-up and adds it again (if it's still a make-up).`; // new wording, not in the mockups (Star's note, "cycle" for "testing")
 
 // ----- The measured-number editor (G 3–G 5) -----
 export const UNIT_WORDS = { in: 'inches', sec: 'seconds', min: 'min (m:ss)', count: 'count', reps: 'reps', kicks: 'kicks' };
@@ -165,10 +165,10 @@ export const PICKER_SUB = 'Pick who to grade';
 export const CANCEL = 'Cancel';
 
 // ----- Answers that are never retried (Star's H2 pattern; banner with ✕ only) -----
-export const KEPT_REFUSED = 'That grade was kept from an earlier cycle, so it can’t be changed here. Your change wasn’t saved.'; // new wording, not in the mockups ("cycle" for Star's "testing")
-export const movedElsewhere = (name, what) => `${name} was moved to another Dan on another device. Your ${what} wasn’t saved.`; // new wording, not in the mockups
-export const removedFromCycle = (name, what) => `${name} was removed from this cycle. Your ${what} wasn’t saved.`; // new wording, not in the mockups
-export const reloadedAfter = (what) => `That ${what} couldn’t be saved. The grid has been reloaded.`; // Star's words ("grade" / "count")
+export const KEPT_REFUSED = 'That grade was kept from an earlier cycle, so it can\'t be changed here. Your change wasn\'t saved.'; // new wording, not in the mockups ("cycle" for Star's "testing")
+export const movedElsewhere = (name, what) => `${name} was moved to another Dan on another device. Your ${what} wasn't saved.`; // new wording, not in the mockups
+export const removedFromCycle = (name, what) => `${name} was removed from this cycle. Your ${what} wasn't saved.`; // new wording, not in the mockups
+export const reloadedAfter = (what) => `That ${what} couldn't be saved. The grid has been reloaded.`; // Star's words ("grade" / "count")
 export const NUMBER_RANGE = 'Type a number from 0 to 999.'; // G 4
 
 // ----- Choose subjects (G 21–G 23, admins) -----
@@ -184,7 +184,7 @@ export const bestCaseLine = (total, passMark) => `If the ticked subjects all get
 export const chooseNote = (firstName) => `${firstName} retests the ticked subjects at a later cycle (no fee). The rest keep their grades.`;
 export const CHOOSE_NONE = 'Tick at least one subject.'; // Star v0.513's line
 export const CHOOSE_ALREADY_ADDED = (firstName) =>
-  `${firstName}’s make-up is already on a later cycle, so the subjects can’t change here.`; // new wording, not in the mockups
+  `${firstName}'s make-up is already on a later cycle, so the subjects can't change here.`; // new wording, not in the mockups
 export const SUBJECTS_LABEL = 'Subjects to retest';
 export const SAVE = 'Save';
 export const SAVING = 'Saving…';
@@ -200,7 +200,7 @@ export const secondPartWords = (time, place) => `second part ${time} · ${place}
 export const sheetWhenLine = (parts) => parts.filter(Boolean).join(' · ');
 export const handInDueWords = (dueText) => `Hand-in work due ${dueText}`; // new wording, not in the mockups (Other requirements' sheet)
 export const SHEET_JUDGE = 'Judge:';
-export const SHEET_MEASURED_HELP = 'Write the number measured. The dashboard works out each grade from the cut-offs for the candidate’s age group.';
+export const SHEET_MEASURED_HELP = 'Write the number measured. The dashboard works out each grade from the cut-offs for the candidate\'s age group.';
 export const SHEET_MINUTES_HELP = (names) => `${names}: minutes and seconds (m:ss).`; // "Mile: minutes and seconds (m:ss)."
 export const sheetGradesHelp = (letters) => `Grades: ${letters.join(' · ')}.`;
 export const sheetWriteNumber = (name, unit) => `${name}: write the number${unit ? ` (${unit})` : ''}.`; // "Target kick (30 sec): write the number (kicks)." // new wording, not in the mockups

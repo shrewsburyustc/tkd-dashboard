@@ -31,6 +31,10 @@
 // admin, a row with payment rows is read first (Edit / Undo payment act on the LATEST payment,
 // which the row doesn't carry).
 //
+// The tab draws no bar of its own for a problem: its saves fill the cycle page's one bar, a PageBar under
+// the top bar (CyclePage.jsx, v1.128). The one bar it draws itself, "couldn't load", is a PageBar too. The
+// candidate detail keeps its own bar INSIDE the detail while it is open (CandidateDialog.jsx, v0.966 / v1.128).
+//
 // It follows the location switcher (v0.118): on Worcester or Shrewsbury the list, the cards and
 // the duplicate box show that school only; Both shows everyone. With the device's Hide payments
 // switch on (v0.215, OP-B7) there is only the Candidates card, no money columns and no payment actions, and
@@ -46,7 +50,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import CompareDialog from '../../../components/CompareDialog.jsx';
 import CountCards from '../../../components/CountCards.jsx';
 import DuplicateBox from '../../../components/DuplicateBox.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadRoster, schoolToday } from '../../../lib/blackBelt/api.js';
@@ -56,6 +60,8 @@ import { PHONE_QUERY, WIDE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../li
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import CandidateReceipt from '../receipt/CandidateReceipt.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import AddCandidateDialog from './AddCandidateDialog.jsx';
 import CandidateDialog, { lineWords } from './CandidateDialog.jsx';
 import ChangePlanDialog from './ChangePlanDialog.jsx';
@@ -130,6 +136,9 @@ export default function CandidatesTab({
 }) {
   const live = useLiveLoad({ key: cycle.id, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const rows = useMemo(() => live.data?.rows ?? [], [live.data]);
+  // C5: "couldn't load" is a PageBar drawn from the load's status (this tab's other problems are the cycle page's
+  // bar, which has its own call): when its Retry works, focus goes to the tab.
+  useBarFocusReturn(live.status === 'error' || live.status === 'notFound', focusCurrentTab);
   const today = schoolToday();
   const [hidden] = usePrivateDetailsHidden();
   const isPhone = useMediaQuery(PHONE_QUERY);
@@ -457,7 +466,7 @@ export default function CandidatesTab({
   if (live.status === 'error' || live.status === 'notFound') {
     return (
       <div id={panelId} role="tabpanel" aria-labelledby={tabId} className="tpanel">
-        <ErrorBanner text={T.LOAD_FAILED} onRetry={() => live.reload()} />
+        <PageBar text={T.LOAD_FAILED} onRetry={() => live.reload()} />
       </div>
     );
   }

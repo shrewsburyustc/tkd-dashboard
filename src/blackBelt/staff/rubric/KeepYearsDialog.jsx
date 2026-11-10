@@ -16,7 +16,7 @@ import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import Dialog from '../../../components/Dialog.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import DialogBar from '../parts/DialogBar.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { setKeepYears } from '../../../lib/blackBelt/api.js';
 import { keepYearsProblem } from '../../../lib/blackBelt/rules.js';
@@ -144,7 +144,7 @@ export default function KeepYearsDialog({ settings, isPhone, onClose, onSaved, o
             save();
           }}
         >
-          {failed && <ErrorBanner text={T.SAVE_FAILED} onRetry={save} retrying={saving} />}
+          {failed && <DialogBar text={T.SAVE_FAILED} onRetry={save} retrying={saving} />}
           <p className="bb-keep-sentence">
             {T.KEEP_PART_1} {numberInput(n1, setN1, T.KEEP_N1_LABEL, `${id}-n1`)} {T.KEEP_PART_2} {numberInput(n2, setN2, T.KEEP_N2_LABEL, `${id}-n2`)} {T.KEEP_PART_3}
           </p>

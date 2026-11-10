@@ -10,7 +10,7 @@
 // which would read the text as UTC midnight and could show the day before.
 
 import { formatMoney } from '../../lib/money.js';
-import { HIDDEN_ON_THIS_TABLET } from '../../lib/privateDetails.js';
+import { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../lib/privateDetails.js';
 // More of the shared sentences (R2-07, R3-13): the refused-change line and the calendars' gray line, typed once in the shared words.
 import { PAST_DAYS_HINT, someoneElseChanged } from '../../components/text.js';
 export { PAST_DAYS_HINT, someoneElseChanged };
@@ -426,7 +426,7 @@ export function linksStateLine(state, cycle) {
   if (state.state === 'not_open_yet') return "Registration hasn't been opened yet, so families can't sign up.";
   return "Registration is closed, so families can't sign up right now.";
 }
-export const LINKS_EXPLAIN = 'Each school has its own link; the link sets the candidate’s school. Families choose their Dan on the form.';
+export const LINKS_EXPLAIN = 'Each school has its own link; the link sets the candidate\'s school. Families choose their Dan on the form.';
 export const DAN_HINT_START = 'To choose the Dan for a family, add ';
 export const DAN_HINT_END = ' to the end of a link.';
 
@@ -519,7 +519,7 @@ export const CARD_LATE = 'Late';
 export const CARD_NOT_PAID = 'Not paid';
 export const CARD_CANDIDATES = 'Candidates'; // the one card left while Hide private details is on (v1.046 (9))
 export const duplicatesLeftOut = (n) =>
-  n === 1 ? "The possible duplicate row isn't counted in the cards until it's resolved." : `The ${n} possible duplicate rows aren’t counted in the cards until they’re resolved.`;
+  n === 1 ? "The possible duplicate row isn't counted in the cards until it's resolved." : `The ${n} possible duplicate rows aren't counted in the cards until they're resolved.`;
 export const SHOWING_FILTER = {
   paidInFull: 'Showing paid in full only',
   onSchedule: 'Showing paying on schedule only',
@@ -622,8 +622,8 @@ export const undoWhy = {
   hasGrades: (name) => couldntUndo(`${name} has grades, so they can't be deleted. Withdraw them instead`),
   danHasGrades: (name) => couldntUndo(`grades were already entered for ${name}'s new Dan`),
   danLockedStaff: couldntUndo('a payment is recorded, so ask an admin to change the Dan'),
-  makeupLater: (name) => couldntUndo(`${name}’s make-up is already on a later cycle. Undo that make-up first, then change the Dan`),
-  alreadyAdded: (name) => couldntUndo(`another make-up of ${name} is already on a cycle, so this one can’t be restored`),
+  makeupLater: (name) => couldntUndo(`${name}'s make-up is already on a later cycle. Undo that make-up first, then change the Dan`),
+  alreadyAdded: (name) => couldntUndo(`another make-up of ${name} is already on a cycle, so this one can't be restored`),
 };
 // The same refusal as a NOTE inside an open dialog (Record payment, Edit details …): the dialog
 // still shows what was typed, not the other person's change, so it keeps the old words (v0.966:
@@ -639,12 +639,12 @@ export const ACTION_FAILED = "That didn't work. Check the connection, then retry
 // refusal of an Undo that was pressed before the switch turned on shows this one neutral sentence (with × only).
 export const UNDO_AT_DESK = "Couldn't undo. Do it at the desk.";
 // The words a money Undo gives the save line (lib/saveLine.js) for the bar it leaves after the person left the page
-// ("Undo didn't save: “Sam Lee’s payment” (Black Belt)"). They name who and what, never an amount: that bar
+// ("Undo didn't save: "Sam Lee's payment" (Black Belt)"; the shared undoPaymentTitle itself stays curly). They name who and what, never an amount: that bar
 // can show on any page, with no Hide private details check (v0.249).
-export const paymentUndoWords = (name) => `${name}’s payment`;
-export const refundUndoWords = (name) => `${name}’s refund`;
-export const returnedUndoWords = (name) => `${name}’s returned check`;
-export const planUndoWords = (name) => `${name}’s plan change`;
+export const paymentUndoWords = (name) => `${name}'s payment`;
+export const refundUndoWords = (name) => `${name}'s refund`;
+export const returnedUndoWords = (name) => `${name}'s returned check`;
+export const planUndoWords = (name) => `${name}'s plan change`;
 
 // ----- Candidates 3 · Candidate detail -----
 export const SECTION_CANDIDATE = 'Candidate';
@@ -669,7 +669,7 @@ export const DELETED_AFTER_KEEPING = 'Deleted after the keeping time';
 // Hide private details on (OP-B7; "tablet" as every section, v0.507 / v0.974): the shared words
 // "Hidden on this tablet" (src/lib/privateDetails.js), drawn gray (.ev-hidden-value)
 export const HIDDEN_ON_DEVICE = HIDDEN_ON_THIS_TABLET;
-export const PAYMENTS_HIDDEN = 'Payments are hidden on this tablet.'; // (OP-B7; v0.974)
+export const PAYMENTS_HIDDEN = PAYMENT_DETAILS_HIDDEN; // (OP-B7; v0.974) the shared sentence "Payment details are hidden on this tablet." (R4-03)
 export const registeredLine = (registeredOn, source, code) =>
   source === 'desk' ? `${shortDate(registeredOn)} · at the desk` : `${shortDate(registeredOn)} · family form (${schoolName(code)} link)`;
 export const VIEW_SIGNATURE = 'View signature';
@@ -794,13 +794,13 @@ export const HIDDEN_EDIT_HINT = 'Change the date of birth or email at the desk.'
 export const DAN_AT_DESK_HINT = 'Change the Dan at the desk.'; // approved by Jeffrey 2026-11-06 (step 1)
 export const alreadyPaidAdmin = (cents) => `${money(cents)} is already paid. Recorded payments stay as they are; the balance is worked out again.`;
 // Field errors: the family form's wording (B1 Form 4), plus the desk's own two (not in the mockups)
-export const ERR_FIRST = 'Enter the candidate’s first name.';
-export const ERR_LAST = 'Enter the candidate’s last name.';
-export const ERR_DOB = 'Choose the candidate’s date of birth.';
+export const ERR_FIRST = 'Enter the candidate\'s first name.';
+export const ERR_LAST = 'Enter the candidate\'s last name.';
+export const ERR_DOB = 'Choose the candidate\'s date of birth.';
 export const ERR_DAN = 'Choose the Dan the candidate is testing for.';
 export const ERR_EMAIL = 'Enter a full email address, like name@example.com.';
 export const ERR_SCHOOL = 'Choose the school.'; // (not in the mockups)
-export const ERR_PLAN = 'Choose how they’ll pay.'; // (not in the mockups)
+export const ERR_PLAN = 'Choose how they\'ll pay.'; // (not in the mockups)
 export const ERR_WAIVER_TICK = 'Tick this once the family has signed the paper waiver.';
 export function nameError(code, emptyText) {
   if (code === 'empty') return emptyText;
@@ -866,7 +866,7 @@ export const PAYMENT_GONE = 'This payment was already undone or changed.';
 // Undo payment asks first, then a toast WITHOUT Undo (OP-B1). The box names the person and the
 // payment (v0.964, mockup C option A): the title is Star's shape with the amount and how, never
 // built from the installments; the second line says when it was paid and what it was for (v0.965).
-// "Undo Mia Chen’s $870 card payment?"
+// "Undo Mia Chen's $870 card payment?" (the shared undoPaymentTitle draws a curly apostrophe; it is a shared file)
 // (the title is the shared one, R1-06; only the amount and the way are formatted here)
 export const undoPaymentTitle = (name, cents, method) => sharedUndoPaymentTitle(name, money(cents), methodName(method).toLowerCase());
 // What a payment was for, inside a sentence (v0.964, v0.965): "payment 1", "payments 1, 2 and 3",
@@ -908,7 +908,7 @@ export const UNDOING = 'Undoing…';
 export const DELETING = 'Deleting…';
 export const CHANGING = 'Changing…'; // the Dan-change box's red button while it works
 export const keepDan = (dan) => `Keep ${DAN_LABELS[dan] ?? 'Dan'}`; // "Keep 1st Dan" — the current Dan (BB19, as Star's)
-export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then retry."; // under an Undo box's buttons (Star's words)
+export { UNDO_DIDNT_SAVE as UNDO_BOX_FAILED } from '../../components/text.js'; // under an Undo box's buttons: the shared failed-Undo sentence (R4-03, v1.045 (4))
 export const UNDO_REFUND_CONFIRM = 'Undo refund'; // (not in the mockups)
 export const undoBlockedReturned = RETURNED_FIRST;
 export const UNDO_NET_FLOOR = 'Undoing this would take the paid total below zero. Undo the refund first.';
@@ -917,13 +917,13 @@ export const REFUND_TITLE = 'Record refund';
 export const refundSub = (name, planName, paidCents, dueCents) => `${name} · ${planName} · paid ${money(paidCents)} of ${money(dueCents)}`;
 export const overpaidLine = (cents) => `Overpaid ${money(cents)}`;
 export const refundHint = (paidCents) =>
-  `Fees are non-refundable. Record a refund only when money is handed back, for example an overpayment. It can’t be more than ${money(paidCents)} (what’s been paid). It counts today.`;
+  `Fees are non-refundable. Record a refund only when money is handed back, for example an overpayment. It can't be more than ${money(paidCents)} (what's been paid). It counts today.`;
 export const refundTooLarge = (paidCents) => `A refund can't be more than ${money(paidCents)} (what's been paid).`;
 export const toastRefund = (cents, name) => `Refund recorded · ${money(cents)} · ${name}`;
 
 export const RETURNED_TITLE = 'Mark check returned';
 export const returnedSub = (name, what, cents, paidOn) => `${name} · ${what} · ${money(cents)} check recorded ${monthDay(paidOn)}`;
-export const returnedSentence = (cents, name) => `The check stays in the history, marked returned. ${money(cents)} goes back on ${name}’s balance.`;
+export const returnedSentence = (cents, name) => `The check stays in the history, marked returned. ${money(cents)} goes back on ${name}'s balance.`;
 // The predicted tag after the mark (from the predicted Money). what = "Payment 2"; firstDue = its due date
 export function returnedPrediction(what, dueOn, m) {
   const tag = moneyTag(m);
@@ -985,9 +985,9 @@ export const addClosedSub = (date) => `Registration closed on ${weekdayMonthDay(
 export const SCHOOL = 'School';
 export const DOB = 'Date of birth';
 // The date of birth's calendar (v1.018, design review BB12): Star's staff birthday wording.
-export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can\'t be chosen.';
 export const TESTING_FOR = 'Testing for';
-export const HOW_THEY_PAY = 'How they’ll pay';
+export const HOW_THEY_PAY = 'How they\'ll pay';
 export const AMOUNTS_AFTER_DAN = 'Amounts show once you choose a Dan.';
 export const EMAIL = 'Email for results';
 export const PAPER_WAIVER_HINT = 'The signed paper goes in the testing folder.';
@@ -1069,7 +1069,7 @@ export const DEFAULT_RUBRIC = 'Default rubric';
 export const cycleRubricTitle = (cycleName) => `${cycleName} rubric`;
 export const editDan = (dan) => `Edit ${DAN_LABELS[dan] ?? ''}`;
 export const DAN_SWITCHER = 'Dan shown'; // screen readers: the name of the 1st–4th Dan switcher (new wording, not in the mockups)
-export const DEFAULT_USED_BY = 'Used by every new cycle. A cycle’s copy can be changed until its registration first opens.';
+export const DEFAULT_USED_BY = 'Used by every new cycle. A cycle\'s copy can be changed until its registration first opens.';
 export const LOADING_RUBRIC_CARD = 'Loading the rubric'; // (new wording, not in the mockups)
 export const RUBRIC_LOAD_FAILED = "Couldn't load the rubric. Check the connection, then retry."; // + Retry; S-2 ending (v1.051)
 export const TO_PASS = 'To pass';
@@ -1109,15 +1109,15 @@ export const showPoints = (name) => `Points for ${name}`; // screen readers (new
 export const AGE_BRACKET = 'Age bracket';
 export const wayHeading = (name, unit, direction) => `${name ? `${name} · ` : ''}${unit}, ${DIRECTION_WORDS[direction] ?? direction}`;
 export const cutOffsFoot = (direction, unit) =>
-  `${direction === 'at_most' ? 'At most' : direction === 'under' ? 'Under' : 'At least'} the number (${unit}). Below C is a D. Ages on the cycle’s first testing day.`;
-export const TWO_WAYS_FOOT = 'The candidate does one way; the examiner records which. Below C is a D. Ages on the cycle’s first testing day.';
+  `${direction === 'at_most' ? 'At most' : direction === 'under' ? 'Under' : 'At least'} the number (${unit}). Below C is a D. Ages on the cycle's first testing day.`;
+export const TWO_WAYS_FOOT = 'The candidate does one way; the examiner records which. Below C is a D. Ages on the cycle\'s first testing day.';
 export const OWN_POINTS = 'Own points';
-export const OWN_POINTS_FOOT = 'This subject’s own points (typed, not credits × grade points).';
+export const OWN_POINTS_FOOT = 'This subject\'s own points (typed, not credits × grade points).';
 export const OUTDOOR = 'Outdoor';
 export const HANDED_IN_TAG = 'Handed in';
 export const onlyBrackets = (labels) => `Only ${labels}`; // "Only 18 and over"
 export const noteLine = (note) => `Note: ${note}`;
-export const PART_FOOT = 'The part’s most points: each subject’s A+ points added up.';
+export const PART_FOOT = 'The part\'s most points: each subject\'s A+ points added up.';
 export const partFootLimited = (names, labels) => ` ${names} only ${names.includes(' and ') ? 'count' : 'counts'} for ${labels}.`;
 export const EXTRA_POINTS_TITLE = 'Extra points';
 export const extraHead = (counts, limit) =>
@@ -1155,7 +1155,7 @@ export const mostPointsChange = (before, after) => (before === after ? `${after}
 export const mostPointsBefore = (text) => `Most points ${text} before extra points`;
 export const ADD_BRACKET = 'Add bracket';
 export const BRACKETS_HINT =
-  'Brackets go from age to age with no gaps or overlaps; the last may be open. Ages on the cycle’s first testing day. The bracket name is worked out from the ages.';
+  'Brackets go from age to age with no gaps or overlaps; the last may be open. Ages on the cycle\'s first testing day. The bracket name is worked out from the ages.';
 export const NO_D_TICK = 'No D in any subject';
 export const MAKEUP_SENTENCE = 'Make-up sentence';
 export const MAKEUP_HINT = 'Shown under the pass mark on the family form and on the printed requirements.';
@@ -1168,7 +1168,7 @@ export const REMOVE_BRACKET = 'Remove bracket';
 export const ONLY_BRACKET = 'A Dan needs at least one bracket.';
 export const PART_NAME = 'Part name';
 export const gradePointsHint = (dan, partName) =>
-  `${DAN_LABELS[dan] ?? ''}’s own grade points for ${partName}, from A+ down to D. The letters are fixed for each part; only the points change.`;
+  `${DAN_LABELS[dan] ?? ''}'s own grade points for ${partName}, from A+ down to D. The letters are fixed for each part; only the points change.`;
 export const gradePointLabel = (partName, letter) => `${partName} grade points, ${letter}`; // screen readers (new wording, not in the mockups)
 export const upToChange = (before, after) => (before === after ? `up to ${after} points` : `up to ${before} → ${after} points`);
 export const ADD_SUBJECT = 'Add subject';
@@ -1184,7 +1184,7 @@ export const ADDED_TO_TOTAL = 'Added to the total';
 export const LIMIT = 'Limit';
 export const NO_LIMIT = 'No limit';
 export const TO_CONFIRM_TICK = 'To confirm with Master Jeong';
-export const EXTRA_SETTINGS_HINT = 'Unticked “Added to the total”: extra points are still recorded and shown, but not counted. Limit empty = no limit.';
+export const EXTRA_SETTINGS_HINT = 'Unticked "Added to the total": extra points are still recorded and shown, but not counted. Limit empty = no limit.';
 export const PER_COUNT = 'Per count';
 export const STEPS = 'Steps';
 export const POINT_EACH_UNIT = 'point each';
@@ -1225,16 +1225,16 @@ export const fromAgeLabel = (n) => `Age bracket ${n}, from age`; // (new wording
 export const toAgeLabel = (n) => `Age bracket ${n}, to age`; // (new wording, not in the mockups)
 export const TWO_WAYS_HINT = 'The candidate does one way; the examiner records which. A subject has at most two ways.';
 export const AGES_HINT =
-  'Ages on the cycle’s first testing day. Leave “from” empty for the youngest and “to” empty for the oldest. No gaps or overlaps. A result below C is a D.';
+  'Ages on the cycle\'s first testing day. Leave "from" empty for the youngest and "to" empty for the oldest. No gaps or overlaps. A result below C is a D.';
 export const POINTS_LABEL = 'Points';
 export const WORKED_OUT = 'Worked out';
-export const workedOutWhy = (credits, dan, partName) => `${credits} credits × ${DAN_LABELS[dan] ?? ''}’s ${partName} grade points. Changes when the credits change.`;
-export const ownPointsWhy = (worked) => `Each grade’s points typed for this subject; credits don’t change them. Worked out, they would be ${worked}.`;
+export const workedOutWhy = (credits, dan, partName) => `${credits} credits × ${DAN_LABELS[dan] ?? ''}'s ${partName} grade points. Changes when the credits change.`;
+export const ownPointsWhy = (worked) => `Each grade's points typed for this subject; credits don't change them. Worked out, they would be ${worked}.`;
 export const ownPointLabel = (letter) => `Own points, ${letter}`; // (new wording, not in the mockups)
 export const WHO_DOES_IT = 'Who does it';
 export const EVERYONE = 'Everyone';
 export const ONLY_SOME_BRACKETS = 'Only some brackets';
-export const WHO_HINT = 'The brackets come from To pass. A candidate outside them skips this subject, and that bracket’s most points leave it out.';
+export const WHO_HINT = 'The brackets come from To pass. A candidate outside them skips this subject, and that bracket\'s most points leave it out.';
 export const TAGS = 'Tags';
 export const doneKeepsDraft = (dan) => `Done keeps this in the draft. Nothing is saved until Save ${DAN_LABELS[dan] ?? ''}.`;
 export const DONE_KEEPS_PHONE = 'Done keeps this in the draft.';
@@ -1242,7 +1242,7 @@ export const DONE = 'Done';
 export const NEW_WAY_UNIT = 'count'; // a new way's unit (new wording, not in the mockups)
 
 // ----- R6: Split this bracket… -----
-export const splitTitle = (label) => `Split “${label}”`;
+export const splitTitle = (label) => `Split "${label}"`;
 export const splitSub = (dan, where) => `${DAN_LABELS[dan] ?? ''} · ${where}`;
 export const SPLIT_AT_AGE = 'Split at age';
 export const splitPreview = (label, points) => `${label} → ${points} points`;
@@ -1255,19 +1255,19 @@ export const COPY_TITLE = 'Copy from another Dan';
 export const copyInto = (dan, where) => `Into ${DAN_LABELS[dan] ?? ''} · ${where}`;
 export const copyChoiceLine = (subjects, passText, mostText) => `${subjects} subjects · to pass ${passText} · most ${mostText}`;
 export const copyWarning = (into, from, unsaved) =>
-  `Replaces everything in ${DAN_LABELS[into]}’s draft — part names, grade points, subjects, scoring, pass-mark brackets and extra points — with a copy of ${DAN_LABELS[from]}.${
+  `Replaces everything in ${DAN_LABELS[into]}'s draft — part names, grade points, subjects, scoring, pass-mark brackets and extra points — with a copy of ${DAN_LABELS[from]}.${
     unsaved > 0 ? ` Your ${unsaved} unsaved ${unsaved === 1 ? 'change' : 'changes'} to ${DAN_LABELS[into]} ${unsaved === 1 ? 'is' : 'are'} lost.` : ''
   } Nothing is saved until you press Save ${DAN_LABELS[into]}.`;
 export const copyDan = (dan) => `Copy ${DAN_LABELS[dan] ?? ''}`;
 
 // ----- R10: leaving with unsaved changes -----
 export const discardTitle = (dan) => `Discard changes to ${DAN_LABELS[dan] ?? ''}?`;
-export const changesArentSaved = (count) => `${count} ${count === 1 ? 'change isn’t' : 'changes aren’t'} saved.`;
+export const changesArentSaved = (count) => `${count} ${count === 1 ? "change isn't" : "changes aren't"} saved.`;
 export const DISCARD = 'Discard';
 export const KEEP_EDITING = 'Keep editing';
 
 // ----- R8: errors on Save -----
-export const cantSaveYet = (dan, count) => `Can’t save ${DAN_LABELS[dan] ?? ''} yet. Fix ${count === 1 ? 'this thing' : `these ${count} things`}:`;
+export const cantSaveYet = (dan, count) => `Can't save ${DAN_LABELS[dan] ?? ''} yet. Fix ${count === 1 ? 'this thing' : `these ${count} things`}:`;
 export const ERRORS_FOOT = 'Each line jumps to its field. Nothing was saved.';
 export const CHECK_CUTOFFS = 'Check the cut-offs and age brackets';
 export const CHECK_POINTS = 'Check the points'; // (new wording, not in the mockups)
@@ -1281,7 +1281,7 @@ export const RELOAD = 'Reload';
 export const RELOAD_FIRST = 'Reload first — another admin saved';
 export const nowShowing = (name, time, change) => `Now showing the version ${name || 'another admin'} saved${time ? ` at ${time}` : ''}${change ? `: ${change}.` : '.'}`;
 export const yourChangesLost = (count) =>
-  `Your ${count} ${count === 1 ? 'change wasn’t' : 'changes weren’t'} saved. Make ${count === 1 ? 'it' : 'them'} again if ${count === 1 ? 'it still applies' : 'they still apply'}:`;
+  `Your ${count} ${count === 1 ? "change wasn't" : "changes weren't"} saved. Make ${count === 1 ? 'it' : 'them'} again if ${count === 1 ? 'it still applies' : 'they still apply'}:`;
 export const HIDE = 'Hide';
 export const RUBRIC_NOT_ALLOWED = "Only an admin can change the rubric. Your changes weren't saved."; // (new wording, not in the mockups)
 export const RUBRIC_INVALID_UNKNOWN = 'The database refused this rubric. Check the fields and try again.'; // a problem the screen can't place (new wording, not in the mockups)
@@ -1293,7 +1293,7 @@ export const timeOfDay = (stamp) => {
 
 // ----- R12 / R13: a cycle's Rubric tab -----
 export const TAB_CYCLE_RUBRIC = 'Rubric';
-export const CYCLE_RUBRIC_EDITABLE = 'This cycle’s rubric can be changed until registration first opens. Opening registration locks it.';
+export const CYCLE_RUBRIC_EDITABLE = 'This cycle\'s rubric can be changed until registration first opens. Opening registration locks it.';
 export const copiedWhenAdded = (date) => `Copied from the default rubric when the cycle was added (${date}).`;
 export const copiedFromStartingPoint = (date) => `Copied from the Fall 2026 starting point when the cycle was added (${date}).`; // a converted v1 cycle (new wording, not in the mockups)
 export const lockedSince = (date) => `Locked since registration opened on ${date}. Changes go into the default rubric for next season.`;
@@ -1309,12 +1309,12 @@ export const UNDO_OPEN_TOO_LATE = "Couldn't undo: it's too late, or someone else
 
 // ----- R14: Add cycle / Edit cycle -----
 export const RUBRIC_SECTION = 'Rubric';
-export const RUBRIC_ADD_LINE = 'Copied from the default rubric when you save. Change it on the cycle’s Rubric tab until registration first opens.';
+export const RUBRIC_ADD_LINE = 'Copied from the default rubric when you save. Change it on the cycle\'s Rubric tab until registration first opens.';
 // Edit cycle before the first opening (new wording: the mockup reuses Add's line, which says "when you save")
-export const RUBRIC_EDIT_LINE = 'Copied from the default rubric when the cycle was added. Change it on the cycle’s Rubric tab until registration first opens.';
+export const RUBRIC_EDIT_LINE = 'Copied from the default rubric when the cycle was added. Change it on the cycle\'s Rubric tab until registration first opens.';
 export const rubricLockedLine = (date) => `Locked since registration opened on ${date}.`;
-export const NEW_CYCLES_CLOSED = 'New cycles start closed. Check the rubric, then open registration from the cycle’s ⋯ menu.';
-export const NOT_OPENED_YET_LINE = 'Not opened yet. An admin opens registration from the cycle’s ⋯ menu.'; // Edit cycle, never opened (new wording, not in the mockups)
+export const NEW_CYCLES_CLOSED = 'New cycles start closed. Check the rubric, then open registration from the cycle\'s ⋯ menu.';
+export const NOT_OPENED_YET_LINE = 'Not opened yet. An admin opens registration from the cycle\'s ⋯ menu.'; // Edit cycle, never opened (new wording, not in the mockups)
 
 // ===== Contract 0025 §14.5 (builder C3): make-ups, the Dan-change dialog, has-grades refusals =====
 // Mockups: TKD-BlackBelt-Grading-Mockups.html G06 (proposals 24–27) and
@@ -1337,19 +1337,19 @@ export const retestsLine = (names) => `Retests ${(names ?? []).join(', ')}`;
 // G05's chosen subjects. The mockup adds the day ("…, Jun 14"); the data layer doesn't send that date.
 export const SUBJECTS_CHOSEN_BY_ADMIN = 'Subjects chosen by an admin';
 export const newInCycle = (names, cycleName) => `+ ${(names ?? []).join(', ')}, new in ${cycleName}`;
-export const droppedFromCycle = (names, cycleName) => `Not in ${cycleName}’s rubric, so not copied: ${(names ?? []).join(', ')}`; // new wording, not in the mockups
+export const droppedFromCycle = (names, cycleName) => `Not in ${cycleName}'s rubric, so not copied: ${(names ?? []).join(', ')}`; // new wording, not in the mockups
 export const MAKEUP_ADD = 'Add';
 export const addMakeupLabel = (name) => `Add ${name} as a make-up`; // screen readers (new wording, not in the mockups)
 export const ALREADY_ADDED = 'Already added';
 export const CHOOSE_SUBJECTS = 'Choose subjects';
 export const chooseSubjectsLabel = (name) => `Choose subjects for ${name}`; // screen readers (new wording, not in the mockups)
 export const ADMIN_CHOOSES_FIRST = 'An admin chooses the subjects first';
-export const choiceNeededLine = (cycleName) => `Below the pass mark on ${cycleName}. The subjects to retest aren’t chosen yet.`; // new wording, not in the mockups
+export const choiceNeededLine = (cycleName) => `Below the pass mark on ${cycleName}. The subjects to retest aren't chosen yet.`; // new wording, not in the mockups
 export const MAKEUP_LIST_EMPTY = 'No one owes a make-up from an earlier cycle.'; // new wording, not in the mockups
 export const makeupNoMatch = (text) => `No one matches "${text}".`; // new wording, not in the mockups
 export const makeupAddedToast = (name, cycleName) => `${name} added · make-up from ${cycleName}`;
-export const makeupStale = (name, cycleName) => `${name}’s result on ${cycleName} changed just now, so the list was loaded again.`; // new wording, not in the mockups
-export const makeupInvalid = (name) => `${name} can’t be added as a make-up any more.`; // new wording, not in the mockups
+export const makeupStale = (name, cycleName) => `${name}'s result on ${cycleName} changed just now, so the list was loaded again.`; // new wording, not in the mockups
+export const makeupInvalid = (name) => `${name} can't be added as a make-up any more.`; // new wording, not in the mockups
 export const MAKEUP_GONE = 'This candidate or cycle was deleted, so the list was loaded again.'; // new wording, not in the mockups
 
 // ----- G 27: the make-up row (roster and detail) -----
@@ -1368,9 +1368,9 @@ export const DAN_MAKEUP_HINT = 'A make-up keeps the Dan of the earlier cycle.'; 
 // ----- Q-G3 (v0.950): grades block deleting -----
 export const hasGrades = (name) => `${name} has grades, so they can't be deleted. Withdraw them instead.`;
 export const hasGradesShort = (name) => `${name} has grades, so they can't be deleted.`; // already withdrawn (new wording, not in the mockups)
-export const CYCLE_HAS_GRADES = 'Grades are entered for this cycle, so it can’t be deleted.'; // new wording, not in the mockups
-export const restoreAlreadyAdded = (name) => `Another make-up of ${name} is already on a cycle, so this one can’t be restored.`; // new wording, not in the mockups
-export const danChangeMakeupLater = (name) => `${name}’s make-up is already on a later cycle. Undo that make-up first, then change the Dan.`; // OI-4 (new wording, not in the mockups)
+export const CYCLE_HAS_GRADES = 'Grades are entered for this cycle, so it can\'t be deleted.'; // new wording, not in the mockups
+export const restoreAlreadyAdded = (name) => `Another make-up of ${name} is already on a cycle, so this one can't be restored.`; // new wording, not in the mockups
+export const danChangeMakeupLater = (name) => `${name}'s make-up is already on a later cycle. Undo that make-up first, then change the Dan.`; // OI-4 (new wording, not in the mockups)
 
 // ----- Q-G4 (v0.951 / v0.955): the Dan-change dialog -----
 export const changeDanTitle = (name, dan) => `Change ${name} to ${DAN_LABELS[dan] ?? ''}?`;
@@ -1397,11 +1397,11 @@ export const clearGradesButton = (counts) => `Change Dan and clear ${clearedPart
 export const gradesChanged = (name) => `${name}'s grades changed. Check the number and try again.`;
 
 // ----- S2: Edit cycle once grading started -----
-export const DAY_HAS_GRADES = 'Grades are entered for this day, so it can’t be moved or deleted.'; // new wording, not in the mockups
-export const FIRST_DAY_FROZEN = 'Grading has started, so the first day can’t be moved or deleted.'; // new wording, not in the mockups
+export const DAY_HAS_GRADES = 'Grades are entered for this day, so it can\'t be moved or deleted.'; // new wording, not in the mockups
+export const FIRST_DAY_FROZEN = 'Grading has started, so the first day can\'t be moved or deleted.'; // new wording, not in the mockups
 export const partsKeepGrades = (parts) => `${parts} already has grades on this day, so it stays ticked.`; // new wording, not in the mockups
 export const beforeFirstDay = (date) => `Grading has started, so no testing day can come before the first day (${date}).`; // new wording, not in the mockups
-export const EDIT_CYCLE_HAS_GRADES = 'Some testing days already have grades, so this change wasn’t saved. Grayed days can’t be moved or deleted.'; // new wording, not in the mockups
+export const EDIT_CYCLE_HAS_GRADES = 'Some testing days already have grades, so this change wasn\'t saved. Grayed days can\'t be moved or deleted.'; // new wording, not in the mockups
 
 // ----- Q-G1 / OI-2 (v0.948 / v0.956): a cycle's rubric locked by grading -----
 export const lockedByGrading = (date) => `Locked — grading started ${date}. Changes go into the default rubric for next season.`; // new wording, not in the mockups

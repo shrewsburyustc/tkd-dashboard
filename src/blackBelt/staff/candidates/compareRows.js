@@ -9,7 +9,7 @@
 // never marks them different, so a hidden line cannot give away which registration paid.
 //
 // first / second: the two registrations as loadCandidate reads them ({ candidate, money, … }).
-import { formatCents } from '../../../lib/blackBelt/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import * as T from '../text.js';
 
 const HIDDEN_KEYS = ['dob', 'email', 'plan', 'paid'];
@@ -26,7 +26,7 @@ export function compareRows(first, second, { hidden = false } = {}) {
       dan: T.DAN_LABELS[c.dan] ?? '',
       school: T.schoolName(c.locationCode),
       plan: T.planCell(c.plan?.name ?? '', c.kukkiwon),
-      paid: formatCents(d.money?.paidCents ?? 0),
+      paid: formatMoney(d.money?.paidCents ?? 0),
     };
   };
   const a = facts(first);

@@ -73,7 +73,7 @@ export const retests = (names) => `retests ${names.join(', ')}`;
 export const ADMIN_CHOOSES = 'an admin chooses subjects';
 export const CHOOSE_SUBJECTS = 'Choose subjects'; // the admins' link (G 21–23)
 export const chooseSubjectsLabel = (name) => `Choose subjects for ${name}`; // new wording, not in the mockups (screen readers only)
-export const NO_AGE = 'No date of birth on file, so the pass mark can’t be worked out.'; // new wording, not in the mockups
+export const NO_AGE = 'No date of birth on file, so the pass mark can\'t be worked out.'; // new wording, not in the mockups
 // The sent line (proposals 15, 16, 33)
 export const NOT_SENT_YET = 'Not sent yet';
 // "Sent Jun 7 · Staff"; seen in a later year "Sent Jun 7, 2027 · Staff" (R04, years later)
@@ -105,8 +105,8 @@ export const NO_GRADES_YET = 'No grades yet. Results fill in as grades are enter
 // Offline: the page's one shared amber bar already says it, so the tab draws no bar of its own; two
 // gray "why" lines sit next to the grayed controls instead (approved by Jeffrey 2026-11-07, step 1b,
 // picture Q, rulebook v1.123).
-export const OFFLINE_WHY_BUTTONS = 'Print results and Download CSV are off while you’re offline. Try again when the connection is back.';
-export const OFFLINE_WHY_ROWS = 'Email result and Mark as sent are off while you’re offline. Try again when the connection is back.';
+export const OFFLINE_WHY_BUTTONS = 'Print results and Download CSV are off while you\'re offline. Try again when the connection is back.';
+export const OFFLINE_WHY_ROWS = 'Email result and Mark as sent are off while you\'re offline. Try again when the connection is back.';
 export const EMAIL_OFF_HIDDEN = 'Email result is off while private details are hidden. Email results at the desk.'; // Star's words (v0.974)
 
 // ----- Loading and empty (proposals 31, 37) -----
@@ -117,17 +117,17 @@ export const emptyOneSchoolParts = (school, dan) => [`No ${school} ${danLabel(da
 export const emptyDanBoth = (dan) => `No ${danLabel(dan)} candidates. Add candidates on the Candidates tab.`;
 
 // ----- Email result's banners (proposal 19) -----
-export const COPY_BLOCKED = 'Couldn’t copy the message, so the email opened empty. Close it and try Email result again.';
-export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then retry.`; // + Retry (S-2)
-export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then retry.'; // new wording, not in the mockups (Star's)
+export const COPY_BLOCKED = 'Couldn\'t copy the message, so the email opened empty. Close it and try Email result again.';
+export const addressFailed = (name) => `Couldn't get ${name}'s email address. Check the connection, then retry.`; // + Retry (S-2)
+export const MESSAGE_NOT_READY = 'Couldn\'t build the message. Check the connection, then retry.'; // new wording, not in the mockups (Star's)
 // Email result refused by the database at the click (nothing opens). new wording, not in the mockups
 export function emailRefusal(status, name) {
   switch (status) {
-    case 'stale': return `${name}’s result changed just now, so the email wasn’t opened. Check the new result, then email it again.`; // new wording, not in the mockups
-    case 'not_finished': return `${name}’s result can’t be emailed now, so the email wasn’t opened.`; // new wording, not in the mockups
+    case 'stale': return `${name}'s result changed just now, so the email wasn't opened. Check the new result, then email it again.`; // new wording, not in the mockups
+    case 'not_finished': return `${name}'s result can't be emailed now, so the email wasn't opened.`; // new wording, not in the mockups
     case 'no_email': return `No email on file for ${name} — deleted after the keeping time.`; // new wording, not in the mockups
-    case 'withdrawn': return `${name} was removed from this cycle. The email wasn’t opened.`; // new wording, not in the mockups
-    case 'not_found': return `${name} was deleted on another device. The email wasn’t opened.`; // new wording, not in the mockups
+    case 'withdrawn': return `${name} was removed from this cycle. The email wasn't opened.`; // new wording, not in the mockups
+    case 'not_found': return `${name} was deleted on another device. The email wasn't opened.`; // new wording, not in the mockups
     default: return addressFailed(name);
   }
 }
@@ -138,26 +138,26 @@ export function markSentRefusal(status, name) {
   switch (status) {
     case 'stale':
     case 'invalid':
-      return `${name}’s result changed just now, so it wasn’t marked as sent. Check the new result, then email it again.`;
-    case 'not_finished': return `${name}’s result isn’t finished any more, so it wasn’t marked as sent.`;
-    case 'withdrawn': return `${name} was removed from this cycle. It wasn’t marked as sent.`;
+      return `${name}'s result changed just now, so it wasn't marked as sent. Check the new result, then email it again.`;
+    case 'not_finished': return `${name}'s result isn't finished any more, so it wasn't marked as sent.`;
+    case 'withdrawn': return `${name} was removed from this cycle. It wasn't marked as sent.`;
     case 'not_found': return `${name} was deleted on another device. Nothing was marked.`;
-    case 'no_email': return `No email on file for ${name}, so it wasn’t marked as sent.`; // new wording, not in the mockups
-    default: return `Couldn’t mark ${name} as sent. Check the connection, then retry.`; // + Retry
+    case 'no_email': return `No email on file for ${name}, so it wasn't marked as sent.`; // new wording, not in the mockups
+    default: return `Couldn't mark ${name} as sent. Check the connection, then retry.`; // + Retry
   }
 }
 export function undoSentRefusal(status) {
   switch (status) {
     case 'stale': return 'That was already undone.';
     case 'not_allowed': return 'Too late to undo here. Ask an admin to undo Mark as sent.';
-    case 'not_found': return 'That send record isn’t there any more. Nothing was changed.';
-    case 'invalid': return 'That couldn’t be undone. The list has been reloaded.';
+    case 'not_found': return 'That send record isn\'t there any more. Nothing was changed.';
+    case 'invalid': return 'That couldn\'t be undone. The list has been reloaded.';
     default: return UNDO_DIDNT_SAVE; // R2-07: the shared failed-Undo sentence
   }
 }
 export const undoConfirmTitle = (name) => `Undo Mark as sent for ${name}?`;
 export const undoConfirmBody = (day) =>
-  `This removes the ${monthDay(day)} send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn’t really sent.`;
+  `This removes the ${monthDay(day)} send record. The row then shows the send before it, if there was one — otherwise "Not sent yet". Use this only if the email wasn't really sent.`;
 export const UNDO_CONFIRM_GO = 'Undo Mark as sent';
 export const UNDO_CONFIRM_BUSY = 'Undoing…'; // the button's words while the Undo works (shared ConfirmBox, BB7)
 export const UNDO_CONFIRM_KEEP = 'Keep send record'; // same word as Star's Undo Mark as sent box, rulebook v1.008: the left button, the one that changes nothing
@@ -167,7 +167,7 @@ export const CANCEL = 'Cancel';
 export const PRINT_FAILED = loadFailedNamed('the results to print'); // new wording, not in the mockups (+ Retry; S-2)
 export const csvDownloaded = (fileName, n) =>
   `Downloaded ${fileName} (${plural(n, 'candidate', 'candidates')}). It has dates of birth, emails and payments — keep it private.`;
-export const CSV_FAILED = 'Couldn’t download the CSV. Check the connection, then retry.'; // + Retry
+export const CSV_FAILED = 'Couldn\'t download the CSV. Check the connection, then retry.'; // + Retry
 export const CSV_NOT_ALLOWED = 'Only an admin can download the CSV.';
 
 // ----- The printed results sheet (R05, proposals 38–44) -----
@@ -211,9 +211,9 @@ export const sheetPage = (n, of) => `Page ${n} of ${of}`;
 export const RESULT_EMAILS_TITLE = 'Result emails';
 export const RESULT_EMAILS_SUB = 'What Email result copies for each family (Results tab). Blanks in {braces} fill in for each candidate.';
 export const SUBJECT_LABEL = 'Subject';
-export const SUBJECT_FIXED_NOTE_INLINE = 'the same for every email; it can’t be changed.'; // after " · "
-export const SUBJECT_FIXED_NOTE = 'The same for every email; it can’t be changed.'; // phones: on its own line
-export const TEXTS_USED_WHEN_CLICKED = 'Email result always uses these texts as they are when it’s clicked.';
+export const SUBJECT_FIXED_NOTE_INLINE = 'the same for every email; it can\'t be changed.'; // after " · "
+export const SUBJECT_FIXED_NOTE = 'The same for every email; it can\'t be changed.'; // phones: on its own line
+export const TEXTS_USED_WHEN_CLICKED = 'Email result always uses these texts as they are when it\'s clicked.';
 export const KIND_NAME = { passed: 'Passed', makeup_d: 'Make-up with a D', makeup_below: 'Make-up below the pass mark' };
 export const editTextLabel = (kind) => `Edit the ${KIND_NAME[kind]} email`; // screen readers
 export const TEXTS_LOAD_FAILED = loadFailedNamed('the result emails'); // new wording, not in the mockups (+ Retry; S-2)
@@ -243,11 +243,11 @@ export const SAVE = 'Save';
 export const SAVING = 'Saving…';
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
 export const DISCARD_CHANGES = 'Discard changes';
-export const TEXT_STALE = 'Someone else changed this just now. Your change wasn’t saved. Cancel, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
-export const TEXT_STALE_PHONE = 'Someone else changed this just now. Your change wasn’t saved. Discard changes, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
-export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubric and waiver. Your change wasn’t saved.'; // new wording, not in the mockups (Star's)
-export const TEXT_INVALID = 'This text can’t be saved. Check the message under the box.'; // new wording, not in the mockups
-export const TEXT_SAVE_FAILED = 'Couldn’t save. Check the connection, then retry.';
+export const TEXT_STALE = 'Someone else changed this just now. Your change wasn\'t saved. Cancel, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
+export const TEXT_STALE_PHONE = 'Someone else changed this just now. Your change wasn\'t saved. Discard changes, then open it again to see the latest.'; // new wording, not in the mockups (Star's)
+export const TEXT_NOT_ALLOWED = 'Only an admin can change Rubric and waiver. Your change wasn\'t saved.'; // new wording, not in the mockups (Star's)
+export const TEXT_INVALID = 'This text can\'t be saved. Check the message under the box.'; // new wording, not in the mockups
+export const TEXT_SAVE_FAILED = 'Couldn\'t save. Check the connection, then retry.';
 // Where a blank works, for "{D subjects} only works in a Make-up with a D email."
 const BLANK_HOME = {
   'subjects to work on': 'a make-up email',
@@ -259,18 +259,18 @@ const BLANK_HOME = {
 export function resultTextProblemText(problem) {
   if (!problem) return null;
   switch (problem.code) {
-    case 'unknown_blank': return `{${problem.blank}} isn’t one of the blanks. Check the spelling, or pick one below.`;
+    case 'unknown_blank': return `{${problem.blank}} isn't one of the blanks. Check the spelling, or pick one below.`;
     case 'blank_not_for_kind': return `{${problem.blank}} only works in ${BLANK_HOME[problem.blank] ?? 'another kind of email'}.`; // new wording, not in the mockups
     case 'missing_required':
       return problem.blank === 'subjects to work on'
         ? 'A make-up email has to say what to work on. Add {subjects to work on}.' // new wording, not in the mockups
         : `Every result email gives the total and the pass mark. Add {${problem.blank}}.`; // new wording, not in the mockups
     case 'too_long': return `Keep it to ${MAX_RESULT_TEXT_LENGTH.toLocaleString('en-US')} characters or fewer${problem.length ? ` (it has ${problem.length.toLocaleString('en-US')})` : ''}.`; // new wording, not in the mockups
-    case 'bad_character': return 'It has a hidden character that can’t be used. Retype the part you pasted.'; // new wording, not in the mockups
-    case 'first_line': return 'The first line can’t be empty. Start with the greeting, for example “Hello,”.'; // new wording, not in the mockups
+    case 'bad_character': return 'It has a hidden character that can\'t be used. Retype the part you pasted.'; // new wording, not in the mockups
+    case 'first_line': return 'The first line can\'t be empty. Start with the greeting, for example "Hello,".'; // new wording, not in the mockups
     case 'stray_brace': return 'A { or } is left over. Finish the blank, for example {first name}, or remove the brace.'; // new wording, not in the mockups
     case 'empty': return 'Write the email text.'; // new wording, not in the mockups
-    default: return 'This text can’t be saved.'; // new wording, not in the mockups
+    default: return 'This text can\'t be saved.'; // new wording, not in the mockups
   }
 }
 // The names used in sentences built from a list of subjects ("Breaking and Meditation")
