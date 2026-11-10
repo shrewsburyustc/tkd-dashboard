@@ -71,7 +71,16 @@ function PrivateRow({ row, ctx }) {
   // to the name instead (nameTag), like the event roster's Status column keeps it.
   const notSaved = ctx.notSavedId === row.id;
   const nameTag = hidden && notSaved ? <NotSavedTag /> : null;
-  const payTag = notSaved ? <NotSavedTag /> : <span className={`ttag${row.paid ? ' ttag--ok' : ''}`}>{row.paid ? T.TAG_PAID : T.TAG_NOT_PAID}</span>;
+  // A cancelled private testing that was never paid owes nothing, so its Payment cell says so ("Nothing was paid",
+  // the row's version of the summary's "Cancelled · nothing was paid") instead of "Not paid" (final batch).
+  const nothingPaid = cancelled && !row.paid;
+  const payTag = notSaved ? (
+    <NotSavedTag />
+  ) : nothingPaid ? (
+    <span className="ro-muted">{T.NOTHING_PAID}</span>
+  ) : (
+    <span className={`ttag${row.paid ? ' ttag--ok' : ''}`}>{row.paid ? T.TAG_PAID : T.TAG_NOT_PAID}</span>
+  );
 
   // The amber owed line and the gray moved line (P1)
   const owed =
