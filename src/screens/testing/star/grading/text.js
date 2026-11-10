@@ -84,7 +84,7 @@ export const privatePageTitle = (name) => `Private testing · ${name}`;
 export const privatePageLine = (dateText, timeText, danLabel, testingForText, school) =>
   [dateText, timeText, danLabel, keepArrow(testingForText), school].filter(Boolean).join(' · ');
 export const backToEventLabel = (eventName) => `Back to ${eventName} candidates`; // the back link's name for screen readers
-export const privateGradesLabel = (name) => `${name}’s grades`;
+export const privateGradesLabel = (name) => `${name}'s grades`;
 export const LOADING_PRIVATE = 'Loading the private testing…';
 export const LOAD_PRIVATE_FAILED = loadFailedNamed('the private testing'); // S-2 (v1.051 (2)): the ending is "then retry" now (was v0.513's "then try again"); it has Retry
 // Back on the Candidates tab when the open private page had to close (banner with ✕ only; the

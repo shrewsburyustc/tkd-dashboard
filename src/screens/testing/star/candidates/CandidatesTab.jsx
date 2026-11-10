@@ -642,7 +642,7 @@ export default function CandidatesTab({
     if (result.status === 'error') {
       if (hiddenNowRef.current) {
         reload();
-        return { status: 'error', reason: T.UNDO_DIDNT_SAVE, noRetry: true };
+        return { status: 'error', reason: T.UNDO_BOX_FAILED, noRetry: true };
       }
       return { status: 'error' };
     }
