@@ -6,9 +6,8 @@
 // Save turns gray before the database would say "invalid".
 // For SHOWING any amount use formatMoney from src/lib/money.js (87000 → "$870", 29050 → "$290.50");
 // for reading payment amounts (any cents, phase B2) use parseAmount / amountInputText at the end of
-// this file. (formatCents, below, is only an old name for formatMoney: it stays until the files
-// that still import it — the Candidates dialogs, the receipt's words and the checks — have
-// switched; design review BB14.)
+// this file. (formatCents, below, is only an old name for formatMoney: it stays until the checks
+// that still import it have switched; design review BB14.)
 //
 // It is pure (no React, no browser), so Node can import it (checks.mjs) and so can the public
 // family form.
@@ -94,9 +93,8 @@ export function parseAmount(text) {
 // ".00". Not a whole number → ''.
 // Since Dashboard core step 1 this is the dashboard's shared helper, formatMoney in
 // src/lib/money.js (rulebook v1.026, v1.101): the same output for every value. The name still
-// stays for the Candidates page's own files (CandidateDialog, ChangePlanDialog, ItemChecklist,
-// compareRows.js), the receipt's words (receipt/text.js) and the checks (checks.mjs and
-// src/lib/shared/checks.mjs); staff/text.js and results/ already call formatMoney (BB14). Delete this
+// stays only for the checks (checks.mjs and the shared src/lib/shared/checks.mjs, which must not be
+// edited from here); every screen and words file now calls formatMoney (BB14). Delete this
 // wrapper once nothing imports it.
 export function formatCents(cents) {
   return formatMoney(cents);

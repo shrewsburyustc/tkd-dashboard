@@ -18,6 +18,8 @@
 // with the text still there), saves with the version the dialog opened with, and shows the toast
 // "Result email saved" with Undo (the old text saved back with the NEW version). A text change never
 // resets "Sent" on the Results tab.
+// Its amber bars (a failed Undo, and "couldn't load the texts") are the shared PageBar, drawn under the top
+// bar so they stay in view however far the page is scrolled (rulebook v1.128).
 // PLAIN TEXT ONLY: the texts are whatever an admin typed (they may hold < > &), so they are shown
 // as React text — never as HTML.
 //
@@ -25,15 +27,16 @@
 //        onModalChange(open) — true while its dialog is open (Rubric and waiver makes the page inert)
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconEdit } from '@tabler/icons-react';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import { loadResultTexts, setResultText } from '../../../lib/blackBelt/gradingApi.js';
 import { RESULT_KINDS, RESULT_SUBJECT, resultTextProblem } from '../../../lib/blackBelt/resultEmail.js';
 import { useSaveLine } from '../../../lib/saveLine.js';
 import { TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import ResultTextDialog from './ResultTextDialog.jsx';
-import LineBar from '../parts/LineBar.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import { UNDO_SECTION, someoneElseChanged } from '../text.js';
 import * as T from '../results/text.js';
@@ -59,6 +62,9 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
     dialogRef.current = dialog;
   });
   const [banner, setBanner] = useState(null); // an Undo that didn't work: { text, retry? }
+  // The bar is a PageBar (under the top bar, v1.128): when it goes while focus is on its Retry or ×, focus returns to the tab.
+  // C5: so is "couldn't load the texts" (drawn from the load's status): when its Retry works, focus goes to the tab.
+  useBarFocusReturn(Boolean(banner) || (!texts && live.status !== 'loading' && live.status !== 'idle'), focusCurrentTab);
   // Save and the toast's Undo share one line (R2-05): an Undo pressed during a save waits its turn.
   const line = useSaveLine({ section: UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
 
@@ -195,11 +201,8 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
       </div>
     );
   } else if (!texts) {
-    rows = (
-      <div className="bbrem-error">
-        <ErrorBanner text={T.TEXTS_LOAD_FAILED} onRetry={() => liveRef.current.reload()} />
-      </div>
-    );
+    // "Couldn't load": the page's amber bar under the top bar (PageBar, v1.128); the rows stay empty
+    rows = <PageBar text={T.TEXTS_LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
   } else {
     rows = RESULT_KINDS.map((kind) => {
       const name = T.KIND_NAME[kind];
@@ -238,7 +241,7 @@ export default function ResultEmailsBlock({ isAdmin, isPhone, screenLocked, onNo
         </h2>
       </div>
       <p className="bbrem-sub">{T.RESULT_EMAILS_SUB}</p>
-      {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying === true} onDismiss={() => setBanner(null)} />}
+      {banner && <PageBar takeFocus={banner.takeFocus === true} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying === true} onDismiss={() => setBanner(null)} />}
       {/* The subject line: fixed in the app, never stored */}
       <div className={rowClass()}>
         {isPhone ? (

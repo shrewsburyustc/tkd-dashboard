@@ -22,7 +22,7 @@ import { useId } from 'react';
 import { IconSearch } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import DialogBar from '../parts/DialogBar.jsx';
 import { bracketLabel } from '../../../lib/blackBelt/rubric.js';
 import * as T from '../text.js';
 
@@ -92,7 +92,7 @@ export default function MakeupPickerDialog({ state, cycle, isAdmin, isPhone, onS
 
   let body;
   if (state.failed) {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={onRetry} />;
+    body = <DialogBar text={T.LOAD_FAILED} onRetry={onRetry} />;
   } else if (state.rows === null) {
     body = (
       <div className="tskeleton" aria-busy="true">
@@ -151,7 +151,7 @@ export default function MakeupPickerDialog({ state, cycle, isAdmin, isPhone, onS
       </div>
       {/* S-2: Choose subjects couldn't read the earlier cycle's results — the shared sentence, with a Retry
           that repeats that read for the same row */}
-      {state.chooseFailed && <ErrorBanner text={T.LOAD_FAILED} onRetry={() => onChoose(state.chooseFailed)} retrying={state.saving} />}
+      {state.chooseFailed && <DialogBar text={T.LOAD_FAILED} onRetry={() => onChoose(state.chooseFailed)} retrying={state.saving} />}
       {body}
       {state.note && (
         <div className="tdialog-note">

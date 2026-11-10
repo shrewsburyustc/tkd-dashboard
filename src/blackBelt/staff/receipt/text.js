@@ -7,9 +7,9 @@
 // receipt's own words (src/components/text.js); only what is Black Belt's own stays here. Anything
 // the mockup doesn't show is marked "(not in the mockups)".
 //
-// Money: whole cents in, "$290" / "$290.50" out (formatCents, money.js).
+// Money: whole cents in, "$290" / "$290.50" out (formatMoney, the shared src/lib/money.js).
 // Dates: 'YYYY-MM-DD' school dates, turned into words by the staff screens' helpers.
-import { formatCents } from '../../../lib/blackBelt/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import { monthDay, shortDate } from '../text.js';
 
 // ===== The box =====
@@ -48,14 +48,14 @@ export function planLine({ planName, amounts, kukkiwon, kukkiwonCents, kukkiwonA
   let text = planName ?? '';
   if (Array.isArray(amounts) && amounts.length > 0 && amounts.every(Number.isInteger)) {
     const total = amounts.reduce((sum, c) => sum + c, 0);
-    if (amounts.length === 1) text = `In full (${formatCents(total)})`;
-    else if (amounts.every((c) => c === amounts[0])) text = `${amounts.length} payments of ${formatCents(amounts[0])}`;
-    else text = `${amounts.length} payments: ${amounts.map(formatCents).join(' + ')}`;
+    if (amounts.length === 1) text = `In full (${formatMoney(total)})`;
+    else if (amounts.every((c) => c === amounts[0])) text = `${amounts.length} payments of ${formatMoney(amounts[0])}`;
+    else text = `${amounts.length} payments: ${amounts.map((c) => formatMoney(c)).join(' + ')}`;
   }
   if (kukkiwon) {
     const when = kukkiwonAddedOn ? `added ${monthDay(kukkiwonAddedOn)}` : 'with payment 1';
     text += Number.isInteger(kukkiwonCents)
-      ? ` + Kukkiwon certificate (${formatCents(kukkiwonCents)}, ${when})`
+      ? ` + Kukkiwon certificate (${formatMoney(kukkiwonCents)}, ${when})`
       : ' + Kukkiwon certificate';
   }
   return text;

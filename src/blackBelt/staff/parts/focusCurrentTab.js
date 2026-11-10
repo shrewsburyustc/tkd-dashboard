@@ -3,7 +3,7 @@
 // Why it exists: the bar's × removes the button that had focus, and the browser then drops focus
 // on the page body — a keyboard or screen-reader user would have to start again from the top
 // (design review of BB4, v0.966). The shared ErrorBanner stays as it is; Black Belt's own "×"
-// handlers call this instead.
+// handlers call this instead. It never scrolls the page (focus({ preventScroll: true })).
 //
 //   focusCurrentTab()  — waits one frame (the bar is gone by then), then focuses the selected tab
 //                        of the Black Belt page on screen (the cycle page's tabs first, else the
@@ -13,6 +13,8 @@ export function focusCurrentTab() {
     const tab =
       document.querySelector('.bb .bb-cycle-tabs [role="tab"][aria-selected="true"]') ??
       document.querySelector('.bb [role="tablist"] [role="tab"][aria-selected="true"]');
-    tab?.focus();
+    // preventScroll: the page stays exactly where it is when a bar goes (rulebook v1.124); focus alone would
+    // scroll the page back up to the tab button.
+    tab?.focus({ preventScroll: true });
   });
 }

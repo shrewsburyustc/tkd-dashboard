@@ -704,11 +704,6 @@
   border-top: 1px solid var(--color-border);
 }
 
-.bbrem-error {
-  padding: var(--space-8) 0;
-  border-top: 1px solid var(--color-border);
-}
-
 /* ===== The "Edit result email" dialog (proposal 27) ===== */
 /* 640px on the PC and tablet (never wider than the screen) */
 .tdialog--bb-email {

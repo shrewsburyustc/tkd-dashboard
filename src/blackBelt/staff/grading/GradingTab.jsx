@@ -15,7 +15,8 @@
 //   "Showing Worcester candidates only · Show both schools" on a one-school device (G 29)
 //   the Dan switch with counts ("1st Dan 5 · 2nd Dan 3 …", an amber ⚠ on a Dan with Not saved
 //     cells) and "Print grading sheet" on its right (phones: under it; hidden on an empty Dan)
-//   the save engine's banner (Retry + ✕) and the never-retried answers' banner (✕ only)
+//   the save engine's banner (Retry + ✕) and the never-retried answers' banner (✕ only): both are the shared
+//     PageBar, drawn under the top bar so they stay in view however far the grid is scrolled (v1.128)
 //   Other requirements: "Hand-in work was due Sat, May 29. Empty hand-in cells show Late." (G 16);
 //   Extra points: "Extra point numbers are still to be confirmed with Master Jeong." (G 20)
 //   PC and tablets: the grid (GradeGrid.jsx). Phones (< 640px): ◀ [picker ▾] ▶ and the card
@@ -41,7 +42,9 @@
 //   panelId, tabId
 import { useEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconChevronDown, IconChevronLeft, IconChevronRight, IconInfoCircle, IconPrinter } from '@tabler/icons-react';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import Select from '../../../components/Select.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../lib/device.js';
 import { NARROW_PHONE_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
@@ -72,7 +75,10 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
   const isWide = useMediaQuery(WIDE_QUERY);
   const size = isWide ? (isTouch ? 'touch' : 'pc') : 'narrow';
   const { live, saves } = grading;
+  // Both bars are PageBars (under the top bar, v1.128): when they go while focus is on a Retry or ×, focus returns to the tab.
   const data = live.data;
+  // C5: "couldn't load" and the offline line are PageBars too (drawn from the load's status, not from a banner).
+  useBarFocusReturn(Boolean(saves.banner || grading.pageBanner) || (!data && (!saves.online || live.status === 'error')), focusCurrentTab);
 
   // Opened from Results' "Open grades": that Dan and that day (once per click).
   if (focus && !focusSeen.has(focus.key)) {
@@ -307,9 +313,9 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
   let body;
   if (!data && !saves.online) {
     // Opened while offline: nothing to show yet — say so instead of loading forever.
-    body = <ErrorBanner text={T.OFFLINE_NO_GRADES} onRetry={() => grading.reload()} />;
+    body = <PageBar text={T.OFFLINE_NO_GRADES} onRetry={() => grading.reload()} />;
   } else if (!data && live.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_GRADES_FAILED} onRetry={() => grading.reload()} />;
+    body = <PageBar text={T.LOAD_GRADES_FAILED} onRetry={() => grading.reload()} />;
   } else if (!data) {
     body = (
       <div className="clist tskeleton" aria-busy="true">
@@ -461,8 +467,8 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
             {printButton}
           </div>
         )}
-        {saves.banner && <ErrorBanner text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
-        {grading.pageBanner && <ErrorBanner text={grading.pageBanner} onDismiss={grading.dismissPageBanner} />}
+        {saves.banner && <PageBar text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
+        {grading.pageBanner && <PageBar text={grading.pageBanner} onDismiss={grading.dismissPageBanner} />}
         {underLine && rows.length > 0 && <p className="bbg-grayline">{underLine}</p>}
         {body}
         <p className="visually-hidden" aria-live="polite">
