@@ -31,11 +31,11 @@ export const alreadyPaid = (name) => `${name} is already marked paid.`;
 export const UNDO_PAYMENT_TOO_LATE = 'Too late to undo here. Ask an admin to undo the payment.'; // G16
 export const UNDO_DUPLICATE_TOO_LATE = 'Too late to undo here. Ask an admin to restore the copy from Removed.';
 export const UNDO_REFUND_FIRST = 'Undo the refund first.'; // G1 (also the grayed menu items' reason)
-export const NO_FEE = 'Make-ups have no fee, so there’s nothing to pay.'; // not drawn
-export const EVENT_FINISHED_ADD = 'This testing has finished, so candidates can’t be added any more.'; // Color Belt's line, for Star
+export const NO_FEE = 'Make-ups have no fee, so there\'s nothing to pay.'; // not drawn
+export const EVENT_FINISHED_ADD = 'This testing has finished, so candidates can\'t be added any more.'; // Color Belt's line, for Star
 
 // ----- Dialog notes (under the buttons) -----
-export const DIALOG_STALE = "Someone else changed this just now. Your change wasn’t saved. Cancel, then open it again to see the latest.";
+export const DIALOG_STALE = "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
 export const DIALOG_STALE_PHONE = "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const DIALOG_INVALID = "That didn't save. Check the fields and try again.";
 export const DIALOG_FAILED = "Couldn't save. Check the connection, then retry."; // G11
@@ -43,15 +43,15 @@ export const ALREADY_PAID_DIALOG = 'Already marked paid. Close this and use ⋯ 
 export const DAN_NEEDS_ADMIN = 'Only an admin can change the Dan after a payment is recorded.'; // G2
 export const DAN_AT_THE_DESK = 'Change the Dan at the desk.'; // G2/G8, while Hide private details is on
 // G1: Record refund — refund_too_large while something is still overpaid (under the Amount field)…
-export const refundTooLarge = (overpaidCents) => `Can’t be more than the ${dollars(overpaidCents)} overpaid.`;
+export const refundTooLarge = (overpaidCents) => `Can't be more than the ${dollars(overpaidCents)} overpaid.`;
 // …and when nothing is overpaid any more (someone else refunded first).
 export const NOTHING_OVERPAID = 'Nothing is overpaid any more. Someone else changed this just now. Close this to see the latest.';
 
 // ----- The Dan-change confirmation (G2, v0.164) — opened by a grades_exist answer -----
 export const changeDanTitle = (name, newDanLabel) => `Change ${name} to ${newDanLabel}?`;
-// "The 4 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects. This can’t be undone."
+// "The 4 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects. This can't be undone."
 export const changeDanBody = (count, oldDanLabel, newDanLabel) =>
-  `The ${plural(count, 'grade', 'grades')} entered for ${oldDanLabel} subjects will be cleared. ${newDanLabel} has different subjects. This can’t be undone.`;
+  `The ${plural(count, 'grade', 'grades')} entered for ${oldDanLabel} subjects will be cleared. ${newDanLabel} has different subjects. This can't be undone.`;
 export const clearGradesButton = (count) => `Change Dan and clear ${plural(count, 'grade', 'grades')}`; // red
 export const keepDanButton = (oldDanLabel) => `Keep ${oldDanLabel}`;
 
@@ -62,10 +62,10 @@ export const MAKEUP_LIST_EMPTY = [
 ];
 export const makeupNoMatch = (search) => `No one matches “${search}”.`;
 export const ALREADY_ADDED = 'Already added'; // the row's right side; no banner
-export const CANT_ADD_YET = 'Can’t add yet'; // gray, a choice_needed row
-// "Fall 2026 · scored below 245. An admin chooses the subjects to retest on Fall 2026’s Grading tab first."
+export const CANT_ADD_YET = 'Can\'t add yet'; // gray, a choice_needed row
+// "Fall 2026 · scored below 245. An admin chooses the subjects to retest on Fall 2026's Grading tab first."
 export const choiceNeededLine = (earlierEventName, passMark) =>
-  `${earlierEventName} · scored below ${passMark}. An admin chooses the subjects to retest on ${earlierEventName}’s Grading tab first.`;
+  `${earlierEventName} · scored below ${passMark}. An admin chooses the subjects to retest on ${earlierEventName}'s Grading tab first.`;
 
 export const DUPLICATE_NAME = 'That name is already used here. Change it, then save again.'; // PROPOSAL (not expected from a candidate function)
 
@@ -86,7 +86,7 @@ export const TOAST_REFUND_RECORDED = 'Refund recorded'; // + Undo (G1)
 export const paymentUndoneToast = sharedPaymentUndoneToast; // admin, no Undo (G16); the shared words (R1-07): "Payment undone for [Name]"
 export const withdrawnToast = (name) => `${name} withdrawn`;
 export const restoredToast = (name) => `${name} restored`;
-export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
+export const duplicateRemovedToast = (name) => `${name}'s extra copy moved to Removed`;
 export const TOAST_KEPT_BOTH = 'Kept both registrations';
 
 // The message for an answer, by which action it answered. Returns:

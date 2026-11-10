@@ -62,7 +62,7 @@ export const ANNOUNCE_SAVED = 'Saved';
 export const ANNOUNCE_NOT_SAVED = 'Not saved';
 
 // ----- The page banner (proposals 3 and 6) -----
-// "Couldn’t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection,
+// "Couldn't save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection,
 // then try again." — names up to three candidates, then "and N more". + Retry and ✕.
 export function namesUpToThree(names) {
   if (names.length <= 3) return joinNames(names);
@@ -70,45 +70,45 @@ export function namesUpToThree(names) {
 }
 export function saveFailedBanner(grades, counts, names) {
   const who = names.length > 0 ? ` (${namesUpToThree(names)})` : '';
-  return `Couldn’t save ${gradesAndCounts(grades, counts)}${who}. Check the connection, then retry.`;
+  return `Couldn't save ${gradesAndCounts(grades, counts)}${who}. Check the connection, then retry.`;
 }
-// "You’re offline. 9 grades and 1 count aren’t saved yet. They save by themselves when the connection
+// "You're offline. 9 grades and 1 count aren't saved yet. They save by themselves when the connection
 // is back. Keep this page open." + Retry.
 export function offlineBanner(grades, counts) {
   const n = grades + counts;
-  if (n === 0) return 'You’re offline. Grades you choose save by themselves when the connection is back. Keep this page open.'; // approved v0.513 (not in the mockups)
-  return `You’re offline. ${gradesAndCounts(grades, counts)} ${n === 1 ? 'isn’t' : 'aren’t'} saved yet. They save by themselves when the connection is back. Keep this page open.`;
+  if (n === 0) return 'You\'re offline. Grades you choose save by themselves when the connection is back. Keep this page open.'; // approved v0.513 (not in the mockups)
+  return `You're offline. ${gradesAndCounts(grades, counts)} ${n === 1 ? 'isn\'t' : 'aren\'t'} saved yet. They save by themselves when the connection is back. Keep this page open.`;
 }
 export const RETRY = 'Retry';
 
 // ----- A retry dropped because the cell changed on another device (proposal 4) — gray, under the cell
-export const CHANGED_ELSEWHERE_GRADE = 'Changed on another device — your grade wasn’t saved.';
-export const CHANGED_ELSEWHERE_COUNT = 'Changed on another device — your count wasn’t saved.'; // approved v0.513 (not in the mockups)
+export const CHANGED_ELSEWHERE_GRADE = 'Changed on another device — your grade wasn\'t saved.';
+export const CHANGED_ELSEWHERE_COUNT = 'Changed on another device — your count wasn\'t saved.'; // approved v0.513 (not in the mockups)
 
 // ----- Answers that are never retried (H2, proposals 10–12): banner with ✕ only, the grid reloads
-export const KEPT_REFUSED = 'That grade was kept from an earlier testing, so it can’t be changed here. Your change wasn’t saved.';
-// "Jordan Kim was moved to 2nd Dan on another device. Your grade wasn’t saved."
-export const movedToDan = (name, danLabel) => `${name} was moved to ${danLabel} on another device. Your grade wasn’t saved.`;
+export const KEPT_REFUSED = 'That grade was kept from an earlier testing, so it can\'t be changed here. Your change wasn\'t saved.';
+// "Jordan Kim was moved to 2nd Dan on another device. Your grade wasn't saved."
+export const movedToDan = (name, danLabel) => `${name} was moved to ${danLabel} on another device. Your grade wasn't saved.`;
 // stale when the new Dan couldn't be read (not in the mockups, approved v0.513)
-export const changedElsewhereRow = (name) => `${name} was changed on another device. Your grade wasn’t saved.`;
-// "Mia Patel was removed from this testing. Your grade wasn’t saved."
-export const removedFromTesting = (name) => `${name} was removed from this testing. Your grade wasn’t saved.`;
-export const GRADE_RELOADED = 'That grade couldn’t be saved. The grid has been reloaded.'; // invalid / not_found
+export const changedElsewhereRow = (name) => `${name} was changed on another device. Your grade wasn't saved.`;
+// "Mia Patel was removed from this testing. Your grade wasn't saved."
+export const removedFromTesting = (name) => `${name} was removed from this testing. Your grade wasn't saved.`;
+export const GRADE_RELOADED = 'That grade couldn\'t be saved. The grid has been reloaded.'; // invalid / not_found
 // a count refused the same way (not in the mockups, approved v0.513)
-export const removedFromTestingCount = (name) => `${name} was removed from this testing. Your count wasn’t saved.`;
-export const COUNT_RELOADED = 'That count couldn’t be saved. The grid has been reloaded.';
+export const removedFromTestingCount = (name) => `${name} was removed from this testing. Your count wasn't saved.`;
+export const COUNT_RELOADED = 'That count couldn\'t be saved. The grid has been reloaded.';
 
 // ----- The leave question (proposal 7; Color Belt v0.192) -----
-// "3 grades and 1 count aren’t saved" / "1 grade isn’t saved"
-export const leaveTitle = (grades, counts) => `${gradesAndCounts(grades, counts)} ${grades + counts === 1 ? 'isn’t' : 'aren’t'} saved`;
+// "3 grades and 1 count aren't saved" / "1 grade isn't saved"
+export const leaveTitle = (grades, counts) => `${gradesAndCounts(grades, counts)} ${grades + counts === 1 ? 'isn\'t' : 'aren\'t'} saved`;
 // people = [{ name, items: ['Breaking', 'Knowledge'] }] (items: subject names, "Classes attended",
 // "Assistant classes") → "Mia Patel (Korean Terminology), Noah Chen (Breaking, Knowledge) and Ethan
-// Lopez (Assistant classes) weren’t saved because the connection dropped. If you leave now, they’re
-// lost. Stay, and they’ll save when the Wi-Fi is back."
+// Lopez (Assistant classes) weren't saved because the connection dropped. If you leave now, they're
+// lost. Stay, and they'll save when the Wi-Fi is back."
 export function leaveBody(people) {
   const total = people.reduce((n, p) => n + p.items.length, 0);
   const who = joinNames(people.map((p) => `${p.name} (${p.items.join(', ')})`));
-  return `${who} ${total === 1 ? 'wasn’t' : 'weren’t'} saved because the connection dropped. If you leave now, they’re lost. Stay, and they’ll save when the Wi-Fi is back.`;
+  return `${who} ${total === 1 ? 'wasn\'t' : 'weren\'t'} saved because the connection dropped. If you leave now, they're lost. Stay, and they'll save when the Wi-Fi is back.`;
 }
 export const LEAVE_ANYWAY = 'Leave anyway'; // right, red (D1c, DR G5)
 export const STAY_ON_PAGE = 'Stay on this page'; // left, plain, the default (Enter, Esc, backdrop, Back)
@@ -119,13 +119,13 @@ export const COUNT_ASSISTANT_CLASSES = 'Assistant classes';
 // The note's title: "Kept from Spring 2026 · A"
 export const keptNoteTitle = (eventName, grade) => `Kept from ${eventName} · ${grade}`;
 export const keptNoteBody = (eventName) =>
-  `Kept grades can’t be changed on this testing. To correct one, fix it on ${eventName}, then an admin removes this make-up and adds it again (if it’s still a make-up).`;
+  `Kept grades can't be changed on this testing. To correct one, fix it on ${eventName}, then an admin removes this make-up and adds it again (if it's still a make-up).`;
 export const keptCellLabel = 'kept'; // under the gray letter in the grid
 export const keptLine = (grade) => `${grade} kept`; // phone: "B+ kept" (no ▾)
 export const keptFromLine = (eventName) => `kept from ${eventName}`; // phone: under the subject
 
 // ----- Choose subjects (v0.130; the dialog waits for the answer) — not in the mockups, approved v0.513 -----
-export const CHOOSE_STALE = 'Someone else chose the subjects just now. Your choice wasn’t saved. Close this to see the latest.';
+export const CHOOSE_STALE = 'Someone else chose the subjects just now. Your choice wasn\'t saved. Close this to see the latest.';
 export const CHOOSE_NOT_ALLOWED = 'Only an admin can choose the subjects to retest.';
 export const CHOOSE_INVALID = 'This result no longer needs a choice. Close this to see the latest.';
-export const CHOOSE_FAILED = 'Couldn’t save. Check the connection, then retry.';
+export const CHOOSE_FAILED = 'Couldn\'t save. Check the connection, then retry.';

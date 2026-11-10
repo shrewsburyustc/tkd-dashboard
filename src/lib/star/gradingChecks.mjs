@@ -491,23 +491,23 @@ await check('typed letters on a PC: A, B, C, D then "+", Delete clears', async (
 
 await check('banner, offline, leave and kept texts (proposals 3, 6, 7, 9–12)', async () => {
   assert.equal(T.saveFailedBanner(3, 1, ['Mia Patel', 'Noah Chen', 'Ethan Lopez']),
-    'Couldn’t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection, then retry.');
-  assert.equal(T.saveFailedBanner(2, 0, ['Noah Chen']), 'Couldn’t save 2 grades (Noah Chen). Check the connection, then retry.');
-  assert.equal(T.saveFailedBanner(5, 0, ['A B', 'C D', 'E F', 'G H', 'I J']), 'Couldn’t save 5 grades (A B, C D, E F and 2 more). Check the connection, then retry.');
-  assert.equal(T.offlineBanner(9, 1), 'You’re offline. 9 grades and 1 count aren’t saved yet. They save by themselves when the connection is back. Keep this page open.');
-  assert.equal(T.offlineBanner(1, 0), 'You’re offline. 1 grade isn’t saved yet. They save by themselves when the connection is back. Keep this page open.');
-  assert.equal(T.leaveTitle(3, 1), '3 grades and 1 count aren’t saved');
-  assert.equal(T.leaveTitle(1, 0), '1 grade isn’t saved');
+    'Couldn\'t save 3 grades and 1 count (Mia Patel, Noah Chen and Ethan Lopez). Check the connection, then retry.');
+  assert.equal(T.saveFailedBanner(2, 0, ['Noah Chen']), 'Couldn\'t save 2 grades (Noah Chen). Check the connection, then retry.');
+  assert.equal(T.saveFailedBanner(5, 0, ['A B', 'C D', 'E F', 'G H', 'I J']), 'Couldn\'t save 5 grades (A B, C D, E F and 2 more). Check the connection, then retry.');
+  assert.equal(T.offlineBanner(9, 1), 'You\'re offline. 9 grades and 1 count aren\'t saved yet. They save by themselves when the connection is back. Keep this page open.');
+  assert.equal(T.offlineBanner(1, 0), 'You\'re offline. 1 grade isn\'t saved yet. They save by themselves when the connection is back. Keep this page open.');
+  assert.equal(T.leaveTitle(3, 1), '3 grades and 1 count aren\'t saved');
+  assert.equal(T.leaveTitle(1, 0), '1 grade isn\'t saved');
   assert.equal(T.leaveBody([{ name: 'Mia Patel', items: ['Korean Terminology'] }, { name: 'Noah Chen', items: ['Breaking', 'Knowledge'] }, { name: 'Ethan Lopez', items: ['Assistant classes'] }]),
-    'Mia Patel (Korean Terminology), Noah Chen (Breaking, Knowledge) and Ethan Lopez (Assistant classes) weren’t saved because the connection dropped. If you leave now, they’re lost. Stay, and they’ll save when the Wi-Fi is back.');
+    'Mia Patel (Korean Terminology), Noah Chen (Breaking, Knowledge) and Ethan Lopez (Assistant classes) weren\'t saved because the connection dropped. If you leave now, they\'re lost. Stay, and they\'ll save when the Wi-Fi is back.');
   assert.equal(T.keptNoteTitle('Spring 2026', 'A'), 'Kept from Spring 2026 · A');
-  assert.equal(T.keptNoteBody('Spring 2026'), 'Kept grades can’t be changed on this testing. To correct one, fix it on Spring 2026, then an admin removes this make-up and adds it again (if it’s still a make-up).');
-  assert.equal(refusalText('kept', 'grade', 'Sofia Reyes'), 'That grade was kept from an earlier testing, so it can’t be changed here. Your change wasn’t saved.');
-  assert.equal(refusalText('stale', 'grade', 'Jordan Kim', '2nd Dan'), 'Jordan Kim was moved to 2nd Dan on another device. Your grade wasn’t saved.');
-  assert.equal(refusalText('withdrawn', 'grade', 'Mia Patel'), 'Mia Patel was removed from this testing. Your grade wasn’t saved.');
-  assert.equal(refusalText('invalid', 'grade', 'Mia Patel'), 'That grade couldn’t be saved. The grid has been reloaded.');
+  assert.equal(T.keptNoteBody('Spring 2026'), 'Kept grades can\'t be changed on this testing. To correct one, fix it on Spring 2026, then an admin removes this make-up and adds it again (if it\'s still a make-up).');
+  assert.equal(refusalText('kept', 'grade', 'Sofia Reyes'), 'That grade was kept from an earlier testing, so it can\'t be changed here. Your change wasn\'t saved.');
+  assert.equal(refusalText('stale', 'grade', 'Jordan Kim', '2nd Dan'), 'Jordan Kim was moved to 2nd Dan on another device. Your grade wasn\'t saved.');
+  assert.equal(refusalText('withdrawn', 'grade', 'Mia Patel'), 'Mia Patel was removed from this testing. Your grade wasn\'t saved.');
+  assert.equal(refusalText('invalid', 'grade', 'Mia Patel'), 'That grade couldn\'t be saved. The grid has been reloaded.');
   assert.equal(refusalText('not_found', 'grade', 'Mia Patel'), T.GRADE_RELOADED);
-  assert.equal(T.CHANGED_ELSEWHERE_GRADE, 'Changed on another device — your grade wasn’t saved.');
+  assert.equal(T.CHANGED_ELSEWHERE_GRADE, 'Changed on another device — your grade wasn\'t saved.');
 });
 
 await check('the save engine\'s pure part: answer kinds, the retry decision (proposal 4), the unsaved summary', async () => {

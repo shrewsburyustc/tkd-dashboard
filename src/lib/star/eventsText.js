@@ -56,7 +56,7 @@ export const eventSummary = (event) =>
   `${shortDate(event.testingDate)} · ${testingTimeLabel(event.startTime, event.endTime)} at ${whereText(event.whereCode)} · both schools · ${candidatesCount(event.activeCount ?? 0)}`;
 
 // ----- Registration links dialog: the status line (v0.92 screen 11, v0.99) -----
-export const EACH_SCHOOL_LINK = 'Each school has its own link; the link sets the candidate’s school.';
+export const EACH_SCHOOL_LINK = 'Each school has its own link; the link sets the candidate\'s school.';
 export function registrationStatusLine(event) {
   switch (event?.state) {
     case 'open':
@@ -92,8 +92,8 @@ export const duplicateEventName = (name) => `There's already an event called ${n
 export const CLOSING_AFTER_TESTING = 'The closing date must be on or before the testing date.';
 
 // ----- Loading -----
-export const LOAD_EVENTS_FAILED = 'Couldn’t load events. Check the connection, then retry.'; // G1
-export const LOAD_EVENT_FAILED = 'Couldn’t load this event. Check the connection, then retry.'; // G2
+export const LOAD_EVENTS_FAILED = 'Couldn\'t load events. Check the connection, then retry.'; // G1
+export const LOAD_EVENT_FAILED = 'Couldn\'t load this event. Check the connection, then retry.'; // G2
 export const EVENT_GONE = 'This testing event was deleted, or the link is wrong.'; // G3
 
 // ----- Refusals -----

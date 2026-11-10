@@ -7,7 +7,7 @@
 // Drawn like the other blocks under the Dan list (SettingsBlocks.jsx: Grade scale, Assistant-class
 // table, Fees):
 //   - header "Result emails", the gray line under it
-//   - "Subject": the fixed subject line, as plain text, with "the same for every email; it can’t be
+//   - "Subject": the fixed subject line, as plain text, with "the same for every email; it can't be
 //     changed." (proposal 45 — it goes into the email link, so it never carries a name or a result)
 //   - one row per email kind (Passed · Make-up with a D · Make-up below 245) with the START of its
 //     text (PC / tablet: one line, cut with "…"; phone: up to two lines under the name), and an
