@@ -873,6 +873,20 @@
   color: var(--color-text-secondary);
 }
 
+/* While another save runs, a day box (Check in, Came, Missed) can't be pressed: it gets the same look
+   as a busy "$X due" tag — the unavailable gray, white with a dashed edge (rulebook v1.131, extended
+   to the day boxes: Jeffrey, 2026-11-10, "Yes, take all", decision 4). It stays focusable
+   (aria-disabled); the page's one "not allowed" cursor. More specific than .cp-dc--came etc. above,
+   so it wins over their green / amber / plain looks. */
+button.cp-dc[aria-disabled='true'],
+button.cp-dc[aria-disabled='true']:hover {
+  border-color: var(--color-border-strong);
+  border-style: dashed;
+  background: var(--color-bg);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
 button.cp-dc:focus-visible {
   outline: 2px solid var(--color-blue);
   outline-offset: 1px;
