@@ -32,7 +32,8 @@ import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { useSaveLine } from '../../../lib/saveLine.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { addEvent, deleteEvent, loadEvent, loadEvents, schoolToday, setRegistration, undoEventEdit, updateEvent } from '../../../lib/testing/eventsApi.js';
-import { defaultAutoCloseOn, registrationSwitch, stateTag } from '../../../lib/testing/eventRules.js';
+import { EVENTS_ROOM, defaultAutoCloseOn, registrationSwitch, stateTag } from '../../../lib/testing/eventRules.js';
+import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { registrationLink } from '../../../lib/testing/qr.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
@@ -48,16 +49,6 @@ const sideBySchool = new Map();
 
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
-
-// batch 2 words (the owner of text.js moves these later): the reasons a refused Undo gives, each
-// one the "[reason]" inside T.couldntUndo('[reason]') ("Couldn't undo: [reason]."), no full stop.
-const UNDO_REASON_ADMIN_ONLY = 'only an admin can do that';
-const UNDO_REASON_OPEN_NEEDS_ADMIN = 'the closing date has passed, so only an admin can open registration';
-const UNDO_REASON_RESULT = 'a result was recorded just now';
-const UNDO_REASON_REGISTERED = 'a student registered just now';
-const UNDO_REASON_FINISHED_REGISTRATION = 'this testing has finished, so registration can no longer change';
-const UNDO_REASON_FINISHED_EDIT = "this testing has finished, so it can't be put back";
-const undoReasonSomeoneElse = (name) => `someone else changed ${name} just now`;
 
 // A menu item with no icon (the approved menus draw Close / Open registration without one).
 // It keeps the label lined up with the items that have an icon.
@@ -114,12 +105,22 @@ export default function EventsTab({
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
   const isTouch = useMediaQuery(TOUCH_QUERY);
+  // Only the list follows the room beside the left panel (final batch, as the roster and the Private list):
+  // narrower than EVENTS_ROOM its table would squeeze the Event column to nothing, so it draws its phone rows.
+  // Dialogs, the ⋯ menu's sheet and the buttons keep following the window (isPhone).
+  const narrowRoom = usePageRoomBelow(EVENTS_ROOM);
+  const listIsPhone = isPhone || narrowRoom;
 
   // ----- State -----
   const [side, setSideState] = useState(() => sideBySchool.get(locationCode) ?? 'upcoming');
   const [sort, setSort] = useState(null); // { key, dir: 1 | -1 } or null (the side's own order)
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor }
+  // A flip of the list's layout (the window crosses a breakpoint, or the room beside the panel crosses EVENTS_ROOM)
+  // redraws every row's buttons, so an open ⋯ menu would point at a button that is gone: close it.
+  useEffect(() => {
+    setMenu(null);
+  }, [listIsPhone]);
   // The page's ONE bar, drawn as a PageBar under the top bar: { text, retry?, kind?, retrying?, takeFocus? }.
   // kind 'switch' = a Close / Open registration that didn't save; 'undo' = the save line's bar for an
   // Undo (it comes through `undoBar` below).
@@ -188,7 +189,7 @@ export default function EventsTab({
   //                 "Undo didn't save…" with Retry.
   // `name` is the event the Undo concerns; `opens` is true for an Undo that opens registration;
   // `finishedReason` is what to say when the testing has finished meanwhile.
-  function undoOutcome(result, { name, focus = null, opens = false, finishedReason = UNDO_REASON_FINISHED_EDIT }) {
+  function undoOutcome(result, { name, focus = null, opens = false, finishedReason = T.UNDO_REASON_FINISHED_EDIT }) {
     const status = result.status;
     if (status === 'ok') {
       const reloaded = reloadQuiet();
@@ -202,15 +203,15 @@ export default function EventsTab({
     let reason = null;
     if (status === 'not_allowed') {
       onRefreshProfile();
-      reason = opens ? UNDO_REASON_OPEN_NEEDS_ADMIN : UNDO_REASON_ADMIN_ONLY;
+      reason = opens ? T.UNDO_REASON_OPEN_NEEDS_ADMIN : T.UNDO_REASON_ADMIN_ONLY;
     } else if (status === 'has_results') {
-      reason = UNDO_REASON_RESULT;
+      reason = T.UNDO_REASON_RESULT;
     } else if (status === 'not_empty') {
-      reason = UNDO_REASON_REGISTERED;
+      reason = T.UNDO_REASON_REGISTERED;
     } else if (status === 'finished') {
       reason = finishedReason;
     } else if (['stale', 'not_found', 'duplicate_name', 'invalid', 'final_award_not_set'].includes(status)) {
-      reason = undoReasonSomeoneElse(name);
+      reason = T.undoReasonSomeoneElse(name);
     }
     if (!reason) return { status: 'error' };
     reloadQuiet();
@@ -618,7 +619,7 @@ export default function EventsTab({
       setBanner((current) => (current?.kind === 'switch' ? null : current));
     }
     // An Undo that opens registration again says so; one that closes it says "Undone" (R2-07, v1.051).
-    return undoOutcome(result, { name: event.name, opens: open, finishedReason: UNDO_REASON_FINISHED_REGISTRATION });
+    return undoOutcome(result, { name: event.name, opens: open, finishedReason: T.UNDO_REASON_FINISHED_REGISTRATION });
   }
   async function switchRegistration(event, open, expectedVersion = event.version) {
     const result = await onLine(
@@ -800,7 +801,7 @@ export default function EventsTab({
       }
     }
     // Phones have no pencil on the row, so Edit event is in the menu there (E8).
-    if (isAdmin && isPhone) items.push({ key: 'edit', label: T.EDIT_EVENT, Icon: IconEdit, disabled: line.busy, onSelect: () => openEditEvent(event, menu.anchor) });
+    if (isAdmin && listIsPhone) items.push({ key: 'edit', label: T.EDIT_EVENT, Icon: IconEdit, disabled: line.busy, onSelect: () => openEditEvent(event, menu.anchor) });
     if (isAdmin) {
       items.push({ key: 'delete', label: T.DELETE_EVENT, Icon: IconTrash, danger: true, separatorBefore: true, disabled: line.busy, onSelect: () => startDelete(event, menu.anchor) });
     }
@@ -877,11 +878,11 @@ export default function EventsTab({
   } else {
     body = (
       <div
-        className={`clist ev-list${isTouch ? ' is-touch' : ''}${isAdmin && !isPhone ? ' has-edit' : ''}`}
+        className={`clist ev-list${isTouch ? ' is-touch' : ''}${isAdmin && !listIsPhone ? ' has-edit' : ''}`}
         role="table"
         aria-label={side === 'past' ? T.PAST : T.UPCOMING}
       >
-        {!isPhone && (
+        {!listIsPhone && (
           <div className="ev-row ev-head" role="row">
             {header('name', T.COL_EVENT)}
             {header('date', T.COL_TESTING_DATE)}
@@ -909,7 +910,7 @@ export default function EventsTab({
               />
             );
             const edit =
-              isAdmin && !isPhone ? (
+              isAdmin && !listIsPhone ? (
                 <IconButton
                   label={T.editEventLabel(event.name)}
                   Icon={IconEdit}
@@ -923,13 +924,13 @@ export default function EventsTab({
             return (
               <div
                 key={event.id}
-                className={`ev-row${selected ? ' is-selected' : ''}${isPhone ? ' is-phone' : ''}`}
+                className={`ev-row${selected ? ' is-selected' : ''}${listIsPhone ? ' is-phone' : ''}`}
                 role="row"
                 aria-label={T.openEventLabel(event.name)}
                 {...nav.rowProps(event.id)}
                 onClick={() => onOpenEvent(event.id)}
               >
-                {isPhone ? (
+                {listIsPhone ? (
                   <>
                     <span className="ev-phone-main" role="cell">
                       <span className="ev-name">{event.name}</span>
