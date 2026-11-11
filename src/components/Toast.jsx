@@ -35,25 +35,46 @@ import { UNDOING } from './text.js';
 const TOAST_MS = 5000; // 5 seconds
 const ROOM_GAP = 8; // the clear gap kept between what is above and the toast (px)
 
-// The toast's own room (rulebook v1.042, v1.138; design review R2-04). The toast is drawn on top of the
-// page, so its Undo used to cover whatever sat under it (Check in, a row's ⋯, "Delete permanently").
-// While a toast shows, this tells the styles how much room it takes, in two CSS variables on <html>:
+// The toast's own room (rulebook v1.042, v1.138, v1.139; design review R2-04). The toast is drawn on top of
+// the page, so its Undo used to cover whatever sat under it (Check in, a row's ⋯, "Delete permanently").
+// One rule (v1.139, Jeffrey: "B for fixed bars"): a fixed bar of buttons at the bottom keeps its place and
+// the toast sits just above it; anything that scrolls ends above the toast. While a toast shows, this
+// tells the styles, in CSS variables on <html>:
 //   --toast-room          from the bottom of the page area (.shell-content) up to the toast's top edge + a
 //                         gap: the page area ends this far above its usual bottom (app.css)
 //   --toast-room-window   the same measured from the bottom of the window: an open ⋯ sheet ends above it
 //                         (shared.css)
-// Both are removed the moment the toast goes, so the room goes with it. Measured from the toast's own
-// box, so a wrapped two-line toast and any place it is moved to (Black Belt's lift) are covered.
-// The control that has the keyboard is scrolled into view if the room covered it (§4 check 3).
+//   --toast-room-page     the same for a full-screen phone page (.dialog-page-body, app.css), 0 when that page
+//                         has a pinned bar (.dialog-page-submit: Save, Record payment…): then the toast is
+//                         lifted above the bar instead (an inline `bottom` on the toast's place)
+// All are removed the moment the toast goes, so the room goes with it. Measured from the toast's own
+// box, so a wrapped two-line toast is covered. The control that has the keyboard is scrolled into view if
+// the room covered it (§4 check 3).
 function useToastRoom(toastId) {
   useLayoutEffect(() => {
     if (toastId === null) return undefined;
     const root = document.documentElement;
     const toastEl = () => document.querySelector('.toast-region .toast');
+    const regionEl = () => document.querySelector('.toast-region');
+    // The pinned bar of the page that is on top, if it has one and it shows.
+    const pinnedBar = () => {
+      const bars = [...document.querySelectorAll('.dialog-page .dialog-page-submit')].filter((b) => b.offsetParent !== null);
+      return bars.length ? bars[bars.length - 1] : null;
+    };
     let last = '';
     const measure = () => {
       const el = toastEl();
-      if (!el) return;
+      const region = regionEl();
+      if (!el || !region) return;
+      // Lift the toast above a pinned bar (from the window's bottom up to the bar's top edge, at least its
+      // own height: it is stuck to the bottom of the page), or leave it in its own place.
+      const pinned = pinnedBar();
+      if (pinned) {
+        const box = pinned.getBoundingClientRect();
+        region.style.bottom = `${Math.round(Math.max(box.height, window.innerHeight - box.top)) + ROOM_GAP}px`;
+      } else {
+        region.style.removeProperty('bottom');
+      }
       const top = el.getBoundingClientRect().top;
       const fromWindow = Math.max(0, window.innerHeight - top + ROOM_GAP);
       // The page area's usual bottom: the top of the phone bottom bar when it shows, else the window's.
@@ -62,15 +83,18 @@ function useToastRoom(toastId) {
       const content = document.querySelector('.shell-content');
       const natural = content ? content.getBoundingClientRect().bottom + parseFloat(getComputedStyle(content).marginBottom || '0') : barTop;
       const fromContent = Math.max(0, Math.round(natural - (top - ROOM_GAP)));
-      const next = `${fromContent}|${Math.round(fromWindow)}`;
+      const fromPage = pinned ? 0 : Math.round(fromWindow);
+      const next = `${fromContent}|${Math.round(fromWindow)}|${fromPage}`;
       if (next === last) return;
       last = next;
       root.style.setProperty('--toast-room', `${fromContent}px`);
       root.style.setProperty('--toast-room-window', `${Math.round(fromWindow)}px`);
+      root.style.setProperty('--toast-room-page', `${fromPage}px`);
       // The room may now cover the control the keyboard is on: bring it back into sight.
       const focused = document.activeElement;
-      if (focused && content && content.contains(focused)) {
-        const edge = content.getBoundingClientRect().bottom - fromContent;
+      const area = focused && (focused.closest('.dialog-page-body') || (content && content.contains(focused) ? content : null));
+      if (area && !pinned) {
+        const edge = area.getBoundingClientRect().bottom - (area === content ? fromContent : 0);
         if (focused.getBoundingClientRect().bottom > edge) focused.scrollIntoView({ block: 'nearest' });
       }
     };
@@ -79,15 +103,18 @@ function useToastRoom(toastId) {
     const observer = el ? new ResizeObserver(measure) : null;
     if (el) observer.observe(el);
     window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true); // a pinned bar sits where the page's end puts it
     return () => {
       observer?.disconnect();
       window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+      regionEl()?.style.removeProperty('bottom');
       root.style.removeProperty('--toast-room');
       root.style.removeProperty('--toast-room-window');
+      root.style.removeProperty('--toast-room-page');
     };
   }, [toastId]);
 }
-
 export default function Toast({ toast, onDismiss, onUndo }) {
   const onDismissRef = useRef(onDismiss);
   useEffect(() => {

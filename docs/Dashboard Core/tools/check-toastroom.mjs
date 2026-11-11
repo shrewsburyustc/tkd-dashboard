@@ -101,6 +101,33 @@ await withChrome(async (tab) => {
         return { sheetBottom: r.bottom, toastTop: t.top };
       })()`);
       assert.ok(sheet.sheetBottom <= sheet.toastTop - 7.5, `the sheet ends at ${Math.round(sheet.sheetBottom)}, the toast starts at ${Math.round(sheet.toastTop)}`);
+      // a full-screen page (.dialog-page, outside .shell-content), as Dialog.jsx draws it on phones: (a) with its
+      // buttons in the scrolling body, the body ends above the toast; (b) with a pinned bar (.dialog-page-submit,
+      // sticky), the bar keeps its place and the toast sits above it (v1.139)
+      const fullPage = await ev(`(async () => {
+        const out = {};
+        const make = (pinned) => {
+          const page = document.createElement('div'); page.className = 'dialog-page tdialog-page'; page.id = 'room-test-page';
+          page.innerHTML = '<div class="dialog-page-head"><h2 class="dialog-page-title">Test</h2></div><div class="dialog-page-body"><div style="height:1200px">long content</div>' + (pinned ? '<div class="dialog-page-submit"><button class="btn btn-primary">Save</button></div>' : '<button class="btn" id="room-test-last">History</button>') + '</div>';
+          document.body.appendChild(page); return page;
+        };
+        const settle = () => { window.dispatchEvent(new Event('resize')); return new Promise((r) => setTimeout(r, 200)); };
+        let page = make(false); await settle();
+        const body = page.querySelector('.dialog-page-body').getBoundingClientRect();
+        let toast = document.querySelector('.toast-region .toast').getBoundingClientRect();
+        out.plain = { bodyBottom: body.bottom, toastTop: toast.top };
+        page.remove(); await settle();
+        page = make(true); await settle();
+        const bar = page.querySelector('.dialog-page-submit').getBoundingClientRect();
+        const body2 = page.querySelector('.dialog-page-body').getBoundingClientRect();
+        toast = document.querySelector('.toast-region .toast').getBoundingClientRect();
+        out.pinned = { barTop: bar.top, toastBottom: toast.bottom, bodyBottom: body2.bottom, windowBottom: window.innerHeight };
+        page.remove(); await settle();
+        return out;
+      })()`);
+      assert.ok(fullPage.plain.bodyBottom <= fullPage.plain.toastTop - 7.5, `a full-screen page's body ends at ${Math.round(fullPage.plain.bodyBottom)}, the toast starts at ${Math.round(fullPage.plain.toastTop)}`);
+      assert.ok(fullPage.pinned.toastBottom <= fullPage.pinned.barTop - 7.5, `with a pinned bar the toast ends at ${Math.round(fullPage.pinned.toastBottom)}, the bar starts at ${Math.round(fullPage.pinned.barTop)}`);
+      assert.ok(Math.abs(fullPage.pinned.bodyBottom - fullPage.pinned.windowBottom) <= 1, 'and the page with the pinned bar does not shrink (the bar keeps its place)');
       // the keyboard's control is not left under the toast: the last control in the page, focused
       const hidden = await ev(`(() => {
         const content = document.querySelector('.shell-content');

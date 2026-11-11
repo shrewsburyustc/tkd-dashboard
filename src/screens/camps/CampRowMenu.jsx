@@ -33,6 +33,7 @@
 //   actions.dialogOpen → true while one of its dialogs shows (the page behind goes inert)
 // "Hide private details" (rulebook v0.722): Delete camp's sentence names no amount while it is on
 // (read here, so the Camps list and the camp page both follow it); Print roster reads it itself.
+import NoIcon from '../../components/NoIcon.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { IconEdit, IconPrinter, IconTemplate, IconTrash } from '@tabler/icons-react';
 import { deleteTemplate, loadCamp, setSignup } from '../../lib/camps/campsApi.js';
@@ -44,11 +45,6 @@ import { reloadBounded, saveOnLine, undoAnswer } from './lineSave.js';
 import PrintRoster from './PrintRoster.jsx';
 import SaveTemplateDialog from './SaveTemplateDialog.jsx';
 import * as T from './text.js';
-
-// A menu item with no icon (Close / Open sign-up are drawn without one, like Star's built ⋯).
-export function NoIcon() {
-  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
-}
 
 // Can this person open sign-up again right now ("Open sign-up", v0.725)? Staff only before the
 // closing date (Star v0.86); admins any time before the camp is over (the database then moves

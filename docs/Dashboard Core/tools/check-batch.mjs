@@ -310,6 +310,41 @@ await withChrome(async (tab) => {
     assert.equal(await ev(`document.getElementById('sh-select-unavailable').getAttribute('aria-expanded')`), 'false', 'a key does not open it');
     assert.equal(await ev(`document.activeElement.id`), 'sh-select-unavailable', 'and the focus stays on it');
   });
+  await check('the ⋯ menu\'s tick-box rows (N16): role menuitemcheckbox with aria-checked, choosing one flips it and keeps the menu open, Esc closes and gives the focus back, 44px on touch', async () => {
+    await open(390, 844, true);
+    await ev(`document.getElementById('sh-tick-button').click()`);
+    await sleep(300);
+    const read = () => ev(`(() => { const r = [...document.querySelectorAll('[role=menuitemcheckbox]')]; return { checks: r.map((x) => x.getAttribute('aria-checked')), heights: r.map((x) => Math.round(x.getBoundingClientRect().height)), open: Boolean(document.querySelector('.tmenu, .tsheet')), role: r.length }; })()`);
+    const first = await read();
+    assert.equal(first.role, 2, 'two tick-box rows');
+    assert.deepEqual(first.checks, ['true', 'false']);
+    assert.ok(first.heights.every((h) => h >= 44), `44px on touch: ${first.heights}`);
+    await ev(`document.querySelectorAll('[role=menuitemcheckbox]')[1].click()`);
+    await sleep(200);
+    const second = await read();
+    assert.deepEqual(second.checks, ['true', 'true'], 'the choice flipped');
+    assert.equal(second.open, true, 'and the menu stays open');
+    await tab.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    await tab.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    await sleep(250);
+    assert.equal((await read()).open, false, 'Esc closes it');
+    assert.equal(await ev(`document.activeElement.id`), 'sh-tick-button', 'the focus is back on the button');
+  });
+  await check('touch 820 and 390: the Mark paid box\'s button has a 44px tap box: a click 3.5px above and below still lands on it (P6)', async () => {
+    for (const [w, h] of [[820, 1180], [390, 844]]) {
+      await open(w, h, true);
+      const hit = await ev(`(() => { const b = document.getElementById('sh-mpb-go'); const r = b.getBoundingClientRect(); const a = document.elementFromPoint(r.left + 20, r.top - 3.5); const c = document.elementFromPoint(r.left + 20, r.bottom + 3.5); return [a === b, c === b, Math.round(r.height)]; })()`);
+      assert.equal(hit[0], true, `above at ${w}`);
+      assert.equal(hit[1], true, `below at ${w}`);
+    }
+  });
+  await check('PC: a locked ChoiceGroup says aria-disabled (group and buttons) and stays one Tab stop (v1.141)', async () => {
+    await open(1280, 800, false);
+    const s = await ev(`(() => { const g = document.querySelector('[data-sh="choices"] [role=radiogroup]'); const r = [...g.querySelectorAll('[role=radio]')]; return { group: g.getAttribute('aria-disabled'), radios: r.map((x) => x.getAttribute('aria-disabled')), tabStops: r.filter((x) => x.tabIndex === 0).length }; })()`);
+    assert.equal(s.group, 'true');
+    assert.ok(s.radios.every((x) => x === 'true'), `buttons: ${s.radios}`);
+    assert.equal(s.tabStops, 1, 'one Tab stop');
+  });
   await check('PC: the back link inside a page that is a flex column is only as wide as itself, so a click right of it does not go back (v1.136)', async () => {
     await open(1280, 800, false);
     const w = await ev(`(() => {

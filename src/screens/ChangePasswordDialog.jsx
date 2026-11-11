@@ -158,7 +158,7 @@ export default function ChangePasswordDialog({ profile, onCancel, onChanged }) {
   const describe = (...ids) => ids.filter(Boolean).join(' ') || undefined;
 
   return (
-    <AccountDialog title="Change password" fullScreen={isPhone} onCancel={onCancel}>
+    <AccountDialog title="Change password" fullScreen={isPhone} onCancel={onCancel} dirty={current !== '' || newPassword !== '' || confirm !== '' || busy}>
       {/* noValidate: our own plain-language messages instead of the browser's pop-ups */}
       <form onSubmit={handleSubmit} noValidate className="dialog-form">
         <div className="field">

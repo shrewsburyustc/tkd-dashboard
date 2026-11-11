@@ -523,8 +523,9 @@ section.reg-card .reg-review {
 .reg-field--sign {
   margin: 12px 0 0;
 }
+/* The Signature label is 13px, the same as the shared Date signed label under it (v1.141; Jeffrey via Main: both the same size) */
 .reg-field--sign .reg-label {
-  font-size: var(--text-12);
+  font-size: var(--text-13);
 }
 .reg-sigpad {
   height: 120px;

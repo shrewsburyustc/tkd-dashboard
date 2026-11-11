@@ -520,6 +520,26 @@ html.is-reordering .tib-tip {
   cursor: default;
 }
 
+/* A tick-box row in the ⋯ menu (RowMenu.jsx `checked`, N16, v1.141): the Calendar's Show menu's box, now
+   shared. Unticked rows keep a full-color label: the box shows the state. */
+.menu-check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid var(--color-border-control);
+  border-radius: 4px;
+  color: var(--color-on-blue);
+}
+
+.menu-check.is-on {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+}
+
 /* ===== ⋯ menu: bottom sheet (phone) ===== */
 .tsheet-wrap {
   position: fixed;
@@ -1745,10 +1765,14 @@ html.is-reordering .tib-tip {
   white-space: nowrap;
 }
 
-/* Hide private details: a hidden value keeps its row and reads gray "Hidden on this tablet"
-   (testing-events.css's .ev-hidden-value, copied here so the shared part doesn't depend on a
-   section's sheet). */
-.cmp-hidden {
+/* Hide private details: a hidden value keeps its row and reads gray "Hidden on this tablet". ONE rule for
+   every section (v1.141, pass 1 Smaller; it used to be five copies): .hidden-value is the shared class;
+   the others are the names sections still use for it until they switch (they only get the color). */
+.hidden-value,
+.ev-hidden-value,
+.st-hidden-value,
+.cmp-hidden,
+.rcpt-hidden {
   color: var(--color-text-secondary);
 }
 
@@ -1916,7 +1940,6 @@ html.is-reordering .tib-tip {
 /* Hide private details on: "Payment details are hidden on this tablet." */
 .rcpt-hidden {
   margin: 0;
-  color: var(--color-text-secondary);
   font-size: var(--text-14);
 }
 

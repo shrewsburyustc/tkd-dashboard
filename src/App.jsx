@@ -1119,12 +1119,11 @@ export default function App() {
               <Testing
                 location={location}
                 onLocationChange={changeLocation}
-                // This device's school: the desk Black Belt payments and refunds count at (R1-01)
+                // This device's home school, given once: the desk Black Belt, Color Belt and Star payments and
+                // refunds count at (R1-01, v1.035). Testing.jsx hands it on to each page with its other props.
                 deviceLocation={deviceLocation}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
-                // This device's home school: a Color Belt payment counts at the desk that took it (v1.035).
-                deviceLocation={deviceLocation}
                 testingPage={testingPage}
                 onOpenTestingPage={openTestingPage}
                 eventId={eventId}
@@ -1146,9 +1145,6 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
-                // This device's home school: Star's Record payment / Record refund count at it (v1.035, R1-01).
-                // Testing.jsx hands it on to Star's page with its other props; nothing else changes there.
-                deviceLocation={deviceLocation}
               />
             )}
             {section === 'camps' && (

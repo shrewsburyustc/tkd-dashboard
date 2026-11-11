@@ -71,7 +71,7 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
       aria-labelledby={labelId}
       aria-invalid={invalid ? 'true' : undefined}
       aria-describedby={describedBy}
-      aria-disabled={disabled ? 'true' : undefined}
+      aria-disabled={disabled || locked ? 'true' : undefined} // locked: screen readers say "dimmed" too (v1.141), the group stays one Tab stop
       onKeyDown={handleKeyDown}
     >
       {options.map((option, index) => {
@@ -86,7 +86,7 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
             role="radio"
             aria-checked={checked ? 'true' : 'false'}
             aria-label={option.content ? option.label : undefined}
-            aria-disabled={disabled ? 'true' : undefined}
+            aria-disabled={disabled || locked ? 'true' : undefined}
             tabIndex={!disabled && index === tabStop ? 0 : -1}
             data-autofocus={autoFocus && !disabled && index === tabStop ? true : undefined}
             className={`${variant === 'chips' ? 'ev-chip' : 'segment'}${checked ? ' is-checked' : ''}`}

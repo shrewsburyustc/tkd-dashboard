@@ -23,6 +23,7 @@
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what (v0.86).
 //   - Nothing personal is shown: names of events, dates, counts and tags only.
 // From phase 3 it also reloads quietly every 15 seconds (v0.507 Q3: Star adopts Color Belt's v0.157).
+import NoIcon from '../../../../components/NoIcon.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
@@ -69,12 +70,6 @@ const loadList = () => loadStarEvents();
 
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
-
-// A menu item with no icon (the approved menus draw Close / Open registration without one); it
-// keeps the label lined up with the items that have an icon.
-function NoIcon() {
-  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
-}
 
 // Finding things on the page (for putting keyboard focus back after a dialog closes).
 const find = (selector) => document.querySelector(selector);
