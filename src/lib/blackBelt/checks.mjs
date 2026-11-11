@@ -5168,5 +5168,20 @@ check('D1/D2/D3: focus keeps the page still; the rubric bar goes with its draft;
   assert.ok(/failed \? <DialogBar/.test(read('staff/candidates/dialogParts.jsx')) || /state\.failed \? <DialogBar/.test(read('staff/candidates/dialogParts.jsx')), 'FailedBanner must draw a DialogBar');
   assert.ok(/e\.failed && <DialogBar/.test(read('staff/candidates/CandidateDialog.jsx')), 'the candidate edit bar must be a DialogBar');
 });
+// Focus after the rubric editor closes (source check, pure text): Cancel / Discard / a finished save removes the
+// button that had focus, so stopEdit hands focus to the current tab button (only when focus was in the editor, its
+// dialogs or nowhere, and only if it has fallen by the next frame), and the helper never scrolls.
+check('rubric editor close: focus goes to the current tab, only when it was in the editor, without scrolling', () => {
+  const read = (rel) => readFileSync(new URL(`../../blackBelt/${rel}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const card = read('staff/rubric/RubricCard.jsx');
+  const stop = card.slice(card.indexOf('function stopEdit()'), card.indexOf('// A newer version of the Dan being edited'));
+  assert.ok(/focusWasHere/.test(stop) && /editTopRef\.current\?\.contains\(active\)/.test(stop), 'stopEdit must remember whether focus was in the editor');
+  assert.ok(/document\.body/.test(stop) && /\[aria-modal="true"\]/.test(stop), 'stopEdit must also count focus on the body or in a dialog');
+  assert.ok(/if \(focusWasHere\)/.test(stop) && /requestAnimationFrame/.test(stop), 'stopEdit must wait one frame');
+  assert.ok(/if \(fallen\) focusCurrentTab\(\)/.test(stop), 'stopEdit must only hand focus over when it has fallen');
+  assert.ok(/import \{ focusCurrentTab \} from '\.\.\/parts\/focusCurrentTab\.js'/.test(card), 'RubricCard must import focusCurrentTab');
+  const focusTab = read('staff/parts/focusCurrentTab.js');
+  assert.ok(/tab\?\.focus\(\{ preventScroll: true \}\)/.test(focusTab), 'focusCurrentTab must keep preventScroll');
+});
 console.log(`${count} groups of checks ran.`);
 console.log('ALL BLACK BELT LIB CHECKS PASSED');
