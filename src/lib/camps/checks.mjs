@@ -42,6 +42,7 @@ import {
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
 import * as StarText from '../../screens/testing/star/candidates/text.js'; // only to compare the shared payment words (R1-07)
+import * as FamilyText from '../../camp/text.js'; // the public family page's words
 // The shared words (src/components/text.js): only to check the "Date signed" sentences (v0.638).
 import * as SharedText from '../../components/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
@@ -3034,6 +3035,24 @@ check('Camps: every sentence has a straight apostrophe; a busy day box gets the 
   assert.ok(rule.startsWith("button.cp-dc[aria-disabled='true'],"), 'the busy day box rule exists');
   const body = rule.slice(0, rule.indexOf('}'));
   for (const part of ['border-style: dashed', 'background: var(--color-bg)', 'color: var(--color-disabled-text)', 'cursor: not-allowed']) assert.ok(body.includes(part), part);
+});
+
+// ======================= the family page's camp card has no "Sign up by" line (rulebook v0.753) =======================
+check('Family page: the camp card shows only the early-price part; no "Sign up by" line (v0.753)', () => {
+  // Jeffrey 2026-11-10: "Remove this bottom line Sign up by November 27". Only the line goes; the camp
+  // still closes sign-up on its date (the page's open / closed logic reads signupClosesOn, not this card).
+  assert.equal('signUpByPart' in FamilyText, false, 'the word is gone');
+  assert.equal(FamilyText.earlyUntilPart('Wednesday, November 18'), 'Early price until Wednesday, November 18');
+  const parts = readFileSync(new URL('../../camp/parts.jsx', import.meta.url), 'utf8');
+  const partsCode = parts.split('\n').filter((line) => !line.trim().startsWith('//')).join('\n'); // (the comments explain what was removed)
+  assert.ok(!/signUpBy|Sign up by/i.test(partsCode), 'the card no longer builds a sign-up-by part');
+  // The line (its own row) is drawn only when there is an early-price part: no empty row or gap.
+  assert.ok(parts.includes('{earlyLine ? ('), 'the row is left out when there is no early price');
+  assert.ok(parts.includes("priceKindToday === 'early' && camp.earlyUntil"), 'and after the early date');
+  assert.ok(!parts.includes('byParts'), 'no leftover list of parts');
+  // The closing date still decides whether families can sign up.
+  const app = readFileSync(new URL('../../camp/CampApp.jsx', import.meta.url), 'utf8');
+  assert.ok(app.includes("answer.state === 'closed'") && app.includes("answer.state === 'not_open_yet'"), 'the page still follows the camp\'s sign-up state (closed, not open yet)');
 });
 
 console.log(`${count} groups of checks ran.`);

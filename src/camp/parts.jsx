@@ -34,16 +34,17 @@ export function PreviewStrip() {
 }
 
 // The camp card at the top (C7a, C7d). `camp` is the camelCase camp from the GET answer.
-//   full = true on the open form: adds "Ages 5–12", the early-price / sign-up-by line and the
+//   full = true on the open form: adds "Ages 5–12", the early-price line (no "Sign up by", v0.753) and the
 //   camp's description. The "can't sign up" messages (C7d) show only name, days, school and hours.
 //   priceKindToday 'early' | 'regular' — after the early-price date the early part is left out.
 export function CampCard({ camp, full = false, priceKindToday = 'early' }) {
   if (!camp) return null;
   const hours = campHours(camp.startTime, camp.endTime);
   const where = locationLine(camp.schoolName, camp.address);
-  const byParts = [];
-  if (priceKindToday === 'early' && camp.earlyUntil) byParts.push(T.earlyUntilPart(longDate(camp.earlyUntil)));
-  if (camp.signupClosesOn) byParts.push(T.signUpByPart(longDate(camp.signupClosesOn)));
+  // The line under the details: only the early-price part. "Sign up by [day]" was removed (Jeffrey
+  // 2026-11-10, rulebook v0.753); the camp still closes sign-up on its date (camp.signupClosesOn is
+  // still read by the page's open / closed logic, just not drawn here).
+  const earlyLine = priceKindToday === 'early' && camp.earlyUntil ? T.earlyUntilPart(longDate(camp.earlyUntil)) : null;
   return (
     <section className="reg-hero" aria-label={camp.name}>
       <h1 className="reg-hero__title">{camp.name}</h1>
@@ -71,9 +72,9 @@ export function CampCard({ camp, full = false, priceKindToday = 'early' }) {
               {line.text}
             </div>
           ))}
-          {byParts.length > 0 ? (
+          {earlyLine ? (
             <div className="reg-hero__by">
-              <b>{byParts.join(' · ')}</b>
+              <b>{earlyLine}</b>
             </div>
           ) : null}
           {camp.description ? <div className="reg-hero__note camp-pre">{camp.description}</div> : null}
