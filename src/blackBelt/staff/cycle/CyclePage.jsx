@@ -55,7 +55,7 @@ import ResultsTab from '../results/ResultsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import { showOnCyclesList } from '../cycles/CyclesTab.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
-import NoIcon from '../parts/NoIcon.jsx';
+import NoIcon from '../../../components/NoIcon.jsx';
 import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';

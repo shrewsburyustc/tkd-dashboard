@@ -10,7 +10,8 @@
 //
 // Props:
 //   profile   — the signed-in person ({ email, ... })
-//   onCancel  — close, nothing changed (Cancel button, Esc, or the phone back arrow on step 1)
+//   onCancel  — close, nothing changed (the Cancel button; Esc, a click outside, Back and the phone back arrow on step 1
+//               reach it only when nothing is typed, otherwise the dialog says "Unsaved changes…" first, M14)
 //   onChanged — new PIN saved: the App closes this and shows the "PIN changed" toast
 import { useEffect, useRef, useState } from 'react';
 import AccountDialog from '../components/AccountDialog.jsx';
@@ -128,8 +129,12 @@ export default function ChangePinDialog({ profile, onCancel, onChanged }) {
     }
   }
 
+  // Something typed that would be thrown away (M14, v1.027): the password on step 1, a PIN on steps 2-3 (or
+  // the check running). Esc, a click outside, Back and the phone back arrow then keep the dialog open with a note.
+  const dirty = password !== '' || checking || (!passwordStep && (pin.digits.length > 0 || stage === 'confirm'));
+
   return (
-    <AccountDialog title="Change PIN" fullScreen={isPhone} onCancel={onCancel} onBack={goBack}>
+    <AccountDialog title="Change PIN" fullScreen={isPhone} onCancel={onCancel} onBack={goBack} backLeaves={passwordStep} dirty={dirty}>
       <p className="dialog-step">Step {stepNumber} of 3</p>
 
       {passwordStep ? (

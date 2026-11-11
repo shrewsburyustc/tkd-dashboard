@@ -22,6 +22,7 @@
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what.
 // Follows "Hide private details" (v0.506): while the device switch is on, the Delete event
 // warning says "any recorded payment" instead of the event's payment total.
+import NoIcon from '../../../components/NoIcon.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
@@ -49,12 +50,6 @@ const sideBySchool = new Map();
 
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
-
-// A menu item with no icon (the approved menus draw Close / Open registration without one).
-// It keeps the label lined up with the items that have an icon.
-export function NoIcon() {
-  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
-}
 
 // Finding things on the page (for putting keyboard focus back after a dialog closes).
 const find = (selector) => document.querySelector(selector);

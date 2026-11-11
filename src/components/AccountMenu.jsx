@@ -37,6 +37,7 @@ import { LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { claimBack } from '../lib/backButton.js';
 import { usePrivateDetailsHidden, HIDE_PRIVATE_DETAILS } from '../lib/privateDetails.js';
+import { STAFF_ACCOUNTS_OFF } from './text.js';
 import { PANEL_SIZE, PANEL_SIZE_LABELS, PANEL_SIZES } from '../lib/panelSize.js';
 
 // menuitemcheckbox = the Hide private details switch (it stays checked or unchecked, like a switch).
@@ -451,12 +452,23 @@ export default function AccountMenu({
                       role="menuitem"
                       tabIndex={-1}
                       className="menu-item"
-                      onClick={() => choose(onStaffAccounts)}
+                      // M17 (v1.000, v1.143): emails are private details, so Staff accounts is desk-only while they are
+                      // hidden: the unavailable look, still focusable, with one gray line under it.
+                      aria-disabled={detailsHidden ? 'true' : undefined}
+                      aria-describedby={detailsHidden ? 'account-menu-staff-off' : undefined}
+                      onClick={() => {
+                        if (!detailsHidden) choose(onStaffAccounts);
+                      }}
                     >
                       {/* ti-user-cog = Staff accounts (admin), guidelines 2.4 */}
                       <IconUserCog size={16} aria-hidden="true" className="menu-icon" />
                       <span>Staff accounts</span>
                     </button>
+                    {detailsHidden && (
+                      <p id="account-menu-staff-off" className="menu-note">
+                        {STAFF_ACCOUNTS_OFF}
+                      </p>
+                    )}
                     <button
                       type="button"
                       role="menuitem"

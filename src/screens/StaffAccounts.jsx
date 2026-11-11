@@ -26,8 +26,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconDots, IconKey, IconPassword } from '@tabler/icons-react';
 import PageBar from '../components/PageBar.jsx'; // the page's amber bar, under the top bar (v1.128)
+import { STAFF_ACCOUNTS_OFF } from '../components/text.js';
 import IconButton from '../components/IconButton.jsx';
 import RowMenu from '../components/RowMenu.jsx';
+import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import { listStaff } from '../lib/staffAccounts.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../lib/useRowArrowNav.js';
@@ -45,6 +47,21 @@ export default function StaffAccounts({ profile, screenLocked, showToast, onModa
   const [retrying, setRetrying] = useState(false);
   const [menu, setMenu] = useState(null); // { account, anchor } while a row menu is open
   const [dialog, setDialog] = useState(null); // { type: 'password' | 'pin', account }
+
+  // M17 (v1.000, v1.143): the emails are private details, so while Hide private details is on this page shows one
+  // gray line instead of the list. If the switch goes on while a row menu or a reset dialog is open, they close
+  // (and the page is not left locked as modal).
+  const [privateHidden] = usePrivateDetailsHidden();
+  useEffect(() => {
+    if (!privateHidden) return;
+    setMenu(null);
+    if (dialog) {
+      setDialog(null);
+      onModalOpenChange(false);
+    }
+    // Only when the switch goes on: dialog is read then, not watched.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [privateHidden]);
   const dotsRefs = useRef(new Map()); // account id → its ⋯ button (menu anchor, focus target)
   const returnFocusTo = useRef(null); // account id whose ⋯ gets focus after a dialog closes
 
@@ -129,6 +146,19 @@ export default function StaffAccounts({ profile, screenLocked, showToast, onModa
         { key: 'pin', label: T.RESET_PIN, Icon: IconKey, onSelect: () => openDialog('pin', menu.account) },
       ]
     : [];
+
+  if (privateHidden) {
+    return (
+      <div className="staffaccounts">
+        <div className="phead">
+          <div className="phead-titles">
+            <h1 className="ptitle">{T.PAGE_TITLE}</h1>
+          </div>
+        </div>
+        <p className="sa-sub hidden-value">{STAFF_ACCOUNTS_OFF}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="staffaccounts">
