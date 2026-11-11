@@ -136,6 +136,10 @@ export const heldAtLine = (code) => `Both schools · held at ${schoolName(code)}
 export const schoolColumn = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolName(camp.locationCode));
 // The camp's school wherever one line is shown (the Registration link box's card heading, the camp page)
 export const campSchoolLine = (camp) => (camp.bothSchools ? heldAtLine(camp.locationCode) : schoolName(camp.locationCode));
+// The same line for what a FAMILY gets (the printed receipt, the registration link's QR card): a camp for
+// both schools says "Both schools" and no single school (Jeffrey 2026-11-10, rulebook v0.754). The staff
+// screens keep campSchoolLine's "held at": it is the camp's own school in the database.
+export const familySchoolLine = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolName(camp.locationCode));
 export const NO_CAMPS_ADMIN = 'No camps yet. Add one with Add camp.'; // (not in the mockups)
 export const NO_CAMPS_STAFF = 'No camps yet. An admin adds them.'; // (not in the mockups; §8 Empty states, v0.53)
 export const NO_UPCOMING = 'No upcoming camps.'; // (not in the mockups)

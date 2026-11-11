@@ -15,7 +15,10 @@ export const PREVIEW_BANNER = 'Preview mode — not connected to the real databa
 export const LOADING = 'Loading…'; // (Color Belt)
 
 // ----- The camp card at the top (C7a, C7d) -----
-export const BOTH_SCHOOLS_LINE = (heldAt) => `U.S.T.C. Worcester & Shrewsbury · held at ${heldAt}`;
+// A camp for both schools names both and no single place: "held at …" and the street address are left
+// off the family page (Jeffrey 2026-11-10, rulebook v0.754): each school's students still go to their
+// own school, and merging the two is the school's own decision, not something the form announces.
+export const BOTH_SCHOOLS_LINE = 'U.S.T.C. Worcester & Shrewsbury';
 // "Ages 5–12"; one age only, e.g. 8 to 8 → "Age 8" (not in the mockups)
 export const agesLine = (min, max) => (min === max ? `Age ${min}` : `Ages ${min}–${max}`);
 // "Early price until Wednesday, November 18" (the old " · Sign up by …" part is gone, v0.753)

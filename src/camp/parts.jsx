@@ -6,7 +6,7 @@
 // camp.css ("camp-").
 import { onlyOnLines } from './form.js';
 import * as T from './text.js';
-import { addressLine, campDaysLong, campHours, locationLine, longDate } from './format.js';
+import { campDaysLong, campHours, locationLine, longDate } from './format.js';
 
 // The white header strip: logo, school name, "Camp sign-up" (v0.106).
 // The logo's alt text is empty because the school name is written right next to it.
@@ -50,11 +50,11 @@ export function CampCard({ camp, full = false, priceKindToday = 'early' }) {
       <h1 className="reg-hero__title">{camp.name}</h1>
       <div className="reg-hero__when">{campDaysLong(camp.days)}</div>
       {camp.bothSchools ? (
-        // A camp for both schools: the school is named once in the both-schools line
-        // ("… · held at Worcester"), then the hours and the street address (when there is one).
+        // A camp for both schools: both schools are named, no single place ("held at …" and the
+        // street address are left off, v0.754), then the hours.
         <>
-          <div className="reg-hero__where">{T.BOTH_SCHOOLS_LINE(camp.schoolName)}</div>
-          <div className="reg-hero__where">{[hours, addressLine(camp.address)].filter(Boolean).join(' · ')}</div>
+          <div className="reg-hero__where">{T.BOTH_SCHOOLS_LINE}</div>
+          {hours ? <div className="reg-hero__where">{hours}</div> : null}
         </>
       ) : (
         <div className="reg-hero__where">

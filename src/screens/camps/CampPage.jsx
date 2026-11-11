@@ -1341,7 +1341,7 @@ export default function CampPage({
     } else if (!hidden && dialog.type === 'link') {
       // Registration link (rulebook v0.733, design review C11): the dashboard's shared box with
       // Camps' parts — the camp's name, Camps' line (can families sign up now?), ONE link for the
-      // camp with Camps' heading ("Both schools · held at Worcester", or just "Worcester" for a
+      // camp with Camps' heading ("Both schools" for a both-schools camp, no "held at", v0.754; or "Worcester" for a
       // one-school camp), no flyer. The box copies the link and saves the QR picture itself: a
       // failure shows its amber note INSIDE the box (shared words), and the PNG is named
       // "April Vacation Camp QR code.png" (both schools) or "Veterans Day Camp - Worcester QR
@@ -1353,7 +1353,7 @@ export default function CampPage({
           title={T.REGISTRATION_LINK}
           eventName={camp.name}
           intro={T.linkDialogLine(state, camp)}
-          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.campSchoolLine(camp) }] : []}
+          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.familySchoolLine(camp) }] : []}
           onCopied={() => showToast(T.TOAST_LINK_COPIED, { icon: false })}
           onClose={closeDialog}
           isPhone={isPhone}

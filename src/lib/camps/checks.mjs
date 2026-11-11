@@ -1632,9 +1632,9 @@ check('R1-07: Camps\' payment line and History words start with Star\'s words an
     ]);
     assert.equal(r.printedOn, '2026-10-29');
     assert.equal(r.printedByName, 'Jeffrey Berg');
-    // A both-schools camp: Camps' own line. An extra offered only on some days: Camper detail's words.
+    // A both-schools camp: "Both schools", no single school on a family's paper (v0.754). An extra offered only on some days: Camper detail's words.
     const both = build({ camp: { ...camp, bothSchools: true }, campExtras: [{ name: 'Late pick-up', onlyOn: ['2026-11-25'] }] });
-    assert.deepEqual(both.facts[2], ['School', 'Both schools · held at Worcester']);
+    assert.deepEqual(both.facts[2], ['School', 'Both schools']);
     assert.deepEqual(both.facts[4], ['Extras', 'Late pick-up — Wed; T-shirt']);
     // Some days only, no extras: the Days line names them and there is no Extras line.
     const some = build({ detail: { ...detail, camper: { ...camper, days: [camper.days[0]] }, breakdown: { extras: [] } } });
@@ -3053,6 +3053,25 @@ check('Family page: the camp card shows only the early-price part; no "Sign up b
   // The closing date still decides whether families can sign up.
   const app = readFileSync(new URL('../../camp/CampApp.jsx', import.meta.url), 'utf8');
   assert.ok(app.includes("answer.state === 'closed'") && app.includes("answer.state === 'not_open_yet'"), 'the page still follows the camp\'s sign-up state (closed, not open yet)');
+});
+
+// ======================= a both-schools camp names no single school to families (rulebook v0.754) =======================
+check('Both-schools camp: nothing a family sees says "held at" or gives one school\'s street (v0.754)', () => {
+  // Jeffrey 2026-11-10: the Worcester students still go to Worcester and the Shrewsbury students to
+  // Shrewsbury; merging the two is the school's own decision, so the form doesn't announce it.
+  assert.equal(FamilyText.BOTH_SCHOOLS_LINE, 'U.S.T.C. Worcester & Shrewsbury');
+  assert.equal(CampText.familySchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools');
+  assert.equal(CampText.familySchoolLine({ bothSchools: true, locationCode: 'shrewsbury' }), 'Both schools');
+  assert.equal(CampText.familySchoolLine({ bothSchools: false, locationCode: 'worcester' }), 'Worcester');
+  // The staff screens keep the camp's own school ("held at") — it is the camp's school in the database.
+  assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools · held at Worcester');
+  // The family page (card + "You're signed up"), the registration link's QR card and the receipt.
+  const code = (name) => readFileSync(new URL(name, import.meta.url), 'utf8').split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
+  const family = code('../../camp/text.js') + code('../../camp/parts.jsx') + code('../../camp/SignedUp.jsx');
+  assert.ok(!/held at/i.test(family.replace(/\/\/.*$/gm, '')), 'no "held at" on the family page');
+  assert.ok(!/addressLine\(camp\.address\)/.test(code('../../camp/SignedUp.jsx')) && !code('../../camp/parts.jsx').includes('addressLine('), 'both-schools camps show no street address');
+  assert.ok(code('../../screens/camps/CampPage.jsx').includes('heading: T.familySchoolLine(camp)'), 'the QR card heading');
+  assert.ok(code('./campReceipt.js').includes('T.familySchoolLine(camp)'), 'the receipt');
 });
 
 console.log(`${count} groups of checks ran.`);

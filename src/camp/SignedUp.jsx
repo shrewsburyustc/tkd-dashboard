@@ -4,7 +4,7 @@
 // and "Pay at the school before camp" with each child's line and the Total to pay.
 // Everything here comes from the server's answer (`result`, already camelCase), so the family
 // sees exactly what was saved — not what the form guessed.
-import { addressLine, campDaysShort, campHours, formatDollars, joinAnd, locationLine, shortDate, sortedDates } from './format.js';
+import { campDaysShort, campHours, formatDollars, joinAnd, locationLine, shortDate, sortedDates } from './format.js';
 import { onlyOnLines } from './form.js';
 import * as T from './text.js';
 
@@ -46,15 +46,8 @@ export default function SignedUp({ result, campInfo, headingRef }) {
             ))}
           </Row>
           {camp.bothSchools ? (
-            <Row label={T.ROW_WHERE}>
-              {T.BOTH_SCHOOLS_LINE(camp.schoolName)}
-              {addressLine(camp.address) ? (
-                <>
-                  <br />
-                  {addressLine(camp.address)}
-                </>
-              ) : null}
-            </Row>
+            // Both schools: both are named, no single place or street address (v0.754).
+            <Row label={T.ROW_WHERE}>{T.BOTH_SCHOOLS_LINE}</Row>
           ) : (
             <Row label={T.ROW_WHERE}>{where}</Row>
           )}
