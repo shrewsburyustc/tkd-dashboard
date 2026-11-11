@@ -17,7 +17,7 @@
 //   readOnly  true while saving
 import { useId } from 'react';
 import Notice from '../../../components/Notice.jsx';
-import { formatCents } from '../../../lib/blackBelt/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import * as T from '../text.js';
 
 export default function ItemChecklist({ items, ticks, onChange, showAll = false, label = T.FOR_TICK, error = null, readOnly = false }) {
@@ -49,7 +49,7 @@ export default function ItemChecklist({ items, ticks, onChange, showAll = false,
                 {T.itemLine(x.item, x.dueOn)}
                 {paid && !showAll && <span className="bb-check-paid"> {T.PAID_MARK}</span>}
               </span>
-              <span className="bb-num bb-check-amount">{formatCents(paid || showAll ? x.amountCents : x.remainingCents)}</span>
+              <span className="bb-num bb-check-amount">{formatMoney(paid || showAll ? x.amountCents : x.remainingCents)}</span>
             </label>
           );
         })}

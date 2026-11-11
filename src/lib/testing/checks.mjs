@@ -28,7 +28,7 @@ import {
   todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
-  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf, ROSTER_ROOM, rosterLayoutFor, markPaidChoiceWhere,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts, canPrintReceipt, rosterCounts, inCardFilter, dateSignedOf, ROSTER_ROOM, EVENTS_ROOM as ER_EVENTS_ROOM, rosterLayoutFor, markPaidChoiceWhere,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
@@ -2598,6 +2598,46 @@ check('words: batch 3 Q2 a and c, and the wiring of Q1 / Q2 / Q3 (Jeffrey: A to 
   assert.match(student, /stripes: values\.stripes, payingBy: values\.payingBy \}/); // … and the saved value is still sent, hidden or not
 });
 
+check('eventRules: EVENTS_ROOM — the room below which the Events list draws its phone rows (final batch)', () => {
+  // Measured 2026-11-10: with touch the table's fixed columns take 522 px, with a mouse 492 px; the Event column gets
+  // the rest and needs about 120 px to wrap a name onto two lines (46 px at 568 px of room = a 640 px touch window
+  // with the Largest panel: the name was cut into letters).
+  assert.equal(ER_EVENTS_ROOM, 648);
+  assert.ok(ER_EVENTS_ROOM - 522 >= 120, 'touch: the Event column keeps 120 px');
+  assert.ok(ER_EVENTS_ROOM - 492 >= 120, 'mouse: the Event column keeps 120 px');
+  assert.ok(640 - 96 < ER_EVENTS_ROOM, '640 wide with the Largest panel draws phone rows');
+  assert.ok(820 - 72 >= ER_EVENTS_ROOM, '820 wide with the Standard panel keeps the table');
+  const src = readFileSync(new URL('../../screens/testing/events/EventsTab.jsx', import.meta.url), 'utf8');
+  assert.match(src, /const narrowRoom = usePageRoomBelow\(EVENTS_ROOM\);\s+const listIsPhone = isPhone \|\| narrowRoom;/);
+  assert.match(src, /\{listIsPhone \? \(\s+<>\s+<span className="ev-phone-main"/); // the rows follow the room …
+  assert.match(src, /isSheet=\{isPhone\}/); // … the ⋯ menu's sheet and the dialogs keep the window's
+  assert.doesNotMatch(src, /\b(?:const|let|var) EVENTS_ROOM\b/); // no copy of the number
+  assert.match(src, /useEffect\(\(\) => \{\s+setMenu\(null\);\s+\}, \[listIsPhone\]\);/); // a flip closes an open ⋯ menu
+});
+
+check('final batch: the staff failure sentences say "retry" (v1.137) and no curly apostrophe is left in a sentence', () => {
+  assert.equal(CBT.SAVE_FAILED, "Couldn't save. Check the connection, then retry.");
+  assert.equal(CBT.DELETE_FAILED, "Couldn't delete. Check the connection, then retry.");
+  assert.equal(CBT.registrationNotClosed('E'), "Registration for E wasn't closed. Check the connection, then retry.");
+  assert.equal(CBT.registrationNotOpened('E'), "Registration for E wasn't opened. Check the connection, then retry.");
+  assert.equal(CBT.NOTE_SAVE_FAILED, "Couldn't save the note. Check the connection, then retry.");
+  assert.equal(CBT.CB_CSV_FAILED, "Couldn't download the CSV. Check the connection, then retry.");
+  assert.match(CBT.gradingSaveFailed(2, ['Group A']), /Check the connection, then retry\.$/);
+  assert.equal(CBT.INVALID_DIALOG, "That didn't save. Check the fields and try again."); // a field problem: stays
+  // Every word this file exports is free of curly apostrophes (strings and function answers with sample inputs)
+  for (const [name, value] of Object.entries(CBT)) {
+    if (typeof value === 'string') assert.doesNotMatch(value, /\u2019/, name);
+  }
+  assert.equal(CBT.historyPayingBy('cash', 'check'), 'Paying by: Cash → Check'); // History, like Star's and Camps'
+});
+
+check('final batch: a cancelled, never-paid private testing says "Nothing was paid" in the Past list (not "Not paid")', () => {
+  assert.equal(CBT.NOTHING_PAID, 'Nothing was paid');
+  const rows = readFileSync(new URL('../../screens/testing/private/PrivateRows.jsx', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(rows, /const nothingPaid = cancelled && !row\.paid;/);
+  assert.match(rows, /nothingPaid \? \(\s+<span className="ro-muted">\{T\.NOTHING_PAID\}<\/span>/);
+});
+
 check('privateRules: PRIVATE_ROOM — the room below which the Private testing list draws its phone rows (batch 3 Q1 A)', () => {
   // Measured 2026-11-07 with the sample list: first text-on-text overlap at 608 px of room (mouse) and 592 (touch),
   // clean from 616 in both.
@@ -3865,7 +3905,7 @@ const csvSample = (over = {}) => ({
 
 check('CB18 resultsCsv: the 15 columns, in v0.418 Q3 order, and each value', () => {
   assert.deepEqual(CBT.CB_CSV_HEADINGS, [
-    'Reference', 'First name', 'Last name', 'Class', 'Class time', 'Belt', 'Testing for', 'Result', 'Grader’s note',
+    'Reference', 'First name', 'Last name', 'Class', 'Class time', 'Belt', 'Testing for', 'Result', "Grader's note",
     'Paying by', 'Paid', 'Amount paid', 'Paid on', 'Paid by', 'Registration id',
   ]);
   const full = CSV.csvRow(csvSample());
@@ -3926,7 +3966,7 @@ check('CB18 resultsCsv: every cell is safe from formula injection and quoted rig
   const lines = text.split('\r\n');
   assert.equal(lines.length, 3); // header, one row, '' after the closing CRLF
   assert.equal(lines[2], '');
-  assert.equal(lines[0], 'Reference,First name,Last name,Class,Class time,Belt,Testing for,Result,Grader’s note,Paying by,Paid,Amount paid,Paid on,Paid by,Registration id');
+  assert.equal(lines[0], "Reference,First name,Last name,Class,Class time,Belt,Testing for,Result,Grader's note,Paying by,Paid,Amount paid,Paid on,Paid by,Registration id");
   // Each written cell, read back: none may start with = + - @ tab or CR, even after spaces.
   for (const cell of cells) {
     const written = CSV_WRITER.csvCell(cell);
@@ -4101,7 +4141,7 @@ await (async () => {
     cbRaw = () => { throw new Error('network down'); };
     assert.equal((await eventsApi.downloadResultsCsv({ eventId: DEFAULT_EVENT_ID, eventName: 'E' })).status, 'error');
     // The words around it.
-    assert.equal(CBT.cbCsvDownloaded('E-results-2026-11-20.csv', 1), 'Downloaded E-results-2026-11-20.csv (1 student). It has payments and graders’ notes — keep it private.');
+    assert.equal(CBT.cbCsvDownloaded('E-results-2026-11-20.csv', 1), "Downloaded E-results-2026-11-20.csv (1 student). It has payments and graders' notes — keep it private.");
     assert.equal(CBT.cbCsvDownloaded('E.csv', 14).includes('(14 students)'), true);
     cbRaw = null;
     cbRpcCtx = E_DESK;
@@ -4494,7 +4534,7 @@ check('text: the private Undo payment box names the latest payment and what the 
 });
 
 check('words: batch 2 — the shared sentences reach Color Belt unchanged (R1-06, R1-07, R2-07, R3-13)', () => {
-  assert.equal(CBT.undoPaymentTitle('Ava Chen', 6500, 'cash'), "Undo Ava Chen's $65 cash payment?"); // R1-06
+  assert.equal(CBT.undoPaymentTitle('Ava Chen', 6500, 'cash').replace(/\u2019/g, "'"), "Undo Ava Chen's $65 cash payment?"); // R1-06 (the shared words may still carry a curly apostrophe: compare straight)
   assert.equal(CBT.undoPaymentBody(6500, 'cash', '2026-11-03'), 'Paid on Nov 3. The row goes back to Not paid. Both stay in the history.');
   assert.equal(CBT.markedPaidToast('Ava Chen', 6500, 'cash'), 'Ava Chen marked paid · $65 cash'); // R1-07
   assert.equal(CBT.markedPaidToastHidden('Ava Chen'), 'Ava Chen marked paid');
@@ -4502,12 +4542,23 @@ check('words: batch 2 — the shared sentences reach Color Belt unchanged (R1-06
   assert.equal(CBT.someoneElseChanged('Ava Chen'), 'Someone else changed Ava Chen just now, so nothing was done. Their change is shown.'); // R2-07
   assert.equal(CBT.couldntUndo('a result was recorded just now'), "Couldn't undo: a result was recorded just now.");
   assert.equal(CBT.UNDO_DIDNT_SAVE, "Undo didn't save. Check the connection, then retry.");
-  assert.equal(CBT.UNDO_FAILED, CBT.UNDO_DIDNT_SAVE); // the old name says the same thing
   assert.equal(CBT.PAST_DATES_HINT, "Past days can't be chosen."); // R3-13
-  // Camps re-exports these old names from this file until it has switched: they must still exist as words
-  for (const name of ['STALE', 'UNDO_STALE', 'UNDO_FAILED', 'ROSTER_STALE', 'markPaidFailed', 'paymentUndoneToast']) {
+  // The old names are gone from this file (nothing used them any more)
+  for (const name of ['STALE', 'UNDO_STALE', 'UNDO_FAILED', 'TOAST_UNDONE', 'UNDO_HAS_RESULT', 'UNDO_PAST_DAY', 'UNDO_MOVE_TOO_LATE']) {
+    assert.equal(CBT[name], undefined, `${name} is not exported any more`);
+  }
+  // Camps re-exports these names from this file (src/screens/camps/text.js): they must still exist as words
+  for (const name of ['STALE_DIALOG', 'STALE_DIALOG_PHONE', 'SAVE_FAILED', 'DELETE_FAILED', 'ROSTER_STALE', 'UNDO_PAYMENT_TOO_LATE', 'UNDO_DUPLICATE_TOO_LATE', 'markPaidFailed', 'paymentUndoneToast']) {
     assert.ok(CBT[name] !== undefined, `${name} is still exported (Camps re-exports it)`);
   }
+  // R2-07 refused-Undo reasons: the pages take them from here, each sentence typed once
+  assert.equal(CBT.couldntUndo(CBT.UNDO_REASON_ADMIN_ONLY), "Couldn't undo: only an admin can do that.");
+  assert.equal(CBT.couldntUndo(CBT.UNDO_REASON_RESULT), "Couldn't undo: a result was recorded just now.");
+  assert.equal(CBT.couldntUndo(CBT.undoReasonSomeoneElse('Ava Chen')), "Couldn't undo: someone else changed Ava Chen just now.");
+  assert.equal(CBT.couldntUndo(CBT.undoReasonClassHasRanks('High Green')), "Couldn't undo: High Green has ranks now. Use ⋯ → Delete class instead.");
+  assert.equal(CBT.couldntUndo(CBT.undoReasonRankIsFinalAward('Black', 'Teen')), "Couldn't undo: Black is now Teen's final award. Use ⋯ → Delete rank instead.");
+  assert.equal(CBT.UNDO_REASON_PRIVATE_PAYMENT_TOO_LATE, "it's too late for that here, so ask an admin to undo the payment");
+  assert.equal(CBT.UNDO_REASON_PAYMENT_TOO_LATE, 'too late here, an admin can undo the payment');
 });
 
 // ======================= history.js (CB7, migration 0030 §5, rulebook v0.421, mockup P3) =======================
@@ -4535,7 +4586,7 @@ check('history: event registration rows — every action has words (CB7)', () =>
   assert.equal(textOf(hRow(R, 'update', 'update_student', { event_rank_id: 'x' }, { event_rank_id: 'y' })), 'Belt changed'); // ranks unknown
   // change_paying_by / Mark paid or Edit payment by another way (money)
   const paying = hRow(R, 'update', 'change_paying_by', { paying_by: 'check', version: 3 }, { paying_by: 'cash', version: 4 });
-  assert.equal(textOf(paying), 'Paying by changed: Check → Cash');
+  assert.equal(textOf(paying), 'Paying by: Check → Cash');
   assert.deepEqual(words(paying, { hidden: true }), { hiddenPayment: true });
   // Mark paid's own registration update (version only) says nothing: one entry per change
   assert.equal(words(hRow(R, 'update', 'mark_paid', { version: 4, updated_at: 'a' }, { version: 5, updated_at: 'b' })), null);
@@ -4652,7 +4703,7 @@ check('history: private testing rows — added, moved in, day, cancel, restore, 
   assert.equal(textOf(edit, { hidden: true }), 'First name: Ava → Eva; Belt: Yellow → Orange; Class: Group A → Group B'); // the price part goes
   assert.deepEqual(words(hRow(PV, 'update', 'private_update', { private_cents: 8500 }, { private_cents: 9500 }), { hidden: true }), { hiddenPayment: true });
   // private_change_paying_by / private_mark_paid (version only) / private_delete
-  assert.equal(textOf(hRow(PV, 'update', 'private_change_paying_by', { paying_by: 'card' }, { paying_by: 'check' })), 'Paying by changed: Card → Check');
+  assert.equal(textOf(hRow(PV, 'update', 'private_change_paying_by', { paying_by: 'card' }, { paying_by: 'check' })), 'Paying by: Card → Check');
   assert.equal(words(hRow(PV, 'update', 'private_mark_paid', { version: 1 }, { version: 2 })), null);
   assert.equal(textOf(hRow(PV, 'delete', 'private_delete', { status: 'cancelled' }, null)), 'Deleted');
   // payments: private_mark_paid, private_undo_payment, private_edit_payment, moved in with the student
@@ -4727,10 +4778,10 @@ check('history: the preview readers end to end — Mark paid, Undo, Edit payment
   // says both, money first; the Mark paid by the family's own way changed nothing else.
   assert.deepEqual([...list].sort(), [
     'Result: Passed',
-    `Payment changed: ${payingByText(family).toLowerCase()} → ${payingByText(other).toLowerCase()}; Paying by changed: ${P(family)} → ${P(other)}`,
+    `Payment changed: ${payingByText(family).toLowerCase()} → ${payingByText(other).toLowerCase()}; Paying by: ${P(family)} → ${P(other)}`,
     `Payment recorded: $65 ${payingByText(family).toLowerCase()}, paid Oct 17`,
-    `Payment undone: $65; Paying by changed: ${P(other)} → ${P(family)}`,
-    `Payment recorded: $65 ${payingByText(other).toLowerCase()}, paid Oct 17; Paying by changed: ${P(family)} → ${P(other)}`,
+    `Payment undone: $65; Paying by: ${P(other)} → ${P(family)}`,
+    `Payment recorded: $65 ${payingByText(other).toLowerCase()}, paid Oct 17; Paying by: ${P(family)} → ${P(other)}`,
     zoe().source === 'form' ? 'Registered on the family form' : 'Added at the desk',
   ].sort());
   // Hide private details: only the result and the registration stay; 4 money entries hidden
@@ -4753,29 +4804,29 @@ check('history: a payment save that changed Paying by is ONE entry, money first 
     row('testing_private', 'update', 'private_mark_paid', '2026-11-05T15:00:00.004Z', { paying_by: 'card', version: 2 }, { paying_by: 'cash', version: 3 }),
     row('testing_private_payments', 'insert', 'private_mark_paid', at('00'), null, { kind: 'payment', amount_cents: 2000, method: 'cash', paid_on: '2026-11-05' }),
   ];
-  assert.deepEqual(words(markPaid), ['Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash']);
+  assert.deepEqual(words(markPaid), ['Payment recorded: $20 cash, paid Nov 5; Paying by: Card → Cash']);
   // … and its Undo payment, newest first: two saves, two entries
   const undo = [
     row('testing_private', 'update', 'private_undo_payment', at('30'), { paying_by: 'cash' }, { paying_by: 'card' }),
     row('testing_private_payments', 'insert', 'private_undo_payment', at('30'), null, { kind: 'reversal', amount_cents: -2000, method: 'cash', paid_on: '2026-11-05' }),
   ];
   assert.deepEqual(words([...undo, ...markPaid]), [
-    'Payment undone: $20; Paying by changed: Cash → Card',
-    'Payment recorded: $20 cash, paid Nov 5; Paying by changed: Card → Cash',
+    'Payment undone: $20; Paying by: Cash → Card',
+    'Payment recorded: $20 cash, paid Nov 5; Paying by: Card → Cash',
   ]);
   // Hide private details: both parts are money, so the whole entry is left out (one, not two)
   const hidden = combineHistoryRows(markPaid).map((r) => describeHistoryRow(r, { hidden: true })).filter(Boolean);
   assert.deepEqual(hidden, [{ hiddenPayment: true }]);
   // ⋯ Change how they'll pay has no payment in its save: its own entry, as before
-  assert.deepEqual(words([row('testing_registrations', 'update', 'change_paying_by', at('40'), { paying_by: 'cash' }, { paying_by: 'check' })]), ['Paying by changed: Cash → Check']);
+  assert.deepEqual(words([row('testing_registrations', 'update', 'change_paying_by', at('40'), { paying_by: 'cash' }, { paying_by: 'check' })]), ['Paying by: Cash → Check']);
   // No payment row of that save in the list (the 500-row limit): Paying by keeps its own entry
-  assert.deepEqual(words(markPaid.slice(0, 1)), ['Paying by changed: Card → Cash']);
+  assert.deepEqual(words(markPaid.slice(0, 1)), ['Paying by: Card → Cash']);
   // A payment row of another table or action, or more than 5 seconds away, is never joined
   const apart = [
     row('testing_registrations', 'update', 'mark_paid', at('00'), { paying_by: 'cash' }, { paying_by: 'card' }),
     row('testing_payments', 'insert', 'mark_paid', '2026-11-05T15:00:06Z', null, { kind: 'payment', amount_cents: 6500, method: 'card', paid_on: '2026-11-05' }),
   ];
-  assert.deepEqual(words(apart).sort(), ['Paying by changed: Cash → Card', 'Payment recorded: $65 card, paid Nov 5']);
+  assert.deepEqual(words(apart).sort(), ['Paying by: Cash → Card', 'Payment recorded: $65 card, paid Nov 5']);
   const otherTable = [apart[0], { ...apart[1], table_name: 'testing_private_payments', occurred_at: at('00') }];
   assert.equal(words(otherTable).length, 2);
   const otherAction = [apart[0], { ...apart[1], action: 'edit_payment', occurred_at: at('00') }];
@@ -4788,13 +4839,13 @@ check('history: a payment save that changed Paying by is ONE entry, money first 
     row('testing_payments', 'insert', 'mark_paid', at('04'), null, { kind: 'payment', amount_cents: 6500, method: 'cash', paid_on: '2026-11-05' }),
     row('testing_registrations', 'update', 'mark_paid', at('00'), { paying_by: 'cash' }, { paying_by: 'card' }),
   ];
-  assert.deepEqual(words(orphan).sort(), ['Paying by changed: Cash → Card', 'Payment recorded: $65 cash, paid Nov 5']);
+  assert.deepEqual(words(orphan).sort(), ['Paying by: Cash → Card', 'Payment recorded: $65 cash, paid Nov 5']);
   // Undo payment joins its reversal (the old way, before) and Edit payment its new payment (after)
   const undoEv = [
     row('testing_registrations', 'update', 'undo_payment', at('10'), { paying_by: 'card' }, { paying_by: 'cash' }),
     row('testing_payments', 'insert', 'undo_payment', at('10'), null, { kind: 'reversal', amount_cents: -6500, method: 'card', paid_on: '2026-11-05' }),
   ];
-  assert.deepEqual(words(undoEv), ['Payment undone: $65; Paying by changed: Card → Cash']);
+  assert.deepEqual(words(undoEv), ['Payment undone: $65; Paying by: Card → Cash']);
 });
 
 check('history: a moved private testing starts at the move, which names the event (v0.418 Q4, P3)', () => {

@@ -18,6 +18,11 @@
 //     / Discard) for the Dan switcher and — through setGuard — every other way out; phones show
 //     the v0.56 note with Discard changes (R10). Closing or reloading the browser tab: the
 //     browser's own question.
+// Its amber bar (a failed save or Undo) is a PageBar under the top bar when it is drawn in the page, and a
+// bar inside the phone editor's full-screen page when that is open (rulebook v1.128). The "another admin
+// saved" box with Reload is a state, not a failure bar, and stays where it is.
+// When the editor closes (Cancel, Discard, a finished save) while the keyboard focus was in it, focus goes to the
+// current tab button, without scrolling (stopEdit, focusCurrentTab).
 // The database decides everything again (admins only, the lock at first opening, the rev check,
 // every value). This screen only makes the common case smooth.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -32,7 +37,10 @@ import RubricEditor, { PhoneUnsavedNote } from './RubricEditor.jsx';
 import RubricReadView from './RubricReadView.jsx';
 import SplitBracketDialog from './SplitBracketDialog.jsx';
 import SubjectDialog from './SubjectDialog.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import LineBar from '../parts/LineBar.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import { prepareDan } from './draft.js';
 import { useRubricDraft } from './useRubricDraft.js';
@@ -111,10 +119,29 @@ export default function RubricCard({
     resetEditState();
     d.start(dan);
   }
+  // Leaving the editor (Cancel, Discard changes, Back → Discard, the copy turned read-only, or a save that
+  // finished) also clears the card's amber bar: a "Couldn't save" bar belongs to the draft that is now gone, and
+  // its Retry would save the discarded change (design review D3). A bar that a status sets AFTER stopEdit
+  // ("locked" below) is set after this line, so it stays.
+  // Focus: the Cancel (or Discard) button that had the keyboard focus is removed with the editor, and the browser
+  // would drop focus on the page body. So when focus was inside the editor (or one of its dialogs, or already
+  // nowhere), it goes to the current tab button, one frame later and without scrolling (focusCurrentTab; rulebook
+  // v1.124). Focus the person has put somewhere else is never taken: the frame check below looks again.
   function stopEdit() {
+    const active = document.activeElement;
+    const focusWasHere =
+      !active || active === document.body || Boolean(editTopRef.current?.contains(active)) || Boolean(active.closest?.('[aria-modal="true"]'));
     d.stop();
     resetEditState();
     setDialog(null);
+    setBanner(null);
+    if (focusWasHere) {
+      window.requestAnimationFrame(() => {
+        const now = document.activeElement;
+        const fallen = !now || now === document.body || !now.isConnected || Boolean(now.closest?.('.toast-region'));
+        if (fallen) focusCurrentTab();
+      });
+    }
   }
 
   // A newer version of the Dan being edited arrived (another admin saved): the banner.
@@ -184,6 +211,13 @@ export default function RubricCard({
   }, [modal, onModalChange]);
   useEffect(() => () => onModalChange?.(false), [onModalChange]);
 
+  // The latest save(): a Retry captured in an old bar never runs an old copy of it (which would still see the
+  // draft that was open then).
+  const saveRef = useRef(null);
+  useLayoutEffect(() => {
+    saveRef.current = save;
+  });
+
   // ----- Saving (R8, R11) -----
   async function save() {
     if (!d.editing || saving || stale) return;
@@ -242,7 +276,8 @@ export default function RubricCard({
       stopEdit();
       onLocked?.();
     } else {
-      setBanner({ text: T.SAVE_FAILED, retry: () => save() });
+      // Retry goes through saveRef, so it always runs the CURRENT save (which does nothing once the draft is gone)
+      setBanner({ text: T.SAVE_FAILED, retry: () => saveRef.current?.() });
     }
   }
 
@@ -337,6 +372,12 @@ export default function RubricCard({
     setPhoneNote(true);
   }
 
+  // The page bar is open when there is a banner and the phone's full-screen editor is not (that one has a LineBar
+  // inside its box, see below). × or a Retry that works: focus returns to the tab. A hook, so it sits ABOVE the
+  // early return below (C1: hooks run in the same order on every render).
+  const phoneEditorOpen = isPhone && editing && Boolean(d.draft) && !screenLocked;
+  useBarFocusReturn(Boolean(banner) && !phoneEditorOpen, focusCurrentTab);
+
   // ----- Drawing -----
   if (!rubric) return null;
 
@@ -365,7 +406,12 @@ export default function RubricCard({
     </div>
   );
 
-  const bannerElement = banner ? <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={saving || banner.retrying === true} onDismiss={() => setBanner(null)} /> : null;
+  // The card's amber bar: a PageBar under the top bar when it is drawn in the page (the read view, and the
+  // editor on the PC and tablet), but a LineBar INSIDE the box when the editor is the phone's full-screen
+  // page (a bar in a dialog stays inside it, v1.128). While that page is open, the read view behind draws none.
+  const barProps = { takeFocus: banner?.takeFocus === true, text: banner?.text, onRetry: banner?.retry ? () => banner.retry() : undefined, retrying: saving || banner?.retrying === true, onDismiss: () => setBanner(null) };
+  const pageBarElement = banner && !phoneEditorOpen ? <PageBar {...barProps} /> : null;
+  const boxBarElement = banner && phoneEditorOpen ? <LineBar focusKey={banner} {...barProps} /> : null;
   const staleBanner = stale ? (
     <div className="errbar" role="alert">
       <IconAlertTriangle size={16} aria-hidden="true" className="errbar-icon" />
@@ -396,7 +442,7 @@ export default function RubricCard({
           topBanners={
             <>
               {staleBanner}
-              {bannerElement}
+              {isPhone ? boxBarElement : pageBarElement}
             </>
           }
           afterReload={afterReload}
@@ -511,7 +557,7 @@ export default function RubricCard({
           {subtitle && <p className="bbr-sub">{subtitle}</p>}
           {switcher}
           {readLine && <p className="bbr-sub">{readLine}</p>}
-          {bannerElement}
+          {pageBarElement}
           <RubricReadView key={danNo} dan={shownDan} isPhone={isPhone} showStamp={isAdmin} />
           {isPhone && editor}
         </>

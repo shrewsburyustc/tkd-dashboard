@@ -7,10 +7,10 @@
 //
 //   const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
 //
-// bar = { text, retry, retrying, takeFocus } from the line. The pages draw it with parts/LineBar.jsx (an
-// ErrorBanner that also acts on `takeFocus`, which only the shared PageBar did before); ErrorBanner reads
-// `retrying` so a Retry that is on its way can't be pressed twice. This file only hands the bar over: the
-// focus move is LineBar's.
+// bar = { text, retry, retrying, takeFocus } from the line. The pages draw it with the shared PageBar
+// (under the top bar, v1.128), which acts on `takeFocus`; a bar inside a box uses parts/LineBar.jsx, which
+// does the same. ErrorBanner reads `retrying` so a Retry that is on its way can't be pressed twice. This
+// file only hands the bar over: the focus move is PageBar's or LineBar's.
 export function undoBarFor(setBanner) {
   return (bar) => setBanner((current) => (bar ? { ...bar, fromUndo: true } : current && current.fromUndo ? null : current));
 }

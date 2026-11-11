@@ -4,7 +4,7 @@
 // and the phase 4 gap mockups (TKD-StarTesting-Phase4-Gap-Mockups.html, F1–F6, v0.510). Keeping it
 // in one file makes it easy to compare with the mockups. Lines marked "PROPOSAL" are for cases the
 // mockups don't draw; they follow the approved wording's style and are listed for review.
-// The apostrophes are the curly ’ used in the mockups.
+// The apostrophes are straight (') everywhere (rulebook decision of 2026-11-08).
 //
 // THE ACKNOWLEDGMENT (ACK_TEXT + ACK_BOLD + ACK_END) is the exact wording approved in v0.510 and
 // stands for the database label STAR_ACK_VERSION ('st-2026-10-18', src/lib/star/starEventRules.js).
@@ -28,15 +28,15 @@ export const LAST_NAME = 'Last name';
 export const NAME_HINT = 'The person testing for a star.';
 export const DOB = 'Date of birth';
 export const DOB_HINT = 'Opens a calendar.';
-export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can\'t be chosen.';
 export const CHOOSE = 'Choose…';
 export const CURRENT_DAN = 'Current Dan';
 export const STARS_NOW = 'Stars the candidate has now';
 export const starsWord = (n) => (n === 1 ? '1 star' : `${n} stars`);
-// "1st Dan goes up to 4 stars. Already at 4 stars? There’s no more 1st Dan star testing. Please ask at
+// "1st Dan goes up to 4 stars. Already at 4 stars? There's no more 1st Dan star testing. Please ask at
 // the front desk about 2nd Dan testing." (F3, v0.510 Q2 A — the numbers and next Dan follow the Dan)
 export const topStarNote = (label, limit, nextLabel) =>
-  `${label} goes up to ${starsWord(limit)}. Already at ${starsWord(limit)}? There’s no more ${label} star testing. Please ask at the front desk about ${nextLabel} testing.`;
+  `${label} goes up to ${starsWord(limit)}. Already at ${starsWord(limit)}? There's no more ${label} star testing. Please ask at the front desk about ${nextLabel} testing.`;
 export const TESTING_FOR = 'Testing for';
 // "1st Dan · 1 star → 2 stars"
 export const progression = (label, starsFrom) => `${label} · ${starsWord(starsFrom)} → ${starsWord(starsFrom + 1)}`;
@@ -49,19 +49,19 @@ export const credits = (n) => (n === 1 ? '1 credit' : `${n} credits`);
 export const passLine = (passMark, maxScore) => `Pass mark ${passMark} of ${maxScore}, with no D in any category.`;
 export const AI_NOTE = ' Assistant Instructor comes from the number of assistant classes, entered by staff.';
 export const EMAIL = 'Email for results';
-export const EMAIL_HINT = 'Results are sent here. A parent’s email is fine.';
+export const EMAIL_HINT = 'Results are sent here. A parent\'s email is fine.';
 export const PAYING_BY = 'Paying by';
 export const PAYING_HINT = 'Pay at the front desk.';
 export const METHOD = { cash: 'Cash', check: 'Check' };
 export const CONTINUE = 'Continue';
 
 // Step 1 errors (screen 5, v0.98, v0.107)
-export const ERR_FIRST = 'Enter the candidate’s first name.';
-export const ERR_LAST = 'Enter the candidate’s last name.';
+export const ERR_FIRST = 'Enter the candidate\'s first name.';
+export const ERR_LAST = 'Enter the candidate\'s last name.';
 export const ERR_NAME_TOO_LONG = 'Use 60 characters or fewer.'; // as the dashboard and Color Belt's form
-export const ERR_NAME_BAD_CHARACTER = 'That name has a character that can’t be used. Remove it.'; // as the dashboard
-export const ERR_DOB = 'Choose the candidate’s date of birth.';
-export const ERR_DAN = 'Choose the candidate’s Dan.';
+export const ERR_NAME_BAD_CHARACTER = 'That name has a character that can\'t be used. Remove it.'; // as the dashboard
+export const ERR_DOB = 'Choose the candidate\'s date of birth.';
+export const ERR_DAN = 'Choose the candidate\'s Dan.';
 export const ERR_STARS = 'Choose how many stars the candidate has.';
 export const ERR_EMAIL_EMPTY = 'Enter an email for results.'; // PROPOSAL (the desk dialog's wording)
 export const ERR_EMAIL = 'Enter a full email address, like name@example.com.';
@@ -86,7 +86,7 @@ export const ACK_TEXT = 'I confirm these details are correct and agree to pay th
 export const ACK_BOLD = 'Testing fees are not refundable.';
 export const ACK_END = ' The candidate is ready to test for this star.';
 export const SIGNATURE = 'Signature (the candidate, or a parent or guardian if under 18)';
-export const SIGNATURE_HINT = 'Sign with your finger or mouse. Can’t sign here? Please sign at the front desk.';
+export const SIGNATURE_HINT = 'Sign with your finger or mouse. Can\'t sign here? Please sign at the front desk.';
 export const SEND = 'Send registration';
 export const SENDING = 'Sending…'; // as Color Belt's live form
 export const TRY_AGAIN = 'Try again';
@@ -98,11 +98,11 @@ export const ERR_SIGNATURE = 'Draw your signature in the box.';
 export const ERR_SIGNATURE_TOO_BIG = 'This signature is too detailed to send. Tap Clear and sign again a little more simply.';
 
 // Messages after a failed Send
-export const SEND_FAILED = 'Your registration wasn’t sent. Check your internet connection and try again. Nothing you entered is lost.';
-export const VERIFY_BEFORE = 'We couldn’t check this browser. '; // screen 8: "… Try again, or ask at the front desk."
+export const SEND_FAILED = 'Your registration wasn\'t sent. Check your internet connection and try again. Nothing you entered is lost.';
+export const VERIFY_BEFORE = 'We couldn\'t check this browser. '; // screen 8: "… Try again, or ask at the front desk."
 export const VERIFY_AFTER = ', or ask at the front desk.';
 export const RATE_LIMITED = 'Too many tries from this connection. Please wait a few minutes, or ask at the front desk.';
-export const CLOSED_WHILE_FILLING = 'Registration closed while you were filling this in, so it wasn’t sent. Please ask at the front desk.';
+export const CLOSED_WHILE_FILLING = 'Registration closed while you were filling this in, so it wasn\'t sent. Please ask at the front desk.';
 
 // ----- Registered (screens 9, 10, F2) -----
 export const isRegistered = (name) => `${name} is registered`;
@@ -125,16 +125,16 @@ export const totalHowToday = (methods) => `${methods.toLowerCase()}, at the fron
 export const REGISTER_ANOTHER = 'Register another candidate';
 
 // ----- When families can't register (screen 11, F2, F4) -----
-export const NOT_OPEN_TITLE = 'Registration hasn’t opened yet';
+export const NOT_OPEN_TITLE = 'Registration hasn\'t opened yet';
 export const NOT_OPEN_TEXT = 'Please check back later, or ask at the front desk.';
 export const CLOSED_TITLE = 'Registration is closed';
 export const closedOn = (date) => `It closed on ${date}. To register late, please ask at the front desk.`;
 export const CLOSED_TEXT = 'To register late, please ask at the front desk.';
 export const FINISHED_TITLE = 'This star testing has finished';
 export const FINISHED_TEXT = 'Results are emailed to families after testing. For the next star testing, please ask at the front desk.';
-export const NOT_FOUND_TITLE = 'This link isn’t working';
+export const NOT_FOUND_TITLE = 'This link isn\'t working';
 export const NOT_FOUND_TEXT = 'Please ask at the front desk for the current registration link.';
 export const RATE_TITLE = 'Too many tries';
-export const LOAD_FAILED_TITLE = 'This page didn’t load';
+export const LOAD_FAILED_TITLE = 'This page didn\'t load';
 export const LOAD_FAILED_TEXT = 'Check your internet connection and try again. If it keeps happening, please ask at the front desk.';
 export const LOADING = 'Loading…';

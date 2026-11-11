@@ -128,15 +128,15 @@ export const includesRemoved = (cents) => `includes ${formatMoney(cents)} from r
 // Paid and Not paid counts. It counts pairs, like the orange box above (curly apostrophes, as Camps).
 export const dupNotCounted = (n) =>
   n === 1
-    ? '1 possible duplicate isn’t counted in Paid or Not paid until it’s reviewed.'
-    : `${n} possible duplicates aren’t counted in Paid or Not paid until they’re reviewed.`;
+    ? '1 possible duplicate isn\'t counted in Paid or Not paid until it\'s reviewed.'
+    : `${n} possible duplicates aren't counted in Paid or Not paid until they're reviewed.`;
 export const LOADING_CANDIDATES = 'Loading candidates';
 export const TAB_CANDIDATES = 'Candidates';
 
 // ----- Header and the Add candidate menu (screen 6, G8) -----
 export const ADD_CANDIDATE = 'Add candidate';
 export const NEW_CANDIDATE = 'New candidate';
-export const NEW_CANDIDATE_SUB = 'Walk-in, or a family who couldn’t use the form';
+export const NEW_CANDIDATE_SUB = 'Walk-in, or a family who couldn\'t use the form';
 export const NEW_CANDIDATE_HIDDEN = 'Add new candidates at the desk. Date of birth, email and payments are hidden on this tablet.';
 export const MAKEUP_ITEM = 'Make-up from an earlier testing';
 export const MAKEUP_ITEM_SUB = 'Pick from everyone who owes a make-up';
@@ -148,7 +148,7 @@ export const SET_PRIVATE = 'Set private testing';
 export const CHANGE_PRIVATE = 'Change private day or time';
 export const backToDay = (iso) => `Back to the testing day (${weekdayMonthDay(iso)})`;
 export const GRADE_PRIVATE = 'Grade private testing'; // phase 5, H5 proposal 18
-export const CHANGE_PAYING_BY = 'Change how they’ll pay';
+export const CHANGE_PAYING_BY = 'Change how they\'ll pay';
 export const EDIT_PAYMENT = 'Edit payment';
 export const UNDO_PAYMENT = 'Undo payment';
 export const RECORD_REFUND = 'Record refund';
@@ -200,11 +200,11 @@ export const refundAfter = (paidCents, afterCents) => `The ${dollars(paidCents)}
 // ----- Undo payment / Undo refund confirmations (G16) -----
 // R1-06 (v1.045 (2)): Black Belt's words. The title names the amount and the way; the second line opens
 // with "Paid on [the day the family paid]" (shared) and goes on with Star's own consequence.
-// "Undo Lily Brooks’s $140 card payment?" / "Paid on Nov 3. It is reversed and the row goes back to Not paid. Both stay in the history."
+// "Undo Lily Brooks's $140 card payment?" / "Paid on Nov 3. It is reversed and the row goes back to Not paid. Both stay in the history."
 export const undoPaymentTitle = (name, cents, method) => sharedUndoPaymentTitle(name, dollars(cents), payingByText(method).toLowerCase());
 export const undoPaymentBody = (iso) => `${paidOnOpening(monthDay(iso))}. It is reversed and the row goes back to Not paid. Both stay in the history.`;
 export const KEEP_PAYMENT = 'Keep payment';
-export const undoRefundTitle = (name) => `Undo ${name}’s refund?`; // PROPOSAL (as Undo payment, G16)
+export const undoRefundTitle = (name) => `Undo ${name}'s refund?`; // PROPOSAL (as Undo payment, G16)
 export const undoRefundBody = (cents, method, iso) =>
   `The ${dollars(cents)} ${payingByText(method).toLowerCase()} refund recorded on ${monthDay(iso)} is reversed and the amount shows as overpaid again. Both stay in the history.`; // PROPOSAL
 export const KEEP_REFUND = 'Keep refund'; // PROPOSAL
@@ -221,7 +221,7 @@ export function deleteBody({ eventName, payment, gradeCount, hidden }) {
   else if (pay) what = `The registration and ${pay} are`;
   else if (grades) what = `The registration and the ${grades} are`; // PROPOSAL (no payment)
   else what = 'The registration is'; // PROPOSAL (no payment, no grades)
-  const paymentNote = pay ? ' The payment won’t show in Payments recorded any more.' : '';
+  const paymentNote = pay ? ' The payment won\'t show in Payments recorded any more.' : '';
   return `${what} deleted from ${eventName}.${paymentNote} ${tail}`;
 }
 export const KEEP_CANDIDATE = 'Keep candidate';
@@ -249,9 +249,9 @@ export const FIRST_NAME = 'First name';
 export const LAST_NAME = 'Last name';
 export const DOB = 'Date of birth';
 export const DOB_OPTIONAL = 'Date of birth (optional)';
-export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can\'t be chosen.';
 export const DOB_NEEDED = 'Choose the date of birth. A family-form registration keeps it.'; // PROPOSAL
-export const DOB_OPTIONAL_HINT = 'Leave empty if the family didn’t give it. They’re then in the 13-and-up column for Assistant Instructor.';
+export const DOB_OPTIONAL_HINT = 'Leave empty if the family didn\'t give it. They\'re then in the 13-and-up column for Assistant Instructor.';
 export const SCHOOL_LABEL = 'School';
 export const SCHOOL_HINT = 'Updates the School column.';
 export const EMAIL = 'Email for results';
@@ -263,7 +263,7 @@ export const PAYING_BY_HINT = 'Mark them paid from the row once they pay.'; // (
 export const ENTER_EMAIL = 'Enter an email for results.'; // PROPOSAL
 export const EMAIL_PROBLEM = 'Enter a full email address, like name@example.com.'; // the family form's wording
 export const CHOOSE_SCHOOL = 'Choose the school.'; // PROPOSAL
-export const CHOOSE_DAN = 'Choose the candidate’s Dan.'; // the family form's wording
+export const CHOOSE_DAN = 'Choose the candidate\'s Dan.'; // the family form's wording
 export const CHOOSE_STARS = 'Choose how many stars the candidate has.'; // the family form's wording
 export const NAME_TOO_LONG = 'Use 60 characters or fewer.';
 export const NAME_BAD_CHAR = "That name has a character that can't be used. Remove it.";
@@ -311,7 +311,7 @@ export const LOAD_DETAIL_FAILED = loadFailedNamed('this candidate'); // S-2: "Co
 export const SIGNATURE_TITLE = 'Signature';
 export const signatureSub = (name, eventName) => `${name} · ${eventName}`;
 export const signedLine = (stamp) => `Signed ${shortDate(stampDay(stamp))}, ${stampTime(stamp)} on the family form, after ticking the acknowledgment.`;
-export const signatureAlt = (name) => `${name}’s signature`;
+export const signatureAlt = (name) => `${name}'s signature`;
 export const SIGNATURE_GONE = 'The signature was removed (deleted 90 days after the testing day).'; // PROPOSAL (opened just as it was removed)
 
 // ----- The compare dialog (screen 3, G9) -----
@@ -356,6 +356,7 @@ export const HISTORY_PAYMENT_CHANGED = 'Payment changed';
 export const historyResultSent = (status) => `Result email marked sent${status === 'passed' ? ' (Passed)' : status === 'makeup' ? ' (Make-up)' : ''}`;
 export const HISTORY_RESULT_SENT_UNDONE = 'Mark as sent undone';
 export const HISTORY_SIGNED = 'Signed the acknowledgment on the family form';
+export const HISTORY_SIGNED_JOINED = 'signed the acknowledgment'; // after "Registered on the family form; " in one entry
 export const HISTORY_SIGNATURE_REMOVED = 'Signature removed (90 days after the testing day)';
 export const HISTORY_SIGNATURE_CHANGED = 'Signature changed';
 export const HISTORY_GRADE_CLEARED = 'Grade cleared';

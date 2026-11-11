@@ -18,14 +18,17 @@
 // read with the rubric). A save / undo answered has_grades (grading started meanwhile) stops the
 // editor, says so in the cycle page's amber bar (under the lock line, v0.966) and reloads into
 // that locked view.
+// "Couldn't load" is the page's amber bar under the top bar (PageBar, v1.128), like the cycle page's own.
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { IconLock } from '@tabler/icons-react';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import { loadCycleRubric, saveCycleDan, undoCycleDan } from '../../../lib/blackBelt/api.js';
 import { loadGradingState } from '../../../lib/blackBelt/gradingApi.js';
 import { FRESH_COPY_SOURCE } from '../../../lib/blackBelt/rubric.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import RubricCard from '../rubric/RubricCard.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import * as T from '../text.js';
 
 // The cycle's copy plus, since 0025, when grading started (null = not locked by grading). If the
@@ -79,6 +82,8 @@ export default function CycleRubricTab({
   useLayoutEffect(() => {
     liveRef.current = live;
   });
+  // C5: "couldn't load" is a PageBar drawn from the load's status: when a Retry works, focus goes to the tab.
+  useBarFocusReturn(live.status === 'error' || (live.status === 'ready' && !live.data?.rubric), focusCurrentTab);
 
   let body;
   if (live.status === 'loading' || live.status === 'idle' || live.status === 'notFound' || live.status === 'noAccess') {
@@ -93,7 +98,7 @@ export default function CycleRubricTab({
       </div>
     );
   } else if (live.status === 'error' || !live.data?.rubric) {
-    body = <ErrorBanner text={T.RUBRIC_LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
+    body = <PageBar text={T.RUBRIC_LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
   } else {
     const data = live.data;
     const added = T.stampDate(data.createdAt ?? cycle.createdAt);

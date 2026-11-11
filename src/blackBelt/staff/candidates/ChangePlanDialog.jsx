@@ -21,7 +21,7 @@
 // PlanCards is also used by Add candidate ("How they'll pay").
 import { useId, useRef } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
-import { formatCents } from '../../../lib/blackBelt/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import { cycleCandidateItems, dueNowItems, hasLivePayment, nextItems, predictMoney } from '../../../lib/blackBelt/rules.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { FailedBanner, Footer, PrimaryButton } from './dialogParts.jsx';
@@ -85,7 +85,7 @@ export function PlanCards({ cycle, dan, value, currentId = null, hidden = false,
               <span className="bb-plancard-top">
                 <span className="bb-plancard-name">{plan.name}</span>
                 {plan.id === currentId && <span className="ttag">{T.CURRENT}</span>}
-                {total !== null && <span className="bb-plancard-total">{formatCents(total)}</span>}
+                {total !== null && <span className="bb-plancard-total">{formatMoney(total)}</span>}
               </span>
               <span className="bb-plancard-line">{T.planCardLine(amounts, dates)}</span>
             </span>

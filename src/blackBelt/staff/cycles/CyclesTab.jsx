@@ -12,6 +12,8 @@
 //     so the grading state is read when Delete is chosen and, with grades, the banner says
 //     "Grades are entered for this cycle, so it can't be deleted." instead of the confirmation)
 //   - "+ Add cycle" in the page header (admins; N on the PC)
+// The tab's one amber bar is the shared PageBar, drawn under the top bar so it stays in view however far
+// the list is scrolled (rulebook v1.128); a bar inside a box (Add / Edit cycle) stays an ErrorBanner there.
 // Add / Edit cycle themselves live in ../cycle/useCycleEditor.jsx (the cycle page uses it too).
 //
 // Rules worth knowing (as Color Belt's Events tab):
@@ -22,7 +24,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { deleteCycle, loadCycle, loadCycles, schoolToday } from '../../../lib/blackBelt/api.js';
@@ -32,13 +34,13 @@ import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQu
 import { useSaveLine } from '../../../lib/saveLine.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { useCycleEditor } from '../cycle/useCycleEditor.jsx';
 import { useCycleActions } from './useCycleActions.js';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import NoIcon from '../../../components/NoIcon.jsx';
-import LineBar from '../parts/LineBar.jsx';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import * as T from '../text.js';
 
@@ -109,6 +111,9 @@ export default function CyclesTab({
   const [sort, setSort] = useState(null); // { key, dir } or null (the side's own order)
   const [menu, setMenu] = useState(null); // { id, anchor }
   const [banner, setBanner] = useState(() => pendingBanner); // { text, retry?, kind? }
+  // The bar is a PageBar (under the top bar, v1.128): when it goes while focus is on its Retry or ×, focus returns to the tab.
+  // C5: so is "couldn't load" (drawn from the load's status): when its Retry works, focus goes to the tab.
+  useBarFocusReturn(Boolean(banner) || live.status === 'error', focusCurrentTab);
   // The waiting problem is shown once (cleared after the first paint, not inside useState: React's
   // development mode calls that twice).
   useEffect(() => {
@@ -442,7 +447,7 @@ export default function CyclesTab({
       </div>
     );
   } else if (live.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
   } else if (live.status === 'noAccess') {
     body = null;
   } else if (shown.length === 0) {
@@ -549,7 +554,7 @@ export default function CyclesTab({
     <>
       {renderHeader(addButton, staffLine)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
-        {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
+        {banner && <PageBar takeFocus={banner.takeFocus === true} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
         {live.status === 'ready' && (
           <div className="ev-side">
             <span id={sideLabelId} className="visually-hidden">

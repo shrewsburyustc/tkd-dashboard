@@ -1013,8 +1013,8 @@ check('mock: camp payments — Daily report per desk school, edit / undo / mis-c
     assert.equal(FT.totalSub(cardsFor(d.totals, d.refunds, 'own', null).total), 'after $150.00 refunds');
     assert.equal(FT.afterReturned(-180000, 2), 'after $1,800.00 in returned checks');
     // The Close the day words (B2).
-    assert.equal(FT.expectedCardWithRefunds(-15000, 0, 15000), 'Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine’s day report');
-    assert.equal(FT.returnedNotInDrawer(-90000, 1, true), 'The $900.00 returned check isn’t part of today’s drawer.');
+    assert.equal(FT.expectedCardWithRefunds(-15000, 0, 15000), 'Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine\'s day report');
+    assert.equal(FT.returnedNotInDrawer(-90000, 1, true), 'The $900.00 returned check isn\'t part of today\'s drawer.');
   });
 
   check('black belt: groups — Returned checks always last, also In groups; Refunds header names the card part', () => {
@@ -1106,7 +1106,7 @@ check('mock: camp payments — Daily report per desk school, edit / undo / mis-c
     assert.equal(call2(only([13, 14]), 'finance_home', {}).earlier.by_school.worcester.count, base + 1);
   });
 
-  check('black belt: payment detail — the cycle, a returned check’s history, staff today only', () => {
+  check('black belt: payment detail — the cycle, a returned check\'s history, staff today only', () => {
     const det = call2(bb, 'finance_payment_detail', { p_source: 'black_belt', p_payment_id: bbId(7) });
     assertClean(det, 'finance_payment_detail black belt');
     assert.equal(det.status, 'ok');
@@ -1440,6 +1440,85 @@ check('shared sentences: a refused change names what changed; a failed Undo is t
   assert.equal(FT.CLOSE_UNDONE, 'Undone. The day is open again.');
 });
 
+// ======================= Camp refunds in the Daily report (R1-05, v1.039 / v1.040) =======================
+// Camps' Record refund (0039) writes a camp_payments row of kind 'refund': a minus amount, cash or check, dated the
+// day the money goes out, at the school of the desk that hands it back. Finance needs no code of its own for it:
+// the chain rules, the Refunds figures, Close the day's cash and the export all go by the row's kind. This is the
+// preview run Fix-Finance.md asked for ("record a $66 cash camp refund today -> Refunds, 'after $66.00 refunds',
+// Close the day expects $66 less cash, the payment's day doesn't change"), kept as a permanent check.
+check('mock: camp refunds — counted on the day and at the desk that hands the money back; the payment\'s day does not change', () => {
+  const now = Date.parse('2026-10-24T22:00:00.000Z'); // 6 PM at the school
+  const Y = addDays(T, -1); // the day the payments were taken
+  const id = (n) => `00000000-0000-4000-8000-00000000d${String(n).padStart(3, '0')}`;
+  const row = (n, camper, kind, cents, method, day, hhmm, school, extra = {}) => ({
+    id: id(n), camper_id: camper, kind, amount_cents: cents, method, paid_on: day, recorded_at: at(day, hhmm),
+    recorded_by: 'admin-1', recorded_by_name: 'Jeffrey Berg', reverses_payment_id: null, school, ...extra,
+  });
+  const store = (refunds) => ({
+    camps: [{ id: 'k9', name: 'Thanksgiving Camp', location_code: 'worcester', both_schools: true }],
+    camp_days: [{ id: 'kd9', camp_id: 'k9', day: '2026-11-25' }],
+    camp_campers: [
+      { id: 'kc9', camp_id: 'k9', first_name: 'Pat', last_name: 'Refund' },
+      { id: 'kc10', camp_id: 'k9', first_name: 'Quin', last_name: 'Handback' },
+    ],
+    camp_camper_days: [],
+    camp_payments: [
+      row(1, 'kc9', 'payment', 16600, 'cash', Y, '10:00', 'worcester'), // Pat paid $166 yesterday at Worcester
+      row(2, 'kc10', 'payment', 10000, 'cash', Y, '11:00', 'worcester'), // Quin paid $100 yesterday at Worcester
+      ...refunds,
+    ],
+  });
+  const refunds = [
+    row(3, 'kc9', 'refund', -6600, 'cash', T, '09:30', 'worcester'), // $66 cash handed back today at Worcester
+    row(4, 'kc10', 'refund', -2500, 'cash', T, '09:45', 'shrewsbury'), // $25 cash handed back today at SHREWSBURY
+  ];
+  const make = (read) => {
+    let kept = null;
+    return createFinanceBackend({
+      loadStore: () => kept, saveStore: (x) => { kept = JSON.parse(JSON.stringify(x)); },
+      readColorBelt: () => JSON.parse(JSON.stringify(cbStore)), readCamps: () => JSON.parse(JSON.stringify(read())),
+      now: () => now, today: () => T, newId: () => randomUUID(),
+    });
+  };
+  const before = make(() => store([]));
+  const after = make(() => store(refunds));
+  const dayOf = (b, school, d) => b.rpc('finance_day', dayArgs(school, d), ADMIN_CTX).data;
+  const delta = (school, pick) => pick(dayOf(after, school, T)) - pick(dayOf(before, school, T));
+
+  // Worcester, today: Pat's $66 refund is listed (a counted line of its own) and only that one.
+  const wToday = dayOf(after, 'worcester', T);
+  assertClean(wToday, 'finance_day with a camp refund');
+  const wRefunds = wToday.items.filter((it) => it.source === 'camp' && it.kind === 'refund');
+  assert.deepEqual(wRefunds.map((it) => [it.last_name, it.state, it.amount_cents, it.method]), [['Refund', 'counted', -6600, 'cash']]);
+  assert.equal(wRefunds[0].what, 'camp');
+  // ... in the Refunds figures, under the total ("after $66.00 refunds"), and the total is after the refund.
+  assert.equal(delta('worcester', (d) => d.refunds.count), 1);
+  assert.equal(delta('worcester', (d) => d.refunds.cents), -6600);
+  assert.equal(delta('worcester', (d) => d.refunds.cash_cents), -6600);
+  assert.equal(delta('worcester', (d) => d.totals.total_cents), -6600);
+  assert.equal(delta('worcester', (d) => d.totals.count), 0); // payments only count as payments
+  assert.equal(FT.afterRefunds(-6600), 'after $66.00 refunds');
+  // Close the day expects $66 less cash.
+  assert.equal(expectedValues(wToday.totals, wToday.refunds).cashCents - expectedValues(dayOf(before, 'worcester', T).totals, dayOf(before, 'worcester', T).refunds).cashCents, -6600);
+  // Shrewsbury, today: Quin's $25 refund (handed back there) counts THERE, not at Worcester where it was paid.
+  const sRefunds = dayOf(after, 'shrewsbury', T).items.filter((it) => it.source === 'camp' && it.kind === 'refund');
+  assert.deepEqual(sRefunds.map((it) => [it.last_name, it.amount_cents]), [['Handback', -2500]]);
+  assert.equal(delta('shrewsbury', (d) => d.refunds.cents), -2500);
+  assert.equal(wToday.items.some((it) => it.last_name === 'Handback' && it.kind === 'refund'), false);
+  // The payments' own day does not change at all.
+  for (const school of ['worcester', 'shrewsbury']) assert.deepEqual(dayOf(after, school, Y), dayOf(before, school, Y));
+  assert.deepEqual(dayOf(after, 'worcester', Y).items.filter((it) => it.source === 'camp').map((it) => [it.last_name, it.state, it.amount_cents]).sort(),
+    [['Handback', 'counted', 10000], ['Refund', 'counted', 16600]]);
+  // The export lists the refund row with its own counted amount; the payment detail says "refunded".
+  const exp = after.rpc('finance_export', { p_location_code: 'worcester', p_from: T, p_to: T }, ADMIN_CTX).data.rows
+    .filter((r) => r.what === 'camp' && r.kind === 'refund');
+  assert.deepEqual(exp.map((r) => [r.last_name, r.amount_cents, r.counted_cents, r.event_name]), [['Refund', -6600, -6600, 'Thanksgiving Camp']]);
+  const det = after.rpc('finance_payment_detail', { p_source: 'camp', p_payment_id: id(3) }, ADMIN_CTX).data;
+  assert.equal(det.status, 'ok');
+  assert.equal(det.item.kind, 'refund');
+  assert.equal(det.history[0].what, 'refunded');
+});
+
 // ======================= Finance's own failure sentences say "retry" (v0.825) =======================
 check('failure sentences: every Finance sentence that mentions the connection ends "Check the connection, then retry."', () => {
   const failures = Object.entries(FT).filter(([, v]) => typeof v === 'string' && /connection/i.test(v));
@@ -1448,8 +1527,8 @@ check('failure sentences: every Finance sentence that mentions the connection en
     assert.ok(/Check the connection, then retry\.$/.test(text), `${name}: ${text}`);
     assert.ok(!/try again/i.test(text), `${name} still says "try again"`);
   }
-  assert.equal(FT.CLOSE_FAILED, 'Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.');
-  assert.equal(FT.SETTINGS_SAVE_FAILED, 'Couldn’t save. Check the connection, then retry.');
+  assert.equal(FT.CLOSE_FAILED, 'Couldn\'t close the day. Nothing you typed is lost. Check the connection, then retry.');
+  assert.equal(FT.SETTINGS_SAVE_FAILED, 'Couldn\'t save. Check the connection, then retry.');
 });
 
 console.log(`${count} groups of checks ran.`);

@@ -4,7 +4,7 @@
 // Keeping it in one file makes it easy to compare with the mockups and to change one line
 // without hunting through the screens. Lines marked "(not in the mockups)" are for cases the
 // mockups don't show; they follow the approved wording's style and are listed for review.
-// The apostrophes are the curly ’ used in the mockups.
+// The apostrophes are straight, like everywhere in the dashboard (the mockups had curly ones; changed in the final batch).
 
 export const SCHOOL = "Jae H. Jeong's U.S. Taekwondo Center"; // straight ' as in the mockups' header
 export const PAGE_KIND = 'Color belt testing registration';
@@ -39,12 +39,12 @@ export const METHOD = { cash: 'Cash', check: 'Check', card: 'Card' };
 export const CONTINUE = 'Continue';
 
 // Step 1 errors (F3)
-export const ERR_FIRST = 'Enter the student’s first name.';
-export const ERR_LAST = 'Enter the student’s last name.';
+export const ERR_FIRST = "Enter the student's first name.";
+export const ERR_LAST = "Enter the student's last name.";
 export const ERR_NAME_TOO_LONG = 'Use 60 characters or fewer.'; // same as the dashboard (not in the mockups)
-export const ERR_NAME_BAD_CHARACTER = 'That name has a character that can’t be used. Remove it.'; // same as the dashboard
-export const ERR_CLASS = 'Choose the student’s class.'; // (not in the mockups)
-export const ERR_BELT = 'Choose the student’s current belt.';
+export const ERR_NAME_BAD_CHARACTER = "That name has a character that can't be used. Remove it."; // same as the dashboard
+export const ERR_CLASS = "Choose the student's class."; // (not in the mockups)
+export const ERR_BELT = "Choose the student's current belt.";
 export const ERR_STRIPES = 'Tick the box to confirm 3 stripes. Not sure? Ask your instructor before registering.';
 export const ERR_PAYING = 'Choose Cash or Check.';
 
@@ -64,7 +64,7 @@ export const ACK_TEXT = 'I confirm these details are correct and agree to pay th
 export const ACK_BOLD = 'Testing fees are not refundable.';
 export const SIGNATURE = 'Signature';
 export const SIGNATURE_WHO = ' — a parent or guardian if the student is under 18';
-export const SIGNATURE_HINT = 'Sign with your finger or mouse. Can’t sign here? Please sign at the front desk.';
+export const SIGNATURE_HINT = "Sign with your finger or mouse. Can't sign here? Please sign at the front desk.";
 export const SIGNATURE_BOX = 'Signature box. Draw your signature with your finger or mouse.';
 export const CLEAR = 'Clear';
 export const SEND = 'Send registration';
@@ -78,10 +78,10 @@ export const ERR_SIGNATURE = 'Draw your signature in the box.';
 export const ERR_SIGNATURE_TOO_BIG = 'This signature is too detailed to send. Tap Clear and sign again a little more simply.';
 
 // Messages at the top of step 2 after Send (contract 0005 §4.2)
-export const SEND_FAILED = 'Your registration wasn’t sent. Check your internet connection and try again. Nothing you entered is lost.';
-export const VERIFY_FAILED = 'We couldn’t check this browser. Try again, or ask at the front desk.';
+export const SEND_FAILED = "Your registration wasn't sent. Check your internet connection and try again. Nothing you entered is lost.";
+export const VERIFY_FAILED = "We couldn't check this browser. Try again, or ask at the front desk.";
 export const RATE_LIMITED = 'Too many tries from this connection. Please wait a few minutes, or ask at the front desk.';
-export const CLOSED_WHILE_FILLING = 'Registration closed while you were filling this in, so it wasn’t sent. Please ask at the front desk.';
+export const CLOSED_WHILE_FILLING = "Registration closed while you were filling this in, so it wasn't sent. Please ask at the front desk.";
 
 // Registered (F7, F8)
 export const isRegistered = (name) => `${name} is registered`;
@@ -100,17 +100,17 @@ export const totalHowToday = (methods) => `${methods}, at the front desk, today`
 export const REGISTER_ANOTHER = 'Register another student';
 
 // When families can't register (F11–F15)
-export const NOT_OPEN_TITLE = 'Registration hasn’t opened yet';
+export const NOT_OPEN_TITLE = "Registration hasn't opened yet";
 export const NOT_OPEN_TEXT = 'Please check back later, or ask at the front desk.';
 export const CLOSED_TITLE = 'Registration is closed';
 export const closedOn = (date) => `It closed on ${date}. To register late, please ask at the front desk.`;
 export const CLOSED_TEXT = 'To register late, please ask at the front desk.';
 export const FINISHED_TITLE = 'This color belt testing has finished';
 export const FINISHED_TEXT = 'For the next color belt testing, please ask at the front desk.';
-export const NOT_FOUND_TITLE = 'This link isn’t working';
+export const NOT_FOUND_TITLE = "This link isn't working";
 export const NOT_FOUND_TEXT = 'Please ask at the front desk for the current registration link.';
 // The page itself couldn't load the event (no internet, server trouble) — not in the mockups.
-export const LOAD_FAILED_TITLE = 'This page didn’t load';
+export const LOAD_FAILED_TITLE = "This page didn't load";
 export const LOAD_FAILED_TEXT = 'Check your internet connection and try again.';
 // The page was reloaded too often (the Function's 60-a-minute limit) — the same reason as RATE_LIMITED.
 export const RATE_LIMITED_TITLE = 'Too many tries';

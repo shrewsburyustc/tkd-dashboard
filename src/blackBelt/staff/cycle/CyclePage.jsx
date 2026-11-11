@@ -15,7 +15,9 @@
 //     on it stays usable and opens its menu (R4-04, v1.037, Star's v0.507 Q1): New candidate is
 //     grayed inside the menu, Make-up keeps working (CandidatesTab.jsx).
 //   - ONE amber bar for the page (v0.966): the ⋯ actions', Edit cycle's, the Candidates tab's and
-//     the Rubric tab's problems; switching tabs clears it.
+//     the Rubric tab's problems; switching tabs clears it. It is the shared PageBar, drawn under the top
+//     bar so it stays in view however far the page is scrolled (rulebook v1.128); a bar inside a box stays
+//     an ErrorBanner inside that box. When it goes with focus on its Retry or ×, focus returns to the tab.
 //   - the tabs (v0.946): Candidates (candidates/CandidatesTab.jsx, phase B2) · Grading
 //     (grading/GradingTab.jsx, migration 0025, contract 0025 §14.2) · Results (results/ResultsTab.jsx,
 //     §14.3) · Rubric (this cycle's own copy of the rubric, CycleRubricTab.jsx — migration 0024,
@@ -38,7 +40,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
 import BackLink from '../../../components/BackLink.jsx';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadCycle, schoolToday } from '../../../lib/blackBelt/api.js';
@@ -50,11 +52,11 @@ import GradingTab from '../grading/GradingTab.jsx';
 import { useBbGrading } from '../grading/useBbGrading.js';
 import * as GT from '../grading/text.js';
 import ResultsTab from '../results/ResultsTab.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import { showOnCyclesList } from '../cycles/CyclesTab.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import NoIcon from '../../../components/NoIcon.jsx';
-import LineBar from '../parts/LineBar.jsx';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
@@ -129,6 +131,9 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   const [menu, setMenu] = useState(null); // { anchor }
   const [links, setLinks] = useState(null); // { opener } while the Registration link box is open
   const [banner, setBanner] = useState(null);
+  // The bar is a PageBar (under the top bar, v1.128): when it goes while focus is on its Retry or ×, focus returns to the tab.
+  // C5: "couldn't load" is a bar too (it is drawn from the load's status, not from `banner`), so it counts as open.
+  useBarFocusReturn(Boolean(banner) || live.status === 'error' || (live.status === 'ready' && !cycle), focusCurrentTab);
   // One change at a time, and an Undo pressed meanwhile waits its turn (the shared save line, R2-05).
   // The line's own bar is the page's bar: a failed Undo shows on whichever tab is open (never silent).
   const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
@@ -260,7 +265,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     return (
       <>
         {backLink}
-        <ErrorBanner text={T.LOAD_FAILED} onRetry={() => liveRef.current.reload()} />
+        <PageBar text={T.LOAD_FAILED} onRetry={() => liveRef.current.reload()} />
       </>
     );
   }
@@ -405,7 +410,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
         <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} gradingStartedAt={rubricLive.data.gradingStartedAt ?? null} onGoToDefaultRubric={onGoToDefaultRubric} />
       )}
-      {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={dismissBanner} />}
+      {banner && <PageBar takeFocus={banner.takeFocus === true} text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || banner.retrying === true} onDismiss={dismissBanner} />}
       {tab === 'rubric' && (
         <CycleRubricTab
           cycle={cycle}

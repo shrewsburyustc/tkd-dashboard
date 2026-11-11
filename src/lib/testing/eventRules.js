@@ -56,6 +56,14 @@ export const PREVIEW_TODAY_KEY = 'tkd.preview.today';
 // rows phones show, whatever the window's own width. If class or rank names ever grow, measure again.
 export const ROSTER_ROOM = 648;
 
+// The same for the Events list of Color belt testing (final batch, Jeffrey: take all). Measured in preview on
+// 2026-11-10: with touch the table's fixed columns take 522 px of the room, with a mouse 492 px, and the Event
+// column gets the rest. From 648 px of room it has at least 126 px, so a long name wraps onto two lines
+// ("November Children / Testing"); below that the name is cut into single letters (46 px at 568 px of room: a
+// 640 px touch window with Largest panel). So under EVENTS_ROOM the list draws the stacked rows phones show,
+// whatever the window's own width (the shared parts' usePageRoomBelow / rosterLayoutFor, as the roster).
+export const EVENTS_ROOM = 648;
+
 // The five event states, in the order eventState checks them.
 export const EVENT_STATES = ['finished', 'open', 'closed_by_date', 'not_open_yet', 'closed'];
 

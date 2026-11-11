@@ -89,13 +89,6 @@ const openClassesBySchool = new Map();
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED'];
 
-// batch 2 words — the reasons inside "Couldn't undo: …" (T.couldntUndo adds the start and the full
-// stop). The owner of text.js moves them there later.
-const someoneElseChangedReason = (name) => `someone else changed ${name} just now`;
-const UNDO_NOT_ALLOWED_REASON = 'only an admin can change classes, ranks and prices';
-const classHasRanksReason = (className) => `${className} has ranks now. Use ⋯ → Delete class instead`;
-const rankIsFinalAwardReason = (rankName, className) => `${rankName} is now ${className}'s final award. Use ⋯ → Delete rank instead`;
-
 // Finding things on the page (for putting keyboard focus back after a dialog closes).
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-nav-row="${id}"]`);
@@ -614,12 +607,12 @@ export default function ClassesRanksTab({
     }
     if (status === 'not_allowed') {
       onRefreshProfile();
-      return { status, reason: T.couldntUndo(UNDO_NOT_ALLOWED_REASON) };
+      return { status, reason: T.couldntUndo(T.UNDO_REASON_NOT_ALLOWED_CLASSES) };
     }
-    if (status === 'not_empty') return { status, reason: T.couldntUndo(classHasRanksReason(notEmptyName)) };
+    if (status === 'not_empty') return { status, reason: T.couldntUndo(T.undoReasonClassHasRanks(notEmptyName)) };
     if (['stale', 'not_found', 'duplicate_name', 'invalid'].includes(status)) {
       reloadQuiet(); // show what the other person did
-      return { status, reason: T.couldntUndo(someoneElseChangedReason(name)) };
+      return { status, reason: T.couldntUndo(T.undoReasonSomeoneElse(name)) };
     }
     return { status: 'error' }; // network etc.: the bar's Retry sends the same undo again
   }
@@ -642,10 +635,10 @@ export default function ClassesRanksTab({
     const check = checkUndoAddRank(classesRef.current, rankId);
     if (!check.ok) {
       if (check.reason === 'isFinalAward') {
-        return { status: 'is_final_award', reason: T.couldntUndo(rankIsFinalAwardReason(check.rankName, check.className)) };
+        return { status: 'is_final_award', reason: T.couldntUndo(T.undoReasonRankIsFinalAward(check.rankName, check.className)) };
       }
       reloadQuiet();
-      return { status: 'stale', reason: T.couldntUndo(someoneElseChangedReason(check.rankName ?? rankName)) };
+      return { status: 'stale', reason: T.couldntUndo(T.undoReasonSomeoneElse(check.rankName ?? rankName)) };
     }
     return runUndo(() => deleteRank(check.rpcArgs), {
       name: rankName,
@@ -658,7 +651,7 @@ export default function ClassesRanksTab({
     const cls = classesRef.current.find((c) => c.id === classId);
     const name = cls?.name ?? className;
     if (cls && cls.ranks.length > 0) {
-      return { status: 'not_empty', reason: T.couldntUndo(classHasRanksReason(cls.name)) };
+      return { status: 'not_empty', reason: T.couldntUndo(T.undoReasonClassHasRanks(cls.name)) };
     }
     return runUndo(
       () => deleteClass({ classId, expectedVersion: 1, expectedRankIds: [], expectedLostAwardClassIds: [], onlyIfEmpty: true }),

@@ -36,12 +36,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import DialogBar from '../parts/DialogBar.jsx';
 import LineBar from '../parts/LineBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { HISTORY } from '../../../components/text.js'; // the History section's name for screen readers
-import { formatCents } from '../../../lib/blackBelt/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import DateField from '../parts/DateField.jsx';
@@ -86,7 +87,7 @@ export function lineWords(line, payments, plan) {
 // The ⋯ sheet's subtitle is the shared payment line (v1.135): "$870 card · paid Mar 20 · for payments 1, 2 and 3 · by
 // Jeffrey Berg"; a refund "refunded $23 cash Mar 20 · by …"; a returned check keeps "Mar 20 · $870".
 function lineSubtitle(line, plan) {
-  if (line.kind === 'returned') return `${T.monthDay(line.paidOn)} · ${formatCents(line.amountCents)}`;
+  if (line.kind === 'returned') return `${T.monthDay(line.paidOn)} · ${formatMoney(line.amountCents)}`;
   return T.paymentLine({ kind: line.kind, cents: line.amountCents, method: line.method, iso: line.paidOn, what: T.forSentence(line.forItems, { paymentsCount: plan?.paymentsCount ?? null }), by: line.recordedByName });
 }
 function noteWords(line) {
@@ -154,7 +155,7 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
                 <span className="bb-pay-block-text">
                   <span className="bb-pay-block-top">
                     <span className="bb-pay-what">{w.what}</span>
-                    <span className="bb-num">{formatCents(line.amountCents)}</span>
+                    <span className="bb-num">{formatMoney(line.amountCents)}</span>
                   </span>
                   <span className="bb-pay-block-sub">{second.join(' · ')}</span>
                 </span>
@@ -191,7 +192,7 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
                     <td className="nowrap">{T.monthDay(line.paidOn)}</td>
                     <td>{w.what}</td>
                     <td>{w.how}</td>
-                    <td className="bb-num nowrap">{formatCents(line.amountCents)}</td>
+                    <td className="bb-num nowrap">{formatMoney(line.amountCents)}</td>
                     <td className="bb-pay-note">{noteWords(line)}</td>
                     <td>{line.recordedByName}</td>
                     {isAdmin && <td className="bb-pay-acts">{more(line)}</td>}
@@ -205,15 +206,15 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
       <dl className="bb-totals">
         <div>
           <dt>{T.TOTAL_DUE}</dt>
-          <dd>{formatCents(money.totalDueCents)}</dd>
+          <dd>{formatMoney(money.totalDueCents)}</dd>
         </div>
         <div>
           <dt>{T.PAID}</dt>
-          <dd>{formatCents(money.paidCents)}</dd>
+          <dd>{formatMoney(money.paidCents)}</dd>
         </div>
         <div>
           <dt>{T.BALANCE}</dt>
-          <dd className={money.overpaidCents > 0 ? 'bb-balance is-over' : undefined}>{formatCents(money.balanceCents)}</dd>
+          <dd className={money.overpaidCents > 0 ? 'bb-balance is-over' : undefined}>{formatMoney(money.balanceCents)}</dd>
         </div>
         <div>
           <dt>{T.NEXT_DUE}</dt>
@@ -642,7 +643,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
             actions.saveEdit();
           }}
         >
-          {e.failed && <ErrorBanner text={T.SAVE_FAILED} onRetry={() => actions.saveEdit()} retrying={e.saving} />}
+          {e.failed && <DialogBar text={T.SAVE_FAILED} onRetry={() => actions.saveEdit()} retrying={e.saving} />}
           <EditFields edit={e} data={data} isAdmin={isAdmin} hidden={hidden} today={today} isPhone={isPhone} onChange={actions.changeEdit} />
           {isPhone ? (
             <>

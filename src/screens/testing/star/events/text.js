@@ -69,15 +69,15 @@ export const TESTING_DATE_HINT = PAST_DAYS_HINT;
 export const MARKED_TESTING_DATE = 'Testing date.'; // after the dot, while the testing date's month is on show
 export const MARKED_TESTING_DATE_SR = 'testing date'; // what a screen reader adds to that day
 export const closingRangeHint = (testingDate) => `The closing date can be from today up to ${weekdayMonthDay(testingDate)}.`;
-export const CLOSING_PASSED_HINT = "The testing day has passed, so a new closing date can’t be chosen. Move the testing date first.";
+export const CLOSING_PASSED_HINT = "The testing day has passed, so a new closing date can't be chosen. Move the testing date first.";
 export const CHOOSE_TESTING_DATE_FIRST = 'Choose the testing date first.';
-export const CLOSING_BLOCKED = "Can’t be turned on after the testing day. Move the testing date first.";
-export const closingMoved = (date) => `Moved to ${weekdayMonthDay(date)}, so it isn’t after the testing date.`;
+export const CLOSING_BLOCKED = "Can't be turned on after the testing day. Move the testing date first.";
+export const closingMoved = (date) => `Moved to ${weekdayMonthDay(date)}, so it isn't after the testing date.`;
 // v0.504: shown under the closing-date box instead of "stays open…" when saving would reopen
 // registration by itself (it is kept closed)
 export const KEPT_CLOSED_HINT = 'Registration stays closed when you save; open it from ⋯ when ready.';
 // Edit of a finished event: the Registration switch is grayed
-export const REGISTRATION_LOCKED_FINISHED = "This testing has finished, so registration can’t change.";
+export const REGISTRATION_LOCKED_FINISHED = "This testing has finished, so registration can't change.";
 export const CHOOSE_START_TIME = 'Choose a start time.'; // PROPOSAL (Save tapped while it is empty)
 export const CHOOSE_END_TIME = 'Choose an end time.'; // v0.520 (Save tapped while it is empty)
 export const END_AFTER_START = 'End time must be after the start time.'; // v0.520
