@@ -956,6 +956,33 @@ img {
   border-top: 1px solid var(--color-border);
 }
 
+/* A menu row that can't be used right now (M17, v1.000 / v1.143: Staff accounts while private details are hidden):
+   the approved unavailable look, still focusable (aria-disabled), no hover square. One gray line under it says why. */
+.menu-item[aria-disabled='true'],
+.menu-item[aria-disabled='true'] .menu-icon {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.menu-note {
+  margin: 0;
+  padding: 0 var(--space-12) var(--space-8) 36px; /* 12px edge + 16px icon + 8px gap: lines up with the row's words */
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The unsaved-changes note in Change PIN / Change password (M14): room under it, on the phone page too */
+.dialog-unsaved {
+  margin-bottom: var(--space-16);
+}
+
+/* "Discard changes" on the phone page sits under the note's words, on its own line (its 44px tap area would
+   otherwise stretch the first line and push the words away from the warning icon) */
+.dialog-unsaved .link-button {
+  display: block;
+  margin-top: var(--space-4);
+}
+
 /* ===== Account dialogs (AccountDialog.jsx: Change PIN, Change password) ===== */
 /* PC / tablet: a box in the middle of a dimmed page. */
 .dialog-backdrop {
@@ -1240,6 +1267,10 @@ img {
     background: var(--color-surface);
   }
 
+  .menu-item[aria-disabled='true']:hover {
+    background: none;
+  }
+
   .btn-primary:hover {
     border-color: var(--color-blue-hover);
     background: var(--color-blue-hover);
@@ -1426,6 +1457,11 @@ img {
 
   .menu-subitem {
     padding-left: 40px; /* 16px edge + 16px icon + 8px gap */
+  }
+
+  .menu-note {
+    padding-left: 40px; /* 16px edge + 16px icon + 8px gap */
+    padding-right: var(--space-16);
   }
 }
 

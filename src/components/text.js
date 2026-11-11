@@ -171,6 +171,15 @@ export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
 export const undoPaymentTitle = (name, money, way) => `Undo ${name}'s ${money} ${way} payment?`;
 export const paidOnOpening = (paidOn) => `Paid on ${paidOn}`;
 
+// M14 (v1.027, v1.143): Change PIN and Change password join the unsaved-changes guard, with the words the
+// other dialogs already say. Phones add "Discard changes" (v0.56).
+export const UNSAVED_CHANGES = 'Unsaved changes. Save or cancel first.';
+export const DISCARD_CHANGES = 'Discard changes';
+
+// M17 (v1.000, v1.143): Staff accounts shows emails, so it is desk-only while Hide private details is on. The
+// gray line under the account menu's row, and on the page if it is open when the switch goes on.
+export const STAFF_ACCOUNTS_OFF = 'Off while private details are hidden.';
+
 // R1-07, the last part (v1.135, option C; Jeffrey: "C"): the payment line, the History words and the Paying by line,
 // once. money arrives formatted ("$140"), way in lower case ("card"), dates formatted ("Nov 3").
 //   paymentLine("$140", "card", "Nov 3")                      "$140 card · paid Nov 3"          (Star's base)

@@ -18,9 +18,8 @@ export const LOADING = 'Loading…'; // (Color Belt)
 export const BOTH_SCHOOLS_LINE = (heldAt) => `U.S.T.C. Worcester & Shrewsbury · held at ${heldAt}`;
 // "Ages 5–12"; one age only, e.g. 8 to 8 → "Age 8" (not in the mockups)
 export const agesLine = (min, max) => (min === max ? `Age ${min}` : `Ages ${min}–${max}`);
-// "Early price until Wednesday, November 18 · Sign up by Tuesday, November 24"
+// "Early price until Wednesday, November 18" (the old " · Sign up by …" part is gone, v0.753)
 export const earlyUntilPart = (date) => `Early price until ${date}`;
-export const signUpByPart = (date) => `Sign up by ${date}`;
 
 // ----- Step 1 (C7a) -----
 export const STEP_1 = 'Step 1 of 2 · Details';

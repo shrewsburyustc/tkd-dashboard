@@ -837,5 +837,13 @@ await check('v1.141: apostrophes in the shared sentences are straight', () => {
     if (typeof sample === 'string') assert.ok(!/[\u2019\u2018]/.test(sample), `${name} has a curly apostrophe: ${sample}`);
   }
 });
+await check('M13/M14/M17 (v1.143): Home says "Both schools" on Both, and the shared words for the unsaved-changes guard and Staff accounts', async () => {
+  const { describeLocation } = await import('../dates.js');
+  assert.equal(describeLocation('Both'), 'Both schools');
+  assert.equal(describeLocation('Worcester'), 'Worcester');
+  assert.equal(SHARED.UNSAVED_CHANGES, 'Unsaved changes. Save or cancel first.');
+  assert.equal(SHARED.DISCARD_CHANGES, 'Discard changes');
+  assert.equal(SHARED.STAFF_ACCOUNTS_OFF, 'Off while private details are hidden.');
+});
 console.log(`${count} groups of checks ran.`);
 console.log('ALL SHARED PARTS CHECKS PASSED');
