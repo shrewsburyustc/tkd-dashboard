@@ -207,28 +207,28 @@ const templateExtraJson = ([name, dollars, per, notForAllDays, weekdays]) => ({
 const DEFAULT_CAMPS = [
   {
     key: 'columbus', name: 'Columbus Day Camp', location: 'worcester', both: false, days: ['2026-10-12'],
-    opens: '2026-09-21', closes: '2026-10-11', early: '2026-10-05', ages: [5, 12], grid: GRID_ONE,
+    opens: '2026-09-21', closes: '2026-10-11', early: '2026-10-05', ages: [5, 99], grid: GRID_ONE,
     extras: [DROP, PICK, LUNCH], description: DESC_ONE, made: ['2026-09-14', '10:00'],
   },
   {
     key: 'veterans', name: 'Veterans Day Camp', location: 'worcester', both: false, days: ['2026-11-11'],
-    opens: '2026-10-01', closes: '2026-11-10', early: '2026-11-04', ages: [5, 12], grid: GRID_ONE,
+    opens: '2026-10-01', closes: '2026-11-10', early: '2026-11-04', ages: [5, 99], grid: GRID_ONE,
     extras: [DROP, PICK, LUNCH], description: DESC_ONE, closedByHand: true, made: ['2026-09-25', '10:00'],
   },
   {
     key: 'thanksgiving', name: 'Thanksgiving Camp', location: 'worcester', both: false, days: ['2026-11-25', '2026-11-27'],
-    opens: '2026-10-05', closes: '2026-11-24', early: '2026-11-18', ages: [5, 12], grid: GRID_TWO,
+    opens: '2026-10-05', closes: '2026-11-24', early: '2026-11-18', ages: [5, 99], grid: GRID_TWO,
     extras: [DROP, PICK], description: DESC_TWO, made: ['2026-09-28', '10:00'],
   },
   {
     key: 'winter', name: 'Winter Break Camp', location: 'shrewsbury', both: false, days: ['2026-12-28', '2026-12-29', '2026-12-30'],
-    opens: '2026-11-30', closes: '2026-12-27', early: '2026-12-21', ages: [5, 12], grid: GRID_THREE,
+    opens: '2026-11-30', closes: '2026-12-27', early: '2026-12-21', ages: [5, 99], grid: GRID_THREE,
     extras: [DROP, PICK], description: DESC_WINTER, made: ['2026-10-10', '10:00'],
   },
   {
     key: 'april', name: 'April Vacation Camp', location: 'worcester', both: true,
     days: ['2027-04-19', '2027-04-20', '2027-04-21', '2027-04-22', '2027-04-23'],
-    opens: '2027-03-01', closes: '2027-04-18', early: '2027-04-12', ages: [5, 12], grid: GRID_WEEK,
+    opens: '2027-03-01', closes: '2027-04-18', early: '2027-04-12', ages: [5, 99], grid: GRID_WEEK,
     extras: [DROP, PICK, PIZZA], description: DESC_WEEK, made: ['2026-10-16', '10:00'],
   },
   {
@@ -236,7 +236,7 @@ const DEFAULT_CAMPS = [
     key: 'summer', name: 'Two-Week Summer Camp', location: 'worcester', both: false,
     days: ['2027-07-05', '2027-07-06', '2027-07-07', '2027-07-08', '2027-07-09', '2027-07-12', '2027-07-13', '2027-07-14', '2027-07-15', '2027-07-16'],
     // Weekly pricing (v0.717): 5 rows (Mon–Fri), each week priced on its own and the weeks added up.
-    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 12], grid: GRID_WEEK,
+    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 99], grid: GRID_WEEK,
     extras: [DROP, PICK, PIZZA], description: 'Two weeks of Taekwondo, games, crafts and outdoor play. Bring a lunch, a water bottle, sunscreen and comfortable clothes.',
     made: ['2026-10-20', '10:00'],
   },
@@ -549,7 +549,7 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
     const at = schoolClockToIso('2026-10-16', '12:00');
     db.camp_templates.push({
       id: id('c4'), name, location_code: location, both_schools: both, day_count: dayCount, start_time: '09:00:00', end_time: '15:00:00',
-      opens_days_before: opens, closes_days_before: closes, early_days_before: early, min_age: 5, max_age: 12,
+      opens_days_before: opens, closes_days_before: closes, early_days_before: early, min_age: 5, max_age: 99,
       description, waiver_text: WAIVER, prices: gridRows(grid), extras: extras.map(templateExtraJson), ...stamps(at, 'Jeffrey Berg', ADMIN_USER_ID),
     });
   });

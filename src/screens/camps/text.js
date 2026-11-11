@@ -462,18 +462,15 @@ export const cantChangeExtraPer = (name, n) => `Can't switch ${name} between onc
 export const cantIncludeExtra = (name, n) => `Can't save: ${name} would become included for ${campersCount(n)} who paid for it (they'd come every camp day that week). Change their extras first.`;
 
 // Family form
-export const AGES_ACCEPTED = 'Ages accepted';
-export const AGES_FROM = 'from';
-export const AGES_TO = 'to';
-export const AGES_HINT = 'A blank camp starts at 3 to 17; a template brings its own range. The family form only accepts children in this range.';
-export const AGES_ORDER = 'The first age must be lower than the second.';
+// Ages: a MINIMUM only, no maximum (Jeffrey 2026-11-11, rulebook v0.756: "We assume no adults will come").
+export const MIN_AGE = 'Minimum age';
+export const AGES_HINT = 'The family form only accepts children this age or older. There is no maximum age. A blank camp starts at 3; a template brings its own.';
 export const ENTER_AN_AGE = 'Enter an age';
 export const AGES_RANGE = 'Enter an age from 1 to 99.'; // (not in the mockups)
-export const agesShort = (min, max) => `Ages ${min}–${max}`;
-export const familySummary = (min, max, fromTemplate) =>
-  `${agesShort(min, max)} · description and waiver${fromTemplate ? ' from the template' : ''}`;
-export const FAMILY_AGES_PROBLEM = 'Ages: the first age must be lower than the second';
-export const FAMILY_PROBLEM = 'Check the ages and the waiver'; // (not in the mockups)
+export const agesShort = (min) => `Ages ${min} and up`;
+export const familySummary = (min, fromTemplate) =>
+  `${agesShort(min)} · description and waiver${fromTemplate ? ' from the template' : ''}`;
+export const FAMILY_PROBLEM = 'Check the minimum age and the waiver'; // (not in the mockups)
 export const DESCRIPTION = 'Description';
 export const DESCRIPTION_HINT = 'Shown at the top of the family sign-up form and on the “You\'re signed up” page. Put what to bring here.';
 export const WAIVER_TEXT = 'Waiver text';

@@ -14,7 +14,7 @@ import {
   CAMP_TRIES_PER_HOUR, UNDO_WINDOW_MS, PAYING_BY, DEFAULT_EARLY_DAYS_BEFORE, DEFAULT_CLOSES_DAYS_BEFORE,
   signupState, campTag, isCampWeek, defaultCampTab, defaultCheckInDay, campsForLocation, campCounts, priceKind, baseCents,
   priceChild, familyTotal, isAllDays, payTag, toCollectCents, checkInRule, checkInNote, attendanceCell, cameCount, validateAges,
-  ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
+  ageAllowed, NO_MAX_AGE, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
   gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
   comingCardDay, comesOnDay, campCardCounts, matchesCardFilter,
@@ -67,7 +67,8 @@ function check(label, fn) {
 
 check('constants (§5.1)', () => {
   assert.equal(CAMP_ACK_VERSION, 'camp-2026-10-18');
-  assert.deepEqual(DEFAULT_AGES, { min: 3, max: 17 });
+  assert.deepEqual(DEFAULT_AGES, { min: 3, max: 99 }); // a minimum age and no maximum: 99 is how "no maximum" is stored (v0.756)
+  assert.equal(NO_MAX_AGE, 99);
   assert.deepEqual(AGE_LIMITS, { min: 1, max: 99 });
   assert.equal(MAX_DAYS, 60); // weekly pricing R4 (was 10)
   assert.equal(MAX_EXTRAS, 10);
@@ -417,19 +418,23 @@ check('template offsets both ways', () => {
 });
 
 check('ages, phones and the text rule', () => {
-  assert.equal(validateAges(3, 17), null);
-  assert.equal(validateAges(8, 8), null); // from may equal to
-  assert.equal(validateAges(12, 5), 'order');
-  assert.equal(validateAges('', 5), 'blank');
-  assert.equal(validateAges(null, 5), 'blank');
-  assert.equal(validateAges(5, Number.NaN), 'blank');
-  assert.equal(validateAges(0, 5), 'range');
-  assert.equal(validateAges(5, 100), 'range');
-  assert.equal(validateAges(5.5, 8), 'range');
+  // A minimum age only (v0.756): blank and out-of-range are the only problems; there is no "order".
+  assert.equal(validateAges(3), null);
+  assert.equal(validateAges(1), null);
+  assert.equal(validateAges(99), null);
+  assert.equal(validateAges(''), 'blank');
+  assert.equal(validateAges(null), 'blank');
+  assert.equal(validateAges(Number.NaN), 'blank');
+  assert.equal(validateAges(0), 'range');
+  assert.equal(validateAges(100), 'range');
+  assert.equal(validateAges(5.5), 'range');
   assert.equal(ageAllowed(5, APRIL_CAMP), true);
   assert.equal(ageAllowed(12, APRIL_CAMP), true);
   assert.equal(ageAllowed(4, APRIL_CAMP), false);
-  assert.equal(ageAllowed(13, APRIL_CAMP), false);
+  assert.equal(ageAllowed(13, APRIL_CAMP), true); // no maximum: the camp's stored 12 is ignored by the family form
+  assert.equal(ageAllowed(45, APRIL_CAMP), true);
+  assert.equal(ageAllowed(99, APRIL_CAMP), true);
+  assert.equal(ageAllowed(100, APRIL_CAMP), false); // the database accepts 1 to 99
   assert.equal(ageAllowed(8.5, APRIL_CAMP), false);
   assert.equal(phoneDigits('(508) 555-0142'), '5085550142');
   assert.equal(phoneDigits('+1 508 555 0142'), '5085550142');
@@ -3081,6 +3086,30 @@ check('Both-schools camp: no screen, family or staff, says "held at" or gives on
   assert.ok(code('./campReceipt.js').includes('T.campSchoolLine(camp)'), 'the receipt');
   // Edit camp keeps the camp's stored school without asking (no "Held at" choice): the camp's own school stays.
   assert.ok(!code('../../screens/camps/sections/CampSection.jsx').includes('values.heldAt'), 'no Held at field');
+});
+
+// ======================= ages: a minimum and no maximum (rulebook v0.756) =======================
+check('Ages: Edit camp has one Minimum age box; the family page says "Ages 5 and up" and refuses only younger children (v0.756)', () => {
+  // Jeffrey 2026-11-11: "For ages, have a minimum age but no max. We assume no adults will come."
+  const blank = blankValues('2026-11-05', 'worcester');
+  assert.equal(blank.minAge, '3');
+  assert.equal('maxAge' in blank, false, 'no maximum box value');
+  const asked = (over) => checkForm({ ...blank, waiverText: 'I agree.', ...over }, { mode: 'add', today: '2026-11-05', initialDays: [], server: {} });
+  assert.equal(asked({ minAge: '' }).errors.minAge, 'Enter an age');
+  assert.equal(asked({ minAge: '0' }).errors.ages, 'Enter an age from 1 to 99.');
+  assert.equal(asked({ minAge: '100' }).errors.ages, 'Enter an age from 1 to 99.');
+  assert.equal(asked({ minAge: '5' }).errors.minAge, undefined);
+  assert.equal(asked({ minAge: '5' }).sections[5].summary, 'Ages 5 and up · description and waiver');
+  assert.equal(asked({ minAge: '5', fromTemplateName: 'Summer week' }).sections[5].summary, 'Ages 5 and up · description and waiver from the template');
+  // The words: the family card and the family page's refusal.
+  assert.equal(FamilyText.agesLine(5), 'Ages 5 and up');
+  assert.equal(FamilyText.agesFor(5), 'This camp is for ages 5 and up.');
+  for (const gone of ['AGES_ACCEPTED', 'AGES_FROM', 'AGES_TO', 'AGES_ORDER', 'FAMILY_AGES_PROBLEM']) assert.equal(gone in CampText, false, gone);
+  // The database still stores a maximum for every camp: the app always sends 99 ("no maximum").
+  const code = (name) => readFileSync(new URL(name, import.meta.url), 'utf8').split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
+  assert.ok(code('../../screens/camps/sections/campForm.js').includes('maxAge: NO_MAX_AGE'));
+  assert.ok(!/maxAge/.test(code('../../screens/camps/sections/FamilyFormSection.jsx')), 'one box, no maximum');
+  assert.ok(!/maxAge/.test(code('../../camp/parts.jsx') + code('../../camp/form.js') + code('../../camp/text.js')), 'the family page never reads a maximum');
 });
 
 console.log(`${count} groups of checks ran.`);

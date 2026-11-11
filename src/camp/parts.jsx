@@ -64,7 +64,7 @@ export function CampCard({ camp, full = false, priceKindToday = 'early' }) {
       {full ? (
         <>
           <div className="reg-hero__where camp-ages">
-            <b>{T.agesLine(camp.minAge, camp.maxAge)}</b>
+            <b>{T.agesLine(camp.minAge)}</b>
           </div>
           {/* Extras offered only on some days: "Pizza party: Wed, Fri" (CP1 2026-10-19) */}
           {onlyOnLines(camp).map((line) => (

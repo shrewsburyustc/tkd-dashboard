@@ -53,9 +53,13 @@ export function yearsAround(today, dates = [], nextYear = true) {
 
 // Which waiver/confirmation wording the family ticked. Change it when that wording changes.
 export const CAMP_ACK_VERSION = 'camp-2026-10-18';
-// A blank camp accepts ages 3 to 17; any range must stay inside 1 to 99 (v0.703).
-export const DEFAULT_AGES = { min: 3, max: 17 };
+// A camp has a MINIMUM age and no maximum (Jeffrey 2026-11-11, rulebook v0.756: "We assume no adults will
+// come"). A blank camp starts at 3 and up. The database still stores a maximum for every camp (its check
+// needs one from 1 to 99), so "no maximum" is 99, the top of the allowed range: the app always sends it,
+// and every camp already stored on the live database has it (checked 2026-11-11).
 export const AGE_LIMITS = { min: 1, max: 99 };
+export const NO_MAX_AGE = AGE_LIMITS.max;
+export const DEFAULT_AGES = { min: 3, max: NO_MAX_AGE };
 export const MAX_DAYS = 60; // days in one camp (was 10 before weekly pricing, rulebook v0.717)
 export const MAX_WEEK_DAYS = 7; // rows in a price grid at most (days in one Monday–Sunday week)
 export const MAX_EXTRAS = 10; // extras in one camp
@@ -785,20 +789,18 @@ export function cameCount(row, days, today) {
 const isWhole = (n) => typeof n === 'number' && Number.isInteger(n);
 const isBlank = (v) => v === null || v === undefined || v === '' || (typeof v === 'number' && Number.isNaN(v));
 
-// Checks the "Ages accepted from / to" boxes. null = fine, else 'blank' ("Enter an age"),
-// 'range' (not a whole number from 1 to 99) or 'order' ("The first age must be lower than the
-// second."). From may equal to (8–8 is fine).
-export function validateAges(minAge, maxAge) {
-  if (isBlank(minAge) || isBlank(maxAge)) return 'blank';
-  if (!isWhole(minAge) || !isWhole(maxAge)) return 'range';
-  if (minAge < AGE_LIMITS.min || maxAge > AGE_LIMITS.max || maxAge < AGE_LIMITS.min || minAge > AGE_LIMITS.max) return 'range';
-  if (minAge > maxAge) return 'order';
+// Checks the "Minimum age" box. null = fine, else 'blank' ("Enter an age") or 'range' (not a whole
+// number from 1 to 99). There is no maximum age to check (v0.756).
+export function validateAges(minAge) {
+  if (isBlank(minAge)) return 'blank';
+  if (!isWhole(minAge) || minAge < AGE_LIMITS.min || minAge > AGE_LIMITS.max) return 'range';
   return null;
 }
 
-// May a child of this age sign up on the family form? (Staff Edit details accepts 1–99.)
+// May a child of this age sign up on the family form? The camp's minimum age or older, up to 99 (the
+// largest age the database accepts); there is no maximum age (v0.756). (Staff Edit details accepts 1–99.)
 export function ageAllowed(age, camp) {
-  return isWhole(age) && age >= camp?.minAge && age <= camp?.maxAge;
+  return isWhole(age) && age >= camp?.minAge && age <= NO_MAX_AGE;
 }
 
 // ----- Phones -----

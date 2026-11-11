@@ -19,8 +19,8 @@ export const LOADING = 'Loading…'; // (Color Belt)
 // off the family page (Jeffrey 2026-11-10, rulebook v0.754): each school's students still go to their
 // own school, and merging the two is the school's own decision, not something the form announces.
 export const BOTH_SCHOOLS_LINE = 'U.S.T.C. Worcester & Shrewsbury';
-// "Ages 5–12"; one age only, e.g. 8 to 8 → "Age 8" (not in the mockups)
-export const agesLine = (min, max) => (min === max ? `Age ${min}` : `Ages ${min}–${max}`);
+// "Ages 5 and up": a minimum age and no maximum (Jeffrey 2026-11-11, v0.756; it was "Ages 5–12")
+export const agesLine = (min) => `Ages ${min} and up`;
 // "Early price until Wednesday, November 18" (the old " · Sign up by …" part is gone, v0.753)
 export const earlyUntilPart = (date) => `Early price until ${date}`;
 
@@ -85,7 +85,7 @@ export const CONTINUE = 'Continue';
 export const ERR_FIRST = 'Enter the child\'s first name.';
 export const ERR_LAST = 'Enter the child\'s last name.';
 export const ERR_AGE = 'Enter the child\'s age.';
-export const agesFor = (min, max) => `This camp is for ages ${min} to ${max}.`; // (mockup C7a)
+export const agesFor = (min) => `This camp is for ages ${min} and up.`; // (mockup C7a said "5 to 12"; v0.756)
 export const ERR_MEMBER = 'Choose Yes or No.';
 export const ERR_DAYS = 'Choose at least one day.';
 export const ERR_EXTRA_DAYS = 'Choose which days.';

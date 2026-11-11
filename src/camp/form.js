@@ -175,7 +175,7 @@ export function detailsErrors(form, camp) {
     add(`${c}.last`, childNameError(child.last, T.ERR_LAST));
     const age = ageNumber(child.age);
     if (age === null) add(`${c}.age`, T.ERR_AGE);
-    else if (!ageAllowed(age, camp)) add(`${c}.age`, T.agesFor(camp.minAge, camp.maxAge));
+    else if (!ageAllowed(age, camp)) add(`${c}.age`, T.agesFor(camp.minAge));
     if (child.member === null) add(`${c}.member`, T.ERR_MEMBER);
     if (child.dayIds.length === 0) add(`${c}.days`, T.ERR_DAYS);
     for (const pick of child.extras) {
