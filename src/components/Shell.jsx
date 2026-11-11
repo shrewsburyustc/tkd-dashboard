@@ -39,6 +39,7 @@ export default function Shell({
   onNavigate,
   location,
   onLocationChange,
+  onOpenPerson,
   profile,
   deviceLocation,
   onDeviceLocationChange,
@@ -161,6 +162,7 @@ export default function Shell({
         <TopBar
           location={location}
           onLocationChange={onLocationChange}
+          onOpenPerson={onOpenPerson}
           profile={profile}
           deviceLocation={deviceLocation}
           onDeviceLocationChange={onDeviceLocationChange}

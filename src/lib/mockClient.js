@@ -200,6 +200,7 @@ import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_REA
 import { publicCampHelpers } from './camps/publicApi.preview.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
+import { previewPeopleSearch } from './mockPeople.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
 import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
@@ -932,6 +933,11 @@ export function createMockClient() {
     if (SCHEDULE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
       return schedule.rpc(name, args, testingContext());
+    }
+    if (name === 'people_search') {
+      // The top-bar people search (M16): made-up people, searched by the real function's rules (mockPeople.js)
+      await wait(testingDelay());
+      return { data: previewPeopleSearch(args, (typeof window !== 'undefined' && window.__tkdPreviewPeople) || []), error: null };
     }
     if (CALENDAR_RPC_NAMES.includes(name)) {
       await wait(testingDelay());

@@ -133,6 +133,8 @@ import {
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
+import { takeOpenPerson } from '../../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../../lib/people/useOpenPerson.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
@@ -359,6 +361,22 @@ export default function EventPage({
   useEffect(() => {
     if (wrongSchool) onBack({ replace: true });
   }, [wrongSchool, onBack]);
+
+  // Top-bar "Search people" (M16, rulebook v1.144): a tapped result for a student of this event opens
+  // that student's summary, the way a click on the row does. It waits for the roster to load, then
+  // takes the one-shot request (kind 'colorbelt' only). The summary is found by id in the whole
+  // roster, so the class / Paid filters can't hide it. Not in the roster (removed, or another
+  // event): nothing opens and nothing is said. The event of the wrong school is left alone: the
+  // page goes back to the list (above) and the request stays for the next minute at most.
+  const personTick = useOpenPersonTick(); // a search while this event page is already open
+  useEffect(() => {
+    if (live.status !== 'ready' || wrongSchool || screenLocked) return;
+    const request = takeOpenPerson(['colorbelt']);
+    if (!request) return;
+    const row = roster.find((r) => r.id === request.id);
+    if (row) openView(row, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the roster is ready and when a new search arrives
+  }, [live.status, wrongSchool, screenLocked, personTick]);
 
   // Locking closes the ⋯ menu; dialogs only hide (see the drawing below).
   const menuBeforeLockRef = useRef(null);

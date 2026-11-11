@@ -48,6 +48,7 @@ import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
 import { LOCATION_CODE, loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
 import { prospectsBadge } from './lib/prospects/api.js';
 import { clearOpenProspect, requestOpenProspect } from './lib/prospects/openRequest.js';
+import { clearOpenPerson, requestOpenPerson } from './lib/people/openPerson.js';
 import {
   addressFor,
   addressForRoute,
@@ -257,6 +258,7 @@ export default function App() {
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
     clearOpenProspect(); // a Calendar → Prospects hand-over never carries over to the next person
+    clearOpenPerson(); // and neither does a top-bar search → section hand-over (M16)
     endLeftUndoBarSession(); // a left page's Undo bar (v1.129) belongs to the person who pressed Undo: it goes, and an Undo still running can't bring one back for the next person
     // The same for any other hand-over that lives outside this file (e.g. Star's Home → Grade,
     // src/lib/star/homeHandoff.js): a plain signal, so App needs no import of that code.
@@ -981,6 +983,32 @@ export default function App() {
     requestOpenProspect(id);
     navigate('prospects');
   }, [navigate]);
+  // The top-bar people search (M16, v1.144): a tap on a result opens that person's section and, once it has
+  // loaded, their summary (handed over in memory: lib/people/openPerson.js; never in the web address).
+  const openPerson = useCallback((result) => {
+    guarded(() => {
+      if (result.kind === 'prospect') {
+        requestOpenProspect(result.id); // New students already open a child this way
+        navigate('prospects');
+        return;
+      }
+      // Color Belt shows no events or private testings on Both (it shows a school at a time), so a Color Belt person
+      // opens on their own school: the top bar moves there first.
+      if ((result.kind === 'colorbelt' || result.kind === 'colorbelt_private') && result.school) {
+        const own = result.school === 'shrewsbury' ? 'Shrewsbury' : 'Worcester';
+        if (location !== own) changeLocation(own);
+      }
+      requestOpenPerson({ kind: result.kind, id: result.id, eventId: result.eventId });
+      if (result.kind === 'colorbelt') navigate('testing', { testingPage: 'colorBelt', eventId: result.eventId });
+      else if (result.kind === 'colorbelt_private') navigate('testing', { testingPage: 'colorBelt', eventId: null, privateId: null });
+      else if (result.kind === 'star') navigate('testing', { testingPage: 'star', eventId: result.eventId, eventTab: 'students' });
+      else if (result.kind === 'black_belt') navigate('testing', { testingPage: 'blackBelt', eventId: result.eventId, eventTab: 'candidates' });
+      else if (result.kind === 'camp') {
+        setCampSchoolFollow(null);
+        navigate('camps', { eventId: result.eventId, tab: 'default' });
+      }
+    });
+  }, [guarded, navigate, location, changeLocation]);
   const openFinanceHistory = useCallback((firstDay) => {
     showMonthOf(firstDay);
     navigate('finance', { tab: 'history' });
@@ -1087,6 +1115,7 @@ export default function App() {
             onNavigate={(id, options) => guarded(() => navigate(id, options))}
             location={location}
             onLocationChange={(next) => guarded(() => changeLocation(next))}
+            onOpenPerson={openPerson}
             profile={profile}
             deviceLocation={deviceLocation}
             onDeviceLocationChange={(next) => {
