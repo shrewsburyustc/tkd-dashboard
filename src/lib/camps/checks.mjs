@@ -325,7 +325,7 @@ check('the QR file name (shared, v0.733 option B), campLink and the QR picture',
   assert.equal(qrFileName('Veterans Day Camp', 'Worcester'), 'Veterans Day Camp - Worcester QR code.png');
   assert.equal(CampText.schoolName('worcester'), 'Worcester'); // the school the camp page passes
   // The card's heading: Camps' words, not the shared default "Worcester school".
-  assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools · held at Worcester');
+  assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools'); // no "held at" (v0.754 / v0.755)
   assert.equal(CampText.campSchoolLine({ bothSchools: false, locationCode: 'worcester' }), 'Worcester');
   assert.equal(campLink('k7m2qp4x'), 'https://tkd-dashboard.pages.dev/camp/k7m2qp4x');
   assert.equal(qrCampLink, campLink); // the one definition
@@ -3056,22 +3056,31 @@ check('Family page: the camp card shows only the early-price part; no "Sign up b
 });
 
 // ======================= a both-schools camp names no single school to families (rulebook v0.754) =======================
-check('Both-schools camp: nothing a family sees says "held at" or gives one school\'s street (v0.754)', () => {
+check('Both-schools camp: no screen, family or staff, says "held at" or gives one school\'s street (v0.754, v0.755)', () => {
   // Jeffrey 2026-11-10: the Worcester students still go to Worcester and the Shrewsbury students to
-  // Shrewsbury; merging the two is the school's own decision, so the form doesn't announce it.
+  // Shrewsbury; merging the two is the school's own decision, so nothing announces it ("Remove it too":
+  // the staff screens as well as the form).
   assert.equal(FamilyText.BOTH_SCHOOLS_LINE, 'U.S.T.C. Worcester & Shrewsbury');
-  assert.equal(CampText.familySchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools');
-  assert.equal(CampText.familySchoolLine({ bothSchools: true, locationCode: 'shrewsbury' }), 'Both schools');
-  assert.equal(CampText.familySchoolLine({ bothSchools: false, locationCode: 'worcester' }), 'Worcester');
-  // The staff screens keep the camp's own school ("held at") — it is the camp's school in the database.
-  assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools · held at Worcester');
-  // The family page (card + "You're signed up"), the registration link's QR card and the receipt.
-  const code = (name) => readFileSync(new URL(name, import.meta.url), 'utf8').split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
-  const family = code('../../camp/text.js') + code('../../camp/parts.jsx') + code('../../camp/SignedUp.jsx');
-  assert.ok(!/held at/i.test(family.replace(/\/\/.*$/gm, '')), 'no "held at" on the family page');
+  assert.equal('familySchoolLine' in CampText, false, 'one line for everyone: campSchoolLine');
+  assert.equal('heldAtLine' in CampText, false);
+  assert.equal('HELD_AT' in CampText, false);
+  for (const code of ['worcester', 'shrewsbury']) assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: code }), 'Both schools');
+  assert.equal(CampText.schoolColumn({ bothSchools: true, locationCode: 'worcester' }), 'Both schools');
+  // The folded Edit camp summary and the camp page's summary line.
+  assert.equal(CampText.campSectionSummary('April Vacation Camp', 'both', 'worcester', 5), 'April Vacation Camp · Both schools · 5 days');
+  assert.equal(CampText.campSectionSummary('Veterans Day Camp', 'shrewsbury', 'worcester', 1), 'Veterans Day Camp · Shrewsbury · 1 day');
+  assert.ok(!/held at/i.test(CampText.campSummaryLine({ bothSchools: true, locationCode: 'worcester', startTime: '09:00', endTime: '15:00' }, ['2027-04-19'], 3)));
+  // The sources: no "held at" wording in code, no street address for a both-schools camp, and the QR card
+  // and the receipt use the one line. (Comments may explain what was removed.)
+  const code = (name) => readFileSync(new URL(name, import.meta.url), 'utf8').split('\n').filter((line) => !line.trim().startsWith('//')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+  for (const name of ['../../camp/text.js', '../../camp/parts.jsx', '../../camp/SignedUp.jsx', '../../screens/camps/text.js', '../../screens/camps/CampsTab.jsx', '../../screens/camps/CampPage.jsx', '../../screens/camps/sections/CampSection.jsx', './campReceipt.js']) {
+    assert.ok(!/held at/i.test(code(name).replace(/\/\/.*$/gm, '')), `${name}: no "held at"`);
+  }
   assert.ok(!/addressLine\(camp\.address\)/.test(code('../../camp/SignedUp.jsx')) && !code('../../camp/parts.jsx').includes('addressLine('), 'both-schools camps show no street address');
-  assert.ok(code('../../screens/camps/CampPage.jsx').includes('heading: T.familySchoolLine(camp)'), 'the QR card heading');
-  assert.ok(code('./campReceipt.js').includes('T.familySchoolLine(camp)'), 'the receipt');
+  assert.ok(code('../../screens/camps/CampPage.jsx').includes('heading: T.campSchoolLine(camp)'), 'the QR card heading');
+  assert.ok(code('./campReceipt.js').includes('T.campSchoolLine(camp)'), 'the receipt');
+  // Edit camp keeps the camp's stored school without asking (no "Held at" choice): the camp's own school stays.
+  assert.ok(!code('../../screens/camps/sections/CampSection.jsx').includes('values.heldAt'), 'no Held at field');
 });
 
 console.log(`${count} groups of checks ran.`);

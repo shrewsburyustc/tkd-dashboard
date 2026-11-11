@@ -90,7 +90,7 @@ export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [],
   const facts = [
     [T.RECEIPT_CAMPER, T.camperLabel(c)],
     [T.RECEIPT_CAMP, `${camp.name} · ${T.campDatesText(campDayIsos)}${removed && c.withdrawnAt ? ` · ${T.removedBy(c.withdrawnAt, null).replace(/ /g, ' ')}` : ''}`], // (no line break inside "removed Nov 7")
-    [T.RECEIPT_SCHOOL_LABEL, T.familySchoolLine(camp)], // a family's paper: "Both schools", no single school (v0.754)
+    [T.RECEIPT_SCHOOL_LABEL, T.campSchoolLine(camp)], // "Both schools" for a both-schools camp, no single school (v0.754)
     [T.RECEIPT_DAYS, T.detailDaysLine(myDays, allDays)],
   ];
   const extras = extrasText(detail.breakdown?.extras, campExtras, campDayIsos);

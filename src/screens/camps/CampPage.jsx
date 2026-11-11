@@ -1353,7 +1353,7 @@ export default function CampPage({
           title={T.REGISTRATION_LINK}
           eventName={camp.name}
           intro={T.linkDialogLine(state, camp)}
-          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.familySchoolLine(camp) }] : []}
+          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.campSchoolLine(camp) }] : []}
           onCopied={() => showToast(T.TOAST_LINK_COPIED, { icon: false })}
           onClose={closeDialog}
           isPhone={isPhone}

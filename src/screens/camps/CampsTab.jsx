@@ -5,7 +5,7 @@
 //     reused from Color Belt), so new family sign-ups show up in the Campers column
 //   - shows them on an Upcoming / Past switch with counts (Past = the last day has gone by)
 //   - one status tag per camp: Open until … (green), Not open yet, Closed, Camp today, Done
-//   - "Both schools · held at Worcester" under a both-schools camp's name; on the switcher's Both
+//   - "Both schools" under a both-schools camp's name (no "held at", v0.755); on the switcher's Both
 //     a School column instead (phone: a line on the card)
 //   - admins: the Edit pencil (PC / tablet) and the ⋯ menu (CampRowMenu.jsx); staff: ⋯ with Close
 //     / Open sign-up and Print roster only
@@ -274,7 +274,7 @@ export default function CampsTab({
                   }}
                 />
               ) : null;
-            const heldAt = camp.bothSchools && !showSchool ? <span className="ev-ssub cp-heldat">{T.heldAtLine(camp.locationCode)}</span> : null;
+            const heldAt = camp.bothSchools && !showSchool ? <span className="ev-ssub cp-heldat">{T.BOTH_SCHOOLS}</span> : null;
             return (
               <div
                 key={camp.id}
@@ -289,7 +289,7 @@ export default function CampsTab({
                     <span className="ev-phone-main" role="cell">
                       <span className="ev-name">{camp.name}</span>
                       <span className="l2">{T.campPhoneLine(isoDays, camp.camperCount)}</span>
-                      {camp.bothSchools && <span className="l2">{T.heldAtLine(camp.locationCode)}</span>}
+                      {camp.bothSchools && <span className="l2">{T.BOTH_SCHOOLS}</span>}
                       <span className="ev-phone-tag">{tagFor(camp)}</span>
                     </span>
                     <span className="acts" role="cell">

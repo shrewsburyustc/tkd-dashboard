@@ -130,16 +130,14 @@ export const COL_CAMPERS = 'Campers';
 export const COL_STATUS = 'Status';
 // Also the school line under the page title on Both (v0.723, design review C15; was "Worcester and Shrewsbury").
 export const BOTH_SCHOOLS = 'Both schools';
-// "Both schools · held at Worcester" (the line under a both-schools camp's name)
-export const heldAtLine = (code) => `Both schools · held at ${schoolName(code)}`;
+// (A both-schools camp's line under its name is just BOTH_SCHOOLS. It used to say "· held at Worcester": a
+// camp for both schools names no single school anywhere, for families or staff (Jeffrey 2026-11-10,
+// rulebook v0.754 and v0.755).)
 // The School column on Both: "Worcester", "Shrewsbury" or "Both schools"
 export const schoolColumn = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolName(camp.locationCode));
-// The camp's school wherever one line is shown (the Registration link box's card heading, the camp page)
-export const campSchoolLine = (camp) => (camp.bothSchools ? heldAtLine(camp.locationCode) : schoolName(camp.locationCode));
-// The same line for what a FAMILY gets (the printed receipt, the registration link's QR card): a camp for
-// both schools says "Both schools" and no single school (Jeffrey 2026-11-10, rulebook v0.754). The staff
-// screens keep campSchoolLine's "held at": it is the camp's own school in the database.
-export const familySchoolLine = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolName(camp.locationCode));
+// The camp's school wherever one line is shown (the Registration link box's card heading, the printed
+// receipt's School line, the camp page): "Worcester", "Shrewsbury" or "Both schools".
+export const campSchoolLine = schoolColumn;
 export const NO_CAMPS_ADMIN = 'No camps yet. Add one with Add camp.'; // (not in the mockups)
 export const NO_CAMPS_STAFF = 'No camps yet. An admin adds them.'; // (not in the mockups; §8 Empty states, v0.53)
 export const NO_UPCOMING = 'No upcoming camps.'; // (not in the mockups)
@@ -352,7 +350,6 @@ export const SECTION_FAMILY = 'Family form';
 export const CAMP_SUMMARY_EMPTY = 'Name, school and days';
 export const CAMP_NAME = 'Camp name';
 export const SCHOOL = 'School';
-export const HELD_AT = 'Held at';
 export const DAYS = 'Days';
 export const MONTH = 'Month'; // (not in the mockups) screen readers only
 export const YEAR = 'Year'; // (not in the mockups) screen readers only
@@ -362,10 +359,11 @@ export const DAYS_HINT = 'Tap a day to add or remove it. Days don\'t have to be 
 export const DAYS_PER_WEEK = 'Days per week'; // Edit template (weekly pricing v0.717: the price grid's rows, 1–7)
 export const WEEKDAY_HEADS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 export const dayCellLabel = (iso, picked) => `${shortDate(iso)}${picked ? ', chosen' : ''}`; // screen readers
-// Section 1's folded summary: "April Vacation Camp · Both schools, held at Worcester · 5 days"
-// (a template: "… · 5 days a week" — perWeek true)
+// Section 1's folded summary: "April Vacation Camp · Both schools · 5 days"
+// (a template: "… · 5 days a week" — perWeek true). The 3rd input (the "Held at" choice) is no longer
+// read: a camp for both schools names no single school (v0.755).
 export function campSectionSummary(name, school, heldAt, dayCount, perWeek = false) {
-  const where = school === 'both' ? `Both schools, held at ${schoolName(heldAt)}` : schoolName(school);
+  const where = school === 'both' ? BOTH_SCHOOLS : schoolName(school);
   const days = dayCount > 0 ? `${daysCount(dayCount)}${perWeek ? ' a week' : ''}` : null;
   return [name || null, where || null, days].filter(Boolean).join(' · ');
 }
@@ -501,7 +499,7 @@ export function cantRemoveDay(day, first, last, more) {
 
 // ----- Camp page -----
 export const BACK_TO_CAMPS = 'Camps';
-// "Mon, Apr 19 – Fri, Apr 23, 2027 · 9:00 AM – 3:00 PM · Both schools · held at Worcester · 18 campers"
+// "Mon, Apr 19 – Fri, Apr 23, 2027 · 9:00 AM – 3:00 PM · Both schools · 18 campers"
 export const campSummaryLine = (camp, days, count) =>
   [campDatesText(days), timeRange(camp.startTime, camp.endTime), campSchoolLine(camp), campersCount(count)].join(' · ');
 export const LOADING_CAMP = 'Loading the camp…'; // (not in the mockups) screen readers only
