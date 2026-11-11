@@ -21,6 +21,8 @@
 // Its amber bar (a failed save or Undo) is a PageBar under the top bar when it is drawn in the page, and a
 // bar inside the phone editor's full-screen page when that is open (rulebook v1.128). The "another admin
 // saved" box with Reload is a state, not a failure bar, and stays where it is.
+// When the editor closes (Cancel, Discard, a finished save) while the keyboard focus was in it, focus goes to the
+// current tab button, without scrolling (stopEdit, focusCurrentTab).
 // The database decides everything again (admins only, the lock at first opening, the rev check,
 // every value). This screen only makes the common case smooth.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -121,11 +123,25 @@ export default function RubricCard({
   // finished) also clears the card's amber bar: a "Couldn't save" bar belongs to the draft that is now gone, and
   // its Retry would save the discarded change (design review D3). A bar that a status sets AFTER stopEdit
   // ("locked" below) is set after this line, so it stays.
+  // Focus: the Cancel (or Discard) button that had the keyboard focus is removed with the editor, and the browser
+  // would drop focus on the page body. So when focus was inside the editor (or one of its dialogs, or already
+  // nowhere), it goes to the current tab button, one frame later and without scrolling (focusCurrentTab; rulebook
+  // v1.124). Focus the person has put somewhere else is never taken: the frame check below looks again.
   function stopEdit() {
+    const active = document.activeElement;
+    const focusWasHere =
+      !active || active === document.body || Boolean(editTopRef.current?.contains(active)) || Boolean(active.closest?.('[aria-modal="true"]'));
     d.stop();
     resetEditState();
     setDialog(null);
     setBanner(null);
+    if (focusWasHere) {
+      window.requestAnimationFrame(() => {
+        const now = document.activeElement;
+        const fallen = !now || now === document.body || !now.isConnected || Boolean(now.closest?.('.toast-region'));
+        if (fallen) focusCurrentTab();
+      });
+    }
   }
 
   // A newer version of the Dan being edited arrived (another admin saved): the banner.
