@@ -89,6 +89,10 @@ function Looks() {
         <button type="button" className="btn btn-primary" aria-disabled="true">
           Mark paid (busy)
         </button>
+        {/* The Mark paid box's own button (components/MarkPaidBox.jsx): compact, and still a 44px tap box on touch */}
+        <button type="button" className="btn btn-sm mpb-go" id="sh-mpb-go">
+          Mark paid $15.50
+        </button>
       </div>
       <div className="parts-sh-row" data-sh="select">
         <span id={labelId}>Schedule</span>

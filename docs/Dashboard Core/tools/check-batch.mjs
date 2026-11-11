@@ -330,6 +330,14 @@ await withChrome(async (tab) => {
     assert.equal((await read()).open, false, 'Esc closes it');
     assert.equal(await ev(`document.activeElement.id`), 'sh-tick-button', 'the focus is back on the button');
   });
+  await check('touch 820 and 390: the Mark paid box\'s button has a 44px tap box: a click 3.5px above and below still lands on it (P6)', async () => {
+    for (const [w, h] of [[820, 1180], [390, 844]]) {
+      await open(w, h, true);
+      const hit = await ev(`(() => { const b = document.getElementById('sh-mpb-go'); const r = b.getBoundingClientRect(); const a = document.elementFromPoint(r.left + 20, r.top - 3.5); const c = document.elementFromPoint(r.left + 20, r.bottom + 3.5); return [a === b, c === b, Math.round(r.height)]; })()`);
+      assert.equal(hit[0], true, `above at ${w}`);
+      assert.equal(hit[1], true, `below at ${w}`);
+    }
+  });
   await check('PC: a locked ChoiceGroup says aria-disabled (group and buttons) and stays one Tab stop (v1.141)', async () => {
     await open(1280, 800, false);
     const s = await ev(`(() => { const g = document.querySelector('[data-sh="choices"] [role=radiogroup]'); const r = [...g.querySelectorAll('[role=radio]')]; return { group: g.getAttribute('aria-disabled'), radios: r.map((x) => x.getAttribute('aria-disabled')), tabStops: r.filter((x) => x.tabIndex === 0).length }; })()`);
