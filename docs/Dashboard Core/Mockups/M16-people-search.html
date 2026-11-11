@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>M16: the top-bar people search (mockup)</title>
+<style>
+:root{--ink:#1d2330;--mute:#5b6577;--line:#d8dde6;--bg:#f4f6fa;--blue:#2563eb;--green:#166534;--amber:#b45309;--sel:#e8f0fe}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif;padding:26px}
+h1{font-size:23px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 6px}h3{font-size:14px;margin:0 0 6px}p{max-width:1000px;margin:0 0 8px}.mute{color:var(--mute)}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.pc{width:640px;border:2px solid #333;border-radius:8px;background:#fff;overflow:hidden}
+.tab{width:420px;border:2px solid #333;border-radius:12px;background:#fff;overflow:hidden}
+.ph{width:300px;border:2px solid #333;border-radius:22px;background:#fff;overflow:hidden;position:relative}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);height:48px}
+.top .sw{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:6px;font-size:11px;overflow:hidden}.sw b{padding:4px 7px;font-weight:500}.sw b.on{background:var(--sel);color:var(--blue)}
+.av{width:28px;height:28px;border-radius:50%;background:#e5e7eb;font-size:11px;display:flex;align-items:center;justify-content:center}
+.sb{display:flex;align-items:center;gap:6px;border:1px solid #9aa3b5;border-radius:6px;padding:0 8px;height:32px;width:220px;font-size:13px;color:#333;background:#fff}
+.sb.focus{border:2px solid #2f8a52}.sb .k{margin-left:auto;font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--mute)}
+.page{padding:12px 14px;color:#8a93a5;min-height:60px;font-size:13px}
+.dd{position:absolute;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);width:330px;z-index:3}
+.grp{padding:7px 12px 3px;font-size:11px;color:var(--mute)}.it{padding:6px 12px}.it b{display:block;font-weight:600}.it span{font-size:12px;color:var(--mute)}.it.sel{background:var(--sel)}
+.hint{padding:10px 12px;font-size:12px;color:var(--mute)}
+.opt{border:1px solid var(--line);background:#fff;border-radius:8px;padding:12px;width:330px}
+.opt.rec{border:2px solid #2f8a52}.tag{display:inline-block;font-size:11px;font-weight:700;color:var(--green);background:#dcefe2;border-radius:4px;padding:1px 6px;margin-left:6px}
+.pill{font-size:11px;color:var(--amber);font-weight:700}
+.full{height:420px;position:relative}.fhead{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);height:48px}
+.rec-box{background:#fff;border:2px solid #2f8a52;border-radius:8px;padding:12px 16px;max-width:1000px}
+.q{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:8px 0;max-width:1000px}
+</style></head><body>
+<h1>M16: the top-bar people search</h1>
+<p>Decided already (v0.12, v1.031, picture 20a option B): a "Search people" box in the top bar on every page; one search across Color Belt, Star, Black Belt, Camps and Prospects; results grouped by section, <b>name, event and school only</b> (Prospects keep "Ava R."); a tap opens the person's summary; the boxes inside each list stay; "/" jumps to the search on PC. Picture 20a drew only the PC dropdown. <b>This page draws what 20a did not</b> (tablet, phone, the empty states) and asks the four things that are a real choice.</p>
+
+<h2>1. PC and tablet: the dropdown (decided, drawn at both sizes)</h2>
+<div class="row">
+ <div style="position:relative;width:640px;height:470px">
+  <div class="pc" style="height:470px"><div class="top"><div class="sb focus">🔍 Ava <span class="k">/</span></div><div class="sw"><b class="on">Worcester</b><b>Shrewsbury</b><b>Both</b></div><div class="av">JB</div></div><div class="page">Any page behind (Camps, Home…)</div></div>
+  <div class="dd" style="left:12px;top:52px"><div class="grp">Color belt testing</div><div class="it sel"><b>Ava Chen</b><span>November Children Testing · Worcester</span></div><div class="grp">Star testing</div><div class="it"><b>Ava Reed</b><span>Fall Star Testing · Worcester</span></div><div class="grp">Black Belt testing</div><div class="it"><b>Ava Brooks</b><span>Spring 2027 · Worcester</span></div><div class="grp">Camps</div><div class="it"><b>Ava Thompson</b><span>April Vacation Camp · Worcester</span></div><div class="grp">New students</div><div class="it"><b>Ava R.</b><span>Free class · Worcester</span></div></div>
+  <p class="mute" style="position:absolute;left:0;bottom:-30px">PC 1280: box left of the school switch; ↑ ↓ move, Enter opens, Esc closes.</p>
+ </div>
+ <div style="position:relative;width:420px;height:470px">
+  <div class="tab" style="height:470px"><div class="top"><div class="sb focus" style="width:150px">🔍 Ava</div><div class="sw"><b class="on">Worc.</b><b>Shrew.</b><b>Both</b></div><div class="av">JB</div></div><div class="page">Any page behind</div></div>
+  <div class="dd" style="left:10px;top:52px;width:290px"><div class="grp">Color belt testing</div><div class="it sel"><b>Ava Chen</b><span>November Children Testing · Worcester</span></div><div class="grp">Star testing</div><div class="it"><b>Ava Reed</b><span>Fall Star Testing · Worcester</span></div><div class="grp">Black Belt testing</div><div class="it"><b>Ava Brooks</b><span>Spring 2027 · Worcester</span></div></div>
+  <p class="mute" style="position:absolute;left:0;bottom:-30px">Tablet 820: same box, a little narrower; 44px rows.</p>
+ </div>
+</div>
+
+<h2 style="margin-top:50px">Question A: how it looks on a phone (the top bar is full)</h2>
+<div class="row">
+ <div class="opt rec"><h3>A. A search icon opens a full-screen search page<span class="tag">recommended</span></h3>
+  <div class="ph"><div class="full"><div class="fhead"><span>←</span><div class="sb focus" style="width:210px">🔍 Ava</div></div><div class="grp">Color belt testing</div><div class="it sel"><b>Ava Chen</b><span>November Children Testing · Worcester</span></div><div class="grp">Star testing</div><div class="it"><b>Ava Reed</b><span>Fall Star Testing · Worcester</span></div><div class="grp">Black Belt testing</div><div class="it"><b>Ava Brooks</b><span>Spring 2027 · Worcester</span></div><div class="grp">Camps</div><div class="it"><b>Ava Thompson</b><span>April Vacation Camp</span></div></div></div>
+  <p style="margin-top:8px">The magnifier sits in the top bar next to your initials; it opens a page like the other full-screen phone pages, keyboard up, results fill the screen. <b>+</b> room for results, same pattern as the profile page. <b>−</b> one extra tap, and it covers the page you were on.</p></div>
+ <div class="opt"><h3>B. The icon opens a box under the top bar</h3>
+  <div class="ph" style="height:470px"><div class="top"><div class="sb focus" style="width:200px">🔍 Ava</div><div class="av">JB</div></div><div class="dd" style="left:10px;top:52px;width:270px"><div class="grp">Color belt testing</div><div class="it sel"><b>Ava Chen</b><span>November Children Testing · Worcester</span></div><div class="grp">Star testing</div><div class="it"><b>Ava Reed</b><span>Fall Star Testing</span></div><div class="grp">Black Belt testing</div><div class="it"><b>Ava Brooks</b><span>Spring 2027</span></div></div><div class="page" style="margin-top:150px">The page behind stays visible</div></div>
+  <p style="margin-top:8px"><b>+</b> same as PC, you keep your place. <b>−</b> the school switch has to hide while it is open; a short list under the on-screen keyboard shows only 2–3 results.</p></div>
+</div>
+
+<h2>Question B: which school does it search?</h2>
+<div class="row">
+ <div class="opt rec"><h3>A. The school in the top bar (Both = both)<span class="tag">recommended</span></h3><p>Same rule as every list in the dashboard. On Worcester you only see Worcester people; switch to Both to see everyone. The school still shows on each result.</p><div class="q" style="margin:0;max-width:none"><div class="sb" style="width:100%">🔍 Ava</div><div class="hint">Showing Worcester. Search both schools instead (switches the top bar)</div></div></div>
+ <div class="opt"><h3>B. Always both schools</h3><p>A person is found wherever they are; the school on the result says where. <b>−</b> breaks "the top bar's school filters everything", and a Worcester desk sees Shrewsbury children.</p></div>
+</div>
+
+<h2>Question C: when does it start searching, and what shows when nothing matches</h2>
+<div class="row">
+ <div class="opt rec"><h3>A. From 2 letters, results as you type<span class="tag">recommended</span></h3>
+  <div class="q"><div class="sb" style="width:100%">🔍 A</div><div class="hint">Type at least 2 letters.</div></div>
+  <div class="q"><div class="sb" style="width:100%">🔍 Zzq</div><div class="hint">No one matches "Zzq" at Worcester. Check the spelling, or search both schools.</div></div>
+  <p>One letter would list half the dashboard; two letters keep it short. Results wait a moment after the last key.</p></div>
+ <div class="opt"><h3>B. From 1 letter</h3><p>Fastest to start, but a long list on one letter, and every key asks the database. Not recommended.</p></div>
+</div>
+
+<h2>Question D: what a tap opens</h2>
+<div class="row"><div class="opt rec" style="width:660px"><h3>A. That person's summary in their own section, the way the section opens it today<span class="tag">recommended</span></h3>
+<p>Color belt → the registration's summary on its event page; Star → the candidate's summary; Black Belt → the candidate's detail; Camps → the camper's detail on the camp page; New students → the profile. The back arrow returns to where you searched. No new summary screen to build or keep in step.</p></div></div>
+
+<h2>Recommendation</h2>
+<div class="rec-box"><b>Phone A (search page), school follows the top bar, from 2 letters, a tap opens the section's own summary.</b> Only the words in the results (name, event, school; Prospects "Ava R.") ever leave the database, so Hide private details has nothing to hide. This needs a database function (a new migration, with a security review) that checks access first and returns only those three fields.<br><br><b>Reply with four letters</b>, e.g. "A A A A", or "take the recommendations".</div>
+</body></html>
