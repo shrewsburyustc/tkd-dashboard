@@ -104,6 +104,8 @@ import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { buildColorBeltReceipt } from '../../../lib/testing/receipt.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
+import { takeOpenPerson } from '../../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../../lib/people/useOpenPerson.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
@@ -444,6 +446,19 @@ export default function PrivateTestingTab({
   function openView(row, opener) {
     openDialog({ type: 'view', rowId: row.id, snapshot: row, opener });
   }
+  // Top-bar "Search people" (M16, rulebook v1.144): Testing.jsx opened this tab for a tapped private
+  // testing; once the list has loaded, take the one-shot request (kind 'colorbelt_private') and open
+  // that summary the way a click on its row does. Found by id in the whole list (the Upcoming / Past
+  // side and the Paid filter can't hide it). Not in the list: nothing opens and nothing is said.
+  const personTick = useOpenPersonTick(); // a search while this tab is already showing
+  useEffect(() => {
+    if (live.status !== 'ready' || screenLocked) return;
+    const request = takeOpenPerson(['colorbelt_private']);
+    if (!request) return;
+    const row = rows.find((r) => r.id === request.id);
+    if (row) openView(row, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the list is ready and when a new search arrives
+  }, [live.status, screenLocked, personTick]);
   // Its Edit details button: the summary closes and Edit details opens in its place.
   function editFromView() {
     const d = dialogRef.current;

@@ -43,6 +43,10 @@
 // permanently is grayed "Delete candidates at the desk."; Edit details opens (R4-04, v1.037). The
 // Add candidate menu opens too: New candidate is grayed inside it with Star's reason, and
 // "Make-up from an earlier cycle…" keeps working.
+// Search people (M16, rulebook v1.144): a tap on a Black Belt result opens this cycle on this tab and leaves a
+// one-shot request (lib/people/openPerson.js). Once the roster has loaded, the tab takes it once and opens that
+// candidate's detail the way a click on the row does, whatever the school switch, card or search box hides. A
+// candidate who is no longer in the roster opens nothing and says nothing.
 // The list reloads by itself (useLiveLoad): on open, after every own change, when the screen
 // unlocks or the browser tab comes back, and quietly every 15 seconds — never touching an open
 // dialog or what someone is typing.
@@ -55,6 +59,8 @@ import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { loadRoster, schoolToday } from '../../../lib/blackBelt/api.js';
 import { duplicatePairs, rosterCards, rosterFilter } from '../../../lib/blackBelt/rules.js';
+import { takeOpenPerson } from '../../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../../lib/people/useOpenPerson.js';
 import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { PHONE_QUERY, WIDE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
@@ -187,6 +193,18 @@ export default function CandidatesTab({
     setBanner,
   });
   const { dlg } = actions;
+
+  // Search people (M16): once the roster is loaded (and the screen isn't locked), take the one-shot request for a
+  // Black Belt candidate, once, and open that candidate's detail like a click on the row. Not in the roster (removed
+  // since): nothing opens, nothing is said. The page's filters don't matter: the roster here is everyone.
+  const personTick = useOpenPersonTick(); // a search while this tab is already showing (it stays mounted, hidden, on other tabs)
+  useEffect(() => {
+    if (live.status !== 'ready' || screenLocked) return;
+    const request = takeOpenPerson(['black_belt']);
+    if (!request) return;
+    if (rows.some((r) => r.id === request.id)) actions.openDetail(request.id, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live.status, screenLocked, personTick]);
 
   // A make-up just added glows for a moment (G06)
   const [flashId, setFlashId] = useState(null);

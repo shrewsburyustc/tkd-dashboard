@@ -510,6 +510,16 @@
 //       function); then the same again with 0046 applied first (the two are
 //       independent) - see step0048 below. Run only this step with
 //       node run.mjs --only-step0048
+//   step0049. 0049 (Dashboard core M16: the top-bar people search - one
+//       read-only function people_search(p_query, p_school), nothing else;
+//       rulebook v1.144) on its own database in the production order
+//       (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030, 0032,
+//       0033, 0034, 0036, 0041): the pre-apply check, NO fingerprint file
+//       moves or gains a line, 0049's tests and the Forms / Prospects tests
+//       (0007, 0009, 0012, 0036) before and after it, re-run safety, and the
+//       Undo of SETUP.md 0049e (manual/0049u_undo.sql) - see step0049
+//       below. Run only this step with
+//       node run.mjs --only-step0049
 //   step0035. 0035 (Color Belt clean-up: the old one-click Mark paid
 //       functions testing_mark_paid / testing_private_mark_paid removed;
 //       the app uses 0030's *_by) on its own database in the production
@@ -674,6 +684,7 @@ const onlyStep0037 = process.argv.includes('--only-step0037');
 const onlyStep0045 = process.argv.includes('--only-step0045');
 const onlyStep0038 = process.argv.includes('--only-step0038');
 const onlyStep0047 = process.argv.includes('--only-step0047');
+const onlyStep0049 = process.argv.includes('--only-step0049');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -968,6 +979,15 @@ async function main() {
     if (prints41) {
       console.log('\n0041 fingerprints (kind  item  detail):');
       for (const line of prints41) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0049: just the top-bar people search step (0049)
+  if (onlyStep0049) {
+    const prints49 = await step0049();
+    if (prints49) {
+      console.log('\n0049 fingerprints (kind  item  detail):');
+      for (const line of prints49) console.log('  ' + line);
     }
     return finish();
   }
@@ -1391,6 +1411,10 @@ async function main() {
   // step0045: New students - the Calendar reader calendar_items (its own database, production order)
   console.log('\nMigration 0045 (New students: the Calendar reader calendar_items):');
   const after45 = after5 ? await step0045() : null;
+
+  // step0049: Dashboard core - the top-bar people search people_search (its own database, production order)
+  console.log('\nMigration 0049 (Dashboard core: the top-bar people search people_search):');
+  const after49 = after5 ? await step0049() : null;
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
   const after20 = after5 ? await step0020(db, upgradeDb) : null;
@@ -1524,6 +1548,10 @@ async function main() {
   if (after45) {
     console.log('\n0045 fingerprints (kind  item  detail):');
     for (const line of after45) console.log('  ' + line);
+  }
+  if (after49) {
+    console.log('\n0049 fingerprints (kind  item  detail):');
+    for (const line of after49) console.log('  ' + line);
   }
   if (after46) {
     console.log('\n0046 fingerprints (kind  item  detail):');
@@ -10040,6 +10068,152 @@ async function step0045() {
   }
   await db.close().catch(() => {});
   return prints45;
+}
+
+// =====================================================================
+// step0049: the top-bar people search people_search (0049, Dashboard core
+// M16, rulebook v1.144)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034, 0036 and 0041 - each only if its file is on
+// this branch). 0049 adds ONE read-only function and nothing else, so the
+// step checks that: NO fingerprint file changes (no other file lists a
+// function named people_search), no row and no history changes, the new
+// function's own fingerprint, the pre-apply check before / after / after
+// the undo, the tests, re-run safety, and the undo file exactly as
+// SETUP.md 0049e names it (then the redo).
+// Run only this step with   node run.mjs --only-step0049
+// =====================================================================
+const MD5_0049_SEARCH = '0f8c1fe14f3aa1d2ae6ac1ee19758db3';   // people_search, 0049
+
+async function step0049() {
+  const L = '[0049] ';
+  const preSql = read('tests', '0049_preapply_check.sql');
+  const migration = read('migrations', '0049_people_search.sql');
+  // (0049_tests.sql is not in this list on purpose: it names the column signature_deleted_at, like 0018_tests.sql;
+  // it is pasted by hand, never through the connection)
+  const unsafe = [['migrations', '0049_people_search.sql'], ['tests', '0049_fingerprints.sql'], ['tests', '0049_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0049's migration, fingerprints and pre-apply check contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the pre-apply check names the md5 run.mjs checks (0049's people_search)`, preSql.includes(`'${MD5_0049_SEARCH}'`));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students: last name, date of birth, Address)', '0036_new_students_profile.sql'],
+    ['0041 (Star event end time)', '0041_star_end_time.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await adminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0049: 0 / false / 48 (no people_search yet, every column it reads is there)`,
+    ready.people_search_versions === 0 && ready.people_search_is_0049 === false && ready.needs_found === 48, JSON.stringify(ready));
+
+  // the tests that cover what 0049 reads, before it exists (they must not notice it)
+  const baseline = [['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0036_tests.sql', 'ALL 0036 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0049', baseline);
+
+  // apply 0049: NO fingerprint file may move or gain a line (it adds one function, in no other file's list)
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0041', '0045', '0049']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0049');
+  const before = await printsOf(db, others);
+  // everything 0049 reads and could write, as one md5
+  const snapSql = `select md5(concat_ws('|',
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_events x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_registrations x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_private x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.star_events x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.star_candidates x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.bb_cycles x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.bb_candidates x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camps x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camp_campers x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.forms x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.form_submissions x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.prospects x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.prospect_statuses x),
+       (select count(*)::text from public.change_log)))`;
+  const dataBefore = await one(db, snapSql);
+  if (!(await run(db, `${L}apply 0049_people_search.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const ITEM = 'people_search(p_query text, p_school text)';
+  const TAIL = ' definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE';
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (gone.length) wrong.push(`${n}: moved or gone ${JSON.stringify(gone)}`);
+    if (added.length) wrong.push(`${n}: added ${JSON.stringify(added)}`);
+  }
+  record(`${L}fingerprints: nothing moved and nothing was added in any other fingerprint file (none lists people_search)`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints49 = after['0049_fingerprints.sql'];
+  record(`${L}0049 fingerprints: people_search plpgsql, STABLE, security definer, search_path="", authenticated + postgres only (nothing for anon)`,
+    prints49.length === 1 && prints49[0] === `function  ${ITEM}  ${MD5_0049_SEARCH} lang=plpgsql volatility=s returns=jsonb${TAIL}`,
+    prints49.join(' | '));
+  record(`${L}0049 wrote nothing (every table it reads, the statuses and the history unchanged)`, dataBefore === (await one(db, snapSql)));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0049: 1 / true / 48`,
+    applied.people_search_versions === 1 && applied.people_search_is_0049 === true && applied.needs_found === 48, JSON.stringify(applied));
+
+  // the tests, then the same baseline again
+  await tests('after 0049', [['0049_tests.sql', 'ALL 0049 TESTS PASSED'], ...baseline]);
+
+  // re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0049 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0049 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+
+  // Undo 0049, as SETUP.md 0049e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0049e\. Undo 0049/m);
+  const undoFile = 'manual/0049u_undo.sql';
+  const undoSql = read('manual', '0049u_undo.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0049] SETUP.md has "### 0049e. Undo 0049" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0049] paste ${undoFile}`, undoSql)) {
+    const undone = await printsOf(db, others);
+    const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0049] every fingerprint file equals the one before 0049`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+    const gone49 = await fingerprints(db, '0049_fingerprints.sql');
+    record(`${L}[undo 0049] 0049_fingerprints.sql answers no row`, gone49.length === 0, gone49.join(' | '));
+    const undonePre = await pre();
+    record(`${L}[undo 0049] the pre-apply check answers as before 0049`, JSON.stringify(undonePre) === JSON.stringify(ready),
+      JSON.stringify(undonePre));
+    record(`${L}[undo 0049] no row or history changed`, dataAfter === (await one(db, snapSql)));
+    await tests('after the undo', baseline);
+    await run(db, `${L}[undo 0049] paste ${undoFile} a SECOND time`, undoSql);
+    const undoneAgain = await printsOf(db, others);
+    record(`${L}[undo 0049] a second undo changes nothing`,
+      others.every((n) => JSON.stringify(undone[`${n}_fingerprints.sql`]) === JSON.stringify(undoneAgain[`${n}_fingerprints.sql`])));
+    if (await run(db, `${L}[undo 0049] apply 0049 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0049_fingerprints.sql');
+      record(`${L}[undo 0049] after the redo the 0049 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints49));
+      await tests('after the redo', [['0049_tests.sql', 'ALL 0049 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints49;
 }
 
 // =====================================================================

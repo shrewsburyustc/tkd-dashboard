@@ -5194,5 +5194,28 @@ import { checkRankForm as CHECK_RANK, isRankFormDirty as RANK_DIRTY, checkClassF
   });
 }
 
+// M16 Search people: Color Belt's two screens take the one-shot request from the people module.
+{
+  const src = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
+  const eventPage = src('../../screens/testing/event/EventPage.jsx');
+  const privateTab = src('../../screens/testing/private/PrivateTestingTab.jsx');
+  const testing = src('../../screens/Testing.jsx');
+  check('M16 the event page takes a colorbelt request after the roster loads and opens the summary', () => {
+    assert.match(eventPage, /import \{ takeOpenPerson \} from '\.\.\/\.\.\/\.\.\/lib\/people\/openPerson\.js'/);
+    assert.match(eventPage, /takeOpenPerson\(\['colorbelt'\]\)/);
+    assert.match(eventPage, /roster\.find\(\(r\) => r\.id === request\.id\)/);
+    assert.match(eventPage, /if \(row\) openView\(row, null\)/);
+  });
+  check('M16 the Private testing tab takes a colorbelt_private request after its list loads and opens the summary', () => {
+    assert.match(privateTab, /import \{ takeOpenPerson \} from '\.\.\/\.\.\/\.\.\/lib\/people\/openPerson\.js'/);
+    assert.match(privateTab, /takeOpenPerson\(\['colorbelt_private'\]\)/);
+    assert.match(privateTab, /rows\.find\(\(r\) => r\.id === request\.id\)/);
+    assert.match(privateTab, /if \(row\) openView\(row, null\)/);
+  });
+  check('M16 Color Belt testing switches to the Private testing tab before the request is taken', () => {
+    assert.match(testing, /import \{ hasOpenPerson \} from '\.\.\/lib\/people\/openPerson\.js'/);
+    assert.match(testing, /hasOpenPerson\(\['colorbelt_private'\]\)/);
+  });
+}
 console.log(`${count} groups of checks ran.`);
 console.log('ALL TESTING LIB CHECKS PASSED');

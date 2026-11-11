@@ -3055,5 +3055,11 @@ check('Family page: the camp card shows only the early-price part; no "Sign up b
   assert.ok(app.includes("answer.state === 'closed'") && app.includes("answer.state === 'not_open_yet'"), 'the page still follows the camp\'s sign-up state (closed, not open yet)');
 });
 
+check('Search people opens a camper (M16)', () => {
+  const page = readFileSync(new URL('../../screens/camps/CampPage.jsx', import.meta.url), 'utf8');
+  assert.ok(page.includes("import { takeOpenPerson } from '../../lib/people/openPerson.js';"));
+  assert.ok(page.includes("takeOpenPerson(['camp'])") && page.includes('if (row) openCamper(row);'), 'takes the request once and opens the camper like a click on the name');
+});
+
 console.log(`${count} groups of checks ran.`);
 console.log('ALL CAMPS LIB CHECKS PASSED');

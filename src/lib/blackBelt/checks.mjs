@@ -5183,5 +5183,16 @@ check('rubric editor close: focus goes to the current tab, only when it was in t
   const focusTab = read('staff/parts/focusCurrentTab.js');
   assert.ok(/tab\?\.focus\(\{ preventScroll: true \}\)/.test(focusTab), 'focusCurrentTab must keep preventScroll');
 });
+// Search people (M16): the Candidates tab takes the one-shot open-person request once the roster has loaded and opens
+// that candidate's detail like a row click; the cycle page opens on Candidates unless the address names another tab.
+check('Candidates tab: takes the Search people request when it arrives and opens the detail', () => {
+  const read = (rel) => readFileSync(new URL(`../../blackBelt/${rel}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const tab = read('staff/candidates/CandidatesTab.jsx');
+  assert.ok(/import \{ takeOpenPerson \} from '\.\.\/\.\.\/\.\.\/lib\/people\/openPerson\.js'/.test(tab), 'CandidatesTab must import takeOpenPerson');
+  assert.ok(/takeOpenPerson\(\['black_belt'\]\)/.test(tab), 'CandidatesTab must take only the black_belt kind');
+  assert.ok(/live\.status !== 'ready'/.test(tab) && /useOpenPersonTick\(\)/.test(tab) && /screenLocked, personTick\]/.test(tab), 'it must wait for the loaded roster and look again when a new search arrives');
+  assert.ok(/rows\.some\(\(r\) => r\.id === request\.id\)\) actions\.openDetail\(request\.id, null\)/.test(tab), 'it must open the detail only for a candidate in the roster');
+  assert.ok(/tab = 'candidates'/.test(read('staff/cycle/CyclePage.jsx')), 'the cycle page must default to Candidates');
+});
 console.log(`${count} groups of checks ran.`);
 console.log('ALL BLACK BELT LIB CHECKS PASSED');
