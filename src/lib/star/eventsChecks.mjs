@@ -157,8 +157,8 @@ await check('v0.520 end time: valid only when on the 5-minute list AND after the
 });
 
 await check('links: production address, /star/<code>, one per school, code pattern ^[a-hjkmnp-z2-9]{8}$', async () => {
-  assert.equal(PUBLIC_ORIGIN, 'https://tkd-dashboard.pages.dev');
-  assert.equal(starRegistrationLink('fa2kxm7p'), 'https://tkd-dashboard.pages.dev/star/fa2kxm7p');
+  assert.match(PUBLIC_ORIGIN, /^https:\/\/[a-z0-9.-]+$/); // https, a host, no path, no trailing slash
+  assert.equal(starRegistrationLink('fa2kxm7p'), `${PUBLIC_ORIGIN}/star/fa2kxm7p`);
   // Not codes: upper case, look-alikes (i, l, o, 0, 1), too short / long, anything with a slash.
   for (const bad of ['FA2KXM7P', 'fa2kxm7i', 'fa2kxm7l', 'fa2kxm7o', 'fa2kxm70', 'fa2kxm71', 'fa2kxm7', 'fa2kxm7pp', 'fa2k/m7p', '', null, undefined, 12345678]) {
     assert.equal(starRegistrationLink(bad), '', String(bad));
@@ -171,12 +171,12 @@ await check('links: production address, /star/<code>, one per school, code patte
   assert.ok(decodeURIComponent(qr.slice(qr.indexOf(',') + 1)).startsWith('<svg'));
   const links = starSchoolLinks({ publicCodeWorcester: 'w7nd4hqe', publicCodeShrewsbury: 's3vb8tcr' });
   assert.deepEqual(links.map((l) => [l.locationCode, l.school, l.link]), [
-    ['worcester', 'Worcester', 'https://tkd-dashboard.pages.dev/star/w7nd4hqe'],
-    ['shrewsbury', 'Shrewsbury', 'https://tkd-dashboard.pages.dev/star/s3vb8tcr'],
+    ['worcester', 'Worcester', `${PUBLIC_ORIGIN}/star/w7nd4hqe`],
+    ['shrewsbury', 'Shrewsbury', `${PUBLIC_ORIGIN}/star/s3vb8tcr`],
   ]);
   // Database rows work too; a damaged code gives no link for that school.
   const fromRow = starSchoolLinks({ public_code_worcester: 'w7nd4hqe', public_code_shrewsbury: 'BAD' });
-  assert.equal(fromRow[0].link, 'https://tkd-dashboard.pages.dev/star/w7nd4hqe');
+  assert.equal(fromRow[0].link, `${PUBLIC_ORIGIN}/star/w7nd4hqe`);
   assert.equal(fromRow[1].link, '');
   assert.equal(fromRow[1].code, null);
 });

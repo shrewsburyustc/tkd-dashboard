@@ -31,6 +31,7 @@
 //   RosterRow, Template — see contract 0013 §5.1. A Template's extras carry onlyWeekdays:[1–7]
 //            (ISO weekdays) instead of onlyOn.
 import { addDays, isIsoDate, todayInSchoolTime, SCHOOL_TIME_ZONE } from '../testing/eventRules.js';
+import { PUBLIC_ORIGIN } from '../publicOrigin.js';
 
 export { addDays, isIsoDate, todayInSchoolTime, SCHOOL_TIME_ZONE };
 
@@ -73,7 +74,7 @@ export const DEFAULT_EARLY_DAYS_BEFORE = 7; // a new camp's early price ends 7 d
 export const DEFAULT_CLOSES_DAYS_BEFORE = 1; // … and its sign-up closes the day before
 
 // Extra constants other files share (not in the §5.1 list, but used the same way everywhere).
-export const PUBLIC_ORIGIN = 'https://tkd-dashboard.pages.dev'; // the fixed production address
+export { PUBLIC_ORIGIN }; // the fixed production address, defined once in src/lib/publicOrigin.js (v1.200)
 export const PUBLIC_CODE_PATTERN = /^[a-hjkmnp-z2-9]{8}$/; // what testing_new_public_code() makes
 export const DESCRIPTION_MAX = 2000; // camp description, characters
 export const WAIVER_MAX = 8000; // waiver text, characters

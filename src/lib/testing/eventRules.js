@@ -21,11 +21,15 @@
 // (testing_date): the preview database works with stored rows, the screens with app objects.
 // pick() below reads whichever is there.
 
+import { PUBLIC_ORIGIN } from '../publicOrigin.js';
+
 // ----- Constants shared with the screens, the mock and the public page -----
 
 export const SCHOOL_TIME_ZONE = 'America/New_York';
-// The fixed production address used for every registration link and QR code (plan §8).
-export const PUBLIC_ORIGIN = 'https://tkd-dashboard.pages.dev';
+// The fixed production address used for every registration link and QR code (plan §8). It is defined
+// ONCE in src/lib/publicOrigin.js (rulebook v1.200) and re-exported here, so every file that already
+// imports it from this file keeps working.
+export { PUBLIC_ORIGIN };
 // The payment methods. Families can only choose cash or check on the form (§1.5).
 export const PAYING_BY = ['cash', 'check', 'card'];
 export const FORM_PAYING_BY = ['cash', 'check'];

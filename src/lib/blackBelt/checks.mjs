@@ -38,6 +38,7 @@ import {
   sumRemaining, rosterCards, rosterFilter, searchMatches, duplicatePairs, pairReturnedLines,
 } from './rules.js';
 import { blackBeltLink, qrSvgDataUrl } from './qr.js';
+import { PUBLIC_ORIGIN } from '../publicOrigin.js';
 import { qrFileName, qrPngBlob, qrSvgDataUrl as sharedQrSvgDataUrl } from '../qr.js'; // the shared QR helper (BB10)
 import { formatDollars, formatMoney } from '../money.js';
 import { timeOptions } from '../times.js'; // the shared time list's choices (BB13)
@@ -542,7 +543,7 @@ check('rules: nextWaiverVersionName and the 24-hour waiver rule', () => {
 // ======================= qr.js =======================
 
 check('qr: links, QR picture, file name', () => {
-  assert.equal(blackBeltLink('p4w9tdkm'), 'https://tkd-dashboard.pages.dev/black-belt/p4w9tdkm');
+  assert.equal(blackBeltLink('p4w9tdkm'), `${PUBLIC_ORIGIN}/black-belt/p4w9tdkm`);
   assert.equal(blackBeltLink('bad'), '');
   assert.equal(blackBeltLink(null), '');
   const svg = qrSvgDataUrl('p4w9tdkm');
