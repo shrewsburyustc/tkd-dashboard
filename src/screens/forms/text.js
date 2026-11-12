@@ -220,7 +220,7 @@ export const timesAndSpots = (name) => `Times and spots · ${name}`;
 // classes taught together (rulebook v0.620)
 export const TOGETHER_TITLE = 'Taught together · times and spots';
 export const togetherHint = (example) =>
-  `One spot number for the whole time${example ? `. On the forms: “${example}”` : ''}. These times aren’t in the classes’ own lists; to offer one to a single class, untick the other class above.`;
+  `One spot number for the whole time${example ? `. On the forms: “${example}”` : ''}. These times aren't in the classes' own lists; to offer one to a single class, untick the other class above.`;
 export const togetherTime = (weekdayTimeText, names) => `${weekdayTimeText} · ${names}`;
 export const SPOTS_HINT = 'Spots = free-class students per class. Untick a time to hide it.';
 export const NO_TIMES = 'This class isn\'t on the schedule yet.';
@@ -307,7 +307,7 @@ export const LAST_NAME = 'Last name'; // v0.637
 export const DOB = 'Date of birth'; // v0.634: the age is worked out from it
 // inside the date of birth's calendar (the same set-up as Star's date of birth)
 // (L-09: one agreed hint, with the curly apostrophe; kept here until Dashboard core's shared file holds it)
-export const DOB_CALENDAR_HINT = 'Pick the month and year first, then the day. Future dates can’t be chosen.';
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then the day. Future dates can\'t be chosen.';
 export const yearsOld = (n) => (n === 1 ? '1 year old' : `${n} years old`); // under the date of birth once picked
 export const ADD_CHILD = 'Add another child';
 // The Address question's four boxes (v0.634; the question's own label, e.g. "Home address", is above them)

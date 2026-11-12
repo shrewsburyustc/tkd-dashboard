@@ -147,3 +147,19 @@ Jeffrey: "Yes, build it". Main released it once Dashboard core's shared batch an
 - **Jeffrey: "A"** (picture `docs/Prospects/L10-Schedule-slot-options.png`). Built, uncommitted: on touch a slot under 44 px tall keeps its look and gets an invisible tap box out to 44 px, only into free room next to it (`TimeGrid.jsx` sets `--tap-top` / `--tap-bottom`; `schedule.css` touch block). Touching slots stay at their own size.
 - **Checked:** hit-test at 820 in the preview: 5 px above or below a 30-minute slot picks it, 6 px away does not, the box is 44 px. Both builds and all 19 check files pass.
 - With this, every item of the pass 1 and pass 2 fix lists for New students is built, except what waits on others (Dashboard core's R2-04 for U-06's patch, N16's Show menu) and the real-use tests.
+
+## Small batch: L-03's number and S-10's rest (2026-11-08)
+
+Asked by Main (both decided: pass 2 L-03 with Dashboard core's corrected number; v1.048 (20) for S-10); no picture, no new rulebook row.
+
+- **L-03:** the touch tap boxes use `inset: -5px 0` (it counts from inside the 1 px border, so -4 gave 42 px): `forms-public.css` `.btn::after` (family pages and kiosk), `calendar.css` `.cseg-item::after` (Month / Week), `schedule.css` `.sdaypick-btn::after`.
+- **S-10's rest:** the form builder's field editor ("Show only if" Question and Answer, `forms/FieldEditor.jsx`) uses the shared `Select`. Tried in the preview: Show only if on, the Question list opens with the earlier choice question, Answer changes to Option 2. The family page's own Dropdown question (`FormFields.jsx`) is NOT switched: Main is asking Jeffrey.
+- **Checked:** both builds (production last) and all 19 check files pass; the public form page at `/f/free-class-instagram` still draws the same and its `.btn::after` rule is `-5px 0` on touch. Not tried on a real touch device.
+- **Still open for Dashboard core:** U-06's patch (toast room on `.dialog-page-body`), N16's Show menu (a shared menu with tick rows).
+
+### Added to the small batch (2026-11-10, Jeffrey "Yes, take all" on Main's 14-decision picture, relayed by Main)
+
+- **(3) Apostrophes are straight everywhere:** nine curly ones in New students' sentences are straight now (`screens/calendar/text.js` 2, `screens/forms/text.js` 2, `screens/prospects/text.js` 3, `screens/schedule/text.js` 2; comments and check files untouched). Both builds and all 19 check files pass.
+- **(8)** the family page's Dropdown question (`FormFields.jsx:138`) KEEPS the browser's dropdown: not switched.
+- **(10)** the validation messages ("Check the fields and try again.") stay as they are.
+- Still waiting for Dashboard core: the toast room on `.dialog-page-body` (then U-06's patch goes) and the shared tick-row menu (then N16's Show menu).

@@ -6,6 +6,7 @@
 import { IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
 import Notice from '../../components/Notice.jsx';
+import Select from '../../components/Select.jsx';
 import { textProblem } from '../../lib/calendar/rules.js';
 import { CHOICE_TYPES, HELP_MAX, LABEL_MAX, LOCKED_TYPES, MAX_OPTIONS, OPTION_MAX, WAIVER_MAX, longTextProblem } from '../../lib/forms/fields.js';
 import { FieldIcon } from './FieldPalette.jsx';
@@ -131,34 +132,35 @@ export default function FieldEditor({ field, fields, readOnly, idBase, onChange,
           {earlier.length === 0 && !field.show_if && <p className="field-hint">{T.NO_EARLIER_CHOICE}</p>}
           {field.show_if && (
             <>
+              {/* S-10 (v1.048 (20)): the two "Show only if" dropdowns are the shared Select (v1.100), like the other builders'. */}
               <div className="field">
-                <label htmlFor={`${id}-si-q`}>{T.SHOW_IF_QUESTION}</label>
-                <select
+                <span id={`${id}-si-q-label`} className="field-label">
+                  {T.SHOW_IF_QUESTION}
+                </span>
+                <Select
                   id={`${id}-si-q`}
-                  className="input sdialog-select"
-                  disabled={readOnly}
+                  labelId={`${id}-si-q-label`}
                   value={field.show_if.field}
-                  onChange={(e) => {
-                    const q = earlier.find((f) => f.id === e.target.value);
-                    onChange({ show_if: { field: q.id, value: q.options[0] } });
+                  options={earlier.map((f) => ({ value: f.id, label: f.label }))}
+                  disabled={readOnly}
+                  onChange={(fieldId) => {
+                    const q = earlier.find((f) => f.id === fieldId);
+                    if (q) onChange({ show_if: { field: q.id, value: q.options[0] } });
                   }}
-                >
-                  {earlier.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="field">
-                <label htmlFor={`${id}-si-a`}>{T.SHOW_IF_ANSWER}</label>
-                <select id={`${id}-si-a`} className="input sdialog-select" disabled={readOnly} value={field.show_if.value} onChange={(e) => onChange({ show_if: { ...field.show_if, value: e.target.value } })}>
-                  {(target?.options ?? []).map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
+                <span id={`${id}-si-a-label`} className="field-label">
+                  {T.SHOW_IF_ANSWER}
+                </span>
+                <Select
+                  id={`${id}-si-a`}
+                  labelId={`${id}-si-a-label`}
+                  value={field.show_if.value}
+                  options={(target?.options ?? []).map((o) => ({ value: o, label: o }))}
+                  disabled={readOnly}
+                  onChange={(answer) => onChange({ show_if: { ...field.show_if, value: answer } })}
+                />
               </div>
             </>
           )}

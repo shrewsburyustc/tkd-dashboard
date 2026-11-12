@@ -407,7 +407,7 @@ button.sslot {
 
   .sdaypick-btn::after {
     position: absolute;
-    inset: -4px 0;
+    inset: -5px 0; /* L-03: from inside the 1px border, so -5px gives the 44px tap height */
     content: '';
   }
 
