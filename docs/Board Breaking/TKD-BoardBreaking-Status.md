@@ -1,7 +1,7 @@
 # Board Breaking — status
 
 **Branch:** `board-breaking` (worktree `board-breaking-efd1a3`) · **Started:** 2026-11-12
-**Rulebook block:** 1.300–1.399 (**v1.300 used**; next free 1.301) · **Migration number:** none reserved yet (ask Main first; next free was 0051 on 2026-11-12; this section needs its own migration, then a small Finance one that builds on it)
+**Rulebook block:** 1.300–1.399 (**v1.300 used**; next free 1.301) · **Migrations (reserved by Main 2026-11-12):** **0051** = the Board Breaking section; **0052** = Finance: Board Breaking payments in the Daily report (runs after 0051 is live, builds on 0047's `finance_money_rows_core`). No migration file is written before Jeffrey OKs the contract.
 **Goal (Main's brief, 2026-11-12):** a new **Board Breaking event** section in the dashboard, replacing Jeffrey's existing Board Breaking system (a Netlify page + Google Apps Script + Google Sheet, outside this repo).
 
 ## Where we are
