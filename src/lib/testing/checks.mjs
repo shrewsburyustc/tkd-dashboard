@@ -32,6 +32,7 @@ import {
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import * as SHARED_QR from '../qr.js';
+import { PUBLIC_ORIGIN } from '../publicOrigin.js';
 import * as TIMES from '../times.js'; // the shared time list's choices (CB12)
 import {
   RESULTS, GRADING_NOTE_MAX, normalizeGradingNote, gradingNoteProblem, gradingWindow, canChangeResults, isGraded,
@@ -1255,7 +1256,7 @@ check('eventRules: class times, signature, note, link', () => {
   assert.equal(noteIsValid('line 1\n\tline 2'), true);
   assert.equal(normalizeNote('  Bring water.\r\nArrive early. \n'), 'Bring water.\nArrive early.');
   assert.equal(normalizeNote(' \t\r\n '), null);
-  assert.equal(registrationUrl('p4w9tdkm'), 'https://tkd-dashboard.pages.dev/register/p4w9tdkm');
+  assert.equal(registrationUrl('p4w9tdkm'), `${PUBLIC_ORIGIN}/register/p4w9tdkm`);
   assert.equal(ACK_VERSION, 'cb-2026-10-17');
   assert.deepEqual(FORM_PAYING_BY, ['cash', 'check']);
   assert.equal(UNDO_WINDOW_MS, 10000);
@@ -1266,7 +1267,7 @@ check('eventRules: class times, signature, note, link', () => {
 // Since CB10 (rulebook v0.422, v1.106) the QR picture is the shared helper's (src/lib/qr.js); qr.js
 // here only builds the link. The shared helper's own checks are in src/lib/shared/checks.mjs.
 check('qr: link and QR picture', () => {
-  assert.equal(registrationLink('p4w9tdkm'), 'https://tkd-dashboard.pages.dev/register/p4w9tdkm');
+  assert.equal(registrationLink('p4w9tdkm'), `${PUBLIC_ORIGIN}/register/p4w9tdkm`);
   assert.equal(registrationLink('../evil'), '');
   assert.equal(registrationLink(null), '');
   const url = qrSvgDataUrl('p4w9tdkm');

@@ -25,6 +25,7 @@ import { jsonAnswer, readBodyLimited } from './http.js';
 import { verifyTurnstile } from './turnstile.js';
 import { makeClientKey } from './clientKey.js';
 import { allowRequest } from './rateLimit.js';
+import { hostOf, matchOrigin } from './origins.js';
 
 // The settings the Function needs (Cloudflare dashboard → Pages project → Settings, Production
 // only, contract 0013 §4.2). If any is missing the Function answers "not open" for everything.
@@ -418,7 +419,10 @@ async function postAnswer(context, deps) {
 
   // 2. Only our own page may send sign-ups: the browser adds an Origin header that a page on
   //    another site can't fake.
-  if (request.headers.get('Origin') !== env.PUBLIC_ORIGIN) return { status: 'bad_request' };
+  //    PUBLIC_ORIGIN is a list of our own addresses (functions/_lib/origins.js, rulebook v1.200); the
+  //    request must come from one of them, and Turnstile (step 8) then expects that same address's host.
+  const origin = matchOrigin(request, env);
+  if (origin === null) return { status: 'bad_request' };
 
   // 3. Only JSON (a plain HTML form on another site can't send this type without asking first).
   const type = (request.headers.get('Content-Type') ?? '').split(';')[0].trim().toLowerCase();
@@ -459,12 +463,8 @@ async function postAnswer(context, deps) {
 
   // 8. The human check (Turnstile), verified with Cloudflare using our secret. The token must
   //    have been made for THIS form (action camp_signup) on our own site.
-  let expectedHost;
-  try {
-    expectedHost = new URL(env.PUBLIC_ORIGIN).hostname;
-  } catch {
-    return { status: 'not_open' }; // PUBLIC_ORIGIN isn't a web address: treat as not set up
-  }
+  const expectedHost = hostOf(origin);
+  if (expectedHost === null) return { status: 'not_open' }; // PUBLIC_ORIGIN isn't a web address: treat as not set up
   const human = await verifyTurnstile({
     fetchImpl: deps.fetchImpl,
     secret: env.TURNSTILE_SECRET,

@@ -23,6 +23,7 @@ import * as LIVE_OLD from '../../screens/testing/events/useLiveLoad.js';
 import * as CONNECTION from '../connection.js';
 import * as TIMES from '../times.js';
 import * as QR from '../qr.js';
+import { PUBLIC_ORIGIN } from '../publicOrigin.js';
 import * as HISTORY from '../historyDates.js';
 import * as ROOM from '../pageRoom.js';
 import * as TOASTS from '../toastLine.js';
@@ -343,7 +344,7 @@ await check('M5 QR: the same QR picture as the four copies today, for each secti
     [blackBeltLink('w6em58ap'), bbQrSvgDataUrl('w6em58ap')], // Black Belt
   ];
   for (const [link, today] of pairs) {
-    assert.ok(link.startsWith('https://tkd-dashboard.pages.dev/'), link);
+    assert.ok(link.startsWith(`${PUBLIC_ORIGIN}/`), link);
     assert.ok(today.startsWith('data:image/svg+xml;charset=utf-8,'), 'today\'s picture exists');
     assert.equal(QR.qrSvgDataUrl(link), today, link);
   }
@@ -384,7 +385,7 @@ await check('M5 QR: the file name is "[event] - [school] QR code.png" with a pla
 });
 
 await check('M5 QR: outside a browser the PNG answers null (no canvas), never throws', async () => {
-  assert.equal(await QR.qrPngBlob('https://tkd-dashboard.pages.dev/register/p4w9tdkm'), null);
+  assert.equal(await QR.qrPngBlob(`${PUBLIC_ORIGIN}/register/p4w9tdkm`), null);
   assert.equal(await QR.qrPngBlob('not a link'), null);
 });
 

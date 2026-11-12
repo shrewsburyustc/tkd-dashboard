@@ -651,3 +651,22 @@ test('campDb.js: exactly two statements, children sent as (JSON.stringify(…)::
   assert.equal(params.length, 16);
   assert.ok(params.every((p) => /::(text|uuid|jsonb|boolean|integer)$/.test(p)), params.join(' '));
 });
+
+// Rulebook v1.200: PUBLIC_ORIGIN is a LIST of our own addresses (functions/_lib/origins.js), so the
+// old pages.dev address and the school's own address both work, and an address not on the list never does.
+test('Camps: PUBLIC_ORIGIN as a list - each listed address works, Turnstile must name the host of the address the request came from', async () => {
+  const env = goodEnv({ PUBLIC_ORIGIN: 'https://tkd-dashboard.pages.dev, https://app.example-school.net/ ,' });
+  const hosts = ['tkd-dashboard.pages.dev', 'app.example-school.net'];
+  for (const host of hosts) {
+    const origin = 'https://' + host;
+    const good = await run(handlePost, context({ env, headers: { Origin: origin } }), { openDatabase: fakeDb({ signup: dbSignupOk }).openDatabase, fetchImpl: fakeTurnstile({ success: true, hostname: host, action: 'camp_signup' }).fetchImpl });
+    assert.equal(good.json.status, 'ok', origin);
+    // a token made for the OTHER listed address is not good enough for this one
+    const other = hosts.find((h) => h !== host);
+    const mixed = await run(handlePost, context({ env, headers: { Origin: origin } }), { openDatabase: fakeDb({ signup: dbSignupOk }).openDatabase, fetchImpl: fakeTurnstile({ success: true, hostname: other, action: 'camp_signup' }).fetchImpl });
+    assert.deepEqual(mixed.json, { status: 'verify_failed' }, 'host of the other address: ' + origin);
+  }
+  for (const bad of ['https://www.example-school.net', 'http://app.example-school.net', 'https://app.example-school.net.evil.example', 'https://evil.example', '*', '']) {
+    await expectRefused(context({ env, headers: { Origin: bad } }), { status: 'bad_request' }, 'not on the list: ' + bad);
+  }
+});

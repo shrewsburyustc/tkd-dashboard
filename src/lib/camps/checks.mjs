@@ -27,6 +27,7 @@ import {
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
 import { qrFileName } from '../qr.js';
+import { PUBLIC_ORIGIN } from '../publicOrigin.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
 // Fill in's mapping (migration 0043): what campsApi.js sends and checks.
 import { staffSignupArgs, staffFormShapeOk, staffSignupShapeOk, signupSourceOf } from './campsArgs.js';
@@ -330,7 +331,7 @@ check('the QR file name (shared, v0.733 option B), campLink and the QR picture',
   // The card's heading: Camps' words, not the shared default "Worcester school".
   assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools'); // no "held at" (v0.754 / v0.755)
   assert.equal(CampText.campSchoolLine({ bothSchools: false, locationCode: 'worcester' }), 'Worcester');
-  assert.equal(campLink('k7m2qp4x'), 'https://tkd-dashboard.pages.dev/camp/k7m2qp4x');
+  assert.equal(campLink('k7m2qp4x'), `${PUBLIC_ORIGIN}/camp/k7m2qp4x`);
   assert.equal(qrCampLink, campLink); // the one definition
   assert.equal(campLink('k7m2qp'), ''); // 6 characters: not a code
   assert.equal(campLink('k7m2qp4l'), ''); // "l" is never in a code
