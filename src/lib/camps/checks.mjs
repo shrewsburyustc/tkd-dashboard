@@ -3249,5 +3249,11 @@ check('0050: Add camp makes the second link for a both-schools camp only; an old
   assert.ok(print.includes('sheetCamp') && print.includes('nameSchool'));
 });
 
+check('Search people opens a camper (M16)', () => {
+  const page = readFileSync(new URL('../../screens/camps/CampPage.jsx', import.meta.url), 'utf8');
+  assert.ok(page.includes("import { takeOpenPerson } from '../../lib/people/openPerson.js';"));
+  assert.ok(page.includes("takeOpenPerson(['camp'])") && page.includes('if (row) openCamper(row);'), 'takes the request once and opens the camper like a click on the name');
+});
+
 console.log(`${count} groups of checks ran.`);
 console.log('ALL CAMPS LIB CHECKS PASSED');

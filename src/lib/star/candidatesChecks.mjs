@@ -1857,4 +1857,14 @@ await check('R3-12: Dan and Stars use unavailable with a reason line, readOnly o
   assert.ok(text.includes("STARS_NEEDS_DAN = 'Choose a Dan first.'"));
   assert.equal(DAN_NEEDS_ADMIN, 'Only an admin can change the Dan after a payment is recorded.');
 });
+// M16 (v1.144 D): the top-bar Search people hands a tapped Star result over in memory; the Candidates tab takes it once it
+// is drawn (the page draws it only after the roster loaded) and opens that candidate's summary like a row click.
+await check('M16: the Candidates tab takes the open-person request and opens the summary', () => {
+  const tab = readSource(new URL('../../screens/testing/star/candidates/CandidatesTab.jsx', import.meta.url));
+  assert.ok(tab.includes("import { takeOpenPerson } from '../../../../lib/people/openPerson.js';"), 'the tab imports takeOpenPerson');
+  assert.ok(tab.includes("takeOpenPerson(['star'])"), 'it takes only a Star request');
+  assert.ok(tab.includes('openView(row, usable(rowEl(row.id)))'), 'it opens the summary the way a row click does');
+  assert.ok(tab.includes('candidatesRef.current.find((c) => c.id === request.id)'), 'it looks the id up in the whole roster, not the filtered rows');
+});
+
 console.log(`ALL STAR CANDIDATE CHECKS PASSED (${count} checks)`);

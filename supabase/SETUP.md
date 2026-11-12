@@ -3818,6 +3818,59 @@ Tested in PGlite on every run (`run.mjs` step0047, or `node run.mjs --only-step0
 
 ---
 
+## Migration 0049: the top-bar people search (M16)
+
+**Status: NOT APPLIED YET.** Written on `dashboard-core` (Dashboard core M16, rulebook v1.144: one box in the top bar that finds a person in any section; Jeffrey 2026-11-11: "A for all"; picture `docs/Dashboard Core/Mockups/M16-people-search`). Needs a **security review** and Jeffrey's OK before it is pasted. Apply it **before** the app version that has the top-bar search. The app that is live today keeps working: it never calls the new name.
+
+**Production order:** it needs 0005, 0006, 0012, 0013, 0014, 0016 and 0036 (all live) and nothing else; it touches no other migration's function, so it may go before or after any other. Its guard checks every table and column the function reads (48 columns of 12 tables) and stops with "0049 needs migrations … first (missing: …)", changing nothing, if one is missing.
+
+**What it does** (`supabase/migrations/0049_people_search.sql`): adds **one** function, `public.people_search(p_query text, p_school text)`, and changes nothing else (no table, rule, other function, right or data). It is **read only**: declared `STABLE` (Postgres refuses any write inside it), no insert/update/other write in its code, no history row, no SQL built from text (the typed text is a pattern parameter with `%`, `_` and `\` made literal). It answers `{"status":"ok","results":[…]}` (at most **25 people per kind**; kinds in the order `colorbelt`, `colorbelt_private`, `star`, `black_belt`, `camp`, `prospect`; inside a kind by name, then id, compared byte by byte), `{"status":"no_access"}` (not signed in, PIN-locked, no staff row — checked first) or `{"status":"invalid"}` (a missing text, under 2 or over 80 characters after trimming, or a school that is not `worcester`, `shrewsbury` or `both`; a blank or missing school means both; any case is accepted). Every result has the same 6 keys (`kind`, `id`, `event_id`, `name`, `event`, `school`; null when one doesn't apply). It matches the typed text anywhere in "first last" of the **active** people of: Color Belt registrations (school = the event's) and private testings, Star candidates, Black Belt candidates, camp campers (a camp for both schools matches any school and answers school null) and New students children (shown as "Ava R.").
+- **Never returned:** dates of birth, ages, phone, email, address, form answers, notes, payments, signatures, a New students child's last name or a parent's name, Finance. A New students child is only ever "Ava R." (first name + the first letter of the child's own last name; for a sign-up from before last names were asked, the first letter of the parent's **last word** when the parent's name has more than one word, like the Calendar; the first name alone when there is neither). The typed text is matched **only** against the child's own first + last name, never the parent's name, phone or email. Withdrawn and cancelled people are left out.
+- Security definer, `search_path = ''`, fully qualified names, `has_data_access()` first (never `is_admin()`: staff and admins both may call it, like `prospects_list` and `calendar_items`); `EXECUTE` revoked from public, anon, authenticated and service_role, granted to `authenticated` only. **Nothing for anon.**
+- **The only new exposure:** any signed-in staff session can look a person up by name across every section at once (the full names of Color Belt, Star, Black Belt and camp people were each on their own section's screen already; New students children only as "Ava R."). No column that holds a date of birth, contact detail, answer, payment or note is selected, and the answer is bounded (25 per kind, 150 in all).
+
+**Each step needs Jeffrey's OK.**
+
+### 0049a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0049_preapply_check.sql` must answer `people_search_versions = 0`, `people_search_is_0049 = false`, `needs_found = 48`. `needs_found` below 48 → an earlier migration (or a column of 0036) is missing — stop and tell Claude.
+2. Claude runs the fingerprint files of the sections it reads from only if wanted: no existing fingerprint file lists `people_search`, so nothing else is expected to change.
+
+### 0049b. Apply 0049 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0049_people_search.sql`, **SQL Editor → New query**, paste, **Run** → "Success. No rows returned." One transaction: on any error nothing is kept. The file has none of the words the Supabase connection refuses, so it should not warn.
+2. Running it again is safe (tested: no fingerprint, row or history change).
+
+### 0049c. Fingerprints and security advisor (Claude, through the connection)
+
+1. `supabase/tests/0049_fingerprints.sql` — the one line must match what `run.mjs` printed ("0049 fingerprints"): `people_search(p_query text, p_school text)` with `0f8c1fe14f3aa1d2ae6ac1ee19758db3 lang=plpgsql volatility=s returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`.
+2. Every other fingerprint file is unchanged (`run.mjs` step0049 checks exactly that: none of them lists a function named `people_search`).
+3. `0049_preapply_check.sql` again: `1 / true / 48`.
+4. **Security advisor:** nothing new. (If it lists "security definer function executable by authenticated" for `people_search`, that is expected: the top-bar search calls it, like the other staff readers.)
+
+### 0049d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0049_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0049 TESTS PASSED**. It seeds its own people (named with a random code, in `zz test …` events, camps, a cycle and forms): Color Belt registrations and private testings, Star, Black Belt and camp people, and New students children — including withdrawn and cancelled ones and ones at the other school — and checks who may call it (anon refused, the front desk and an admin allowed, a PIN-locked admin or desk, a login with no staff row and no session → `no_access`), the input rules (1, 2, 80 and 81 characters, unknown school, any-case school), the whole answer (15 results, exactly the 6 keys, kinds in order, names sorted, a both-schools camp with school null, the three "Ava R." labels), what is left out (withdrawn / cancelled people, the other school, a parent's name, phone or email), privacy (no date of birth, email, phone, parent name or child's last name in the answer's text), matching (capitals, parts of a name, spaces, and `%` `_` `\` typed as plain characters), the 25-per-kind limit (30 Star candidates give exactly 25, the next kind still shows), that it writes nothing (every table it reads and the history unchanged) and the function's rights and code (STABLE, no write, no dynamic SQL, schemas, `has_data_access()` first, six limits of 25). It rolls everything back. Supabase may warn about destructive operations (the withdrawn and cancelled seeds are changed inside the rolled-back transaction) — confirm.
+2. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0049e. Undo 0049 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version whose top bar has no search (with the function gone, the search box would only show an error).
+2. Paste **the whole file** `supabase/manual/0049u_undo.sql` → **Run**. It removes the one function; Supabase warns about a destructive operation — that is the function, no data. Confirm.
+3. Claude checks `0049_fingerprints.sql` (no row), every other fingerprint file (unchanged) and `0049_preapply_check.sql` (`0 / false / 48`). To redo: paste 0049 again. Running the undo twice is safe.
+
+Tested in PGlite on every run (`run.mjs` step0049, or `node run.mjs --only-step0049`): the pre-apply check before, after and after the undo; no other fingerprint file moves or gains a line; 0049 writes nothing; 0049's tests and the Forms / Prospects tests (0007, 0009, 0012, 0036) before and after; re-run safety; the undo file exactly as named here, then the redo.
+
+**Why:**
+- **One reader, not one per section:** the top-bar box makes one call; no section's own readers change, and the rules for what a name search may show are in one place.
+- **STABLE and no history:** a search must never write, so Postgres itself refuses it.
+- **Initials made inside the database:** a New students child's last name and the parent's name never leave it, so the app can't show or log what it never receives.
+- **25 per kind:** the answer stays small whatever is typed.
+- **`%`, `_` and `\` are plain characters:** a typed `a%` finds names that hold those two characters, not "everyone with an a".
+- **`"C"` collation on the sort:** PGlite and Supabase sort text differently; names and ids are compared byte by byte so the order is the same everywhere.
+
+---
+
 ## Migration 0050: Camps sign-ups carry the school they came from
 
 **Status: not applied yet.** Built on `camps` (rulebook v0.757; contract `docs/Camps/CONTRACT-0050.md`; Jeffrey 2026-11-11: "Have separate QR Codes for worcester and shrewsbury even if they are together so there are different rosters"). A camp for both schools gets a second family link (a second QR code), one per school; a family that signs up through a school's link is a camper of that school, and the roster follows the school. Apply it **before** the app that reads `school` / `public_code_2` is deployed. The live app keeps working after it: it never names the new columns, its 15-input Fill in call still works (the new input has a default) and the family form is unchanged (the only link a family has today is the camp's `public_code`).

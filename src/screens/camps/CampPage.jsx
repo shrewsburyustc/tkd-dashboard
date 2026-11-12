@@ -87,6 +87,8 @@ import PageBar from '../../components/PageBar.jsx';
 import RegistrationLinkBox from '../../components/RegistrationLinkBox.jsx';
 import ReceiptDialog from '../../components/Receipt.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
+import { takeOpenPerson } from '../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../lib/people/useOpenPerson.js';
 import { useSaveLine } from '../../lib/saveLine.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import IconButton from '../../components/IconButton.jsx';
@@ -375,6 +377,20 @@ export default function CampPage({
     setMenu(null);
     setReceipt(null);
   }, [live.status]);
+
+  // Top-bar Search people (M16, rulebook v1.144): a tapped camper result arrives here as a one-shot request in
+  // memory (lib/people/openPerson.js). Once this camp has loaded, take it (once) and open that camper's detail the
+  // way a click on the name does. A roster filter doesn't matter (openCamper reads the roster, not the filtered
+  // list). A camper who isn't in this roster (removed since), or a request meant for another camp: open nothing, say nothing.
+  const personTick = useOpenPersonTick(); // a search while this camp is already open
+  useEffect(() => {
+    if (live.status !== 'ready' || !camp || wrongSchool || screenLocked) return;
+    const request = takeOpenPerson(['camp']);
+    if (!request || (request.eventId && request.eventId !== campId)) return;
+    const row = roster.find((r) => r.id === request.id);
+    if (row) openCamper(row);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the camp finishes loading; the request is taken once
+  }, [live.status, camp, wrongSchool, screenLocked, personTick]);
 
   // ===== Hide private details (as Color Belt's EventPage, v0.412) =====
   // The open dialog RIGHT NOW: a payment dialog's save that finishes after the switch closed it

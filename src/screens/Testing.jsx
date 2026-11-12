@@ -74,6 +74,7 @@ import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
 import PrivateGradingPage from './testing/private/PrivateGradingPage.jsx';
 import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
+import { hasOpenPerson } from '../lib/people/openPerson.js';
 import TestingChooser from './testing/chooser/TestingChooser.jsx';
 import BackToTesting from './testing/chooser/BackToTesting.jsx';
 import { COLOR_BELT_TITLE } from './testing/chooser/text.js';
@@ -188,7 +189,9 @@ export default function Testing({
   const page = STAR_TESTING_ON ? testingPage : testingPage === 'blackBelt' ? 'blackBelt' : 'colorBelt';
   const baseId = useId();
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
-  const [tab, setTabState] = useState(lastTab);
+  // Top-bar "Search people" (M16): a tapped private testing waits as a request; the tab it lives on
+  // is chosen BEFORE it is taken (PrivateTestingTab takes it once its list has loaded).
+  const [tab, setTabState] = useState(() => (hasOpenPerson(['colorbelt_private']) ? 'private' : lastTab));
   // Phase 4: while a private testing's grading page is open, the tab underneath becomes Private
   // testing, so closing the page lands there.
   useEffect(() => {
@@ -198,6 +201,14 @@ export default function Testing({
     lastTab = key;
     setTabState(key);
   }
+  // The same, when Color Belt testing is already open on another tab (runs after every draw; it
+  // only peeks, so it is cheap): switch to Private testing so the tab can take the request.
+  useEffect(() => {
+    if (page === 'colorBelt' && !eventId && !tabProps.privateId && tab !== 'private' && hasOpenPerson(['colorbelt_private'])) {
+      lastTab = 'private';
+      setTabState('private');
+    }
+  });
 
   // After choosing a school on the Both page, the buttons are gone: keyboard focus goes to the
   // current tab of that school's page instead of getting lost.
