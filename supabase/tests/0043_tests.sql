@@ -470,7 +470,8 @@ begin
   -- F1. The family form is unchanged
   -- ===================================================================
   perform set_config('request.jwt.claims', '', true);
-  select count(*) into v_n2 from public.camp_public_attempts;
+  -- only rows from the last 2 days: the family form's own clean-up removes older ones (production holds some)
+  select count(*) into v_n2 from public.camp_public_attempts a where a.at >= now() - interval '2 days';
   v_sub := gen_random_uuid();
   perform pg_temp.st('F1 family form', pg_temp.fs(v_open, pg_temp.kids(v_open, array['Fran']), 'zz-0043-f1', v_sub), 'ok');
   select s.id into v_sid from public.camp_signups s where s.submission_id = v_sub;
@@ -486,7 +487,7 @@ begin
     raise exception 'TEST FAILED: F1 the family form''s history row: %', v_x - array['before'];
   end if;
   -- two tries (price_changed, then ok): two attempt rows
-  if (select count(*) from public.camp_public_attempts) <> v_n2 + 2 then
+  if (select count(*) from public.camp_public_attempts a where a.at >= now() - interval '2 days') <> v_n2 + 2 then
     raise exception 'TEST FAILED: F1 the family form must write its attempt rows (expected 2 more)';
   end if;
   -- the client-key limit: 30 tries this hour -> rate_limited

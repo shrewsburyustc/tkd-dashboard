@@ -372,7 +372,8 @@ begin
   -- C1. The family form: the school follows the link
   -- ===================================================================
   perform set_config('request.jwt.claims', '', true);
-  select count(*) into v_n2 from public.camp_public_attempts;
+  -- only rows from the last 2 days: the family form's own clean-up removes older ones (production holds some)
+  select count(*) into v_n2 from public.camp_public_attempts a where a.at >= now() - interval '2 days';
   v_sub := gen_random_uuid();
   perform pg_temp.st('C1 through public_code', pg_temp.fs(v_code, v_bs, pg_temp.kids(v_bs, array['Ann', 'Abe']), 'zz-0050-c1', v_sub), 'ok');
   if pg_temp.sch(v_sub) is distinct from 'shrewsbury' then
@@ -411,7 +412,7 @@ begin
   -- the attempts rows name the camp, whichever code was used (each form try = 2 rows: price_changed, ok)
   if (select count(*) from public.camp_public_attempts a where a.client_key = 'zz-0050-c1' and a.camp_id = v_bs) <> 4
      or (select count(*) from public.camp_public_attempts a where a.client_key = 'zz-0050-c1' and a.camp_id = v_bw) <> 4
-     or (select count(*) from public.camp_public_attempts) <> v_n2 + 12 then
+     or (select count(*) from public.camp_public_attempts a where a.at >= now() - interval '2 days') <> v_n2 + 12 then
     raise exception 'TEST FAILED: C1 the attempts rows (camp by either code)';
   end if;
   if current_setting('tkd.signup_school', true) is distinct from '' then
