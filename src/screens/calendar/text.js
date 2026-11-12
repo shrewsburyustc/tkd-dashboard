@@ -96,7 +96,6 @@ export const FOLLOW_UPS_FAILED = loadFailedNamed('follow-ups'); // "Couldn't loa
 export const SHOW = 'Show';
 export const SHOW_TITLE = 'Show on the calendar';
 export const SHOW_EVERYTHING = 'Show everything';
-export const DONE = 'Done';
 export const showBadge = (shown, total) => `${shown} of ${total}`;
 export const showButtonLabel = (shown, total) => `Show, ${shown} of ${total} kinds shown`;
 
