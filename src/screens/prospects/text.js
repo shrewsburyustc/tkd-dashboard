@@ -273,7 +273,7 @@ export const classLineYear = (b) => `${formatDate(b.date)} · ${formatTime(parse
 // brackets: PrintSheet.jsx, pass 2 P-01.)
 
 // ----- The printed visitor sheet (PrintSheet.jsx; v0.636, mockup rev 3 screen 4) -----
-export const SCHOOL_FULL = 'Jae H. Jeong’s U.S. Taekwondo Center';
+export const SCHOOL_FULL = 'Jae H. Jeong\'s U.S. Taekwondo Center';
 export const VISITOR_INFORMATION = 'Visitor information';
 export const printedBy = (date, name) => `Printed ${date}${name ? ` by ${name}` : ''}`;
 export const FORM_WORD = 'Form:';
@@ -376,8 +376,8 @@ export const INVALID = 'That was refused. Check the values and try again.';
 export const JOINED_TITLE = 'Joined';
 export const JOINED_DATE = 'Date joined';
 export const JOINED_HINT = 'Joined families are kept until a Students section exists.';
-export const JOINED_DATE_HINT = 'Days after today can’t be chosen.'; // the Joined calendar's gray line (N6)
-export const PAST_DAYS_HINT = 'Past days can’t be chosen.'; // the follow-up and note calendars' gray line (N6)
+export const JOINED_DATE_HINT = 'Days after today can\'t be chosen.'; // the Joined calendar's gray line (N6)
+export const PAST_DAYS_HINT = 'Past days can\'t be chosen.'; // the follow-up and note calendars' gray line (N6)
 
 // ----- Book a time -----
 export const bookTitle = (name, change) => (change ? `Change ${name}'s free class` : `Book a free class for ${name}`);

@@ -84,7 +84,7 @@ export const AGES_PROBLEM = {
   from_missing: 'Type the youngest age in From.',
   not_number: 'Type whole years, like 7.',
   range: 'Ages go from 0 to 99.',
-  order: 'To can’t be younger than From.',
+  order: 'To can\'t be younger than From.',
 };
 export const AGES_FAILED = "The time slot saved, but the ages didn't. Check the connection, then try again.";
 export const COLOR_AND_AGES_FAILED = "The time slot saved, but the color and the ages didn't. Check the connection, then try again.";
@@ -138,7 +138,7 @@ export const STARTS_ON = 'Starts on';
 export const STARTS_ON_HINT = 'Must be after today. Until then, the current schedule is used.';
 // The Starts on calendar (components/DatePicker.jsx, design review N6 / v1.018)
 export const CHOOSE = 'Choose…'; // the empty field
-export const STARTS_ON_PICKER_HINT = 'Today and earlier days can’t be chosen.'; // the calendar's gray line
+export const STARTS_ON_PICKER_HINT = 'Today and earlier days can\'t be chosen.'; // the calendar's gray line
 export const START_FROM = 'Start from';
 export const copyOf = (label, count) => `Copy of ${label} (${count === 1 ? '1 time slot' : `${count} time slots`})`;
 export const COPY_NOTHING = 'Copy (nothing to copy yet)';

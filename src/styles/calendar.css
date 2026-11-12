@@ -838,7 +838,7 @@ button.cchip--btn:focus-visible {
 
   .cseg-item::after {
     position: absolute;
-    inset: -4px 0;
+    inset: -5px 0; /* L-03: counted from inside the 1px border, so -5px is the 44px tap height */
     content: '';
   }
 

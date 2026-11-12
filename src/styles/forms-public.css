@@ -468,7 +468,7 @@ h1:focus,
 
   .btn::after {
     position: absolute;
-    inset: -4px 0; /* invisible: 36px button + 2 × 4px = 44px tap height */
+    inset: -5px 0; /* invisible: a 36px button + 2 × 4px + its 1px border each side = 44px tap height (L-03) */
     content: '';
   }
 
