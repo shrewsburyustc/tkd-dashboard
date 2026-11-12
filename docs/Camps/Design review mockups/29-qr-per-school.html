@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps: one QR code and link per school, so each school has its own roster (proposal for v0.757, migration 0050)</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2300px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  h2.sec { font-size: 18px; font-weight: 600; margin: 10px 0 12px; padding-top: 14px; border-top: 1px solid #E5E5E2; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps: one QR code and link per school, so each school has its own roster (proposal for v0.757, migration 0050)</h1>
+<p class="sub">Jeffrey, 2026-11-11: "(1) Still show us both schools (2) Have separate QR Codes for worcester and shrewsbury even if they are together so there are different rosters." Real preview screens of the built pages, with the new parts drawn in (the preview's sample camp is a one-school camp, so the second QR picture is the same sample picture; each school's real QR is different). <b>Amber = what is new.</b> Staff keep seeing "Both schools" (the camp list, the School choice in Edit camp). Families still see no school named anywhere: the school is only which link or QR they used.</p>
+<h2 class="sec">1 · ⋯ Registration link (staff): two cards for a both-schools camp</h2>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:418px">
+    <div class="shot" style="width:418px;height:484.5px">
+      <img src="shots/q50-link-before-1280.png" style="left:-399px;top:-71.25px;width:1216px">
+      <div class="mark" style="left:18.799999999999997px;top:129px;width:380.4px;height:269.25px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>One card, one link</b> for a camp for both schools (the heading shows the camp's school; for a one-school camp, nothing changes).</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After (proposed)</div>
+  <figure style="width:418px">
+    <div class="shot" style="width:418px;height:760px">
+      <img src="shots/q50-link-after-1280.png" style="left:-399px;top:-85.5px;width:1216px">
+      <div class="mark" style="left:18.799999999999997px;top:130.9px;width:380.4px;height:268.3px;border-color:#F59E0B"></div><div class="mark" style="left:18.799999999999997px;top:403.54999999999995px;width:380.4px;height:268.3px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Two cards: Worcester and Shrewsbury.</b> Each has its own link, Copy link and Download QR code (named "April Vacation Camp - Worcester QR code.png" and "… - Shrewsbury QR code.png"). Post each school's QR at that school.</figcaption>
+  </figure>
+  <div class="note">The link already given out for the live Thanksgiving Camp keeps working and counts for the camp's stored school (Shrewsbury); only the other school gets a new link.</div>
+</div>
+</div>
+<h2 class="sec">2 · The roster (staff): sign-ups follow the link they used</h2>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:1003px">
+    <div class="shot" style="width:1003px;height:280.5px">
+      <img src="shots/q50-roster-both-before-1280.png" style="left:-64.6px;top:-323px;width:1088px">
+      
+    </div>
+    <figcaption><b>Both switcher:</b> one roster, no school shown.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After (proposed)</div>
+  <figure style="width:1003px">
+    <div class="shot" style="width:1003px;height:280.5px">
+      <img src="shots/q50-roster-both-after-1280.png" style="left:-64.6px;top:-323px;width:1088px">
+      <div class="mark" style="left:2.8px;top:51.25px;width:84.5px;height:19.9px;border-color:#F59E0B"></div><div class="mark" style="left:2.8px;top:95.45px;width:84.5px;height:19.9px;border-color:#F59E0B"></div><div class="mark" style="left:2.8px;top:137.1px;width:84.5px;height:19.9px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Both switcher:</b> a small gray school line under each name (phone cards show it the same way).</figcaption>
+  </figure>
+<figure style="width:1003px">
+    <div class="shot" style="width:1003px;height:323px">
+      <img src="shots/q50-roster-worcester-after-1280.png" style="left:-64.6px;top:-323px;width:1088px">
+      
+    </div>
+    <figcaption><b>Worcester switcher:</b> only the families who used Worcester's link (or were filled in at a Worcester desk), with their own counts, To collect and Payments recorded. Shrewsbury likewise. (Sample: half the rows hidden.)</figcaption>
+  </figure>
+  <div class="note">The camp list's Campers count follows the switcher the same way. The family's sign-up stays whole: all children of one sign-up share a school. A family that used the wrong QR: an admin or staff member changes the school in Camper detail (one line in the history).</div>
+</div>
+</div>
+<h2 class="sec">3 · The family form: no change, no school named</h2>
+<div class="cols">
+<div class="col after">
+  <div class="label">Both links open the same form</div>
+  <figure style="width:448.8px">
+    <div class="shot" style="width:448.8px;height:255px">
+      <img src="shots/b28-after-1280.png" style="left:-319.59999999999997px;top:-102px;width:1088px">
+      
+    </div>
+    <figcaption>The form is picture 28's (no school line). Which school the family belongs to is only known from the link or QR code they used.</figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>How it works.</b> A camp for both schools has two family links (the camp's existing link, for its stored school, and a new one for the other school). The sign-up page and the Sign up button work the same; the database records the school next to the sign-up from the link used (<b>migration 0050</b>: a school on each sign-up, a second link on the camp, the roster view and Camper detail carry the school, a staff "change school" function; the family sign-up function and Fill in set it). <b>Fill in</b> at the desk uses the school this device is set to. <b>Receipts</b> for a both-schools camp now say the camper's own school. <b>Payments, Mark paid and Finance don't change</b> (a payment already counts at the desk that took it). Nothing is built, applied or merged until you answer.</div>
+</body></html>

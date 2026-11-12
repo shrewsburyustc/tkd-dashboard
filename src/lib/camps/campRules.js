@@ -53,9 +53,13 @@ export function yearsAround(today, dates = [], nextYear = true) {
 
 // Which waiver/confirmation wording the family ticked. Change it when that wording changes.
 export const CAMP_ACK_VERSION = 'camp-2026-10-18';
-// A blank camp accepts ages 3 to 17; any range must stay inside 1 to 99 (v0.703).
-export const DEFAULT_AGES = { min: 3, max: 17 };
+// A camp has a MINIMUM age and no maximum (Jeffrey 2026-11-11, rulebook v0.756: "We assume no adults will
+// come"). A blank camp starts at 3 and up. The database still stores a maximum for every camp (its check
+// needs one from 1 to 99), so "no maximum" is 99, the top of the allowed range: the app always sends it,
+// and every camp already stored on the live database has it (checked 2026-11-11).
 export const AGE_LIMITS = { min: 1, max: 99 };
+export const NO_MAX_AGE = AGE_LIMITS.max;
+export const DEFAULT_AGES = { min: 3, max: NO_MAX_AGE };
 export const MAX_DAYS = 60; // days in one camp (was 10 before weekly pricing, rulebook v0.717)
 export const MAX_WEEK_DAYS = 7; // rows in a price grid at most (days in one Monday–Sunday week)
 export const MAX_EXTRAS = 10; // extras in one camp
@@ -181,14 +185,47 @@ export function campsForLocation(camps, location) {
   return (camps ?? []).filter((c) => c.locationCode === location || c.bothSchools === true);
 }
 
-// How many ACTIVE campers each camp has: rows [{ campId, status }] → { [campId]: count }.
+// How many ACTIVE campers each camp has: rows [{ campId, status, school }] → { [campId]: count }.
 // A camp with no active camper isn't in the answer (read it with `?? 0`).
-export function campCounts(rows) {
+// On one school's list (location 'worcester' / 'shrewsbury') a camp for BOTH schools counts only the families
+// that used that school's link (migration 0050, rulebook v0.757); bothCampIds = the ids of the camps for both
+// schools. On Both (or without the options) every active camper counts, as before.
+export function campCounts(rows, { location = 'both', bothCampIds = null } = {}) {
   const counts = {};
+  const bySchool = SCHOOL_CODES.includes(location);
   for (const r of rows ?? []) {
-    if (r?.status === 'active') counts[r.campId] = (counts[r.campId] ?? 0) + 1;
+    if (r?.status !== 'active') continue;
+    if (bySchool && bothCampIds?.has(r.campId) && r.school !== location) continue;
+    counts[r.campId] = (counts[r.campId] ?? 0) + 1;
   }
   return counts;
+}
+
+// ----- One link and one roster per school (migration 0050, rulebook v0.757) -----
+
+export const SCHOOL_CODES = ['worcester', 'shrewsbury'];
+export const otherSchool = (code) => (code === 'worcester' ? 'shrewsbury' : 'worcester');
+
+// The family links of a camp: one for a camp for one school; TWO for a camp for both schools — the camp's own
+// link (public_code, the one already given out) is for its stored school, public_code_2 for the other.
+// → [{ school: 'worcester' | 'shrewsbury', code }], Worcester first. A missing code is left out.
+export function campLinks(camp) {
+  if (!camp) return [];
+  const list = [{ school: camp.locationCode, code: camp.publicCode }];
+  if (camp.bothSchools === true) list.push({ school: otherSchool(camp.locationCode), code: camp.publicCode2 });
+  return list
+    .filter((l) => SCHOOL_CODES.includes(l.school) && typeof l.code === 'string' && l.code !== '')
+    .sort((a, b) => SCHOOL_CODES.indexOf(a.school) - SCHOOL_CODES.indexOf(b.school));
+}
+
+// The school of a roster row: the school of the link the family used; the camp's own school when the row has none.
+export const rowSchool = (row, camp) => (SCHOOL_CODES.includes(row?.school) ? row.school : camp?.locationCode ?? null);
+
+// The rows one school's roster shows: for a camp for both schools on a school's switcher, only that school's
+// families; on Both (or for a camp for one school) every row.
+export function rowsForSchool(rows, camp, location) {
+  if (!camp?.bothSchools || !SCHOOL_CODES.includes(location)) return rows ?? [];
+  return (rows ?? []).filter((r) => rowSchool(r, camp) === location);
 }
 
 // ----- Prices (§1.13, §1.20) -----
@@ -601,7 +638,7 @@ export function matchesCardFilter(row, filter, day) {
 // the top switcher — for every camp, so Mark paid never asks. Accepts the device's name
 // ('Worcester') or a code ('worcester'); anything else → null (the screen then sends nothing usable
 // and the database refuses with field 'school').
-export const SCHOOLS = ['worcester', 'shrewsbury'];
+export const SCHOOLS = SCHOOL_CODES; // (defined with the school helpers above)
 export function paymentSchoolFor(deviceLocation) {
   const code = typeof deviceLocation === 'string' ? deviceLocation.toLowerCase() : null;
   return SCHOOLS.includes(code) ? code : null;
@@ -785,20 +822,18 @@ export function cameCount(row, days, today) {
 const isWhole = (n) => typeof n === 'number' && Number.isInteger(n);
 const isBlank = (v) => v === null || v === undefined || v === '' || (typeof v === 'number' && Number.isNaN(v));
 
-// Checks the "Ages accepted from / to" boxes. null = fine, else 'blank' ("Enter an age"),
-// 'range' (not a whole number from 1 to 99) or 'order' ("The first age must be lower than the
-// second."). From may equal to (8–8 is fine).
-export function validateAges(minAge, maxAge) {
-  if (isBlank(minAge) || isBlank(maxAge)) return 'blank';
-  if (!isWhole(minAge) || !isWhole(maxAge)) return 'range';
-  if (minAge < AGE_LIMITS.min || maxAge > AGE_LIMITS.max || maxAge < AGE_LIMITS.min || minAge > AGE_LIMITS.max) return 'range';
-  if (minAge > maxAge) return 'order';
+// Checks the "Minimum age" box. null = fine, else 'blank' ("Enter an age") or 'range' (not a whole
+// number from 1 to 99). There is no maximum age to check (v0.756).
+export function validateAges(minAge) {
+  if (isBlank(minAge)) return 'blank';
+  if (!isWhole(minAge) || minAge < AGE_LIMITS.min || minAge > AGE_LIMITS.max) return 'range';
   return null;
 }
 
-// May a child of this age sign up on the family form? (Staff Edit details accepts 1–99.)
+// May a child of this age sign up on the family form? The camp's minimum age or older, up to 99 (the
+// largest age the database accepts); there is no maximum age (v0.756). (Staff Edit details accepts 1–99.)
 export function ageAllowed(age, camp) {
-  return isWhole(age) && age >= camp?.minAge && age <= camp?.maxAge;
+  return isWhole(age) && age >= camp?.minAge && age <= NO_MAX_AGE;
 }
 
 // ----- Phones -----

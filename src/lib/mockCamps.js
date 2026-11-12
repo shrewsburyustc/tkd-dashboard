@@ -34,7 +34,8 @@
 // pricing, rulebook v0.717: a camp's price grid has rows 1…W, W = the most camp days in one
 // Monday–Sunday week, and a template's day_count means "days per week" 1–7; version 5 migration
 // 0033 (rulebook v0.735 / v0.736): the camper's paying_by_on_form, the payment's paying_by_before
-// and the change log the history reads. A saved version-3 or version-4 store is UPGRADED (see
+// and the change log the history reads; version 6 migration 0050 (rulebook v0.757): a sign-up's school and a
+// both-schools camp's second link. A saved version-3, 4 or 5 store is UPGRADED (see
 // upgradeStore); anything older is replaced by the default data), column
 // names are the database's (snake_case):
 //   camps, camp_days, camp_prices, camp_extras, camp_templates, camp_signups, camp_campers,
@@ -93,7 +94,7 @@ import {
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6; // 6: 0050 — sign-ups carry a school, a both-schools camp has a second link (public_code_2)
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const REFERENCE_START = 4001; // CP-4001 is the first reference the database makes (§1.7)
 const ATTEMPT_KEEP_MS = 2 * 24 * 60 * 60 * 1000; // rate-limit rows older than 2 days are removed
@@ -173,6 +174,11 @@ export const DEFAULT_CAMP_CODES = {
   columbus: 'cb8d2wqr', veterans: 'vt4n7hzs', thanksgiving: 'thx9kv3m', winter: 'wn6y3fjr', april: 'k7m2qp4x',
   summer: 'sm2w8kxe',
 };
+// 0050: the second family link of a camp for both schools (the school that is NOT the camp's stored school).
+export const DEFAULT_CAMP_CODES_2 = {
+  columbus: 'cb3m9xkq', veterans: 'vt7p2wne', thanksgiving: 'thz6d4mr', winter: 'wn2k8qhv', april: 'k4s9wm7d', summer: 'sm5t3njx',
+};
+const otherSchool = (code) => (code === 'worcester' ? 'shrewsbury' : 'worcester');
 
 const WAIVER = 'I give permission for my child to take part in camp at Jae H. Jeong’s U.S. Taekwondo Center, including Taekwondo, games and outdoor play. I understand that physical activity can lead to injury, and I release the school and its staff from claims arising from normal camp activities. In an emergency, I allow staff to get medical care for my child if I can’t be reached.';
 const DESC_WEEK = 'A week of Taekwondo, games and crafts while school is out, with a pizza party on Friday. Bring a lunch, a water bottle and comfortable clothes.';
@@ -207,28 +213,28 @@ const templateExtraJson = ([name, dollars, per, notForAllDays, weekdays]) => ({
 const DEFAULT_CAMPS = [
   {
     key: 'columbus', name: 'Columbus Day Camp', location: 'worcester', both: false, days: ['2026-10-12'],
-    opens: '2026-09-21', closes: '2026-10-11', early: '2026-10-05', ages: [5, 12], grid: GRID_ONE,
+    opens: '2026-09-21', closes: '2026-10-11', early: '2026-10-05', ages: [5, 99], grid: GRID_ONE,
     extras: [DROP, PICK, LUNCH], description: DESC_ONE, made: ['2026-09-14', '10:00'],
   },
   {
     key: 'veterans', name: 'Veterans Day Camp', location: 'worcester', both: false, days: ['2026-11-11'],
-    opens: '2026-10-01', closes: '2026-11-10', early: '2026-11-04', ages: [5, 12], grid: GRID_ONE,
+    opens: '2026-10-01', closes: '2026-11-10', early: '2026-11-04', ages: [5, 99], grid: GRID_ONE,
     extras: [DROP, PICK, LUNCH], description: DESC_ONE, closedByHand: true, made: ['2026-09-25', '10:00'],
   },
   {
     key: 'thanksgiving', name: 'Thanksgiving Camp', location: 'worcester', both: false, days: ['2026-11-25', '2026-11-27'],
-    opens: '2026-10-05', closes: '2026-11-24', early: '2026-11-18', ages: [5, 12], grid: GRID_TWO,
+    opens: '2026-10-05', closes: '2026-11-24', early: '2026-11-18', ages: [5, 99], grid: GRID_TWO,
     extras: [DROP, PICK], description: DESC_TWO, made: ['2026-09-28', '10:00'],
   },
   {
     key: 'winter', name: 'Winter Break Camp', location: 'shrewsbury', both: false, days: ['2026-12-28', '2026-12-29', '2026-12-30'],
-    opens: '2026-11-30', closes: '2026-12-27', early: '2026-12-21', ages: [5, 12], grid: GRID_THREE,
+    opens: '2026-11-30', closes: '2026-12-27', early: '2026-12-21', ages: [5, 99], grid: GRID_THREE,
     extras: [DROP, PICK], description: DESC_WINTER, made: ['2026-10-10', '10:00'],
   },
   {
     key: 'april', name: 'April Vacation Camp', location: 'worcester', both: true,
     days: ['2027-04-19', '2027-04-20', '2027-04-21', '2027-04-22', '2027-04-23'],
-    opens: '2027-03-01', closes: '2027-04-18', early: '2027-04-12', ages: [5, 12], grid: GRID_WEEK,
+    opens: '2027-03-01', closes: '2027-04-18', early: '2027-04-12', ages: [5, 99], grid: GRID_WEEK,
     extras: [DROP, PICK, PIZZA], description: DESC_WEEK, made: ['2026-10-16', '10:00'],
   },
   {
@@ -236,7 +242,7 @@ const DEFAULT_CAMPS = [
     key: 'summer', name: 'Two-Week Summer Camp', location: 'worcester', both: false,
     days: ['2027-07-05', '2027-07-06', '2027-07-07', '2027-07-08', '2027-07-09', '2027-07-12', '2027-07-13', '2027-07-14', '2027-07-15', '2027-07-16'],
     // Weekly pricing (v0.717): 5 rows (Mon–Fri), each week priced on its own and the weeks added up.
-    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 12], grid: GRID_WEEK,
+    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 99], grid: GRID_WEEK,
     extras: [DROP, PICK, PIZZA], description: 'Two weeks of Taekwondo, games, crafts and outdoor play. Bring a lunch, a water bottle, sunscreen and comfortable clothes.',
     made: ['2026-10-20', '10:00'],
   },
@@ -412,7 +418,8 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
       id: id('c0'), location_code: def.location, both_schools: def.both, name: def.name, start_time: '09:00:00', end_time: '15:00:00',
       signup_opens_on: def.opens, signup_closes_on: def.closes, early_until: def.early, closed_by_hand: def.closedByHand === true,
       min_age: def.ages[0], max_age: def.ages[1], description: def.description, waiver_text: WAIVER,
-      public_code: DEFAULT_CAMP_CODES[def.key], ...stamps(made, 'Jeffrey Berg', ADMIN_USER_ID),
+      public_code: DEFAULT_CAMP_CODES[def.key], public_code_2: def.both ? DEFAULT_CAMP_CODES_2[def.key] : null,
+      ...stamps(made, 'Jeffrey Berg', ADMIN_USER_ID),
     };
     if (camp.closed_by_hand) bump(camp, schoolClockToIso(addDays(def.closes, -6), '11:00'), 'Jeffrey Berg', ADMIN_USER_ID);
     db.camps.push(camp);
@@ -435,6 +442,8 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
       if (!signup) {
         signup = {
           id: id('c5'), camp_id: camp.id, reference: `CP-${ref}`, submission_id: id('ca'),
+          // 0050: the school of the link the family used (a both-schools camp: every other sample family used the other school's)
+          school: camp.both_schools && ref % 2 === 0 ? otherSchool(camp.location_code) : camp.location_code,
           parent_name: family[0], parent_relation: family[1], parent_phone: family[2],
           emergency_name: family[3], emergency_relation: family[4], emergency_phone: family[5],
           price_kind: kind, signed_up_on: signed[0], signature: SAMPLE_SIGNATURE, signed_at: signedAt, signature_deleted_at: null,
@@ -549,7 +558,7 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
     const at = schoolClockToIso('2026-10-16', '12:00');
     db.camp_templates.push({
       id: id('c4'), name, location_code: location, both_schools: both, day_count: dayCount, start_time: '09:00:00', end_time: '15:00:00',
-      opens_days_before: opens, closes_days_before: closes, early_days_before: early, min_age: 5, max_age: 12,
+      opens_days_before: opens, closes_days_before: closes, early_days_before: early, min_age: 5, max_age: 99,
       description, waiver_text: WAIVER, prices: gridRows(grid), extras: extras.map(templateExtraJson), ...stamps(at, 'Jeffrey Berg', ADMIN_USER_ID),
     });
   });
@@ -684,6 +693,32 @@ function upgradeStore5(store) {
   return store;
 }
 
+// A saved version-5 store → version 6, the way migration 0050 leaves the real tables: every sign-up gets the school
+// of its camp's stored school (nobody has a school yet), and every camp for both schools gets its second family link
+// (the known sample camps their sample link; any other camp one made from its id, never one already used).
+function upgradeStore6(store) {
+  if (!store || typeof store !== 'object' || store.schema !== 5) return store;
+  if (!Array.isArray(store.camps) || !Array.isArray(store.camp_signups)) return store;
+  const used = new Set(store.camps.flatMap((c) => [c.public_code, c.public_code_2]).filter(Boolean));
+  const sampleKey = (camp) => Object.keys(DEFAULT_CAMP_CODES).find((key) => DEFAULT_CAMP_CODES[key] === camp.public_code);
+  for (const camp of store.camps) {
+    if (camp.public_code_2 === undefined) camp.public_code_2 = null;
+    if (camp.both_schools !== true || camp.public_code_2) continue;
+    let code = sampleKey(camp) ? DEFAULT_CAMP_CODES_2[sampleKey(camp)] : null;
+    const hex = String(camp.id).replace(/[^0-9a-f]/gi, '').padEnd(32, '0');
+    for (let shift = 0; !code || used.has(code); shift += 1) {
+      code = '';
+      for (let i = 0; i < 8; i += 1) code += CODE_ALPHABET[parseInt(hex.slice(((i + shift) * 2) % 30, ((i + shift) * 2) % 30 + 2), 16) % CODE_ALPHABET.length];
+    }
+    used.add(code);
+    camp.public_code_2 = code;
+  }
+  const campById = new Map(store.camps.map((c) => [c.id, c]));
+  for (const signup of store.camp_signups) if (!signup.school) signup.school = campById.get(signup.camp_id)?.location_code ?? 'worcester';
+  store.schema = 6;
+  return store;
+}
+
 // Is a loaded store usable? (Missing, damaged or another schema version → the default data.)
 const LISTS = ['camps', 'camp_days', 'camp_prices', 'camp_extras', 'camp_templates', 'camp_signups', 'camp_campers',
   'camp_camper_days', 'camp_camper_extras', 'camp_payments', 'camp_public_attempts', 'camp_change_log'];
@@ -700,7 +735,7 @@ function storeIsUsable(store) {
 
 const STAMP_COLS = ['version', 'created_at', 'created_by_name', 'updated_at', 'updated_by_name'];
 const CAMP_COLS = ['id', 'location_code', 'both_schools', 'name', 'start_time', 'end_time', 'signup_opens_on', 'signup_closes_on', 'early_until',
-  'closed_by_hand', 'min_age', 'max_age', 'description', 'waiver_text', 'public_code', ...STAMP_COLS];
+  'closed_by_hand', 'min_age', 'max_age', 'description', 'waiver_text', 'public_code', 'public_code_2', ...STAMP_COLS];
 const TEMPLATE_COLS = ['id', 'name', 'location_code', 'both_schools', 'day_count', 'start_time', 'end_time', 'opens_days_before', 'closes_days_before',
   'early_days_before', 'min_age', 'max_age', 'description', 'waiver_text', 'prices', 'extras', ...STAMP_COLS];
 const CAMPER_COLS = ['id', 'signup_id', 'camp_id', 'position', 'first_name', 'last_name', 'age', 'member', 'paying_by', 'paying_by_on_form', 'base_cents', 'status',
@@ -710,7 +745,8 @@ const ROSTER_COLS = ['id', 'camp_id', 'signup_id', 'position', 'first_name', 'la
   'signed_up_on', 'signed', 'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents',
   'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paid_school',
   'paying_by_on_form', // 0033: added at the end of the view (create or replace view can only add columns there)
-  'refunded_cents']; // 0039: the refunds that stand, as a plus number (also at the end)
+  'refunded_cents', // 0039: the refunds that stand, as a plus number (also at the end)
+  'school']; // 0050: the school of the link the family used (also at the end)
 const GRANTED = {
   camps: CAMP_COLS,
   camp_days: ['id', 'camp_id', 'day'],
@@ -733,7 +769,8 @@ const HIDDEN = {
   camp_campers: ['withdrawn_by', 'created_by', 'updated_by'],
   camp_signups: ['submission_id', 'parent_name', 'parent_phone', 'parent_relation', 'emergency_name', 'emergency_phone', 'emergency_relation',
     'signature', 'waiver_text_signed', 'ack_version', 'created_at', 'created_by', 'created_by_name', 'updated_at', 'updated_by', 'updated_by_name',
-    'source', 'entered_by'], // 0043: read through camp_camper_detail / camp_camper_history, no table grant
+    'source', 'entered_by', // 0043: read through camp_camper_detail / camp_camper_history, no table grant
+    'school'], // 0050: only the roster view has it
   camp_camper_days: ['checked_in_by'],
   camp_camper_extras: [],
   camp_payments: ['recorded_by', 'paying_by_before'], // paying_by_before (0033) is not granted to the app
@@ -782,7 +819,7 @@ const RPC_ARGS = {
   camp_staff_signup: [ID('p_camp_id'), ID('p_submission_id'), ['p_children', 'jsonb'], ['p_parent_name', 'text'], ['p_parent_phone', 'text'],
     ['p_parent_relation', 'text'], ['p_emergency_name', 'text'], ['p_emergency_phone', 'text'], ['p_emergency_relation', 'text'],
     ['p_paying_by', 'text'], ['p_acknowledged', 'bool'], ['p_signature', 'text'], ['p_ack_version', 'text'], ['p_waiver_version', 'text'],
-    ['p_expected_total_cents', 'int']],
+    ['p_expected_total_cents', 'int'], ['p_school', 'text', 'optional']], // 0050: p_school has a default (null = the camp's stored school)
 };
 // A = admins only (the others are S = staff and admins, some with a rule inside — see each one).
 const ADMIN_ONLY = new Set([
@@ -992,7 +1029,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   function read() {
     let store = null;
     try {
-      store = upgradeStore5(upgradeStore(clone(loadStore())));
+      store = upgradeStore6(upgradeStore5(upgradeStore(clone(loadStore()))));
     } catch {
       store = null;
     }
@@ -1150,6 +1187,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       paid_school: last?.school ?? null, // mock-only extra column (campsApi doesn't ask for it)
       paying_by_on_form: c.paying_by_on_form ?? c.paying_by, // 0033: the family's choice on the form
       refunded_cents: refundedCents(db, c.id), // 0039: the refunds that stand, a plus number (0 = none)
+      school: signup?.school ?? null, // 0050
     };
   }
 
@@ -1206,8 +1244,13 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       const hex = newId().replace(/-/g, '');
       let code = '';
       for (let i = 0; i < 8; i += 1) code += CODE_ALPHABET[parseInt(hex.slice(i * 2, i * 2 + 2), 16) % CODE_ALPHABET.length];
-      if (!db.camps.some((c) => c.public_code === code)) return code;
+      if (!db.camps.some((c) => c.public_code === code || c.public_code_2 === code)) return code;
     }
+  }
+  // 0050 (the trigger on camps): a camp for both schools has a second link, a camp for one school has none.
+  function syncCode2(db, camp) {
+    if (camp.both_schools && !camp.public_code_2) camp.public_code_2 = newPublicCode(db);
+    if (!camp.both_schools) camp.public_code_2 = null;
   }
 
   // The checks Add camp and Edit camp share (argument shape). Returns the cleaned values, null
@@ -1298,7 +1341,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (!v) return st('invalid');
       if (v.problem) return v.problem;
       if (v.days.some((d) => d < today())) return st('invalid'); // every day today or later
-      const camp = insertRow(db.camps, { id: newId(), ...v.fields, closed_by_hand: false, public_code: newPublicCode(db) }, ctx);
+      const camp = insertRow(db.camps, { id: newId(), ...v.fields, closed_by_hand: false, public_code: newPublicCode(db), public_code_2: null }, ctx);
+      syncCode2(db, camp);
       v.days.forEach((day) => db.camp_days.push({ id: newId(), camp_id: camp.id, day }));
       v.prices.forEach((p) => db.camp_prices.push({ id: newId(), camp_id: camp.id, ...p }));
       v.extras.forEach(({ id, ...e }) => db.camp_extras.push({ ...e, id: newId(), camp_id: camp.id }));
@@ -1422,6 +1466,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       v.prices.forEach((p) => db.camp_prices.push({ id: newId(), camp_id: camp.id, ...p }));
       // Existing campers' prices are untouched. Every change bumps the camp's version.
       updateRow(camp, v.fields, ctx, true);
+      syncCode2(db, camp); // 0050
       return { status: 'ok', version: camp.version };
     },
 
@@ -1903,7 +1948,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         emergency_name: a.p_emergency_name, emergency_phone: a.p_emergency_phone, emergency_relation: a.p_emergency_relation,
         paying_by: a.p_paying_by, acknowledged: a.p_acknowledged, signature: a.p_signature, ack_version: a.p_ack_version,
         waiver_version: a.p_waiver_version, expected_total_cents: a.p_expected_total_cents,
-      }, {}, { actorName: ctx.actorName, userId: ctx.userId, isAdmin: ctx.isAdmin });
+      }, {}, { actorName: ctx.actorName, userId: ctx.userId, isAdmin: ctx.isAdmin, school: typeof a.p_school === 'string' && a.p_school !== '' ? a.p_school : null });
       return answer;
     },
   };
@@ -1973,7 +2018,15 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       },
     };
   }
-  const campByCode = (db, code) => (typeof code === 'string' && CODE_PATTERN.test(code) ? db.camps.find((c) => c.public_code === code) ?? null : null);
+  // 0050: a code is the camp's own link (the camp's stored school) or its second link (the other school).
+  function campAndSchoolByCode(db, code) {
+    if (typeof code !== 'string' || !CODE_PATTERN.test(code)) return null;
+    const first = db.camps.find((c) => c.public_code === code);
+    if (first) return { camp: first, school: first.location_code };
+    const second = db.camps.find((c) => c.public_code_2 === code);
+    return second ? { camp: second, school: otherSchool(second.location_code) } : null;
+  }
+  const campByCode = (db, code) => campAndSchoolByCode(db, code)?.camp ?? null;
 
   function publicCamp(code) {
     const db = read();
@@ -2026,8 +2079,15 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   // source 'desk' and entered_by = the staff member's name, by that staff member. desk = null is
   // the family form, exactly as before (source 'form', entered_by null, actor "Family form").
   function signupCore(db, args, flags, desk = null) {
-    const camp = desk ? findCamp(db, uuidText(args.camp_id) ? args.camp_id.toLowerCase() : '') : campByCode(db, args.code);
+    const found = desk ? null : campAndSchoolByCode(db, args.code);
+    const camp = desk ? findCamp(db, uuidText(args.camp_id) ? args.camp_id.toLowerCase() : '') : found?.camp ?? null;
     if (!camp) return { answer: st('not_found'), campId: null }; // 1
+    // 0050: the school this sign-up belongs to. The family form: the link's school. The desk: the school sent
+    // (This device), or the camp's own; a school that isn't one, or another school's on a ONE-school camp, is refused.
+    if (desk && desk.school !== null && (!LOCATION_CODES.includes(desk.school) || (!camp.both_schools && desk.school !== camp.location_code))) {
+      return { answer: { status: 'invalid', field: 'school' }, campId: camp.id };
+    }
+    const signupSchool = desk ? (desk.school ?? camp.location_code) : found.school;
     const campId = camp.id;
     const out = (answer) => ({ answer, campId });
     if (!childrenArgValid(args.children)) return out(st('invalid')); // 2 (before any cast)
@@ -2094,6 +2154,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     const signup = insertRow(db.camp_signups, {
       id: newId(), camp_id: campId, reference: `CP-${db.next_reference++}`, submission_id: submissionId,
       source: desk ? 'desk' : 'form', entered_by: desk ? desk.actorName : null, // 0043
+      school: signupSchool, // 0050
       parent_name: normalizeName(args.parent_name), parent_phone: args.parent_phone, parent_relation: normalizeName(args.parent_relation),
       emergency_name: normalizeName(args.emergency_name), emergency_phone: args.emergency_phone, emergency_relation: normalizeName(args.emergency_relation),
       price_kind: kind, signed_up_on: today(), signature: args.signature, signed_at: at, signature_deleted_at: null,

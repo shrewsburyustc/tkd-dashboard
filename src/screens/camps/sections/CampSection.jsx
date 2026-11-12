@@ -1,8 +1,8 @@
 // CampSection.jsx — section 1 of Add / Edit camp: name, school and days (C3).
 // Why it exists: the first thing every camp needs. Drawn inside CampDialog's folded frame.
 //   - Camp name (Edit template: Template name — renaming a template happens here, C2)
-//   - School: Worcester | Shrewsbury | Both schools; with Both schools, "Held at Worcester |
-//     Shrewsbury" appears next to it (v0.710). Neutral gray selection, not blue (C3 note).
+//   - School: Worcester | Shrewsbury | Both schools. (The "Held at Worcester | Shrewsbury" choice that
+//     appeared next to it with Both schools, v0.710, is gone: v0.755.) Neutral gray selection, not blue (C3 note).
 //   - Days: the month calendar (DayCalendar.jsx), its one-line summary
 //     ("Mon, Apr 19 – Fri, Apr 23, 2027 · 5 days") and the hint. Edit template has no days, only
 //     "Days per week" (1–7; weekly pricing v0.717), which sets the size of the price grid.
@@ -20,7 +20,6 @@ const SCHOOLS = [
   { key: 'shrewsbury', label: T.schoolName('shrewsbury') },
   { key: 'both', label: T.BOTH_SCHOOLS },
 ];
-const HELD_AT = SCHOOLS.slice(0, 2);
 // "Days per week" (Edit template): 1 day … 7 days. Values are strings, as the form keeps them.
 const DAY_COUNTS = Array.from({ length: MAX_WEEK_DAYS }, (_, i) => ({ value: String(i + 1), label: T.daysCount(i + 1) }));
 
@@ -57,16 +56,8 @@ export default function CampSection({ mode, values, errors, show, today, keepDay
             <ChoiceGroup labelId={`${idBase}-school`} value={values.school} readOnly={readOnly} options={SCHOOLS} onChange={(school) => onChange({ school })} />
           </div>
         </div>
-        {values.school === 'both' && (
-          <div className="field cp-neutral">
-            <span id={`${idBase}-held`} className="field-label">
-              {T.HELD_AT}
-            </span>
-            <div>
-              <ChoiceGroup labelId={`${idBase}-held`} value={values.heldAt} readOnly={readOnly} options={HELD_AT} onChange={(heldAt) => onChange({ heldAt })} />
-            </div>
-          </div>
-        )}
+        {/* No "Held at" choice any more (v0.755): a camp for both schools names no single school. The
+            camp's stored school stays as it was (a new camp takes the device's school) and is never shown. */}
       </div>
 
       {isTemplate ? (

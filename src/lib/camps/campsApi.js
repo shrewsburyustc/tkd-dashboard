@@ -107,11 +107,13 @@ export async function loadCamps(location) {
     const ids = [...byId.keys()];
     const [dayRes, rosterRes] = await Promise.all([
       selectIn('camp_days', DAY_COLUMNS, 'camp_id', ids),
-      selectIn('camp_roster', 'camp_id, status', 'camp_id', ids),
+      selectIn('camp_roster', 'camp_id, status, school', 'camp_id', ids),
     ]);
     if (dayRes.error) return failure(dayRes.error);
     if (rosterRes.error) return failure(rosterRes.error);
-    const counts = campCounts(toCamel(rosterRes.rows));
+    // On one school's list a camp for both schools counts only that school's families (0050).
+    const bothCampIds = new Set([...byId.values()].filter((row) => row.both_schools === true).map((row) => row.id));
+    const counts = campCounts(toCamel(rosterRes.rows), { location, bothCampIds });
     const camps = [...byId.values()].map((row) => ({
       ...toCamp(row),
       days: dayRes.rows.filter((d) => d.camp_id === row.id).map(toDay).sort(byDay),
@@ -227,8 +229,9 @@ export async function loadStaffForm(campId) {
 //   children, camp } · 'price_changed' + { newTotalCents, oldTotalCents, camp (the whole GET-shaped
 //   answer) } · 'camp_changed' + { camp } · 'admin_only' + { signupState, closesOn } · 'finished' ·
 //   'invalid' · 'not_found' · 'no_access' · 'error' (no connection).
-export async function staffSignup(campId, body) {
-  return callRpc('camp_staff_signup', staffSignupArgs(campId, body), staffSignupShapeOk);
+// school (0050): This device's school, for a camp for both schools (null = the camp's own school).
+export async function staffSignup(campId, body, school = null) {
+  return callRpc('camp_staff_signup', staffSignupArgs(campId, body, school), staffSignupShapeOk);
 }
 
 // The signed-in person's name, for the receipt's "Printed … by [name]" (design review C3, rulebook

@@ -74,7 +74,7 @@ function extrasText(breakdownExtras, campExtras, campDayIsos) {
 // printedOn      today at the school, 'YYYY-MM-DD'
 // printedByName  get_my_profile's full_name, or null
 // → the plain receipt (Receipt.jsx's shape)
-export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [], schools = [], printedOn, printedByName = null }) {
+export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [], schools = [], printedOn, printedByName = null, camperSchool = null }) {
   const c = detail.camper;
   const campDayIsos = campDays.map((d) => (typeof d === 'string' ? d : d.day)).sort();
   const myDays = (c.days ?? []).map((d) => d.day).sort();
@@ -90,7 +90,7 @@ export function buildCampReceipt({ detail, camp, campDays = [], campExtras = [],
   const facts = [
     [T.RECEIPT_CAMPER, T.camperLabel(c)],
     [T.RECEIPT_CAMP, `${camp.name} · ${T.campDatesText(campDayIsos)}${removed && c.withdrawnAt ? ` · ${T.removedBy(c.withdrawnAt, null).replace(/ /g, ' ')}` : ''}`], // (no line break inside "removed Nov 7")
-    [T.RECEIPT_SCHOOL_LABEL, T.campSchoolLine(camp)],
+    [T.RECEIPT_SCHOOL_LABEL, T.receiptSchoolLine(camp, camperSchool)], // the camper's own school (0050, v0.757)
     [T.RECEIPT_DAYS, T.detailDaysLine(myDays, allDays)],
   ];
   const extras = extrasText(detail.breakdown?.extras, campExtras, campDayIsos);

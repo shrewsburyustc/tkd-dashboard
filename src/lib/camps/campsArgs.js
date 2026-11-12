@@ -8,7 +8,7 @@ import { toCamel, toSnake } from './campRules.js';
 
 // The columns we read (the database refuses select('*') on purpose: some columns — phones, the
 // signature, who-as-an-id — are never given to the app). Only columns contract 0013 §1.15 grants.
-export const CAMP_COLUMNS = 'id, location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on, early_until, closed_by_hand, min_age, max_age, description, waiver_text, public_code, version';
+export const CAMP_COLUMNS = 'id, location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on, early_until, closed_by_hand, min_age, max_age, description, waiver_text, public_code, public_code_2, version';
 export const DAY_COLUMNS = 'id, camp_id, day';
 export const PRICE_COLUMNS = 'camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents, nonmember_regular_cents';
 export const EXTRA_COLUMNS = 'id, camp_id, name, price_cents, per, not_for_all_days, only_on, sort';
@@ -20,7 +20,9 @@ export const TEMPLATE_COLUMNS = 'id, name, location_code, both_schools, day_coun
 // (0 = none) — the ⋯ shows Undo refund and grays Edit payment / Undo payment while it is above 0
 // (rulebook v0.743 (4)), and the roster's Paid tag then names the amount, "Paid $292" (v0.745).
 // The view only has it once 0039 is pasted, which comes before this app.
-export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form, refunded_cents';
+// school (migration 0050): the school of the link the family used (also at the end of the view); camps.public_code_2
+// (0050) is the second family link of a camp for both schools. Both exist only once 0050 is pasted.
+export const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at, paying_by_on_form, refunded_cents, school';
 
 // ----- Converting database rows to the §5.1 shapes -----
 
@@ -146,7 +148,8 @@ export function recordRefundArgs({ camperId, expectedVersion, method, amountCent
 
 // camp_staff_signup's arguments from the family page's own POST body (src/camp/form.js buildBody):
 // the camp by id; the honeypot, timing and Turnstile fields are not sent (the staff path has none).
-export function staffSignupArgs(campId, body = {}) {
+// school (0050): This device's school for a camp for BOTH schools (null = the camp's own school).
+export function staffSignupArgs(campId, body = {}, school = null) {
   const parent = body.parent ?? {};
   const emergency = body.emergency ?? {};
   return {
@@ -165,6 +168,7 @@ export function staffSignupArgs(campId, body = {}) {
     p_ack_version: body.ack_version,
     p_waiver_version: body.waiver_version,
     p_expected_total_cents: body.expected_total_cents,
+    p_school: school ?? null,
   };
 }
 

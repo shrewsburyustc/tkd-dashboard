@@ -18,6 +18,7 @@ import { centsToInputText, parseDollars } from '../../../lib/money.js';
 import {
   AGE_LIMITS,
   DEFAULT_AGES,
+  NO_MAX_AGE,
   DEFAULT_CLOSES_DAYS_BEFORE,
   DEFAULT_EARLY_DAYS_BEFORE,
   DESCRIPTION_MAX,
@@ -118,7 +119,6 @@ export function blankValues(today, defaultLocation) {
     bank: {},
     extras: defaultExtras(),
     minAge: String(DEFAULT_AGES.min),
-    maxAge: String(DEFAULT_AGES.max),
     description: '',
     waiverText: '',
   };
@@ -137,7 +137,6 @@ export function applyTemplate(values, template, today) {
     bank: bankFrom(template.prices),
     extras: extrasFrom(template.extras, false, true),
     minAge: String(template.minAge),
-    maxAge: String(template.maxAge),
     description: template.description ?? '',
     waiverText: template.waiverText ?? '',
     datesEdited: false,
@@ -190,7 +189,6 @@ export function valuesFromCamp(camp, days, prices, extras) {
     bank: bankFrom(prices),
     extras: extrasFrom(extras, true),
     minAge: String(camp.minAge),
-    maxAge: String(camp.maxAge),
     description: camp.description ?? '',
     waiverText: camp.waiverText ?? '',
   };
@@ -212,7 +210,6 @@ export function valuesFromTemplate(template) {
     bank: bankFrom(template.prices),
     extras: extrasFrom(template.extras, false),
     minAge: String(template.minAge),
-    maxAge: String(template.maxAge),
     description: template.description ?? '',
     waiverText: template.waiverText ?? '',
   };
@@ -400,23 +397,19 @@ export function checkForm(values, ctx) {
   sections[4] = { problem: noPrice > 0 || noName > 0 || noDays > 0 || sameName || Boolean(server.extraError) || values.extras.length > MAX_EXTRAS, summary: extrasSummary };
 
   // ----- 5. Family form: ages, description, waiver -----
+  // A minimum age and no maximum (v0.756): the database still wants a maximum, so the camp always saves 99.
   const minAge = ageNumber(values.minAge);
-  const maxAge = ageNumber(values.maxAge);
-  const ageIssue = validateAges(minAge, maxAge);
-  if (ageIssue === 'blank') {
-    if (minAge === '') errors.minAge = T.ENTER_AN_AGE;
-    if (maxAge === '') errors.maxAge = T.ENTER_AN_AGE;
-  } else if (ageIssue === 'range') errors.ages = T.AGES_RANGE;
-  else if (ageIssue === 'order') errors.ages = T.AGES_ORDER;
+  const ageIssue = validateAges(minAge);
+  if (ageIssue === 'blank') errors.minAge = T.ENTER_AN_AGE;
+  else if (ageIssue === 'range') errors.ages = T.AGES_RANGE;
   const descIssue = TEXT_PROBLEM(values.description, DESCRIPTION_MAX, false);
   if (descIssue) errors.description = descIssue === 'tooLong' ? T.TEXT_TOO_LONG(DESCRIPTION_MAX) : T.NAME_BAD_CHARACTER;
   const waiverIssue = TEXT_PROBLEM(values.waiverText, WAIVER_MAX, true);
   if (waiverIssue) errors.waiverText = waiverIssue === 'empty' ? T.ENTER_WAIVER : waiverIssue === 'tooLong' ? T.TEXT_TOO_LONG(WAIVER_MAX) : T.NAME_BAD_CHARACTER;
   const familyProblem = Boolean(ageIssue || descIssue || waiverIssue);
   let familySummary;
-  if (ageIssue === 'order') familySummary = T.FAMILY_AGES_PROBLEM;
-  else if (familyProblem) familySummary = T.FAMILY_PROBLEM;
-  else familySummary = T.familySummary(minAge, maxAge, Boolean(values.fromTemplateName));
+  if (familyProblem) familySummary = T.FAMILY_PROBLEM;
+  else familySummary = T.familySummary(minAge, Boolean(values.fromTemplateName));
   sections[5] = { problem: familyProblem, summary: familySummary };
 
   const firstProblem = [1, 2, 3, 4, 5].find((k) => sections[k].problem) ?? null;
@@ -429,7 +422,7 @@ export function checkForm(values, ctx) {
       startTime: values.startTime,
       endTime: values.endTime,
       minAge,
-      maxAge,
+      maxAge: NO_MAX_AGE,
       prices,
       extras,
       description: normalizeCampText(values.description),

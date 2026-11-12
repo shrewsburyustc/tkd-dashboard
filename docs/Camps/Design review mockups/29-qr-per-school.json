@@ -1,0 +1,45 @@
+{
+  "title": "Camps: one QR code and link per school, so each school has its own roster (proposal for v0.757, migration 0050)",
+  "subtitle": "Jeffrey, 2026-11-11: \"(1) Still show us both schools (2) Have separate QR Codes for worcester and shrewsbury even if they are together so there are different rosters.\" Real preview screens of the built pages, with the new parts drawn in (the preview's sample camp is a one-school camp, so the second QR picture is the same sample picture; each school's real QR is different). <b>Amber = what is new.</b> Staff keep seeing \"Both schools\" (the camp list, the School choice in Edit camp). Families still see no school named anywhere: the school is only which link or QR they used.",
+  "width": 2300,
+  "sections": [
+    {
+      "heading": "1 · ⋯ Registration link (staff): two cards for a both-schools camp",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/q50-link-before-1280.png", "shotWidth": 1280, "crop": [420, 75, 440, 510], "scale": 0.95, "marks": [[444, 215, 392, 275]],
+            "caption": "<b>One card, one link</b> for a camp for both schools (the heading shows the camp's school; for a one-school camp, nothing changes)." }
+        ] },
+        { "label": "After (proposed)", "tone": "after", "items": [
+          { "src": "shots/q50-link-after-1280.png", "shotWidth": 1280, "crop": [420, 90, 440, 800], "scale": 0.95, "marks": [[444, 232, 392, 274], [444, 519, 392, 274]],
+            "caption": "<b>Two cards: Worcester and Shrewsbury.</b> Each has its own link, Copy link and Download QR code (named \"April Vacation Camp - Worcester QR code.png\" and \"… - Shrewsbury QR code.png\"). Post each school's QR at that school." }
+        ], "note": "The link already given out for the live Thanksgiving Camp keeps working and counts for the camp's stored school (Shrewsbury); only the other school gets a new link." }
+      ]
+    },
+    {
+      "heading": "2 · The roster (staff): sign-ups follow the link they used",
+      "columns": [
+        { "label": "Today", "tone": "today", "items": [
+          { "src": "shots/q50-roster-both-before-1280.png", "shotWidth": 1280, "crop": [76, 380, 1180, 330], "scale": 0.85,
+            "caption": "<b>Both switcher:</b> one roster, no school shown." }
+        ] },
+        { "label": "After (proposed)", "tone": "after", "items": [
+          { "src": "shots/q50-roster-both-after-1280.png", "shotWidth": 1280, "crop": [76, 380, 1180, 330], "scale": 0.85, "marks": [[84, 445, 90, 14], [84, 497, 90, 14], [84, 546, 90, 14]],
+            "caption": "<b>Both switcher:</b> a small gray school line under each name (phone cards show it the same way)." },
+          { "src": "shots/q50-roster-worcester-after-1280.png", "shotWidth": 1280, "crop": [76, 380, 1180, 380], "scale": 0.85,
+            "caption": "<b>Worcester switcher:</b> only the families who used Worcester's link (or were filled in at a Worcester desk), with their own counts, To collect and Payments recorded. Shrewsbury likewise. (Sample: half the rows hidden.)" }
+        ], "note": "The camp list's Campers count follows the switcher the same way. The family's sign-up stays whole: all children of one sign-up share a school. A family that used the wrong QR: an admin or staff member changes the school in Camper detail (one line in the history)." }
+      ]
+    },
+    {
+      "heading": "3 · The family form: no change, no school named",
+      "columns": [
+        { "label": "Both links open the same form", "tone": "after", "items": [
+          { "src": "shots/b28-after-1280.png", "shotWidth": 1280, "crop": [376, 120, 528, 300], "scale": 0.85,
+            "caption": "The form is picture 28's (no school line). Which school the family belongs to is only known from the link or QR code they used." }
+        ] }
+      ]
+    }
+  ],
+  "footer": "<b>How it works.</b> A camp for both schools has two family links (the camp's existing link, for its stored school, and a new one for the other school). The sign-up page and the Sign up button work the same; the database records the school next to the sign-up from the link used (<b>migration 0050</b>: a school on each sign-up, a second link on the camp, the roster view and Camper detail carry the school, a staff \"change school\" function; the family sign-up function and Fill in set it). <b>Fill in</b> at the desk uses the school this device is set to. <b>Receipts</b> for a both-schools camp now say the camper's own school. <b>Payments, Mark paid and Finance don't change</b> (a payment already counts at the desk that took it). Nothing is built, applied or merged until you answer."
+}
