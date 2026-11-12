@@ -42,6 +42,7 @@ import {
 // the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
 import * as StarText from '../../screens/testing/star/candidates/text.js'; // only to compare the shared payment words (R1-07)
+import * as FamilyText from '../../camp/text.js'; // the public family page's words
 // The shared words (src/components/text.js): only to check the "Date signed" sentences (v0.638).
 import * as SharedText from '../../components/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
@@ -446,7 +447,7 @@ check('ages, phones and the text rule', () => {
 });
 
 check('md5 is the standard algorithm (the waiver version)', () => {
-  for (const text of ['', 'abc', 'I give permission…', 'x'.repeat(1000), 'Jae H. Jeong’s']) {
+  for (const text of ['', 'abc', 'I give permission…', 'x'.repeat(1000), 'Jae H. Jeong\'s']) {
     assert.equal(md5(text), createHash('md5').update(text, 'utf8').digest('hex'));
   }
 });
@@ -1452,15 +1453,15 @@ check('Hide private details: delete sentences and toast name no money (v0.722)',
   const camp = 'April Vacation Camp';
   const pay = [{ amountCents: 33500, method: 'card', paidOn: '2027-03-25' }];
   // Delete camper: one sentence, paid or not (picture 03b).
-  const hiddenCamper = 'The sign-up and any recorded payment are deleted from April Vacation Camp. This can’t be undone.';
+  const hiddenCamper = 'The sign-up and any recorded payment are deleted from April Vacation Camp. This can\'t be undone.';
   assert.equal(T.deleteCamperBody(camp, pay, true), hiddenCamper);
   assert.equal(T.deleteCamperBody(camp, [], true), hiddenCamper);
-  assert.equal(T.deleteCamperBody(camp, [], false), 'The sign-up is deleted from April Vacation Camp. This can’t be undone.');
+  assert.equal(T.deleteCamperBody(camp, [], false), 'The sign-up is deleted from April Vacation Camp. This can\'t be undone.');
   assert.match(T.deleteCamperBody(camp, pay, false), /\$335 card payment recorded on Mar 25/);
   // Delete camp: with and without removed campers; an empty camp has no payment to mention.
-  assert.equal(T.deleteCampBody(camp, 19, 1, 379500, true), 'April Vacation Camp, its 19 campers and 1 removed, and any recorded payment are deleted. This can’t be undone.');
-  assert.equal(T.deleteCampBody(camp, 19, 0, 0, true), 'April Vacation Camp, its 19 campers and any recorded payment are deleted. This can’t be undone.');
-  assert.equal(T.deleteCampBody(camp, 0, 0, 0, true), 'April Vacation Camp is deleted. This can’t be undone.');
+  assert.equal(T.deleteCampBody(camp, 19, 1, 379500, true), 'April Vacation Camp, its 19 campers and 1 removed, and any recorded payment are deleted. This can\'t be undone.');
+  assert.equal(T.deleteCampBody(camp, 19, 0, 0, true), 'April Vacation Camp, its 19 campers and any recorded payment are deleted. This can\'t be undone.');
+  assert.equal(T.deleteCampBody(camp, 0, 0, 0, true), 'April Vacation Camp is deleted. This can\'t be undone.');
   assert.match(T.deleteCampBody(camp, 19, 1, 379500, false), /\$3,795 in payments/);
   for (const text of [T.deleteCamperBody(camp, pay, true), T.deleteCampBody(camp, 19, 1, 379500, true), T.markedPaidToastHidden('Leo Kim')]) {
     assert.ok(!/\$|cash|check|card|\bpaid on\b/i.test(text), text);
@@ -1488,14 +1489,14 @@ check('Undo of Edit camp: old payload, refusal words (v0.726)', () => {
   assert.equal(undoAddsPastDay(before, saved, '2027-04-20'), true);
   assert.equal(undoAddsPastDay(before, saved, '2027-04-19'), false);
   // The shared sentence (R2-07, v1.045 (4)): "Couldn't undo: [reason]." (the reason's own period is not doubled)
-  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: true }), "Couldn't undo: New days can’t be in the past.");
+  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: true }), "Couldn't undo: New days can't be in the past.");
   assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: false }), null);
   assert.equal(campUndoRefusal({ status: 'stale' }), null);
   assert.equal(campUndoRefusal({ status: 'ok' }), null);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'day', day: '2027-04-21', firstName: 'Mia', lastName: 'Rossi', more: 0 }), /^Couldn't undo: Can’t remove .*Mia Rossi picked it/);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra', extraName: 'Art', count: 2 }), /^Couldn't undo: Can’t remove Art: 2 campers picked it/);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_per', extraName: 'Art', count: 1 }), /^Couldn't undo: Can’t switch Art/);
-  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_included', extraName: 'Art', count: 1 }), /^Couldn't undo: Can’t save: Art would become included/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'day', day: '2027-04-21', firstName: 'Mia', lastName: 'Rossi', more: 0 }), /^Couldn't undo: Can't remove .*Mia Rossi picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra', extraName: 'Art', count: 2 }), /^Couldn't undo: Can't remove Art: 2 campers picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_per', extraName: 'Art', count: 1 }), /^Couldn't undo: Can't switch Art/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_included', extraName: 'Art', count: 1 }), /^Couldn't undo: Can't save: Art would become included/);
   // The words (v0.725 / v0.726).
   assert.equal(T.OPEN_SIGNUP, 'Open sign-up');
   assert.equal(T.OPEN_NEEDS_ADMIN, 'The closing date has passed. Ask an admin to open it.');
@@ -2091,7 +2092,7 @@ check('roster extras: the words, the every-day list, the day boxes', () => {
   assert.equal(CampText.checkInDayLabel('Ava Thompson', '2027-04-19', ['Early drop-off', 'Late pick-up']), 'Check in Ava Thompson, Mon, Apr 19, early drop-off, late pick-up');
   assert.equal(CampText.checkInDayLabel('Ava Thompson', '2027-04-19', []), 'Check in Ava Thompson, Mon, Apr 19');
   assert.equal(CampText.checkInDayLabel('Ava Thompson', '2027-04-19'), 'Check in Ava Thompson, Mon, Apr 19');
-  assert.equal(CampText.missedDayLabel('Ethan Brooks', '2027-04-19', ['Early drop-off']), 'Ethan Brooks didn’t come Mon, Apr 19, early drop-off. Check in');
+  assert.equal(CampText.missedDayLabel('Ethan Brooks', '2027-04-19', ['Early drop-off']), 'Ethan Brooks didn\'t come Mon, Apr 19, early drop-off. Check in');
   assert.match(CampText.undoCheckInDayLabel('Ava Thompson', '2027-04-19', '2027-04-19T12:42:00Z', ['Late pick-up']), /^Ava Thompson checked in Mon, Apr 19 at .+, late pick-up\. Undo check-in$/);
   // The legend's meaning after the blue word.
   assert.equal(CampText.legendExtraMeaning('Early drop-off'), ' early drop-off');
@@ -2457,7 +2458,8 @@ check('the family form\'s "Date signed" box is the shared one, with the shared w
 check('shared sentences and the Paying by line (batch of 2026-11-08: R1-06, R1-07, R2-07, R3-13, R1-02)', () => {
   const T = CampText;
   // R1-06: the Undo payment box takes Black Belt's words: the title names the amount and the way, the second line opens "Paid on [day]".
-  assert.equal(T.undoPaymentTitle('Leo Kim', 35000, 'cash'), 'Undo Leo Kim’s $350 cash payment?');
+  // (The title is the shared sentence; the check reads the apostrophe either way, so it holds whether or not the shared file has gone straight yet.)
+  assert.equal(T.undoPaymentTitle('Leo Kim', 35000, 'cash').replace('’', "'"), 'Undo Leo Kim\'s $350 cash payment?');
   assert.equal(T.undoPaymentBody({ amountCents: 35000, method: 'cash', paidOn: '2027-03-17' }, 35000), 'Paid on Mar 17. It is reversed, so $350 is owed again. Both stay in the history.');
   assert.equal(T.undoPaymentBody({ amountCents: 35000, method: 'cash', paidOn: '2027-03-17' }, 0), 'Paid on Mar 17. It is reversed. Both stay in the history.');
   // R1-07: the toasts are the shared ones.
@@ -2466,7 +2468,7 @@ check('shared sentences and the Paying by line (batch of 2026-11-08: R1-06, R1-0
   assert.equal(T.paymentUndoneToast('Leo Kim'), 'Payment undone for Leo Kim');
   // R2-07: a refused change or Undo names the camper; a failed Undo says the shared sentence.
   assert.equal(T.someoneElseChanged('Leo Kim'), 'Someone else changed Leo Kim just now, so nothing was done. Their change is shown.');
-  assert.equal(T.undoRefused('New days can’t be in the past.'), "Couldn't undo: New days can’t be in the past.");
+  assert.equal(T.undoRefused('New days can\'t be in the past.'), "Couldn't undo: New days can't be in the past.");
   assert.equal(T.UNDO_PAYMENT_FAILED, "Undo didn't save. Check the connection, then retry.");
   assert.equal(T.UNDO_DIDNT_SAVE, T.UNDO_PAYMENT_FAILED);
   // R3-13: Edit payment's Date paid hint.
@@ -2497,7 +2499,7 @@ check('Record refund: the words (v0.743 — Star\'s box, Camps\' words)', () => 
   // Since v0.745 (Star's words) it names what the row then reads: paid minus everything overpaid.
   assert.equal(T.refundAfter(31500, 1, 29200), 'The $315 payment stays in the history. Afterwards the row reads “Paid $292”.');
   assert.equal(T.refundAfter(31500, 2, 29200), 'The 2 payments ($315) stay in the history. Afterwards the row reads “Paid $292”.');
-  assert.equal(T.refundTooLarge(2300), 'Can’t be more than the $23 overpaid.');
+  assert.equal(T.refundTooLarge(2300), 'Can\'t be more than the $23 overpaid.');
   // The box's words for what picture 22 didn't draw (review L4 / L5).
   assert.equal(T.REFUND_AMOUNT_ZERO, 'Enter an amount more than $0.');
   assert.equal(T.REFUND_AMOUNT_PROBLEM, 'Enter an amount in whole dollars, like 23.');
@@ -3005,6 +3007,58 @@ check('R2-05 / R3-06 / R1-06 / R2-07 the Camps files: one save line, no busy fla
   assert.ok(files['CampPage.jsx'].includes('T.undoPaymentTitle(dialog.name, dialog.payment.amountCents, dialog.payment.method)'));
   assert.equal((files['CampPage.jsx'].match(/T\.ROSTER_STALE/g) ?? []).length, 2, 'once in the no-name fallback of hiddenMoneyProblem (and once in its comment)');
   assert.equal((files['CampPage.jsx'].match(/querySelector\('\.back-link'\)/g) ?? []).length, 3, 'the three focus calls (Hide private details, closing a receipt, focus that fell) look for .back-link');
+});
+
+// ======================= straight apostrophes and busy day boxes (rulebook v0.752) =======================
+check('Camps: every sentence has a straight apostrophe; a busy day box gets the unavailable look (v0.752)', () => {
+  // Jeffrey 2026-11-10 (decision 3): apostrophes are straight (') everywhere. Camps' two word files carry
+  // no curly one in code (a comment may mention it).
+  for (const name of ['screens/camps/text.js', 'camp/text.js']) {
+    const source = readFileSync(new URL(`../../${name}`, import.meta.url), 'utf8');
+    const curly = source.split('\n').filter((line) => line.split('//')[0].includes('’'));
+    assert.deepEqual(curly, [], `${name}: no curly apostrophe in a sentence`);
+  }
+  // Decision 4 (v1.131's gray extended to the day boxes): a day box is aria-disabled while a save runs,
+  // and the stylesheet gives that state the same gray, white and dashed look as a busy "$X due" tag.
+  const roster = readFileSync(new URL('../../screens/camps/CampRoster.jsx', import.meta.url), 'utf8');
+  assert.ok(roster.includes("'aria-disabled': busy ? 'true' : undefined"));
+  // v1.040: Record refund (like Mark paid) is counted at THIS DEVICE's school — the page sends
+  // paymentSchoolFor(deviceLocation) as p_school, never the camper's or the camp's school.
+  const page = readFileSync(new URL('../../screens/camps/CampPage.jsx', import.meta.url), 'utf8');
+  const refundCall = page.slice(page.indexOf('await recordRefund({'));
+  const refundArgs = refundCall.slice(0, refundCall.indexOf('});'));
+  assert.ok(refundArgs.includes('school: paymentSchoolFor(deviceLocation)'), 'Record refund sends the device\'s school');
+  assert.ok(!/locationCode|camper\.school/.test(refundArgs), 'and never the camper\'s or the camp\'s');
+  assert.equal(recordRefundArgs({ camperId: 'c', expectedVersion: 1, method: 'cash', amountCents: 100, refundedOn: '2027-03-04', school: 'shrewsbury' }).p_school, 'shrewsbury');
+  const css = readFileSync(new URL('../../styles/camps.css', import.meta.url), 'utf8');
+  const rule = css.slice(css.indexOf("button.cp-dc[aria-disabled='true']"));
+  assert.ok(rule.startsWith("button.cp-dc[aria-disabled='true'],"), 'the busy day box rule exists');
+  const body = rule.slice(0, rule.indexOf('}'));
+  for (const part of ['border-style: dashed', 'background: var(--color-bg)', 'color: var(--color-disabled-text)', 'cursor: not-allowed']) assert.ok(body.includes(part), part);
+});
+
+// ======================= the family page's camp card has no "Sign up by" line (rulebook v0.753) =======================
+check('Family page: the camp card shows only the early-price part; no "Sign up by" line (v0.753)', () => {
+  // Jeffrey 2026-11-10: "Remove this bottom line Sign up by November 27". Only the line goes; the camp
+  // still closes sign-up on its date (the page's open / closed logic reads signupClosesOn, not this card).
+  assert.equal('signUpByPart' in FamilyText, false, 'the word is gone');
+  assert.equal(FamilyText.earlyUntilPart('Wednesday, November 18'), 'Early price until Wednesday, November 18');
+  const parts = readFileSync(new URL('../../camp/parts.jsx', import.meta.url), 'utf8');
+  const partsCode = parts.split('\n').filter((line) => !line.trim().startsWith('//')).join('\n'); // (the comments explain what was removed)
+  assert.ok(!/signUpBy|Sign up by/i.test(partsCode), 'the card no longer builds a sign-up-by part');
+  // The line (its own row) is drawn only when there is an early-price part: no empty row or gap.
+  assert.ok(parts.includes('{earlyLine ? ('), 'the row is left out when there is no early price');
+  assert.ok(parts.includes("priceKindToday === 'early' && camp.earlyUntil"), 'and after the early date');
+  assert.ok(!parts.includes('byParts'), 'no leftover list of parts');
+  // The closing date still decides whether families can sign up.
+  const app = readFileSync(new URL('../../camp/CampApp.jsx', import.meta.url), 'utf8');
+  assert.ok(app.includes("answer.state === 'closed'") && app.includes("answer.state === 'not_open_yet'"), 'the page still follows the camp\'s sign-up state (closed, not open yet)');
+});
+
+check('Search people opens a camper (M16)', () => {
+  const page = readFileSync(new URL('../../screens/camps/CampPage.jsx', import.meta.url), 'utf8');
+  assert.ok(page.includes("import { takeOpenPerson } from '../../lib/people/openPerson.js';"));
+  assert.ok(page.includes("takeOpenPerson(['camp'])") && page.includes('if (row) openCamper(row);'), 'takes the request once and opens the camper like a click on the name');
 });
 
 console.log(`${count} groups of checks ran.`);

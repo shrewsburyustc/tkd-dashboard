@@ -10,8 +10,15 @@
 // Props:
 //   title       "Change PIN" / "Change password"
 //   fullScreen  true on phones (the screen decides, using the same 640px breakpoint as app.css)
-//   onCancel    Esc pressed (and the phone back arrow, unless onBack is given)
+//   onCancel    the real close: the screen's own Cancel button, and what happens once the guard lets go
+//   dirty       true while the person has typed something that would be thrown away (M14, v1.027): Esc,
+//               a click on the dimmed backdrop, the browser's Back and the phone's back arrow then keep the
+//               dialog open with the amber note "Unsaved changes. Save or cancel first." (phones add a
+//               "Discard changes" link, v0.56). With nothing typed they close it, as in every other dialog
+//               (v0.46; before v1.143 a click outside did nothing). The screen's Cancel button always closes.
 //   onBack      phone back arrow — Change PIN uses it to step back instead of closing
+//   backLeaves  true when the phone back arrow would leave the dialog (Change PIN's first step): it then
+//               goes through the same guard instead of calling onBack
 //   children    the screen's content
 //
 // The page behind it is made "inert" by the App (no clicks, no Tab) while it's open.
@@ -19,23 +26,40 @@
 // Browser Back (v0.83): while open, the dialog adds a step to the browser's history, so the
 // browser's (or phone's) Back cancels it — like Esc — instead of leaving the page behind it.
 // Same way Dialog.jsx does it.
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { dialogStep } from '../lib/backButton.js';
-import { BACK } from './text.js';
+import { BACK, DISCARD_CHANGES, UNSAVED_CHANGES } from './text.js';
+import Notice from './Notice.jsx';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
-export default function AccountDialog({ title, fullScreen, onCancel, onBack, children }) {
+export default function AccountDialog({ title, fullScreen, onCancel, onBack, backLeaves = false, dirty = false, children }) {
   const boxRef = useRef(null); // the dialog box (or the full-screen page)
+  const [unsaved, setUnsaved] = useState(false); // the amber note is showing
   const titleId = useId(); // links the title to the dialog, so screen readers announce it
 
   // Newest callbacks in refs, so the key listener below never calls stale ones.
   const onCancelRef = useRef(onCancel);
+  const dirtyRef = useRef(dirty);
   useEffect(() => {
     onCancelRef.current = onCancel;
+    dirtyRef.current = dirty;
   });
+  // Nothing left to lose: the note has done its job.
+  useEffect(() => {
+    if (!dirty) setUnsaved(false);
+  }, [dirty]);
+
+  // Esc, a click outside, the browser's Back and the phone's back arrow ask to close: with something typed
+  // the dialog stays open and says so; with nothing typed it closes (v1.027, v1.143).
+  // (A ref, so the listeners below never call a stale one.)
+  const requestCloseRef = useRef(null);
+  requestCloseRef.current = () => {
+    if (dirtyRef.current) setUnsaved(true);
+    else onCancelRef.current();
+  };
 
   // Opening: move focus inside (unless the screen already did). Closing: back to the initials.
   useEffect(() => {
@@ -61,7 +85,10 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
     else window.history.pushState(marker, '');
     const release = dialogStep(token); // App.jsx: this step is in use (backButton.js)
     function handleBack() {
-      onCancelRef.current(); // Back used up our step; cancelling closes the dialog
+      // Back used up our step. With something typed, put the step back (the dialog stays open with the
+      // note); otherwise closing the dialog is what Back does.
+      if (dirtyRef.current) window.history.pushState(marker, '');
+      requestCloseRef.current();
     }
     window.addEventListener('popstate', handleBack);
     return () => {
@@ -80,7 +107,7 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onCancelRef.current();
+        requestCloseRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -112,32 +139,66 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // The amber note (M14). On phones a "Discard changes" link goes with it: the page has no Cancel button.
+  const unsavedNote = unsaved ? (
+    <div className="dialog-unsaved">
+      <Notice>
+        {/* One piece of text, so the icon and the words line up (the link wraps with the words) */}
+        <span>
+          {UNSAVED_CHANGES}
+          {fullScreen && (
+            <>
+              {' '}
+              <button type="button" className="link-button" onClick={() => onCancelRef.current()}>
+                {DISCARD_CHANGES}
+              </button>
+            </>
+          )}
+        </span>
+      </Notice>
+    </div>
+  ) : null;
+
   if (fullScreen) {
     return (
       // tabIndex={-1}: the page itself can hold focus (e.g. between steps) but isn't a Tab stop.
       <div ref={boxRef} className="dialog-page" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <div className="dialog-page-head">
-          <button type="button" className="icon-button" aria-label={BACK} onClick={onBack ?? onCancel}>
+          <button type="button" className="icon-button" aria-label={BACK} onClick={backLeaves || !onBack ? () => requestCloseRef.current() : onBack}>
             <IconArrowLeft size={20} aria-hidden="true" />
           </button>
           <h2 id={titleId} className="dialog-page-title">
             {title}
           </h2>
         </div>
-        <div className="dialog-page-body">{children}</div>
+        <div className="dialog-page-body">
+          {unsavedNote}
+          {children}
+        </div>
       </div>
     );
   }
 
   return (
-    // The dimmed backdrop. Clicking it does nothing on purpose: Cancel is the one way out,
-    // so a stray click can't throw away what was typed. "--top": the box sits near the top of the
-    // screen, like every other dialog (v0.82; the class lives in shared.css with v0.80).
-    <div className="dialog-backdrop dialog-backdrop--top">
+    // The dimmed backdrop. A click on it (not on the box) asks to close: it closes when nothing was typed,
+    // and with something typed it keeps the dialog open and says so, so a stray click can't throw away
+    // what was typed (v1.027, v1.143). "--top": the box sits near the top of the screen, like every other
+    // dialog (v0.82; the class lives in shared.css with v0.80).
+    <div
+      className="dialog-backdrop dialog-backdrop--top"
+      onMouseDown={(event) => {
+        // Keep focus where it is: a click on the dim area shouldn't drop focus to the page.
+        if (event.target === event.currentTarget) event.preventDefault();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) requestCloseRef.current();
+      }}
+    >
       <div ref={boxRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <h2 id={titleId} className="dialog-title">
           {title}
         </h2>
+        {unsavedNote}
         {children}
       </div>
     </div>

@@ -13,7 +13,7 @@
 //      straight into a file (a Blob) — never into a web address (a data: link or a ?query), which could
 //      end up in the browser's history or a log.
 // The text starts with a byte-order mark (BOM) when saved, so Excel reads it as UTF-8 and shows
-// "’" and "→" correctly. Lines end with CRLF (\r\n), as RFC 4180 says.
+// "'" and "→" correctly. Lines end with CRLF (\r\n), as RFC 4180 says.
 
 // A cell that would start a formula: = + - @, or a tab / carriage return before one.
 const FORMULA_START = /^[=+\-@\t\r]/;

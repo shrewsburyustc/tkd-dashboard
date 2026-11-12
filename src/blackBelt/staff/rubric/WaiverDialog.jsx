@@ -7,7 +7,7 @@
 import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import DialogBar from '../parts/DialogBar.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { saveWaiver } from '../../../lib/blackBelt/api.js';
 import { waiverBodyProblem } from '../../../lib/blackBelt/rules.js';
@@ -82,7 +82,7 @@ export default function WaiverDialog({ current, nextVersionName, isPhone, onClos
           save();
         }}
       >
-        {failed && <ErrorBanner text={T.SAVE_FAILED} onRetry={save} retrying={saving} />}
+        {failed && <DialogBar text={T.SAVE_FAILED} onRetry={save} retrying={saving} />}
         <div className="field">
           <label htmlFor={`${id}-body`}>{T.WAIVER_TEXT}</label>
           <textarea

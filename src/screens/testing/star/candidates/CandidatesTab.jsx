@@ -67,6 +67,8 @@ import {
 } from '../../../../lib/star/candidatesApi.js';
 import { usePageRoomBelow } from '../../../../lib/pageRoom.js';
 import { useSaveLine } from '../../../../lib/saveLine.js';
+import { takeOpenPerson } from '../../../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../../../lib/people/useOpenPerson.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
 import CandidateDialog, { checkCandidateForm, isCandidateDirty } from './CandidateDialog.jsx';
@@ -181,6 +183,23 @@ export default function CandidatesTab({
     // (only when asked)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openAddMenu]);
+
+  // M16 (top-bar Search people, rulebook v1.144 D): a tapped Star result arrives here with the person's id
+  // waiting in memory (lib/people/openPerson.js). This tab is only drawn once the event and its roster have
+  // loaded, so the first time it is ready (and not behind the screen lock) it takes the request - once - and
+  // opens that candidate's summary exactly as a click on the row does. A school or card filter doesn't matter:
+  // the summary doesn't depend on it. If the id isn't in the roster (removed since), nothing opens and nothing
+  // is said. The request is never taken before the tab is ready, so it can't be lost.
+  const personTick = useOpenPersonTick(); // a search while this tab is already showing
+  useEffect(() => {
+    if (screenLocked) return;
+    const request = takeOpenPerson(['star']);
+    if (!request) return;
+    const row = candidatesRef.current.find((c) => c.id === request.id);
+    if (row) openView(row, usable(rowEl(row.id)));
+    // (when the tab is shown, the lock clears, or a new search arrives)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenLocked, personTick]);
 
   function setDan(dan) {
     danByEvent.set(eventId, dan);
@@ -642,7 +661,7 @@ export default function CandidatesTab({
     if (result.status === 'error') {
       if (hiddenNowRef.current) {
         reload();
-        return { status: 'error', reason: T.UNDO_DIDNT_SAVE, noRetry: true };
+        return { status: 'error', reason: T.UNDO_BOX_FAILED, noRetry: true };
       }
       return { status: 'error' };
     }

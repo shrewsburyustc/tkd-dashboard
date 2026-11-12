@@ -21,10 +21,10 @@
 // instead (a positive number, sent to the database as a minus amount).
 // Card refunds (Black Belt, v0.814 / mockup B2): the card machine total expected is card in −
 // card refunded, written the same way ("Expected −$150.00 ($0.00 in − $150.00 refunded) · from
-// the machine’s day report"). When that is below zero the card field accepts a minus sign
+// the machine's day report"). When that is below zero the card field accepts a minus sign
 // ("−150.00", as B2 draws it), because the machine's own day total is then negative.
 // Returned checks (v0.809) are never part of the drawer: on a day with some, one quiet line says
-// so ("The $900.00 returned check isn’t part of today’s drawer.", B2).
+// so ("The $900.00 returned check isn't part of today's drawer.", B2).
 //
 // If saving fails (D13) the dialog keeps everything typed, shows a Not saved tag and the error
 // INSIDE the dialog right above the button, and the button becomes "Retry close the day".
@@ -159,7 +159,7 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
   if (cashOut) cashExpected = T.expectedCashOut(-expected.cashCents, cashIn, cashRefunded);
   else if (cashRefunded > 0) cashExpected = T.expectedCashWithRefunds(expected.cashCents, cashIn, cashRefunded);
   else cashExpected = T.expectedCash(expected.cashCents);
-  // Card (v0.814): with card refunds, "Expected $X ($Y in − $Z refunded) · from the machine’s day report".
+  // Card (v0.814): with card refunds, "Expected $X ($Y in − $Z refunded) · from the machine's day report".
   const cardRefunded = -(refunds?.card_cents ?? 0); // a positive amount
   const cardExpected = cardRefunded > 0
     ? T.expectedCardWithRefunds(expected.cardCents, totals?.card?.cents ?? 0, cardRefunded)

@@ -15,6 +15,7 @@
 // The public page, its QR code and kiosk mode are step F3; emails wait for the school's sending
 // address (rulebook v0.242). Admin vs staff only changes what is SHOWN — the database enforces
 // who may change what.
+import NoIcon from '../components/NoIcon.jsx';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCopy, IconCurrencyDollarOff, IconEdit, IconMapPin, IconPlus, IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../components/ConfirmBox.jsx';
@@ -36,12 +37,6 @@ import Builder from './forms/Builder.jsx';
 import ShareDialog from './forms/ShareDialog.jsx';
 import { useFillIn } from './forms/useFillIn.js';
 import * as T from './forms/text.js';
-
-// A menu item with no icon (Close form / Open form, rulebook v1.016 and v0.621), as in Star's, Color Belt's
-// and Camps' menus: a blank spot keeps the label lined up with the items that have an icon.
-function NoIcon() {
-  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
-}
 
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 // The other school's code ('worcester' ↔ 'shrewsbury'), for "Copy to …" (v0.642)

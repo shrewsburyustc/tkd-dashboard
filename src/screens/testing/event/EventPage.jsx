@@ -133,6 +133,8 @@ import {
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
+import { takeOpenPerson } from '../../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../../lib/people/useOpenPerson.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
@@ -147,17 +149,6 @@ import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDi
 import { useGradingSaves } from './useGradingSaves.js';
 import { useSaveLine } from '../../../lib/saveLine.js';
 import * as T from '../text.js';
-
-// batch 2 words — the reasons of a refused Undo, in the shared sentence "Couldn't undo: [reason]."
-// (T.couldntUndo wants a lowercase reason with no final full stop). Each keeps the meaning of the
-// old sentence it replaces (the owner of text.js moves them later).
-const REASON_ONLY_ADMIN = 'only an admin can do that';
-const REASON_PAYMENT_TOO_LATE = 'too late here, an admin can undo the payment'; // was UNDO_PAYMENT_TOO_LATE
-const REASON_DUPLICATE_TOO_LATE = 'too late here, an admin can restore the copy from Removed'; // was UNDO_DUPLICATE_TOO_LATE
-const REASON_MOVE_TOO_LATE = 'too late here, the private testing stays on the Private testing tab'; // was UNDO_MOVE_TOO_LATE
-const REASON_HAS_RESULT = 'a result was recorded just now'; // was UNDO_HAS_RESULT
-const reasonChanged = (name) => `someone else changed ${name} just now`; // was UNDO_STALE
-const THIS_STUDENT_LOWER = 'this student'; // for someoneElseChanged when a row's name isn't known
 
 // The class chosen on each event's page, kept while the page is open.
 const classByEvent = new Map();
@@ -371,6 +362,22 @@ export default function EventPage({
     if (wrongSchool) onBack({ replace: true });
   }, [wrongSchool, onBack]);
 
+  // Top-bar "Search people" (M16, rulebook v1.144): a tapped result for a student of this event opens
+  // that student's summary, the way a click on the row does. It waits for the roster to load, then
+  // takes the one-shot request (kind 'colorbelt' only). The summary is found by id in the whole
+  // roster, so the class / Paid filters can't hide it. Not in the roster (removed, or another
+  // event): nothing opens and nothing is said. The event of the wrong school is left alone: the
+  // page goes back to the list (above) and the request stays for the next minute at most.
+  const personTick = useOpenPersonTick(); // a search while this event page is already open
+  useEffect(() => {
+    if (live.status !== 'ready' || wrongSchool || screenLocked) return;
+    const request = takeOpenPerson(['colorbelt']);
+    if (!request) return;
+    const row = roster.find((r) => r.id === request.id);
+    if (row) openView(row, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the roster is ready and when a new search arrives
+  }, [live.status, wrongSchool, screenLocked, personTick]);
+
   // Locking closes the ⋯ menu; dialogs only hide (see the drawing below).
   const menuBeforeLockRef = useRef(null);
   useEffect(() => {
@@ -432,7 +439,7 @@ export default function EventPage({
     } else if (status === 'error') {
       setBanner({ text: T.SAVE_FAILED });
     } else {
-      setBanner({ text: T.someoneElseChanged(name || THIS_STUDENT_LOWER) });
+      setBanner({ text: T.someoneElseChanged(name || T.THIS_STUDENT_LOWER) });
       reloadQuiet();
     }
   }
@@ -861,7 +868,7 @@ export default function EventPage({
         showToast(text, { icon: false });
       } else {
         undoToast(text, () =>
-          runUndo(() => undoMoveToPrivate({ privateId, expectedVersion: 1 }), { find: () => rowEl(d.rowId), name, notAllowed: T.couldntUndo(REASON_MOVE_TOO_LATE) }),
+          runUndo(() => undoMoveToPrivate({ privateId, expectedVersion: 1 }), { find: () => rowEl(d.rowId), name, notAllowed: T.couldntUndo(T.UNDO_REASON_MOVE_TOO_LATE) }),
         );
       }
       focusLater(() => rowEl(d.rowId), addStudentEl, reloaded);
@@ -1106,7 +1113,7 @@ export default function EventPage({
       // loaded row first (now, when the Undo's turn comes); if it has a result, say so and don't undo.
       const fresh = (liveRef.current.data?.roster ?? []).find((r) => r.id === d.rowId);
       if (p.eventRankId !== snap.eventRankId && fresh?.result) {
-        return { status: 'has_result', reason: T.couldntUndo(REASON_HAS_RESULT) };
+        return { status: 'has_result', reason: T.couldntUndo(T.UNDO_REASON_RESULT) };
       }
       return runUndo(
         () => updateStudent({ registrationId: d.rowId, expectedVersion: savedVersion, firstName: snap.firstName, lastName: snap.lastName, eventRankId: snap.eventRankId }),
@@ -1293,11 +1300,11 @@ export default function EventPage({
     if (status === 'not_allowed') {
       onRefreshProfile();
       if (hiddenMoney) reloadQuiet();
-      return { status, reason: !hiddenMoney && options.notAllowed ? options.notAllowed : T.couldntUndo(REASON_ONLY_ADMIN) };
+      return { status, reason: !hiddenMoney && options.notAllowed ? options.notAllowed : T.couldntUndo(T.UNDO_REASON_ADMIN_ONLY) };
     }
     // stale, not_found, anything else the database refused
     reloadQuiet();
-    return { status, reason: T.couldntUndo(reasonChanged(options.name || THIS_STUDENT_LOWER)) };
+    return { status, reason: T.couldntUndo(T.undoReasonSomeoneElse(options.name || T.THIS_STUDENT_LOWER)) };
   }
 
   // A row action (Mark paid, Withdraw …) that the database didn't accept.
@@ -1397,7 +1404,7 @@ export default function EventPage({
     // (words: the hidden version, so a bar shown after leaving the page never carries the amount or the way)
     undoToast(
       T.markedPaidToast(name, result.amountCents, result.method),
-      () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id), name, notAllowed: T.couldntUndo(REASON_PAYMENT_TOO_LATE), money: true }),
+      () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id), name, notAllowed: T.couldntUndo(T.UNDO_REASON_PAYMENT_TOO_LATE), money: true }),
       { words: T.markedPaidToastHidden(name) },
     );
   }
@@ -1598,7 +1605,7 @@ export default function EventPage({
           if (!copy) return { status: 'stale' };
           return restoreStudent({ registrationId: other.id, expectedVersion: copy.version });
         },
-        { find: () => rowEl(other.id), name, notAllowed: T.couldntUndo(REASON_DUPLICATE_TOO_LATE) },
+        { find: () => rowEl(other.id), name, notAllowed: T.couldntUndo(T.UNDO_REASON_DUPLICATE_TOO_LATE) },
       ),
     );
     focusLater(() => rowEl(keep.id), addStudentEl, reloaded);

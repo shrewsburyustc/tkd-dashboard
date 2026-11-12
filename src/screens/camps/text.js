@@ -266,7 +266,7 @@ export const TOAST_UNDONE_SIGNUP_OPEN = 'Undone. Sign-up is open again.';
 export const signupOpenUntil = (iso) => `Sign-up open until ${monthDay(iso)}`; // (v0.725) admin, after the closing date
 export const signupNotClosed = (name) => `Sign-up for ${name} wasn't closed. Check the connection, then retry.`; // (not in the mockups)
 export const signupNotOpened = (name) => `Sign-up for ${name} wasn't opened. Check the connection, then retry.`; // (v0.725)
-export const CAMP_FINISHED = 'This camp is over, so its sign-up can’t change.'; // (not in the mockups)
+export const CAMP_FINISHED = 'This camp is over, so its sign-up can\'t change.'; // (not in the mockups)
 export const CAMPS_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 
 // ----- Delete camp -----
@@ -277,10 +277,10 @@ export const deleteCampTitle = (name) => `Delete ${name}?`;
 // same way whether anything was paid or not — "April Vacation Camp, its 19 campers and 1 removed,
 // and any recorded payment are deleted. This can't be undone." (picture 03b)
 export function deleteCampBody(name, active, removed, cents, detailsHidden = false) {
-  if (active + removed === 0) return `${name} is deleted. This can’t be undone.`; // (not in the mockups)
+  if (active + removed === 0) return `${name} is deleted. This can't be undone.`; // (not in the mockups)
   const who = removed > 0 ? `${campersCount(active)} and ${removed} removed` : campersCount(active);
-  if (detailsHidden) return `${name}, its ${who}${removed > 0 ? ',' : ''} and any recorded payment are deleted. This can’t be undone.`;
-  return `${name} and its ${who} and ${formatMoney(cents)} in payments are deleted. This can’t be undone.`; // (not in the mockups)
+  if (detailsHidden) return `${name}, its ${who}${removed > 0 ? ',' : ''} and any recorded payment are deleted. This can't be undone.`;
+  return `${name} and its ${who} and ${formatMoney(cents)} in payments are deleted. This can't be undone.`; // (not in the mockups)
 }
 export const TOAST_CAMP_ADDED = 'Camp added'; // (not in the mockups)
 export const TOAST_CAMP_SAVED = 'Camp saved'; // (not in the mockups)
@@ -308,10 +308,10 @@ export const EDIT_TEMPLATE = 'Edit template';
 export const DELETE_TEMPLATE = 'Delete template';
 export const KEEP_TEMPLATE = 'Keep template'; // (not in the mockups)
 export const deleteTemplateTitle = (name) => `Delete ${name}?`; // (not in the mockups)
-export const DELETE_TEMPLATE_BODY = 'The template is deleted. Camps made from it don’t change. This can’t be undone.'; // (not in the mockups)
-export const NO_TEMPLATES = 'No templates yet. Open a camp’s ⋯ menu and choose Save as template.';
+export const DELETE_TEMPLATE_BODY = 'The template is deleted. Camps made from it don\'t change. This can\'t be undone.'; // (not in the mockups)
+export const NO_TEMPLATES = 'No templates yet. Open a camp\'s ⋯ menu and choose Save as template.';
 export const TEMPLATES_NOTE =
-  'Templates are made from a camp: open the camp’s ⋯ menu and choose Save as template. Templates are shared by both schools.';
+  'Templates are made from a camp: open the camp\'s ⋯ menu and choose Save as template. Templates are shared by both schools.';
 export const LOAD_TEMPLATES_FAILED = "Couldn't load templates. Check the connection, then retry."; // (not in the mockups)
 export const TOAST_TEMPLATE_SAVED_EDIT = 'Template saved'; // (not in the mockups)
 // A template's dayCount is its "days per week" (weekly pricing, v0.717):
@@ -354,7 +354,7 @@ export const MONTH = 'Month'; // (not in the mockups) screen readers only
 export const YEAR = 'Year'; // (not in the mockups) screen readers only
 export const PREV_MONTH = 'Previous month'; // (not in the mockups)
 export const NEXT_MONTH = 'Next month'; // (not in the mockups)
-export const DAYS_HINT = 'Tap a day to add or remove it. Days don’t have to be next to each other (Thanksgiving: Wed & Fri).';
+export const DAYS_HINT = 'Tap a day to add or remove it. Days don\'t have to be next to each other (Thanksgiving: Wed & Fri).';
 export const DAYS_PER_WEEK = 'Days per week'; // Edit template (weekly pricing v0.717: the price grid's rows, 1–7)
 export const WEEKDAY_HEADS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 export const dayCellLabel = (iso, picked) => `${shortDate(iso)}${picked ? ', chosen' : ''}`; // screen readers
@@ -417,7 +417,7 @@ export function pricesSummary(rows) {
 // Extras
 export const EXTRA_NAME = 'Name'; // (not in the mockups) column / label
 export const EXTRA_PRICE = 'Price'; // (not in the mockups)
-export const EXTRA_PER = 'How it’s charged'; // (not in the mockups) screen readers only
+export const EXTRA_PER = 'How it\'s charged'; // (not in the mockups) screen readers only
 export const ONCE = 'Once';
 export const PER_DAY = 'Per day';
 export const NOT_FOR_ALL_DAYS = 'Not charged to all-days campers';
@@ -451,13 +451,13 @@ export const SAME_EXTRA_NAME = 'Another extra has this name.'; // (not in the mo
 export const extraSummaryPart = (name, cents, per) => `${name} ${formatMoney(cents)}${per === 'day' ? '/day' : ''}`;
 // Removing a day from an extra's "Only on these days" that campers chose (database / mock
 // refusal not_empty, kind 'extra_day'): "Can't remove Wed from Pizza party: 3 campers chose it …"
-export const cantRemoveExtraDay = (day, extraName, n) => `Can’t remove ${weekdayShort(day)} from ${extraName}: ${campersCount(n)} chose it. Change their ${extraName.charAt(0).toLowerCase()}${extraName.slice(1)} days first.`; // (not in the mockups)
-export const cantRemoveExtra = (name, n) => `Can’t remove ${name}: ${campersCount(n)} picked it. Change their extras first.`; // (§7.3)
+export const cantRemoveExtraDay = (day, extraName, n) => `Can't remove ${weekdayShort(day)} from ${extraName}: ${campersCount(n)} chose it. Change their ${extraName.charAt(0).toLowerCase()}${extraName.slice(1)} days first.`; // (not in the mockups)
+export const cantRemoveExtra = (name, n) => `Can't remove ${name}: ${campersCount(n)} picked it. Change their extras first.`; // (§7.3)
 // Edit camp refusals added by 0027 (rulebook v0.720; not in the mockups):
 // once ↔ per day switched while campers chose it…
-export const cantChangeExtraPer = (name, n) => `Can’t switch ${name} between once and per day: ${campersCount(n)} picked it. Change their extras first.`;
+export const cantChangeExtraPer = (name, n) => `Can't switch ${name} between once and per day: ${campersCount(n)} picked it. Change their extras first.`;
 // …or the change would make an extra campers paid for "included" (they'd now come every day of that week).
-export const cantIncludeExtra = (name, n) => `Can’t save: ${name} would become included for ${campersCount(n)} who paid for it (they’d come every camp day that week). Change their extras first.`;
+export const cantIncludeExtra = (name, n) => `Can't save: ${name} would become included for ${campersCount(n)} who paid for it (they'd come every camp day that week). Change their extras first.`;
 
 // Family form
 export const AGES_ACCEPTED = 'Ages accepted';
@@ -473,7 +473,7 @@ export const familySummary = (min, max, fromTemplate) =>
 export const FAMILY_AGES_PROBLEM = 'Ages: the first age must be lower than the second';
 export const FAMILY_PROBLEM = 'Check the ages and the waiver'; // (not in the mockups)
 export const DESCRIPTION = 'Description';
-export const DESCRIPTION_HINT = 'Shown at the top of the family sign-up form and on the “You’re signed up” page. Put what to bring here.';
+export const DESCRIPTION_HINT = 'Shown at the top of the family sign-up form and on the “You\'re signed up” page. Put what to bring here.';
 export const WAIVER_TEXT = 'Waiver text';
 export const WAIVER_HINT = 'Families read and sign this on the form.';
 export const waiverFromTemplate = (name) => `Families read and sign this on the form. Filled in from the ${name} template.`;
@@ -487,12 +487,12 @@ export const NAME_TOO_LONG = 'Use 60 characters or fewer.'; // (not in the mocku
 export const NAME_BAD_CHARACTER = 'Remove the hidden character from the name.'; // (not in the mockups)
 export const PICK_A_DAY = 'Pick at least one day.'; // (not in the mockups)
 export const TOO_MANY_DAYS = 'A camp can have up to 60 days.'; // (not in the mockups) weekly pricing R4
-export const PAST_DAY = 'New days can’t be in the past.'; // (not in the mockups)
+export const PAST_DAY = 'New days can\'t be in the past.'; // (not in the mockups)
 // "Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it. Change their days or withdraw them first."
 export function cantRemoveDay(day, first, last, more) {
   const who = `${first} ${last}`.trim();
   const names = more > 0 ? `${who} and ${more} more` : who;
-  return `Can’t remove ${dayLong(day)}: ${names} picked it. Change their days or withdraw them first.`;
+  return `Can't remove ${dayLong(day)}: ${names} picked it. Change their days or withdraw them first.`;
 }
 
 // ----- Camp page -----
@@ -548,7 +548,7 @@ export const noExtraShort = (name) => `No ${String(name).trim().split(/\s+/)[0].
 const extrasTail = (shortNames = []) => shortNames.map((n) => `, ${n.toLowerCase()}`).join('');
 export const checkInDayLabel = (name, day, shortNames) => `Check in ${name}, ${dayLong(day)}${extrasTail(shortNames)}`; // screen readers
 export const undoCheckInDayLabel = (name, day, stamp, shortNames) => `${name} checked in ${dayLong(day)} at ${clockTime(stamp)}${extrasTail(shortNames)}. Undo check-in`; // screen readers
-export const missedDayLabel = (name, day, shortNames) => `${name} didn’t come ${dayLong(day)}${extrasTail(shortNames)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
+export const missedDayLabel = (name, day, shortNames) => `${name} didn't come ${dayLong(day)}${extrasTail(shortNames)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
 export const notSignedUpLabel = (day) => `Not signed up ${dayLong(day)}`; // screen readers
 export const payTagLabel = (name, text) => `${name}: ${text}. Mark paid`; // screen readers on the $ due / Owes tag
 export const WEEK_SWITCH_LABEL = 'Week'; // (not in the mockups) screen readers
@@ -568,7 +568,7 @@ export function weekLabel(index, week, short) {
 export const rosterLegendParts = (touch) => ({
   came: 'came (check-in time)',
   checkIn: ` · Check in: signed up — ${touch ? 'tap' : 'click'} to check in · `,
-  missed: 'didn’t come',
+  missed: 'didn\'t come',
   rest: ' · — not signed up that day',
 });
 export const FIND_CAMPER = 'Find a camper';
@@ -624,15 +624,15 @@ export const markedPaidToastHidden = (name) => sharedMarkedPaidToastHidden(name)
 export const paymentUndoneToast = (name) => sharedPaymentUndoneToast(name);
 export const duplicateBoxLine = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
 export const signedUpTwice = (name) => `${name} is signed up twice`;
-export const DELETE_CAMPER_BODY_NO_PAY = (camp) => `The sign-up is deleted from ${camp}. This can’t be undone.`;
+export const DELETE_CAMPER_BODY_NO_PAY = (camp) => `The sign-up is deleted from ${camp}. This can't be undone.`;
 // detailsHidden (Hide private details, v0.722): one sentence for paid and not paid, no amount (as Color
 // Belt's deleteStudentBody): "The sign-up and any recorded payment are deleted from <camp>. …"
 export function deleteCamperBody(campName, payments, detailsHidden = false) {
-  if (detailsHidden) return `The sign-up and any recorded payment are deleted from ${campName}. This can’t be undone.`;
+  if (detailsHidden) return `The sign-up and any recorded payment are deleted from ${campName}. This can't be undone.`;
   if (payments.length === 0) return DELETE_CAMPER_BODY_NO_PAY(campName);
   const p = payments[0];
   const paid = `the ${formatMoney(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)}`;
-  return `The sign-up and ${paid} are deleted from ${campName}. This can’t be undone.`;
+  return `The sign-up and ${paid} are deleted from ${campName}. This can't be undone.`;
 }
 export const KEEP_CAMPER = 'Keep camper';
 
@@ -687,7 +687,7 @@ export const refundAfter = (cents, count, afterCents) => {
 // Too much, under Amount (the Save button grays) — and the database's refund_too_large while something is
 // still overpaid; when nothing is overpaid any more, the note under the buttons (Star's words). The most
 // that can go back is always what was overpaid, so this is also the words for a very large number.
-export const refundTooLarge = (cents) => `Can’t be more than the ${formatMoney(cents)} overpaid.`;
+export const refundTooLarge = (cents) => `Can't be more than the ${formatMoney(cents)} overpaid.`;
 export const NOTHING_OVERPAID = 'Nothing is overpaid any more. Someone else changed this just now. Close this to see the latest.'; // (not in the mockups) Star's words
 // (not in the mockups) The box's other field messages: $0; anything that isn't a whole-dollar amount
 // (cents, letters, or blank once touched or after pressing Save — Edit payment's "Enter a price …"
@@ -705,14 +705,14 @@ export const undoRefundBody = (refund) =>
   `The ${formatMoney(Math.abs(refund.amountCents))} ${payingByLower(refund.method)} refund recorded on ${monthDay(refund.paidOn)} is reversed and the amount shows as overpaid again. Both stay in the history.`;
 export const KEEP_REFUND = 'Keep refund';
 export const TOAST_KEPT_BOTH = 'Kept both sign-ups';
-export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
+export const duplicateRemovedToast = (name) => `${name}'s extra copy moved to Removed`;
 
 // The printed roster (the attendance grid, all weeks)
 export const COL_CAME = 'Came';
 export const cameText = (came, soFar) => `${came} of ${soFar}`;
 // Paper keeps the ✓ / ✗ characters (v0.723: they print reliably in any printer font; only the screen
 // uses the icons). (not in the mockups)
-export const PRINT_LEGEND = '✓ came (check-in time) · ✗ didn’t come · blank: still to come · — not signed up that day';
+export const PRINT_LEGEND = '✓ came (check-in time) · ✗ didn\'t come · blank: still to come · — not signed up that day';
 
 // Print roster
 export const printedOn = (stamp) => `Printed ${stampDayTime(stamp)}`; // (not in the mockups)
@@ -737,8 +737,8 @@ export const signedUpStamp = (stamp) => `${stampDayTime(stamp)} · family form`;
 
 // ----- C5 Registration link (the line under the camp name in the shared box; rulebook v0.733) -----
 export const linkDialogLine = (state, camp) => {
-  if (state === 'open') return `Family sign-up is open until ${weekdayMonthDay(camp.signupClosesOn)}. Families choose their child’s days and extras on the form.`;
-  if (state === 'not_open_yet') return `Family sign-up opens on ${weekdayMonthDay(camp.signupOpensOn)}. Families choose their child’s days and extras on the form.`; // (not in the mockups)
+  if (state === 'open') return `Family sign-up is open until ${weekdayMonthDay(camp.signupClosesOn)}. Families choose their child's days and extras on the form.`;
+  if (state === 'not_open_yet') return `Family sign-up opens on ${weekdayMonthDay(camp.signupOpensOn)}. Families choose their child's days and extras on the form.`; // (not in the mockups)
   if (state === 'closed') return 'Family sign-up is closed. Open it from the ⋯ menu to take more sign-ups.'; // (v0.725)
   return 'This camp is over.'; // (not in the mockups)
 };
@@ -896,9 +896,9 @@ export const EMERGENCY = 'Emergency contact';
 export const CONTACT_NAME = 'Name'; // (not in the mockups) — the family form's field label
 export const PHONE = 'Phone';
 export const RELATIONSHIP = 'Relationship to the child';
-export const ENTER_FIRST = 'Enter the child’s first name.';
-export const ENTER_LAST = 'Enter the child’s last name.';
-export const ENTER_AGE = 'Enter the child’s age.';
+export const ENTER_FIRST = 'Enter the child\'s first name.';
+export const ENTER_LAST = 'Enter the child\'s last name.';
+export const ENTER_AGE = 'Enter the child\'s age.';
 export const AGE_RANGE_STAFF = 'Enter an age from 1 to 99.'; // (not in the mockups)
 export const CHOOSE_DAY = 'Choose at least one day.';
 export const CHOOSE_WHICH_DAYS = 'Choose which days.';
@@ -907,13 +907,13 @@ export const ENTER_PHONE = 'Enter a 10-digit phone number.';
 export const ENTER_RELATION = 'Enter the relationship.';
 export const newTotalLine = (cents) => `Total now ${formatMoney(cents)}`; // (not in the mockups) live price while editing
 export const TOTAL_NOW = 'Total now'; // the same line while private details are hidden: "Total now Hidden on this tablet" (v0.722)
-export const REPRICE_NOTE = 'Changing days, member or extras prices the camper at the camp’s current prices.'; // (not in the mockups)
-export const TOTAL_TOO_HIGH = 'A camper’s total can be $10,000 at most.'; // (not in the mockups) weekly pricing R5
+export const REPRICE_NOTE = 'Changing days, member or extras prices the camper at the camp\'s current prices.'; // (not in the mockups)
+export const TOTAL_TOO_HIGH = 'A camper\'s total can be $10,000 at most.'; // (not in the mockups) weekly pricing R5
 export const checkedInCantRemove = (day) => `This camper was checked in on ${dayLong(day)}. Undo that check-in first.`; // (§7.3, the camper's name is the dialog title)
 // The same, in the camp page's amber bar after a refused Undo of Edit details (no dialog title
 // there, so it names the camper; v0.726). (not in the mockups)
 export const checkedInCantRemoveNamed = (name, day) => `${name} was checked in on ${dayLong(day)}. Undo that check-in first.`;
-export const PAYMENT_NOT_HERE = 'Payments are changed from the roster’s ⋯ menu.'; // (not in the mockups)
+export const PAYMENT_NOT_HERE = 'Payments are changed from the roster\'s ⋯ menu.'; // (not in the mockups)
 export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups) weekly pricing R5
 
 

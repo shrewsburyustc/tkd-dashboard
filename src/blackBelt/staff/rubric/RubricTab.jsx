@@ -17,19 +17,19 @@
 //     while a Dan has unsaved changes every way out asks first (setGuard, from BlackBeltTesting).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import { loadRubric, setKeepYears } from '../../../lib/blackBelt/api.js';
 import { useSaveLine } from '../../../lib/saveLine.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import KeepYearsDialog from './KeepYearsDialog.jsx';
 import ReadAllDialog from './ReadAllDialog.jsx';
 import WaiverDialog from './WaiverDialog.jsx';
 import DefaultRubricCard from './DefaultRubricCard.jsx';
 import ResultEmailsBlock from './ResultEmailsBlock.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
-import LineBar from '../parts/LineBar.jsx';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import * as T from '../text.js';
 
@@ -51,6 +51,9 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [dialog, setDialog] = useState(null); // { type: 'read' | 'waiver' | 'keep', opener, … }
   const [banner, setBanner] = useState(null);
+  // The bar is a PageBar (under the top bar, v1.128): when it goes while focus is on its Retry or ×, focus returns to the tab.
+  // C5: so is "couldn't load" (drawn from the load's status): when its Retry works, focus goes to the tab.
+  useBarFocusReturn(Boolean(banner) || live.status === 'error' || (live.status === 'ready' && !live.data), focusCurrentTab);
   // The toast's Undo goes through the shared save line (R2-05): pressed while another save runs, it waits its turn.
   const line = useSaveLine({ section: T.UNDO_SECTION, showToast, undoBar: undoBarFor(setBanner) });
   const [rubricModal, setRubricModal] = useState(false); // the rubric card's dialogs / phone editor
@@ -118,7 +121,7 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
       </div>
     );
   } else if (live.status === 'error' || (live.status === 'ready' && !data)) {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
   } else if (live.status === 'noAccess') {
     body = null;
   } else {
@@ -208,7 +211,7 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
     <>
       {renderHeader(null)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel bb-rubric">
-        {banner && <LineBar takeFocus={banner.takeFocus === true} focusKey={banner} text={banner.text} onRetry={banner.retry} retrying={banner.retrying === true} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
+        {banner && <PageBar takeFocus={banner.takeFocus === true} text={banner.text} onRetry={banner.retry} retrying={banner.retrying === true} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
         {body}
       </div>
       {dialogElement}

@@ -4,11 +4,14 @@
 // file loads it (and keeps it fresh every 15 seconds, so another admin's save shows up) and
 // hands it to RubricCard.jsx, which draws the read view and the editor.
 // It sits below the Waiver and Keeping cards (the mockups' placement).
+// "Couldn't load" is the page's amber bar under the top bar (PageBar, v1.128).
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import { loadDefaultRubric, saveDefaultDan, undoDefaultDan } from '../../../lib/blackBelt/api.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import RubricCard from './RubricCard.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import * as T from '../text.js';
 
 const LIVE_KEY = 'black-belt-default-rubric';
@@ -24,6 +27,8 @@ export default function DefaultRubricCard({ isAdmin, isPhone, screenLocked, onNo
   useEffect(() => {
     if (live.status === 'noAccess') onNoAccess();
   }, [live.status, onNoAccess]);
+  // C5: "couldn't load" is a PageBar drawn from the load's status: when a Retry works, focus goes to the tab.
+  useBarFocusReturn(live.status === 'error' || (live.status === 'ready' && !live.data?.rubric), focusCurrentTab);
 
   if (live.status === 'loading' || live.status === 'idle') {
     return (
@@ -39,7 +44,7 @@ export default function DefaultRubricCard({ isAdmin, isPhone, screenLocked, onNo
   }
   if (live.status === 'noAccess') return null;
   if (live.status === 'error' || !live.data?.rubric) {
-    return <ErrorBanner text={T.RUBRIC_LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
+    return <PageBar text={T.RUBRIC_LOAD_FAILED} onRetry={() => liveRef.current.reload()} />;
   }
 
   return (

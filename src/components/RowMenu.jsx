@@ -17,14 +17,20 @@
 //   isSheet   true on phones
 //   title     sheet header line 1 (phone)       subtitle  sheet header line 2 (phone)
 //   label     accessible name of the menu, e.g. "More actions for Yellow"
-//   items     [{ key, label, Icon, onSelect, disabled, danger, separatorBefore }]
+//   items     [{ key, label, Icon, onSelect, disabled, danger, separatorBefore, checked }]
+//             A row with checked (true or false) is a tick-box row (rulebook v1.141, N16): role="menuitemcheckbox",
+//             aria-checked, a tick box instead of its Icon, and choosing it does NOT close the menu: the
+//             choice takes effect at once (onSelect is called, the menu stays), and Esc, Tab or a click outside
+//             closes it as for any ⋯ menu. Rows without checked are as before.
 //   onClose   (reason) => void — reason 'escape' | 'outside' | 'select' | 'tab'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { IconCheck } from '@tabler/icons-react';
 import { CANCEL } from './text.js';
 
 const MENU_WIDTH = 200; // px, as mocked up
 const GAP = 4; // px between the ⋯ button and the dropdown
+const ROW_SELECTOR = '[role="menuitem"], [role="menuitemcheckbox"]'; // plain rows and tick-box rows
 
 export default function RowMenu({ anchor, isSheet, title, subtitle, label, items, onClose }) {
   const panelRef = useRef(null);
@@ -64,7 +70,7 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
   useEffect(() => {
     if (!ready || focusedRef.current) return;
     focusedRef.current = true;
-    const all = Array.from(panelRef.current?.querySelectorAll('[role="menuitem"]') ?? []);
+    const all = Array.from(panelRef.current?.querySelectorAll(ROW_SELECTOR) ?? []);
     (all.find((item) => item.getAttribute('aria-disabled') !== 'true') ?? all[0])?.focus();
   }, [ready]);
 
@@ -83,7 +89,7 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
     // The menu is drawn in a portal, but React still passes its events up to the row it
     // belongs to. Stop them here so arrow keys don't also move between rows.
     event.stopPropagation();
-    const list = Array.from(panelRef.current.querySelectorAll('[role="menuitem"]'));
+    const list = Array.from(panelRef.current.querySelectorAll(ROW_SELECTOR));
     const index = list.indexOf(document.activeElement);
     let next = null;
     if (event.key === 'ArrowDown') next = index + 1 >= list.length ? 0 : index + 1;
@@ -108,27 +114,40 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
 
   function choose(item) {
     if (item.disabled) return; // gray item: nothing happens (it stays focusable for screen readers)
+    if (typeof item.checked === 'boolean') {
+      item.onSelect(); // a tick-box row: takes effect at once and the menu stays open
+      return;
+    }
     onClose('select');
     item.onSelect();
   }
 
-  const menuItems = items.map((item) => (
-    <div key={item.key}>
-      {item.separatorBefore && <div role="separator" className="menu-separator" />}
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        aria-disabled={item.disabled ? 'true' : undefined}
-        className={`menu-item tmenu-item${item.danger ? ' tmenu-item--danger' : ''}${item.disabled ? ' is-disabled' : ''}`}
-        onClick={() => choose(item)}
-      >
-        <item.Icon size={16} aria-hidden="true" className="menu-icon" />
-        <span>{item.label}</span>
-      </button>
-    </div>
-  ));
-
+  const menuItems = items.map((item) => {
+    const tick = typeof item.checked === 'boolean';
+    return (
+      <div key={item.key}>
+        {item.separatorBefore && <div role="separator" className="menu-separator" />}
+        <button
+          type="button"
+          role={tick ? 'menuitemcheckbox' : 'menuitem'}
+          aria-checked={tick ? (item.checked ? 'true' : 'false') : undefined}
+          tabIndex={-1}
+          aria-disabled={item.disabled ? 'true' : undefined}
+          className={`menu-item tmenu-item${item.danger ? ' tmenu-item--danger' : ''}${item.disabled ? ' is-disabled' : ''}`}
+          onClick={() => choose(item)}
+        >
+          {tick ? (
+            <span className={`menu-check${item.checked ? ' is-on' : ''}`} aria-hidden="true">
+              {item.checked && <IconCheck size={14} stroke={3} />}
+            </span>
+          ) : (
+            <item.Icon size={16} aria-hidden="true" className="menu-icon" />
+          )}
+          <span>{item.label}</span>
+        </button>
+      </div>
+    );
+  });
   if (isSheet) {
     return createPortal(
       // onClick stopPropagation: same portal reason as in handleKeyDown.

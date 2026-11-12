@@ -160,7 +160,7 @@ export function blankValues(row, { eventName, testingDate, danLabel }) {
     'D subjects': joinNames(r.dSubjects ?? []),
     // R3 proposal 14's sentence; "subjects … are" when there is more than one D (same meaning)
     'below-pass-mark note': alsoBelow
-      ? `${first}’s total is also below the pass mark; only the D ${dCount > 1 ? 'subjects are' : 'subject is'} tested again.`
+      ? `${first}'s total is also below the pass mark; only the D ${dCount > 1 ? 'subjects are' : 'subject is'} tested again.`
       : '',
   };
 }

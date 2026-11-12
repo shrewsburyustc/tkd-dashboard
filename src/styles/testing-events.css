@@ -1354,10 +1354,7 @@
    (star.css .st-cards.is-one / .st-hidden-value), written here so Color Belt doesn't depend on
    Star's stylesheet being loaded. (The one-card row, .ev-cards.is-one, is in shared.css.) */
 
-/* A hidden value keeps its row and reads gray "Hidden on this tablet" */
-.ev-hidden-value {
-  color: var(--color-text-secondary);
-}
+/* (A hidden value's gray is the shared .hidden-value in shared.css, v1.141.) */
 
 /* The roster without Paying by, Payment, Paid on and Mark paid:
    Student · Testing for · Status (only when a shown row has a tag) · ⋯ */

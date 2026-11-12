@@ -26,7 +26,7 @@ import { withChrome } from './chrome.mjs';
 
 const base = process.argv[2] ?? 'http://localhost:5190/';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const NOT_SAVED = "Couldn't save your panel size, so your other devices keep the old one. Check the internet, then Retry.";
+const NOT_SAVED = "Couldn't save your panel size, so your other devices keep the old one. Check the connection, then retry.";
 const SURFACE = 'rgb(247, 247, 245)'; // --color-surface, the gray hover highlight
 let passed = 0;
 const failures = [];

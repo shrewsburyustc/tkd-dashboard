@@ -4434,7 +4434,7 @@ await checkAsync('Candidates shared-parts switch (pass 1): shared words, queued 
   assert.equal(StaffWords.toastPaymentRecorded(29050, 'card', 'Mia Chen'), 'Mia Chen marked paid · $290.50 card');
   assert.equal(StaffWords.toastPaymentUndone('Sam Lee'), 'Payment undone for Sam Lee');
   // R1-06: the Undo payment box reads as before, its title and "Paid on" built from the shared words
-  assert.equal(StaffWords.undoPaymentTitle('Sam Lee', 33000, 'cash'), 'Undo Sam Lee’s $330 cash payment?');
+  assert.equal(StaffWords.undoPaymentTitle('Sam Lee', 33000, 'cash'), "Undo Sam Lee's $330 cash payment?");
   assert.equal(StaffWords.undoPaymentBody('2027-03-20', 'payments 1 and 2'), 'Paid on Mar 20 for payments 1 and 2. It comes off the balance; the history keeps it.');
   assert.equal(StaffWords.undoPaymentBody('2027-03-20', ''), 'Paid on Mar 20. It comes off the balance; the history keeps it.');
 
@@ -4729,8 +4729,8 @@ await (async () => {
     assert.equal(staffText.bracketMore('18–24'), 'More actions for 18–24');
     // M12: the Results tab's two gray offline lines
     const resultsText = await import('../../blackBelt/staff/results/text.js');
-    assert.equal(resultsText.OFFLINE_WHY_BUTTONS, 'Print results and Download CSV are off while you’re offline. Try again when the connection is back.');
-    assert.equal(resultsText.OFFLINE_WHY_ROWS, 'Email result and Mark as sent are off while you’re offline. Try again when the connection is back.');
+    assert.equal(resultsText.OFFLINE_WHY_BUTTONS, "Print results and Download CSV are off while you're offline. Try again when the connection is back.");
+    assert.equal(resultsText.OFFLINE_WHY_ROWS, "Email result and Mark as sent are off while you're offline. Try again when the connection is back.");
     assert.equal(resultsText.OFFLINE, undefined); // the tab's own amber bar is gone
     count += 1;
   } catch (error) {
@@ -5017,11 +5017,28 @@ check('Cycles, Rubric, Results: shared words, shared parts, no leftover copies',
   assert.ok(/finally \{[^}]*a\.endWrite\(again\.status, \(\) => retrySwitch\(/.test(editorCode), 'the registration switch Retry ends the line in a finally with a retry');
   assert.ok(/finally \{[\s\S]{0,160}a\.endWrite\(result\.status, \(\) => switchRegistration\(/.test(code('cycles/useCycleActions.js')), 'Close / Open registration ends the line in a finally with a retry');
   assert.ok(/saveCall\(/.test(code('candidates/useCandidateActions.js')) && !/\n\s*endWrite\(result\.status, \(\) =>/.test(code('candidates/useCandidateActions.js')), 'Candidates: every save goes through saveCall (always ended)');
-  // C2: the seven bars the save line can fill are LineBar (they take the focus the line asks for)
-  for (const rel of ['cycles/CyclesTab.jsx', 'cycle/CyclePage.jsx', 'rubric/RubricTab.jsx', 'rubric/RubricCard.jsx', 'rubric/ResultEmailsBlock.jsx', 'results/ResultsTab.jsx', 'candidates/CandidateDialog.jsx']) {
-    assert.ok(/<LineBar[\s\S]{0,120}takeFocus=\{banner\.takeFocus === true\}/.test(code(rel)), `${rel}: its line bar is a LineBar`);
+  // C2 (v1.128): the page bars the save line can fill are the shared PageBar, drawn under the top bar (it takes the
+  // focus the line asks for); a bar INSIDE a box stays inside it: the candidate detail's is a LineBar, the rubric
+  // editor's on the phone's full-screen page too. Every page bar is cleared with focus returned to the tab (useBarFocusReturn).
+  for (const rel of ['cycles/CyclesTab.jsx', 'cycle/CyclePage.jsx', 'rubric/RubricTab.jsx', 'rubric/ResultEmailsBlock.jsx', 'results/ResultsTab.jsx']) {
+    const src = code(rel);
+    assert.ok(/<PageBar[\s\S]{0,120}takeFocus=\{banner\.takeFocus === true\}/.test(src), `${rel}: its line bar is a PageBar`);
+    assert.ok(!/<LineBar/.test(src), `${rel}: no LineBar is left on a page`);
+    assert.ok(src.includes('useBarFocusReturn('), `${rel}: focus returns to the tab when the bar goes`);
+  }
+  const cardSrc = code('rubric/RubricCard.jsx');
+  assert.ok(/<PageBar \{\.\.\.barProps\}/.test(cardSrc) && /<LineBar focusKey=\{banner\} \{\.\.\.barProps\}/.test(cardSrc), 'RubricCard: PageBar in the page, LineBar inside the phone editor page');
+  assert.ok(/phoneEditorOpen = isPhone && editing/.test(cardSrc) && /banner && !phoneEditorOpen \? <PageBar/.test(cardSrc) && /banner && phoneEditorOpen \? <LineBar/.test(cardSrc), 'RubricCard: only one of the two bars is drawn');
+  for (const rel of ['cycle/CyclePage.jsx', 'cycle/CycleRubricTab.jsx', 'cycles/CyclesTab.jsx', 'candidates/CandidatesTab.jsx', 'results/ResultsTab.jsx', 'rubric/RubricTab.jsx', 'rubric/ResultEmailsBlock.jsx', 'rubric/DefaultRubricCard.jsx', 'grading/GradingTab.jsx']) {
+    assert.ok(code(rel).includes('<PageBar') && !/<ErrorBanner/.test(code(rel)), `${rel}: its page bars (including "couldn't load") are PageBars, none is an ErrorBanner`);
+  }
+  assert.ok(/<LineBar/.test(code('candidates/CandidateDialog.jsx')) && !/<PageBar/.test(code('candidates/CandidateDialog.jsx')), 'the candidate detail keeps its bar INSIDE the detail (LineBar, never PageBar)');
+  for (const rel of ['candidates/CandidateDialog.jsx', 'cycle/CycleDialog.jsx', 'candidates/dialogParts.jsx', 'rubric/KeepYearsDialog.jsx', 'rubric/WaiverDialog.jsx', 'candidates/MakeupPickerDialog.jsx', 'candidates/SignatureDialog.jsx']) {
+    assert.ok(!/<PageBar/.test(code(rel)), `${rel}: a bar inside a box is never a PageBar`);
   }
   assert.ok(code('parts/LineBar.jsx').includes('.errbar-retry') && code('parts/LineBar.jsx').includes('.errbar-dismiss'), 'LineBar moves focus to Retry, else ×');
+  const returnSrc = code('parts/useBarFocusReturn.js');
+  assert.ok(returnSrc.includes("'.shell-pagebars'") && returnSrc.includes('focusin') && returnSrc.includes('toast-region'), 'useBarFocusReturn: watches focus in the page bar slot and only moves focus that fell');
   // C3: Results' Email result / Mark as sent are unavailable while the line is busy
   assert.ok(/ctx\.lineBusy/.test(code('results/ResultRows.jsx')) && /lineBusy: line\.busy/.test(resultsCode), 'Results rows go gray while the save line is busy');
   // C4: the locked Dan is described by its hint whoever is locked out
@@ -5033,6 +5050,17 @@ check('Cycles, Rubric, Results: shared words, shared parts, no leftover copies',
   assert.ok(/a\.paymentsHidden\s*\?\s*T\.UNDO_AT_DESK/.test(code('candidates/useMakeupPicker.js')), 'undoAdd: neutral refusal while hidden');
   // S2: a money Undo's bar is marked, and the switch removes it
   assert.ok(/moneyUndo/.test(code('candidates/useCandidateActions.js')) && /current\?\.moneyUndo \? null/.test(code('candidates/useCandidateActions.js')), 'paymentsHiddenNow removes the bar of a money Undo');
+  // SEC1: a money Undo that FAILS after the switch turned on draws no bar (its Retry would run a payment Undo on the hidden tablet)
+  assert.ok(/if \(lastUndoMoney\.current && latest\.current\.paymentsHidden\) return;\s*\n\s*report\(\{ text: bar\.text/.test(code('candidates/useCandidateActions.js')), 'undoBar: a money Undo failing while hidden shows no bar and no Retry');
+  // C1: the focus-return hook runs above RubricCard's early return (same hooks on every render)
+  const cardCode = code('rubric/RubricCard.jsx');
+  assert.ok(cardCode.indexOf('useBarFocusReturn(Boolean(banner)') > -1 && cardCode.indexOf('useBarFocusReturn(Boolean(banner)') < cardCode.indexOf('if (!rubric) return null;'), 'RubricCard: useBarFocusReturn is called before the early return');
+  // C5: "couldn't load" bars (drawn from the load's status) are covered by the focus return too
+  for (const rel of ['cycle/CyclePage.jsx', 'cycle/CycleRubricTab.jsx', 'rubric/RubricTab.jsx', 'rubric/DefaultRubricCard.jsx', 'rubric/ResultEmailsBlock.jsx', 'grading/GradingTab.jsx', 'results/ResultsTab.jsx', 'candidates/CandidatesTab.jsx', 'cycles/CyclesTab.jsx']) {
+    assert.ok(/useBarFocusReturn\([^\n]*(status === 'error'|live\.status !== 'loading')/.test(code(rel)), `${rel}: its "couldn't load" bar hands focus to the tab when it closes`);
+  }
+  // C6: leaving the bar by a click on blank space (focusout, no new target) clears the hook's memory
+  assert.ok(/addEventListener\('focusout'/.test(code('parts/useBarFocusReturn.js')), 'useBarFocusReturn: a focusout away from the bar clears the memory');
   // S4: the words a money Undo gives the line (shown on any page after the person left) never hold an amount
   for (const fn of ['paymentUndoWords', 'refundUndoWords', 'returnedUndoWords', 'planUndoWords']) {
     const words = StaffWords[fn]('Sam Lee');
@@ -5067,7 +5095,9 @@ check('v1.135 payment line: the shared base, Black Belt extras in order, phone v
   assert.ok(/T\.paidOnPhone\(/.test(dialog) && /T\.refundedOnPhone\(/.test(dialog), 'the phone block uses the shared phone variant');
   assert.ok(/T\.paymentLine\(/.test(dialog), 'the ⋯ sheet subtitle is the shared payment line');
   assert.ok(!/\[T\.monthDay\(line\.paidOn\), w\.how/.test(dialog), 'the old "date · how" phone line is gone');
-  assert.ok(!/menu\.line\.paidOn\)\} · \$\{formatCents/.test(dialog), 'the old "Mar 20 · $870" subtitle is gone from the menu (only a returned check keeps it)');
+  // the old money wording came from a local formatCents; the shared formatMoney replaced it, so any return of it fails here
+  assert.ok(!/formatCents/.test(dialog), 'the dialog formats money with the shared formatMoney, never a local formatCents');
+  assert.ok(/line\.kind === 'returned'\) return `\$\{T\.monthDay\(line\.paidOn\)\} · \$\{formatMoney\(line\.amountCents\)\}`/.test(dialog), 'only a returned check keeps the "Mar 20 · $870" subtitle, built with formatMoney');
   // Black Belt stores no Paying by on a candidate (the method is chosen per payment at the desk), so no Paying by line
   assert.ok(!/payingBy|chosen on the form/i.test(dialog), 'no Paying by line: Black Belt has no such data (v1.135 note)');
 });
@@ -5094,6 +5124,75 @@ check('Connection-failure sentences say "then retry", not "then try again"', asy
       assert.ok(!/then try again/i.test(text), name + '.' + key + ' still says "then try again": ' + text);
     }
   }
+});
+// Design review R4-03 + Jeffrey's rule: the hidden-payments line and the failed-Undo line are the shared sentences, and
+// every Black Belt sentence a person reads uses straight apostrophes and quotes (the starting result emails in
+// resultEmail.js are stored texts and are left alone; so are code comments).
+check('R4-03: shared hidden / failed-Undo words, straight apostrophes in Black Belt sentences', async () => {
+  const staff = await import('../../blackBelt/staff/text.js');
+  const shared = await import('../../components/text.js');
+  const priv = await import('../privateDetails.js');
+  assert.equal(staff.PAYMENTS_HIDDEN, priv.PAYMENT_DETAILS_HIDDEN);
+  assert.equal(staff.PAYMENTS_HIDDEN, 'Payment details are hidden on this tablet.');
+  assert.equal(staff.HIDDEN_ON_DEVICE, priv.HIDDEN_ON_THIS_TABLET);
+  assert.equal(staff.UNDO_BOX_FAILED, shared.UNDO_DIDNT_SAVE);
+  assert.equal(staff.UNDO_BOX_FAILED, "Undo didn't save. Check the connection, then retry.");
+  for (const rel of ['staff/text.js', 'form/text.js', 'staff/results/text.js', 'staff/grading/text.js', 'staff/rubric/problemText.js', 'staff/receipt/text.js']) {
+    const text = readFileSync(new URL(`../../blackBelt/${rel}`, import.meta.url), 'utf8');
+    const code = text.split('\n').filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line)).join('\n');
+    assert.ok(!/[‘’“”]/.test(code.replace(/\/\/.*$/gm, '')), `${rel}: a curly apostrophe or quote in a sentence`);
+  }
+});
+// Design review D1 + D3 + D2 (source checks, pure text): the bar code never scrolls the page by focusing, the rubric
+// card clears its bar when the editor closes, and the failure bars inside dialogs scroll into view.
+check('D1/D2/D3: focus keeps the page still; the rubric bar goes with its draft; dialog bars scroll into view', () => {
+  const read = (rel) => readFileSync(new URL(`../../blackBelt/${rel}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  // D1: × / a Retry that works hands focus to the tab WITHOUT scrolling the page (rulebook v1.124)
+  const focusTab = read('staff/parts/focusCurrentTab.js');
+  assert.ok(/tab\?\.focus\(\{ preventScroll: true \}\)/.test(focusTab), 'focusCurrentTab must focus with preventScroll');
+  assert.ok(!/\.focus\(\)/.test(focusTab.replace(/\/\/.*$/gm, '')), 'focusCurrentTab has a focus() call without preventScroll');
+  assert.ok(/target\.focus\(\{ preventScroll: true \}\)/.test(read('staff/parts/LineBar.jsx')), 'LineBar must focus with preventScroll');
+  // D3: closing the editor clears the card's bar, and a Retry always runs the latest save
+  const card = read('staff/rubric/RubricCard.jsx');
+  const stop = card.slice(card.indexOf('function stopEdit()'), card.indexOf('// A newer version of the Dan being edited'));
+  assert.ok(/d\.stop\(\);/.test(stop) && /setBanner\(null\)/.test(stop), 'stopEdit must clear the card bar');
+  assert.ok(/retry: \(\) => saveRef\.current\?\.\(\)/.test(card), 'the failed-save Retry must go through saveRef');
+  assert.ok(!/retry: \(\) => save\(\)/.test(card), 'a Retry that calls the save of an old render can save a discarded draft');
+  // D2: every failed-save bar inside a dialog is a DialogBar (scrolls into view) and the bar itself scrolls with block 'nearest'
+  const bar = read('staff/parts/DialogBar.jsx');
+  assert.ok(/scrollIntoView\?\.\(\{ block: 'nearest' \}\)/.test(bar) && /\.errbar/.test(bar), 'DialogBar must scroll its .errbar into view');
+  assert.ok(!/\.focus\(/.test(bar.replace(/\/\/.*$/gm, '')), 'DialogBar must not take focus');
+  for (const rel of ['staff/candidates/dialogParts.jsx', 'staff/rubric/WaiverDialog.jsx', 'staff/rubric/KeepYearsDialog.jsx', 'staff/candidates/MakeupPickerDialog.jsx']) {
+    assert.ok(read(rel).includes("import DialogBar from '../parts/DialogBar.jsx'"), `${rel} must use DialogBar`);
+  }
+  assert.ok(/failed \? <DialogBar/.test(read('staff/candidates/dialogParts.jsx')) || /state\.failed \? <DialogBar/.test(read('staff/candidates/dialogParts.jsx')), 'FailedBanner must draw a DialogBar');
+  assert.ok(/e\.failed && <DialogBar/.test(read('staff/candidates/CandidateDialog.jsx')), 'the candidate edit bar must be a DialogBar');
+});
+// Focus after the rubric editor closes (source check, pure text): Cancel / Discard / a finished save removes the
+// button that had focus, so stopEdit hands focus to the current tab button (only when focus was in the editor, its
+// dialogs or nowhere, and only if it has fallen by the next frame), and the helper never scrolls.
+check('rubric editor close: focus goes to the current tab, only when it was in the editor, without scrolling', () => {
+  const read = (rel) => readFileSync(new URL(`../../blackBelt/${rel}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const card = read('staff/rubric/RubricCard.jsx');
+  const stop = card.slice(card.indexOf('function stopEdit()'), card.indexOf('// A newer version of the Dan being edited'));
+  assert.ok(/focusWasHere/.test(stop) && /editTopRef\.current\?\.contains\(active\)/.test(stop), 'stopEdit must remember whether focus was in the editor');
+  assert.ok(/document\.body/.test(stop) && /\[aria-modal="true"\]/.test(stop), 'stopEdit must also count focus on the body or in a dialog');
+  assert.ok(/if \(focusWasHere\)/.test(stop) && /requestAnimationFrame/.test(stop), 'stopEdit must wait one frame');
+  assert.ok(/if \(fallen\) focusCurrentTab\(\)/.test(stop), 'stopEdit must only hand focus over when it has fallen');
+  assert.ok(/import \{ focusCurrentTab \} from '\.\.\/parts\/focusCurrentTab\.js'/.test(card), 'RubricCard must import focusCurrentTab');
+  const focusTab = read('staff/parts/focusCurrentTab.js');
+  assert.ok(/tab\?\.focus\(\{ preventScroll: true \}\)/.test(focusTab), 'focusCurrentTab must keep preventScroll');
+});
+// Search people (M16): the Candidates tab takes the one-shot open-person request once the roster has loaded and opens
+// that candidate's detail like a row click; the cycle page opens on Candidates unless the address names another tab.
+check('Candidates tab: takes the Search people request when it arrives and opens the detail', () => {
+  const read = (rel) => readFileSync(new URL(`../../blackBelt/${rel}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const tab = read('staff/candidates/CandidatesTab.jsx');
+  assert.ok(/import \{ takeOpenPerson \} from '\.\.\/\.\.\/\.\.\/lib\/people\/openPerson\.js'/.test(tab), 'CandidatesTab must import takeOpenPerson');
+  assert.ok(/takeOpenPerson\(\['black_belt'\]\)/.test(tab), 'CandidatesTab must take only the black_belt kind');
+  assert.ok(/live\.status !== 'ready'/.test(tab) && /useOpenPersonTick\(\)/.test(tab) && /screenLocked, personTick\]/.test(tab), 'it must wait for the loaded roster and look again when a new search arrives');
+  assert.ok(/rows\.some\(\(r\) => r\.id === request\.id\)\) actions\.openDetail\(request\.id, null\)/.test(tab), 'it must open the detail only for a candidate in the roster');
+  assert.ok(/tab = 'candidates'/.test(read('staff/cycle/CyclePage.jsx')), 'the cycle page must default to Candidates');
 });
 console.log(`${count} groups of checks ran.`);
 console.log('ALL BLACK BELT LIB CHECKS PASSED');

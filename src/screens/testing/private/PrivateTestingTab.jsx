@@ -104,6 +104,8 @@ import { usePageRoomBelow } from '../../../lib/pageRoom.js';
 import { buildColorBeltReceipt } from '../../../lib/testing/receipt.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
+import { takeOpenPerson } from '../../../lib/people/openPerson.js';
+import { useOpenPersonTick } from '../../../lib/people/useOpenPerson.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
@@ -124,16 +126,6 @@ const filterBySchool = new Map();
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'STUDENT_LOCKED', 'PRIVATE_GRADED', 'ALREADY_PAID'];
 // The dialogs that are about money: closed when Hide private details is switched on.
 const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment'];
-
-// batch 2 words — the short reasons that follow "Couldn't undo: …" (T.couldntUndo adds the final
-// stop). Lowercase, plain, no stop. The owner of text.js moves them there later.
-const REASON_ONLY_ADMIN = 'only an admin can do that';
-const REASON_PAYMENT_TOO_LATE = "it's too late for that here, so ask an admin to undo the payment";
-const REASON_HAS_RESULT = 'a result was recorded just now';
-const REASON_PAST_DAY = "that day has passed, so it can't be put back";
-const REASON_GRADED = 'this private testing was graded just now';
-const REASON_CANCELLED = 'it was cancelled just now, and an admin can restore it while its day is ahead';
-const reasonSomeoneElse = (name) => `someone else changed ${name} just now`;
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-private-row="${id}"]`);
@@ -454,6 +446,19 @@ export default function PrivateTestingTab({
   function openView(row, opener) {
     openDialog({ type: 'view', rowId: row.id, snapshot: row, opener });
   }
+  // Top-bar "Search people" (M16, rulebook v1.144): Testing.jsx opened this tab for a tapped private
+  // testing; once the list has loaded, take the one-shot request (kind 'colorbelt_private') and open
+  // that summary the way a click on its row does. Found by id in the whole list (the Upcoming / Past
+  // side and the Paid filter can't hide it). Not in the list: nothing opens and nothing is said.
+  const personTick = useOpenPersonTick(); // a search while this tab is already showing
+  useEffect(() => {
+    if (live.status !== 'ready' || screenLocked) return;
+    const request = takeOpenPerson(['colorbelt_private']);
+    if (!request) return;
+    const row = rows.find((r) => r.id === request.id);
+    if (row) openView(row, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the list is ready and when a new search arrives
+  }, [live.status, screenLocked, personTick]);
   // Its Edit details button: the summary closes and Edit details opens in its place.
   function editFromView() {
     const d = dialogRef.current;
@@ -831,11 +836,11 @@ export default function PrivateTestingTab({
   // for "someone else changed …"), money (a payment's Undo: while Hide private details is on when the
   // answer arrives, only the general words and no Retry that would record money), gradedCheck
   // ({ rowId, resultBefore }: Edit details / Change day or time, see refuseUndoIfGraded).
-  function undoRun({ call, findFocus = null, name, money = false, gradedCheck = null, notAllowedReason = REASON_ONLY_ADMIN }) {
+  function undoRun({ call, findFocus = null, name, money = false, gradedCheck = null, notAllowedReason = T.UNDO_REASON_ADMIN_ONLY }) {
     return async () => {
       // A result recorded since the change isn't in the row's version, so check the latest loaded row.
       if (gradedCheck && refuseUndoIfGraded(gradedCheck.rowId, gradedCheck.resultBefore)) {
-        return { status: 'has_result', reason: T.couldntUndo(REASON_HAS_RESULT) };
+        return { status: 'has_result', reason: T.couldntUndo(T.UNDO_REASON_RESULT) };
       }
       const result = await call();
       const status = result.status;
@@ -855,16 +860,16 @@ export default function PrivateTestingTab({
       if (status === 'not_allowed') {
         onRefreshProfile();
         if (hiddenMoney) reloadQuiet();
-        return { status, reason: T.couldntUndo(hiddenMoney ? REASON_ONLY_ADMIN : notAllowedReason) };
+        return { status, reason: T.couldntUndo(hiddenMoney ? T.UNDO_REASON_ADMIN_ONLY : notAllowedReason) };
       }
       // Refused by the database: the list reloads, and the bar says why.
       reloadQuiet();
-      let reason = T.couldntUndo(reasonSomeoneElse(name));
+      let reason = T.couldntUndo(T.undoReasonSomeoneElse(name));
       if (!hiddenMoney) {
         // (Change day or time's Undo: the old day is past now; rowProblem handles the same statuses.)
-        if (status === 'past_day') reason = T.couldntUndo(REASON_PAST_DAY);
-        else if (status === 'graded') reason = T.couldntUndo(REASON_GRADED);
-        else if (status === 'cancelled') reason = T.couldntUndo(REASON_CANCELLED);
+        if (status === 'past_day') reason = T.couldntUndo(T.UNDO_REASON_PAST_DAY);
+        else if (status === 'graded') reason = T.couldntUndo(T.UNDO_REASON_GRADED);
+        else if (status === 'cancelled') reason = T.couldntUndo(T.UNDO_REASON_CANCELLED);
       }
       return { status, reason };
     };
@@ -987,7 +992,7 @@ export default function PrivateTestingTab({
           findFocus: () => moreEl(rowId),
           name,
           money: true,
-          notAllowedReason: REASON_PAYMENT_TOO_LATE,
+          notAllowedReason: T.UNDO_REASON_PRIVATE_PAYMENT_TOO_LATE,
         }),
         // The words for a bar shown after the person left the page: no amount or way, so Hide
         // private details can't be undone by it.

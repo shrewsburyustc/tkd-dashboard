@@ -8,6 +8,8 @@
 // Top to bottom:
 //   one banner: Email result's, Mark as sent's / Undo's, Print's and the CSV's refusals
 //   "Showing Worcester candidates only · Show both schools" on a one-school device (proposal 30)
+//   amber bar: the shared PageBar, drawn under the top bar so it stays in view however far the list is
+//     scrolled (v1.128); × or a Retry that works returns focus to the tab button
 //   offline: no bar of its own (the page's shared amber bar says it); two gray "why" lines sit next to
 //     the grayed controls (M12, rulebook v1.123) — the last list stays on screen
 //   the Dan switch with counts (all four Dans, the device's school) · Print results · Download CSV
@@ -53,7 +55,7 @@ import {
   IconArrowBackUp, IconCurrencyDollarOff, IconDownload, IconMailCheck, IconPrinter, IconSchool, IconWifiOff,
 } from '@tabler/icons-react';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
-import ErrorBanner from '../../../components/ErrorBanner.jsx';
+import PageBar from '../../../components/PageBar.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../lib/device.js';
 import { useSaveLine } from '../../../lib/saveLine.js';
@@ -62,14 +64,15 @@ import { buildResultMessage, mailtoFor, resultKind } from '../../../lib/blackBel
 import { schoolToday } from '../../../lib/blackBelt/api.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
-import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
+import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import ChoiceGroup from '../../../components/ChoiceGroup.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../lib/useLiveLoad.js';
 import MakeupSubjectsDialog from '../grading/MakeupSubjectsDialog.jsx';
 import ResultRows from './ResultRows.jsx';
 import ResultsSheet from './ResultsSheet.jsx';
 import { canEmail, emailAnswerFromRow, isSent, nothingYet, openGradesDay, schoolDateOf, summaryCounts } from './resultLines.js';
-import LineBar from '../parts/LineBar.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import { useBarFocusReturn } from '../parts/useBarFocusReturn.js';
 import { undoBarFor } from '../parts/undoBar.js';
 import { UNDO_SECTION } from '../text.js';
 import * as T from './text.js';
@@ -149,7 +152,7 @@ export default function ResultsTab({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
-  const [hidden] = usePaymentsHidden(); // Hide payments (also hides emails, proposal 36)
+  const [hidden] = usePrivateDetailsHidden(); // Hide payments (also hides emails, proposal 36)
 
   // Online / offline (proposal 35): while the browser says it's offline nothing is requested and
   // the last list stays on screen under the amber bar.
@@ -193,6 +196,9 @@ export default function ResultsTab({
 
   const [menu, setMenu] = useState(null); // { id, anchor }
   const [banner, setBanner] = useState(null); // { text, retry? }
+  // The bar is a PageBar (under the top bar, v1.128): when it goes while focus is on its Retry or ×, focus returns to the tab.
+  // C5: so is "couldn't load" (drawn from the load's status): when its Retry works, focus goes to the tab.
+  useBarFocusReturn(Boolean(banner) || (!data && live.status === 'error'), focusCurrentTab);
   const [busyId, setBusyId] = useState(null); // the row with a save / address read on its way
   const [csvBusy, setCsvBusy] = useState(false);
   const [printBusy, setPrintBusy] = useState(false);
@@ -682,7 +688,7 @@ export default function ResultsTab({
 
   let body;
   if (!data && live.status === 'error') {
-    body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => reload()} />;
+    body = <PageBar text={T.LOAD_FAILED} onRetry={() => reload()} />;
   } else if (!data) {
     body = (
       <>
@@ -766,9 +772,8 @@ export default function ResultsTab({
     <>
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel bbres-panel">
         {banner && (
-          <LineBar
+          <PageBar
             takeFocus={banner.takeFocus === true}
-            focusKey={banner}
             text={banner.text}
             onRetry={banner.retry ? () => banner.retry() : undefined}
             retrying={busyId !== null || csvBusy || printBusy || banner.retrying === true}

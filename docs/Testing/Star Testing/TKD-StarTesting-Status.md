@@ -40,6 +40,8 @@ Fix list: `docs/Design Review/Rolling check/Pass 2/Fix-Star.md` (merged into mai
 
 - **R1-07 second part (rulebook v1.135, Jeffrey "C", checked 2026-11-08):** Star's words ARE the base, so nothing to change in Star: payment line "$140 card · paid Nov 3" (phone "Card · paid Nov 3"), History "Payment recorded: $140 card, paid Nov 3" / "Payment undone: $140" (`candidates/text.js` `historyPayment`), Paying by line "Card (chosen on the form / at the desk)" (`payingByDetail`). Hide private details hides all three as today. If Dashboard core later puts shared versions in `src/components/text.js`, Star can import them with no visible change. **R3-12** (the shared Select's "unavailable" option) is still not on main: waits for Dashboard core, then one small batch.
 
+- **Final open list for pass 1 + pass 2 (2026-11-08, checked against main 35ccf6ca; Jeffrey: finish pass 2, no pass 3):** everything in both fix files is built and live (batches 1, 3, 4, retry words, R3-12 `ad1659f9`: Dan and Stars use the shared Select's `unavailable` state; Stars' reason line "Choose a Dan first." stays unless Jeffrey changes it). **Open:** (1) S-10 (pass 1, Smaller): the Results email-text dialog (`ResultTextDialog.jsx` ~293) still uses a browser `<select>`; it becomes the shared Select only when that screen is next worked on (no sweep, by design). (2) Jeffrey: set the End time on each upcoming Star event (events saved before 0041 show only the start time). (3) Accepted small points (listed in the Batch 1, 3 and 4 lines above and: an Edit saved from a browser tab opened before the end-time deploy clears an end time). Nothing else promised by a fix file or a Star rulebook row is unbuilt.
+
 ---
 
 ## 1. Where things stand (one paragraph)

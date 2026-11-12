@@ -74,9 +74,9 @@ export const jumpToGroup = (label) => `Show the ${label} payments`; // NOT IN MO
 // ----- Close the day box (D1, D2, D3, D13, #q12) -----
 export const CLOSE_TITLE = 'Close the day';
 export const CLOSE_OPEN_BUTTON = 'Close the day…'; // the outline button that opens the dialog (v0.800)
-export const CLOSE_HINT = 'Count the drawer and type what you find. The dashboard compares it with today’s payments.';
-// An earlier day an admin closes: "today’s" would be wrong. NOT IN MOCKUPS — for CP1
-export const CLOSE_HINT_OTHER_DAY = 'Count the drawer and type what you find. The dashboard compares it with this day’s payments.';
+export const CLOSE_HINT = 'Count the drawer and type what you find. The dashboard compares it with today\'s payments.';
+// An earlier day an admin closes: "today's" would be wrong. NOT IN MOCKUPS — for CP1
+export const CLOSE_HINT_OTHER_DAY = 'Count the drawer and type what you find. The dashboard compares it with this day\'s payments.';
 export const CASH_LABEL = 'Cash counted in the drawer';
 export const CASH_OUT_LABEL = 'Cash taken out of the drawer'; // #q12 / v0.209
 export const CHECKS_LABEL = 'Checks in the drawer';
@@ -91,16 +91,16 @@ export const expectedCashWithRefunds = (expected, inCents, refunded) =>
 export const expectedCashOut = (outCents, inCents, refunded) =>
   `Expected ${money(outCents)} taken out (${money(inCents)} in − ${money(refunded)} refunded)`;
 export const expectedChecks = (count, cents) => `Expected ${count} check${count === 1 ? '' : 's'}, ${money(cents)}`;
-export const expectedCard = (cents) => `Expected ${money(cents)} · from the machine’s day report`;
+export const expectedCard = (cents) => `Expected ${money(cents)} · from the machine's day report`;
 // With card refunds (Black Belt, v0.814 / mockup B2): written like cash —
-// "Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine’s day report"
+// "Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine's day report"
 export const expectedCardWithRefunds = (expected, inCents, refunded) =>
-  `Expected ${money(expected)} (${money(inCents)} in − ${money(refunded)} refunded) · from the machine’s day report`;
+  `Expected ${money(expected)} (${money(inCents)} in − ${money(refunded)} refunded) · from the machine's day report`;
 // The quiet line under the figures on a day with returned checks (B2, v0.815).
 export function returnedNotInDrawer(cents, count, isToday) {
-  const drawer = isToday ? 'today’s drawer' : 'this day’s drawer'; // "this day’s": NOT IN MOCKUPS (B2) — an admin closing an earlier day
-  if (count === 1) return `The ${money(Math.abs(cents))} returned check isn’t part of ${drawer}.`;
-  return `The ${count} returned checks (${money(Math.abs(cents))}) aren’t part of ${drawer}.`; // NOT IN MOCKUPS (B2) — several
+  const drawer = isToday ? 'today\'s drawer' : 'this day\'s drawer'; // "this day's": NOT IN MOCKUPS (B2) — an admin closing an earlier day
+  if (count === 1) return `The ${money(Math.abs(cents))} returned check isn't part of ${drawer}.`;
+  return `The ${count} returned checks (${money(Math.abs(cents))}) aren't part of ${drawer}.`; // NOT IN MOCKUPS (B2) — several
 }
 export const NOTE_LABEL = 'Note';
 export const NOTE_NEEDED = '(needed when anything is short or over)';
@@ -109,7 +109,7 @@ export const RETRY_CLOSE = 'Retry close the day';
 export const FILL_ALL_FIRST = 'Fill in all three counts first.';
 export const SAVES_WITH_NAME = 'Saves the count with your name.';
 export const NOT_SAVED = 'Not saved';
-export const CLOSE_FAILED = 'Couldn’t close the day. Nothing you typed is lost. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
+export const CLOSE_FAILED = 'Couldn\'t close the day. Nothing you typed is lost. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
 
 // Tags (D2). Success tags have no icon (v0.207).
 export const MATCHES = 'Matches';
@@ -126,9 +126,9 @@ export const checksBothOff = (countText, cents, isShort) => `${countText}, ${isS
 
 // Typing problems under a count field. NOT IN MOCKUPS — for CP1
 export const FIELD_NOT_NUMBER = 'Type an amount, like 300.00.';
-export const FIELD_TOO_HIGH = 'That’s more than $100,000.00. Check the amount.';
+export const FIELD_TOO_HIGH = 'That\'s more than $100,000.00. Check the amount.';
 export const FIELD_COUNT_NOT_NUMBER = 'Type a whole number, like 2.';
-export const FIELD_COUNT_TOO_HIGH = 'That’s more than 500 checks. Check the number.';
+export const FIELD_COUNT_TOO_HIGH = 'That\'s more than 500 checks. Check the number.';
 
 // The note is missing (D2): "Cash is short $20.00. Add a note saying what happened."
 export function noteMissing(part, isShort, cents, countDiff) {
@@ -194,7 +194,7 @@ export function changedAfterLine({ count, added, addedAt, corrected, correctedOn
 }
 
 // ----- Toasts and messages for closing (D3) -----
-export const DRAWER_CLOSED = 'Today’s drawer is closed'; // one sentence: no full stop (v1.051)
+export const DRAWER_CLOSED = 'Today\'s drawer is closed'; // one sentence: no full stop (v1.051)
 export const drawerClosedOn = (day) => `The drawer for ${dayShort(day)} is closed`; // NOT IN MOCKUPS — for CP1 (admin closing an earlier day)
 export const UNDO = 'Undo';
 export const UNDONE = 'Undone'; // the toast after an Undo that worked (v1.051)
@@ -204,10 +204,10 @@ export const TOO_LATE_UNDO = 'Too late to undo here. Ask an admin to reopen the 
 // src/components/text.js; the page's bar offers Retry with it (R2-07, v1.045 (4)).
 export { UNDO_DIDNT_SAVE as UNDO_FAILED } from '../../components/text.js';
 export const DAY_REOPENED = 'Day reopened. It can be counted again.'; // NOT IN MOCKUPS — for CP1
-export const REOPEN_FAILED = 'Couldn’t reopen the day. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
-export const NOT_CLOSED_ANY_MORE = 'This day isn’t closed any more. Someone reopened it just now.'; // NOT IN MOCKUPS — for CP1
+export const REOPEN_FAILED = 'Couldn\'t reopen the day. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
+export const NOT_CLOSED_ANY_MORE = 'This day isn\'t closed any more. Someone reopened it just now.'; // NOT IN MOCKUPS — for CP1
 export const ALREADY_CLOSED = 'Someone else closed this day just now. Check their count below.'; // NOT IN MOCKUPS — for CP1
-export const NOTHING_TO_CLOSE_NOW = 'There’s nothing to close any more: the payments were undone.'; // NOT IN MOCKUPS — for CP1
+export const NOTHING_TO_CLOSE_NOW = 'There\'s nothing to close any more: the payments were undone.'; // NOT IN MOCKUPS — for CP1
 
 // ----- Shared messages -----
 // A refused change: the one sentence every section says (R2-07, v1.045 (4)), naming what changed. The screen
@@ -215,9 +215,9 @@ export const NOTHING_TO_CLOSE_NOW = 'There’s nothing to close any more: the pa
 export const STALE_DAY = someoneElseChanged('the day'); // the Daily report, and the Close the day box
 export const STALE_SETTING = someoneElseChanged('the setting'); // Settings
 export const NOT_ALLOWED = 'Only an admin can do that.'; // NOT IN MOCKUPS — for CP1
-export const LOAD_FAILED = 'Couldn’t load the daily report. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
-export const LOAD_HISTORY_FAILED = 'Couldn’t load History. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
-export const LOAD_SETTINGS_FAILED = 'Couldn’t load the settings. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
+export const LOAD_FAILED = 'Couldn\'t load the daily report. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
+export const LOAD_HISTORY_FAILED = 'Couldn\'t load History. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
+export const LOAD_SETTINGS_FAILED = 'Couldn\'t load the settings. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 // Retry, Dismiss, Back, Close and Cancel are the shared parts' words (src/components/text.js), typed
 // once there so Finance's can't drift from every other section's (design review F6; Jeffrey,
 // 2026-11-05: "Yes, shared words").
@@ -323,7 +323,7 @@ export const NO_PAYMENTS_DAY = 'No payments recorded on this day.'; // NOT IN MO
 export const NOTHING_TO_CLOSE = 'Nothing to close. Payments recorded in Testing and Camps appear here.'; // "and Camps" (not in the mockups, Camps v0.707)
 // A day with only returned checks (B7): nothing to close.
 export const NOTHING_TO_CLOSE_RETURNED = (count) =>
-  count === 1 ? 'Nothing to close: a returned check isn’t drawer money.' : 'Nothing to close: returned checks aren’t drawer money.'; // plural NOT IN MOCKUPS (B7)
+  count === 1 ? 'Nothing to close: a returned check isn\'t drawer money.' : 'Nothing to close: returned checks aren\'t drawer money.'; // plural NOT IN MOCKUPS (B7)
 
 // ----- Both (D6) -----
 export const NOT_CLOSED_YET = 'Not closed yet';
@@ -360,9 +360,9 @@ export const HISTORY_HINT = 'Click a day to open its report. Newest first.';
 export const HISTORY_HINT_TOUCH = 'Tap a day to open its report. Newest first.'; // NOT IN MOCKUPS — for CP1 ("Click" on a touch screen)
 // "1 day this month wasn't closed: Tue, Oct 20."
 export function unclosedLine(count, days) {
-  if (count === 1) return `1 day this month wasn’t closed: ${days[0] ?? ''}.`;
+  if (count === 1) return `1 day this month wasn't closed: ${days[0] ?? ''}.`;
   // NOT IN MOCKUPS — for CP1 (more than one)
-  return `${count} days this month weren’t closed: ${days.join(', ')}.`;
+  return `${count} days this month weren't closed: ${days.join(', ')}.`;
 }
 export const NO_DAYS_YET = 'No days to show for this month yet.'; // NOT IN MOCKUPS — for CP1
 export const openDay = (dayText) => `Open ${dayText}`; // NOT IN MOCKUPS — for CP1 (screen-reader name of a row)
@@ -370,16 +370,16 @@ export const openDay = (dayText) => `Open ${dayText}`; // NOT IN MOCKUPS — for
 // ----- Export (D7) -----
 export const EXPORT_TITLE = 'Export payments';
 export const EXPORT_HINT =
-  'Downloads a CSV file (opens in Excel or Google Sheets). It holds students’ names and amounts, so each download is logged.';
+  'Downloads a CSV file (opens in Excel or Google Sheets). It holds students\' names and amounts, so each download is logged.';
 export const FROM = 'From';
 export const TO = 'To';
-export const DAYS_AFTER_TODAY = 'Days after today can’t be chosen.'; // the calendar's gray line (v0.817, v0.818)
+export const DAYS_AFTER_TODAY = 'Days after today can\'t be chosen.'; // the calendar's gray line (v0.817, v0.818)
 export const SCHOOL = 'School';
 export const FROM_TOP_BAR = '(from the top bar)';
 export const exportSummary = (count, cents) => `${paymentsCount(count)} · ${money(cents)}`;
 export const EXPORT_COUNTING = 'Counting…'; // NOT IN MOCKUPS — for CP1
 export const DOWNLOAD_CSV = 'Download CSV';
-export const EXPORT_FAILED = 'Couldn’t make the file. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825); the Download button is the retry
+export const EXPORT_FAILED = 'Couldn\'t make the file. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825); the Download button is the retry
 export const EXPORT_DONE = 'CSV downloaded'; // NOT IN MOCKUPS — for CP1
 // Date problems. NOT IN MOCKUPS — for CP1
 export const DATE_MISSING = 'Pick a date.';
@@ -390,7 +390,7 @@ export const csvFileName = (school, from, to) => `${school}-${from}-to-${to}.csv
 
 // ----- Printed page (D8) -----
 export const printTitle = (school) => `Daily report · ${school}`;
-export const SCHOOL_NAME = 'Jae H. Jeong’s U.S. Taekwondo Center';
+export const SCHOOL_NAME = 'Jae H. Jeong\'s U.S. Taekwondo Center';
 export const printedBy = (when, name) => `printed ${when} by ${name}`;
 export const PRINT_NOT_CLOSED = 'Not closed yet'; // D8: "If the day isn't closed yet, the count line says 'Not closed yet'"
 export const COUNTED_BY = 'Counted by: ______________________';
@@ -415,18 +415,18 @@ export const D_RETURNED_CHECK = 'Returned check';
 export const D_HANDED_IN = 'Handed in';
 export const D_RETURNED = 'Returned';
 export const recordedAt = (whenText, name) => `${whenText} by ${name}`;
-export const DETAIL_HINT = 'Payments are changed on the event’s page in Testing, not here.';
+export const DETAIL_HINT = 'Payments are changed on the event\'s page in Testing, not here.';
 // A Color Belt private testing payment has no event: it is changed on the Private testing tab (v0.813).
 export const DETAIL_HINT_PRIVATE = 'Payments are changed on the Private testing tab in Testing, not here.';
 export const OPEN_IN_TESTING = 'Open in Testing';
 // A camp payment's detail (Camps v0.707): the camp's days, and the way to the camp's page.
 export const D_CAMP_DAYS = 'Camp days'; // (not in the mockups)
 export const D_PAID_AT = 'Paid at'; // (not in the mockups) the school whose drawer has a camp payment
-export const DETAIL_HINT_CAMP = 'Payments are changed on the camp’s page in Camps, not here.'; // (not in the mockups)
+export const DETAIL_HINT_CAMP = 'Payments are changed on the camp\'s page in Camps, not here.'; // (not in the mockups)
 // A Black Belt payment, refund or returned check (B3, B4).
-export const DETAIL_HINT_BLACK_BELT = 'Payments are changed on the candidate’s page in Black Belt testing, not here.';
+export const DETAIL_HINT_BLACK_BELT = 'Payments are changed on the candidate\'s page in Black Belt testing, not here.';
 export const OPEN_IN_CAMPS = 'Open in Camps'; // (not in the mockups)
-export const DETAIL_LOAD_FAILED = 'Couldn’t load this payment. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
+export const DETAIL_LOAD_FAILED = 'Couldn\'t load this payment. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const DETAIL_LOADING = 'Loading…'; // NOT IN MOCKUPS — for CP1
 // History lines: "Mon, Oct 26, 9:07 AM · Jeffrey changed the amount $70.00 → $65.00"
 export function historyLine(entry, previous) {
@@ -455,11 +455,11 @@ export function historyLine(entry, previous) {
 // ----- Settings (D9) -----
 export const REMINDER_TITLE = 'Close-the-day reminder';
 export const REMINDER_HINT =
-  'From this time, Home shows “Today’s drawer isn’t closed yet” on days the school took payments, until the day is closed.';
+  'From this time, Home shows “Today\'s drawer isn\'t closed yet” on days the school took payments, until the day is closed.';
 export const ON = 'On';
 export const OFF = 'Off';
 export const REMINDER_SWITCH = 'Close-the-day reminder'; // the switch's screen-reader name
-export const COPY_MONDAY = 'Copy each school’s Monday to Tue–Fri';
+export const COPY_MONDAY = 'Copy each school\'s Monday to Tue–Fri';
 export const SETTINGS_FOOT = 'Each change saves at once with a 5-second Undo, and is logged. Only admins see this tab.';
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const timeFor = (weekday, school) => `${weekday} reminder time at ${school}`; // screen-reader name of a dropdown. NOT IN MOCKUPS — for CP1
@@ -469,21 +469,21 @@ export const REMINDER_ON_TOAST = 'Reminder turned on';
 export const REMINDER_OFF_TOAST = 'Reminder turned off';
 export const timeSavedToast = (weekday, school) => `${weekday} at ${school} saved`;
 export const COPIED_TOAST = 'Monday copied to Tue–Fri';
-export const SETTINGS_SAVE_FAILED = 'Couldn’t save. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
+export const SETTINGS_SAVE_FAILED = 'Couldn\'t save. Check the connection, then retry.'; // "retry" like the shared sentences (v0.825)
 
 // ----- Home (D10) -----
-export const DRAWER_NOT_CLOSED = 'Today’s drawer isn’t closed yet.';
-export const schoolDrawerNotClosed = (school) => `${school}’s drawer isn’t closed yet.`;
+export const DRAWER_NOT_CLOSED = 'Today\'s drawer isn\'t closed yet.';
+export const schoolDrawerNotClosed = (school) => `${school}'s drawer isn't closed yet.`;
 export const CLOSE_THE_DAY_LINK = 'Close the day';
 export function earlierNotClosed(count, firstDay) {
-  if (count === 1) return `1 earlier day wasn’t closed: ${dayShort(firstDay)}.`;
+  if (count === 1) return `1 earlier day wasn't closed: ${dayShort(firstDay)}.`;
   // NOT IN MOCKUPS — for CP1 (more than one)
-  return `${count} earlier days weren’t closed, the first on ${dayShort(firstDay)}.`;
+  return `${count} earlier days weren't closed, the first on ${dayShort(firstDay)}.`;
 }
 // One school chosen: that school's days only. NOT IN MOCKUPS — for CP1 (D10 draws the line without a school)
 export function earlierNotClosedAt(school, count, firstDay) {
-  if (count === 1) return `1 earlier day at ${school} wasn’t closed: ${dayShort(firstDay)}.`;
-  return `${count} earlier days at ${school} weren’t closed, the first on ${dayShort(firstDay)}.`;
+  if (count === 1) return `1 earlier day at ${school} wasn't closed: ${dayShort(firstDay)}.`;
+  return `${count} earlier days at ${school} weren't closed, the first on ${dayShort(firstDay)}.`;
 }
 export const OPEN_HISTORY = 'Open History';
 

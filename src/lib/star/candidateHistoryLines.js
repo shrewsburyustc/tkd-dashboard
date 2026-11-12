@@ -177,5 +177,8 @@ export function describeHistoryEntry(entry, { hidden }) {
   if (lines.length === 0) return leftOutMoney ? { hiddenPayment: true } : null;
   // The same words twice in one save (a make-up copies several grades: "Grade changed" for each)
   // are said once.
-  return { text: [...new Set(lines)].join('; '), at: entry.occurredAt, who: entry.actorName || T.HISTORY_STAFF };
+  // Joined with "Registered on the family form", the signed row drops its repeated "on the family form".
+  const said = [...new Set(lines)];
+  if (said.includes(T.HISTORY_REGISTERED_FORM) && said.includes(T.HISTORY_SIGNED)) said[said.indexOf(T.HISTORY_SIGNED)] = T.HISTORY_SIGNED_JOINED;
+  return { text: said.join('; '), at: entry.occurredAt, who: entry.actorName || T.HISTORY_STAFF };
 }

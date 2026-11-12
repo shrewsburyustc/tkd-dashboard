@@ -235,11 +235,11 @@ await check('summary line (3) and the small wording rules', async () => {
   assert.equal(undoTimeLeft(1000, 12000), 0);
   assert.equal(T.markedAsSent('Noah Chen'), 'Marked as sent · Noah Chen');
   // refusal wordings (24)
-  assert.equal(T.markSentRefusal('stale', 'Noah Chen'), 'Noah Chen’s result changed just now, so it wasn’t marked as sent. Check the new result, then email it again.');
-  assert.equal(T.markSentRefusal('not_finished', 'Noah Chen'), 'Noah Chen’s result isn’t finished any more, so it wasn’t marked as sent.');
-  assert.equal(T.markSentRefusal('withdrawn', 'Noah Chen'), 'Noah Chen was removed from this testing. It wasn’t marked as sent.');
+  assert.equal(T.markSentRefusal('stale', 'Noah Chen'), 'Noah Chen\'s result changed just now, so it wasn\'t marked as sent. Check the new result, then email it again.');
+  assert.equal(T.markSentRefusal('not_finished', 'Noah Chen'), 'Noah Chen\'s result isn\'t finished any more, so it wasn\'t marked as sent.');
+  assert.equal(T.markSentRefusal('withdrawn', 'Noah Chen'), 'Noah Chen was removed from this testing. It wasn\'t marked as sent.');
   assert.equal(T.markSentRefusal('not_found', 'Noah Chen'), 'Noah Chen was deleted on another device. Nothing was marked.');
-  assert.equal(T.markSentRefusal('error', 'Noah Chen'), 'Couldn’t mark Noah Chen as sent. Check the connection, then retry.');
+  assert.equal(T.markSentRefusal('error', 'Noah Chen'), 'Couldn\'t mark Noah Chen as sent. Check the connection, then retry.');
   assert.equal(T.undoSentRefusal('stale'), 'That was already undone.');
   assert.equal(T.undoSentRefusal('not_allowed'), 'Too late to undo here. Ask an admin to undo Mark as sent.');
   // R2-07 (v1.045 (4)): an Undo that didn't reach the database says the one shared sentence (the admin's
@@ -248,7 +248,7 @@ await check('summary line (3) and the small wording rules', async () => {
   assert.equal(T.undoSentRefusal('surprise'), T.undoSentRefusal('error'));
   assert.equal(T.TOAST_UNDONE, undefined); // "Undone" is said by the save line now
   assert.equal(T.noEmailOnFile('Noah Chen'), 'Noah Chen has no email for results. Add it with Edit details on the Candidates tab, then try again.');
-  assert.equal(T.addressFailed('Noah Chen'), 'Couldn’t get Noah Chen’s email address. Check the connection, then retry.');
+  assert.equal(T.addressFailed('Noah Chen'), 'Couldn\'t get Noah Chen\'s email address. Check the connection, then retry.');
   assert.equal(T.csvDownloaded('Fall-2026-Star-Testing-results-2026-11-16.csv', 11),
     'Downloaded Fall-2026-Star-Testing-results-2026-11-16.csv (11 candidates). It has dates of birth, emails and payments — keep it private.');
   for (const s of STAR_RESULTS_STATUSES) assert.equal(typeof T.markSentRefusal(s, 'X'), 'string');
@@ -345,7 +345,7 @@ await check('star_undo_result_sent: own send within 10 s, not after (not_allowed
   // the Undo confirmation (21)
   assert.equal(T.undoConfirmTitle('Noah Chen'), 'Undo Mark as sent for Noah Chen?');
   assert.equal(T.undoConfirmBody('2026-11-16'),
-    'This removes the Nov 16 send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn’t really sent.');
+    'This removes the Nov 16 send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn\'t really sent.');
 });
 
 // =====================================================================================
@@ -528,7 +528,7 @@ await check('CSV safety: RFC 4180 quoting, the formula-injection guard (= + - @ 
   assert.equal(csvFileName('Fall 2026 Star Testing', '2026-11-16'), 'Fall-2026-Star-Testing-results-2026-11-16.csv');
   assert.equal(csvFileName('  Spring / Summer: Star   Testing? ', '2027-04-02'), 'Spring-Summer-Star-Testing-results-2027-04-02.csv');
   assert.equal(csvFileName('', '2027-04-02'), 'Star-testing-results-2027-04-02.csv');
-  assert.equal(csvFileName('Mia’s Star Testing', '2027-04-02'), 'Mia’s-Star-Testing-results-2027-04-02.csv');
+  assert.equal(csvFileName('Mia\'s Star Testing', '2027-04-02'), 'Mia\'s-Star-Testing-results-2027-04-02.csv');
 });
 
 // =====================================================================================
@@ -559,7 +559,7 @@ await check('the email for all three kinds: blanks, a private testing, a D AND b
   // a D AND below 245 (OPEN-12): the note, the D subjects joined "A and B"
   const sofia = build('Sofia');
   assert.equal(sofia.kind, 'makeup_d');
-  assert.ok(sofia.body.includes('Sofia received a D in Breaking and Korean Terminology. Sofia’s total is also below the pass mark; only the D subjects are tested again.\n\nWhat to work on: Breaking and Korean Terminology.'));
+  assert.ok(sofia.body.includes('Sofia received a D in Breaking and Korean Terminology. Sofia\'s total is also below the pass mark; only the D subjects are tested again.\n\nWhat to work on: Breaking and Korean Terminology.'));
   assert.ok(sofia.body.includes('with a total of 237.5 out of 315'));
   // below 245, subjects chosen
   const drew = build('Drew');
@@ -578,7 +578,7 @@ await check('the email for all three kinds: blanks, a private testing, a D AND b
   // the 1-subject note wording; a single-D make-up's note when also below
   const one = { firstName: 'Noah', lastName: 'Chen', starsTo: 1, result: { status: 'makeup', makeupReasons: ['d', 'below'], dSubjects: ['Breaking'], needs: ['Breaking'], total: 227.5, passMark: 245, maxScore: 315, private: null } };
   const noah = buildResultMessage({ texts: t.texts, row: one, eventName: 'Fall 2026 Star Testing', testingDate: '2026-11-14', danLabel: '1st Dan' });
-  assert.ok(noah.body.includes('Noah received a D in Breaking. Noah’s total is also below the pass mark; only the D subject is tested again.'));
+  assert.ok(noah.body.includes('Noah received a D in Breaking. Noah\'s total is also below the pass mark; only the D subject is tested again.'));
   assert.ok(noah.body.includes('took the Fall 2026 Star Testing (1st Dan) on Saturday, November 14, 2026, with a total of 227.5 out of 315.'));
   // pieces
   assert.equal(longDate('2026-12-01'), 'Tuesday, December 1, 2026');
@@ -695,7 +695,7 @@ await check('the text rules give the SAME answers as star_result_text_problem �
   for (const [kind, body, code] of codes) assert.equal(resultTextProblem(kind, body), code, `${kind}: ${JSON.stringify(body)}`);
   // R4's accepted texts: exactly 2,000 characters, every blank of a kind, typographic marks
   assert.equal(resultTextProblem('passed', base + 'x'.repeat(2000 - 29)), null);
-  assert.equal(resultTextProblem('passed', 'Hello,\n\n{full name} — {event} ({Dan}) {testing day}: {total} / {max}, pass {pass mark}, {star earned}. We’ll see you, {first name}!'), null);
+  assert.equal(resultTextProblem('passed', 'Hello,\n\n{full name} — {event} ({Dan}) {testing day}: {total} / {max}, pass {pass mark}, {star earned}. We\'ll see you, {first name}!'), null);
   assert.equal(resultTextProblem('makeup_d', '{first name} {full name} {event} {Dan} {testing day} {total} {pass mark} {max} {D subjects} {subjects to work on} {below-pass-mark note}'), null);
   // the length is counted in characters (code points), like char_length: an emoji is ONE
   assert.equal(resultTextProblem('passed', base + '😀'.repeat(2000 - 29)), null);
@@ -705,7 +705,7 @@ await check('the text rules give the SAME answers as star_result_text_problem �
   for (const label of ['first line no-break sp', 'double braces', 'below no subjects', 'direction override']) assert.ok(tests.includes(label), label);
   // the editor's details and messages (48)
   assert.deepEqual(resultTextProblemDetail('passed', `${base} {frist name}`), { code: 'unknown_blank', blank: 'frist name' });
-  assert.equal(T.resultTextProblemText(resultTextProblemDetail('passed', `${base} {frist name}`)), '{frist name} isn’t one of the blanks. Check the spelling, or pick one below.');
+  assert.equal(T.resultTextProblemText(resultTextProblemDetail('passed', `${base} {frist name}`)), '{frist name} isn\'t one of the blanks. Check the spelling, or pick one below.');
   assert.equal(T.resultTextProblemText(resultTextProblemDetail('passed', `${base} {D subjects}`)), '{D subjects} only works in a Make-up with a D email.');
   assert.equal(T.resultTextProblemText(resultTextProblemDetail('makeup_below', base)), 'A make-up email has to say what to work on. Add {subjects to work on}.');
   for (const [kind, body] of invalid) assert.equal(typeof T.resultTextProblemText(resultTextProblemDetail(kind, body)), 'string');

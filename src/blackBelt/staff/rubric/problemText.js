@@ -45,7 +45,7 @@ function bracketWords(code, list, index) {
     case 'brackets_count':
       return 'use 1 to 6 age brackets.';
     case 'bracket_ages':
-      return `${cur ? `${bracketLabel(cur)}: ` : ''}ages must be whole numbers from 0 to 99, and “from” can’t be above “to”.`;
+      return `${cur ? `${bracketLabel(cur)}: ` : ''}ages must be whole numbers from 0 to 99, and "from" can't be above "to".`;
     case 'brackets_order':
       return 'age brackets must go from the youngest to the oldest.';
     case 'brackets_gap':
@@ -53,7 +53,7 @@ function bracketWords(code, list, index) {
     case 'brackets_overlap':
       return `age brackets overlap: ${prev ? bracketLabel(prev) : ''} and ${cur ? bracketLabel(cur) : ''} both cover age ${num(cur?.from)}.`;
     case 'brackets_ends':
-      return 'the first age bracket must start at the youngest (leave “from” empty) and the last must have no end (leave “to” empty).';
+      return 'the first age bracket must start at the youngest (leave "from" empty) and the last must have no end (leave "to" empty).';
     default:
       return null;
   }
@@ -118,7 +118,7 @@ export function describe(problem, dan) {
     const wb = way && hasIndex(p.bracket) ? way.brackets?.[p.bracket] : null;
     switch (code) {
       case 'subject_id':
-        text = 'this subject can’t be read. Remove it and add it again.';
+        text = 'this subject can\'t be read. Remove it and add it again.';
         break;
       case 'subject_name':
         prefix = partName;
@@ -127,8 +127,8 @@ export function describe(problem, dan) {
       case 'subject_name_duplicate':
         prefix = partName;
         return {
-          list: `${partName}: two subjects are named “${subjectName}”.`, // R8
-          field: `Two subjects are named “${subjectName}”. Give each a different name.`, // R8
+          list: `${partName}: two subjects are named "${subjectName}".`, // R8
+          field: `Two subjects are named "${subjectName}". Give each a different name.`, // R8
         };
       case 'credits':
         text = 'credits must be a whole number from 1 to 20.'; // R8
@@ -142,7 +142,7 @@ export function describe(problem, dan) {
         break;
       }
       case 'points_not_worked_out':
-        text = 'the worked-out points don’t match credits × grade points. Open the subject and press Done.';
+        text = 'the worked-out points don\'t match credits × grade points. Open the subject and press Done.';
         break;
       case 'ways_count':
         text = 'a measured subject needs one or two ways.';
@@ -178,7 +178,7 @@ export function describe(problem, dan) {
       default:
         text = way ? bracketWords(code, way.brackets, p.bracket) : null;
     }
-    if (!text) text = 'something in this subject can’t be saved.';
+    if (!text) text = 'something in this subject can\'t be saved.';
     return { list: prefix ? `${prefix}: ${text}` : cap(text), field: cap(text) };
   }
 
@@ -190,7 +190,7 @@ export function describe(problem, dan) {
         text = 'a part name must be 1 to 60 characters.';
         break;
       case 'part_name_duplicate':
-        text = `two parts are named “${partName}”.`;
+        text = `two parts are named "${partName}".`;
         break;
       case 'grade_points_range':
         text = 'grade points must be numbers from 0 to 999 (up to 2 decimals), and A+ above 0.';
@@ -204,7 +204,7 @@ export function describe(problem, dan) {
         text = 'a part needs 1 to 30 subjects.';
         break;
       default:
-        text = 'something in this part can’t be saved.';
+        text = 'something in this part can\'t be saved.';
     }
     return { list: `${prefix}: ${text}`, field: cap(text) };
   }
@@ -229,7 +229,7 @@ export function describe(problem, dan) {
         break;
       case 'extra_item_name_duplicate':
         prefix = 'Extra points';
-        text = `two items are named “${itemName}”.`;
+        text = `two items are named "${itemName}".`;
         break;
       case 'extra_rule':
         text = 'choose Per count or Steps.';
@@ -241,7 +241,7 @@ export function describe(problem, dan) {
         text = 'use 1 to 10 steps.';
         break;
       case 'extra_step_range':
-        text = 'each step needs “at least” as a whole number from 1 to 9999 and points from 0.01 to 999.';
+        text = 'each step needs "at least" as a whole number from 1 to 9999 and points from 0.01 to 999.';
         break;
       case 'extra_steps_order': {
         // The checker may not say which step: find the first one that doesn't go up.
@@ -249,18 +249,18 @@ export function describe(problem, dan) {
         if (k < 1) k = 1;
         const cur = steps[k];
         const prev = steps[k - 1];
-        if (cur && prev && !(cur.at_least > prev.at_least)) text = `steps must go up: “${num(cur.at_least)}+” comes after “${num(prev.at_least)}+”.`; // R8
+        if (cur && prev && !(cur.at_least > prev.at_least)) text = `steps must go up: "${num(cur.at_least)}+" comes after "${num(prev.at_least)}+".`; // R8
         else if (cur && prev) text = `each step must give more points than the one before: ${num(cur.points)} comes after ${num(prev.points)}.`;
         else text = 'steps must go up.';
         break;
       }
       default:
-        text = 'something here can’t be saved.';
+        text = 'something here can\'t be saved.';
     }
     return { list: `${prefix}: ${text}`, field: cap(text) };
   }
 
   // ----- the whole Dan (too big, or not readable) -----
-  text = code === 'too_big' ? 'This Dan is too big to save. Remove some subjects, notes or steps.' : 'This Dan can’t be saved as it is. Cancel and edit it again.';
+  text = code === 'too_big' ? 'This Dan is too big to save. Remove some subjects, notes or steps.' : 'This Dan can\'t be saved as it is. Cancel and edit it again.';
   return { list: text, field: text };
 }

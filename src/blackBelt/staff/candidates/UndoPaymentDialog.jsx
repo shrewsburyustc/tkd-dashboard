@@ -1,4 +1,4 @@
-// UndoPaymentDialog.jsx — the short "Undo Mia Chen’s $870 card payment?" confirmation (admins; a
+// UndoPaymentDialog.jsx — the short "Undo Mia Chen's $870 card payment?" confirmation (admins; a
 // payment, a refund or a returned-check mark — from a payment line's ⋯ in the detail, or a
 // payment from the roster row's ⋯, which acts on the candidate's latest payment, v0.963).
 // Why it exists: contract CONTRACT-0016-B2 §3.5 and open point OP-B1. The database can't undo an

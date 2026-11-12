@@ -5,7 +5,8 @@
 // mockups and to change one line without hunting through the screens.
 // Lines marked "(not in the mockups)" are for cases the mockups don't show; they follow the
 // approved wording's style and are listed for Jeffrey's walkthrough (CP2).
-// The apostrophes are the curly ’ used in the mockups (the school's name keeps its straight ').
+// The apostrophes are straight ' everywhere (the mockups drew curly ones; the shared words and the rest of the
+// dashboard use straight, so the family form does too).
 
 export const SCHOOL = "Jae H. Jeong's U.S. Taekwondo Center";
 export const PAGE_KIND = 'Black Belt testing registration';
@@ -31,7 +32,7 @@ export const LAST_NAME_HINT = 'Spell it exactly as it should be printed on the b
 export const DOB = 'Date of birth';
 export const DOB_HINT = 'Opens a calendar.';
 // The date-of-birth calendar (v1.018): Star's family birthday wording
-export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can\'t be chosen.';
 export const CHOOSE = 'Choose…'; // the empty date field
 export const TESTING_FOR = 'Testing for';
 export const DAN = { 1: '1st Dan', 2: '2nd Dan', 3: '3rd Dan', 4: '4th Dan' };
@@ -41,7 +42,7 @@ export const KUKKIWON_YES = 'Yes, add it';
 export const kukkiwonYesWithFee = (fee) => `Yes, add it (${fee})`;
 export const kukkiwonRangeHint = (min, max) => (min === max ? `The fee is ${min}.` : `The fee depends on the Dan (${min} to ${max}).`);
 export const KUKKIWON_ADDED = 'Added to payment 1.';
-export const HOW_PAY = 'How you’ll pay';
+export const HOW_PAY = 'How you\'ll pay';
 export const AMOUNTS_LATER = 'Amounts show once you choose a Dan.';
 export const onePaymentBy = (date) => `1 payment · by ${date}`;
 export const ONE_PAYMENT_TODAY = '1 payment · today'; // a passed due date counts as today (OP-12; not in the mockups)
@@ -56,17 +57,17 @@ export const itemsLabel = (items) => items.map((item) => (item === 'kukkiwon' ? 
 export const PAY_AT_DESK = 'Pay at the front desk.';
 export const whatDanTested = (danLabel) => `What ${danLabel} is tested on`;
 export const EMAIL = 'Email for results';
-export const EMAIL_HINT = 'Results are sent here. A parent’s email is fine.';
+export const EMAIL_HINT = 'Results are sent here. A parent\'s email is fine.';
 export const CONTINUE = 'Continue';
 
 // Step 1 errors (Form 4)
-export const ERR_FIRST = 'Enter the candidate’s first name.';
-export const ERR_LAST = 'Enter the candidate’s last name.';
+export const ERR_FIRST = 'Enter the candidate\'s first name.';
+export const ERR_LAST = 'Enter the candidate\'s last name.';
 export const ERR_NAME_TOO_LONG = 'Use 60 characters or fewer.';
-export const ERR_NAME_BAD_CHARACTER = 'That name has a character that can’t be used. Remove it.';
-export const ERR_DOB = 'Choose the candidate’s date of birth.';
+export const ERR_NAME_BAD_CHARACTER = 'That name has a character that can\'t be used. Remove it.';
+export const ERR_DOB = 'Choose the candidate\'s date of birth.';
 export const ERR_DAN = 'Choose the Dan the candidate is testing for.';
-export const ERR_PLAN = 'Choose how you’ll pay.';
+export const ERR_PLAN = 'Choose how you\'ll pay.';
 export const ERR_EMAIL = 'Enter a full email address, like name@example.com.';
 
 // Step 2 (Form 5, 6, 8, 9)
@@ -94,10 +95,10 @@ export const waiverVersion = (name) => `Version ${name}`;
 export const ACK = 'I have read and agree to the waiver.';
 export const SIGNER = 'Name of the person signing';
 export const signerHintMinor = (first, firstDay) => `A parent or guardian signs, because ${first} is under 18 on ${firstDay}.`;
-export const signerHintAdult = (first, firstDay) => `Filled in from the candidate’s name: ${first} is 18 or over on ${firstDay}, so ${first} signs.`;
+export const signerHintAdult = (first, firstDay) => `Filled in from the candidate's name: ${first} is 18 or over on ${firstDay}, so ${first} signs.`;
 export const SIGNATURE = 'Signature';
 export const SIGNATURE_MINOR = ' (parent or guardian)';
-export const SIGNATURE_HINT = 'Sign with your finger or mouse. Can’t sign here? Please sign at the front desk.';
+export const SIGNATURE_HINT = 'Sign with your finger or mouse. Can\'t sign here? Please sign at the front desk.';
 // Date signed (v0.638, picture R): its words live once in src/components/text.js and are drawn by the
 // shared DateSigned part (src/components/DateSigned.jsx), so nothing is repeated here.
 export const SIGNATURE_BOX ='Signature, draw with finger or mouse'; // the box's accessible name (Form 9)
@@ -115,12 +116,12 @@ export const ERR_SIGNATURE = 'Draw your signature in the box.';
 export const ERR_SIGNATURE_TOO_BIG = 'This signature is too detailed to send. Tap Clear and sign again a little more simply.';
 
 // Banners at the top of step 2 after Send (contract 0016-B1 §4.3)
-export const SEND_FAILED = 'Your registration wasn’t sent. Check your internet connection and try again. Nothing you entered is lost.';
-export const VERIFY_FAILED = 'We couldn’t check this browser. Try again, or ask at the front desk.';
+export const SEND_FAILED = 'Your registration wasn\'t sent. Check your internet connection and try again. Nothing you entered is lost.';
+export const VERIFY_FAILED = 'We couldn\'t check this browser. Try again, or ask at the front desk.';
 export const RATE_LIMITED = 'Too many tries from this connection. Please wait a few minutes, or ask at the front desk.';
-export const CLOSED_WHILE_FILLING = 'Registration closed while you were filling this in, so it wasn’t sent. Please ask at the front desk.';
+export const CLOSED_WHILE_FILLING = 'Registration closed while you were filling this in, so it wasn\'t sent. Please ask at the front desk.';
 // OP-13 working default (not in the mockups)
-export const WAIVER_CHANGED = 'The school’s waiver has changed since you opened this page. Please reload the page to read the new one.';
+export const WAIVER_CHANGED = 'The school\'s waiver has changed since you opened this page. Please reload the page to read the new one.';
 export const RELOAD_PAGE = 'Reload page';
 
 // Requirements panel (Form 3) and Read all (Form 5)
@@ -206,7 +207,7 @@ export const KUKKIWON_TITLE = 'Kukkiwon certificate';
 export const KUKKIWON_STEPS = [
   'Make an account on Tcon, the Kukkiwon website.',
   'Give the front desk your Tcon user ID.',
-  'Upload a passport-style photo in Tcon. Please don’t email it to the school.',
+  'Upload a passport-style photo in Tcon. Please don\'t email it to the school.',
 ];
 export const REFERENCE = 'Reference';
 export const REFERENCE_HINT = 'Mention it at the front desk if anything needs changing, including a wrong email.';
@@ -214,19 +215,19 @@ export const THIS_VISIT = 'Registered on this visit';
 export const visitLine = (name, danLabel, kukkiwon, planName) =>
   `${name} · ${danLabel}${kukkiwon ? ' + Kukkiwon' : ''} · ${planName}`;
 export const VISIT_TOTAL = 'Total';
-export const VISIT_TOTAL_HOW = 'at the front desk, on each plan’s dates';
+export const VISIT_TOTAL_HOW = 'at the front desk, on each plan\'s dates';
 export const PRINT = 'Print or save this page';
 export const REGISTER_ANOTHER = 'Register another candidate';
 
 // When families can't register (Form 8)
-export const NOT_OPEN_TITLE = 'Registration hasn’t opened yet';
+export const NOT_OPEN_TITLE = 'Registration hasn\'t opened yet';
 export const NOT_OPEN_TEXT = 'Please check back later, or ask at the front desk.';
 export const CLOSED_TITLE = 'Registration is closed';
 export const closedOn = (date) => `It closed on ${date}. To register late, please ask at the front desk.`;
 export const CLOSED_TEXT = 'To register late, please ask at the front desk.';
 export const FINISHED_TITLE = 'This Black Belt testing has finished';
 export const FINISHED_TEXT = 'For the next Black Belt testing, please ask at the front desk.';
-export const NOT_FOUND_TITLE = 'This link isn’t working';
+export const NOT_FOUND_TITLE = 'This link isn\'t working';
 export const NOT_FOUND_TEXT = 'Please ask at the front desk for the current registration link.';
-export const LOAD_FAILED_TITLE = 'This page didn’t load';
+export const LOAD_FAILED_TITLE = 'This page didn\'t load';
 export const LOAD_FAILED_TEXT = 'Check your internet connection and try again.';

@@ -1394,13 +1394,9 @@
   /* (The ⋯ sheet's room under a toast is the shared one now: .tsheet ends above the toast, shared.css,
      R2-04 / v1.138. Black Belt's own copy of that rule is gone.) */
 
-  /* BB5 (v0.967): on the full-screen candidate detail the toast ("Changes saved · Undo") sits just
-     ABOVE the bottom buttons (Record payment · Print receipt), never over them. CandidateDialog.jsx
-     measures the buttons' bar and sets --bb-toast-lift (the distance from the bottom of the window
-     to the bar's top edge); 150px is a safe guess until it has measured. */
-  body:has(.bb-detail-phone-buttons) .toast-region {
-    bottom: calc(var(--bb-toast-lift, 150px) + var(--space-8));
-  }
+  /* (BB5, v0.967: the toast sits just ABOVE the candidate detail's pinned buttons, Record payment · Print
+     receipt. That lift is the shared one now: Toast.jsx lifts the toast above any page's pinned bar,
+     v1.139. The --bb-toast-lift variable CandidateDialog.jsx still sets is no longer read.) */
 }
 
 /* ===== The rubric (migration 0024, mockups R1–R14) =====
