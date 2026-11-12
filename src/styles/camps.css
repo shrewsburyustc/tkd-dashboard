@@ -41,6 +41,15 @@
   min-width: 0;
 }
 
+/* The family's school under a camper's name (a camp for both schools on the Both switcher; 0050, v0.757) */
+.cp-rschool {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
 /* "Both schools" under the camp's name */
 .cp-heldat {
   display: block;

@@ -110,7 +110,7 @@ import {
   campToday,
 } from '../../lib/camps/campsApi.js';
 import {
-  campLink, campTag, campWeeks, defaultWeekIndex, lastDay, newestStandingRefund, overpaidCents, paymentSchoolFor, refundStands, signupState,
+  campLink, campLinks, campTag, campWeeks, defaultWeekIndex, lastDay, newestStandingRefund, overpaidCents, paymentSchoolFor, refundStands, rowsForSchool, signupState,
   standingPayments,
 } from '../../lib/camps/campRules.js';
 import { buildCampReceipt } from '../../lib/camps/campReceipt.js';
@@ -318,6 +318,7 @@ export default function CampPage({
     onRefreshProfile,
     setBanner,
     reload: reloadQuiet,
+    locationKey, // Print roster follows the switcher (0050)
     onDeleted: () => onBack({ replace: true }),
   });
 
@@ -326,6 +327,8 @@ export default function CampPage({
   const fill = useCampFillIn({
     campId,
     campName: camp?.name ?? '',
+    // 0050: a family filled in at the desk of a camp for both schools is a camper of this device's school
+    deskSchool: camp?.bothSchools ? paymentSchoolFor(deviceLocation) : null,
     isAdmin,
     isPhone,
     screenLocked,
@@ -463,9 +466,16 @@ export default function CampPage({
   }, [detailsHidden]);
 
   // ===== Derived =====
-  const active = roster.filter((r) => r.status === 'active').sort(byFirstName);
-  const removed = roster.filter((r) => r.status !== 'active').sort(byFirstName);
-  const pairs = findPairs(active);
+  // A camp for both schools shows only the school on the switcher (the families that used that school's link);
+  // Both shows everyone, with each family's school under the name (0050, rulebook v0.757).
+  const shownRoster = rowsForSchool(roster, camp, locationKey);
+  const showSchool = Boolean(camp?.bothSchools) && locationKey === 'both';
+  const active = shownRoster.filter((r) => r.status === 'active').sort(byFirstName);
+  const removed = shownRoster.filter((r) => r.status !== 'active').sort(byFirstName);
+  // A possible duplicate is camp-wide (the database finds it by name across both schools' links): its pair is built from every
+  // active row, and shown when either family is on this roster, so the tag's Review always opens (review of 0050).
+  const shownIds = new Set(shownRoster.map((r) => r.id));
+  const pairs = findPairs(roster.filter((r) => r.status === 'active')).filter((p) => shownIds.has(p.first.id) || shownIds.has(p.second.id));
   // Weeks (multi-week option A): the week containing today, else the next, else the last.
   const weeks = campWeeks(days);
   const weekIndex = chosenWeek !== null && chosenWeek < weeks.length ? chosenWeek : defaultWeekIndex(weeks, today);
@@ -1138,6 +1148,7 @@ export default function CampPage({
         schools: schools.status === 'ok' ? schools.schools : [],
         printedOn: campToday(), // today at the school
         printedByName: name,
+        camperSchool: current.roster?.find((r) => r.id === camperId)?.school ?? null, // 0050: a both-schools camp's receipt names the camper's school
       });
       return { ...open, data };
     });
@@ -1346,14 +1357,18 @@ export default function CampPage({
       // failure shows its amber note INSIDE the box (shared words), and the PNG is named
       // "April Vacation Camp QR code.png" (both schools) or "Veterans Day Camp - Worcester QR
       // code.png" (one school: the box adds the school when `school` is set — option B).
-      const url = campLink(camp.publicCode); // '' for a damaged code: then no card is offered
+      // One card per school's link (0050): a camp for both schools has two, Worcester's and Shrewsbury's; a damaged
+      // code gets no card.
+      const links = campLinks(camp)
+        .map((l) => ({ url: campLink(l.code), school: T.schoolName(l.school), heading: T.schoolName(l.school) }))
+        .filter((l) => l.url !== '');
       dialogElement = (
         <RegistrationLinkBox
           key={dialog.key}
           title={T.REGISTRATION_LINK}
           eventName={camp.name}
           intro={T.linkDialogLine(state, camp)}
-          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.campSchoolLine(camp) }] : []}
+          links={links}
           onCopied={() => showToast(T.TOAST_LINK_COPIED, { icon: false })}
           onClose={closeDialog}
           isPhone={isPhone}
@@ -1707,6 +1722,7 @@ export default function CampPage({
         notSavedId={notSavedId}
         updatedAt={live.updatedAt}
         detailsHidden={detailsHidden}
+        showSchool={showSchool}
         handlers={{
           onOpen: (row, el) => openCamper(row, el),
           onMore: (row, anchor) => openMenu('camper', row, anchor),

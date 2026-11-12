@@ -96,7 +96,9 @@ function isBlank(form, camp) {
 export const closedWords = (signupState, closesOn, today) =>
   (signupState === 'closed' && closesOn && today > closesOn ? T.FILL_IN_PAST_CLOSING_STAFF : T.FILL_IN_CLOSED_STAFF);
 
-export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked, today, onNoAccess, onRefreshProfile, onSent, onClosedProblem }) {
+// deskSchool (0050): for a camp for BOTH schools, This device's school (the family is a camper of the school whose
+// desk filled them in); null for a camp for one school (the camp's own school).
+export function useCampFillIn({ campId, campName, deskSchool = null, isAdmin, isPhone, screenLocked, today, onNoAccess, onRefreshProfile, onSent, onClosedProblem }) {
   const [state, setState] = useState(null);
   const ref = useRef(state);
   useLayoutEffect(() => {
@@ -185,7 +187,7 @@ export function useCampFillIn({ campId, campName, isAdmin, isPhone, screenLocked
     const camp = campOf(d.staff);
     const kind = kindOf(d.staff);
     const body = buildBody({ form: d.form, camp, kind, waiverVersion: camp.waiverVersion, signature, submissionId: d.submissionId, honeypot: '', startedAt: 0, token: '' });
-    const res = await staffSignup(campId, body);
+    const res = await staffSignup(campId, body, deskSchool);
     if (keyRef.current !== d.key) {
       // Closed while saving (only closeNow can: Hide private details switched on, v0.746). The box
       // can't show its note any more: a family that was saved shows on the roster; any other answer

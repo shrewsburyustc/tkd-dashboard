@@ -612,6 +612,20 @@
 //       Finance tests before and after; re-run safety; 0035 after 0044 is
 //       refused by 0035's guard (known) - see step0044 below. Run only
 //       this step with   node run.mjs --only-step0044
+//   step0050. 0050 (Camps sign-ups carry the school they came from: a
+//       second family link per both-schools camp, camp_signups.school,
+//       Fill in's p_school, the roster's school column; v0.757) on its own
+//       database in the production order (liveOrderTo0025, then 0027,
+//       0026, 0028, 0029, 0031, 0030, 0032, 0033, 0034, 0036, 0041, 0042,
+//       0043, 0039) with a Worcester camp (a family, one payment) and a
+//       both-schools camp made before it: the pre-apply check, exactly the
+//       planned fingerprint lines move, nothing is written but the new
+//       columns (Finance's reports the same), the backfill, 0050's tests
+//       and the camps tests (0013, 0017, 0018, 0022, 0026, 0027, 0033,
+//       0043, 0039) before and after, the app's calls as role
+//       authenticated / camps_registrar / anon, and re-run safety - see
+//       step0050 below. Run only this step with
+//       node run.mjs --only-step0050
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -667,6 +681,7 @@ const onlyStep0041 = process.argv.includes('--only-step0041');
 const onlyStep0042 = process.argv.includes('--only-step0042');
 const onlyStep0040 = process.argv.includes('--only-step0040');
 const onlyStep0043 = process.argv.includes('--only-step0043');
+const onlyStep0050 = process.argv.includes('--only-step0050');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStep0044 = process.argv.includes('--only-step0044');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
@@ -1016,6 +1031,15 @@ async function main() {
     }
     return finish();
   }
+  // --only-step0050: just the Camps sign-up school step (0050)
+  if (onlyStep0050) {
+    const prints50 = await step0050();
+    if (prints50) {
+      console.log('\n0050 fingerprints (kind  item  detail):');
+      for (const line of prints50) console.log('  ' + line);
+    }
+    return finish();
+  }
   // --only-step0044: just Color Belt's rolling-check step A (0044)
   if (onlyStep0044) {
     const prints44 = await step0044();
@@ -1351,6 +1375,9 @@ async function main() {
   // step0039: Camps Record refund (its own database, production order: it is pasted after 0043)
   console.log('\nMigration 0039 (Camps Record refund):');
   const after39 = after5 ? await step0039() : null;
+  // step0050: Camps sign-ups carry the school (its own database, production order: it is pasted after 0039)
+  console.log('\nMigration 0050 (Camps: one family link and one roster per school):');
+  const after50 = after5 ? await step0050() : null;
 
   // step0044: Color Belt rolling check, step A - the family form's own Paying by, Edit event Undo in one call, each payment's school
   console.log('\nMigration 0044 (Color Belt: the form\'s own Paying by, Edit event Undo in one call, each payment\'s school):');
@@ -1520,6 +1547,10 @@ async function main() {
   if (after39) {
     console.log('\n0039 fingerprints (kind  item  detail):');
     for (const line of after39) console.log('  ' + line);
+  }
+  if (after50) {
+    console.log('\n0050 fingerprints (kind  item  detail):');
+    for (const line of after50) console.log('  ' + line);
   }
   if (after45) {
     console.log('\n0045 fingerprints (kind  item  detail):');
@@ -10607,6 +10638,442 @@ async function step0039() {
   await tests('after the re-run', [['0039_tests.sql', 'ALL 0039 TESTS PASSED']]);
   await db.close().catch(() => {});
   return prints39;
+}
+
+// The planned moves of step0050 (fingerprint file number -> the lines that move)
+const EXPECTED_0050_MOVES = {
+  '0013': ['function camp_public_camp', 'function camp_public_signup', 'view camp_roster', 'table camp_signups', 'table camps',
+    'trigger camp_signups.camp_signups_before_school', 'trigger camps.camps_before_public_code_2'],
+  '0022': ['function camp_public_camp', 'function camp_public_signup'],
+  '0033': ['view camp_roster'],
+  '0043': ['function camp_public_signup', 'function camp_staff_signup'],
+  '0039': ['view camp_roster'],
+};
+
+// =====================================================================
+// step0050: Camps sign-ups carry the school they came from (0050,
+// rulebook v0.757, docs/Camps/CONTRACT-0050.md)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034, 0036, 0041, 0042, 0043 and 0039 - each only if
+// its file is on this branch; 0050 is pasted after 0039):
+//   a. 0050_fingerprints.sql and 0050_preapply_check.sql are
+//      connector-safe (no "delete" / "drop"); two camps made BEFORE 0050 -
+//      one for Worcester only (the Amy and Bo family, Amy paid at the
+//      Worcester desk) and one for both schools stored at Shrewsbury (the
+//      Cy family); the pre-apply check names the md5s of what 0050 was
+//      built on (0013's camp_public_camp, 0043's camp_public_signup and
+//      camp_staff_signup, 0039's roster) and answers
+//      1 / 0 / 3 / 4 / 0 / 0 / 0 / 2 / 1
+//   b. the camps tests (0013, 0017, 0018, 0022, 0026, 0027, 0033, 0043,
+//      0039) pass BEFORE 0050 (the baseline); 0050_tests.sql stops at its
+//      setup check ("is 0050 applied?")
+//   c. apply 0050: in every other fingerprint file ONLY the planned lines
+//      move (body md5 of camp_public_camp, camp_public_signup and the
+//      roster view's md5; camp_staff_signup's line with its one more
+//      input); 0050's own rows as designed. 0050 changes no row apart from
+//      the new columns: every sign-up, camper, payment and camp the same
+//      (same versions), no history row, the Finance Daily report and
+//      Export of the day the same; the both-schools camp has a second
+//      code, the one-school camp none; each sign-up took its camp's school
+//   d. 0050_tests.sql, then the baseline tests again; AS THE APP (SET ROLE
+//      authenticated with an unlocked admin's token, inputs by NAME as
+//      supabase-js sends them): the 15-input Fill in call still reaches
+//      the core, the 16-input one with p_school too, a bad school ->
+//      invalid / school, the app reads school and public_code_2 (anon
+//      can't read the columns); camps_registrar opens the camp with
+//      either code and signs up through both (rolled back); anon and
+//      camps_registrar can't run Fill in
+//   e. 0050 applied a SECOND time: no fingerprint, row or history change;
+//      0050_tests.sql passes again
+// (No undo file: 0050 only adds two columns, two trigger functions and
+// changes three functions and the roster; to go back, ask Claude - see
+// SETUP.md 0050.)
+// Run only this step with   node run.mjs --only-step0050
+// =====================================================================
+async function step0050() {
+  const L = '[0050] ';
+  const preSql = read('tests', '0050_preapply_check.sql');
+  const migration = read('migrations', '0050_camps_signup_school.sql');
+  const unsafe = [['tests', '0050_fingerprints.sql'], ['tests', '0050_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0050_fingerprints.sql and 0050_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students profile)', '0036_new_students_profile.sql'], ['0041 (Star end time)', '0041_star_end_time.sql'],
+    ['0042 (copy a form to the other school)', '0042_forms_copy_to_school.sql'], ['0043 (Camps Fill in)', '0043_camps_fill_in.sql'],
+    ['0039 (Camps Record refund)', '0039_camps_record_refund.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. two camps with family sign-ups before 0050
+  const claims = JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: CAMPS_ADMIN_SID,
+    amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+  await campsAdminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  const prices = JSON.stringify([1, 2, 3].map((k) => ({ day_count: k, member_early_cents: 7500 * k, member_regular_cents: 8000 * k,
+    nonmember_early_cents: 8500 * k, nonmember_regular_cents: 9000 * k })));
+  const seeded = await run(db, `${L}a Worcester camp (Amy and Bo, Amy paid) and a both-schools camp stored at Shrewsbury (Cy), made before 0050`, `
+    do $$
+    declare
+      v_mon   date := date_trunc('week', (public.testing_today() + 14)::timestamp)::date + 7;
+      v_r     jsonb;
+      v_camp  uuid;
+      v_total integer;
+      v_try   integer;
+      v_kids  jsonb;
+      v_c     record;
+      v_def   record;
+    begin
+      for v_def in select * from (values ('PGlite 0050 camp W', 'worcester', false, array['Amy', 'Bo']),
+                                         ('PGlite 0050 camp B', 'shrewsbury', true, array['Cy'])) as x(name, school, both_s, kids) loop
+        perform set_config('request.jwt.claims', '${claims}', true);
+        v_r := public.camp_add_camp(v_def.school, v_def.both_s, v_def.name, array[v_mon, v_mon + 1, v_mon + 2], '09:00', '15:00',
+                 public.testing_today() - 3, public.testing_today() + 5, public.testing_today() + 5, 5, 12,
+                 '${prices}'::jsonb, '[]'::jsonb, null, 'I agree.');
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'camp_add_camp %', v_r; end if;
+        v_camp := (v_r ->> 'id')::uuid;
+        perform set_config('request.jwt.claims', '', true);
+        select jsonb_agg(jsonb_build_object('first_name', n, 'last_name', 'Before', 'age', 8, 'member', true,
+                 'day_ids', (select jsonb_agg(d.id order by d.day) from public.camp_days d where d.camp_id = v_camp),
+                 'extras', '[]'::jsonb) order by n) into v_kids
+          from unnest(v_def.kids) as n;
+        v_total := 0;
+        for v_try in 1 .. 2 loop
+          select public.camp_public_signup(c.public_code, 'pglite-0050', gen_random_uuid(), v_kids, 'Test Parent', '5085550100',
+                   'Parent', 'Test Contact', '5085550101', 'Friend', 'cash', true, '${TEST_SIGNATURE}', 'camp-2026-10-18',
+                   md5(c.waiver_text), v_total) into v_r
+            from public.camps c where c.id = v_camp;
+          exit when v_r ->> 'status' = 'ok';
+          v_total := (v_r ->> 'new_total_cents')::integer;
+        end loop;
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'sign-up %', v_r; end if;
+      end loop;
+      -- Amy paid at the Worcester desk
+      perform set_config('request.jwt.claims', '${claims}', true);
+      select c.id, c.version into v_c from public.camp_campers c where c.first_name = 'Amy' and c.last_name = 'Before';
+      v_r := public.camp_mark_paid(v_c.id, v_c.version, 'worcester');
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'mark paid %', v_r; end if;
+      perform set_config('request.jwt.claims', '', true);
+    end
+    $$;`);
+  if (!seeded) return null;
+  const campW = await one(db, `select c.id::text from public.camps c where c.name = 'PGlite 0050 camp W'`);
+  const campB = await one(db, `select c.id::text from public.camps c where c.name = 'PGlite 0050 camp B'`);
+  const codeB = await one(db, `select c.public_code from public.camps c where c.id = '${campB}'`);
+
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const answer = (r) => r ? [r.old_staff_signup, r.new_staff_signup, r.replaced_found, r.replaced_as_tested, r.applied_as_tested,
+    r.new_functions, r.new_columns, r.signups, r.both_camps].join(' / ') : 'none';
+  const fnMd5 = (sig) => one(db, `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                                    from pg_proc p where p.oid = to_regprocedure('public.${sig}')`);
+  const STAFF15 = 'camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer)';
+  const STAFF16 = 'camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer, text)';
+  const SIGNUP = 'camp_public_signup(text, text, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer)';
+  // the four things 0050 replaces: camp_public_camp, camp_public_signup, camp_staff_signup, the roster view
+  const md5s = async (staff) => [await fnMd5('camp_public_camp(text)'), await fnMd5(SIGNUP), await fnMd5(staff),
+    await one(db, `select md5(pg_get_viewdef('public.camp_roster'::regclass))`)];
+  const builtOn = await md5s(STAFF15);
+  record(`${L}the pre-apply check names the md5s of what 0050 was built on (0013 camp_public_camp, 0043 camp_public_signup and camp_staff_signup, 0039 roster)`,
+    builtOn.every((m) => m && preSql.includes(m)), builtOn.join(' / '));
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0050: 1 / 0 / 3 / 4 / 0 / 0 / 0 / 2 / 1`, answer(ready) === '1 / 0 / 3 / 4 / 0 / 0 / 0 / 2 / 1', answer(ready));
+
+  // b. the baseline tests
+  const baseline = [['0013_tests.sql', 'ALL 0013 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'],
+    ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0022_tests.sql', 'ALL 0022 TESTS PASSED'],
+    ['0026_tests.sql', 'ALL 0026 TESTS PASSED'], ['0027_tests.sql', 'ALL 0027 TESTS PASSED'],
+    ['0033_tests.sql', 'ALL 0033 TESTS PASSED'], ['0043_tests.sql', 'ALL 0043 TESTS PASSED'],
+    ['0039_tests.sql', 'ALL 0039 TESTS PASSED']]
+    .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file)));
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0050', baseline);
+  // ... and 0050's own tests before 0050: they stop at once at their setup
+  // check with a clear message (nothing else runs; rolled back)
+  let early = '';
+  try {
+    await db.exec(read('tests', '0050_tests.sql').replaceAll('<paste-admin-UID-here>', ADMIN_UID)
+      .replaceAll('<paste-desk-UID-here>', DESK_UID));
+  } catch (error) {
+    early = error.message;
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}0050_tests.sql BEFORE 0050 stops at its setup check ("is 0050 applied?")`,
+    /TEST SETUP: camps\.public_code_2 \/ camp_signups\.school/.test(early), early || 'it ran');
+
+  // c. apply 0050: only the planned lines move
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0041', '0042',
+    '0043', '0039', '0050'].filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0050');
+  const before = await printsOf(db, numbers);
+  // every sign-up (without the school), camper, payment and camp (without public_code_2), the history's size and
+  // last row, as one md5
+  const snapSql = `select md5(
+       coalesce((select string_agg((to_jsonb(s) - 'school')::text, ',' order by s.id) from public.camp_signups s), '')
+    || coalesce((select string_agg((to_jsonb(c) - 'public_code_2')::text, ',' order by c.id) from public.camps c), '')
+    || coalesce((select string_agg(to_jsonb(c)::text, ',' order by c.id) from public.camp_campers c), '')
+    || coalesce((select string_agg(to_jsonb(p)::text, ',' order by p.id) from public.camp_payments p), '')
+    || (select count(*) from public.change_log)::text || '/' || coalesce((select max(l.id) from public.change_log l), 0)::text)`;
+  const dataBefore = await one(db, snapSql);
+  // Finance, as the admin: the Daily report and the Export of today, as text
+  const asAdmin = async (sql) => {
+    let out;
+    try {
+      await db.exec('begin;');
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+      out = (await db.query(sql)).rows[0]?.r;
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    return out;
+  };
+  const financeSql = `select (public.finance_day('worcester', public.testing_today())::text || '|'
+      || public.finance_day('shrewsbury', public.testing_today())::text || '|'
+      || public.finance_export('worcester', public.testing_today(), public.testing_today())::text) as r`;
+  const financeBefore = await asAdmin(financeSql);
+  if (!(await run(db, `${L}apply 0050_camps_signup_school.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const parts = (line) => line.split('  ');
+  const fnName = (item) => item.slice(0, item.indexOf('('));
+  const keyOf = (kind, item) => (kind === 'function' ? `function ${fnName(item)}` : `${kind} ${item}`);
+  const md5Only = ['function camp_public_camp', 'function camp_public_signup', 'view camp_roster'];
+  const NEW_COLUMN_OF = { 'table camp_signups': 'school', 'table camps': 'public_code_2' };
+  const oneMore = (item) => item.replace(/\)$/, ', p_school text)');
+  const wrong = [];
+  const moved = {};   // fingerprint file number -> the planned lines that moved
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      const key = keyOf(kind, item);
+      const twinOf = (want) => added.find((a) => parts(a)[0] === kind && parts(a)[1] === want);
+      if (md5Only.includes(key)) {
+        const twin = twinOf(item);
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) { (moved[n] ??= []).push(key); continue; }
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+      } else if (key === 'function camp_staff_signup') {
+        const twin = twinOf(oneMore(item));
+        if (twin && parts(twin)[2].slice(32) === detail.slice(32)) { (moved[n] ??= []).push(key); continue; }
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone, no twin with p_school)'}`);
+      } else if (key in NEW_COLUMN_OF) {
+        // 0013's table lines list the readable columns: the same line with exactly ONE more column, the new one
+        const twin = twinOf(item);
+        const cols = (d) => d.slice(d.indexOf('columns=') + 8).split(',');
+        const head = (d) => d.slice(0, d.indexOf('columns='));
+        if (twin && head(parts(twin)[2]) === head(detail)
+            && JSON.stringify(cols(parts(twin)[2]).filter((c) => !cols(detail).includes(c))) === JSON.stringify([`${NEW_COLUMN_OF[key]}>authenticated:SELECT`])
+            && cols(detail).every((c) => cols(parts(twin)[2]).includes(c))) { (moved[n] ??= []).push(key); continue; }
+        wrong.push(`${n}: ${g}${twin ? ` -> ${twin}` : ' (gone)'}`);
+      } else {
+        wrong.push(`${n}: ${g} (moved)`);
+      }
+    }
+    for (const a of added) {
+      const [kind, item] = parts(a);
+      const twinned = gone.some((g) => parts(g)[0] === kind && (parts(g)[1] === item || oneMore(parts(g)[1]) === item));
+      if (!twinned && kind === 'trigger' && (item === 'camp_signups.camp_signups_before_school' || item === 'camps.camps_before_public_code_2')) {
+        (moved[n] ??= []).push(`trigger ${item}`);   // 0013's file lists every trigger of the camp tables
+        continue;
+      }
+      if (!twinned) wrong.push(`${n}: added ${a}`);
+    }
+  }
+  const expected = EXPECTED_0050_MOVES;
+  for (const [n, items] of Object.entries(expected)) {
+    const got = moved[n] ?? [];
+    if (got.length !== items.length || !items.every((x) => got.includes(x))) {
+      wrong.push(`${n}: planned ${items.join(', ')} - moved ${got.join(', ') || 'nothing'}`);
+    }
+  }
+  for (const n of Object.keys(moved)) if (!expected[n]) wrong.push(`${n}: moved ${moved[n].join(', ')}`);
+  record(`${L}fingerprints: exactly the planned lines moved (body md5 of camp_public_camp, camp_public_signup and the roster view; camp_staff_signup's line with p_school); everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files; ${JSON.stringify(moved)}`);
+  const prints50 = after['0050_fingerprints.sql'];
+  const fn = (name) => prints50.find((l) => l.startsWith(`function  ${name}(`)) || '';
+  const tail = (vol, definer, rights, returns = 'jsonb') =>
+    ` lang=plpgsql volatility=${vol} returns=${returns} definer=${definer} settings=search_path="" owner=postgres rights=${rights}`;
+  const STAFF = 'authenticated:EXECUTE,postgres:EXECUTE';
+  const REG = 'camps_registrar:EXECUTE,postgres:EXECUTE';
+  record(`${L}0050 fingerprints: camp_staff_signup (16 inputs, one version) signed-in staff only; camp_public_camp (stable) and camp_public_signup camps_registrar only; the two trigger functions internal`,
+    fn('camp_staff_signup').startsWith('function  camp_staff_signup(p_camp_id uuid, p_submission_id uuid, p_children jsonb, p_parent_name text, p_parent_phone text, p_parent_relation text, p_emergency_name text, p_emergency_phone text, p_emergency_relation text, p_paying_by text, p_acknowledged boolean, p_signature text, p_ack_version text, p_waiver_version text, p_expected_total_cents integer, p_school text)  ')
+      && fn('camp_staff_signup').endsWith(tail('v', 'true', STAFF))
+      && fn('camp_public_camp').endsWith(tail('s', 'true', REG)) && fn('camp_public_signup').endsWith(tail('v', 'true', REG))
+      && fn('camps_keep_public_code_2').endsWith(tail('v', 'false', 'postgres:EXECUTE', 'trigger'))
+      && fn('camp_signups_set_school').endsWith(tail('v', 'false', 'postgres:EXECUTE', 'trigger'))
+      && prints50.filter((l) => l.startsWith('function  camp_staff_signup(')).length === 1,
+    ['camp_staff_signup', 'camp_public_camp', 'camp_public_signup', 'camps_keep_public_code_2', 'camp_signups_set_school'].map(fn).join(' | '));
+  const rowOf = (kind, item) => prints50.find((l) => l.startsWith(`${kind}  ${item}  `)) || '';
+  record(`${L}0050 fingerprints: the two columns (the app reads them, nobody else), their four rules, the two triggers and the view (security_invoker, read by authenticated); 14 rows`,
+    rowOf('column', 'camp_signups.school') === 'column  camp_signups.school  text notnull=true default= rights=authenticated:SELECT'
+      && rowOf('column', 'camps.public_code_2') === 'column  camps.public_code_2  text notnull=false default= rights=authenticated:SELECT'
+      && rowOf('constraint', 'camp_signups.camp_signups_school_fk').includes('FOREIGN KEY (school) REFERENCES locations(code)')
+      && rowOf('constraint', 'camps.camps_public_code_2_key').includes('UNIQUE (public_code_2)')
+      && rowOf('constraint', 'camps.camps_public_code_2_check').includes('[a-hjkmnp-z2-9]{8}')
+      && rowOf('constraint', 'camps.camps_public_code_2_both_check').includes('(public_code_2 IS NOT NULL) = both_schools')
+      && /BEFORE INSERT OR UPDATE ON (public\.)?camps /.test(rowOf('trigger', 'camps.camps_before_public_code_2'))
+      && /BEFORE INSERT OR UPDATE ON (public\.)?camp_signups /.test(rowOf('trigger', 'camp_signups.camp_signups_before_school'))
+      && /^view {2}camp_roster {2}[0-9a-f]{32} options=security_invoker=true rights=authenticated:SELECT$/.test(rowOf('view', 'camp_roster'))
+      && prints50.length === 14,
+    prints50.filter((l) => !l.startsWith('function')).join(' | '));
+  const appliedMd5 = await md5s(STAFF16);
+  record(`${L}the pre-apply check names 0050's md5s (camp_public_camp, camp_public_signup, camp_staff_signup, roster)`,
+    appliedMd5.every((m) => m && preSql.includes(m)), appliedMd5.join(' / '));
+  const done = await pre();
+  record(`${L}[pre-apply check] after 0050: 0 / 1 / 3 / 0 / 4 / 2 / 2 / 2 / 1`, answer(done) === '0 / 1 / 3 / 0 / 4 / 2 / 2 / 2 / 1', answer(done));
+  record(`${L}0050 wrote nothing but the new columns: every sign-up, camper, payment and camp the same (versions too), no history row`,
+    dataBefore === (await one(db, snapSql)));
+  record(`${L}Finance unchanged: the Daily reports (Worcester, Shrewsbury) and the Export of today read the same text before and after`,
+    financeBefore !== undefined && financeBefore === (await asAdmin(financeSql))
+      && /PGlite 0050 camp W/.test(financeBefore), (financeBefore ?? 'none').slice(0, 120));
+  record(`${L}the backfill: the both-schools camp got a second code, the one-school camp none; each sign-up took its camp's school (Amy and Bo worcester, Cy shrewsbury)`,
+    (await one(db, `select (select count(*) from public.camps c where c.both_schools and c.public_code_2 ~ '^[a-hjkmnp-z2-9]{8}$' and c.public_code_2 <> c.public_code)::text
+        || '/' || (select count(*) from public.camps c where not c.both_schools and c.public_code_2 is not null)::text
+        || '/' || (select string_agg(c.first_name || ':' || s.school, ',' order by c.first_name)
+                     from public.camp_campers c join public.camp_signups s on s.id = c.signup_id)`)) === '1/0/Amy:worcester,Bo:worcester,Cy:shrewsbury');
+
+  // d. the tests; the app's calls (by name) as role authenticated
+  await tests('after 0050', [['0050_tests.sql', 'ALL 0050 TESTS PASSED'], ...baseline]);
+  await campsAdminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  const code2B = await one(db, `select c.public_code_2 from public.camps c where c.id = '${campB}'`);
+  const kidsSql = (camp) => `(select jsonb_build_array(jsonb_build_object('first_name', 'Dee', 'last_name', 'App', 'age', 8, 'member', true,
+                        'day_ids', jsonb_agg(d.id order by d.day), 'extras', '[]'::jsonb))
+                        from public.camp_days d where d.camp_id = '${camp}')`;
+  const asApp = async (label, sql, check, role = 'authenticated') => {
+    let out;
+    try {
+      await db.exec('begin;');
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+      await db.exec(`set local role ${role};`);
+      out = (await db.query(sql)).rows[0];
+    } catch (error) {
+      out = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[as ${role}] ${label}`, check(out), JSON.stringify(out?.r ? { status: out.r.status, field: out.r.field, new_total_cents: out.r.new_total_cents } : out));
+  };
+  const staffArgs = (camp, extra) => `p_camp_id => '${camp}', p_submission_id => gen_random_uuid(), p_children => ${kidsSql(camp)},
+       p_parent_name => 'Test Parent', p_parent_phone => '5085550100', p_parent_relation => 'Parent',
+       p_emergency_name => 'Test Contact', p_emergency_phone => '5085550101', p_emergency_relation => 'Friend',
+       p_paying_by => 'cash', p_acknowledged => true, p_signature => '${TEST_SIGNATURE}', p_ack_version => 'camp-2026-10-18',
+       p_waiver_version => (select md5(c.waiver_text) from public.camps c where c.id = '${camp}'),
+       p_expected_total_cents => 0${extra}`;
+  await asApp('camp_staff_signup with the old 15 inputs by name and a 0 total -> price_changed (the default school; it reached the core)',
+    `select public.camp_staff_signup(${staffArgs(campB, '')}) as r`, (o) => o?.r?.status === 'price_changed' && o.r.new_total_cents === 22500);
+  await asApp('camp_staff_signup with p_school => worcester on the both-schools camp -> price_changed (it reached the core)',
+    `select public.camp_staff_signup(${staffArgs(campB, ", p_school => 'worcester'")}) as r`, (o) => o?.r?.status === 'price_changed');
+  await asApp('camp_staff_signup with an unknown school -> invalid / school',
+    `select public.camp_staff_signup(${staffArgs(campB, ", p_school => 'boston'")}) as r`,
+    (o) => o?.r?.status === 'invalid' && o.r.field === 'school');
+  await asApp('camp_staff_signup with another school on a one-school camp -> invalid / school',
+    `select public.camp_staff_signup(${staffArgs(campW, ", p_school => 'shrewsbury'")}) as r`,
+    (o) => o?.r?.status === 'invalid' && o.r.field === 'school');
+  await asApp('the app reads camps.public_code_2 and camp_signups.school straight from the tables, and camp_roster.school',
+    `select (select string_agg(c.name || ':' || coalesce(c.public_code_2, '-'), ',' order by c.name) from public.camps c
+              where c.name like 'PGlite 0050%') as t, (select string_agg(distinct s.school, ',') from public.camp_signups s) as s,
+            (select string_agg(r.first_name || ':' || r.school, ',' order by r.first_name) from public.camp_roster r) as ro,
+            (select r.school from public.camp_roster r where r.first_name = 'Cy') as cy`,
+    (o) => o?.t === `PGlite 0050 camp B:${code2B},PGlite 0050 camp W:-` && o.s === 'shrewsbury,worcester'
+      && o.ro === 'Amy:worcester,Bo:worcester,Cy:shrewsbury' && o.cy === 'shrewsbury');
+  await asApp('the app can read camp_roster.school but not UPDATE a sign-up\'s school (permission denied)',
+    `update public.camp_signups set school = 'worcester'`, (o) => /permission denied for table camp_signups/.test(o?.error ?? ''));
+  await asApp('anon can read neither column (permission denied)',
+    `select c.public_code_2 from public.camps c`, (o) => /permission denied for table camps/.test(o?.error ?? ''), 'anon');
+  await asApp('anon can\'t read camp_signups.school (permission denied)',
+    `select s.school from public.camp_signups s`, (o) => /permission denied for table camp_signups/.test(o?.error ?? ''), 'anon');
+  for (const role of ['anon', 'camps_registrar']) {
+    await asApp(`${role} can't run camp_staff_signup (permission denied)`,
+      `select public.camp_staff_signup('${campB}', gen_random_uuid(), '[]'::jsonb, 'a', 'b', 'c', 'd', 'e', 'f', 'cash', true, 's', 'v', 'w', 0, 'worcester')`,
+      (o) => /permission denied for function camp_staff_signup/.test(o?.error ?? ''), role);
+  }
+  await asApp('camps_registrar: camp_public_camp opens the camp with the first code and with the second, the same answer, no school in it',
+    `select (public.camp_public_camp('${codeB}') = public.camp_public_camp('${code2B}')
+             and public.camp_public_camp('${codeB}') ->> 'status' = 'ok'
+             and public.camp_public_camp('${codeB}')::text !~ '"school"') as same`,
+    (o) => o?.same === true, 'camps_registrar');
+  // (camps_registrar can't read camp_days, so the children's JSON is made here, as the owner)
+  const waiverB = await one(db, `select md5(c.waiver_text) from public.camps c where c.id = '${campB}'`);
+  const kidsB = (await db.query(`select ${kidsSql(campB)}::text as k`)).rows[0].k;
+  for (const [which, code] of [['public_code', codeB], ['public_code_2', code2B]]) {
+    await asApp(`camps_registrar: camp_public_signup through ${which} with a 0 total -> price_changed (it reached the core)`,
+      `select public.camp_public_signup('${code}', 'pglite-0050-app', gen_random_uuid(), '${kidsB}'::jsonb, 'Test Parent', '5085550100', 'Parent',
+         'Test Contact', '5085550101', 'Friend', 'cash', true, '${TEST_SIGNATURE}', 'camp-2026-10-18',
+         '${waiverB}', 0) as r`,
+      (o) => o?.r?.status === 'price_changed' && o.r.new_total_cents === 22500, 'camps_registrar');
+  }
+
+  // d2. the second code is retried until it is unused in BOTH columns: with the generator stubbed (inside a
+  //     rolled-back transaction) to answer another camp's FIRST code first, the new second code is the next one
+  await campsAdminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  let genError = '';
+  try {
+    await db.exec(`begin;
+      do $gen$
+      declare
+        v_r      jsonb;
+        v_camp   uuid;
+        v_other  text;
+        v_code2  text;
+        v_n      text;
+      begin
+        select c.public_code into v_other from public.camps c where c.id = '${campW}';
+        execute $q$
+          create or replace function public.testing_new_public_code() returns text language plpgsql volatile as $f$
+          declare v_n integer := coalesce(nullif(current_setting('tkd.test_n', true), ''), '0')::integer;
+          begin
+            perform set_config('tkd.test_n', (v_n + 1)::text, true);
+            if v_n = 0 then return current_setting('tkd.test_first'); end if;
+            return 'rrrrrrrr';
+          end $f$ $q$;
+        perform set_config('tkd.test_first', v_other, true);
+        perform set_config('request.jwt.claims', '${claims}', true);
+        select public.camp_update_camp(c.id, c.version, c.location_code, true, c.name,
+                 array(select d.day from public.camp_days d where d.camp_id = c.id order by d.day),
+                 c.start_time, c.end_time, c.signup_opens_on, c.signup_closes_on, c.early_until, c.min_age, c.max_age,
+                 '${prices}'::jsonb, '[]'::jsonb, c.description, c.waiver_text) into v_r
+          from public.camps c where c.id = '${campW}';
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'edit camp answered %', v_r; end if;
+        select c.public_code_2 into v_code2 from public.camps c where c.id = '${campW}';
+        v_n := current_setting('tkd.test_n', true);
+        if v_code2 is distinct from 'rrrrrrrr' or v_n is distinct from '2' then
+          raise exception 'second code % after % generator calls (expected rrrrrrrr after 2)', v_code2, v_n;
+        end if;
+      end
+      $gen$;
+      rollback;`);
+  } catch (error) {
+    genError = error.message;
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}the second code is retried until unused in both columns (generator stubbed to answer another camp's first code first; rolled back)`,
+    genError === '', genError);
+
+  // e. re-run safety
+  const dataAfter = await one(db, snapSql);
+  await run(db, `${L}apply 0050 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0050 re-run: no fingerprint change, no row or history change`,
+    movedAgain.length === 0 && (await one(db, snapSql)) === dataAfter, movedAgain.join(', '));
+  await tests('after the re-run', [['0050_tests.sql', 'ALL 0050 TESTS PASSED']]);
+  await db.close().catch(() => {});
+  return prints50;
 }
 
 // =====================================================================

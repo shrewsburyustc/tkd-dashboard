@@ -65,6 +65,7 @@ export function useCampActions({
   setBanner,
   reload, // () => Promise — quiet reload of the list / page after a change
   onDeleted, // (camp) => void — e.g. the camp page goes back to the list
+  locationKey = 'both', // the top switcher: Print roster prints only that school's families of a camp for both schools (0050)
 }) {
   const [dialog, setDialog] = useState(null); // { type: 'template' | 'delete', … }
   const [printing, setPrinting] = useState(null); // the loaded camp data while it prints
@@ -203,11 +204,11 @@ export function useCampActions({
       setBanner({ text: T.printLoadFailed, retry: () => startPrint(camp) });
       return;
     }
-    setPrinting({ ...fresh, printedAt: new Date().toISOString() });
+    setPrinting({ ...fresh, school: locationKey, printedAt: new Date().toISOString() });
   }
   // (The camp page already has everything loaded: it prints without a new request.)
   function printLoaded(data) {
-    setPrinting({ ...data, printedAt: new Date().toISOString() });
+    setPrinting({ ...data, school: locationKey, printedAt: new Date().toISOString() });
   }
 
   // ----- Undo of Save as template: delete the new template (as Add camp's Undo deletes the new

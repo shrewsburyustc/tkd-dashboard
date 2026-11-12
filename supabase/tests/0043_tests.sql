@@ -132,7 +132,8 @@ begin
   if v_desk_name is null then
     raise exception 'TEST SETUP: no ACTIVE role-staff row with id %. Paste the front-desk UID into v_desk.', v_desk;
   end if;
-  if to_regprocedure('public.camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer)') is null
+  -- (changed by 0050, rulebook v0.757: after 0050 camp_staff_signup has ONE more input, p_school, with a default)
+  if (to_regprocedure('public.camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer)') is null and to_regprocedure('public.camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer, text)') is null)
      or to_regprocedure('public.camp_staff_form(uuid)') is null then
     raise exception 'TEST SETUP: camp_staff_signup / camp_staff_form are missing (is 0043 applied?)';
   end if;
@@ -543,7 +544,9 @@ begin
   -- ===================================================================
   perform set_config('request.jwt.claims', '', true);
   for v_fname in select unnest(array['camp_staff_form(uuid)',
-                                     'camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer)',
+                                     case when to_regprocedure('public.camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer, text)') is not null
+                                          then 'camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer, text)'
+                                          else 'camp_staff_signup(uuid, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer)' end,
                                      'camp_camper_detail(uuid)']) loop
     select p.oid, p.prosecdef, p.proconfig, p.proacl into v_fn
       from pg_proc p where p.oid = to_regprocedure('public.' || v_fname);

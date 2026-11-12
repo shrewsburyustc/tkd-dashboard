@@ -185,14 +185,47 @@ export function campsForLocation(camps, location) {
   return (camps ?? []).filter((c) => c.locationCode === location || c.bothSchools === true);
 }
 
-// How many ACTIVE campers each camp has: rows [{ campId, status }] → { [campId]: count }.
+// How many ACTIVE campers each camp has: rows [{ campId, status, school }] → { [campId]: count }.
 // A camp with no active camper isn't in the answer (read it with `?? 0`).
-export function campCounts(rows) {
+// On one school's list (location 'worcester' / 'shrewsbury') a camp for BOTH schools counts only the families
+// that used that school's link (migration 0050, rulebook v0.757); bothCampIds = the ids of the camps for both
+// schools. On Both (or without the options) every active camper counts, as before.
+export function campCounts(rows, { location = 'both', bothCampIds = null } = {}) {
   const counts = {};
+  const bySchool = SCHOOL_CODES.includes(location);
   for (const r of rows ?? []) {
-    if (r?.status === 'active') counts[r.campId] = (counts[r.campId] ?? 0) + 1;
+    if (r?.status !== 'active') continue;
+    if (bySchool && bothCampIds?.has(r.campId) && r.school !== location) continue;
+    counts[r.campId] = (counts[r.campId] ?? 0) + 1;
   }
   return counts;
+}
+
+// ----- One link and one roster per school (migration 0050, rulebook v0.757) -----
+
+export const SCHOOL_CODES = ['worcester', 'shrewsbury'];
+export const otherSchool = (code) => (code === 'worcester' ? 'shrewsbury' : 'worcester');
+
+// The family links of a camp: one for a camp for one school; TWO for a camp for both schools — the camp's own
+// link (public_code, the one already given out) is for its stored school, public_code_2 for the other.
+// → [{ school: 'worcester' | 'shrewsbury', code }], Worcester first. A missing code is left out.
+export function campLinks(camp) {
+  if (!camp) return [];
+  const list = [{ school: camp.locationCode, code: camp.publicCode }];
+  if (camp.bothSchools === true) list.push({ school: otherSchool(camp.locationCode), code: camp.publicCode2 });
+  return list
+    .filter((l) => SCHOOL_CODES.includes(l.school) && typeof l.code === 'string' && l.code !== '')
+    .sort((a, b) => SCHOOL_CODES.indexOf(a.school) - SCHOOL_CODES.indexOf(b.school));
+}
+
+// The school of a roster row: the school of the link the family used; the camp's own school when the row has none.
+export const rowSchool = (row, camp) => (SCHOOL_CODES.includes(row?.school) ? row.school : camp?.locationCode ?? null);
+
+// The rows one school's roster shows: for a camp for both schools on a school's switcher, only that school's
+// families; on Both (or for a camp for one school) every row.
+export function rowsForSchool(rows, camp, location) {
+  if (!camp?.bothSchools || !SCHOOL_CODES.includes(location)) return rows ?? [];
+  return (rows ?? []).filter((r) => rowSchool(r, camp) === location);
 }
 
 // ----- Prices (§1.13, §1.20) -----
@@ -605,7 +638,7 @@ export function matchesCardFilter(row, filter, day) {
 // the top switcher — for every camp, so Mark paid never asks. Accepts the device's name
 // ('Worcester') or a code ('worcester'); anything else → null (the screen then sends nothing usable
 // and the database refuses with field 'school').
-export const SCHOOLS = ['worcester', 'shrewsbury'];
+export const SCHOOLS = SCHOOL_CODES; // (defined with the school helpers above)
 export function paymentSchoolFor(deviceLocation) {
   const code = typeof deviceLocation === 'string' ? deviceLocation.toLowerCase() : null;
   return SCHOOLS.includes(code) ? code : null;

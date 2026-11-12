@@ -1,0 +1,58 @@
+{
+  "title": "Camps family form for a camp that is for both schools: no school named at all (proposal for v0.756)",
+  "subtitle": "Jeffrey, 2026-11-11: \"Dont have it say both schools at all. Show me a mockup of what the form will look like for the parents registering.\" Real preview screens of the built page (April Vacation Camp, a camp for both schools), with the school line taken out of the page to show the result. <b>Amber = what differs.</b> The page's header already says \"Jae H. Jeong's U.S. Taekwondo Center\", so the parent still knows whose camp it is; the school line and the \"Where\" row are what go. One-school camps keep their school line.",
+  "width": 2620,
+  "sections": [
+    {
+      "heading": "1 · The form: top of the page (Step 1)",
+      "columns": [
+        { "label": "Today (built, v0.754)", "tone": "today", "items": [
+          { "row": [
+            { "src": "shots/b28-before-1280.png", "shotWidth": 1280, "crop": [376, 120, 528, 310], "scale": 0.85, "marks": [[393, 211, 216, 22]],
+              "caption": "<b>PC:</b> \"U.S.T.C. Worcester & Shrewsbury\" under the dates." },
+            { "src": "shots/b28-before-820.png", "shotWidth": 820, "crop": [146, 120, 528, 310], "scale": 0.85, "marks": [[163, 211, 216, 22]],
+              "caption": "<b>Tablet:</b> the same." },
+            { "src": "shots/b28-before-390.png", "shotWidth": 390, "crop": [10, 130, 370, 350], "scale": 0.85, "marks": [[33, 247, 225, 22]],
+              "caption": "<b>Phone (390 and 320):</b> the same." }
+          ] }
+        ] },
+        { "label": "After (proposed)", "tone": "after", "items": [
+          { "row": [
+            { "src": "shots/b28-after-1280.png", "shotWidth": 1280, "crop": [376, 120, 528, 310], "scale": 0.85, "marks": [[393, 211, 130, 22]],
+              "caption": "<b>PC:</b> the line is gone; the hours follow the dates. Nothing replaces it." },
+            { "src": "shots/b28-after-820.png", "shotWidth": 820, "crop": [146, 120, 528, 310], "scale": 0.85, "marks": [[163, 211, 130, 22]],
+              "caption": "<b>Tablet:</b> the same." },
+            { "src": "shots/b28-after-390.png", "shotWidth": 390, "crop": [10, 130, 370, 350], "scale": 0.85, "marks": [[33, 247, 130, 22]],
+              "caption": "<b>Phone (390 and 320):</b> the same; the card is one line shorter." }
+          ] }
+        ], "note": "No \"Both schools\", no \"Worcester & Shrewsbury\", no \"held at\", no street address. The rest of the card (dates, hours, ages, pizza party, early price, the camp's own description) is unchanged." }
+      ]
+    },
+    {
+      "heading": "2 · After sending: \"You're signed up\"",
+      "columns": [
+        { "label": "Today (built, v0.754)", "tone": "today", "items": [
+          { "row": [
+            { "src": "shots/b28s-before-1280.png", "shotWidth": 1280, "crop": [376, 240, 528, 320], "scale": 0.85, "marks": [[393, 411, 494, 36]],
+              "caption": "<b>PC:</b> a \"Where\" row: \"U.S.T.C. Worcester & Shrewsbury\"." },
+            { "src": "shots/b28s-before-820.png", "shotWidth": 820, "crop": [146, 240, 528, 320], "scale": 0.85, "marks": [[163, 411, 494, 36]],
+              "caption": "<b>Tablet:</b> the same." },
+            { "src": "shots/b28s-before-390.png", "shotWidth": 390, "crop": [10, 250, 370, 330], "scale": 0.85, "marks": [[33, 461, 325, 38]],
+              "caption": "<b>Phone:</b> the same." }
+          ] }
+        ] },
+        { "label": "After (proposed)", "tone": "after", "items": [
+          { "row": [
+            { "src": "shots/b28s-after-1280.png", "shotWidth": 1280, "crop": [376, 240, 528, 320], "scale": 0.85, "marks": [[393, 414, 494, 28]],
+              "caption": "<b>PC:</b> the \"Where\" row is gone; \"About the camp\" follows \"Camp\"." },
+            { "src": "shots/b28s-after-820.png", "shotWidth": 820, "crop": [146, 240, 528, 320], "scale": 0.85, "marks": [[163, 414, 494, 28]],
+              "caption": "<b>Tablet:</b> the same." },
+            { "src": "shots/b28s-after-390.png", "shotWidth": 390, "crop": [10, 250, 370, 330], "scale": 0.85, "marks": [[33, 468, 325, 28]],
+              "caption": "<b>Phone:</b> the same." }
+          ] }
+        ], "note": "The \"Pay at the school before camp\" words are the same for every camp and name no school, so they stay." }
+      ]
+    }
+  ],
+  "footer": "<b>Also changes with it (words only, not drawn):</b> the <b>registration link's QR card</b> (the dashboard's Registration link box, the picture staff print or save) has no school heading under the camp's name, and the <b>printed receipt</b> has no \"School\" row, for a camp for both schools. A one-school camp's QR card and receipt still say \"Worcester\" or \"Shrewsbury\". <b>Staff screens:</b> the camp list's \"Both schools\" under the camp's name, its School column on the Both switcher, and Edit camp's School choice (Worcester | Shrewsbury | Both schools) are how staff say which schools a camp is for; they stay unless you want them gone too (question 1). <b>No database change.</b>"
+}

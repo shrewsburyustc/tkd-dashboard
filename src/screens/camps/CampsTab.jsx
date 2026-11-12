@@ -140,6 +140,7 @@ export default function CampsTab({
     onRefreshProfile,
     setBanner,
     reload: reloadQuiet,
+    locationKey,
   });
   useEffect(() => {
     onModalOpenChange(actions.dialogOpen);

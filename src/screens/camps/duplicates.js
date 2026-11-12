@@ -52,6 +52,10 @@ export function compareRows(first, second, campDays, detailsHidden = false) {
   return [
     { key: 'signedUp', label: T.CMP_SIGNED_UP, first: T.signedUpStamp(first.createdAt), second: T.signedUpStamp(second.createdAt), plain: true },
     { key: 'reference', label: T.CMP_REFERENCE, first: first.reference, second: second.reference, plain: true },
+    // Two families of a camp for both schools can share a name: say which school's link each used (0050).
+    ...(first.school && second.school && first.school !== second.school
+      ? [{ key: 'school', label: T.SCHOOL, first: T.schoolName(first.school), second: T.schoolName(second.school), plain: true }]
+      : []),
     { key: 'days', label: T.CMP_DAYS, first: T.camperDaysText(first, campDays), second: T.camperDaysText(second, campDays) },
     { key: 'extras', label: T.CMP_EXTRAS, first: extrasShort(first), second: extrasShort(second) },
     { key: 'payingBy', label: T.CMP_PAYING_BY, first: T.payingByText(first.payingBy), second: T.payingByText(second.payingBy), hidden: detailsHidden },

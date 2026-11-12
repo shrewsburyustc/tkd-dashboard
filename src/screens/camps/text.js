@@ -138,6 +138,9 @@ export const schoolColumn = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolN
 // The camp's school wherever one line is shown (the Registration link box's card heading, the printed
 // receipt's School line, the camp page): "Worcester", "Shrewsbury" or "Both schools".
 export const campSchoolLine = schoolColumn;
+// The School line of a camper's receipt (0050): the camper's own school. A camp for one school: its school; a camp for both
+// schools: the school of the link the family used (the camp's own school when the row has none).
+export const receiptSchoolLine = (camp, camperSchool) => schoolName(camp.bothSchools ? (camperSchool ?? camp.locationCode) : camp.locationCode);
 export const NO_CAMPS_ADMIN = 'No camps yet. Add one with Add camp.'; // (not in the mockups)
 export const NO_CAMPS_STAFF = 'No camps yet. An admin adds them.'; // (not in the mockups; §8 Empty states, v0.53)
 export const NO_UPCOMING = 'No upcoming camps.'; // (not in the mockups)

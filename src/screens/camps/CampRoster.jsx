@@ -318,6 +318,7 @@ export default function CampRoster({
   notSavedId,
   updatedAt = null, // when the page last loaded fresh data (useLiveLoad) — shown as "Updated …"
   detailsHidden = false, // Hide private details is on: no money on the roster (v0.722)
+  showSchool = false, // a camp for both schools on the Both switcher: each family's school under the name (0050, v0.757)
   handlers, // { onOpen(row, el), onMore(row, el), onMarkPaid(row, method), onReview(row, el), onReviewPair(pair, el), onCheckIn(row, day), onUndoCheckIn(row, day) }
 }) {
   const [popover, setPopover] = useState(null); // { rowId, anchor }
@@ -509,6 +510,8 @@ export default function CampRoster({
       {T.camperLabel(row)}
     </button>
   );
+  // The family's school, a small gray line under the name (only a both-schools camp on Both).
+  const schoolLine = (row) => (showSchool && row.school ? <span className="cp-rschool">{T.schoolName(row.school)}</span> : null);
   const more = (row) =>
     showMore ? (
       <IconButton
@@ -583,6 +586,7 @@ export default function CampRoster({
                   {more(row)}
                 </span>
               </div>
+              {schoolLine(row)}
               {note && <span className="cp-rnote">{note}</span>}
               <div className="cp-rdays">{shownDays.map((d) => cell(row, d, true))}</div>
             </div>
@@ -640,6 +644,7 @@ export default function CampRoster({
                       {T.TAG_NOT_SAVED}
                     </span>
                   )}
+                    {schoolLine(row)}
                     {note && <span className="cp-rnote">{note}</span>}
                   </th>
                   {!detailsHidden && (

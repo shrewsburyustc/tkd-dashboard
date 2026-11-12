@@ -22,6 +22,7 @@ import {
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
   overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
   paidTagParts, rosterRoomNeeded, ROSTER_ROOM,
+  campLinks, rowSchool, rowsForSchool, otherSchool, SCHOOL_CODES,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 // The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
@@ -43,6 +44,7 @@ import {
 import * as CampText from '../../screens/camps/text.js';
 import * as StarText from '../../screens/testing/star/candidates/text.js'; // only to compare the shared payment words (R1-07)
 import * as FamilyText from '../../camp/text.js'; // the public family page's words
+import { compareRows } from '../../screens/camps/duplicates.js'; // the possible-duplicate compare box's rows
 // The shared words (src/components/text.js): only to check the "Date signed" sentences (v0.638).
 import * as SharedText from '../../components/text.js';
 // The Edit camp form's pure Undo helpers (rulebook v0.726).
@@ -1637,9 +1639,12 @@ check('R1-07: Camps\' payment line and History words start with Star\'s words an
     ]);
     assert.equal(r.printedOn, '2026-10-29');
     assert.equal(r.printedByName, 'Jeffrey Berg');
-    // A both-schools camp: "Both schools", no single school on a family's paper (v0.754). An extra offered only on some days: Camper detail's words.
+    // A both-schools camp: the camper's own school (the link the family used, 0050 / v0.757; the camp's own school when
+    // the row has none). An extra offered only on some days: Camper detail's words.
     const both = build({ camp: { ...camp, bothSchools: true }, campExtras: [{ name: 'Late pick-up', onlyOn: ['2026-11-25'] }] });
-    assert.deepEqual(both.facts[2], ['School', 'Both schools']);
+    assert.deepEqual(both.facts[2], ['School', 'Worcester']);
+    assert.deepEqual(build({ camp: { ...camp, bothSchools: true }, camperSchool: 'shrewsbury' }).facts[2], ['School', 'Shrewsbury']);
+    assert.deepEqual(build({ camp: { ...camp, bothSchools: false }, camperSchool: 'shrewsbury' }).facts[2], ['School', 'Worcester']); // one school: the camp's own
     assert.deepEqual(both.facts[4], ['Extras', 'Late pick-up — Wed; T-shirt']);
     // Some days only, no extras: the Days line names them and there is no Extras line.
     const some = build({ detail: { ...detail, camper: { ...camper, days: [camper.days[0]] }, breakdown: { extras: [] } } });
@@ -2314,8 +2319,8 @@ check('Fill in: campsApi\'s mapping (campsArgs staffSignupArgs / staffFormShapeO
   };
   const args = staffSignupArgs(added.id, body);
   assert.deepEqual(Object.keys(args).sort(), ['p_ack_version', 'p_acknowledged', 'p_camp_id', 'p_children', 'p_emergency_name', 'p_emergency_phone',
-    'p_emergency_relation', 'p_expected_total_cents', 'p_parent_name', 'p_parent_phone', 'p_parent_relation', 'p_paying_by', 'p_signature',
-    'p_submission_id', 'p_waiver_version']);
+    'p_emergency_relation', 'p_expected_total_cents', 'p_parent_name', 'p_parent_phone', 'p_parent_relation', 'p_paying_by', 'p_school', 'p_signature',
+    'p_submission_id', 'p_waiver_version']); // p_school (0050): This device's school, null = the camp's own
   assert.equal(args.p_parent_relation, 'Mother');
   assert.equal(args.p_emergency_phone, '5085550187');
   const saved = toCamel(rpcOk(b, 'camp_staff_signup', args, STAFF));
@@ -3082,8 +3087,10 @@ check('Both-schools camp: no screen, family or staff, says "held at" or gives on
     assert.ok(!/held at/i.test(code(name).replace(/\/\/.*$/gm, '')), `${name}: no "held at"`);
   }
   assert.ok(!/addressLine\(camp\.address\)/.test(code('../../camp/SignedUp.jsx')) && !code('../../camp/parts.jsx').includes('addressLine('), 'both-schools camps show no street address');
-  assert.ok(code('../../screens/camps/CampPage.jsx').includes('heading: T.campSchoolLine(camp)'), 'the QR card heading');
-  assert.ok(code('./campReceipt.js').includes('T.campSchoolLine(camp)'), 'the receipt');
+  // (Since 0050 / v0.757 the registration link has one card per school, headed by that school, and the receipt names
+  // the camper's own school — see the "one link per school" check below.)
+  assert.ok(code('../../screens/camps/CampPage.jsx').includes('heading: T.schoolName(l.school)'), 'the QR card headings');
+  assert.ok(code('./campReceipt.js').includes('T.receiptSchoolLine(camp, camperSchool)'), 'the receipt');
   // Edit camp keeps the camp's stored school without asking (no "Held at" choice): the camp's own school stays.
   assert.ok(!code('../../screens/camps/sections/CampSection.jsx').includes('values.heldAt'), 'no Held at field');
 });
@@ -3110,6 +3117,136 @@ check('Ages: Edit camp has one Minimum age box; the family page says "Ages 5 and
   assert.ok(code('../../screens/camps/sections/campForm.js').includes('maxAge: NO_MAX_AGE'));
   assert.ok(!/maxAge/.test(code('../../screens/camps/sections/FamilyFormSection.jsx')), 'one box, no maximum');
   assert.ok(!/maxAge/.test(code('../../camp/parts.jsx') + code('../../camp/form.js') + code('../../camp/text.js')), 'the family page never reads a maximum');
+});
+
+// ======================= one link and one roster per school (migration 0050, rulebook v0.757) =======================
+check('mock (0050): a both-schools camp has a second link; a sign-up carries the school of the link; the roster has it', () => {
+  const { backend: b } = makeBackend({ today: '2027-03-10', clock: Date.parse('2027-03-10T14:00:00Z') });
+  const camps = toCamel(rows(b, 'camps', 'id, name, location_code, both_schools, public_code, public_code_2'));
+  const april = camps.find((c) => c.name === 'April Vacation Camp');
+  const veterans = camps.find((c) => c.name === 'Veterans Day Camp');
+  assert.equal(april.bothSchools, true);
+  assert.match(april.publicCode2, /^[a-hjkmnp-z2-9]{8}$/);
+  assert.notEqual(april.publicCode2, april.publicCode);
+  assert.equal(veterans.bothSchools, false);
+  assert.equal(veterans.publicCode2, null); // a camp for one school has one link
+  // campLinks: the camp's own link is for its stored school, the second for the other; Worcester first.
+  assert.deepEqual(campLinks(april), [{ school: 'worcester', code: april.publicCode }, { school: 'shrewsbury', code: april.publicCode2 }]);
+  assert.deepEqual(campLinks({ ...april, locationCode: 'shrewsbury' }), [{ school: 'worcester', code: april.publicCode2 }, { school: 'shrewsbury', code: april.publicCode }]);
+  assert.deepEqual(campLinks(veterans), [{ school: veterans.locationCode, code: veterans.publicCode }]);
+  assert.deepEqual(campLinks(null), []);
+  assert.equal(otherSchool('worcester'), 'shrewsbury');
+  // Both links open the same camp, and the answer names neither school's link nor any school choice.
+  const one = b.publicCamp(april.publicCode);
+  const two = b.publicCamp(april.publicCode2);
+  assert.equal(one.status, 'ok');
+  assert.deepEqual(two, one);
+  assert.equal(JSON.stringify(one).includes(april.publicCode2), false);
+  assert.equal(b.publicCamp('zzzzzzzz').status, 'not_found');
+  // A sign-up through each link: the school of that link.
+  const [d1] = one.camp.days.map((d) => d.day_id);
+  const kid = (first) => ({ first_name: first, last_name: 'Tester', age: 8, member: false, day_ids: [d1], extras: [] });
+  const signUp = (code, first) => {
+    const probe = b.publicSignup(signupArgs(b, code, [kid(first)]));
+    assert.equal(probe.status, 'price_changed');
+    const done = b.publicSignup(signupArgs(b, code, [kid(first)], { expected_total_cents: probe.new_total_cents }));
+    assert.equal(done.status, 'ok');
+    return done;
+  };
+  signUp(april.publicCode, 'Wanda');
+  signUp(april.publicCode2, 'Sheldon');
+  const roster = toCamel(rows(b, 'camp_roster', 'id, first_name, school, camp_id, status', [{ col: 'camp_id', value: april.id }]));
+  assert.equal(roster.find((r) => r.firstName === 'Wanda').school, april.locationCode);
+  assert.equal(roster.find((r) => r.firstName === 'Sheldon').school, otherSchool(april.locationCode));
+  assert.equal(roster.every((r) => SCHOOL_CODES.includes(r.school)), true, 'every camper has a school (the seeded ones too)');
+  // Fill in: This device's school (p_school); blank = the camp's own; an unknown school, or another school on a camp for ONE school, is refused.
+  const camp = b.publicCamp(april.publicCode);
+  const deskBody = (first) => ({
+    submission_id: randomUUID(), children: [kid(first)],
+    parent: { name: 'Sarah Carter', phone: '5085550142', relation: 'Mother' }, emergency: { name: 'Tom Carter', phone: '5085550187', relation: 'Uncle' },
+    paying_by: 'cash', acknowledged: true, signature: 'data:image/png;base64,iVBORw0KGgo=', ack_version: CAMP_ACK_VERSION,
+    waiver_version: camp.waiver_version, expected_total_cents: 0,
+  });
+  const desk = (campId, first, school) => {
+    const probe = rpcOk(b, 'camp_staff_signup', staffSignupArgs(campId, deskBody(first), school), STAFF);
+    if (probe.status !== 'price_changed') return probe;
+    const body = { ...deskBody(first), expected_total_cents: probe.new_total_cents };
+    return rpcOk(b, 'camp_staff_signup', staffSignupArgs(campId, body, school), STAFF);
+  };
+  assert.equal(desk(april.id, 'Dora', 'shrewsbury').status, 'ok');
+  assert.equal(desk(april.id, 'Dave', null).status, 'ok');
+  assert.deepEqual(desk(april.id, 'Dina', 'boston'), { status: 'invalid', field: 'school' });
+  const after = toCamel(rows(b, 'camp_roster', 'first_name, school', [{ col: 'camp_id', value: april.id }]));
+  assert.equal(after.find((r) => r.firstName === 'Dora').school, 'shrewsbury');
+  assert.equal(after.find((r) => r.firstName === 'Dave').school, april.locationCode); // blank = the camp's own school
+  assert.equal(after.some((r) => r.firstName === 'Dina'), false);
+  // A camp for one school: its own school, and no other.
+  const vetPub = b.publicCamp(veterans.publicCode);
+  assert.equal(vetPub.status, 'ok');
+  const vetKid = { first_name: 'Vic', last_name: 'Tester', age: 8, member: false, day_ids: [vetPub.camp.days[0].day_id], extras: [] };
+  const vetBody = (total) => ({ ...deskBody('Vic'), children: [vetKid], waiver_version: vetPub.waiver_version, expected_total_cents: total });
+  assert.deepEqual(rpcOk(b, 'camp_staff_signup', staffSignupArgs(veterans.id, vetBody(0), otherSchool(veterans.locationCode)), STAFF), { status: 'invalid', field: 'school' });
+  // The sign-up's school can't be set from the app (no grant on the column) — it is only the roster's.
+  assert.equal(b.select('camp_signups', 'school', [], [], ADMIN).error.code, '42501');
+});
+
+check('0050: Add camp makes the second link for a both-schools camp only; an old store is upgraded; counts, rows and receipt follow the school', () => {
+  const { backend: b } = makeBackend({ today: '2027-05-01', clock: Date.parse('2027-05-01T14:00:00Z') });
+  const both = rpcOk(b, 'camp_add_camp', addCampArgs('2027-06-07', { p_both_schools: true }));
+  const single = rpcOk(b, 'camp_add_camp', addCampArgs('2027-07-12'));
+  const codes = (id) => rows(b, 'camps', 'public_code, public_code_2', [{ col: 'id', value: id }])[0];
+  assert.match(codes(both.id).public_code_2, /^[a-hjkmnp-z2-9]{8}$/);
+  assert.notEqual(codes(both.id).public_code_2, codes(both.id).public_code);
+  assert.equal(codes(single.id).public_code_2, null);
+  // A saved version-5 store (no school, no second link) becomes version 6 the way 0050 leaves the real tables.
+  const old = defaultCampsData({ today: '2027-03-10' });
+  old.schema = 5;
+  for (const c of old.camps) delete c.public_code_2;
+  for (const s of old.camp_signups) delete s.school;
+  let saved = old;
+  const b6 = createCampsBackend({ loadStore: () => saved, saveStore: (s) => { saved = s; }, now: () => Date.parse('2027-03-10T14:00:00Z'), today: () => '2027-03-10', newId: () => randomUUID() });
+  const upgraded = toCamel(rows(b6, 'camps', 'name, location_code, both_schools, public_code, public_code_2'));
+  assert.equal(upgraded.every((c) => (c.bothSchools ? /^[a-hjkmnp-z2-9]{8}$/.test(c.publicCode2) : c.publicCode2 === null)), true);
+  assert.equal(new Set(upgraded.flatMap((c) => [c.publicCode, c.publicCode2]).filter(Boolean)).size, upgraded.flatMap((c) => [c.publicCode, c.publicCode2]).filter(Boolean).length, 'no code is used twice');
+  const upRoster = toCamel(rows(b6, 'camp_roster', 'school, camp_id'));
+  assert.equal(upRoster.length > 0 && upRoster.every((r) => SCHOOL_CODES.includes(r.school)), true);
+  // The school helpers.
+  const camp = { bothSchools: true, locationCode: 'worcester' };
+  const list = [{ id: 'a', campId: 'c', status: 'active', school: 'worcester' }, { id: 'b', campId: 'c', status: 'active', school: 'shrewsbury' },
+    { id: 'd', campId: 'c', status: 'withdrawn', school: 'shrewsbury' }, { id: 'e', campId: 'x', status: 'active', school: 'shrewsbury' }];
+  assert.deepEqual(rowsForSchool(list, camp, 'worcester').map((r) => r.id), ['a']);
+  assert.deepEqual(rowsForSchool(list, camp, 'shrewsbury').map((r) => r.id), ['b', 'd', 'e']);
+  assert.equal(rowsForSchool(list, camp, 'both').length, 4);
+  assert.equal(rowsForSchool(list, { bothSchools: false, locationCode: 'worcester' }, 'shrewsbury').length, 4); // a one-school camp shows everyone
+  assert.equal(rowSchool({ school: null }, camp), 'worcester');
+  assert.equal(rowSchool({ school: 'shrewsbury' }, camp), 'shrewsbury');
+  assert.deepEqual(campCounts(list), { c: 2, x: 1 });
+  assert.deepEqual(campCounts(list, { location: 'worcester', bothCampIds: new Set(['c']) }), { c: 1, x: 1 }); // 'x' is a one-school camp: counted whole
+  assert.deepEqual(campCounts(list, { location: 'both', bothCampIds: new Set(['c']) }), { c: 2, x: 1 });
+  assert.equal(CampText.receiptSchoolLine(camp, 'shrewsbury'), 'Shrewsbury');
+  assert.equal(CampText.receiptSchoolLine(camp, null), 'Worcester');
+  assert.equal(CampText.receiptSchoolLine({ bothSchools: false, locationCode: 'worcester' }, 'shrewsbury'), 'Worcester');
+  // The screens: the link box lists a card per school, the roster follows the switcher, Print roster too, Fill in sends the device's school.
+  const code = (name) => readFileSync(new URL(name, import.meta.url), 'utf8').split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
+  const page = code('../../screens/camps/CampPage.jsx');
+  assert.ok(page.includes('campLinks(camp)') && page.includes('links={links}'));
+  assert.ok(page.includes('rowsForSchool(roster, camp, locationKey)') && page.includes('showSchool={showSchool}'));
+  assert.ok(page.includes('deskSchool: camp?.bothSchools ? paymentSchoolFor(deviceLocation) : null'));
+  assert.ok(code('../../screens/camps/FillInDialog.jsx').includes('staffSignup(campId, body, deskSchool)'));
+  assert.ok(code('../../screens/camps/PrintRoster.jsx').includes('rowsForSchool(data.roster ?? [], camp, data.school)'));
+  assert.ok(code('../../screens/camps/CampRowMenu.jsx').includes('school: locationKey'));
+  assert.ok(code('../../lib/camps/campsApi.js').includes("'camp_id, status, school'"));
+  // A possible duplicate across the two schools' links (the same name signed up through both): its pair is built from every
+  // active row and shown when either family is on this roster, and the compare box says each family's school.
+  assert.ok(page.includes("findPairs(roster.filter((r) => r.status === 'active')).filter("), 'pairs come from the full roster');
+  const pairRows = [{ id: 'p', school: 'worcester', createdAt: '2027-03-01T10:00:00Z', days: [], extras: [], reference: 'CP-1', totalCents: 0, paidCents: 0 },
+    { id: 'q', school: 'shrewsbury', createdAt: '2027-03-02T10:00:00Z', days: [], extras: [], reference: 'CP-2', totalCents: 0, paidCents: 0 }];
+  const cmp = compareRows(pairRows[0], pairRows[1], [], false);
+  assert.deepEqual(cmp.find((r) => r.key === 'school'), { key: 'school', label: 'School', first: 'Worcester', second: 'Shrewsbury', plain: true });
+  assert.equal(compareRows(pairRows[0], { ...pairRows[1], school: 'worcester' }, [], false).some((r) => r.key === 'school'), false, 'the same school: no school row');
+  // The printed roster of one school says that school; on Both each name carries its school.
+  const print = code('../../screens/camps/PrintRoster.jsx');
+  assert.ok(print.includes('sheetCamp') && print.includes('nameSchool'));
 });
 
 console.log(`${count} groups of checks ran.`);

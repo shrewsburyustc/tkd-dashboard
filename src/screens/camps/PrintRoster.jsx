@@ -12,7 +12,7 @@
 // Props: data = a loaded camp ({ camp, days, roster, today, printedAt }), onDone()
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { attendanceCell, cameCount, payTag } from '../../lib/camps/campRules.js';
+import { attendanceCell, cameCount, payTag, rowsForSchool, SCHOOL_CODES } from '../../lib/camps/campRules.js';
 import { campToday } from '../../lib/camps/campsApi.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import { byFirstName } from './CampRoster.jsx';
@@ -61,14 +61,19 @@ export default function PrintRoster({ data, onDone }) {
   const { camp } = data;
   const days = data.days ?? [];
   const today = data.today ?? campToday();
-  const rows = (data.roster ?? [])
+  // A camp for both schools prints only the school on the switcher (data.school; Both prints everyone), 0050.
+  const rows = rowsForSchool(data.roster ?? [], camp, data.school)
     .filter((r) => r.status === 'active')
     .sort(byFirstName);
+  const oneSchool = camp.bothSchools && SCHOOL_CODES.includes(data.school);
+  const sheetCamp = oneSchool ? { ...camp, bothSchools: false, locationCode: data.school } : camp;
+  const nameSchool = camp.bothSchools && !oneSchool; // Both: the school after each name
 
   return createPortal(
     <div className="camp-print">
       <h1 className="cpr-title">{camp.name}</h1>
-      <p className="cpr-line">{T.campSummaryLine(camp, days.map((d) => d.day), rows.length)}</p>
+      {/* A school's sheet says that school (not "Both schools"); on Both each name carries its school (0050). */}
+      <p className="cpr-line">{T.campSummaryLine(sheetCamp, days.map((d) => d.day), rows.length)}</p>
       <table className="cpr-table">
         <thead>
           <tr>
@@ -90,6 +95,7 @@ export default function PrintRoster({ data, onDone }) {
                 {/* Hidden: no Paid column; "· Possible duplicate" goes after the name (picture 03). */}
                 <th scope="row">
                   {T.camperNameAge(row)}
+                  {nameSchool && row.school ? ` · ${T.schoolName(row.school)}` : ''}
                   {detailsHidden && payTag(row) === 'duplicate' && ` · ${T.TAG_POSSIBLE_DUPLICATE}`}
                 </th>
                 {!detailsHidden && <td>{paidText(row)}</td>}

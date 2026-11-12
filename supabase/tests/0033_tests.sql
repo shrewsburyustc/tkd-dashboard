@@ -552,7 +552,11 @@ begin
        'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents', 'paid_on',
        'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paying_by_on_form']
                              || (case when to_regprocedure('public.camp_record_refund(uuid, integer, text, integer, date, text)') is not null
-                                      then array['refunded_cents'] else array[]::text[] end) then
+                                      then array['refunded_cents'] else array[]::text[] end)
+                             -- (changed by 0050, rulebook v0.757: after 0050 ONE more column, school, comes last)
+                             || (case when exists (select 1 from pg_attribute a where a.attrelid = 'public.camp_signups'::regclass
+                                           and a.attname = 'school' and a.atttypid <> 0)
+                                      then array['school'] else array[]::text[] end) then
     raise exception 'TEST FAILED: F1 camp_roster columns %', v_cols;
   end if;
   if (select r.paying_by_on_form from public.camp_roster r where r.id = v_kit) <> 'card' then

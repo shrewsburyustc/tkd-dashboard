@@ -769,6 +769,10 @@ begin
        'version', 'created_at', 'signup_version', 'reference', 'price_kind', 'signed_up_on', 'signed',
        'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents', 'paid_on',
        'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paying_by_on_form', 'refunded_cents']
+          -- (changed by 0050, rulebook v0.757: after 0050 ONE more column, school, comes last)
+          || (case when exists (select 1 from pg_attribute a where a.attrelid = 'public.camp_signups'::regclass
+                                           and a.attname = 'school' and a.atttypid <> 0)
+                                      then array['school'] else array[]::text[] end)
      or (select a.atttypid from pg_attribute a
           where a.attrelid = 'public.camp_roster'::regclass and a.attname = 'refunded_cents') <> 'integer'::regtype then
     raise exception 'TEST FAILED: G2 camp_roster columns %', v_cols;

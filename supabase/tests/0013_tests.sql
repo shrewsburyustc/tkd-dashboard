@@ -2635,6 +2635,12 @@ begin
   if to_regprocedure('public.camp_record_refund(uuid, integer, text, integer, date, text)') is not null then
     v_staff_fns  := v_staff_fns || array['camp_record_refund', 'camp_undo_refund'];
   end if;
+  --       (changed by 0050, rulebook v0.757: after 0050 the two trigger
+  --       functions that keep a camp's second family code and a sign-up's
+  --       school are helpers)
+  if to_regprocedure('public.camps_keep_public_code_2()') is not null then
+    v_helper_fns := v_helper_fns || array['camps_keep_public_code_2', 'camp_signups_set_school'];
+  end if;
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and (p.proname like 'camp\_%' or p.proname like 'camps\_%')
