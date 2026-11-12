@@ -1113,44 +1113,4 @@ button.cchip--btn:focus-visible {
   font-weight: 500;
 }
 
-.cshow-head {
-  margin: 0;
-  padding: var(--space-4) var(--space-16) var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-.cshow-item {
-  min-height: 44px;
-}
-
-/* Unticked kinds keep a full-color label: the box shows the state (v0.614 review). */
-.cshow-box {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  box-sizing: border-box;
-  border: 2px solid var(--color-border-control);
-  border-radius: 4px;
-  color: var(--color-on-blue);
-}
-
-.cshow-box.is-on {
-  border-color: var(--color-blue);
-  background: var(--color-blue);
-}
-
-.cshow-all {
-  min-height: 44px;
-  color: var(--color-blue);
-}
-
-.cshow-done {
-  min-height: 44px;
-  justify-content: center;
-  color: var(--color-blue);
-  font-weight: 500; /* §7: only 400 and 500 (R4-06) */
-}
+/* The list itself is the shared menu with tick rows (RowMenu, N16, v1.141): no styles of its own here. */

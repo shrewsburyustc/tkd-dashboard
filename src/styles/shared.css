@@ -535,6 +535,12 @@ html.is-reordering .tib-tip {
   color: var(--color-on-blue);
 }
 
+/* app.css's older .menu-check (a ✓ pushed to the row's right end) has margin-left: auto, which also threw this
+   box to the middle of the row, in front of a right-hand label. A tick-box row's box sits at the left. */
+.tmenu-item > .menu-check {
+  margin-left: 0;
+}
+
 .menu-check.is-on {
   border-color: var(--color-blue);
   background: var(--color-blue);
