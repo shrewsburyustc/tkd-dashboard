@@ -8,9 +8,10 @@
 import { useState } from 'react';
 import RegistrationLinkBox from '../components/RegistrationLinkBox.jsx';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
+import { PUBLIC_ORIGIN } from '../lib/publicOrigin.js';
 import { findByWords, pressLikeKeyboard, useLater } from './act.js';
 
-const ORIGIN = 'https://tkd-dashboard.pages.dev';
+const ORIGIN = PUBLIC_ORIGIN; // the same fixed address every real link uses (src/lib/publicOrigin.js)
 
 // A stand-in flyer (each section prints its own; Color Belt's and Star's are letter pages). It is
 // drawn into the page only while printing; the box prints it.
