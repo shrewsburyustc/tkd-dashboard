@@ -31,7 +31,7 @@
 ## Outside steps done by Jeffrey (2026-11-12, guided one at a time, verified from outside)
 
 - Domain-a/b: custom domains `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net` added on the Pages project `tkd-dashboard`; two CNAME lines (`dashboard`, `forms` → `tkd-dashboard.pages.dev`, TTL 4 hrs) added in Squarespace Custom records. Both names answer HTTPS 200; MX, SPF, DKIM, `www` and `pages.dev` unchanged (checked with nslookup/curl).
-- Domain-c: Turnstile widget hostnames now `tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net` (screenshot seen; his confirmation of the Save is still to be re-asked).
+- Domain-c: Turnstile widget hostnames now `tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net` (screenshot seen; Jeffrey confirmed the Save: "The turnstile hostnames are done").
 - Domain-d: `PUBLIC_ORIGIN` (Production) set to the three addresses, he says saved (first save did not stick, redone). **Cannot be verified from outside before the next deployment**; the live checks after the push (Domain-f) prove it.
 - **Batch 3 (built, committed, not pushed):** `src/lib/publicOrigin.js` → `https://forms.ustaekwondo.net`; SETUP status line. Function tests 187, run-checks 21/21, both builds pass; built bundle holds the new address.
 
