@@ -13,7 +13,7 @@ Cloudflare or Square only: never in chat, git, a file or a screenshot.** Detaile
 1. **Merge.** Main merges branch `board-breaking` and Domain's `_headers` / `_redirects` batch (the `/breaking` lines) into `main`,
    runs the checks and both builds, and pushes only when Jeffrey says so. After the push Cloudflare deploys; nothing is reachable yet
    (the family page is off until step 7; the staff page is off by its build switch).
-2. **Logins (Jeffrey + Claude).** SETUP 0051f: Jeffrey makes the two random passwords on his PC (`brk_registrar`, `brk_square`), saves each in
+2. **Logins (Jeffrey + Claude) — DONE 2026-11-13.** SETUP 0051f: Jeffrey makes the two random passwords on his PC (`brk_registrar`, `brk_square`), saves each in
    his password manager, pastes the two `alter role … password '<verifier>'` lines in the SQL Editor, deletes the snippets. Claude checks
    read-only that each login now has a password and that nothing else changed.
 3. **Hyperdrive and bindings (Jeffrey).** SETUP 0051g steps 1–2: two Hyperdrive configurations (`tkd-brk-registrar`, `tkd-brk-square`),
