@@ -28,6 +28,12 @@
 - Website (via Main, 2026-11-12): the school website will be built on Cloudflare Pages (its own project), not Squarespace. So no `/embed/*` path or frame-ancestors allow-list, and nothing for the website in `_headers`, `origins.js` or Turnstile. The only thing left that touches us is the bare name `ustaekwondo.net`: on Cloudflare Pages it needs Cloudflare DNS unless Squarespace can forward it to `www.` over https (unverified). Plan §2b / Q4 stays as is; not urgent (only at website launch, after this work is live). Records list to keep ready: the Squarespace DNS panel (Jeffrey's screenshot, step 1).
 - Checks: Function tests 187 pass, run-checks 21/21, both builds pass.
 
+## The domain's DNS records at Squarespace (Jeffrey's screenshots, 2026-11-12; the list to keep ready)
+
+- **Squarespace Defaults box** (the Coming Soon placeholder; never delete): four `A` records for `@` (198.185.159.144 / .145, 198.49.23.144 / .145), `CNAME www → ext-sq.squarespace.com`, one `HTTPS` record for `@`. TTL 4 hrs.
+- **Custom records box** (all of it is the school's Google Workspace email; never touch): `MX @ priority 1 → smtp.google.com`; `TXT @ → v=spf1 include:_spf.google.com ~all`; `TXT google._domainkey → v=DKIM1; k=rsa; p=…` (public key, shown cut off). TTL 1 hr. This is also the box where our two CNAME lines go (ADD RECORD).
+- Cloudflare Pages → tkd-dashboard → Custom domains: empty before step 2 (project connected to GitHub shrewsburyustc/tkd-dashboard).
+
 ## How a NEW public Function adopts the origin helper + the address constant (for Board Breaking; written 2026-11-12)
 
 A "public Function" = a file under `functions/api/…` that families' browsers POST to (signed out). Copy `functions/_lib/bbRegister.js` / `functions/api/black-belt/[code].js` as the model. In the lib file:
