@@ -6,6 +6,7 @@
 ## Where it stands (2026-11-12)
 
 - **Plan written:** `docs/Domain/TKD-Domain-Plan.md`. Jeffrey's six answers (§6) are still open (relayed by Main).
+- **Correction (2026-11-12, from the Website session, verified):** `ustaekwondo.net` and `www.` show Squarespace's "Coming Soon" placeholder, not a live school website (my first plan said live). Only the Google Workspace email records (MX, SPF, DKIM) are at stake; the school's real current site is probably `jeongsustc.com` (HostGator, unconfirmed, out of scope, never touched). Plan §0, risks and Q4 corrected; new §2b is the one DNS decision shared with the Website project (keep DNS at Squarespace with `app.` and `www.` CNAMEs and the bare name forwarded, or move DNS to Cloudflare with every record copied). My recommendations are unchanged. Layout: `app.` = dashboard; `www.` and the bare name = the new website.
 - **Batch 1, the shared pieces (built, awaiting review, not pushed):** works with the address NOT switched on, so it can merge to `main` early and changes nothing families or staff see:
   - `functions/_lib/origins.js` + `functions/tests/origins.test.mjs` (+ a "list" test in each of the five Function test files): `PUBLIC_ORIGIN` is a comma-separated list; the five Functions (Color Belt, Camps, Star, Black Belt, Forms) use `matchOrigin` / `hostOf`.
   - `src/lib/publicOrigin.js`: the ONE address constant (value still `https://tkd-dashboard.pages.dev`). `eventRules.js`, `campRules.js` and `parts/M5.jsx` import it; the checks use it.
@@ -16,7 +17,29 @@
 
 ## Decisions
 
+- **v1.201 (Jeffrey 2026-11-12)** — staff dashboard = `dashboard.ustaekwondo.net`; families' forms, QR codes and testing registration = `forms.ustaekwondo.net`; `pages.dev` stays on. Costs nothing extra. `PUBLIC_ORIGIN` list will be `https://tkd-dashboard.pages.dev,https://dashboard.ustaekwondo.net,https://forms.ustaekwondo.net`; Turnstile gets `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net`; `publicOrigin.js` flips to `https://forms.ustaekwondo.net` only after both names work.
 - **v1.200** — shared pieces first, address not switched on yet (Jeffrey via Main: Domain is priority 1). Name, staff move, `pages.dev` redirect, DNS home, extras: still open.
+
+## Batch 2 (built 2026-11-12, committed, not pushed)
+
+- `public/_headers`: `X-Robots-Tag: noindex, nofollow` on every static page; `src/forms/ics.js`: calendar-file id label follows `publicOrigin.js`; `supabase/SETUP.md`: new section "Custom domain: dashboard.ustaekwondo.net … forms.ustaekwondo.net" (Domain-a … Domain-f, click by click).
+- **Assumed defaults, not yet explicitly confirmed by Jeffrey (he was told and did not object):** staff stay on `pages.dev` for now, no `pages.dev` redirect, DNS stays at Squarespace, noindex + label yes. Rulebook rows for these wait for his explicit word.
+- Jeffrey (2026-11-12): has the domain admin controls; has never worked with DNS/Cloudflare settings and has set nothing up, so every outside step is guided from zero, one at a time.
+- Website (via Main, 2026-11-12): the school website will be built on Cloudflare Pages (its own project), not Squarespace. So no `/embed/*` path or frame-ancestors allow-list, and nothing for the website in `_headers`, `origins.js` or Turnstile. The only thing left that touches us is the bare name `ustaekwondo.net`: on Cloudflare Pages it needs Cloudflare DNS unless Squarespace can forward it to `www.` over https (unverified). Plan §2b / Q4 stays as is; not urgent (only at website launch, after this work is live). Records list to keep ready: the Squarespace DNS panel (Jeffrey's screenshot, step 1).
+- Checks: Function tests 187 pass, run-checks 21/21, both builds pass.
+
+## Outside steps done by Jeffrey (2026-11-12, guided one at a time, verified from outside)
+
+- Domain-a/b: custom domains `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net` added on the Pages project `tkd-dashboard`; two CNAME lines (`dashboard`, `forms` → `tkd-dashboard.pages.dev`, TTL 4 hrs) added in Squarespace Custom records. Both names answer HTTPS 200; MX, SPF, DKIM, `www` and `pages.dev` unchanged (checked with nslookup/curl).
+- Domain-c: Turnstile widget hostnames now `tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net` (screenshot seen; his confirmation of the Save is still to be re-asked).
+- Domain-d: `PUBLIC_ORIGIN` (Production) set to the three addresses, he says saved (first save did not stick, redone). **Cannot be verified from outside before the next deployment**; the live checks after the push (Domain-f) prove it.
+- **Batch 3 (built, committed, not pushed):** `src/lib/publicOrigin.js` → `https://forms.ustaekwondo.net`; SETUP status line. Function tests 187, run-checks 21/21, both builds pass; built bundle holds the new address.
+
+## The domain's DNS records at Squarespace (Jeffrey's screenshots, 2026-11-12; the list to keep ready)
+
+- **Squarespace Defaults box** (the Coming Soon placeholder; never delete): four `A` records for `@` (198.185.159.144 / .145, 198.49.23.144 / .145), `CNAME www → ext-sq.squarespace.com`, one `HTTPS` record for `@`. TTL 4 hrs.
+- **Custom records box** (all of it is the school's Google Workspace email; never touch): `MX @ priority 1 → smtp.google.com`; `TXT @ → v=spf1 include:_spf.google.com ~all`; `TXT google._domainkey → v=DKIM1; k=rsa; p=…` (public key, shown cut off). TTL 1 hr. This is also the box where our two CNAME lines go (ADD RECORD).
+- Cloudflare Pages → tkd-dashboard → Custom domains: empty before step 2 (project connected to GitHub shrewsburyustc/tkd-dashboard).
 
 ## How a NEW public Function adopts the origin helper + the address constant (for Board Breaking; written 2026-11-12)
 
@@ -58,7 +81,7 @@ For the family link and QR code in `src/`:
 1. **Cloudflare Pages → project → Settings → Environment variables → `PUBLIC_ORIGIN` (Production):** add the address to the list, comma-separated, exactly as a browser writes it: `https://` + host, no path, no trailing slash, no wildcard (e.g. `https://tkd-dashboard.pages.dev,https://app.ustaekwondo.net,https://www.ustaekwondo.net`). A changed setting only applies from the **next deployment**.
 2. **Cloudflare → Turnstile → the widget `TKD family form` → Hostname management:** add the same host (host only, no `https://`). Turnstile's check then expects the host of whichever address the request came from.
 3. No code change is needed for steps 1–2, because every public Function uses the shared helper.
-4. **What this does and does not cover.** The list allows pages that are **served from** that address to post to the Functions **on the same address** (the normal case: the family form opened at `app.ustaekwondo.net` posts to `app.ustaekwondo.net/api/…`). If a page on a **different host** (the Squarespace website at `www.ustaekwondo.net`) had to post to the dashboard's Function across sites, the browser would also demand CORS answers (`Access-Control-Allow-Origin`, and an `OPTIONS` reply), which the Functions do not give today. Simplest for the website: link families to the form page on the dashboard's address. If a cross-site post is really wanted, it is its own small decision (the Function would answer CORS for exactly the listed addresses and nothing else), to be reviewed for security before it is built.
+4. **What this does and does not cover.** The list allows pages that are **served from** that address to post to the Functions **on the same address** (the normal case: the family form opened at `app.ustaekwondo.net` posts to `app.ustaekwondo.net/api/…`). If a page on a **different host** (the new school website on `www.ustaekwondo.net`) had to post to the dashboard's Function across sites, the browser would also demand CORS answers (`Access-Control-Allow-Origin`, and an `OPTIONS` reply), which the Functions do not give today. Simplest for the website: link families to the form page on the dashboard's address. If a cross-site post is really wanted, it is its own small decision (the Function would answer CORS for exactly the listed addresses and nothing else), to be reviewed for security before it is built.
 
 ## Next
 

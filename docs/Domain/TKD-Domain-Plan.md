@@ -1,4 +1,4 @@
-# ustaekwondo.net on the dashboard — plan (step 1, written 2026-11-12)
+# ustaekwondo.net on the dashboard — plan (step 1, written 2026-11-12; §0, risks and Q4 corrected the same day)
 
 Nothing in this file has been done. It is a plan for Jeffrey to decide on. No DNS, Cloudflare, Supabase or app change has been made.
 
@@ -6,9 +6,9 @@ Nothing in this file has been done. It is a plan for Jeffrey to decide on. No DN
 
 | Finding | Why it matters |
 |---|---|
-| **`ustaekwondo.net` is already the school's live website, built on Squarespace.** The apex name answers from Squarespace's servers, and `www` points at `ext-sq.squarespace.com`. | We cannot put the dashboard on `ustaekwondo.net` or `www.` itself. That would take the school's public website down. The dashboard goes on a **subdomain** (a name in front, like `app.ustaekwondo.net`). |
-| **The domain's DNS is hosted at Squarespace** (name servers `nsd1-4.squarespacedns.com`), not at Cloudflare. | DNS is the internet's phone book: it says which server answers for a name. Squarespace holds the school's phone book, so the one new line we need is added there. Cloudflare allows this for subdomains (a "CNAME" record, below). Only an apex name would need Cloudflare to hold the whole phone book. |
-| **The school's email runs on Google Workspace** (the MX record points at Google; the SPF record says Google may send mail). | Those records must never change. Moving the domain's DNS to Cloudflare would mean copying every record by hand, and one slip would stop the school's email or website. So: **do not move the name servers.** |
+| **`ustaekwondo.net` and `www.ustaekwondo.net` currently show Squarespace's "Coming Soon" placeholder page** (checked 2026-11-12; page title "Coming Soon", about 3 KB; I first mistook it for a live site). It is NOT a live school website. The apex name answers from Squarespace's servers, and `www` points at `ext-sq.squarespace.com`. | Nothing live is at stake on these two names. They are reserved for the **new public school website** (Website session's plan: `www.` and the bare name = website, `app.` = dashboard). So the dashboard still goes on a **subdomain** (`app.ustaekwondo.net`), not on the bare name or `www.`. The school's real current website is probably `jeongsustc.com` (old site, hosted at HostGator; **not confirmed by Jeffrey and out of scope: we never touch it**). |
+| **The domain's DNS is hosted at Squarespace** (name servers `nsd1-4.squarespacedns.com`), not at Cloudflare. | DNS is the internet's phone book: it says which server answers for a name. Squarespace holds the school's phone book, so the one new line we need for `app.` is added there. Cloudflare allows this for subdomains (a "CNAME" record, below). A bare name (`ustaekwondo.net` with nothing in front) cannot be a CNAME, and Cloudflare Pages only takes a bare name if Cloudflare holds the whole phone book. That matters for the website, not for `app.` (see §2b, the one shared decision). |
+| **The school's `@ustaekwondo.net` email runs on Google Workspace** (the MX record points at Google; the SPF TXT record says Google may send mail; a Google DKIM key record exists at `google._domainkey`). | **These are the only records truly at stake.** Do not change, delete or move them; if the DNS ever moves, copy every one and check mail before and after (§2b). Adding an `app` record touches none of them. |
 | None of `app`, `dashboard`, `forms`, `join`, `go`, `staff` or `portal` exist as names yet. | All are free to use. |
 | **No Supabase Edge Functions exist** (checked with the read-only connector). Supabase's own API accepts calls from any web address, so it has no "allowed origins" list to change. | The database side needs nothing for CORS. |
 | **The app never stores a full address in the database.** I searched every migration: there is no `pages.dev` or `http…` in any table or function. Families' links are made in the browser from the short public code (`/camp/k7m2qp4x`). | Existing records and the live Shrewsbury Thanksgiving camp need no data change. **No migration is needed for this work.** |
@@ -63,9 +63,20 @@ A browser keeps its saved data **per web address**. A staff tablet that opens th
 | **A** | **One name: `app.ustaekwondo.net`** | same | same | One DNS record, one Pages domain, one Turnstile hostname. Neutral word for families ("app", not "dashboard"). A staff-only page still needs a login, same as today. | Families and staff share one address, as they do today. |
 | B | One name: `dashboard.ustaekwondo.net` | same | same | Matches "the dashboard" in staff's heads. | Families see "dashboard" in a link on the flyer. Otherwise identical to A. |
 | C | Two names: `dashboard.` for staff, a short one for families (`join.` or `go.`) | `dashboard.` | `join.` | Prettiest family links, shorter QR codes. | Two DNS records, two Pages domains, two origins in every check. More to explain and to go wrong. Both names still serve everything unless a Function is added to separate them. |
-| X | The bare `ustaekwondo.net` or `www.` | | | | **Not possible without taking down the school's website.** Also needs Cloudflare to hold the DNS. |
+| X | The bare `ustaekwondo.net` or `www.` | | | | Not for the dashboard: reserved for the new public website (Website session). The bare name can't be a CNAME, and Pages takes it only if Cloudflare holds the DNS (§2b). |
 
 Options A, B and C can be extended later (adding `join.` to A later is "add, never break" and takes the same steps again). **Recommendation: A, `app.ustaekwondo.net`.** If Jeffrey prefers the word "dashboard", B costs nothing extra.
+
+## 2b. The one shared DNS decision (Dashboard + new school website)
+
+Both projects need names under `ustaekwondo.net`: the dashboard on `app.`, the new public website on `www.` and the bare name. Nothing live sits on those names today (Coming Soon placeholder), so the only thing to protect is the **Google Workspace email** (MX, SPF, the Google DKIM key, and any other mail records Squarespace's DNS panel lists).
+
+| | Option | What it needs | Pros | Cons |
+|---|---|---|---|---|
+| **S** | **Keep DNS at Squarespace (recommended).** `app.` = CNAME to `tkd-dashboard.pages.dev`; `www.` = CNAME to the website's host; the bare name forwarded to `www.` over https | Squarespace's forwarding must serve https for the bare name (**unverified**; Website session is checking) | No existing record is touched, so email cannot be affected. Smallest change, easy to undo. | The bare name cannot point at Cloudflare Pages directly; no Cloudflare rate-limit/WAF rules on the school's own domain. If the bare name's forwarding is http-only, people typing `ustaekwondo.net` may get a browser warning. |
+| C | **Move DNS to Cloudflare** (change the name servers at Squarespace Domains) | Copy **every** record from Squarespace's DNS panel into Cloudflare first (Google MX, SPF, DKIM, any DMARC / verification TXT), compare the two lists line by line, only then switch the name servers; send and receive a test email before and after; keep the old record list as the undo | The bare name can serve the website on Cloudflare Pages; WAF rate limiting becomes possible; one place for everything | One missed or mistyped record can stop or spoof the school's email until fixed (name-server changes take minutes to hours to spread). Needs both the Squarespace and the Cloudflare logins. |
+
+What changes because the site is a placeholder: the risk of Option C is now **only the email records** (earlier I also counted a live website). It does not change my pick: keep DNS at Squarespace unless the https forwarding of the bare name fails, then move DNS to Cloudflare with the checklist above. The dashboard's `app.` works the same under both options (under C Cloudflare adds the CNAME itself).
 
 ## 3. What happens to links already printed or shared
 
@@ -93,18 +104,20 @@ Steps 3–6 can be done before any code is pushed, in this order, and the live s
 
 ## 5. Risks I checked
 
-- **Squarespace website / Google email**: only one new `app` record is added; no existing record is changed, and no name servers move.
+- **Google email**: only one new `app` record is added; no existing record is changed (MX, SPF, DKIM stay as they are), and no name servers move. There is no live Squarespace site on these names to protect (Coming Soon placeholder). `jeongsustc.com` (HostGator) is a separate domain this work never touches.
 - **Wrong order in Pages vs DNS** gives a 522 error on the new name only; the old name is unaffected.
 - **Turnstile host mismatch** would block sign-ups on the new name only. Hence the hostname is added before the push and checked in step 8.
 - **Forgetting the old address in `PUBLIC_ORIGIN`** would break every printed QR code. The code change has a test for exactly this and step 8 checks it on the live site.
-- **Rate limiting** (SETUP §12a step 5 explains why a WAF rate-limit rule can't be used on a `pages.dev` address): it still can't, because DNS stays at Squarespace. It is the one real benefit of moving DNS to Cloudflare, and not worth the risk of breaking email.
+- **Rate limiting** (SETUP §12a step 5 explains why a WAF rate-limit rule can't be used on a `pages.dev` address): it still can't while DNS stays at Squarespace. Moving DNS to Cloudflare is the one way to get it (and to serve the bare name), see §2b for what that costs.
 - **Two sites, two sets of device settings** (item E above).
 
 ## 6. Questions for Jeffrey (asked together)
 
+**Answered 2026-11-12 (rulebook v1.201):** Q1 = two names, `dashboard.ustaekwondo.net` for staff and `forms.ustaekwondo.net` for families. Still open: Q2–Q6 (Q4 is the DNS decision shared with the website project, §2b).
+
 1. **Name layout:** A `app.ustaekwondo.net` (recommended), B `dashboard.ustaekwondo.net`, or C two names?
 2. **Staff devices:** leave them on `tkd-dashboard.pages.dev` for now and move later when convenient (recommended), or move them all on one day?
 3. **The old `pages.dev` address:** keep serving it forever, no redirect (recommended), or plan a redirect later?
-4. **DNS:** leave the school's DNS at Squarespace and add one CNAME there (recommended), or move DNS to Cloudflare?
+4. **DNS (the ONE decision shared with the Website project; answer once for both):** keep the school's DNS at Squarespace (my pick: `app.` and `www.` are both CNAMEs there, the bare name forwarded to `www.`), or move it to Cloudflare (needed only if the bare name must serve the website directly, or if you want rate limiting). Details and the checklist for moving: §2b.
 5. **Access:** can you sign in to both the school's Squarespace domain settings and the Cloudflare account that owns the Pages project?
 6. **Small extras in the same batch:** add the "noindex" header so search engines never list the dashboard (recommended yes), and change the calendar-file label to the new domain (harmless, yes)?
