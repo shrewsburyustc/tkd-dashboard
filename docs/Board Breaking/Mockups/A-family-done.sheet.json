@@ -1,0 +1,8 @@
+{
+  "shots": "A-family-shots",
+  "title": "Board breaking · Family sign-up page: after Register, and closed (mockup)",
+  "subtitle": "What a parent sees after tapping Register (card, card with a failed payment link, cash or check) and when registration is closed. Same look as the Camps \"You're signed up\" and \"Sign-up is closed\" pages. <b>Amber outline</b> = new on this page. Names and amounts are made up.",
+  "out": "A-family-done",
+  "states": ["done-card", "done-card-failed", "done-cash", "closed"],
+  "pcOwnLine": ["done-card", "done-card-failed", "done-cash", "closed"]
+}

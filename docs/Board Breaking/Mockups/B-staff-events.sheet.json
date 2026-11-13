@@ -1,0 +1,14 @@
+{
+  "shots": "B-staff-shots",
+  "title": "Board breaking · Events page (staff dashboard)",
+  "subtitle": "New page inside Testing (rulebook v1.300): the list of Board breaking events. Drawn with the app's own stylesheets, at PC 1280×800, tablet 820×1180 touch, phone 390×844 touch and small phone 320×640 touch. School = Shrewsbury. Fake data.",
+  "states": [
+    "events",
+    "events-past",
+    "events-empty"
+  ],
+  "pcOwnLine": [
+    "events"
+  ],
+  "out": "B-staff-events"
+}

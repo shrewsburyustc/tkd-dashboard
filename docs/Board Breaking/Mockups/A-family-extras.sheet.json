@@ -1,0 +1,8 @@
+{
+  "shots": "A-family-shots",
+  "title": "Board breaking · Family sign-up page: extra pictures (mockup)",
+  "subtitle": "Three parts of the form drawn on their own: the opened Rank list, the opened requirement chart, and the form after tapping Register with boxes empty (Camps' way). <b>Amber outline</b> = new on this page. Names and amounts are made up.",
+  "out": "A-family-extras",
+  "states": ["rank-list", "chart-open", "form-errors"],
+  "pcOwnLine": ["rank-list", "chart-open", "form-errors"]
+}
