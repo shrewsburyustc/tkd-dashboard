@@ -17,6 +17,7 @@
 
 ## Decisions
 
+- **v1.201 (Jeffrey 2026-11-12)** — staff dashboard = `dashboard.ustaekwondo.net`; families' forms, QR codes and testing registration = `forms.ustaekwondo.net`; `pages.dev` stays on. Costs nothing extra. `PUBLIC_ORIGIN` list will be `https://tkd-dashboard.pages.dev,https://dashboard.ustaekwondo.net,https://forms.ustaekwondo.net`; Turnstile gets `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net`; `publicOrigin.js` flips to `https://forms.ustaekwondo.net` only after both names work.
 - **v1.200** — shared pieces first, address not switched on yet (Jeffrey via Main: Domain is priority 1). Name, staff move, `pages.dev` redirect, DNS home, extras: still open.
 
 ## How a NEW public Function adopts the origin helper + the address constant (for Board Breaking; written 2026-11-12)

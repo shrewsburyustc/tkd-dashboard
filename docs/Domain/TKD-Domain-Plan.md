@@ -113,6 +113,8 @@ Steps 3–6 can be done before any code is pushed, in this order, and the live s
 
 ## 6. Questions for Jeffrey (asked together)
 
+**Answered 2026-11-12 (rulebook v1.201):** Q1 = two names, `dashboard.ustaekwondo.net` for staff and `forms.ustaekwondo.net` for families. Still open: Q2–Q6 (Q4 is the DNS decision shared with the website project, §2b).
+
 1. **Name layout:** A `app.ustaekwondo.net` (recommended), B `dashboard.ustaekwondo.net`, or C two names?
 2. **Staff devices:** leave them on `tkd-dashboard.pages.dev` for now and move later when convenient (recommended), or move them all on one day?
 3. **The old `pages.dev` address:** keep serving it forever, no redirect (recommended), or plan a redirect later?
