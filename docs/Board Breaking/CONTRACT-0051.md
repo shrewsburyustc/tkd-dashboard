@@ -20,7 +20,7 @@ overrides and refunds.
 
 - **`brk_settings`** — one row (`id = 1`, check). `tech_cents` 300, `adult_cents` 400 (cash / check price per board),
   `card_extra_cents` 25 (added per board when Paying by is Card), `same_day_extra_cents` 100 (added per board from the event
-  date on), `child_max_age` 12 (age 12 and under → Child chart; 13 and up → Teen / Adult chart), `tiger_max_age` 6 (see §4).
+  date on), `child_max_age` 12 (age 12 and under → Child chart; 13 and up → Teen / Adult chart).
   One price setting for all events (Q5). Admin-only write, logged.
 - **`brk_chart`** — the board chart: `id`, `band` (`tiger` · `child` · `teen` · `black`), `rank_name`, `sort`, `technique`
   (text, may be empty), `tech_boards`, `adult_boards` (0–12). Unique `(band, rank_name)`. Seeded from the live page's numbers
@@ -87,9 +87,8 @@ registration is paid).
 
 - **Boards:** the family's counts are checked (0–12 each, at least 1 in total). The recommended counts come from `brk_chart`:
   a "Little Tiger …" rank uses the `tiger` row; a Black Belt rank uses the `black` row (age ignored, as today); any other rank
-  uses `child` when age ≤ `child_max_age`, else `teen`. (So the "6 and under" line only matters for the rank list's wording:
-  a young child who picks a regular belt gets the Child chart; a Little Tiger belt always gets 3 Technical. `tiger_max_age`
-  is kept as a setting but moves no board counts — **to confirm with Jeffrey**, see the questions.)
+  uses `child` when age ≤ `child_max_age` (12), else `teen`. There is **one age line** (v1.301): Little Tiger comes from the rank picked.
+  **The live page's numbers are the chart** (the printed PDF is incorrect, v1.301); the PDF's technique words are only a starting text.
 - **Amount:** `tech × (tech_cents + card? card_extra_cents + same_day? same_day_extra_cents) + adult × (adult_cents + …)`.
   Same day = New York's today ≥ the event date at the moment of sign-up (`public.testing_today()`). If `expected_total_cents`
   differs from the database's number the answer is `price_changed` with the new number, as in Camps.
@@ -157,10 +156,9 @@ does not touch any other section's tables or functions in 0051.
   `src/styles/*` only if a shared part is missing, `supabase/SETUP.md`, `supabase/tests/pglite/run.mjs`, `vite.config.js`
   (second public page, as Camps did). Never `functions/_lib/origins.js`, `public/_headers`, `public/_redirects`.
 
-## 10. Open points for Jeffrey (asked together with the pictures)
+## 10. Open points for Jeffrey (asked one at a time, with the pictures)
 
-1. **Little Tiger age line.** With one long rank list, the rank (not the age) says "Little Tiger"; so age only separates Child
-   (≤ 12) from Teen / Adult (13+). Keep a 6 / 7 line anyway (no effect on boards), or **drop it (recommended)**?
+1. ~~Little Tiger age line~~ — **settled v1.301: dropped**, one line at 12 / 13.
 2. **Square account:** the Square account/location the links use, and when you can set the Cloudflare secrets (sandbox first).
 3. **Where a Square payment counts in Finance:** the event's school (**recommended**) or something else?
 4. **A card student whose boards change after the link was made:** the old link is cancelled and staff take the card on the Square

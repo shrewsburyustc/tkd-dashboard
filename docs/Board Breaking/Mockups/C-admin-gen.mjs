@@ -38,8 +38,8 @@ const solid = (c) => ({ p: 'solid', c });
 const stripe = (c, c2) => ({ p: 'stripe', c, c2 });
 const half = (c, c2) => ({ p: 'half', c, c2 });
 
-// ---------- the board chart (the LIVE PAGE's numbers, docs/Board Breaking/Chart-live-page-vs-PDF.md) ----------
-// [rank, belt, technique, technical, adult, what the printed PDF says if it differs]
+// ---------- the board chart (the chart's numbers) ----------
+// [rank, belt, technique, technical, adult, unused]
 const LT = [
   ['White', solid('white'), 'Hammer Fist', 3, 0],
   ['Yellow', stripe('white', 'yellow'), 'Hammer Fist', 3, 0],
@@ -61,30 +61,28 @@ const BELT = {
 };
 const beltNames = Object.keys(BELT);
 const CHILD = beltNames.map((n) => {
-  let t = 3, a = 0, printed = null;
-  if (['Blue', 'High Blue', 'Purple', 'Red', 'High Red', 'Brown'].includes(n)) { t = 4; printed = '3 Technical'; }
-  if (n === 'High Brown') { t = 3; a = 1; printed = '2 Technical + 1 Adult'; }
-  if (n === 'Red / Black') { t = 2; a = 2; printed = '2 Adult'; }
+  let t = 3, a = 0;
+  if (['Blue', 'High Blue', 'Purple', 'Red', 'High Red', 'Brown'].includes(n)) { t = 4; }
+  if (n === 'High Brown') { t = 3; a = 1; }
+  if (n === 'Red / Black') { t = 2; a = 2; }
   if (n === 'Bo Dan / Deputy') { t = 2; a = 3; }
-  return [n, BELT[n], technique[n], t, a, printed];
+  return [n, BELT[n], technique[n], t, a];
 });
 const TEEN = beltNames.map((n) => {
-  let t = 0, a = 3, printed = null;
-  if (['Blue', 'Purple', 'High Red', 'Brown', 'High Brown'].includes(n)) { t = 1; printed = '3 Adult'; }
-  if (['High Blue', 'Red'].includes(n)) { t = 1; printed = '1 Technical + 2 Adult'; }
-  if (n === 'Red / Black') { t = 1; a = 4; printed = '4 Adult'; }
+  let t = 0, a = 3;
+  if (['Blue', 'Purple', 'High Red', 'Brown', 'High Brown'].includes(n)) { t = 1; }
+  if (['High Blue', 'Red'].includes(n)) { t = 1; }
+  if (n === 'Red / Black') { t = 1; a = 4; }
   if (n === 'Bo Dan / Deputy') { t = 2; a = 3; }
-  return [n, BELT[n], technique[n], t, a, printed];
+  return [n, BELT[n], technique[n], t, a];
 });
-const P2 = '2 Technical + Power Breaking (3 Adult)';
-const P3 = '3 Technical + Power Breaking (3 Adult)';
 const BLACK = [
-  ['1st Dan', 4, 3, P2], ['1st Dan 1 Star', 4, 3, P2], ['1st Dan 2 Star', 4, 3, P2], ['1st Dan 3 Star', 4, 3, P2],
-  ['1st Dan 4 Star', 7, 3, null], ['2nd Dan', 7, 3, null],
-  ['2nd Dan 1 Star', 6, 3, P3], ['2nd Dan 2 Star', 6, 3, P3], ['2nd Dan 3 Star', 6, 3, P3],
-  ['3rd Dan', 6, 3, P3], ['3rd Dan 1 Star', 6, 3, P3], ['3rd Dan 2 Star', 6, 3, P3], ['3rd Dan 3 Star', 6, 3, P3],
-  ['3rd Dan 4 Star', 6, 3, P3], ['3rd Dan 5 Star', 6, 3, '4 Adult + Power Breaking (3 Adult)'],
-].map(([n, t, a, p]) => [n, solid('black'), 'Power Breaking', t, a, p]);
+  ['1st Dan', 4, 3], ['1st Dan 1 Star', 4, 3], ['1st Dan 2 Star', 4, 3], ['1st Dan 3 Star', 4, 3],
+  ['1st Dan 4 Star', 7, 3], ['2nd Dan', 7, 3],
+  ['2nd Dan 1 Star', 6, 3], ['2nd Dan 2 Star', 6, 3], ['2nd Dan 3 Star', 6, 3],
+  ['3rd Dan', 6, 3], ['3rd Dan 1 Star', 6, 3], ['3rd Dan 2 Star', 6, 3], ['3rd Dan 3 Star', 6, 3],
+  ['3rd Dan 4 Star', 6, 3], ['3rd Dan 5 Star', 6, 3],
+].map(([n, t, a]) => [n, solid('black'), 'Power Breaking', t, a]);
 const GROUPS = [
   { key: 'tiger', name: 'Little Tiger', rule: 'Little Tiger belts, at any age', rows: LT },
   { key: 'child', name: 'Child', rule: 'Age 12 and under', rows: CHILD },
@@ -143,22 +141,21 @@ const ageCard = (mark = true) => `<section class="st-blk${mark ? ' mark' : ''}" 
 
 // ---------- the chart ----------
 const cols = (kind) => (kind === 'tablet' ? 'minmax(0,1fr) minmax(0,1.7fr) 76px 56px 88px' : 'minmax(0,1fr) minmax(0,1.8fr) 76px 56px 64px');
-const tagDiff = `<span class="ttag ttag--warn">${icon('alert-triangle', 12)}Differs from the printed chart</span>`;
 function wideRow(g, r, kind, opts = {}) {
-  const [name, b, tech, T, A, printed] = r;
+  const [name, b, tech, T, A] = r;
   const ctx = `${g.name} ${name}`;
   const menu = opts.menu
     ? `<div class="tmenu bb-menu" role="menu" aria-label="More actions for ${ctx}"><div><button type="button" role="menuitem" class="menu-item tmenu-item">${icon('arrow-up', 16, 'menu-icon')}<span>Move up</span></button></div><div><button type="button" role="menuitem" class="menu-item tmenu-item">${icon('arrow-down', 16, 'menu-icon')}<span>Move down</span></button></div><div><div role="separator" class="menu-separator"></div><button type="button" role="menuitem" class="menu-item tmenu-item tmenu-item--danger mark">${icon('trash', 16, 'menu-icon')}<span>Delete rank</span></button></div></div>`
     : '';
   return `<div class="rrow" role="row"${opts.anchor ? ' data-scroll-to' : ''} style="grid-template-columns:${cols(kind)}">
   <span role="cell" class="rcell rk"><span class="rk-belt-name">${belt(b)}<span class="rk-name">${name}</span></span></span>
-  <span role="cell" class="rcell bb-tech"><span>${tech}</span>${printed ? `${tagDiff}<span class="bb-printed">Printed chart: ${printed}</span>` : ''}</span>
+  <span role="cell" class="rcell bb-tech"><span>${tech}</span></span>
   <span role="cell" class="rcell num">${T}</span><span role="cell" class="rcell num">${A}</span>
   <span role="cell" class="rcell rcell-acts bb-acts"><span class="acts">${tib(`Edit ${ctx}`, 'edit')}${tib(`More actions for ${ctx}`, 'dots', ' aria-haspopup="menu"')}</span>${menu}</span>
 </div>`;
 }
 function phoneRow(g, r, opts = {}) {
-  const [name, b, tech, T, A, printed] = r;
+  const [name, b, tech, T, A] = r;
   const ctx = `${g.name} ${name}`;
   const [first, ...rest] = name.split(' ');
   return `<div class="prow" role="row"${opts.anchor ? ' data-scroll-to' : ''}>
@@ -166,7 +163,6 @@ function phoneRow(g, r, opts = {}) {
     <div class="l1"><span class="l1-names"><span class="belt-name"><span class="nowrap">${belt(b)}${first}</span>${rest.length ? ` ${rest.join(' ')}` : ''}</span></span></div>
     <div class="l2"><span>${T} Technical</span> <span>· ${A} Adult</span></div>
     <div class="l2">${tech}</div>
-    ${printed ? `<div class="l1b">${tagDiff}</div><div class="l2">Printed chart: ${printed}</div>` : ''}
   </div>
   <span role="cell" class="rcell-acts"><span class="acts">${tib(`Edit ${ctx}`, 'edit')}${tib(`More actions for ${ctx}`, 'dots', ' aria-haspopup="menu"')}</span></span>
 </div>`;
@@ -258,7 +254,6 @@ ${css}
   .bb-h2 { margin-top: var(--space-24); font-size: var(--text-16); font-weight: 500; }
   .bb-sub { margin: 2px 0 var(--space-8); color: var(--color-text-secondary); font-size: var(--text-12); }
   .bb-tech { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-  .bb-printed { color: var(--color-text-secondary); font-size: var(--text-12); }
   .bb-acts { position: relative; }
   .bb-menu { position: absolute; top: 34px; right: 0; }
   .rrow { align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
@@ -312,7 +307,7 @@ files['C-admin-prices'] = head('C-admin-prices', 'States: the top of the tab wit
 files['C-admin-chart'] = head('C-admin-chart', 'States: the whole tab with the chart, Edit rank, the ⋯ menu, Delete rank asks.') +
   state({
     id: 'chart',
-    caption: '<b>The whole tab, as an admin sees it</b>: the two cards, then the <b>Board chart</b>. Four groups, each opens and closes like a class in Classes and ranks; a row = belt and rank · technique · Technical · Adult, a pencil and a ⋯ (Move up, Move down, Delete rank). “Add rank” ends each group. On the phone each row is a small card. The amber <b>“Differs from the printed chart”</b> tags are only here to help Jeffrey review (every row where the live page and the PDF disagree); they are not part of the screen.',
+    caption: '<b>The whole tab, as an admin sees it</b>: the two cards, then the <b>Board chart</b>. Four groups, each opens and closes like a class in Classes and ranks; a row = belt and rank · technique · Technical · Adult, a pencil and a ⋯ (Move up, Move down, Delete rank). “Add rank” ends each group. On the phone each row is a small card.',
     page: adminPage((k) => `${pricesCard(false)}${ageCard(false)}${chartBlock(k)}`),
   }) +
   state({
