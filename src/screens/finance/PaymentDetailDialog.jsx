@@ -12,6 +12,11 @@
 // Returned instead of Paid by, Amount and Date paid; its history also lists the check's own
 // "recorded" line and "marked it returned by the bank" / "undid the returned mark".
 //
+// Board breaking (rulebook v1.300, migration 0052): a Board breaking payment reads "Board breaking · Nov 20
+// (Shrewsbury)" like Star testing, its hint names Board breaking, and "Open in Testing" opens that event's
+// page (#testing/breaking/event/<id>). While Board breaking's build switch is off (features.js) the page
+// does not exist, so that button is left out (the way back to the event is simply not offered).
+//
 // Props:
 //   item       the row that was clicked (finance_day item): shown at once while the rest loads
 //   school     the school's name (Worcester / Shrewsbury)
@@ -21,7 +26,8 @@
 //                    for a camp payment (source 'camp', Camps v0.707) it opens the camp's page;
 //                    a Color Belt private testing payment has no event: options.privateTab = true
 //                    opens the Private testing tab (v0.813); a Black Belt one (source
-//                    'black_belt') gives the cycle's id (v0.815)
+//                    'black_belt') gives the cycle's id (v0.815); a Board breaking one (source
+//                    'board_breaking') gives the event's id (v1.300)
 //   onNoAccess       the database says this sign-in is locked
 import { useEffect, useState } from 'react';
 import { IconAlertTriangle, IconChevronRight } from '@tabler/icons-react';
@@ -30,6 +36,7 @@ import { financePaymentDetail } from '../../lib/finance/financeApi.js';
 import { dayAndTime, dayShort, dayShortYear, money, timeOfDay } from './format.js';
 import { editChangedNothing, forTextOf, whatText } from './PaymentsList.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
+import { BOARD_BREAKING_ON } from '../../lib/features.js';
 import * as T from './text.js';
 
 export default function PaymentDetailDialog({ item, school, isPhone, onClose, onOpenInTesting, onNoAccess }) {
@@ -58,12 +65,15 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
   const isCamp = (shown.source ?? item.source) === 'camp' || shown.what === 'camp';
   // A Black Belt payment, refund or returned check (v0.815): no date anywhere; changed in Black Belt testing.
   const isBlackBelt = (shown.source ?? item.source) === 'black_belt' || shown.what === 'black_belt';
+  // A Board breaking payment, refund or edit (v1.300): "Board breaking · Nov 20"; changed on the event's page.
+  const isBreaking = (shown.source ?? item.source) === 'board_breaking' || shown.what === 'board_breaking';
   // A camp payment: "Camp · April Vacation Camp", and the camp's days on their own line (v0.707).
   const campName = state.data?.event_name ?? shown.event_name ?? item.event_name ?? '';
   const campDays = state.data?.camp_days ?? state.data?.days ?? [];
   // A Color Belt private testing payment (migration 0018, v0.813): no event; changed on the Private testing tab.
   const isPrivateColorBelt = !isCamp && shown.what === 'color_belt' && shown.is_private === true;
-  let what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : state.data?.event_name || whatText(shown);
+  // (Board breaking names the section, not the event, so it reads like its row in the list.)
+  let what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : isBreaking ? whatText(shown) : state.data?.event_name || whatText(shown);
   // "Black Belt · Spring 2027 · Payment 2" — the cycle name the row stored (the answer's event_name is the same).
   if (isBlackBelt) what = forTextOf({ ...shown, event_name: shown.event_name ?? state.data?.event_name ?? item.event_name ?? '' });
   // No Edited tag when the edit was changed back (v0.824); History below still lists both changes.
@@ -167,14 +177,16 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
           </ul>
         )}
         <p className="fin-hint fin-detail-hint">
-          {isCamp ? T.DETAIL_HINT_CAMP : isBlackBelt ? T.DETAIL_HINT_BLACK_BELT : isPrivateColorBelt ? T.DETAIL_HINT_PRIVATE : T.DETAIL_HINT}
+          {isCamp ? T.DETAIL_HINT_CAMP : isBlackBelt ? T.DETAIL_HINT_BLACK_BELT : isBreaking ? T.DETAIL_HINT_BOARD_BREAKING : isPrivateColorBelt ? T.DETAIL_HINT_PRIVATE : T.DETAIL_HINT}
         </p>
       </div>
       <div className="dialog-actions fin-detail-actions">
-        <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={() => onOpenInTesting(state.data?.event_id ?? null, shown.source ?? item.source, { privateTab: isPrivateColorBelt })}>
-          {isCamp ? T.OPEN_IN_CAMPS : T.OPEN_IN_TESTING}
-          <IconChevronRight size={16} aria-hidden="true" />
-        </button>
+        {(!isBreaking || BOARD_BREAKING_ON) && (
+          <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={() => onOpenInTesting(state.data?.event_id ?? null, shown.source ?? item.source, { privateTab: isPrivateColorBelt })}>
+            {isCamp ? T.OPEN_IN_CAMPS : T.OPEN_IN_TESTING}
+            <IconChevronRight size={16} aria-hidden="true" />
+          </button>
+        )}
         {!isPhone && (
           <button type="button" className="btn" data-autofocus onClick={onClose}>
             {T.CLOSE}

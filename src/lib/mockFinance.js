@@ -23,6 +23,13 @@
 //     "Changed after closing", "Added after closing" and whether a day needs closing (History,
 //     Home). Card refunds come off the expected card figure (v0.814). Sample rows for the preview:
 //     __tkdPreview.bbFinanceSample() (mockClient.js) records them through Black Belt's own functions.
+//   - Board breaking payments (migration 0052, rulebook v1.300–v1.304): READ from the Board breaking preview
+//     store ('tkd.preview.breaking', mockBreaking.js) — brk_payments, written by its Mark paid / Undo / Edit /
+//     Refund. A fifth source 'board_breaking': the school is the one STORED on the shown row (the desk's school;
+//     a Square payment, recorded by 'Square' with no login, counts at the event's school), what = 'board_breaking',
+//     the event's name and date, never private. Edits (reversal + new payment, same time and login) and undos
+//     follow the other sections' chain rules; a Square payment has no login, so undoing it is never a hidden
+//     mis-click.
 //   - Star payments (R1-09): READ from the Star preview store ('tkd.preview.star', the store
 //     mockStarCandidates.js keeps) — the rows its Candidates tab writes (payments, refunds, edits,
 //     undos). Read like migration 0026 reads star_payments: what = 'star', the event's name, the
@@ -40,12 +47,13 @@
 // the real Star store is read — they would all show "Changed after closing").
 //
 // Like mockTestingEvents.js it is a "pure core": it never touches the browser by itself.
-//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, readStar, now, today, newId });
+//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, readBreaking, readStar, now, today, newId });
 //     loadStore()     → the saved finance store (missing / damaged → the default sample)
 //     saveStore(s)    → saves it
 //     readColorBelt() → the Testing preview store (events, registrations, payments)
 //     readCamps()     → the Camps preview store (camps, camp_days, camp_campers, camp_payments); optional
 //     readBlackBelt() → the Black Belt preview store (bb_payments, bb_candidates, bb_cycle_plans); optional
+//     readBreaking()  → the Board breaking preview store (events, registrations, payments); optional
 //     readStar()      → the Star preview store (events, candidates, payments); optional
 //     now()           → milliseconds (timestamps, the 10-second windows)
 //     today()         → 'YYYY-MM-DD' in school time (setToday can pretend another date)
@@ -61,7 +69,7 @@ import { addDays, isIsoDate, normalizeNote, SCHOOL_TIME_ZONE } from './testing/e
 const STORE_FORMAT = 2; // bump when the store's shape changes (old stores are then replaced)
 const SCHOOLS = ['worcester', 'shrewsbury']; // switcher order: Worcester, Shrewsbury
 const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
-const SOURCES = ['color_belt', 'star', 'camp', 'black_belt']; // finance_payment_detail's p_source
+const SOURCES = ['color_belt', 'star', 'camp', 'black_belt', 'board_breaking']; // finance_payment_detail's p_source
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INT_MAX = 2147483647;
 const HOUR_MS = 60 * 60 * 1000;
@@ -375,7 +383,7 @@ function storeIsUsable(s) {
 
 // ----- The backend -----
 
-export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, readStar, now = () => Date.now(), today, newId }) {
+export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, readBreaking, readStar, now = () => Date.now(), today, newId }) {
   let failNext = false; // set by failNextSave()
   const stamp = () => new Date(now()).toISOString();
   // The day the sample counts back from: the pretend date, but never later than the real date
@@ -432,6 +440,18 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     return ok ? bb : null;
   }
 
+  // The Board breaking preview store, or null when there is none (or it can't be read).
+  function breakingStore() {
+    let br = null;
+    try {
+      br = readBreaking?.() ?? null;
+    } catch {
+      br = null;
+    }
+    const ok = br && ['events', 'registrations', 'payments'].every((k) => Array.isArray(br[k]));
+    return ok ? br : null;
+  }
+
   // The Star preview store (R1-09), or null when there is none, it can't be read, or it has no
   // payments yet — then the Star sample in Finance's own store is used instead (starSource).
   function starStore() {
@@ -479,7 +499,30 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     return out;
   }
 
-  // Every item of all three sources, with the owner's name, school and event. Owners that no longer
+  // Board breaking items (contract 0052 §2): the school is the one stored on the shown row (a Square payment
+  // was stored with the event's school), the owner is the registration, the event's date stands in the row.
+  function breakingItems() {
+    const br = breakingStore();
+    if (!br) return [];
+    const regs = new Map(br.registrations.map((r) => [r.id, r]));
+    const events = new Map(br.events.map((e) => [e.id, e]));
+    const rowsById = new Map(br.payments.map((p) => [p.id, p]));
+    const out = [];
+    for (const it of chainItems(br.payments.map((p) => ({ ...p, source: 'board_breaking', owner_id: p.registration_id })))) {
+      const reg = regs.get(it.owner_id);
+      const event = reg ? events.get(reg.event_id) : null;
+      const shownRow = rowsById.get(it.row_id);
+      if (!event || !shownRow) continue;
+      out.push({
+        ...it, school: shownRow.school, first_name: reg.first_name, last_name: reg.last_name,
+        was_school: wasSchoolOf(it, shownRow.school, rowsById.get(it.payment_id)?.school ?? shownRow.school),
+        what: 'board_breaking', event_date: event.event_date, is_private: false, event_name: event.name, event_id: event.id,
+      });
+    }
+    return out;
+  }
+
+  // Every item of all five sources, with the owner's name, school and event. Owners that no longer
   // exist (a deleted student or event) take their rows with them, like the database's cascades.
   function allItems(db) {
     let cb = null;
@@ -563,6 +606,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       });
     }
     out.push(...blackBeltItems()); // the fourth source (0026)
+    out.push(...breakingItems()); // the fifth source (0052)
     return out;
   }
 
@@ -572,6 +616,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     if (source === 'star') rows = starSource(db).payments;
     else if (source === 'camp') rows = campsStore()?.camp_payments ?? [];
     else if (source === 'black_belt') rows = (blackBeltStore()?.bb_payments ?? []).map((p) => ({ ...p, owner_id: p.candidate_id }));
+    else if (source === 'board_breaking') rows = (breakingStore()?.payments ?? []).map((p) => ({ ...p, owner_id: p.registration_id }));
     else {
       try {
         // Event payments and private testing payments (0018): a private row's owner is its private testing.
@@ -651,7 +696,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     };
     // Camp rows also carry the camp's name ('Camp · April Vacation Camp', v0.707). Color Belt and
     // Star rows are unchanged (their screens show the event date).
-    if (it.source === 'camp') out.event_name = it.event_name;
+    if (it.source === 'camp' || it.source === 'board_breaking') out.event_name = it.event_name; // (Board breaking: 0052)
     // Black Belt rows (0026 §6): the stored cycle name, what it's for, the one-payment plan's name
     // and, on a returned check, the day the check was handed in.
     if (it.source === 'black_belt') {
@@ -904,7 +949,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
           kind: it.kind, method: it.method, amount_cents: it.amount_cents,
           counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
           note: exportNote(it), was_school: it.was_school ?? null,
-          ...(it.source === 'camp' ? { event_name: it.event_name } : {}), // camp rows: the camp's name (not a CSV column)
+          ...(it.source === 'camp' || it.source === 'board_breaking' ? { event_name: it.event_name } : {}), // camp / Board breaking rows: the event's name (not a CSV column)
           // Black Belt rows (0026 §6): the cycle name, what it's for and, on a returned check, the handed-in day.
           ...(it.source === 'black_belt'
             ? { event_name: it.event_name, for_items: it.for_items, one_payment_plan: it.one_payment_plan, handed_in_on: it.handed_in_on }

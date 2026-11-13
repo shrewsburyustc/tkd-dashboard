@@ -636,6 +636,33 @@
 //       authenticated / camps_registrar / anon, and re-run safety - see
 //       step0050 below. Run only this step with
 //       node run.mjs --only-step0050
+//   step0051. 0051 (Board breaking: the new section's nine tables, 26 app
+//       functions, the family form's login brk_registrar and Square's
+//       login brk_square; v1.300-v1.303; contract docs/Board Breaking/
+//       CONTRACT-0051.md) on its own database in the production order
+//       (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031, 0030, 0032,
+//       0033, 0034, 0036, 0041, 0042, 0043, 0039, 0050): the pre-apply
+//       check before and after, no other fingerprint file and no existing
+//       row changes (0051 only adds), 0051's fingerprints (rights of every
+//       function and table, the two logins), the seed, 0051's tests and
+//       0013 / 0050 / 0002 / PIN tests after it, the app's calls as role
+//       authenticated / brk_registrar / brk_square / anon, and re-run
+//       safety - see step0051 below. Run only this step with
+//       node run.mjs --only-step0051
+//   step0052. 0052 (Finance reads Board breaking payments: a fifth source,
+//       'board_breaking', in the Daily report, Close the day, History, Export and
+//       payment detail; v1.300-v1.304; contract docs/Board Breaking/CONTRACT-0052.md)
+//       on its own databases in the production order (liveOrderTo0025 with the
+//       four big Finance seeds, then 0027 ... 0039, 0037, Color Belt's 0035 and
+//       0044, Star's 0038, Black Belt's 0046, Finance's 0047, Camps' 0050 and
+//       Board breaking's 0051, then the Black Belt seed): the pre-apply check, the
+//       guard refusing a changed function / rule / missing 0051, every other
+//       section's Finance answers byte-for-byte the same before and after, only
+//       the five functions' and the rule's fingerprint lines move, 0052's tests and
+//       the older Finance tests, a seed of Board breaking money read by every
+//       Finance function under 2 s with its Export total equal to brk_payments,
+//       and re-run safety - see step0052 below. Run only this step with
+//       node run.mjs --only-step0052
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -692,6 +719,8 @@ const onlyStep0042 = process.argv.includes('--only-step0042');
 const onlyStep0040 = process.argv.includes('--only-step0040');
 const onlyStep0043 = process.argv.includes('--only-step0043');
 const onlyStep0050 = process.argv.includes('--only-step0050');
+const onlyStep0051 = process.argv.includes('--only-step0051');
+const onlyStep0052 = process.argv.includes('--only-step0052');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStep0044 = process.argv.includes('--only-step0044');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
@@ -1060,6 +1089,24 @@ async function main() {
     }
     return finish();
   }
+  // --only-step0051: just the Board breaking step (0051)
+  if (onlyStep0051) {
+    const prints51 = await step0051();
+    if (prints51) {
+      console.log('\n0051 fingerprints (kind  item  detail):');
+      for (const line of prints51) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0052: just Finance reads Board breaking payments (0052)
+  if (onlyStep0052) {
+    const prints52 = await step0052();
+    if (prints52) {
+      console.log('\n0052 fingerprints (kind  item  detail):');
+      for (const line of prints52) console.log('  ' + line);
+    }
+    return finish();
+  }
   // --only-step0044: just Color Belt's rolling-check step A (0044)
   if (onlyStep0044) {
     const prints44 = await step0044();
@@ -1398,6 +1445,12 @@ async function main() {
   // step0050: Camps sign-ups carry the school (its own database, production order: it is pasted after 0039)
   console.log('\nMigration 0050 (Camps: one family link and one roster per school):');
   const after50 = after5 ? await step0050() : null;
+  // step0051: Board breaking (its own database, production order: it is pasted after 0050)
+  console.log('\nMigration 0051 (Board breaking: the new section\'s database, the family form and Square):');
+  const after51 = after5 ? await step0051() : null;
+  // step0052: Finance reads Board breaking payments (its own databases, production order: it is pasted after 0051)
+  console.log('\nMigration 0052 (Finance: Board breaking payments in the Daily report, Close the day, History, Export and payment detail):');
+  const after52 = after5 ? await step0052() : null;
 
   // step0044: Color Belt rolling check, step A - the family form's own Paying by, Edit event Undo in one call, each payment's school
   console.log('\nMigration 0044 (Color Belt: the form\'s own Paying by, Edit event Undo in one call, each payment\'s school):');
@@ -1575,6 +1628,14 @@ async function main() {
   if (after50) {
     console.log('\n0050 fingerprints (kind  item  detail):');
     for (const line of after50) console.log('  ' + line);
+  }
+  if (after51) {
+    console.log('\n0051 fingerprints (kind  item  detail):');
+    for (const line of after51) console.log('  ' + line);
+  }
+  if (after52) {
+    console.log('\n0052 fingerprints (kind  item  detail):');
+    for (const line of after52) console.log('  ' + line);
   }
   if (after45) {
     console.log('\n0045 fingerprints (kind  item  detail):');
@@ -11251,6 +11312,328 @@ async function step0050() {
 }
 
 // =====================================================================
+// step0051: Board breaking (0051, rulebook v1.300-v1.303,
+// docs/Board Breaking/CONTRACT-0051.md and SIGNATURES-0051.md)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029, 0031,
+// 0030, 0032, 0033, 0034, 0036, 0041, 0042, 0043, 0039 and 0050 - each
+// only if its file is on this branch; 0051 is pasted after 0050).
+// 0051 ONLY ADDS (nine tables, 26 app functions + helpers, two logins,
+// a few rows), so the step checks that and what it added:
+//   a. 0051_fingerprints.sql and 0051_preapply_check.sql are
+//      connector-safe (no "delete" / "drop"); the migration holds no
+//      password; the pre-apply check answers 14 / 2 / 0 / 0 / 0 before,
+//      the fingerprint file lists no row, and 0051_tests.sql stops at its
+//      setup check ("is 0051 applied?")
+//   b. apply 0051: NO other fingerprint file moves or gains a line; no
+//      row of the sections that already exist changes; the pre-apply
+//      check answers 14 / 2 / 9 / n / 2 (n = the fingerprint file's
+//      function rows)
+//   c. the fingerprints: the 26 app functions are security definer with
+//      search_path = '', granted exactly as the sheet says (the staff 21
+//      to authenticated, the family form's 4 to brk_registrar, Square's
+//      one to brk_square), every other function (helpers, triggers) for
+//      nobody but the owner; eight tables with row security on and
+//      nothing for anon / service_role, no write right for the app, none
+//      of the secret columns readable; the two logins
+//   d. the seed: one settings row (300 / 400 / 25 / 100 / 12), a chart
+//      with every band (live-page numbers)
+//   e. 0051_tests.sql, then 0013_tests.sql (its "no function in public is
+//      executable by PUBLIC" scan now covers 0051's functions), 0050's,
+//      0002's and the PIN tests again; AS THE APP: an unlocked admin's
+//      token with role authenticated (inputs by NAME as supabase-js
+//      sends them) reads the lists, the roster, adds a walk-in; the family
+//      form's login (brk_registrar) opens the event page and signs up (a
+//      0 total -> price_changed, the right total -> ok) but can read no
+//      table and run no staff function; Square's login (brk_square) runs
+//      its one function and nothing else; anon can do none of it (all
+//      rolled back)
+//   f. 0051 applied a SECOND time: no fingerprint change, no change in
+//      the settings, chart, event, class rows; the tests pass again
+// (No undo file: 0051 only adds objects; to go back, ask Claude - see
+// SETUP.md 0051.)
+// Run only this step with   node run.mjs --only-step0051
+// =====================================================================
+const STAFF_0051 = ['brk_settings_get', 'brk_events_list', 'brk_event_roster', 'brk_registration_history', 'brk_add_event',
+  'brk_update_event', 'brk_delete_event', 'brk_save_classes', 'brk_add_student', 'brk_edit_registration', 'brk_set_override',
+  'brk_set_broke', 'brk_mark_paid', 'brk_undo_payment', 'brk_edit_payment', 'brk_record_refund', 'brk_undo_refund',
+  'brk_delete_registration', 'brk_save_settings', 'brk_save_chart', 'brk_dismiss_square_event'];
+const PUBLIC_0051 = ['brk_public_event', 'brk_public_signup', 'brk_public_registration', 'brk_public_set_link'];
+const SQUARE_0051 = ['brk_square_payment'];
+
+async function step0051() {
+  const L = '[0051] ';
+  if (!existsSync(path.join(supabaseDir, 'migrations', '0051_board_breaking.sql'))) {
+    record(`${L}migrations/0051_board_breaking.sql exists`, false, 'the file is missing');
+    return null;
+  }
+  const preSql = read('tests', '0051_preapply_check.sql');
+  const migration = read('migrations', '0051_board_breaking.sql');
+  const unsafe = [['tests', '0051_fingerprints.sql'], ['tests', '0051_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0051_fingerprints.sql and 0051_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the migration file is pure ASCII (no curly quotes, dashes or other characters outside 0x00-0x7F)`,
+    /^[ -]*$/.test(migration), (migration.match(/[^ -]/g) ?? []).slice(0, 5).join(' '));
+  record(`${L}the migration holds no password (no "password '...'" and no SCRAM verifier: the two logins get theirs from SETUP.md)`,
+    !/password\s+'/i.test(migration) && !/SCRAM-SHA/i.test(migration));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql'],
+    ['0030 (Color Belt design review)', '0030_color_belt_review.sql'], ['0032 (Black Belt design review)', '0032_black_belt_review.sql'],
+    ['0033 (Camps design review)', '0033_camps_design_review.sql'], ['0034 (Black Belt history ids)', '0034_black_belt_history_ids.sql'],
+    ['0036 (New students profile)', '0036_new_students_profile.sql'], ['0041 (Star end time)', '0041_star_end_time.sql'],
+    ['0042 (copy a form to the other school)', '0042_forms_copy_to_school.sql'], ['0043 (Camps Fill in)', '0043_camps_fill_in.sql'],
+    ['0039 (Camps Record refund)', '0039_camps_record_refund.sql'], ['0050 (Camps: a school on every sign-up)', '0050_camps_signup_school.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await campsAdminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  const claims = JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: CAMPS_ADMIN_SID,
+    amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+
+  // a. before 0051
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const answer = (r) => r ? [r.prereqs_found, r.locations_found, r.brk_tables, r.brk_functions, r.brk_roles].join(' / ') : 'none';
+  record(`${L}[pre-apply check] before 0051: 14 / 2 / 0 / 0 / 0`, answer(await pre()) === '14 / 2 / 0 / 0 / 0', answer(await pre()));
+  const none = await fingerprints(db, '0051_fingerprints.sql');
+  record(`${L}0051_fingerprints.sql lists no row before 0051`, none.length === 0, none.join(' | '));
+  let early = '';
+  try {
+    await db.exec(read('tests', '0051_tests.sql').replaceAll('<paste-admin-UID-here>', ADMIN_UID)
+      .replaceAll('<paste-desk-UID-here>', DESK_UID));
+  } catch (error) {
+    early = error.message;
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}0051_tests.sql BEFORE 0051 stops at its setup check ("is 0051 applied?")`,
+    /TEST SETUP: the Board breaking tables/.test(early), early || 'it ran');
+
+  // b. apply 0051: nothing that exists may change
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0030', '0032', '0033', '0034', '0036', '0041', '0042',
+    '0043', '0039', '0050'].filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const snapOld = `select md5(concat_ws('|',
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.staff x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.locations x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.testing_events x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camps x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camp_campers x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.camp_payments x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.star_candidates x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.bb_candidates x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.forms x)))`;
+  const dataBefore = await one(db, snapOld);
+  const logBefore = await one(db, `select count(*)::text from public.change_log where table_name not like 'brk\\_%'`);
+  if (!(await run(db, `${L}apply 0051_board_breaking.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const moved = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (gone.length) moved.push(`${n}: moved or gone ${JSON.stringify(gone)}`);
+    if (added.length) moved.push(`${n}: added ${JSON.stringify(added)}`);
+  }
+  record(`${L}fingerprints: nothing moved and nothing was added in any other fingerprint file (0051 only adds brk_ objects)`,
+    moved.length === 0, moved.join('; ') || `${numbers.length} files`);
+  record(`${L}0051 changed no row of the sections that already exist (staff, schools, Color Belt, Camps, Star, Black Belt, forms) and wrote no history row for them`,
+    dataBefore === (await one(db, snapOld))
+      && logBefore === (await one(db, `select count(*)::text from public.change_log where table_name not like 'brk\\_%'`)));
+
+  // c. the fingerprints
+  const prints51 = await fingerprints(db, '0051_fingerprints.sql');
+  const lines = prints51.map((l) => l.split('  '));
+  const fnLines = lines.filter((p) => p[0] === 'function');
+  const nameOf = (item) => item.slice(0, item.indexOf('('));
+  const rightsOf = (detail) => detail.slice(detail.indexOf(' rights=') + 8);
+  const wrongFn = [];
+  const want = (name) => (STAFF_0051.includes(name) ? 'authenticated:EXECUTE,postgres:EXECUTE'
+    : PUBLIC_0051.includes(name) ? 'brk_registrar:EXECUTE,postgres:EXECUTE'
+      : SQUARE_0051.includes(name) ? 'brk_square:EXECUTE,postgres:EXECUTE' : 'postgres:EXECUTE');
+  for (const [, item, detail] of fnLines) {
+    const name = nameOf(item);
+    const named = STAFF_0051.includes(name) || PUBLIC_0051.includes(name) || SQUARE_0051.includes(name);
+    if (rightsOf(detail) !== want(name)) wrongFn.push(`${item}: rights ${rightsOf(detail)}`);
+    if (!detail.includes(' settings=search_path="" ')) wrongFn.push(`${item}: settings`);
+    if (!detail.includes(' owner=postgres ')) wrongFn.push(`${item}: owner`);
+    if (named && !detail.includes(' definer=true ')) wrongFn.push(`${item}: not security definer`);
+    if (!detail.includes(' returns=jsonb ') && named) wrongFn.push(`${item}: returns`);
+  }
+  const names = fnLines.map((p) => nameOf(p[1]));
+  for (const n of [...STAFF_0051, ...PUBLIC_0051, ...SQUARE_0051]) {
+    if (names.filter((x) => x === n).length !== 1) wrongFn.push(`${n}: not exactly one version`);
+  }
+  record(`${L}0051 fingerprints: 26 app functions (staff 21: authenticated only; family form 4: brk_registrar only; Square 1: brk_square only), every one security definer with search_path = '' owned by postgres; every helper and trigger function for nobody but the owner; ${fnLines.length} function rows`,
+    wrongFn.length === 0, wrongFn.join('; '));
+  const tbl = lines.filter((p) => p[0] === 'table');
+  const secret = /(square_order_id|square_link_url|submission_id|recorded_by|paying_by_before)>/;
+  const badTbl = [];
+  for (const [, item, detail] of tbl) {
+    if (!detail.startsWith('rls=true ')) badTbl.push(`${item}: rls`);
+    if (/anon|service_role|brk_registrar|brk_square/.test(detail)) badTbl.push(`${item}: a right for anon / service_role / a brk login`);
+    if (/authenticated:(INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER)/.test(detail)) badTbl.push(`${item}: a write right for the app`);
+    if (secret.test(detail.replace(/recorded_by_name>/g, ''))) badTbl.push(`${item}: a secret column is readable`);
+  }
+  const tblNames = tbl.map((p) => p[1]).sort().join(',');
+  record(`${L}0051 fingerprints: nine tables (settings, chart, events, event_classes, registrations, payments, public_attempts, square_events, cleared_links), row security on, nothing for anon / service_role / the two logins, no write right for the app, no secret column readable`,
+    tblNames === 'brk_chart,brk_cleared_links,brk_event_classes,brk_events,brk_payments,brk_public_attempts,brk_registrations,brk_settings,brk_square_events'
+      && badTbl.length === 0, badTbl.join('; ') || tblNames);
+  const pol = lines.filter((p) => p[0] === 'policy');
+  record(`${L}0051 fingerprints: every policy is "authenticated may read while has_data_access()"`,
+    pol.length > 0 && pol.every((p) => /cmd=SELECT roles=authenticated using=.*has_data_access/.test(p[2])), pol.map((p) => p.join('  ')).join(' | '));
+  const roles = lines.filter((p) => p[0] === 'role');
+  record(`${L}0051 fingerprints: brk_registrar (connection limit 5) and brk_square (3): a login, no inheritance, no create / bypass / replication / super rights, timeouts and an empty search_path, member of nothing`,
+    roles.length === 2
+      && roles.every((p) => /login=true inherit=false createdb=false createrole=false bypassrls=false replication=false super=false/.test(p[2])
+        && p[2].includes('statement_timeout=5s') && p[2].includes('idle_in_transaction_session_timeout=10s') && p[2].includes('search_path=""')
+        && p[2].includes(' member_of= '))
+      && roles.find((p) => p[1] === 'brk_registrar')?.[2].includes('connlimit=5 ')
+      && roles.find((p) => p[1] === 'brk_square')?.[2].includes('connlimit=3 '),
+    roles.map((p) => p.join('  ')).join(' | '));
+  const done = await pre();
+  record(`${L}[pre-apply check] after 0051: 14 / 2 / 9 / ${fnLines.length} / 2`,
+    answer(done) === `14 / 2 / 9 / ${fnLines.length} / 2`, answer(done));
+
+  // d. the seed
+  const seedRows = await one(db, `select (select count(*) from public.brk_settings)::text
+      || '/' || (select s.tech_cents || ',' || s.adult_cents || ',' || s.card_extra_cents || ',' || s.same_day_extra_cents || ',' || s.child_max_age || ',' || s.version
+                   from public.brk_settings s limit 1)
+      || '/' || (select count(distinct c.band) from public.brk_chart c)::text`);
+  record(`${L}the seed: one settings row 300,400,25,100,12 at version 1, a chart with all four bands`,
+    seedRows === '1/300,400,25,100,12,1/4', seedRows);
+
+  // e. the tests, then the earlier ones again
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) {
+      if (file === '0051_tests.sql') await runTestFileLive(db, `${L}${file} (${label})`, file, ok);
+      else await runTestFile(db, `${L}${file} (${label})`, file, ok);
+    }
+  };
+  await tests('after 0051', [['0051_tests.sql', 'ALL 0051 TESTS PASSED'], ['0013_tests.sql', 'ALL 0013 TESTS PASSED'],
+    ['0050_tests.sql', 'ALL 0050 TESTS PASSED'], ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED']]
+    .filter(([file]) => existsSync(path.join(supabaseDir, 'tests', file))));
+
+  // an event the app checks can use (made through the functions, as the admin)
+  await campsAdminSession(db);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  const seeded = await run(db, `${L}an open Worcester event with one class, made as the admin before the app checks`, `
+    do $$
+    declare
+      v_r  jsonb;
+      v_id uuid;
+    begin
+      perform set_config('request.jwt.claims', '${claims}', true);
+      v_r := public.brk_add_event('PGlite 0051 event', 'worcester', public.testing_today() + 14, null);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'brk_add_event %', v_r; end if;
+      v_id := (v_r ->> 'event_id')::uuid;
+      v_r := public.brk_save_classes(v_id, (select e.version from public.brk_events e where e.id = v_id),
+               '[{"name": "Group A", "start_time": "09:00", "end_time": "10:00"}]'::jsonb);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'brk_save_classes %', v_r; end if;
+      v_r := public.brk_update_event(v_id, (select e.version from public.brk_events e where e.id = v_id), 'PGlite 0051 event',
+               public.testing_today() + 14, true);
+      if v_r ->> 'status' is distinct from 'ok' then raise exception 'brk_update_event %', v_r; end if;
+      perform set_config('request.jwt.claims', '', true);
+    end
+    $$;`);
+  if (!seeded) return null;
+  const ev = (await db.query(`select e.id::text as id, e.public_code as code, (select c.id::text from public.brk_event_classes c where c.event_id = e.id limit 1) as cls
+                                from public.brk_events e where e.name = 'PGlite 0051 event'`)).rows[0];
+  const asApp = async (label, sql, check, role = 'authenticated') => {
+    let out;
+    try {
+      await db.exec('begin;');
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [role === 'authenticated' ? claims : '']);
+      await db.exec(`set local role ${role};`);
+      out = (await db.query(sql)).rows[0];
+    } catch (error) {
+      out = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[as ${role}] ${label}`, check(out), JSON.stringify(out?.r ? { status: out.r.status, outcome: out.r.outcome, amount_cents: out.r.amount_cents } : out).slice(0, 160));
+  };
+  await asApp('brk_events_list(p_location_code => both) by name lists the event', `select public.brk_events_list(p_location_code => 'both') as r`,
+    (o) => o?.r?.status === 'ok' && o.r.events.some((e) => e.id === ev.id && e.public_code === ev.code));
+  await asApp('brk_settings_get() answers the settings and the chart', `select public.brk_settings_get() as r`,
+    (o) => o?.r?.status === 'ok' && o.r.settings.tech_cents === 300 && o.r.chart.length > 0);
+  await asApp('brk_event_roster(p_event_id => ...) answers the event and its class, no Square words in it',
+    `select public.brk_event_roster(p_event_id => '${ev.id}') as r`,
+    (o) => o?.r?.status === 'ok' && o.r.event.classes.length === 1 && !/square_|submission_id|recorded_by"/.test(JSON.stringify(o.r)));
+  await asApp('brk_add_student by name (a walk-in: 1 technical board, cash, 300)',
+    `select public.brk_add_student(p_event_id => '${ev.id}', p_first_name => 'App', p_last_name => 'Walkin', p_age => 10,
+       p_rank_name => (select c.rank_name from public.brk_chart c where c.band = 'child' order by c.sort limit 1),
+       p_class_id => '${ev.cls}', p_tech => 1, p_adult => 0, p_paying_by => 'cash') as r`,
+    (o) => o?.r?.status === 'ok' && o.r.amount_cents === 300);
+  await asApp('the app reads the event columns straight from the table (name, date, code) but not a Square column',
+    `select (select count(*) from public.brk_events e where e.name = 'PGlite 0051 event')::integer as n,
+            (select e.public_code from public.brk_events e where e.id = '${ev.id}') as code`,
+    (o) => o?.n === 1 && o.code === ev.code);
+  await asApp('the app can not read brk_registrations.square_link_url (permission denied)',
+    `select r.square_link_url from public.brk_registrations r`, (o) => /permission denied for table brk_registrations/.test(o?.error ?? ''));
+  await asApp('the app can not write brk_payments (permission denied)',
+    `delete from public.brk_payments`, (o) => /permission denied for table brk_payments/.test(o?.error ?? ''));
+  await asApp('the app can not call the family form function or Square\'s (permission denied)',
+    `select public.brk_square_payment('worcester', 'e', 'p', 'o', 1, 'USD', 'COMPLETED') as r`,
+    (o) => /permission denied for function brk_square_payment/.test(o?.error ?? ''));
+  const childRank = await one(db, `select c.rank_name from public.brk_chart c where c.band = 'child' order by c.sort limit 1`);
+  const kid = `'App', 'Kid', 10, '${childRank}', '${ev.cls}', 3, 0, 'cash'`;
+  await asApp('brk_public_event opens the event page by its code', `select public.brk_public_event('${ev.code}') as r`,
+    (o) => o?.r?.status === 'ok' && o.r.event.registration_state === 'open', 'brk_registrar');
+  await asApp('brk_public_signup with a 0 total -> price_changed 900 (it reached the core)',
+    `select public.brk_public_signup('${ev.code}', 'pglite-0051-app', gen_random_uuid(), ${kid}, 0) as r`,
+    (o) => o?.r?.status === 'price_changed' && o.r.amount_cents === 900, 'brk_registrar');
+  await asApp('brk_public_signup with the right total -> ok 900',
+    `select public.brk_public_signup('${ev.code}', 'pglite-0051-app', gen_random_uuid(), ${kid}, 900) as r`,
+    (o) => o?.r?.status === 'ok' && o.r.amount_cents === 900, 'brk_registrar');
+  await asApp('brk_registrar can read no table (permission denied)', `select count(*) from public.brk_events`,
+    (o) => /permission denied for table brk_events/.test(o?.error ?? ''), 'brk_registrar');
+  await asApp('brk_registrar can not run a staff function (permission denied)', `select public.brk_events_list('both') as r`,
+    (o) => /permission denied for function brk_events_list/.test(o?.error ?? ''), 'brk_registrar');
+  await asApp('brk_registrar can not run Square\'s function (permission denied)',
+    `select public.brk_square_payment('worcester', 'e', 'p', 'o', 1, 'USD', 'COMPLETED') as r`,
+    (o) => /permission denied for function brk_square_payment/.test(o?.error ?? ''), 'brk_registrar');
+  await asApp('brk_square_payment: an order nobody knows -> unknown_order (and the message is recorded)',
+    `select public.brk_square_payment('worcester', 'pglite-evt-1', 'pglite-pay-1', 'no-such-order', 900, 'USD', 'COMPLETED') as r`,
+    (o) => o?.r?.status === 'ok' && o.r.outcome === 'unknown_order', 'brk_square');
+  await asApp('brk_square can read no table (permission denied)', `select count(*) from public.brk_square_events`,
+    (o) => /permission denied for table brk_square_events/.test(o?.error ?? ''), 'brk_square');
+  await asApp('brk_square can not run the family form\'s function (permission denied)', `select public.brk_public_event('${ev.code}') as r`,
+    (o) => /permission denied for function brk_public_event/.test(o?.error ?? ''), 'brk_square');
+  await asApp('anon can not run the family form\'s function (permission denied)', `select public.brk_public_event('${ev.code}') as r`,
+    (o) => /permission denied for function brk_public_event/.test(o?.error ?? ''), 'anon');
+  await asApp('anon can not run a staff function (permission denied)', `select public.brk_settings_get() as r`,
+    (o) => /permission denied for function brk_settings_get/.test(o?.error ?? ''), 'anon');
+  await asApp('anon can read no table (permission denied)', `select count(*) from public.brk_events`,
+    (o) => /permission denied for table brk_events/.test(o?.error ?? ''), 'anon');
+
+  // f. re-run safety
+  const snapNew = `select md5(concat_ws('|',
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.brk_settings x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.brk_chart x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.brk_events x),
+       (select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.brk_event_classes x),
+       (select count(*)::text from public.brk_registrations)))`;
+  const newBefore = await one(db, snapNew);
+  await run(db, `${L}apply 0051 a SECOND time (re-run safety)`, migration);
+  const again = await fingerprints(db, '0051_fingerprints.sql');
+  const othersAgain = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(othersAgain[`${n}_fingerprints.sql`]));
+  record(`${L}0051 re-run: no fingerprint change (0051's or any other file's), no change in the settings, chart, event and class rows`,
+    JSON.stringify(again) === JSON.stringify(prints51) && movedAgain.length === 0 && newBefore === (await one(db, snapNew)),
+    movedAgain.join(', '));
+  await tests('after the re-run', [['0051_tests.sql', 'ALL 0051 TESTS PASSED']]);
+  await db.close().catch(() => {});
+  return prints51;
+}
+
+// =====================================================================
 // step0044: Color Belt rolling check, step A (0044) - the family form's
 // own Paying by (M-01), Edit event's Undo in one call (R2-02), each
 // payment's school (R1-01, v1.035)
@@ -11580,6 +11963,441 @@ async function step0044() {
   }
   await db.close().catch(() => {});
   return prints44;
+}
+
+// =====================================================================
+// step0052: Finance reads Board breaking payments (0052; rulebook
+// v1.300-v1.304; contract docs/Board Breaking/CONTRACT-0052.md)
+// ---------------------------------------------------------------------
+// 0052 adds a fifth source, 'board_breaking' (public.brk_payments, 0051),
+// to Finance: it REPLACES five functions (finance_chain_steps_core 0026,
+// finance_money_rows_core / finance_day / finance_payment_detail /
+// finance_export 0047), each starting from the live text, and rebuilds the
+// table rule finance_day_closing_items_source_check.
+// DATABASE A, built in the production order with every live migration
+// (liveOrderTo0025 with the four big Finance seeds in it - Color Belt, Star,
+// camps, private testing, 5 years - then 0027, 0026, 0028, 0029, 0031, 0030,
+// 0032, 0033, 0034, 0036, 0041, 0042, 0043, 0039, 0037, then Color Belt's
+// 0035 and 0044, Star's 0038, Black Belt's 0046, Finance's 0047, Camps' 0050
+// and Board breaking's 0051 - the real files) and the Black Belt seed
+// (2,000 candidates, returned checks, edits):
+//   a. 0052's fingerprints and pre-apply check are connector-safe (no
+//      "delete" / "drop"); the migration is pure ASCII; the pre-apply check
+//      before: five functions + the wrapper + the rule "ok: the live ...",
+//      0051's tables there, source not yet accepted
+//   b. the guard refuses 0052 when 0051 is missing, when a replaced function
+//      differs from the live text (finance_day), when the unreplaced wrapper
+//      differs, and when the table rule differs - nothing changes
+//   c. the Finance answers of every OTHER section - details, days, Both,
+//      History, exports, Home, and the items and figures of 5 years of weekly
+//      days - taken before 0052 are byte-for-byte the same after it
+//   d. apply 0052: in every fingerprint file ONLY the five functions' lines
+//      (code md5, live text -> 0052's) and the rule's line move; rights,
+//      definer, settings, owner, volatility, result tables stay; 0052's
+//      own 11 rows are as planned; no row of any table changed
+//   e. 0052_tests.sql, 0026's and 0018's tests; a seed of Board breaking
+//      money (2,000 students: edits, undos, refunds, Square) read by
+//      the Daily report, History, Export (its total per school equals the
+//      money in brk_payments) and payment detail, each under 2 s
+//   f. 0052 applied a SECOND time: no fingerprint, no row changed; tests again
+// DATABASE B, clean (no seeds), same order: 0052's tests, then 0047's,
+// 0037's, 0011's, camps' 0017's, 0018's, 0026's, finance_camp_refunds' and
+// 0051's tests after it.
+// Run only this step with   node run.mjs --only-step0052
+// =====================================================================
+const MD5_0052 = {
+  old: {
+    finance_chain_steps_core: '6d03a519cc5ada725a961b1c672dbe82',
+    finance_money_rows_core: '11479fb6451a956b5f8bb5bc6b5c0366',
+    finance_day: '8cb806284e54443fb73bd4a8f679b617',
+    finance_payment_detail: 'cc90ec717325831a58a3063c9cb73c12',
+    finance_export: '0f4b678f757bca72fec14bb78aacd37d',
+  },
+  new: {
+    finance_chain_steps_core: 'f59ce2d742c8f69e9b76109962cc5edf',
+    finance_money_rows_core: '534cb48c5cc6d5f6c9be6ce4ca0e0d8d',
+    finance_day: 'fe768b06d00755793c0352c41fabcd3e',
+    finance_payment_detail: '61b9768f75082591f5e74a79ad5fee33',
+    finance_export: '637d23b573269daa3e8f4f23f2d1e68a',
+  },
+  wrapper: '6882b0a0f80407ba97864f47feae0e7f',
+};
+const FIVE_0052 = ['finance_chain_steps_core', 'finance_money_rows_core', 'finance_day', 'finance_payment_detail', 'finance_export'];
+const SIGS_0052 = {
+  finance_chain_steps_core: 'public.finance_chain_steps_core(date, date, text, uuid)',
+  finance_money_rows_core: 'public.finance_money_rows_core(text, date, date, text, uuid)',
+  finance_money_rows: 'public.finance_money_rows(text, date, date)',
+  finance_day: 'public.finance_day(text, date)',
+  finance_payment_detail: 'public.finance_payment_detail(text, uuid)',
+  finance_export: 'public.finance_export(text, date, date)',
+};
+const RULE_0052 = 'finance_day_closing_items_source_check';
+
+// The production order up to and including 0051, on a database made by buildBase (seeds: SQL for after 0021, as liveOrderTo0025)
+async function build0052(L, seeds = '') {
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L, seeds))) return null;
+  const order = [['0027', '0027_camps_edit_guard.sql'], ['0026', '0026_finance_black_belt.sql'], ['0028', '0028_star_start_times.sql'],
+    ['0029', '0029_finance_reminder_5min.sql'], ['0031', '0031_class_ages.sql'], ['0030', '0030_color_belt_review.sql'],
+    ['0032', '0032_black_belt_review.sql'], ['0033', '0033_camps_design_review.sql'], ['0034', '0034_black_belt_history_ids.sql'],
+    ['0036', '0036_new_students_profile.sql'], ['0041', '0041_star_end_time.sql'], ['0042', '0042_forms_copy_to_school.sql'],
+    ['0043', '0043_camps_fill_in.sql'], ['0039', '0039_camps_record_refund.sql'], ['0037', '0037_finance_export_private.sql']];
+  const real = (n) => readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith(`${n}_`) && f.endsWith('.sql'));
+  const applied = [];
+  for (const [n, file] of order) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${n}`, read('migrations', file)))) return null;
+    applied.push(n);
+  }
+  for (const n of ['0035', '0044', '0038', '0046', '0047', '0050', '0051']) {
+    if (!real(n)) { record(`${L}the real ${n} file is in supabase/migrations/`, false, 'missing'); return null; }
+    if (!(await run(db, `${L}apply ${n} (the real file)`, read('migrations', real(n))))) return null;
+    applied.push(n);
+  }
+  return { db, applied };
+}
+
+// The Board breaking money seed: 2,000 students at two events (one per school), one payment each over the last 300
+// days, taken at the event's school or the other (every 4th); every 7th edited (reversal + new payment, one moment,
+// one login); every 11th undone a day later; every 13th refunded ($2, cash) 3 days later; every 17th paid through
+// Square (no login). About 4,500 payment rows, written with the table's own guard on.
+const BRK_SEED_0052 = (today) => `
+begin;
+select set_config('request.jwt.claims', '', true);
+select set_config('tkd.actor_label', 'PGlite brk seed', true);
+insert into public.brk_events (name, location_code, event_date, public_code, created_by_name, updated_by_name)
+select 'PGlite brk perf ' || l.code, l.code, public.testing_today() + 60, public.testing_new_public_code(), '', ''
+  from public.locations l;
+insert into public.brk_event_classes (event_id, name, start_time, end_time, sort)
+select e.id, 'Group A', '17:00', '18:00', 0 from public.brk_events e where e.name like 'PGlite brk perf %';
+insert into public.brk_registrations (event_id, class_id, first_name, last_name, age, rank_name, band_used, tech_boards, adult_boards,
+                                      paying_by, paying_by_on_form, same_day, amount_cents, source, entered_by, created_by_name, updated_by_name)
+select e.id, c.id, 'Brkperf', 'Bp ' || g, 10, 'Yellow', 'child', 1, 0, 'cash', 'cash', false, 1000 + (g % 5) * 100, 'desk', 'seed', '', ''
+  from generate_series(1, 2000) as g
+  join public.brk_events e on e.name = 'PGlite brk perf ' || (case when g % 2 = 0 then 'worcester' else 'shrewsbury' end)
+  join public.brk_event_classes c on c.event_id = e.id;
+
+create temp table zz_brk on commit drop as
+select r.id as registration_id, split_part(r.last_name, ' ', 2)::integer as g, e.location_code,
+       case when split_part(r.last_name, ' ', 2)::integer % 4 = 0
+            then (case e.location_code when 'worcester' then 'shrewsbury' else 'worcester' end) else e.location_code end as school,
+       public.testing_today() - (split_part(r.last_name, ' ', 2)::integer * 300 / 2000) as d,
+       1000 + (split_part(r.last_name, ' ', 2)::integer % 5) * 100 as cents
+  from public.brk_registrations r join public.brk_events e on e.id = r.event_id
+ where r.first_name = 'Brkperf';
+
+-- payment 1 (a Square payment: no login, the event's school)
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select z.registration_id, 'payment', z.cents,
+       case when z.g % 17 = 0 then 'card' else (array['check', 'cash', 'card'])[1 + z.g % 3] end,
+       z.d, case when z.g % 17 = 0 then z.location_code else z.school end,
+       (z.d + time '15:00') at time zone 'America/New_York',
+       case when z.g % 17 = 0 then null else '${DESK_UID}'::uuid end,
+       case when z.g % 17 = 0 then 'Square' else 'Staff' end
+  from zz_brk z order by z.g;
+-- every 7th edited: a reversal + a new payment at one moment by one login
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+select z.registration_id, 'reversal', -p.amount_cents, p.method, z.d, p.school, (z.d + time '16:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin', p.id
+  from zz_brk z join public.brk_payments p on p.registration_id = z.registration_id and p.kind = 'payment'
+ where z.g % 7 = 0 and z.g % 17 <> 0 order by z.g;
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select z.registration_id, 'payment', z.cents + 100, 'card', z.d, z.school, (z.d + time '16:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin'
+  from zz_brk z where z.g % 7 = 0 and z.g % 17 <> 0 order by z.g;
+-- every 11th (not 7th, not 17th) undone a day later
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+select z.registration_id, 'reversal', -p.amount_cents, p.method, z.d + 1, p.school, ((z.d + 1) + time '10:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin', p.id
+  from zz_brk z join public.brk_payments p on p.registration_id = z.registration_id and p.kind = 'payment'
+ where z.g % 11 = 0 and z.g % 7 <> 0 and z.g % 17 <> 0 and z.d + 1 <= public.testing_today() order by z.g;
+-- every 13th (not 7th, 11th, 17th) refunded $2 in cash 3 days later at the school that hands it back
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select z.registration_id, 'refund', -200, 'cash', z.d + 3, z.school, ((z.d + 3) + time '11:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin'
+  from zz_brk z where z.g % 13 = 0 and z.g % 7 <> 0 and z.g % 11 <> 0 and z.g % 17 <> 0 and z.d + 3 <= public.testing_today() order by z.g;
+commit;`;
+
+async function step0052() {
+  const L = '[0052] ';
+  const migFile = path.join(supabaseDir, 'migrations', '0052_finance_board_breaking.sql');
+  if (!existsSync(migFile)) {
+    record(`${L}migrations/0052_finance_board_breaking.sql exists`, false, 'the file is missing');
+    return null;
+  }
+  const migration = read('migrations', '0052_finance_board_breaking.sql');
+  const preSql = read('tests', '0052_preapply_check.sql');
+  const unsafe = [['tests', '0052_fingerprints.sql'], ['tests', '0052_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0052_fingerprints.sql and 0052_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the migration file is pure ASCII (no curly quotes, dashes or other characters outside 0x00-0x7F)`,
+    /^[\r\n -~]*$/.test(migration), (migration.match(/[^\r\n -~]/g) ?? []).slice(0, 5).join(' '));
+  record(`${L}0052's migration has no secret key in it (no "eyJ" token, no "sb_secret_" key)`,
+    !/eyJ[A-Za-z0-9_-]{20,}|sb_secret_/.test(migration));
+  const blocks = migration.replace(/\r\n/g, '\n');
+  record(`${L}every "source: board breaking (0052)" block is closed by an "end board breaking" line`,
+    (blocks.match(/-- ===== source: board breaking \(0052\) =====/g) ?? []).length === (blocks.match(/-- ===== end board breaking =====/g) ?? []).length
+      && (blocks.match(/-- ===== end board breaking =====/g) ?? []).length >= 13,
+    `${(blocks.match(/-- ===== end board breaking =====/g) ?? []).length} blocks`);
+  const nothingForAnon = !/\bto\s+(anon|public)\b/i.test(blocks);
+  record(`${L}the migration grants nothing to anon or public`, nothingForAnon);
+
+  // ================== DATABASE A: seeded
+  const built = await build0052(L, PERF_SEED() + '\n' + CHAIN_SEED() + '\n' + CAMPS_PERF_SEED() + '\n' + PRIVATE_SEED());
+  if (!built) return null;
+  const { db, applied } = built;
+  await adminSession(db);
+  if (!(await bbSeedCycles(db, L))) return null;
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+  const md5Of = async (name) => one(db, `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                                           from pg_proc p where p.oid = to_regprocedure('${SIGS_0052[name]}')`);
+  const ruleMd5 = async () => one(db, `select md5(regexp_replace(pg_get_constraintdef(c.oid), '\\s+', '', 'g'))
+        from pg_constraint c where c.conrelid = to_regclass('public.finance_day_closing_items') and c.conname = '${RULE_0052}'`);
+  for (const name of FIVE_0052) {
+    record(`${L}before 0052 ${name} is the live text (md5 ${MD5_0052.old[name]})`, (await md5Of(name)) === MD5_0052.old[name], await md5Of(name));
+  }
+  record(`${L}before 0052 the wrapper finance_money_rows is 0047's (md5 ${MD5_0052.wrapper})`, (await md5Of('finance_money_rows')) === MD5_0052.wrapper);
+  const ruleOld = await ruleMd5();
+  record(`${L}before 0052 the table rule is 0026's (it does not name board_breaking)`,
+    (await one(db, `select pg_get_constraintdef(c.oid) not like '%board_breaking%' from pg_constraint c
+       where c.conrelid = to_regclass('public.finance_day_closing_items') and c.conname = '${RULE_0052}'`)) === true, ruleOld);
+
+  // a. the pre-apply check
+  const pre = async () => (await db.query(preSql)).rows;
+  const preBefore = await pre();
+  record(`${L}[pre-apply check] before 0052: the five functions, the wrapper and the rule "ok: the live ...", 0051's tables there, no closed day with Board breaking money`,
+    preBefore.filter((r) => r.kind === 'function').length === 6 && preBefore.filter((r) => r.kind === 'rule').length === 1
+      && preBefore.filter((r) => r.kind === 'table').length === 1 && preBefore.every((r) => r.detail.startsWith('ok: ')),
+    JSON.stringify(preBefore.map((r) => r.item + ': ' + r.detail.slice(0, 24))));
+
+  // b. the guard refuses
+  const md5Day = await md5Of('finance_day');
+  const guardTry = async (label, plant, wanted) => {
+    let message = '';
+    try {
+      await db.exec(`begin;\n${plant}\n${migration}`);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0052 when ${label} (it stops, nothing changes)`,
+      message.includes(wanted) && (await md5Of('finance_day')) === md5Day && (await one(db, `select to_regclass('public.brk_payments') is not null`)) === true
+        && (await ruleMd5()) === ruleOld, message || 'it ran');
+  };
+  await guardTry('0051 is missing', 'alter table public.brk_payments rename to brk_payments_gone;', '0052 needs migration 0051');
+  await guardTry('a replaced function differs from the live one (finance_day)',
+    `create or replace function public.finance_day(p_location_code text, p_day date)
+     returns jsonb language plpgsql stable security definer set search_path = '' as $$ begin return '{}'::jsonb; end; $$;`,
+    'rebuild 0052 first');
+  await guardTry('a replaced function differs from the live one (finance_chain_steps_core)',
+    (() => {
+      const t = read('migrations', '0026_finance_black_belt.sql').replace(/\r\n/g, '\n');
+      const at = t.indexOf('create function public.finance_chain_steps_core(');
+      const end = t.indexOf('\n$$;', at) + 4;
+      return t.slice(at, end).replace('create function', 'create or replace function').replace('v_state  text;', 'v_state  text; v_extra integer := 1;');
+    })(), 'rebuild 0052 first');
+  await guardTry('the wrapper finance_money_rows (not replaced) differs',
+    `create or replace function public.finance_money_rows(p_location_code text, p_from date, p_to date)
+     returns table (source text, payment_id uuid, school text, day date, "time" text, first_name text, last_name text, what text,
+       event_date date, is_private boolean, kind text, method text, amount_cents integer, state text, was_amount_cents integer,
+       was_method text, moved_to date, moved_from date, changed_by_name text, changed_on date, recorded_by_name text, row_id uuid,
+       counts boolean, first_recorded_at timestamptz, row_recorded_at timestamptz, event_name text, event_id uuid, was_school text)
+     language sql stable set search_path = '' as $b$ select m.* from public.finance_money_rows_core(p_location_code, p_from, p_to, null, null) m where true; $b$;`,
+    'rebuild 0052 first');
+  await guardTry('the table rule differs from the live one',
+    `alter table public.finance_day_closing_items drop constraint ${RULE_0052};
+     alter table public.finance_day_closing_items add constraint ${RULE_0052} check (source in ('color_belt', 'star', 'camp'));`,
+    'rebuild 0052 first');
+
+  // c. the other sections' answers, before and after
+  const ids = (await db.query(DETAIL_IDS_SQL + `
+    union all (select 'camp', p.id::text from public.camp_payments p where p.kind = 'payment' order by p.id limit 12)
+    union all (select 'color_belt', p.id::text from public.testing_private_payments p where p.kind = 'payment' order by p.id limit 12)
+    union all (select 'black_belt', p.id::text from public.bb_payments p where p.kind = 'payment' order by p.id limit 14)
+    union all (select 'black_belt', p.id::text from public.bb_payments p where p.kind in ('returned', 'refund', 'reversal') order by p.id limit 14)`)).rows;
+  const today = await one(db, 'select public.testing_today()::text');
+  const days = (await db.query(`select (date '${today}' - 61 * k)::text as d from generate_series(0, 29) as k`)).rows.map((x) => x.d);
+  const answers = async () => {
+    const out = [];
+    for (const { src, id } of ids) out.push(await asAdmin(db, 'select public.finance_payment_detail($1, $2::uuid) as r', [src, id]));
+    for (const d of days) {
+      for (const s of ['worcester', 'shrewsbury']) out.push(await asAdmin(db, `select public.finance_day('${s}', '${d}') as r`));
+      out.push(await asAdmin(db, `select public.finance_day_both('${d}') as r`));
+    }
+    for (let k = 0; k < 6; k++) out.push(await asAdmin(db, `select public.finance_history(null, date '${today}' - ${31 * k}) as r`));
+    for (const s of ['worcester', 'shrewsbury']) {
+      out.push((await asAdmin(db, `select public.finance_export('${s}', date '${today}' - 365, '${today}') as r`))?.rows);
+    }
+    out.push(await asAdmin(db, 'select public.finance_home() as r'));
+    return out.map((x) => JSON.stringify(x));
+  };
+  const sigBefore = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const ansBefore = await answers();
+  const tables = [...FINANCE_TABLES, 'camp_payments', 'bb_payments', 'star_payments', 'testing_payments', 'testing_private_payments',
+    'brk_payments', 'brk_registrations', 'brk_events'];
+  const snap = `select md5(${tables.map((t) => `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')})`;
+  const logSql = `select count(*)::text from public.change_log where table_name <> 'finance_exports'`;
+  const numbers = [...NUMBERS_0025, ...applied, '0052']
+    .filter((n, i, all) => all.indexOf(n) === i && existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const printsBefore = await printsOf(db, numbers);
+  const rowsBefore = await one(db, snap);
+  const logBefore = await one(db, logSql);
+
+  // d. apply 0052
+  if (!(await run(db, `${L}apply 0052_finance_board_breaking.sql`, migration))) return null;
+  const printsAfter = await printsOf(db, numbers);
+  record(`${L}0052 changed no row of any table (payments of every section, Finance's tables, Board breaking's) and wrote no history row`,
+    rowsBefore === (await one(db, snap)) && logBefore === (await one(db, logSql)));
+  const sigAfter = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const ansAfter = await answers();
+  const differ = sigBefore.filter((r, i) => JSON.stringify(r) !== JSON.stringify(sigAfter[i])).map((r) => r.day);
+  const items = sigBefore.reduce((n, r) => n + r.n, 0);
+  record(`${L}every other section's items and figures are the same after 0052, fingerprint included, on 5 years of weekly days - Color Belt, Star, camps, private testing, Black Belt`,
+    sigBefore.length > 300 && items > 1500 && differ.length === 0,
+    `${sigBefore.length} days, ${items} items` + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
+  const ansDiffer = ansBefore.map((a, i) => (a === ansAfter[i] ? null : i)).filter((i) => i !== null);
+  record(`${L}every other section's app answers are the same after 0052: payment details of all five kinds, days, Both, History, exports, Home`,
+    ansBefore.length > 150 && ansDiffer.length === 0 && ansBefore.every((a) => a !== 'null' && a !== undefined),
+    `${ansBefore.length} answers` + (ansDiffer.length ? `; DIFFER at ${ansDiffer.slice(0, 5).join(', ')}: ${String(ansAfter[ansDiffer[0]]).slice(0, 300)}` : ''));
+  const kinds = new Set(ids.map((x) => x.src));
+  record(`${L}the compared payment details cover all of Color Belt, Star, camps, Black Belt`, ['color_belt', 'star', 'camp', 'black_belt'].every((k) => kinds.has(k)),
+    `${ids.length} details: ${[...kinds].join(', ')}`);
+
+  // d (continued). fingerprints: only the five functions' lines and the rule's line move
+  const nameOf = (line) => {
+    const item = line.split('  ')[1] ?? '';
+    return item.includes('(') ? item.split('(')[0] : item.split('.').pop();
+  };
+  const kindOf = (line) => line.split('  ')[0];
+  const wrong = [];
+  const movedIn = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = printsBefore[f].filter((line) => !printsAfter[f].includes(line));
+    const added = printsAfter[f].filter((line) => !printsBefore[f].includes(line));
+    if (!gone.length && !added.length) continue;
+    if (n === '0052') { movedIn.push(n); continue; }   // (its rows are new: the file lists nothing before 0052)
+    const allowed = [...FIVE_0052, RULE_0052];
+    if (gone.length !== added.length || ![...gone, ...added].every((line) => allowed.includes(nameOf(line)))) {
+      wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      continue;
+    }
+    for (const g of gone) {
+      const a = added.find((line) => nameOf(line) === nameOf(g) && kindOf(line) === kindOf(g));
+      if (!a) { wrong.push(`${n}: no matching new line for ${g}`); continue; }
+      const name = nameOf(g);
+      if (name === RULE_0052) {
+        if (!a.includes('board_breaking') || g.includes('board_breaking')) wrong.push(`${n}: rule ${g} => ${a}`);
+      } else if (kindOf(g) !== 'function') {
+        wrong.push(`${n}: a non-md5 line moved: ${g} => ${a}`);
+      } else if (g.replace(MD5_0052.old[name], '<md5>') !== a.replace(MD5_0052.new[name], '<md5>') || !g.includes(MD5_0052.old[name]) || !a.includes(MD5_0052.new[name])) {
+        wrong.push(`${n}: more than the code md5 changed: ${g} => ${a}`);
+      }
+    }
+    movedIn.push(n);
+  }
+  record(`${L}fingerprints: in every other file only the five functions' lines (code md5, live text -> 0052's; definer, settings, owner, rights stay) and the rule's line moved, every other line byte-identical`,
+    wrong.length === 0 && ['0011', '0026', '0047'].every((n) => movedIn.includes(n)),
+    wrong.join('; ') || `moved in ${movedIn.join(', ')}; ${numbers.length} files checked`);
+  const prints52 = printsAfter['0052_fingerprints.sql'];
+  const fnLine = (name) => prints52.find((l) => l.startsWith('function  ') && nameOf(l) === name) ?? '';
+  const kindLine = (name) => prints52.find((l) => l.startsWith('function-kind') && nameOf(l) === name) ?? '';
+  const planned = FIVE_0052.every((name) => {
+    const l = fnLine(name);
+    const appFn = ['finance_day', 'finance_payment_detail', 'finance_export'].includes(name);
+    return l.includes(MD5_0052.new[name]) && l.includes('settings=search_path=""') && l.includes(`definer=${appFn}`) && l.includes('owner=postgres')
+      && (appFn ? /rights=authenticated:EXECUTE,postgres:EXECUTE$/.test(l) : l.endsWith('rights=postgres:EXECUTE'));
+  });
+  const wantKind = { finance_chain_steps_core: 'volatility=s language=plpgsql', finance_money_rows_core: 'volatility=s language=sql',
+    finance_day: 'volatility=s language=plpgsql', finance_payment_detail: 'volatility=s language=plpgsql',
+    finance_export: 'volatility=v language=plpgsql' };
+  const kindsOk = FIVE_0052.every((name) => kindLine(name).includes(wantKind[name]));
+  record(`${L}0052 fingerprints: eleven lines; the five functions' md5, definer, search_path="" and rights as planned (app functions: authenticated only; helpers: owner only); the rule names all five sources`,
+    prints52.length === 11 && planned && kindsOk
+      && prints52.some((l) => l.startsWith('constraint') && l.includes("'black_belt'::text, 'board_breaking'::text")),
+    prints52.join(' | '));
+  const preAfter = await pre();
+  record(`${L}[pre-apply check] after 0052: the five functions and the rule say "ok: already 0052's version"`,
+    preAfter.filter((r) => r.kind === 'function' && r.item !== 'finance_money_rows').every((r) => r.detail.startsWith('ok: already 0052'))
+      && preAfter.filter((r) => r.kind === 'rule').every((r) => r.detail.startsWith('ok: already 0052'))
+      && preAfter.filter((r) => r.item === 'finance_money_rows').every((r) => r.detail.startsWith('ok: ')),
+    JSON.stringify(preAfter.map((r) => r.item + ': ' + r.detail.slice(0, 28))));
+
+  // e. the tests, then a seed of Board breaking money
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await runTestFileLive(db, `${L}0052_tests.sql (on the seeded database)`, '0052_tests.sql', 'ALL 0052 TESTS PASSED');
+  await runTestFile(db, `${L}0026_tests.sql (after 0052)`, '0026_tests.sql', 'ALL 0026 TESTS PASSED');
+  await runTestFile(db, `${L}0018_tests.sql (after 0052)`, '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+  if (await run(db, `${L}the Board breaking money seed (2,000 students, edits, undos, refunds, Square)`, BRK_SEED_0052(today))) {
+    await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+    const kindsSeed = (await db.query(`select count(*)::int as n,
+        count(*) filter (where kind = 'reversal')::int as reversals, count(*) filter (where kind = 'refund')::int as refunds,
+        count(*) filter (where recorded_by is null)::int as square from public.brk_payments`)).rows[0];
+    record(`${L}the seed: thousands of Board breaking rows with edits, undos, refunds and Square payments`,
+      kindsSeed.n > 2500 && kindsSeed.reversals > 400 && kindsSeed.refunds > 100 && kindsSeed.square > 60, JSON.stringify(kindsSeed));
+    const ex = {};
+    for (const s of ['worcester', 'shrewsbury']) {
+      ex[s] = await timed0026(db, L, `finance_export (366 days, ${s}) with the Board breaking money`,
+        `select public.finance_export('${s}', date '${today}' - 365, '${today}') as r`);
+      const rows = (ex[s]?.rows ?? []).filter((r) => r.what === 'board_breaking');
+      const expected = await one(db, `select coalesce(sum(amount_cents), 0)::text from public.brk_payments where school = '${s}' and paid_on >= date '${today}' - 365`);
+      record(`${L}the ${s} export's Board breaking total equals the money in brk_payments stored at ${s}`,
+        rows.length > 500 && String(rows.reduce((n, r) => n + r.counted_cents, 0)) === expected && rows.every((r) => r.event_name && 'was_school' in r),
+        `${rows.length} rows, ${rows.reduce((n, r) => n + r.counted_cents, 0)} vs ${expected}`);
+    }
+    const busy = await one(db, `select p.paid_on::text from public.brk_payments p where p.school = 'worcester' and p.kind = 'payment'
+        and p.paid_on < public.testing_today() - 30 group by p.paid_on order by count(*) desc, p.paid_on limit 1`);
+    const day = await timed0026(db, L, 'finance_day (the busiest Board breaking day, Worcester)', `select public.finance_day('worcester', '${busy}') as r`);
+    const dayItems = day?.items ?? [];
+    const counting = dayItems.filter((i) => ['counted', 'edited', 'moved_in'].includes(i.state));
+    record(`${L}that day: the total adds up from its lines, Board breaking lines carry event_name, nothing is private`,
+      !!day && counting.length > 0 && day.totals.total_cents === counting.reduce((n, i) => n + i.amount_cents, 0)
+        && dayItems.filter((i) => i.source === 'board_breaking').length > 0
+        && dayItems.filter((i) => i.source === 'board_breaking').every((i) => i.event_name && i.is_private === false),
+      `${busy}: ${dayItems.length} items`);
+    const edited = await one(db, `select p.id::text from public.brk_payments p join public.brk_registrations r on r.id = p.registration_id
+       where r.last_name = 'Bp 14' and p.kind = 'payment' order by p.recorded_at, p.id limit 1`);
+    const d1 = await timed0026(db, L, 'finance_payment_detail (an edited Board breaking payment)', `select public.finance_payment_detail('board_breaking', '${edited}') as r`);
+    record(`${L}the edited payment's trail: edited, recorded; state edited`,
+      (d1?.history ?? []).map((h) => h.what).join(',') === 'edited,recorded' && d1?.item?.state === 'edited', (d1?.history ?? []).map((h) => h.what).join(','));
+    await timed0026(db, L, 'finance_day_both (that day)', `select public.finance_day_both('${busy}') as r`);
+    await timed0026(db, L, 'finance_history (both schools, that month)', `select public.finance_history(null, '${busy}') as r`);
+    await timed0026(db, L, 'finance_home', 'select public.finance_home() as r');
+    await db.query(`select set_config('request.jwt.claims', '', false)`);
+  }
+
+  // f. re-run safety
+  const printsSeeded = await printsOf(db, numbers);
+  const rowsSeeded = await one(db, snap);
+  const logSeeded = await one(db, logSql);
+  await run(db, `${L}apply 0052 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(printsSeeded[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0052 re-run: no fingerprint, no row and no history row changed`,
+    movedAgain.length === 0 && rowsSeeded === (await one(db, snap)) && logSeeded === (await one(db, logSql)), movedAgain.join(', '));
+  await runTestFileLive(db, `${L}0052_tests.sql (after the re-run)`, '0052_tests.sql', 'ALL 0052 TESTS PASSED');
+  await db.close().catch(() => {});
+
+  // ================== DATABASE B: clean
+  const L2 = '[0052 clean] ';
+  const built2 = await build0052(L2);
+  if (!built2) return prints52;
+  const db2 = built2.db;
+  if (await run(db2, `${L2}apply 0052_finance_board_breaking.sql`, migration)) {
+    const clean = await fingerprints(db2, '0052_fingerprints.sql');
+    record(`${L2}the 0052 fingerprints equal the ones from the seeded database`, JSON.stringify(clean) === JSON.stringify(prints52), clean.join(' | '));
+    const testFiles = [['0052_tests.sql', 'ALL 0052 TESTS PASSED'], ['0047_tests.sql', 'ALL 0047 TESTS PASSED'], ['0037_tests.sql', 'ALL 0037 TESTS PASSED'],
+      ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+      ['0026_tests.sql', 'ALL 0026 TESTS PASSED'], ['finance_camp_refunds_tests.sql', 'ALL FINANCE CAMP REFUND TESTS PASSED'],
+      ['0051_tests.sql', 'ALL 0051 TESTS PASSED']];
+    for (const [file, ok] of testFiles) {
+      if (existsSync(path.join(supabaseDir, 'tests', file))) await (file === '0052_tests.sql' ? runTestFileLive : runTestFile)(db2, `${L2}${file} (after 0052)`, file, ok);
+    }
+  }
+  await db2.close().catch(() => {});
+  return prints52;
 }
 
 function finish() {

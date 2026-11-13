@@ -10,4 +10,5 @@ import './forms.test.mjs';
 import './starRegister.test.mjs';
 import './bbRegister.test.mjs';
 import './origins.test.mjs';
+import './breaking.test.mjs';
 import './headers.test.mjs';

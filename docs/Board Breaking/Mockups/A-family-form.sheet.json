@@ -1,0 +1,8 @@
+{
+  "shots": "A-family-shots",
+  "title": "Board breaking · Family sign-up page: the form (mockup)",
+  "subtitle": "What a parent sees after scanning the QR. Same look as the Camps sign-up page (same styles and classes). <b>Age</b> replaces Program, <b>Rank</b> is one long list, boards are filled in from age + rank and can be changed. <b>Amber outline</b> = new on this page. Names and amounts are made up. Prices: Technical $3.00, Adult $4.00, card +$0.25 per board.",
+  "out": "A-family-form",
+  "states": ["form", "form-empty"],
+  "pcOwnLine": ["form", "form-empty"]
+}

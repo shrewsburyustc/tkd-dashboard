@@ -1,0 +1,140 @@
+/*
+  breaking.css — Board breaking's own styles for the parts the page frame, the Events tab and the Add / Edit
+  event box draw (rulebook v1.300; approved pictures docs/Board Breaking/Mockups/B-staff*.png).
+  Why it exists: shared.css, testing.css and testing-events.css already draw almost everything this page uses
+  (the tabs, the Upcoming / Past switch, the list rows, the dialog frame, the time list, the ⋯ menu). This file adds
+  ONLY what is new, with the same tokens (tokens.css) and the 4px spacing grid. The class names start with "brk-"
+  so they never clash with another section. The new rules are the ones the pictures' generator marked "NEW":
+  B-staff-gen.mjs's style block. The roster's and the Chart tab's own rules live in breaking-roster.css and
+  breaking-chart.css (the other parts of this section).
+  Load order matters a little: this file is imported by BoardBreaking.jsx after testing-events.css, so where a rule
+  here has the same weight as one there (the class rows in the dialog), this one wins.
+
+  Screen-size rules used below (same as testing-events.css):
+    Phone          (max-width: 639.98px)
+    Tablet         (min-width: 640px) and (max-width: 1023.98px)
+    Touch screens  (pointer: coarse)              → 44px tap areas
+  Note: the Add / Edit event box is drawn into <body> (a portal), outside the ".brk" page wrapper, so its rules
+  start with "brk-" on their own, not under ".brk".
+*/
+
+/* ===== The Events list ===== */
+
+/* Event · Date · School · Registered · Registration · pencil and ⋯ */
+.brk .brk-erow,
+.brk .ev-list:not(.is-touch) .ev-row:not(.is-phone) {
+  grid-template-columns: minmax(0, 1.4fr) 150px 110px minmax(0, 1fr) 160px 64px;
+}
+
+/* The gray line under the list (the picture's "Staff see this list…") */
+.brk .viewonly {
+  margin-top: var(--space-12);
+}
+
+/* ===== Add / Edit event ===== */
+
+/* One class line: [grip + name] and [start to end ⋯] */
+.brk-crow {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.brk-crow-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.brk-crow-name {
+  min-width: 0;
+}
+
+/* The class being dragged is faded; a 2px blue line shows where it will land (the shared drag hook). */
+.brk-crow.is-lifted {
+  opacity: 0.45;
+}
+
+.brk-crow-gap {
+  height: 2px;
+  margin: -1px 0;
+  background: var(--color-blue);
+}
+
+/* "Add class" closes the list, under a line */
+.brk-addclass {
+  padding: var(--space-8) 0 var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* A gray line under a field, pulled up close to what it explains */
+.brk-hint {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+}
+
+/* ===== Tablet widths ===== */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .brk .brk-erow,
+  .brk .ev-list:not(.is-touch) .ev-row:not(.is-phone) {
+    grid-template-columns: minmax(0, 1fr) 108px 84px 170px 136px 64px;
+    white-space: nowrap;
+  }
+
+  /* The name may still wrap onto more lines; the other columns stay on one line. */
+  .brk .brk-erow .ev-name,
+  .brk .ev-list:not(.is-touch) .ev-row .ev-name {
+    white-space: normal;
+  }
+}
+
+/* Touch tablets: the pencil and the ⋯ are 44px each, so the actions column is wider than the mouse one */
+@media (pointer: coarse) and (min-width: 640px) {
+  .brk .brk-erow {
+    grid-template-columns: minmax(0, 1fr) 108px 84px 170px 136px 96px;
+    white-space: nowrap;
+  }
+
+  .brk .brk-erow .ev-name {
+    white-space: normal;
+  }
+}
+
+/* Class lines on tablets and phones: the name on its own line, the two times under it */
+@media (max-width: 1023.98px) {
+  .brk-crow {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-4);
+    padding: var(--space-4) 0 var(--space-8);
+  }
+
+  .brk-crow .ev-crow-times {
+    margin-left: 32px;
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .brk-crow {
+    position: relative;
+  }
+
+  /* start · to · end across the full width, with the ⋯ up beside the name */
+  .brk-crow .ev-crow-times {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    margin-left: 0;
+  }
+
+  .brk-crow .ev-time {
+    width: auto;
+  }
+
+  .brk-crow .ev-crow-times .tib {
+    position: absolute;
+    top: 0;
+    right: calc(-1 * var(--space-4));
+  }
+
+  .brk-crow .brk-crow-name {
+    margin-right: 40px;
+  }
+}

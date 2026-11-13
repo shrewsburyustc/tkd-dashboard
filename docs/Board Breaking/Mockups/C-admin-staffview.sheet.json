@@ -1,0 +1,6 @@
+{
+  "shots": "C-admin-shots/C-admin-staffview",
+  "title": "Board breaking · what staff see — mockup",
+  "subtitle": "Staff get the Events tab only; the admin-only <b>Chart and prices</b> tab is not on their page at all.",
+  "out": "C-admin-staffview"
+}

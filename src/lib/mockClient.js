@@ -139,6 +139,10 @@
 //                                         code, and { duplicateOf: 'Ava Thompson' } for a duplicate)
 //   __tkdPreview.forcePriceChanged(true)  the next camp Send answers price_changed (+$5)
 //   __tkdPreview.forceCampChanged(true)   the next camp Send answers camp_changed
+// Board breaking helpers (contract CONTRACT-0051, mockBreaking.js; data in localStorage 'tkd.preview.breaking';
+// setRole, failNextSave, setTestingDelay, setToday and simulateOtherAdminEdit cover Board breaking too):
+//   __tkdPreview.resetBreaking()          back to the sample events, students, prices and chart
+//   __tkdPreview.addSquareNeedsLook()     one more Square payment "that needs a look" (the amber box on the event page, admins)
 // Finance helpers (contract 0011 §3, mockFinance.js; setToday, setRole and failNextSave cover Finance too —
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
@@ -203,6 +207,7 @@ import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 import { previewPeopleSearch } from './mockPeople.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
+import { createBreakingBackend, BRK_RPC_NAMES, BRK_RESTRICTED_RPC_NAMES, BRK_WRITE_RPC_NAMES, BRK_STORE_KEY } from './mockBreaking.js';
 import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
 import { blackBeltPublicHelpers } from './blackBelt/publicApi.preview.js';
 import BLACK_BELT_MOCKUP_CAST from '../../docs/Testing/Black Belt Testing/TKD-BlackBelt-Mockup-Cast.json'; // 0025's sample (made-up people)
@@ -731,6 +736,14 @@ export function createMockClient() {
       }, admin);
     }
   }
+  // ----- Board breaking (mockBreaking.js) — its own store (migration 0051's staff functions) -----
+  const breaking = createBreakingBackend({
+    loadStore: () => JSON.parse(readStorage(BRK_STORE_KEY)), // missing/damaged -> the sample data
+    saveStore: (store) => writeStorage(BRK_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+  });
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
   // failSavesUntilRetry turns this on and reconnect turns it off: while on, every Events save
@@ -862,6 +875,7 @@ export function createMockClient() {
     readColorBelt: () => events.snapshot(),
     readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     readBlackBelt: () => blackBelt.snapshot(), // Black Belt payments are the fourth (migration 0026)
+    readBreaking: () => breaking.snapshot(), // Board breaking payments are the fifth (migration 0052)
     readStar: () => starCandidates.snapshot(), // Star payments from Star's own store, 'tkd.preview.star' (R1-09)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
@@ -967,6 +981,17 @@ export function createMockClient() {
         backend.failNextSave(); // this one call fails like a dropped connection
       }
       return backend.rpc(name, args, testingContext());
+    }
+    if (BRK_RPC_NAMES.includes(name) || BRK_RESTRICTED_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      if (eventSavesOffline && BRK_WRITE_RPC_NAMES.includes(name)) {
+        return { data: null, error: { message: 'Failed to fetch (preview: failSavesUntilRetry)' }, status: 0 };
+      }
+      if (failNextTesting && BRK_WRITE_RPC_NAMES.includes(name)) {
+        failNextTesting = false; // failNextSave: the next save fails, whichever section it is in
+        breaking.failNextSave();
+      }
+      return breaking.rpc(name, args, testingContext());
     }
     if (BB_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -1126,6 +1151,7 @@ export function createMockClient() {
       starEvents.simulateOtherAdminEdit();
       camps.simulateOtherAdminEdit();
       blackBelt.simulateOtherAdminEdit();
+      breaking.simulateOtherAdminEdit();
       return 'Another admin changed every class, rank, event, student, school address, camp, camper and template, and swapped two ranks — and changed Star testing\'s rubrics and prices, events and candidates, and every Black Belt cycle and candidate, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
@@ -1304,6 +1330,14 @@ export function createMockClient() {
       run('Bao Nguyen returned check', 'bb_mark_check_returned', { p_payment_id: checkOf(person('Bao', 'Nguyen'), '2027-03-27')?.id ?? null, p_note: null }, admin);
       if (problems.length > 0) return `Sample loaded with problems:\n${problems.join('\n')}`;
       return 'Black Belt money sample loaded and today set to Mon, Apr 26, 2027. Reload and open Finance → Daily report (Worcester; Shrewsbury and Both too). Earlier days: Mar 20, Mar 27, Apr 20, Apr 24.';
+    },
+    // ----- Board breaking helpers (mockBreaking.js) -----
+    resetBreaking() {
+      breaking.reset();
+      return 'Board breaking is back to the sample events, students, prices and board chart. Reload to see it.';
+    },
+    addSquareNeedsLook() {
+      return breaking.addNeedsLook() ? 'One more Square payment needs a look (admins see it on the event page).' : 'No upcoming Board breaking event to attach it to.';
     },
     // ----- Black Belt testing helpers (mockBlackBelt.js, blackBelt/publicApi.preview.js) -----
     resetBlackBelt() {

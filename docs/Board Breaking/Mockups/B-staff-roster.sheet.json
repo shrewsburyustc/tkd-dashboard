@@ -1,0 +1,16 @@
+{
+  "shots": "B-staff-shots",
+  "title": "Board breaking · Event roster (staff dashboard)",
+  "subtitle": "One event page: header, counts, Square notice (admin), Find a student and the students grouped by class time. Rows copy Color belt testing's roster and Camps' check-in box. Fake data.",
+  "states": [
+    "roster",
+    "rowmenu",
+    "link"
+  ],
+  "pcOwnLine": [
+    "roster",
+    "rowmenu",
+    "link"
+  ],
+  "out": "B-staff-roster"
+}

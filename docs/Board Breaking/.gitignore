@@ -1,0 +1,5 @@
+# .gitignore for docs/Board Breaking/ — keeps reviewer screenshots and the pictures-in-progress folders out of git.
+# Why: the independent reviewers saved ~16 MB of screenshots in Review/; they were only for the review (the
+# findings are in the status file and the commits), so they are not tracked from now on (commits already made are not rewritten).
+Review/
+Mockups/*-shots/

@@ -21,9 +21,9 @@
 // are drawn again right after, pick it up. (Testing's `pages` are part of its item, so they stay.)
 import {
   IconAddressBook, IconCalendarMonth, IconCertificate, IconClipboardText, IconClock, IconHome, IconReportMoney, IconStar,
-  IconTent, IconAward,
+  IconTent, IconAward, IconHammer,
 } from '@tabler/icons-react';
-import { STAR_TESTING_ON } from '../lib/features.js';
+import { BOARD_BREAKING_ON, STAR_TESTING_ON } from '../lib/features.js';
 
 // Testing's pages (v0.59): ti-certificate = Color belt testing, ti-star = Star testing,
 // ti-award = Black Belt testing (C2, v0.937).
@@ -31,6 +31,8 @@ export const TESTING_PAGES = [
   { key: 'colorBelt', label: 'Color belt testing', Icon: IconCertificate },
   { key: 'star', label: 'Star testing', Icon: IconStar },
   { key: 'blackBelt', label: 'Black Belt testing', Icon: IconAward },
+  // ti-hammer = Board breaking (rulebook v1.300; only while its build switch is on, lib/features.js)
+  ...(BOARD_BREAKING_ON ? [{ key: 'breaking', label: 'Board breaking', Icon: IconHammer }] : []),
 ];
 
 const ALL_ITEMS = [

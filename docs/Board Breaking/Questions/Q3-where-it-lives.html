@@ -1,0 +1,127 @@
+<!doctype html>
+<!-- Q3-where-it-lives.html — question picture for Jeffrey (Board Breaking, 2026-11-12).
+     What: the two places the new Board breaking section could sit in the dashboard's navigation.
+     Why: this is the one question of the first batch that is about how the screen looks.
+     Self-contained: open it in any browser. The icons are simple stand-in shapes, not the final icons. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board breaking — where it lives</title>
+<style>
+  :root { --blue:#003595; --tint:#e6ecf7; --line:#d9dde5; --ink:#1b2230; --muted:#5d6676; --bg:#f5f6f9; --amber:#f0a500; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px; font:15px/1.45 system-ui, "Segoe UI", sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 22px; }
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .opt { border:1px solid var(--line); border-radius:10px; padding:18px; }
+  .opt h2 { font-size:17px; margin:0 0 2px; }
+  .opt .rec { display:inline-block; font-size:12px; font-weight:600; color:#fff; background:var(--blue); border-radius:99px; padding:1px 9px; margin-left:8px; vertical-align:2px; }
+  .opt p { margin:4px 0 14px; color:var(--muted); }
+  .frames { display:flex; gap:18px; align-items:flex-start; }
+  .cap { font-size:12px; color:var(--muted); margin:0 0 6px; font-weight:600; }
+  /* PC frame: icon rail on the left */
+  .pc { width:330px; height:330px; border:1px solid var(--line); border-radius:8px; background:var(--bg); display:flex; overflow:hidden; position:relative; }
+  .rail { width:54px; background:#fff; border-right:1px solid var(--line); padding:8px 0; display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .ic { width:38px; height:32px; border-radius:7px; display:grid; place-items:center; font-size:11px; font-weight:700; color:var(--muted); position:relative; }
+  .ic.on { background:var(--tint); color:var(--blue); }
+  .ic.new { outline:3px solid var(--amber); outline-offset:1px; color:var(--blue); }
+  .pcbody { flex:1; padding:12px; }
+  .title { font-weight:700; font-size:14px; margin-bottom:8px; }
+  .row { height:22px; border-radius:5px; background:#fff; border:1px solid var(--line); margin-bottom:6px; }
+  .menu { position:absolute; left:58px; top:38px; background:#1b2230; color:#fff; border-radius:8px; padding:6px; width:190px; font-size:13px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .menu div { padding:6px 9px; border-radius:5px; }
+  .menu .new { outline:3px solid var(--amber); outline-offset:-1px; font-weight:700; }
+  /* Phone frame */
+  .ph { width:170px; height:330px; border:1px solid var(--line); border-radius:16px; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; }
+  .phbody { flex:1; padding:10px; }
+  .bar { display:flex; background:#fff; border-top:1px solid var(--line); }
+  .bar span { flex:1; text-align:center; font-size:10px; padding:8px 0; color:var(--muted); font-weight:600; }
+  .bar .on { color:var(--blue); }
+  .sheet { background:#fff; border:1px solid var(--line); border-radius:8px; padding:4px; font-size:12px; }
+  .sheet div { padding:6px 8px; border-radius:5px; }
+  .sheet .new { outline:3px solid var(--amber); outline-offset:-2px; font-weight:700; color:var(--blue); }
+  ul { margin:12px 0 0; padding-left:18px; }
+  li { margin-bottom:3px; }
+  .good::marker { content:"+  "; color:#177a3c; font-weight:700; }
+  .bad::marker { content:"–  "; color:#b3261e; font-weight:700; }
+  .note { margin-top:18px; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+  <h1>Question 3 — Where does Board breaking live?</h1>
+  <p class="sub">Amber outline = the new thing. Left frame = PC (tablet looks the same), right frame = phone. Icons are stand-ins.</p>
+
+  <div class="opts">
+    <div class="opt">
+      <h2>A — Inside Testing <span class="rec">Recommended</span></h2>
+      <p>A 4th page under Testing, next to Color belt, Star and Black Belt testing.</p>
+      <div class="frames">
+        <div>
+          <p class="cap">PC — hover the Testing icon</p>
+          <div class="pc">
+            <div class="rail">
+              <div class="ic">Home</div><div class="ic on">Test</div><div class="ic">Camp</div><div class="ic">Sched</div>
+              <div class="ic">Cal</div><div class="ic">Form</div><div class="ic">Pros</div><div class="ic">Fin</div>
+            </div>
+            <div class="pcbody"><div class="title">Testing</div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+            <div class="menu">
+              <div>Color belt testing</div><div>Star testing</div><div>Black Belt testing</div><div class="new">Board breaking</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="cap">Phone — More → Testing</p>
+          <div class="ph">
+            <div class="phbody">
+              <div class="title">Testing</div>
+              <div class="sheet"><div>Color belt testing</div><div>Star testing</div><div>Black Belt testing</div><div class="new">Board breaking</div></div>
+            </div>
+            <div class="bar"><span>Home</span><span>Calendar</span><span>Prospects</span><span class="on">More</span></div>
+          </div>
+        </div>
+      </div>
+      <ul>
+        <li class="good">The rail stays at 8 icons; nothing moves on any device.</li>
+        <li class="good">Staff already look under Testing for anything with a rank, a roster and Mark paid.</li>
+        <li class="good">The boards are each rank's testing technique, so it belongs with testing.</li>
+        <li class="bad">One step more than a rail icon: Testing, then Board breaking.</li>
+      </ul>
+    </div>
+
+    <div class="opt">
+      <h2>B — Its own rail icon</h2>
+      <p>A 9th section on the rail, after Camps.</p>
+      <div class="frames">
+        <div>
+          <p class="cap">PC — a new icon on the rail</p>
+          <div class="pc">
+            <div class="rail">
+              <div class="ic">Home</div><div class="ic">Test</div><div class="ic">Camp</div><div class="ic new on">Board</div><div class="ic">Sched</div>
+              <div class="ic">Cal</div><div class="ic">Form</div><div class="ic">Pros</div><div class="ic">Fin</div>
+            </div>
+            <div class="pcbody"><div class="title">Board breaking</div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+          </div>
+        </div>
+        <div>
+          <p class="cap">Phone — under More</p>
+          <div class="ph">
+            <div class="phbody">
+              <div class="title">More</div>
+              <div class="sheet"><div>Testing</div><div>Camps</div><div class="new">Board breaking</div><div>Schedule</div><div>Forms</div><div>Finance</div></div>
+            </div>
+            <div class="bar"><span>Home</span><span>Calendar</span><span>Prospects</span><span class="on">More</span></div>
+          </div>
+        </div>
+      </div>
+      <ul>
+        <li class="good">One click from anywhere on PC and tablet.</li>
+        <li class="bad">A 9th rail icon: more to scan, and the rail gets tight on a short screen.</li>
+        <li class="bad">On a phone it is under More either way, so nothing is gained there.</li>
+        <li class="bad">A monthly event gets the same weight as Home or Calendar.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Either way: the page inside is the same (list of events → an event's roster by class time), and Home shows the event on its day.</p>
+</body>
+</html>

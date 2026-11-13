@@ -1,0 +1,121 @@
+/* breaking-roster.css — the few styles that are NEW on Board breaking's event page (the roster).
+   Why it exists: the page is built from parts the app already has (Color belt testing's roster rows and
+   count cards, Camps' Find box and Broke-style check box, the shared Mark paid box and ⋯ menu), so almost
+   nothing here is new. The rules below are the "NEW" block of the approved picture's source
+   (docs/Board Breaking/Mockups/B-staff-gen.mjs), moved here when the page was built; all of them hang
+   under .brk-ev (the page's own root) so they can never touch another section.
+   Tokens only (src/styles/tokens.css). The shared classes it relies on come from testing-events.css and
+   camps.css, which EventPage.jsx imports. */
+
+/* "Registration  [Open | Closed]" under the summary line */
+.brk-ev .brk-regline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.brk-ev .brk-regline .field-label {
+  margin: 0;
+}
+
+/* The same line for staff, who can't change it: plain words */
+.brk-ev .brk-regline-value {
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+/* The amount under "Cash" in the Paying by cell */
+.brk-ev .brk-sub {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* A class's header line: "Group D · 4:20 – 5:00 PM" on the left, the counts on the right */
+.brk-ev .brk-subhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.brk-ev .brk-subhead strong {
+  font-weight: 600;
+}
+
+.brk-ev .brk-subcount {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* "8 · [belt] Orange belt" */
+.brk-ev .brk-rank {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-8);
+}
+
+/* The boards line that tablets and phones show under the name (PC has its own column) */
+.brk-ev .brk-boards-inline {
+  display: none;
+  flex-basis: 100%;
+}
+
+/* A student's row on PC: Student · Boards · Paying by · Payment · Broke · actions */
+.brk-ev .brk-srow {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 84px 176px 92px 152px;
+  cursor: default;
+}
+
+/* Gray "Hidden on this tablet" in the payment cell while private details are hidden */
+.brk-ev .brk-hidden-pay {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Tablet: no Boards column; the boards go under the name */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .brk-ev .brk-srow {
+    grid-template-columns: minmax(0, 1.6fr) 76px 150px 76px 152px;
+  }
+
+  .brk-ev .brk-boards {
+    display: none;
+  }
+
+  .brk-ev .brk-boards-inline {
+    display: block;
+  }
+}
+
+/* Phone: the class header may wrap; the tag line keeps its gaps */
+@media (max-width: 639.98px) {
+  .brk-ev .brk-subhead {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .brk-ev .brk-subcount {
+    white-space: normal;
+  }
+
+  .brk-ev .ev-srow.is-phone .ev-sline-tag {
+    gap: var(--space-8);
+  }
+}
+
+/* Touch: the Broke box is 28px tall with a 44px tap area (Camps' day boxes do the same) */
+@media (pointer: coarse) {
+  .brk-ev button.cp-dc {
+    min-height: 28px;
+  }
+
+  .brk-ev button.cp-dc::after {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
+  }
+}

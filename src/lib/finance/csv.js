@@ -51,7 +51,8 @@ export const DEFAULT_CSV_HEADERS = {
 };
 export const DEFAULT_CSV_LABELS = {
   school: { worcester: 'Worcester', shrewsbury: 'Shrewsbury' },
-  what: { color_belt: 'Color belt testing', star: 'Star testing', camp: 'Camp', black_belt: 'Black Belt' }, // Camp: v0.707; Black Belt: v0.815
+  // Camp: v0.707; Black Belt: v0.815; Board breaking: v1.300 / migration 0052 (the event date goes in the Testing date column)
+  what: { color_belt: 'Color belt testing', star: 'Star testing', camp: 'Camp', black_belt: 'Black Belt', board_breaking: 'Board breaking' },
   // A private testing's For cell (0037): the same words as the Daily report (screens/finance/text.js).
   what_private: { color_belt: 'Color belt testing, private', star: 'Star testing, private' },
   kind: { payment: 'Payment', refund: 'Refund', returned: 'Returned check' },
@@ -115,7 +116,7 @@ function cellText(row, key, type, labels) {
   if (type === 'plain') return quoteCell(String(value));
   let shown = type === 'code' ? (labels[key]?.[value] ?? String(value)) : String(value);
   // A private testing (0037): "Star testing, private" / "Color belt testing, private". Only a real
-  // true counts, and only for the two testing sections (camps and Black Belt have no private kind).
+  // true counts, and only for the two testing sections (camps, Black Belt and Board breaking have no private kind).
   if (key === 'what' && row.is_private === true && labels.what_private?.[value]) {
     shown = labels.what_private[value];
   }

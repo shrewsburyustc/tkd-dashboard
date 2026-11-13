@@ -7,6 +7,7 @@
 // ALL FINANCE LIB CHECKS PASSED.
 // Camp payments (v0.707) are the third source: their group checks them. Black Belt payments
 // (migration 0026) are the fourth: returned checks, card refunds, the For text, the CSV rows.
+// Board breaking payments (migration 0052, rulebook v1.300) are the fifth: read from Board breaking's own preview database.
 // The chain CASE TABLE below is the one the SQL tests (0011_tests.sql §2) replay on both sources.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -15,7 +16,8 @@ import {
   anyDifference, countsInTotals, schoolNow, schoolToday, weekdayOf, timeToMinutes, isReminderTime, isReminderDue,
   REMINDER_TIME_CHOICES, monthOf, daysOfMonth, daysBetweenInclusive, fingerprintOf, toCsv as toCsvFromRules, expectedCard,
 } from './financeRules.js';
-import { toCsv, guardFormula, quoteCell, centsToCsvNumber, csvFileName, CSV_COLUMNS, CSV_BOM, blackBeltItemsText } from './csv.js';
+import { toCsv, guardFormula, quoteCell, centsToCsvNumber, csvFileName, CSV_COLUMNS, CSV_BOM, blackBeltItemsText, DEFAULT_CSV_LABELS } from './csv.js';
+import { createBreakingBackend } from '../mockBreaking.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from '../mockFinance.js';
 import { addDays } from '../testing/eventRules.js';
 import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
@@ -1517,6 +1519,138 @@ check('mock: camp refunds — counted on the day and at the desk that hands the 
   assert.equal(det.status, 'ok');
   assert.equal(det.item.kind, 'refund');
   assert.equal(det.history[0].what, 'refunded');
+});
+
+// ======================= Board breaking payments: the fifth source (migration 0052, rulebook v1.300–v1.304) =======================
+// Board breaking's preview database (mockBreaking.js) writes brk_payments; Finance's preview reads them like the other four
+// sources. Run on the real Board breaking fake database (its sample students and payments, then Edit payment and Undo payment
+// through its own functions), so the rows are exactly what the Board breaking screens write.
+check('mock: Board breaking payments — school as stored, Square, refund, edit once, undo, Close the day, detail, export, CSV', () => {
+  let brkStore = null;
+  let brkNow = Date.parse(at(T, '10:00'));
+  const brk = createBreakingBackend({
+    loadStore: () => brkStore, saveStore: (s) => { brkStore = JSON.parse(JSON.stringify(s)); },
+    now: () => brkNow, today: () => T, newId: () => randomUUID(),
+  });
+  const brkAdmin = { signedIn: true, hasDataAccess: true, isAdmin: true, actorName: 'Jeffrey Berg', userId: 'admin-1' };
+  const brkCall = (name, args) => { const r = brk.rpc(name, args, brkAdmin); assert.equal(r.error, null); return r.data; };
+  brk.snapshot(); // makes and keeps the sample data (events, students, payments dated today = T)
+  const make = (readBreaking) => {
+    let kept = null;
+    return createFinanceBackend({
+      loadStore: () => kept, saveStore: (x) => { kept = JSON.parse(JSON.stringify(x)); },
+      readColorBelt: () => JSON.parse(JSON.stringify(cbStore)), readBreaking,
+      now: () => brkNow, today: () => T, newId: () => randomUUID(),
+    });
+  };
+  const without = make(undefined);
+  const withEmpty = make(() => ({ events: [], registrations: [], payments: [] }));
+  const withBrk = make(() => brk.snapshot());
+  const dayOf = (b, school, d = T) => b.rpc('finance_day', dayArgs(school, d), ADMIN_CTX).data;
+  const brkItems = (b, school, d = T) => dayOf(b, school, d).items.filter((it) => it.source === 'board_breaking');
+  const eventDate = brk.snapshot().events.find((e) => e.location_code === 'shrewsbury' && e.event_date > T).event_date;
+
+  // The words: a fifth label, after Black Belt, in the screens' and the CSV's own words.
+  assert.equal(FT.WHAT_BOARD_BREAKING, 'Board breaking');
+  assert.equal(FT.WHAT_BOARD_BREAKING, DEFAULT_CSV_LABELS.what.board_breaking);
+  assert.deepEqual(Object.keys(DEFAULT_CSV_LABELS.what), ['color_belt', 'star', 'camp', 'black_belt', 'board_breaking']);
+
+  // No Board breaking store (or an empty one) → every answer is exactly what it was before.
+  for (const school of ['worcester', 'shrewsbury']) assert.deepEqual(dayOf(withEmpty, school), dayOf(without, school));
+  assert.equal(without.rpc('finance_payment_detail', { p_source: 'board_breaking', p_payment_id: randomUUID() }, ADMIN_CTX).data.status, 'not_found');
+
+  // Shrewsbury today: the sample's cash (Ava, Mia, Gia), check (Zoe) and Square card (Cara) payments and Zoe's $4.00 check refund.
+  const s = brkItems(withBrk, 'shrewsbury');
+  assertClean(dayOf(withBrk, 'shrewsbury'), 'finance_day with Board breaking');
+  assert.deepEqual(s.map((it) => [it.first_name, it.kind, it.method, it.amount_cents, it.state]).sort(),
+    [['Ava', 'payment', 'cash', 1200, 'counted'], ['Cara', 'payment', 'card', 1600, 'counted'], ['Gia', 'payment', 'cash', 1000, 'counted'],
+      ['Mia', 'payment', 'cash', 1600, 'counted'], ['Zoe', 'payment', 'check', 1300, 'counted'], ['Zoe', 'refund', 'check', -400, 'counted']]);
+  assert.ok(s.every((it) => it.what === 'board_breaking' && it.event_date === eventDate && it.is_private === false && it.event_name === 'November Board Breaking'));
+  // A Square payment (no login) is recorded by "Square" and counts at the event's school as a card payment.
+  assert.deepEqual(s.filter((it) => it.first_name === 'Cara').map((it) => [it.recorded_by_name, it.method]), [['Square', 'card']]);
+  // Other sections' rows are untouched, and the totals grow by exactly the Board breaking rows.
+  const sPlain = dayOf(without, 'shrewsbury');
+  const sAll = dayOf(withBrk, 'shrewsbury');
+  assert.deepEqual(sAll.items.filter((it) => it.source !== 'board_breaking'), sPlain.items);
+  assert.equal(sAll.totals.cash.cents, sPlain.totals.cash.cents + 1200 + 1600 + 1000);
+  assert.equal(sAll.totals.check.cents, sPlain.totals.check.cents + 1300);
+  assert.equal(sAll.totals.card.cents, sPlain.totals.card.cents + 1600);
+  assert.equal(sAll.refunds.check_cents, sPlain.refunds.check_cents - 400);
+  assert.equal(sAll.totals.total_cents, sPlain.totals.total_cents + 1200 + 1600 + 1000 + 1300 + 1600 - 400);
+  assert.notEqual(sAll.fingerprint, sPlain.fingerprint);
+
+  // Worcester today: two cash payments and a card payment taken at the desk by a person (not "Square"). Counted at the stored
+  // school: none of Shrewsbury's rows show here, and none of Worcester's show in Shrewsbury.
+  const w = brkItems(withBrk, 'worcester');
+  assert.deepEqual(w.map((it) => [it.first_name, it.method, it.amount_cents, it.recorded_by_name]).sort(),
+    [['Ivy', 'cash', 1200, 'Jeffrey Berg'], ['Lena', 'card', 975, 'Jeffrey Berg'], ['Max', 'cash', 1200, 'Jeffrey Berg']]);
+  assert.ok(w.every((it) => it.event_name === 'November Board Breaking'));
+  assert.equal(s.some((it) => ['Ivy', 'Lena', 'Max'].includes(it.first_name)), false);
+  assert.equal(dayOf(withBrk, 'worcester').totals.card.cents, dayOf(without, 'worcester').totals.card.cents + 975);
+  // An earlier event's day (admins): its cash and check payments, dated the day they were taken.
+  assert.equal(brkItems(withBrk, 'shrewsbury', addDays(T, -20)).length, 8);
+
+  // Close the day expects the Board breaking money: cash − nothing handed back in cash, checks (payments only), card incl. Square.
+  const closeNow = withBrk.rpc('finance_close_day', {
+    p_location_code: 'shrewsbury', p_day: T, p_expected_fingerprint: sAll.fingerprint, p_cash_cents: 0, p_checks_count: 0, p_checks_cents: 0, p_card_cents: 0, p_note: 'board breaking',
+  }, ADMIN_CTX).data;
+  assert.equal(closeNow.status, 'ok');
+  const closed = dayOf(withBrk, 'shrewsbury').closing;
+  assert.equal(closed.expected_card_cents, sAll.totals.card.cents);
+  assert.equal(closed.expected_cash_cents, sAll.totals.cash.cents + sAll.refunds.cash_cents); // cash in − cash handed back (the other sections' refunds too)
+  assert.equal(closed.expected_cash_cents - expectedValues(sPlain.totals, sPlain.refunds).cashCents, 1200 + 1600 + 1000); // Board breaking's cash
+  assert.equal(closed.expected_checks_cents - expectedValues(sPlain.totals, sPlain.refunds).checksCents, 1300); // Zoe's check; her check refund is the school's own check, never in the drawer
+  // ... and a Board breaking payment edited after closing shows as changed (the snapshot knows the new source).
+  assert.equal(dayOf(withBrk, 'shrewsbury').closing.changed_after, false);
+
+  // Payment detail: the Square payment (recorded by Square) and a refund; source names are checked.
+  const cara = s.find((it) => it.first_name === 'Cara');
+  const det = withBrk.rpc('finance_payment_detail', { p_source: 'board_breaking', p_payment_id: cara.payment_id }, ADMIN_CTX).data;
+  assertClean(det, 'finance_payment_detail Board breaking');
+  assert.equal(det.status, 'ok');
+  assert.equal(det.item.school, 'shrewsbury');
+  assert.equal(det.event_name, 'November Board Breaking');
+  assert.deepEqual(det.history.map((h) => [h.what, h.by_name, h.method, h.amount_cents]), [['recorded', 'Square', 'card', 1600]]);
+  const zoeRefund = s.find((it) => it.kind === 'refund');
+  assert.equal(withBrk.rpc('finance_payment_detail', { p_source: 'board_breaking', p_payment_id: zoeRefund.payment_id }, ADMIN_CTX).data.history[0].what, 'refunded');
+  assert.equal(withBrk.rpc('finance_payment_detail', { p_source: 'camp', p_payment_id: cara.payment_id }, ADMIN_CTX).data.status, 'not_found'); // the wrong source finds nothing
+
+  // Edit: Ivy's payment is edited to Shrewsbury (reversal + new payment, same moment, same login) → it shows ONCE, as Edited, at
+  // the school stored on the new row, with "Was Worcester"; Worcester no longer lists it. Then Mia's payment is undone (a minute
+  // later, so not a hidden mis-click) → Undone, not counted.
+  brkNow += 60 * 1000;
+  const roster = (school) => brkCall('brk_event_roster', { p_event_id: brkCall('brk_events_list', { p_location_code: school }).events.find((e) => e.registered > 0 && e.event_date > T).id });
+  const ivy = roster('worcester').registrations.find((r) => r.first_name === 'Ivy');
+  assert.equal(brkCall('brk_edit_payment', { p_payment_id: ivy.payments[0].id, p_method: 'cash', p_amount_cents: 1200, p_paid_on: T, p_school: 'shrewsbury' }).status, 'ok');
+  const mia = roster('shrewsbury').registrations.find((r) => r.first_name === 'Mia');
+  assert.equal(brkCall('brk_undo_payment', { p_payment_id: mia.payments[0].id }).status, 'ok');
+  const sAfter = brkItems(withBrk, 'shrewsbury');
+  assert.deepEqual(sAfter.filter((it) => it.first_name === 'Ivy').map((it) => [it.state, it.amount_cents, it.was_school]), [['edited', 1200, 'worcester']]);
+  assert.deepEqual(sAfter.filter((it) => it.first_name === 'Mia').map((it) => [it.state, it.amount_cents]), [['undone', 1600]]);
+  assert.equal(brkItems(withBrk, 'worcester').some((it) => it.first_name === 'Ivy'), false);
+  const sAfterDay = dayOf(withBrk, 'shrewsbury');
+  assert.equal(sAfterDay.totals.cash.cents, sAll.totals.cash.cents - 1600 + 1200); // Mia's undone cash leaves, Ivy's edited cash arrives
+  assert.equal(sAfterDay.closing.changed_after, true); // the day was closed above, then its Board breaking money changed
+  const ivyDetail = withBrk.rpc('finance_payment_detail', { p_source: 'board_breaking', p_payment_id: ivy.payments[0].id }, ADMIN_CTX).data;
+  assert.deepEqual(ivyDetail.history.map((h) => h.what), ['edited', 'recorded']);
+  assert.equal(ivyDetail.item.was_school, 'worcester');
+
+  // Export: the For cell says "Board breaking", the event's date is in the date column; the CSV words match the screen's.
+  const exp = withBrk.rpc('finance_export', { p_location_code: 'shrewsbury', p_from: T, p_to: T }, ADMIN_CTX).data;
+  assertClean(exp, 'finance_export with Board breaking');
+  const bbRows = exp.rows.filter((r) => r.what === 'board_breaking');
+  assert.ok(bbRows.length >= 7 && bbRows.every((r) => r.event_name === 'November Board Breaking' && r.is_private === false));
+  const csv = toCsv(bbRows);
+  assert.match(csv, new RegExp(`,Nolan,Board breaking,${eventDate},Payment,Cash,12\\.00,12\\.00,Jeffrey Berg,Edited,was \\$12\\.00 cash at Worcester\\r\\n`));
+  assert.match(csv, new RegExp(`,Park,Board breaking,${eventDate},Refund,Check,-4\\.00,-4\\.00,Jeffrey Berg,Counted,`));
+  assert.match(csv, new RegExp(`,Lin,Board breaking,${eventDate},Payment,Card,16\\.00,16\\.00,Square,Counted,`));
+  assert.ok(!csv.includes('Board breaking · ')); // the For cell is just the label (the event's name is not a CSV column)
+  assert.equal(toCsv([{ ...bbRows[0], is_private: true }]), toCsv([bbRows[0]])); // never private
+  // Both schools together.
+  const both = withBrk.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
+  const bothPlain = without.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
+  assert.equal(both.total_cents - bothPlain.total_cents, dayOf(withBrk, 'worcester').totals.total_cents - dayOf(without, 'worcester').totals.total_cents
+    + dayOf(withBrk, 'shrewsbury').totals.total_cents - dayOf(without, 'shrewsbury').totals.total_cents);
 });
 
 // ======================= Finance's own failure sentences say "retry" (v0.825) =======================

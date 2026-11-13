@@ -50,6 +50,10 @@
 //   #testing/black-belt/cycle/<id>/grading    that cycle's Grading tab (contract 0025 §14.1)
 //   #testing/black-belt/cycle/<id>/results    that cycle's Results tab (contract 0025 §14.1)
 //   (#testing/black-belt/grading or /results WITHOUT a cycle id is not an address.)
+// Board breaking (rulebook v1.300) — only while its build switch is on (features.js; otherwise these go to the chooser):
+//   #testing/breaking                         Board breaking, Events tab
+//   #testing/breaking/chart                   its Chart and prices tab (admins)
+//   #testing/breaking/event/<id>              an event's page (its roster)
 // Old or "other switch" addresses are sent to the right one (the address bar is quietly corrected,
 // replacing the step instead of adding one), so bookmarks keep working:
 //   switch ON:  #testing/event/<id>          → #testing/color-belt/event/<id>
@@ -64,8 +68,8 @@
 // A "route" is a small object saying which page is open:
 //   { section: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' | 'prospects' |
 //              'finance' | 'staffAccounts' | 'settings',
-//     testingPage: 'chooser' | 'colorBelt' | 'star' | 'blackBelt' | null   (null when section isn't
-//              'testing'; 'blackBelt' works with the switch on or off),
+//     testingPage: 'chooser' | 'colorBelt' | 'star' | 'blackBelt' | 'breaking' | null   (null when section isn't
+//              'testing'; 'blackBelt' works with the switch on or off; 'breaking' only with its switch on),
 //     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
 //              'star'), on Black Belt the open cycle's id, or on Camps the open camp's id, or null,
 //     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on a Star event page
@@ -79,7 +83,7 @@
 //               always 'students' — see routeTab,
 //     privateId: the open private testing's id (its grading page, Color Belt phase 4 — always on
 //                the Color Belt page, never together with an event), or null }
-import { STAR_TESTING_ON } from './features.js';
+import { BOARD_BREAKING_ON, STAR_TESTING_ON } from './features.js';
 
 const HASH_BY_PAGE = {
   home: '',
@@ -122,6 +126,9 @@ const CAMP_TABS = ['checkin', 'payments', 'attendance'];
 const BLACK_BELT_HASH = '#testing/black-belt';
 const BLACK_BELT_ADDRESS = new RegExp(`^#testing/black-belt(?:/(rubric)|/cycle/${ID}(/rubric|/grading|/results)?)?$`);
 const RUBRIC_SUFFIX = '/rubric';
+// Board breaking: its two tabs (Events has no ending) and an event's page.
+const BREAKING_HASH = '#testing/breaking';
+const BREAKING_ADDRESS = new RegExp(`^#testing/breaking(?:/(chart)|/event/${ID})?$`);
 // The tabs of a Black Belt cycle's page that have an ending of their own in the address.
 const BLACK_BELT_CYCLE_TABS = ['rubric', 'grading', 'results'];
 const STAR_RUBRICS_HASH = '#testing/star/rubrics';
@@ -146,6 +153,7 @@ export const DEFAULT_TESTING_PAGE = STAR_TESTING_ON ? 'chooser' : 'colorBelt';
 //                                     'candidates' (contract 0025 §14.1)
 //   anything else                     'students'
 export function normalEventTab(testingPage, eventId, tab) {
+  if (testingPage === 'breaking') return eventId ? 'students' : tab === 'chart' ? 'chart' : 'events';
   if (testingPage === 'blackBelt') {
     if (eventId) return BLACK_BELT_CYCLE_TABS.includes(tab) ? tab : 'candidates';
     return tab === 'rubric' ? 'rubric' : 'cycles';
@@ -192,6 +200,13 @@ function readHash(hash) {
     // match[3] is '/rubric', '/grading', '/results' or nothing (= Candidates)
     if (match[2]) return { route: route('testing', 'blackBelt', match[2], match[3] ? match[3].slice(1) : 'candidates'), known: true };
     return { route: route('testing', 'blackBelt', null, match[1] ? 'rubric' : 'cycles'), known: true };
+  }
+  // Board breaking: with its switch off, its addresses show the Testing page the switch leaves (the chooser or Color Belt).
+  match = BREAKING_ADDRESS.exec(hash);
+  if (match) {
+    if (!BOARD_BREAKING_ON) return { route: route('testing', DEFAULT_TESTING_PAGE), known: true };
+    if (match[2]) return { route: route('testing', 'breaking', match[2], 'students'), known: true };
+    return { route: route('testing', 'breaking', null, match[1] ? 'chart' : 'events'), known: true };
   }
   // Star testing (switch off: every Star address shows Color Belt, as in phase 1).
   if (!STAR_TESTING_ON && ANY_STAR_HASH.test(hash)) return { route: route('testing', 'colorBelt'), known: true };
@@ -240,6 +255,10 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
     // they only add an ending when a cycle id is set (0025 §14.1).
     if (eventId) return `${BLACK_BELT_HASH}/cycle/${eventId}${BLACK_BELT_CYCLE_TABS.includes(eventTab) ? `/${eventTab}` : ''}`;
     return `${BLACK_BELT_HASH}${eventTab === 'rubric' ? RUBRIC_SUFFIX : ''}`;
+  }
+  if (testingPage === 'breaking') {
+    if (eventId) return `${BREAKING_HASH}/event/${eventId}`;
+    return `${BREAKING_HASH}${eventTab === 'chart' ? '/chart' : ''}`;
   }
   const tabPart = eventTab === 'grading' ? GRADING_SUFFIX : ''; // Students has no ending of its own
   if (!STAR_TESTING_ON) {
@@ -297,7 +316,7 @@ export function sameRoute(a, b) {
   if (!samePage(a, b)) return false;
   if (a.section === 'camps') return routeTab('camps', null, a.eventId, a.eventTab) === routeTab('camps', null, b.eventId, b.eventTab);
   if (a.section === 'settings') return routeTab('settings', null, null, a.eventTab) === routeTab('settings', null, null, b.eventTab);
-  if (!a.eventId && a.testingPage !== 'star' && a.testingPage !== 'blackBelt') return true;
+  if (!a.eventId && a.testingPage !== 'star' && a.testingPage !== 'blackBelt' && a.testingPage !== 'breaking') return true;
   return normalEventTab(a.testingPage, a.eventId, a.eventTab) === normalEventTab(b.testingPage, b.eventId, b.eventTab);
 }
 
@@ -305,5 +324,5 @@ export function sameRoute(a, b) {
 // home, and every Camps page: the list's Camps | Templates and a camp's Check in | Payments | Attendance).
 export function hasAddressTabs(r) {
   if (r.section === 'camps' || r.section === 'settings') return true; // Settings: its Classes and ranks part (CB14)
-  return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star' || r.testingPage === 'blackBelt');
+  return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star' || r.testingPage === 'blackBelt' || r.testingPage === 'breaking');
 }
