@@ -163,3 +163,12 @@ Asked by Main (both decided: pass 2 L-03 with Dashboard core's corrected number;
 - **(8)** the family page's Dropdown question (`FormFields.jsx:138`) KEEPS the browser's dropdown: not switched.
 - **(10)** the validation messages ("Check the fields and try again.") stay as they are.
 - Still waiting for Dashboard core: the toast room on `.dialog-page-body` (then U-06's patch goes) and the shared tick-row menu (then N16's Show menu).
+
+## Pass 2 finished (2026-11-12)
+
+Main merged the last two commits and pushed them (Jeffrey's own "push"): 43593b6e (small batch) as main 7d456e58, and 1bfc0181 as main 820e6865. Both builds, run-checks 21/21, function tests 174/174, Cloudflare success.
+
+- **N16:** the Calendar's Show menu is the shared tick-row menu (`calendar/ShowMenu.jsx` opens `components/RowMenu.jsx`); its own panel styles and the `DONE` text are gone. The phone sheet ends in Cancel like every other menu sheet.
+- **U-06:** the profile page's toast patch is deleted from `prospects.css`; Dashboard core's toast room (v1.140) covers `.dialog-page-body`.
+- **Shared file touched:** `shared.css` `.tmenu-item > .menu-check { margin-left: 0 }` (the older app.css rule threw the tick box to the middle of the row; AccountMenu's right-hand tick is untouched). Dashboard core should know.
+- **Nothing left on New students' pass 2 list.** Jeffrey skips pass 3 and reviews the system himself.
