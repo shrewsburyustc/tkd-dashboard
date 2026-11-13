@@ -649,6 +649,20 @@
 //       authenticated / brk_registrar / brk_square / anon, and re-run
 //       safety - see step0051 below. Run only this step with
 //       node run.mjs --only-step0051
+//   step0052. 0052 (Finance reads Board breaking payments: a fifth source,
+//       'board_breaking', in the Daily report, Close the day, History, Export and
+//       payment detail; v1.300-v1.304; contract docs/Board Breaking/CONTRACT-0052.md)
+//       on its own databases in the production order (liveOrderTo0025 with the
+//       four big Finance seeds, then 0027 ... 0039, 0037, Color Belt's 0035 and
+//       0044, Star's 0038, Black Belt's 0046, Finance's 0047, Camps' 0050 and
+//       Board breaking's 0051, then the Black Belt seed): the pre-apply check, the
+//       guard refusing a changed function / rule / missing 0051, every other
+//       section's Finance answers byte-for-byte the same before and after, only
+//       the five functions' and the rule's fingerprint lines move, 0052's tests and
+//       the older Finance tests, a seed of Board breaking money read by every
+//       Finance function under 2 s with its Export total equal to brk_payments,
+//       and re-run safety - see step0052 below. Run only this step with
+//       node run.mjs --only-step0052
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -706,6 +720,7 @@ const onlyStep0040 = process.argv.includes('--only-step0040');
 const onlyStep0043 = process.argv.includes('--only-step0043');
 const onlyStep0050 = process.argv.includes('--only-step0050');
 const onlyStep0051 = process.argv.includes('--only-step0051');
+const onlyStep0052 = process.argv.includes('--only-step0052');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStep0044 = process.argv.includes('--only-step0044');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
@@ -1083,6 +1098,15 @@ async function main() {
     }
     return finish();
   }
+  // --only-step0052: just Finance reads Board breaking payments (0052)
+  if (onlyStep0052) {
+    const prints52 = await step0052();
+    if (prints52) {
+      console.log('\n0052 fingerprints (kind  item  detail):');
+      for (const line of prints52) console.log('  ' + line);
+    }
+    return finish();
+  }
   // --only-step0044: just Color Belt's rolling-check step A (0044)
   if (onlyStep0044) {
     const prints44 = await step0044();
@@ -1424,6 +1448,9 @@ async function main() {
   // step0051: Board breaking (its own database, production order: it is pasted after 0050)
   console.log('\nMigration 0051 (Board breaking: the new section\'s database, the family form and Square):');
   const after51 = after5 ? await step0051() : null;
+  // step0052: Finance reads Board breaking payments (its own databases, production order: it is pasted after 0051)
+  console.log('\nMigration 0052 (Finance: Board breaking payments in the Daily report, Close the day, History, Export and payment detail):');
+  const after52 = after5 ? await step0052() : null;
 
   // step0044: Color Belt rolling check, step A - the family form's own Paying by, Edit event Undo in one call, each payment's school
   console.log('\nMigration 0044 (Color Belt: the form\'s own Paying by, Edit event Undo in one call, each payment\'s school):');
@@ -1605,6 +1632,10 @@ async function main() {
   if (after51) {
     console.log('\n0051 fingerprints (kind  item  detail):');
     for (const line of after51) console.log('  ' + line);
+  }
+  if (after52) {
+    console.log('\n0052 fingerprints (kind  item  detail):');
+    for (const line of after52) console.log('  ' + line);
   }
   if (after45) {
     console.log('\n0045 fingerprints (kind  item  detail):');
@@ -11932,6 +11963,441 @@ async function step0044() {
   }
   await db.close().catch(() => {});
   return prints44;
+}
+
+// =====================================================================
+// step0052: Finance reads Board breaking payments (0052; rulebook
+// v1.300-v1.304; contract docs/Board Breaking/CONTRACT-0052.md)
+// ---------------------------------------------------------------------
+// 0052 adds a fifth source, 'board_breaking' (public.brk_payments, 0051),
+// to Finance: it REPLACES five functions (finance_chain_steps_core 0026,
+// finance_money_rows_core / finance_day / finance_payment_detail /
+// finance_export 0047), each starting from the live text, and rebuilds the
+// table rule finance_day_closing_items_source_check.
+// DATABASE A, built in the production order with every live migration
+// (liveOrderTo0025 with the four big Finance seeds in it - Color Belt, Star,
+// camps, private testing, 5 years - then 0027, 0026, 0028, 0029, 0031, 0030,
+// 0032, 0033, 0034, 0036, 0041, 0042, 0043, 0039, 0037, then Color Belt's
+// 0035 and 0044, Star's 0038, Black Belt's 0046, Finance's 0047, Camps' 0050
+// and Board breaking's 0051 - the real files) and the Black Belt seed
+// (2,000 candidates, returned checks, edits):
+//   a. 0052's fingerprints and pre-apply check are connector-safe (no
+//      "delete" / "drop"); the migration is pure ASCII; the pre-apply check
+//      before: five functions + the wrapper + the rule "ok: the live ...",
+//      0051's tables there, source not yet accepted
+//   b. the guard refuses 0052 when 0051 is missing, when a replaced function
+//      differs from the live text (finance_day), when the unreplaced wrapper
+//      differs, and when the table rule differs - nothing changes
+//   c. the Finance answers of every OTHER section - details, days, Both,
+//      History, exports, Home, and the items and figures of 5 years of weekly
+//      days - taken before 0052 are byte-for-byte the same after it
+//   d. apply 0052: in every fingerprint file ONLY the five functions' lines
+//      (code md5, live text -> 0052's) and the rule's line move; rights,
+//      definer, settings, owner, volatility, result tables stay; 0052's
+//      own 11 rows are as planned; no row of any table changed
+//   e. 0052_tests.sql, 0026's and 0018's tests; a seed of Board breaking
+//      money (2,000 students: edits, undos, refunds, Square) read by
+//      the Daily report, History, Export (its total per school equals the
+//      money in brk_payments) and payment detail, each under 2 s
+//   f. 0052 applied a SECOND time: no fingerprint, no row changed; tests again
+// DATABASE B, clean (no seeds), same order: 0052's tests, then 0047's,
+// 0037's, 0011's, camps' 0017's, 0018's, 0026's, finance_camp_refunds' and
+// 0051's tests after it.
+// Run only this step with   node run.mjs --only-step0052
+// =====================================================================
+const MD5_0052 = {
+  old: {
+    finance_chain_steps_core: '6d03a519cc5ada725a961b1c672dbe82',
+    finance_money_rows_core: '11479fb6451a956b5f8bb5bc6b5c0366',
+    finance_day: '8cb806284e54443fb73bd4a8f679b617',
+    finance_payment_detail: 'cc90ec717325831a58a3063c9cb73c12',
+    finance_export: '0f4b678f757bca72fec14bb78aacd37d',
+  },
+  new: {
+    finance_chain_steps_core: 'f59ce2d742c8f69e9b76109962cc5edf',
+    finance_money_rows_core: '534cb48c5cc6d5f6c9be6ce4ca0e0d8d',
+    finance_day: 'fe768b06d00755793c0352c41fabcd3e',
+    finance_payment_detail: '61b9768f75082591f5e74a79ad5fee33',
+    finance_export: '637d23b573269daa3e8f4f23f2d1e68a',
+  },
+  wrapper: '6882b0a0f80407ba97864f47feae0e7f',
+};
+const FIVE_0052 = ['finance_chain_steps_core', 'finance_money_rows_core', 'finance_day', 'finance_payment_detail', 'finance_export'];
+const SIGS_0052 = {
+  finance_chain_steps_core: 'public.finance_chain_steps_core(date, date, text, uuid)',
+  finance_money_rows_core: 'public.finance_money_rows_core(text, date, date, text, uuid)',
+  finance_money_rows: 'public.finance_money_rows(text, date, date)',
+  finance_day: 'public.finance_day(text, date)',
+  finance_payment_detail: 'public.finance_payment_detail(text, uuid)',
+  finance_export: 'public.finance_export(text, date, date)',
+};
+const RULE_0052 = 'finance_day_closing_items_source_check';
+
+// The production order up to and including 0051, on a database made by buildBase (seeds: SQL for after 0021, as liveOrderTo0025)
+async function build0052(L, seeds = '') {
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L, seeds))) return null;
+  const order = [['0027', '0027_camps_edit_guard.sql'], ['0026', '0026_finance_black_belt.sql'], ['0028', '0028_star_start_times.sql'],
+    ['0029', '0029_finance_reminder_5min.sql'], ['0031', '0031_class_ages.sql'], ['0030', '0030_color_belt_review.sql'],
+    ['0032', '0032_black_belt_review.sql'], ['0033', '0033_camps_design_review.sql'], ['0034', '0034_black_belt_history_ids.sql'],
+    ['0036', '0036_new_students_profile.sql'], ['0041', '0041_star_end_time.sql'], ['0042', '0042_forms_copy_to_school.sql'],
+    ['0043', '0043_camps_fill_in.sql'], ['0039', '0039_camps_record_refund.sql'], ['0037', '0037_finance_export_private.sql']];
+  const real = (n) => readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith(`${n}_`) && f.endsWith('.sql'));
+  const applied = [];
+  for (const [n, file] of order) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${n}`, read('migrations', file)))) return null;
+    applied.push(n);
+  }
+  for (const n of ['0035', '0044', '0038', '0046', '0047', '0050', '0051']) {
+    if (!real(n)) { record(`${L}the real ${n} file is in supabase/migrations/`, false, 'missing'); return null; }
+    if (!(await run(db, `${L}apply ${n} (the real file)`, read('migrations', real(n))))) return null;
+    applied.push(n);
+  }
+  return { db, applied };
+}
+
+// The Board breaking money seed: 2,000 students at two events (one per school), one payment each over the last 300
+// days, taken at the event's school or the other (every 4th); every 7th edited (reversal + new payment, one moment,
+// one login); every 11th undone a day later; every 13th refunded ($2, cash) 3 days later; every 17th paid through
+// Square (no login). About 4,500 payment rows, written with the table's own guard on.
+const BRK_SEED_0052 = (today) => `
+begin;
+select set_config('request.jwt.claims', '', true);
+select set_config('tkd.actor_label', 'PGlite brk seed', true);
+insert into public.brk_events (name, location_code, event_date, public_code, created_by_name, updated_by_name)
+select 'PGlite brk perf ' || l.code, l.code, public.testing_today() + 60, public.testing_new_public_code(), '', ''
+  from public.locations l;
+insert into public.brk_event_classes (event_id, name, start_time, end_time, sort)
+select e.id, 'Group A', '17:00', '18:00', 0 from public.brk_events e where e.name like 'PGlite brk perf %';
+insert into public.brk_registrations (event_id, class_id, first_name, last_name, age, rank_name, band_used, tech_boards, adult_boards,
+                                      paying_by, paying_by_on_form, same_day, amount_cents, source, entered_by, created_by_name, updated_by_name)
+select e.id, c.id, 'Brkperf', 'Bp ' || g, 10, 'Yellow', 'child', 1, 0, 'cash', 'cash', false, 1000 + (g % 5) * 100, 'desk', 'seed', '', ''
+  from generate_series(1, 2000) as g
+  join public.brk_events e on e.name = 'PGlite brk perf ' || (case when g % 2 = 0 then 'worcester' else 'shrewsbury' end)
+  join public.brk_event_classes c on c.event_id = e.id;
+
+create temp table zz_brk on commit drop as
+select r.id as registration_id, split_part(r.last_name, ' ', 2)::integer as g, e.location_code,
+       case when split_part(r.last_name, ' ', 2)::integer % 4 = 0
+            then (case e.location_code when 'worcester' then 'shrewsbury' else 'worcester' end) else e.location_code end as school,
+       public.testing_today() - (split_part(r.last_name, ' ', 2)::integer * 300 / 2000) as d,
+       1000 + (split_part(r.last_name, ' ', 2)::integer % 5) * 100 as cents
+  from public.brk_registrations r join public.brk_events e on e.id = r.event_id
+ where r.first_name = 'Brkperf';
+
+-- payment 1 (a Square payment: no login, the event's school)
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select z.registration_id, 'payment', z.cents,
+       case when z.g % 17 = 0 then 'card' else (array['check', 'cash', 'card'])[1 + z.g % 3] end,
+       z.d, case when z.g % 17 = 0 then z.location_code else z.school end,
+       (z.d + time '15:00') at time zone 'America/New_York',
+       case when z.g % 17 = 0 then null else '${DESK_UID}'::uuid end,
+       case when z.g % 17 = 0 then 'Square' else 'Staff' end
+  from zz_brk z order by z.g;
+-- every 7th edited: a reversal + a new payment at one moment by one login
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+select z.registration_id, 'reversal', -p.amount_cents, p.method, z.d, p.school, (z.d + time '16:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin', p.id
+  from zz_brk z join public.brk_payments p on p.registration_id = z.registration_id and p.kind = 'payment'
+ where z.g % 7 = 0 and z.g % 17 <> 0 order by z.g;
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select z.registration_id, 'payment', z.cents + 100, 'card', z.d, z.school, (z.d + time '16:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin'
+  from zz_brk z where z.g % 7 = 0 and z.g % 17 <> 0 order by z.g;
+-- every 11th (not 7th, not 17th) undone a day later
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+select z.registration_id, 'reversal', -p.amount_cents, p.method, z.d + 1, p.school, ((z.d + 1) + time '10:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin', p.id
+  from zz_brk z join public.brk_payments p on p.registration_id = z.registration_id and p.kind = 'payment'
+ where z.g % 11 = 0 and z.g % 7 <> 0 and z.g % 17 <> 0 and z.d + 1 <= public.testing_today() order by z.g;
+-- every 13th (not 7th, 11th, 17th) refunded $2 in cash 3 days later at the school that hands it back
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select z.registration_id, 'refund', -200, 'cash', z.d + 3, z.school, ((z.d + 3) + time '11:00') at time zone 'America/New_York',
+       '${ADMIN_UID}'::uuid, 'Main Admin'
+  from zz_brk z where z.g % 13 = 0 and z.g % 7 <> 0 and z.g % 11 <> 0 and z.g % 17 <> 0 and z.d + 3 <= public.testing_today() order by z.g;
+commit;`;
+
+async function step0052() {
+  const L = '[0052] ';
+  const migFile = path.join(supabaseDir, 'migrations', '0052_finance_board_breaking.sql');
+  if (!existsSync(migFile)) {
+    record(`${L}migrations/0052_finance_board_breaking.sql exists`, false, 'the file is missing');
+    return null;
+  }
+  const migration = read('migrations', '0052_finance_board_breaking.sql');
+  const preSql = read('tests', '0052_preapply_check.sql');
+  const unsafe = [['tests', '0052_fingerprints.sql'], ['tests', '0052_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0052_fingerprints.sql and 0052_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the migration file is pure ASCII (no curly quotes, dashes or other characters outside 0x00-0x7F)`,
+    /^[\r\n -~]*$/.test(migration), (migration.match(/[^\r\n -~]/g) ?? []).slice(0, 5).join(' '));
+  record(`${L}0052's migration has no secret key in it (no "eyJ" token, no "sb_secret_" key)`,
+    !/eyJ[A-Za-z0-9_-]{20,}|sb_secret_/.test(migration));
+  const blocks = migration.replace(/\r\n/g, '\n');
+  record(`${L}every "source: board breaking (0052)" block is closed by an "end board breaking" line`,
+    (blocks.match(/-- ===== source: board breaking \(0052\) =====/g) ?? []).length === (blocks.match(/-- ===== end board breaking =====/g) ?? []).length
+      && (blocks.match(/-- ===== end board breaking =====/g) ?? []).length >= 13,
+    `${(blocks.match(/-- ===== end board breaking =====/g) ?? []).length} blocks`);
+  const nothingForAnon = !/\bto\s+(anon|public)\b/i.test(blocks);
+  record(`${L}the migration grants nothing to anon or public`, nothingForAnon);
+
+  // ================== DATABASE A: seeded
+  const built = await build0052(L, PERF_SEED() + '\n' + CHAIN_SEED() + '\n' + CAMPS_PERF_SEED() + '\n' + PRIVATE_SEED());
+  if (!built) return null;
+  const { db, applied } = built;
+  await adminSession(db);
+  if (!(await bbSeedCycles(db, L))) return null;
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+  const md5Of = async (name) => one(db, `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                                           from pg_proc p where p.oid = to_regprocedure('${SIGS_0052[name]}')`);
+  const ruleMd5 = async () => one(db, `select md5(regexp_replace(pg_get_constraintdef(c.oid), '\\s+', '', 'g'))
+        from pg_constraint c where c.conrelid = to_regclass('public.finance_day_closing_items') and c.conname = '${RULE_0052}'`);
+  for (const name of FIVE_0052) {
+    record(`${L}before 0052 ${name} is the live text (md5 ${MD5_0052.old[name]})`, (await md5Of(name)) === MD5_0052.old[name], await md5Of(name));
+  }
+  record(`${L}before 0052 the wrapper finance_money_rows is 0047's (md5 ${MD5_0052.wrapper})`, (await md5Of('finance_money_rows')) === MD5_0052.wrapper);
+  const ruleOld = await ruleMd5();
+  record(`${L}before 0052 the table rule is 0026's (it does not name board_breaking)`,
+    (await one(db, `select pg_get_constraintdef(c.oid) not like '%board_breaking%' from pg_constraint c
+       where c.conrelid = to_regclass('public.finance_day_closing_items') and c.conname = '${RULE_0052}'`)) === true, ruleOld);
+
+  // a. the pre-apply check
+  const pre = async () => (await db.query(preSql)).rows;
+  const preBefore = await pre();
+  record(`${L}[pre-apply check] before 0052: the five functions, the wrapper and the rule "ok: the live ...", 0051's tables there, no closed day with Board breaking money`,
+    preBefore.filter((r) => r.kind === 'function').length === 6 && preBefore.filter((r) => r.kind === 'rule').length === 1
+      && preBefore.filter((r) => r.kind === 'table').length === 1 && preBefore.every((r) => r.detail.startsWith('ok: ')),
+    JSON.stringify(preBefore.map((r) => r.item + ': ' + r.detail.slice(0, 24))));
+
+  // b. the guard refuses
+  const md5Day = await md5Of('finance_day');
+  const guardTry = async (label, plant, wanted) => {
+    let message = '';
+    try {
+      await db.exec(`begin;\n${plant}\n${migration}`);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0052 when ${label} (it stops, nothing changes)`,
+      message.includes(wanted) && (await md5Of('finance_day')) === md5Day && (await one(db, `select to_regclass('public.brk_payments') is not null`)) === true
+        && (await ruleMd5()) === ruleOld, message || 'it ran');
+  };
+  await guardTry('0051 is missing', 'alter table public.brk_payments rename to brk_payments_gone;', '0052 needs migration 0051');
+  await guardTry('a replaced function differs from the live one (finance_day)',
+    `create or replace function public.finance_day(p_location_code text, p_day date)
+     returns jsonb language plpgsql stable security definer set search_path = '' as $$ begin return '{}'::jsonb; end; $$;`,
+    'rebuild 0052 first');
+  await guardTry('a replaced function differs from the live one (finance_chain_steps_core)',
+    (() => {
+      const t = read('migrations', '0026_finance_black_belt.sql').replace(/\r\n/g, '\n');
+      const at = t.indexOf('create function public.finance_chain_steps_core(');
+      const end = t.indexOf('\n$$;', at) + 4;
+      return t.slice(at, end).replace('create function', 'create or replace function').replace('v_state  text;', 'v_state  text; v_extra integer := 1;');
+    })(), 'rebuild 0052 first');
+  await guardTry('the wrapper finance_money_rows (not replaced) differs',
+    `create or replace function public.finance_money_rows(p_location_code text, p_from date, p_to date)
+     returns table (source text, payment_id uuid, school text, day date, "time" text, first_name text, last_name text, what text,
+       event_date date, is_private boolean, kind text, method text, amount_cents integer, state text, was_amount_cents integer,
+       was_method text, moved_to date, moved_from date, changed_by_name text, changed_on date, recorded_by_name text, row_id uuid,
+       counts boolean, first_recorded_at timestamptz, row_recorded_at timestamptz, event_name text, event_id uuid, was_school text)
+     language sql stable set search_path = '' as $b$ select m.* from public.finance_money_rows_core(p_location_code, p_from, p_to, null, null) m where true; $b$;`,
+    'rebuild 0052 first');
+  await guardTry('the table rule differs from the live one',
+    `alter table public.finance_day_closing_items drop constraint ${RULE_0052};
+     alter table public.finance_day_closing_items add constraint ${RULE_0052} check (source in ('color_belt', 'star', 'camp'));`,
+    'rebuild 0052 first');
+
+  // c. the other sections' answers, before and after
+  const ids = (await db.query(DETAIL_IDS_SQL + `
+    union all (select 'camp', p.id::text from public.camp_payments p where p.kind = 'payment' order by p.id limit 12)
+    union all (select 'color_belt', p.id::text from public.testing_private_payments p where p.kind = 'payment' order by p.id limit 12)
+    union all (select 'black_belt', p.id::text from public.bb_payments p where p.kind = 'payment' order by p.id limit 14)
+    union all (select 'black_belt', p.id::text from public.bb_payments p where p.kind in ('returned', 'refund', 'reversal') order by p.id limit 14)`)).rows;
+  const today = await one(db, 'select public.testing_today()::text');
+  const days = (await db.query(`select (date '${today}' - 61 * k)::text as d from generate_series(0, 29) as k`)).rows.map((x) => x.d);
+  const answers = async () => {
+    const out = [];
+    for (const { src, id } of ids) out.push(await asAdmin(db, 'select public.finance_payment_detail($1, $2::uuid) as r', [src, id]));
+    for (const d of days) {
+      for (const s of ['worcester', 'shrewsbury']) out.push(await asAdmin(db, `select public.finance_day('${s}', '${d}') as r`));
+      out.push(await asAdmin(db, `select public.finance_day_both('${d}') as r`));
+    }
+    for (let k = 0; k < 6; k++) out.push(await asAdmin(db, `select public.finance_history(null, date '${today}' - ${31 * k}) as r`));
+    for (const s of ['worcester', 'shrewsbury']) {
+      out.push((await asAdmin(db, `select public.finance_export('${s}', date '${today}' - 365, '${today}') as r`))?.rows);
+    }
+    out.push(await asAdmin(db, 'select public.finance_home() as r'));
+    return out.map((x) => JSON.stringify(x));
+  };
+  const sigBefore = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const ansBefore = await answers();
+  const tables = [...FINANCE_TABLES, 'camp_payments', 'bb_payments', 'star_payments', 'testing_payments', 'testing_private_payments',
+    'brk_payments', 'brk_registrations', 'brk_events'];
+  const snap = `select md5(${tables.map((t) => `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')})`;
+  const logSql = `select count(*)::text from public.change_log where table_name <> 'finance_exports'`;
+  const numbers = [...NUMBERS_0025, ...applied, '0052']
+    .filter((n, i, all) => all.indexOf(n) === i && existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const printsBefore = await printsOf(db, numbers);
+  const rowsBefore = await one(db, snap);
+  const logBefore = await one(db, logSql);
+
+  // d. apply 0052
+  if (!(await run(db, `${L}apply 0052_finance_board_breaking.sql`, migration))) return null;
+  const printsAfter = await printsOf(db, numbers);
+  record(`${L}0052 changed no row of any table (payments of every section, Finance's tables, Board breaking's) and wrote no history row`,
+    rowsBefore === (await one(db, snap)) && logBefore === (await one(db, logSql)));
+  const sigAfter = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const ansAfter = await answers();
+  const differ = sigBefore.filter((r, i) => JSON.stringify(r) !== JSON.stringify(sigAfter[i])).map((r) => r.day);
+  const items = sigBefore.reduce((n, r) => n + r.n, 0);
+  record(`${L}every other section's items and figures are the same after 0052, fingerprint included, on 5 years of weekly days - Color Belt, Star, camps, private testing, Black Belt`,
+    sigBefore.length > 300 && items > 1500 && differ.length === 0,
+    `${sigBefore.length} days, ${items} items` + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
+  const ansDiffer = ansBefore.map((a, i) => (a === ansAfter[i] ? null : i)).filter((i) => i !== null);
+  record(`${L}every other section's app answers are the same after 0052: payment details of all five kinds, days, Both, History, exports, Home`,
+    ansBefore.length > 150 && ansDiffer.length === 0 && ansBefore.every((a) => a !== 'null' && a !== undefined),
+    `${ansBefore.length} answers` + (ansDiffer.length ? `; DIFFER at ${ansDiffer.slice(0, 5).join(', ')}: ${String(ansAfter[ansDiffer[0]]).slice(0, 300)}` : ''));
+  const kinds = new Set(ids.map((x) => x.src));
+  record(`${L}the compared payment details cover all of Color Belt, Star, camps, Black Belt`, ['color_belt', 'star', 'camp', 'black_belt'].every((k) => kinds.has(k)),
+    `${ids.length} details: ${[...kinds].join(', ')}`);
+
+  // d (continued). fingerprints: only the five functions' lines and the rule's line move
+  const nameOf = (line) => {
+    const item = line.split('  ')[1] ?? '';
+    return item.includes('(') ? item.split('(')[0] : item.split('.').pop();
+  };
+  const kindOf = (line) => line.split('  ')[0];
+  const wrong = [];
+  const movedIn = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = printsBefore[f].filter((line) => !printsAfter[f].includes(line));
+    const added = printsAfter[f].filter((line) => !printsBefore[f].includes(line));
+    if (!gone.length && !added.length) continue;
+    if (n === '0052') { movedIn.push(n); continue; }   // (its rows are new: the file lists nothing before 0052)
+    const allowed = [...FIVE_0052, RULE_0052];
+    if (gone.length !== added.length || ![...gone, ...added].every((line) => allowed.includes(nameOf(line)))) {
+      wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      continue;
+    }
+    for (const g of gone) {
+      const a = added.find((line) => nameOf(line) === nameOf(g) && kindOf(line) === kindOf(g));
+      if (!a) { wrong.push(`${n}: no matching new line for ${g}`); continue; }
+      const name = nameOf(g);
+      if (name === RULE_0052) {
+        if (!a.includes('board_breaking') || g.includes('board_breaking')) wrong.push(`${n}: rule ${g} => ${a}`);
+      } else if (kindOf(g) !== 'function') {
+        wrong.push(`${n}: a non-md5 line moved: ${g} => ${a}`);
+      } else if (g.replace(MD5_0052.old[name], '<md5>') !== a.replace(MD5_0052.new[name], '<md5>') || !g.includes(MD5_0052.old[name]) || !a.includes(MD5_0052.new[name])) {
+        wrong.push(`${n}: more than the code md5 changed: ${g} => ${a}`);
+      }
+    }
+    movedIn.push(n);
+  }
+  record(`${L}fingerprints: in every other file only the five functions' lines (code md5, live text -> 0052's; definer, settings, owner, rights stay) and the rule's line moved, every other line byte-identical`,
+    wrong.length === 0 && ['0011', '0026', '0047'].every((n) => movedIn.includes(n)),
+    wrong.join('; ') || `moved in ${movedIn.join(', ')}; ${numbers.length} files checked`);
+  const prints52 = printsAfter['0052_fingerprints.sql'];
+  const fnLine = (name) => prints52.find((l) => l.startsWith('function  ') && nameOf(l) === name) ?? '';
+  const kindLine = (name) => prints52.find((l) => l.startsWith('function-kind') && nameOf(l) === name) ?? '';
+  const planned = FIVE_0052.every((name) => {
+    const l = fnLine(name);
+    const appFn = ['finance_day', 'finance_payment_detail', 'finance_export'].includes(name);
+    return l.includes(MD5_0052.new[name]) && l.includes('settings=search_path=""') && l.includes(`definer=${appFn}`) && l.includes('owner=postgres')
+      && (appFn ? /rights=authenticated:EXECUTE,postgres:EXECUTE$/.test(l) : l.endsWith('rights=postgres:EXECUTE'));
+  });
+  const wantKind = { finance_chain_steps_core: 'volatility=s language=plpgsql', finance_money_rows_core: 'volatility=s language=sql',
+    finance_day: 'volatility=s language=plpgsql', finance_payment_detail: 'volatility=s language=plpgsql',
+    finance_export: 'volatility=v language=plpgsql' };
+  const kindsOk = FIVE_0052.every((name) => kindLine(name).includes(wantKind[name]));
+  record(`${L}0052 fingerprints: eleven lines; the five functions' md5, definer, search_path="" and rights as planned (app functions: authenticated only; helpers: owner only); the rule names all five sources`,
+    prints52.length === 11 && planned && kindsOk
+      && prints52.some((l) => l.startsWith('constraint') && l.includes("'black_belt'::text, 'board_breaking'::text")),
+    prints52.join(' | '));
+  const preAfter = await pre();
+  record(`${L}[pre-apply check] after 0052: the five functions and the rule say "ok: already 0052's version"`,
+    preAfter.filter((r) => r.kind === 'function' && r.item !== 'finance_money_rows').every((r) => r.detail.startsWith('ok: already 0052'))
+      && preAfter.filter((r) => r.kind === 'rule').every((r) => r.detail.startsWith('ok: already 0052'))
+      && preAfter.filter((r) => r.item === 'finance_money_rows').every((r) => r.detail.startsWith('ok: ')),
+    JSON.stringify(preAfter.map((r) => r.item + ': ' + r.detail.slice(0, 28))));
+
+  // e. the tests, then a seed of Board breaking money
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await runTestFileLive(db, `${L}0052_tests.sql (on the seeded database)`, '0052_tests.sql', 'ALL 0052 TESTS PASSED');
+  await runTestFile(db, `${L}0026_tests.sql (after 0052)`, '0026_tests.sql', 'ALL 0026 TESTS PASSED');
+  await runTestFile(db, `${L}0018_tests.sql (after 0052)`, '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+  if (await run(db, `${L}the Board breaking money seed (2,000 students, edits, undos, refunds, Square)`, BRK_SEED_0052(today))) {
+    await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+    const kindsSeed = (await db.query(`select count(*)::int as n,
+        count(*) filter (where kind = 'reversal')::int as reversals, count(*) filter (where kind = 'refund')::int as refunds,
+        count(*) filter (where recorded_by is null)::int as square from public.brk_payments`)).rows[0];
+    record(`${L}the seed: thousands of Board breaking rows with edits, undos, refunds and Square payments`,
+      kindsSeed.n > 2500 && kindsSeed.reversals > 400 && kindsSeed.refunds > 100 && kindsSeed.square > 60, JSON.stringify(kindsSeed));
+    const ex = {};
+    for (const s of ['worcester', 'shrewsbury']) {
+      ex[s] = await timed0026(db, L, `finance_export (366 days, ${s}) with the Board breaking money`,
+        `select public.finance_export('${s}', date '${today}' - 365, '${today}') as r`);
+      const rows = (ex[s]?.rows ?? []).filter((r) => r.what === 'board_breaking');
+      const expected = await one(db, `select coalesce(sum(amount_cents), 0)::text from public.brk_payments where school = '${s}' and paid_on >= date '${today}' - 365`);
+      record(`${L}the ${s} export's Board breaking total equals the money in brk_payments stored at ${s}`,
+        rows.length > 500 && String(rows.reduce((n, r) => n + r.counted_cents, 0)) === expected && rows.every((r) => r.event_name && 'was_school' in r),
+        `${rows.length} rows, ${rows.reduce((n, r) => n + r.counted_cents, 0)} vs ${expected}`);
+    }
+    const busy = await one(db, `select p.paid_on::text from public.brk_payments p where p.school = 'worcester' and p.kind = 'payment'
+        and p.paid_on < public.testing_today() - 30 group by p.paid_on order by count(*) desc, p.paid_on limit 1`);
+    const day = await timed0026(db, L, 'finance_day (the busiest Board breaking day, Worcester)', `select public.finance_day('worcester', '${busy}') as r`);
+    const dayItems = day?.items ?? [];
+    const counting = dayItems.filter((i) => ['counted', 'edited', 'moved_in'].includes(i.state));
+    record(`${L}that day: the total adds up from its lines, Board breaking lines carry event_name, nothing is private`,
+      !!day && counting.length > 0 && day.totals.total_cents === counting.reduce((n, i) => n + i.amount_cents, 0)
+        && dayItems.filter((i) => i.source === 'board_breaking').length > 0
+        && dayItems.filter((i) => i.source === 'board_breaking').every((i) => i.event_name && i.is_private === false),
+      `${busy}: ${dayItems.length} items`);
+    const edited = await one(db, `select p.id::text from public.brk_payments p join public.brk_registrations r on r.id = p.registration_id
+       where r.last_name = 'Bp 14' and p.kind = 'payment' order by p.recorded_at, p.id limit 1`);
+    const d1 = await timed0026(db, L, 'finance_payment_detail (an edited Board breaking payment)', `select public.finance_payment_detail('board_breaking', '${edited}') as r`);
+    record(`${L}the edited payment's trail: edited, recorded; state edited`,
+      (d1?.history ?? []).map((h) => h.what).join(',') === 'edited,recorded' && d1?.item?.state === 'edited', (d1?.history ?? []).map((h) => h.what).join(','));
+    await timed0026(db, L, 'finance_day_both (that day)', `select public.finance_day_both('${busy}') as r`);
+    await timed0026(db, L, 'finance_history (both schools, that month)', `select public.finance_history(null, '${busy}') as r`);
+    await timed0026(db, L, 'finance_home', 'select public.finance_home() as r');
+    await db.query(`select set_config('request.jwt.claims', '', false)`);
+  }
+
+  // f. re-run safety
+  const printsSeeded = await printsOf(db, numbers);
+  const rowsSeeded = await one(db, snap);
+  const logSeeded = await one(db, logSql);
+  await run(db, `${L}apply 0052 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(printsSeeded[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0052 re-run: no fingerprint, no row and no history row changed`,
+    movedAgain.length === 0 && rowsSeeded === (await one(db, snap)) && logSeeded === (await one(db, logSql)), movedAgain.join(', '));
+  await runTestFileLive(db, `${L}0052_tests.sql (after the re-run)`, '0052_tests.sql', 'ALL 0052 TESTS PASSED');
+  await db.close().catch(() => {});
+
+  // ================== DATABASE B: clean
+  const L2 = '[0052 clean] ';
+  const built2 = await build0052(L2);
+  if (!built2) return prints52;
+  const db2 = built2.db;
+  if (await run(db2, `${L2}apply 0052_finance_board_breaking.sql`, migration)) {
+    const clean = await fingerprints(db2, '0052_fingerprints.sql');
+    record(`${L2}the 0052 fingerprints equal the ones from the seeded database`, JSON.stringify(clean) === JSON.stringify(prints52), clean.join(' | '));
+    const testFiles = [['0052_tests.sql', 'ALL 0052 TESTS PASSED'], ['0047_tests.sql', 'ALL 0047 TESTS PASSED'], ['0037_tests.sql', 'ALL 0037 TESTS PASSED'],
+      ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+      ['0026_tests.sql', 'ALL 0026 TESTS PASSED'], ['finance_camp_refunds_tests.sql', 'ALL FINANCE CAMP REFUND TESTS PASSED'],
+      ['0051_tests.sql', 'ALL 0051 TESTS PASSED']];
+    for (const [file, ok] of testFiles) {
+      if (existsSync(path.join(supabaseDir, 'tests', file))) await (file === '0052_tests.sql' ? runTestFileLive : runTestFile)(db2, `${L2}${file} (after 0052)`, file, ok);
+    }
+  }
+  await db2.close().catch(() => {});
+  return prints52;
 }
 
 function finish() {

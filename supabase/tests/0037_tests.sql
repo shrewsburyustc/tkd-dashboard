@@ -282,9 +282,10 @@ begin
     into v_txt
     from pg_proc p
    where p.oid = to_regprocedure('public.finance_export(text, date, date)');
-  -- the code is 0037's, or (once 0047 is applied) 0047's: it adds only was_school
+  -- the code is 0037's, or (once 0047 is applied) 0047's: it adds only was_school; or (once 0052 is applied)
+  -- 0052's: it adds only Board breaking's event_name
   perform pg_temp.t_eq('E7 definer | settings | anon | authenticated | service_role | PUBLIC | code',
-    case when right(v_txt, 32) in ('f812a5b147fda8d8603afe907abd2137', '0f4b678f757bca72fec14bb78aacd37d')
+    case when right(v_txt, 32) in ('f812a5b147fda8d8603afe907abd2137', '0f4b678f757bca72fec14bb78aacd37d', '637d23b573269daa3e8f4f23f2d1e68a')
          then left(v_txt, length(v_txt) - 32) || 'f812a5b147fda8d8603afe907abd2137' else v_txt end,
     'true|search_path=""|false|true|false|false|f812a5b147fda8d8603afe907abd2137');
 

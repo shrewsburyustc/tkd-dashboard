@@ -875,6 +875,7 @@ export function createMockClient() {
     readColorBelt: () => events.snapshot(),
     readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     readBlackBelt: () => blackBelt.snapshot(), // Black Belt payments are the fourth (migration 0026)
+    readBreaking: () => breaking.snapshot(), // Board breaking payments are the fifth (migration 0052)
     readStar: () => starCandidates.snapshot(), // Star payments from Star's own store, 'tkd.preview.star' (R1-09)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday

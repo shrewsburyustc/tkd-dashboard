@@ -56,7 +56,7 @@ ok(() => assert.equal(nov.paid, 5));
 const roster = call('brk_event_roster', { p_event_id: nov.id });
 ok(() => assert.equal(roster.needs_look.length, 2));
 ok(() => assert.equal(call('brk_event_roster', { p_event_id: nov.id }, staff).needs_look.length, 0)); // staff see none
-ok(() => assert.equal(roster.registrations.reduce((t, r) => t + r.owed_cents, 0), 13875)); // $138.75 due
+ok(() => assert.equal(roster.registrations.reduce((t, r) => t + r.owed_cents, 0), 13475)); // $134.75 due ($138.75 before Zoe's sample price override of $9.00, which Finance's preview shows with a $4.00 refund)
 ok(() => assert.equal(call('brk_save_settings', { p_expected_version: 1, p_tech_cents: 300, p_adult_cents: 400, p_card_extra_cents: 25, p_same_day_extra_cents: 100, p_child_max_age: 12 }, staff).status, 'not_allowed'));
 ok(() => assert.equal(brk.rpc('brk_events_list', { p_location_code: 'both' }, { ...staff, hasDataAccess: false }).data.status, 'no_access'));
 ok(() => assert.equal(brk.rpc('brk_public_event', { p_code: 'abcdefgh' }, admin).error.code, '42501')); // public functions: denied

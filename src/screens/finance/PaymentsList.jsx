@@ -37,15 +37,16 @@ const GROUP_LABEL = { cash: T.GROUP_CASH, check: T.GROUP_CHECK, card: T.GROUP_CA
 export const itemKey = (item) => `${item.payment_id}:${item.row_id ?? ''}:${item.state}`;
 
 // "Color belt testing" / "Color belt testing, private" (v0.813) / "Star testing" / "Star testing, private" /
-// "Camp" (Camps v0.707) / "Black Belt" (v0.815)
+// "Camp" (Camps v0.707) / "Black Belt" (v0.815) / "Board breaking" (v1.300)
 export function whatText(item) {
   if (item.what === 'camp') return T.WHAT_CAMP;
   if (item.what === 'black_belt') return T.WHAT_BLACK_BELT;
+  if (item.what === 'board_breaking') return T.WHAT_BOARD_BREAKING;
   if (item.what === 'star') return item.is_private ? T.WHAT_STAR_PRIVATE : T.WHAT_STAR;
   return item.is_private ? T.WHAT_COLOR_BELT_PRIVATE : T.WHAT_COLOR_BELT;
 }
 
-// What a payment is for, without the refund's method note: "Color belt testing · Oct 29",
+// What a payment is for, without the refund's method note: "Color belt testing · Oct 29", "Board breaking · Nov 20",
 // "Camp · April Vacation Camp", "Black Belt · Spring 2027 · Payment 1 + Kukkiwon" (a Black Belt
 // refund: "Black Belt · Spring 2027"). Shared by the list, the printed page and the detail.
 export function forTextOf(item) {

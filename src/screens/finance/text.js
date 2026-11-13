@@ -259,6 +259,9 @@ export const WHAT_CAMP = 'Camp';
 // Black Belt payments (v0.815): "Black Belt · Spring 2027 · Payment 2". No testing date: a cycle
 // has several testing days.
 export const WHAT_BLACK_BELT = 'Black Belt';
+// Board breaking payments (rulebook v1.300, migration 0052): the row reads "Board breaking · Nov 20" like Star testing
+// (a Board breaking night is one day, so the event date stands in the row; never private).
+export const WHAT_BOARD_BREAKING = 'Board breaking';
 // What a Black Belt payment is for, in Black Belt's own words: "Payment 2", "Payment 1 + Kukkiwon",
 // or the one-payment plan's name ("In full") for exactly Payment 1. The CSV uses the same builder.
 export const BB_ITEM_WORDS = { payment: 'Payment', kukkiwon: 'Kukkiwon', join: ' + ' };
@@ -426,6 +429,8 @@ export const DETAIL_HINT_CAMP = 'Payments are changed on the camp\'s page in Cam
 // A Black Belt payment, refund or returned check (B3, B4).
 export const DETAIL_HINT_BLACK_BELT = 'Payments are changed on the candidate\'s page in Black Belt testing, not here.';
 export const OPEN_IN_CAMPS = 'Open in Camps'; // (not in the mockups)
+// A Board breaking payment, refund or edit: changed on the event's page (v1.300; not in the mockups).
+export const DETAIL_HINT_BOARD_BREAKING = 'Payments are changed on the event\'s page in Board breaking, not here.';
 export const DETAIL_LOAD_FAILED = 'Couldn\'t load this payment. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const DETAIL_LOADING = 'Loading…'; // NOT IN MOCKUPS — for CP1
 // History lines: "Mon, Oct 26, 9:07 AM · Jeffrey changed the amount $70.00 → $65.00"

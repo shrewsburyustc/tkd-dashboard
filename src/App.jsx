@@ -62,7 +62,7 @@ import {
   samePage,
   sameRoute,
 } from './lib/pageAddress.js';
-import { STAR_TESTING_ON } from './lib/features.js';
+import { BOARD_BREAKING_ON, STAR_TESTING_ON } from './lib/features.js';
 import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
 import Shell from './components/Shell.jsx';
@@ -1040,6 +1040,13 @@ export default function App() {
         openBlackBelt({ cycleId: eventId ?? null, tab: eventId ? 'candidates' : undefined });
         return;
       }
+      // A Board breaking payment (migration 0052, v1.300): that event's page, #testing/breaking/event/<id> — on
+      // the payment's school, like Black Belt's. With its build switch off the page does not exist, so the
+      // payment's detail has no such link (PaymentDetailDialog); if it is ever asked anyway, go to Testing.
+      if (source === 'board_breaking' && BOARD_BREAKING_ON) {
+        openBreaking({ eventId: eventId ?? null });
+        return;
+      }
       if (source === 'color_belt' && eventId) navigate('testing', { testingPage: 'colorBelt', eventId });
       // A Color Belt private testing payment has no event: Color belt testing's Private testing tab
       // (rulebook v0.813).
@@ -1048,7 +1055,7 @@ export default function App() {
         navigate('testing', { testingPage: 'colorBelt' });
       } else navigate('testing');
     },
-    [location, changeLocation, navigate, openBlackBelt],
+    [location, changeLocation, navigate, openBlackBelt, openBreaking],
   );
   const isAdminNow = profile?.role === 'admin';
   // Who may be where: private details hidden → no Finance at all (Home instead); staff → no History or

@@ -925,7 +925,8 @@ begin
   if v_n < 20 then
     raise exception 'TEST FAILED: B11 only % Black Belt blocks were found in the replaced functions', v_n;
   end if;
-  perform pg_temp.t_eq('B11 the closing items source rule', (select pg_get_constraintdef(c.oid) from pg_constraint c
+  -- (once 0052 is applied the rule also names board_breaking: taken out here, so this check is about 0026's four)
+  perform pg_temp.t_eq('B11 the closing items source rule', (select replace(pg_get_constraintdef(c.oid), ', ''board_breaking''::text', '') from pg_constraint c
     where c.conname = 'finance_day_closing_items_source_check'),
     'CHECK ((source = ANY (ARRAY[''color_belt''::text, ''star''::text, ''camp''::text, ''black_belt''::text])))');
 end;

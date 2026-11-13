@@ -93,7 +93,8 @@ const CLASSES = [
   ['Group D', '16:20', '17:00'], ['White / Little Tiger', '17:10', '17:50'], ['Group A', '18:00', '18:40'],
   ['Group B+C', '18:50', '19:30'], ['Teen / Adult', '19:40', '20:20'],
 ];
-// [first, last, age, rank, class index, tech, adult, paying_by, state ('paid' | 'unpaid' | 'link'), broke, same_day]
+// [first, last, age, rank, class index, tech, adult, paying_by, state ('paid' | 'unpaid' | 'link' | 'desk_card'), broke, same_day]
+// 'paid' by card = a Square payment (no staff login); 'desk_card' = a card payment staff took at the desk (Finance's preview shows both).
 const NOVEMBER_STUDENTS = [
   ['Ava', 'Reed', 8, 'Orange', 0, 4, 0, 'cash', 'paid', true, false],
   ['Mia', 'Santos', 9, 'Green', 0, 4, 0, 'cash', 'paid', true, true],
@@ -145,8 +146,8 @@ function defaultBreakingData({ today, makeId, nowIso }) {
       version: 1, created_at: nowIso, created_by_name: same ? 'Jeffrey Berg' : 'Family form', updated_at: nowIso, updated_by_name: same ? 'Jeffrey Berg' : 'Family form',
     };
     db.registrations.push(row);
-    if (state === 'paid') {
-      const bySquare = paying_by === 'card';
+    if (state === 'paid' || state === 'desk_card') {
+      const bySquare = paying_by === 'card' && state === 'paid';
       db.payments.push({
         id: makeId(), registration_id: row.id, kind: 'payment', amount_cents: amount, method: paying_by, paid_on: paidOn, school: event.location_code,
         recorded_at: nowIso, recorded_by: bySquare ? null : ADMIN_USER_ID, recorded_by_name: bySquare ? 'Square' : 'Jeffrey Berg', reverses_payment_id: null, paying_by_before: null,
@@ -158,11 +159,20 @@ function defaultBreakingData({ today, makeId, nowIso }) {
   NOVEMBER_STUDENTS.forEach((s) => addStudent(upcoming, s, today));
   addEvent('shrewsbury', addDays(today, 36), false);
   const worcester = addEvent('worcester', addDays(today, 8), true);
-  OTHER_NAMES.slice(0, 4).forEach((s, i) => addStudent(worcester, [...s, 'cash', i < 2 ? 'paid' : 'unpaid', false, false], today));
+  // Worcester: two cash payments, one card payment taken at the desk (the third), one still unpaid.
+  OTHER_NAMES.slice(0, 4).forEach((s, i) => addStudent(worcester, [...s, i === 2 ? 'card' : 'cash', i < 2 ? 'paid' : i === 2 ? 'desk_card' : 'unpaid', false, false], today));
   const past = addEvent('shrewsbury', addDays(today, -20), false);
   OTHER_NAMES.forEach((s) => addStudent(past, [...s, 'cash', 'paid', true, false], addDays(today, -20)));
   const older = addEvent('shrewsbury', addDays(today, -55), false);
   OTHER_NAMES.slice(0, 5).forEach((s) => addStudent(older, [...s, 'check', 'paid', true, false], addDays(today, -55)));
+  // A refund for Finance's preview: Zoe Park's price was lowered to $9.00 (an admin's override) after her family paid $13.00 by check, so
+  // $4.00 was handed back by check today at the event's school.
+  const zoe = db.registrations.find((r) => r.first_name === 'Zoe' && r.event_id === upcoming.id);
+  zoe.override_cents = 900;
+  db.payments.push({
+    id: makeId(), registration_id: zoe.id, kind: 'refund', amount_cents: -400, method: 'check', paid_on: today, school: upcoming.location_code,
+    recorded_at: nowIso, recorded_by: ADMIN_USER_ID, recorded_by_name: 'Jeffrey Berg', reverses_payment_id: null, paying_by_before: null,
+  });
   // Two Square payments an admin should look at (for the upcoming Shrewsbury event's school).
   db.square_events.push(
     { square_event_id: 'sqe_demo_1', school: 'shrewsbury', received_at: nowIso, type: 'payment.updated', payment_id: 'pay_demo_1', order_id: 'ord_eli', amount_cents: 1000, outcome: 'amount_mismatch', registration_id: null, reviewed: false },

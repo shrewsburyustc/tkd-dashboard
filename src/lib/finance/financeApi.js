@@ -58,7 +58,7 @@ export function financeHistory({ locationCode = null, month } = {}) {
 }
 
 // One payment's detail + history of changes. source 'color_belt' | 'star' | 'camp' (v0.707; a camp
-// payment's answer also has camp_days: the camper's days); paymentId = the
+// payment's answer also has camp_days: the camper's days) | 'black_belt' (v0.815) | 'board_breaking' (v1.300); paymentId = the
 // item's payment_id (the chain's first row).
 export function financePaymentDetail({ source, paymentId } = {}) {
   return call('finance_payment_detail', { p_source: v(source), p_payment_id: v(paymentId) });
