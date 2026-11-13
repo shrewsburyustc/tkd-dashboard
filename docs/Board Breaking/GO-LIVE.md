@@ -16,7 +16,7 @@ Cloudflare or Square only: never in chat, git, a file or a screenshot.** Detaile
 2. **Logins (Jeffrey + Claude) — DONE 2026-11-13.** SETUP 0051f: Jeffrey makes the two random passwords on his PC (`brk_registrar`, `brk_square`), saves each in
    his password manager, pastes the two `alter role … password '<verifier>'` lines in the SQL Editor, deletes the snippets. Claude checks
    read-only that each login now has a password and that nothing else changed.
-3. **Hyperdrive and bindings (Jeffrey).** SETUP 0051g steps 1–2: two Hyperdrive configurations (`tkd-brk-registrar`, `tkd-brk-square`),
+3. **Hyperdrive and bindings (Jeffrey) — the two configurations are DONE and checked 2026-11-13; the two bindings and `BREAKING_REGISTRATION` = `off` are next.** SETUP 0051g steps 1–2: two Hyperdrive configurations (`tkd-brk-registrar`, `tkd-brk-square`),
    bindings `HYPERDRIVE_BREAKING` and `HYPERDRIVE_BREAKING_SQUARE`, Production only. Claude first checks the Free plan's connection budget.
 4. **Sandbox, one school at a time (Jeffrey).** In that school's Square Developer dashboard: make an application, copy its **sandbox**
    access token and location id; add a webhook subscription for `payment.updated` at exactly
