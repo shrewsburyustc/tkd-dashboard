@@ -1,6 +1,6 @@
 # CONTRACT-0051 — Board breaking: the section's database, the public form and the Square payment
 
-Status: **DRAFT for Jeffrey's OK (2026-11-12).** Migration numbers reserved by Main 2026-11-12: **0051** = this section,
+Status: **DRAFT for Jeffrey's OK (2026-11-12); every open point answered, v1.300–v1.303.** Migration numbers reserved by Main 2026-11-12: **0051** = this section,
 **0052** = Finance reads Board breaking payments (after 0051 is live; builds on 0047's `finance_money_rows_core`).
 Decisions: rulebook v1.300 (Jeffrey's answers Q1–Q8). Nothing below is built until he approves the pictures and this contract.
 Pattern copied from Camps (0013 / 0043 / 0050): tables, `security definer` functions, a `*_registrar` login for the public
@@ -166,6 +166,5 @@ does not touch any other section's tables or functions in 0051.
 1. ~~Little Tiger age line~~ — **settled v1.301: dropped**, one line at 12 / 13.
 2. **Square accounts:** settled v1.302: **one per school** (separate bank accounts). Still needed from Jeffrey: that each school has (or will make) a Square account that can take online payment links, and when he can set the Cloudflare secrets (sandbox first, one school at a time).
 3. ~~Where a Square payment counts in Finance~~ — **settled: the event's school** (Jeffrey chose it; with one Square account per school the event's school is also the school whose bank gets the money).
-4. **A card student whose boards change after the link was made:** the old link is cancelled and staff take the card on the Square
-   terminal (**recommended**), or the app makes a new link for the new amount?
-5. Two boxes (first / last name) instead of today's one name box, for search and duplicates (**recommended**)?
+4. ~~A card student whose boards change after the link was made~~ — **settled v1.303:** the old link is cancelled, staff take the card on the Square terminal.
+5. ~~Two name boxes~~ — **settled v1.303:** first and last name.
