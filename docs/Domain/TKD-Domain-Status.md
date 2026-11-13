@@ -35,6 +35,13 @@
 - Domain-d: `PUBLIC_ORIGIN` (Production) set to the three addresses, he says saved (first save did not stick, redone). **Cannot be verified from outside before the next deployment**; the live checks after the push (Domain-f) prove it.
 - **Batch 3 (built, committed, not pushed):** `src/lib/publicOrigin.js` → `https://forms.ustaekwondo.net`; SETUP status line. Function tests 187, run-checks 21/21, both builds pass; built bundle holds the new address.
 
+## Live after the push (main 580f4b2e, Cloudflare Success) — Domain-f checks, 2026-11-12
+
+- Pushed: batches 1–3 (up to e64a6de3). Live scripts hold `forms.ustaekwondo.net`; all three addresses (`tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net`) answer 200 on /, /register/…, /camp/…, /star/…, /black-belt/…, /f/… with `X-Robots-Tag: noindex, nofollow`.
+- Made-up links (`/api/{register,camp,star,black-belt,forms}/abcdefgh`) answer `not_found` on all three addresses (the Functions run and reach the database).
+- Origin + Turnstile proof without writing data (valid-shaped POST with a fake token, forms and register Functions): with its own address as Origin each of the three addresses reaches the human check (`verify_failed`, i.e. the live `PUBLIC_ORIGIN` list works); `https://evil.example` and the `http://` version of each address are `bad_request`. So the Cloudflare variable is live.
+- **Still to prove with a real browser (Jeffrey, no data written):** the Turnstile box shows no domain error on the new hostnames, and the live Shrewsbury Thanksgiving camp link still opens on `tkd-dashboard.pages.dev` (I do not know the camp code). A real test sign-up is NOT done: it would write test data to the live database (needs Jeffrey's OK and a deletion afterwards).
+
 ## The domain's DNS records at Squarespace (Jeffrey's screenshots, 2026-11-12; the list to keep ready)
 
 - **Squarespace Defaults box** (the Coming Soon placeholder; never delete): four `A` records for `@` (198.185.159.144 / .145, 198.49.23.144 / .145), `CNAME www → ext-sq.squarespace.com`, one `HTTPS` record for `@`. TTL 4 hrs.
