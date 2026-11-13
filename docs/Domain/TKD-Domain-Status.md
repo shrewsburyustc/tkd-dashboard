@@ -20,6 +20,13 @@
 - **v1.201 (Jeffrey 2026-11-12)** — staff dashboard = `dashboard.ustaekwondo.net`; families' forms, QR codes and testing registration = `forms.ustaekwondo.net`; `pages.dev` stays on. Costs nothing extra. `PUBLIC_ORIGIN` list will be `https://tkd-dashboard.pages.dev,https://dashboard.ustaekwondo.net,https://forms.ustaekwondo.net`; Turnstile gets `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net`; `publicOrigin.js` flips to `https://forms.ustaekwondo.net` only after both names work.
 - **v1.200** — shared pieces first, address not switched on yet (Jeffrey via Main: Domain is priority 1). Name, staff move, `pages.dev` redirect, DNS home, extras: still open.
 
+## Batch 2 (built 2026-11-12, committed, not pushed)
+
+- `public/_headers`: `X-Robots-Tag: noindex, nofollow` on every static page; `src/forms/ics.js`: calendar-file id label follows `publicOrigin.js`; `supabase/SETUP.md`: new section "Custom domain: dashboard.ustaekwondo.net … forms.ustaekwondo.net" (Domain-a … Domain-f, click by click).
+- **Assumed defaults, not yet explicitly confirmed by Jeffrey (he was told and did not object):** staff stay on `pages.dev` for now, no `pages.dev` redirect, DNS stays at Squarespace, noindex + label yes. Rulebook rows for these wait for his explicit word.
+- Jeffrey (2026-11-12): has the domain admin controls; has never worked with DNS/Cloudflare settings and has set nothing up, so every outside step is guided from zero, one at a time.
+- Checks: Function tests 187 pass, run-checks 21/21, both builds pass.
+
 ## How a NEW public Function adopts the origin helper + the address constant (for Board Breaking; written 2026-11-12)
 
 A "public Function" = a file under `functions/api/…` that families' browsers POST to (signed out). Copy `functions/_lib/bbRegister.js` / `functions/api/black-belt/[code].js` as the model. In the lib file:

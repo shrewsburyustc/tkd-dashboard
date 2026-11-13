@@ -3946,3 +3946,58 @@ Tested in PGlite on every run (`run.mjs` step0050: a Worcester camp with a famil
 - **A default on the new Fill in input:** the live app's 15-input call keeps meaning "the camp's own school".
 
 ---
+
+## Custom domain: dashboard.ustaekwondo.net for staff, forms.ustaekwondo.net for families
+
+**Status: NOT DONE YET (planned 2026-11-12, rulebook v1.200 and v1.201; plan `docs/Domain/TKD-Domain-Plan.md`).** No migration. Every step is yours, in a web page; each has an undo. **Do them in this order and tell Claude after each one** (Claude checks it from outside before the next).
+
+**Why each step exists, in a line each.** A *domain name* is the school's web address (`ustaekwondo.net`). A *subdomain* is a word put in front (`dashboard.`, `forms.`). *DNS* is the internet's phone book: it says which computer answers for a name; the school's phone book is kept at Squarespace (where the domain was bought). A *CNAME record* is one phone-book line saying "this name is another name for that one": here, `dashboard.` and `forms.` are other names for `tkd-dashboard.pages.dev`, the address the app already has. A *custom domain on Cloudflare Pages* tells Cloudflare "also answer for this name, with its own HTTPS padlock". The old `tkd-dashboard.pages.dev` address stays on for good, so every printed link keeps working. **Never touch** the domain's other DNS lines (mail: MX, SPF, DKIM) and **never change the domain's name servers**.
+
+### Domain-a. Add the two custom domains in Cloudflare Pages (first, before any DNS line)
+
+1. Cloudflare → **Workers & Pages** → `tkd-dashboard` → **Custom domains** → **Set up a domain**.
+2. Type `dashboard.ustaekwondo.net` → **Continue**. Cloudflare shows the one DNS line to create (a CNAME to `tkd-dashboard.pages.dev`) and waits. Do **not** close the page yet; you will not be able to finish it until Domain-b.
+3. Repeat for `forms.ustaekwondo.net`.
+
+Order matters: a CNAME line that exists before Pages knows the name makes that name show "error 522" until the domain is attached. Undo: **Custom domains** → the three dots next to the name → **Remove domain**.
+
+### Domain-b. Add the two CNAME lines at Squarespace
+
+1. Squarespace → **Domains** → `ustaekwondo.net` → **DNS settings** (named "DNS", "DNS settings" or "Advanced settings" depending on the Squarespace screen) → **Add record**.
+2. First line: **Type** `CNAME`, **Host** `dashboard`, **Data / Points to** `tkd-dashboard.pages.dev`. Second line: **Type** `CNAME`, **Host** `forms`, same **Data**. Leave the TTL as it is. Save.
+3. **Do not change or delete any other line**, and do not use "Squarespace default" or "connect to Squarespace site" on these two names.
+4. Back in Cloudflare → **Custom domains**: both names should change from "Verifying" to **Active** within a few minutes (up to a few hours). Open `https://dashboard.ustaekwondo.net`: the dashboard sign-in appears with a padlock. (`https://forms.ustaekwondo.net/f/abcdefgh` shows "This form was not found"; real forms still can't send until Domain-c and Domain-d.)
+
+Undo: delete the two CNAME lines at Squarespace.
+
+### Domain-c. Let the human check (Turnstile) accept the two names
+
+Cloudflare → **Turnstile** → the widget `TKD family form` → **Edit** → **Hostname management** → **Add** `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net` (host only, no `https://`). **Keep** `tkd-dashboard.pages.dev`. Save. Undo: remove the two entries.
+
+### Domain-d. Tell the Functions the three addresses
+
+Cloudflare → **Workers & Pages** → `tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production** → edit `PUBLIC_ORIGIN` → set the value to exactly (one line, commas, no spaces needed, no slash at the end):
+
+```
+https://tkd-dashboard.pages.dev,https://dashboard.ustaekwondo.net,https://forms.ustaekwondo.net
+```
+
+Save. A changed setting applies from the **next deployment**, so it does nothing until the next push (Domain-e). Keep `pages.dev` in the list or every printed QR code stops working. Undo: put the old single value back (`https://tkd-dashboard.pages.dev`).
+
+### Domain-e. The push that switches the links the app shows
+
+Claude prepares one small change (`src/lib/publicOrigin.js` → `https://forms.ustaekwondo.net`, plus its checks). **Only after Domain-a to Domain-d are done and checked**, Main merges and pushes it on your OK. From then on every link, QR code and flyer the app makes uses `forms.ustaekwondo.net`; older ones keep working. Undo: revert the push.
+
+### Domain-f. Live checks (Claude and you, after the push, on the pages.dev address AND the new ones)
+
+1. Sign in at `https://dashboard.ustaekwondo.net` (a new address: you sign in again and set **This device** to the school; a device's saved settings are per address, so staff devices move one at a time, later, by your choice).
+2. Made-up links must say "not open" / "not found" on **both** `https://tkd-dashboard.pages.dev` and `https://forms.ustaekwondo.net`: `/register/abcdefgh`, `/camp/abcdefgh`, `/star/abcdefgh`, `/black-belt/abcdefgh`, `/f/abcdefgh`.
+3. The live Shrewsbury Thanksgiving camp link on `tkd-dashboard.pages.dev` still opens the camp.
+4. One real test sign-up through `forms.ustaekwondo.net` (a test camp or form, deleted afterwards) to prove the Origin and Turnstile checks, and one through the old address.
+5. Cloudflare Pages shows the build as **Success** (a build trigger has been missed before: look at the build report after every push).
+
+### Adding another address later
+
+Add it to `PUBLIC_ORIGIN` (comma-separated, `https://` + host, no path, no slash, no wildcard), add the same host to the Turnstile widget, redeploy. No code change. A page on a different host posting across sites also needs CORS answers from the Functions: see `docs/Domain/TKD-Domain-Status.md`.
+
+---

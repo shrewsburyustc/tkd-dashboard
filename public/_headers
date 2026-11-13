@@ -4,12 +4,15 @@
 #     (blocks "clickjacking" — a fake page hiding our sign-in under its own buttons).
 #   Referrer-Policy: when a link leads elsewhere, only share our site name, not full addresses.
 #   Permissions-Policy: the dashboard never needs the camera, microphone or location.
+#   X-Robots-Tag: noindex, nofollow: search engines must never list the dashboard or the family forms
+#     (rulebook v1.201; the school's own website is a separate site and is not affected).
 /*
   X-Frame-Options: DENY
   Content-Security-Policy: frame-ancestors 'none'
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex, nofollow
 
 # The public family registration page (contract 0005 §4.4). A strict Content-Security-Policy
 # (CSP): the browser may only load this site's own files, plus Cloudflare Turnstile (the
