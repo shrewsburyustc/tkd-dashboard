@@ -31,9 +31,23 @@
 ## Outside steps done by Jeffrey (2026-11-12, guided one at a time, verified from outside)
 
 - Domain-a/b: custom domains `dashboard.ustaekwondo.net` and `forms.ustaekwondo.net` added on the Pages project `tkd-dashboard`; two CNAME lines (`dashboard`, `forms` → `tkd-dashboard.pages.dev`, TTL 4 hrs) added in Squarespace Custom records. Both names answer HTTPS 200; MX, SPF, DKIM, `www` and `pages.dev` unchanged (checked with nslookup/curl).
-- Domain-c: Turnstile widget hostnames now `tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net` (screenshot seen; his confirmation of the Save is still to be re-asked).
+- Domain-c: Turnstile widget hostnames now `tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net` (screenshot seen; Jeffrey confirmed the Save: "The turnstile hostnames are done").
 - Domain-d: `PUBLIC_ORIGIN` (Production) set to the three addresses, he says saved (first save did not stick, redone). **Cannot be verified from outside before the next deployment**; the live checks after the push (Domain-f) prove it.
 - **Batch 3 (built, committed, not pushed):** `src/lib/publicOrigin.js` → `https://forms.ustaekwondo.net`; SETUP status line. Function tests 187, run-checks 21/21, both builds pass; built bundle holds the new address.
+
+## Live after the push (main 580f4b2e, Cloudflare Success) — Domain-f checks, 2026-11-12
+
+- Pushed: batches 1–3 (up to e64a6de3). Live scripts hold `forms.ustaekwondo.net`; all three addresses (`tkd-dashboard.pages.dev`, `dashboard.ustaekwondo.net`, `forms.ustaekwondo.net`) answer 200 on /, /register/…, /camp/…, /star/…, /black-belt/…, /f/… with `X-Robots-Tag: noindex, nofollow`.
+- Made-up links (`/api/{register,camp,star,black-belt,forms}/abcdefgh`) answer `not_found` on all three addresses (the Functions run and reach the database).
+- Origin + Turnstile proof without writing data (valid-shaped POST with a fake token, forms and register Functions): with its own address as Origin each of the three addresses reaches the human check (`verify_failed`, i.e. the live `PUBLIC_ORIGIN` list works); `https://evil.example` and the `http://` version of each address are `bad_request`. So the Cloudflare variable is live.
+- **Still to prove with a real browser (Jeffrey, no data written):** the Turnstile box shows no domain error on the new hostnames, and the live Shrewsbury Thanksgiving camp link still opens on `tkd-dashboard.pages.dev` (I do not know the camp code). A real test sign-up is NOT done: it would write test data to the live database (needs Jeffrey's OK and a deletion afterwards).
+
+## Batch 4 (2026-11-13, built + tested, not pushed): the next section's public-page lines + a framing guard
+
+- At Main's request for the Board Breaking session: `public/_redirects` `/breaking/*  /breaking  200`; `public/_headers` the same single strict policy as `/camp` on `/breaking`, `/breaking.html`, `/breaking/*` (confirmed identical to all 18 existing public lines; frame-ancestors 'none').
+- New `functions/tests/headers.test.mjs` (7 tests, in `functions/tests/index.js`): every public family page address has exactly one policy, equal to /camp's, with frame-ancestors none; no `frame-ancestors` or `X-Frame-Options` anywhere allows framing; `/*` keeps DENY + noindex + nosniff; `/api/*` no-store; each family link shape has its redirect. Function tests now 194; run-checks 21/21; both builds pass.
+- Rulebook v1.202 (10b row + changelog).
+- Webhook host answer for Board Breaking (Square): no reason against `forms.ustaekwondo.net`. Register that exact address; do NOT use `dashboard.` (the staff host) or `pages.dev`. A Square webhook is server-to-server, so it has no browser `Origin` header: it must NOT go through `matchOrigin` (that would refuse it); verify Square's signature over the exact address instead, and keep `SQUARE_WEBHOOK_URL_<SCHOOL>` identical to the registered one. `/api/*` is already routed to Functions and `_headers` does not apply to Function answers (the Function sets its own headers).
 
 ## The domain's DNS records at Squarespace (Jeffrey's screenshots, 2026-11-12; the list to keep ready)
 

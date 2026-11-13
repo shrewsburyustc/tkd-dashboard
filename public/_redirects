@@ -26,3 +26,7 @@
 # like /black-belt/<code> (one per school per cycle), served by the one page black-belt.html in
 # the same way. Pages serves black-belt.html at /black-belt by itself ("pretty URLs").
 /black-belt/*  /black-belt  200
+
+# The public Board breaking family sign-up page: every family link looks like /breaking/<code>,
+# served by the ONE page breaking.html in the same way (Pages serves it at /breaking by itself).
+/breaking/*  /breaking  200
