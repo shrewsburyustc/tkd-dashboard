@@ -26,9 +26,10 @@
 //   focusPage       the row to give keyboard focus to when this page appears (e.g. after "← Testing"
 //                   from Star testing, focus lands back on the Star row), or null
 import { useEffect, useRef, useState } from 'react';
-import { IconAward, IconCertificate, IconChevronRight, IconStar } from '@tabler/icons-react';
+import { IconAward, IconCertificate, IconChevronRight, IconHammer, IconStar } from '@tabler/icons-react';
 import { loadNextBlackBeltDay, loadNextColorBeltEvent, loadNextStarEvent } from '../../../lib/testingChooserApi.js';
-import { BLACK_BELT_ROW, BOTH_SCHOOLS, CHOOSER_TITLE, COLOR_BELT_ROW, STAR_ROW, STAR_BOTH_SCHOOLS, nextEventLine } from './text.js';
+import { BOARD_BREAKING_ON } from '../../../lib/features.js';
+import { BLACK_BELT_ROW, BOARD_BREAKING_ROW, BOTH_SCHOOLS, CHOOSER_TITLE, COLOR_BELT_ROW, STAR_ROW, STAR_BOTH_SCHOOLS, nextEventLine } from './text.js';
 import './chooser.css';
 
 // The last answer per switcher value, kept while the app is open: coming back to the chooser
@@ -114,6 +115,8 @@ export default function TestingChooser({ location, screenLocked = false, onNoAcc
     // Black Belt testing (Jeffrey, 2026-10-22): its third row, with its next testing day (C2, v0.937;
     // a cycle is for both schools, like Star's events).
     { key: 'blackBelt', label: BLACK_BELT_ROW, Icon: IconAward, line: blackBeltNext ? nextEventLine(blackBeltNext.date, BOTH_SCHOOLS) : null },
+    // Board breaking (rulebook v1.300): the fourth row, only while its build switch is on (lib/features.js).
+    ...(BOARD_BREAKING_ON ? [{ key: 'breaking', label: BOARD_BREAKING_ROW, Icon: IconHammer, line: null }] : []),
   ];
 
   return (

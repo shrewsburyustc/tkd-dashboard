@@ -39,3 +39,15 @@ export const loadStarTesting = STAR_TESTING_ON ? () => import('../screens/testin
 // opens. Here for the same reason as loadStarTesting: switch off → null, so the live build has no
 // Star code on Home and Home never asks the database about Star (build plan phase 7 check).
 export const loadStarHome = STAR_TESTING_ON ? () => import('../screens/testing/star/home/StarHomeToday.jsx') : null;
+
+// ----- BOARD_BREAKING_ON: the Board breaking page inside Testing (rulebook v1.300) -----
+// Board breaking's database (migration 0051) is not on the live site yet, so its page stays hidden there, exactly
+// like Star testing did: with the switch off the live build has no Board breaking screens and no way in. It also
+// needs the Testing chooser (the Star switch), because that is where its row and rail entry live.
+// Decided at BUILD time from VITE_BOARD_BREAKING: 'on' → ON, 'off' → OFF, anything else → ON in preview mode only.
+// Turning it on for the live site later = add VITE_BOARD_BREAKING = on in Cloudflare and redeploy (as for Star).
+const breakingSetting = import.meta.env.VITE_BOARD_BREAKING;
+export const BOARD_BREAKING_ON = STAR_TESTING_ON
+  && (breakingSetting === 'on' || (breakingSetting !== 'off' && import.meta.env.MODE === 'preview'));
+// The page's screens, loaded with React's lazy() only when it opens (null when the switch is off: not in the build).
+export const loadBoardBreaking = BOARD_BREAKING_ON ? () => import('../screens/breaking/BoardBreaking.jsx') : null;

@@ -64,6 +64,12 @@
 // Testing menu; with it off, the "Black Belt testing ›" link at the top of the Color Belt page
 // (v0.917). The screens are loaded with a lazy import, so they're only downloaded when someone opens
 // Black Belt. Black Belt is joint for both schools, so the link shows on Both too.
+//
+// Board breaking (rulebook v1.300): a fourth Testing page, testingPage 'breaking', addresses #testing/breaking…
+// (lib/pageAddress.js), only while its build switch is on (lib/features.js loadBoardBreaking; with it off the
+// screens are not in the build). Its row sits on the chooser and in the rail's Testing menu. Like Star and Black
+// Belt it works on Both (an event belongs to one school and says which). eventId carries the open event, eventTab
+// its home tab ('events' | 'chart'); onOpenBreaking({ eventId, tab, replace }) goes to another Board breaking page.
 //   onOpenBlackBelt({ cycleId, tab, replace })   open a Black Belt page (App.jsx; a history step)
 //   (eventId / eventTab / onEventTab carry Black Belt's open cycle and tab while it is the page)
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
@@ -79,12 +85,14 @@ import TestingChooser from './testing/chooser/TestingChooser.jsx';
 import BackToTesting from './testing/chooser/BackToTesting.jsx';
 import { COLOR_BELT_TITLE } from './testing/chooser/text.js';
 import { BOTH_SCHOOLS, PAGE_TITLE, PRICES_LINE_ADMIN, PRICES_LINE_STAFF, TAB_EVENTS, TAB_PRICES, TAB_PRIVATE } from './testing/text.js';
-import { loadStarTesting, STAR_TESTING_ON } from '../lib/features.js';
+import { loadBoardBreaking, loadStarTesting, STAR_TESTING_ON } from '../lib/features.js';
 import '../styles/testing-events.css';
 
 // Star testing's screens are loaded only when its page is first opened ("lazy"). With the build
 // switch off there is no loader (features.js), so the live build doesn't contain Star's screens.
 const StarTesting = loadStarTesting ? lazy(loadStarTesting) : null;
+// Board breaking's screens, the same way (null while its build switch is off).
+const BoardBreaking = loadBoardBreaking ? lazy(loadBoardBreaking) : null;
 
 // Color Belt's page title: "Testing" as before, or "Color belt testing" once the chooser exists.
 const COLOR_BELT_PAGE_TITLE = STAR_TESTING_ON ? COLOR_BELT_TITLE : PAGE_TITLE;
@@ -183,6 +191,7 @@ export default function Testing({
   onOpenStarEvent,
   onCloseStarEvent,
   onOpenBlackBelt,
+  onOpenBreaking,
   ...tabProps
 }) {
   // Switch off: Color Belt, or Black Belt (reached from the Color Belt page's link, C2).
@@ -334,6 +343,31 @@ export default function Testing({
           location={location} onLocationChange={onLocationChange}
           deviceLocation={tabProps.deviceLocation}
           onLeaveGuardChange={tabProps.onLeaveGuardChange}
+        />
+      </Suspense>
+    );
+  }
+  // Board breaking (rulebook v1.300): its own page. eventId = the open event, eventTab = its home tab.
+  if (page === 'breaking' && BoardBreaking) {
+    const { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange } = tabProps;
+    return (
+      <Suspense fallback={null}>
+        <BoardBreaking
+          isAdmin={isAdmin}
+          onBack={backToChooser}
+          eventId={eventId}
+          tab={tabProps.eventTab}
+          onTab={tabProps.onEventTab}
+          onOpen={onOpenBreaking}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={onModalOpenChange}
+          location={location}
+          onLocationChange={onLocationChange}
+          deviceLocation={tabProps.deviceLocation}
         />
       </Suspense>
     );

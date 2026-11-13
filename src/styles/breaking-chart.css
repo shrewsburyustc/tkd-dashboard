@@ -1,0 +1,87 @@
+/* breaking-chart.css — the few NEW rules of Board breaking's "Chart and prices" tab.
+   Why it exists: the tab is built from parts the dashboard already has (Star testing's Fees block, Color belt's class
+   groups and rank rows, the shared dialogs). These are the only things the approved pictures draw that no stylesheet
+   had yet: the price rows' grid, the muted note after a price name, the chart heading, the technique column and the
+   two-column money boxes. They are the "NEW in this screen" rules of docs/Board Breaking/Mockups/C-admin-gen.mjs,
+   renamed from bb- to brk- (Black Belt owns bb-) and scoped under .brk-chart so Color belt's own rows are untouched.
+   Tokens only (src/styles/tokens.css), no colors written out. */
+
+/* The Prices card's rows: the name on the left, the price on the right. */
+.brk-chart .brk-g-price {
+  grid-template-columns: minmax(0, 1fr) 88px;
+  padding: 0 var(--space-12);
+}
+
+.brk-chart .brk-muted {
+  color: var(--color-text-secondary);
+}
+
+.brk-chart .brk-b {
+  font-weight: 500;
+}
+
+/* "Board chart" heading and its gray line */
+.brk-chart .brk-h2 {
+  margin-top: var(--space-24);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.brk-chart .brk-sub {
+  margin: 2px 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The Technique column: text on top (it may wrap for the longest ones). */
+.brk-chart .brk-tech {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.brk-chart .brk-acts {
+  position: relative;
+}
+
+/* Rows that can wrap their technique start at the top, with their numbers lined up to the first line. */
+.brk-chart .rrow {
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.brk-chart .rrow .rk,
+.brk-chart .rrow .brk-tech,
+.brk-chart .rrow .num {
+  padding-top: 4px;
+}
+
+.brk-chart .rrow .rcell-acts {
+  padding-top: 0;
+}
+
+/* Edit prices / Edit rank: two boxes side by side on PC and tablet (the phone stacks them, .is-stacked). */
+.tprices.brk-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 639.98px) {
+  .brk-chart .brk-g-price {
+    padding: 0 var(--space-16);
+  }
+}
+
+@media (pointer: coarse) {
+  .brk-chart .rrow {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .brk-chart .rrow .rk,
+  .brk-chart .rrow .brk-tech,
+  .brk-chart .rrow .num {
+    padding-top: 12px;
+  }
+}

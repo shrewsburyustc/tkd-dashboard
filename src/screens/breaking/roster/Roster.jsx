@@ -1,0 +1,203 @@
+// Roster.jsx — the students of a Board breaking event, grouped by class time (the roster table / phone cards).
+// Why it exists: the event page (EventPage.jsx) keeps the data and the saves; this file only DRAWS the rows,
+// exactly as the approved pictures show them (docs/Board Breaking/Mockups/B-staff-gen.mjs wideRow / phoneRow):
+//   PC and tablet: one table. Student (name, "age · [belt] rank", the small Same day tag) · Boards (PC only; on a
+//     tablet they sit under the name) · Paying by with the amount under it · Payment tag (Paid / Not paid /
+//     Awaiting card payment) · the Broke box (Camps' check-in box look) · Mark paid and ⋯.
+//   Phone: a stacked card per student with the same pieces, the ⋯ on the right.
+// Rows come in groups, one per class: a header line "Group D · 4:20 – 5:00 PM" with "3 registered · 2 broke".
+// While Hide private details is on, the money parts (Paying by, the amount, the payment tag, Mark paid) are
+// left out and the payment cell says "Hidden on this tablet" — the Broke box and the belt stay.
+//
+// Props:
+//   groups        [{ cls: { id, name, startTime, endTime }, rows: Registration[], registered, broke }]
+//   isPhone       draw the phone cards instead of the table
+//   hidden        Hide private details is on
+//   busy          a save is running: Mark paid and Broke are unavailable meanwhile (aria-disabled)
+//   notSavedId    the row whose last save didn't reach the database (a small "Not saved" mark)
+//   markRowId     the row whose Mark paid box is open (keeps its button looking pressed)
+//   handlers      { onMarkPaid(row, button), onBroke(row), onMore(row, button) }
+import { IconCheck, IconDots } from '@tabler/icons-react';
+import Belt from '../../../components/Belt.jsx';
+import IconButton from '../../../components/IconButton.jsx';
+import { formatMoney } from '../../../lib/money.js';
+import { HIDDEN_ON_THIS_TABLET } from '../../../lib/privateDetails.js';
+import { beltFor, classTimes, owedCents, paidState, payingByLabel, rankLabel } from '../../../lib/breaking/breakingRules.js';
+import * as T from '../../../lib/breaking/text/roster.js';
+
+export const fullName = (row) => `${row.firstName} ${row.lastName}`;
+
+// "8 · [belt picture] Orange belt" — the name of the rank is always written next to the picture.
+function RankLine({ row }) {
+  return (
+    <span className="ev-ssub brk-rank">
+      <span>{row.age} ·</span>
+      <Belt belt={beltFor(row.rankName, { danStripe: true })} size="row" />
+      <span>{rankLabel(row.rankName)}</span>
+    </span>
+  );
+}
+
+function PayTag({ row, notSaved }) {
+  const state = paidState(row);
+  return (
+    <>
+      {state === 'paid' && <span className="ttag ttag--ok">{T.TAG_PAID}</span>}
+      {state === 'awaiting' && <span className="ttag ttag--warn">{T.TAG_AWAITING}</span>}
+      {state === 'unpaid' && <span className="ttag">{T.TAG_NOT_PAID}</span>}
+      {notSaved && <span className="ttag ttag--warn">{T.TAG_NOT_SAVED}</span>}
+    </>
+  );
+}
+
+// The Broke box: Camps' check-in box (cp-dc). Pressed = broke (green, a check); pressing it again undoes it.
+function BrokeBox({ row, busy, onBroke }) {
+  const name = fullName(row);
+  const common = {
+    type: 'button',
+    'data-broke': row.id,
+    'aria-disabled': busy ? 'true' : undefined,
+    onClick: (event) => {
+      event.stopPropagation();
+      if (!busy) onBroke(row);
+    },
+  };
+  if (row.broke) {
+    return (
+      <button {...common} className="cp-dc cp-dc--came" aria-label={T.undoBrokeFor(name)}>
+        <span className="cp-dc-val">
+          <IconCheck size={14} aria-hidden="true" />
+          {T.BROKE}
+        </span>
+      </button>
+    );
+  }
+  return (
+    <button {...common} className="cp-dc cp-dc--checkin" aria-label={T.markBroke(name)}>
+      <span className="cp-dc-val">{T.BROKE}</span>
+    </button>
+  );
+}
+
+function MarkPaidButton({ row, busy, hidden, onMarkPaid }) {
+  if (hidden || paidState(row) === 'paid') return null;
+  return (
+    <button
+      type="button"
+      className="btn btn-sm ev-markpaid"
+      data-mark={row.id}
+      aria-label={T.markPaidFor(fullName(row))}
+      aria-disabled={busy ? 'true' : undefined}
+      onClick={(event) => {
+        if (!busy) onMarkPaid(row, event.currentTarget);
+      }}
+    >
+      {/* ti-check = Mark paid (Color belt testing's button icon) */}
+      <IconCheck size={16} aria-hidden="true" />
+      {T.MARK_PAID}
+    </button>
+  );
+}
+
+function MoreButton({ row, onMore }) {
+  return <IconButton label={T.moreFor(fullName(row))} Icon={IconDots} aria-haspopup="menu" data-more={row.id} onClick={(event) => onMore(row, event.currentTarget)} />;
+}
+
+// One row on PC / tablet.
+function WideRow({ row, busy, hidden, notSavedId, handlers }) {
+  const name = fullName(row);
+  const boards = T.boardsText(row.techBoards, row.adultBoards);
+  return (
+    <div className="ev-srow brk-srow" role="row" aria-label={name} data-nav-row={row.id}>
+      <span className="ev-scell ev-sname-line" role="cell">
+        <span className="ev-sname">{name}</span>
+        <RankLine row={row} />
+        {row.sameDay && <span className="ttag">{T.SAME_DAY}</span>}
+        <span className="brk-boards-inline ev-ssub">{boards}</span>
+      </span>
+      <span className="ev-scell brk-boards" role="cell">{boards}</span>
+      <span className="ev-scell" role="cell">
+        {!hidden && (
+          <>
+            {payingByLabel(row.payingBy)}
+            <span className="brk-sub">{formatMoney(owedCents(row))}</span>
+          </>
+        )}
+      </span>
+      <span className="ev-scell" role="cell">
+        {hidden ? <span className="brk-hidden-pay">{HIDDEN_ON_THIS_TABLET}</span> : <PayTag row={row} notSaved={notSavedId === row.id} />}
+      </span>
+      <span className="ev-scell" role="cell">
+        <BrokeBox row={row} busy={busy} onBroke={handlers.onBroke} />
+      </span>
+      <span className="acts" role="cell">
+        <MarkPaidButton row={row} busy={busy} hidden={hidden} onMarkPaid={handlers.onMarkPaid} />
+        <MoreButton row={row} onMore={handlers.onMore} />
+      </span>
+    </div>
+  );
+}
+
+// One card on a phone.
+function PhoneRow({ row, busy, hidden, notSavedId, handlers }) {
+  const name = fullName(row);
+  return (
+    <div className="ev-srow is-phone" role="row" aria-label={name} data-nav-row={row.id}>
+      <span className="ev-srow-main" role="cell">
+        <span className="ev-sname-line">
+          <span className="ev-sname">{name}</span>
+          <RankLine row={row} />
+        </span>
+        <span className="ev-sline">{T.boardsText(row.techBoards, row.adultBoards)}</span>
+        {!hidden && (
+          <span className="ev-sline l2">
+            {payingByLabel(row.payingBy)} · {formatMoney(owedCents(row))}
+            {row.sameDay && ' '}
+            {row.sameDay && <span className="ttag">{T.SAME_DAY}</span>}
+          </span>
+        )}
+        <span className="ev-sline ev-sline-tag">
+          {hidden ? <span className="brk-hidden-pay">{HIDDEN_ON_THIS_TABLET}</span> : <PayTag row={row} notSaved={notSavedId === row.id} />}
+          <MarkPaidButton row={row} busy={busy} hidden={hidden} onMarkPaid={handlers.onMarkPaid} />
+          <BrokeBox row={row} busy={busy} onBroke={handlers.onBroke} />
+        </span>
+      </span>
+      <span className="acts" role="cell">
+        <MoreButton row={row} onMore={handlers.onMore} />
+      </span>
+    </div>
+  );
+}
+
+export default function Roster({ groups, isPhone, hidden, busy, notSavedId, handlers }) {
+  const Row = isPhone ? PhoneRow : WideRow;
+  return (
+    <div className={`clist ev-roster brk-roster${isPhone ? ' is-phone is-touch' : ''}`} role="table" aria-label={T.STUDENTS_BY_CLASS}>
+      {!isPhone && (
+        <div className="ev-srow ev-shead brk-srow" role="row">
+          <span role="columnheader">{T.COL_STUDENT}</span>
+          <span role="columnheader" className="brk-boards">{T.COL_BOARDS}</span>
+          <span role="columnheader">{hidden ? '' : T.COL_PAYING_BY}</span>
+          <span role="columnheader">{T.COL_PAYMENT}</span>
+          <span role="columnheader">{T.COL_BROKE}</span>
+          <span role="columnheader" aria-label={T.COL_ACTIONS} />
+        </div>
+      )}
+      {groups.map(({ cls, rows, registered, broke }) => (
+        <div role="rowgroup" key={cls.id}>
+          <div className="gr-subhead ev-subhead brk-subhead" role="row">
+            <span role="cell">
+              <strong>{cls.name}</strong> · {classTimes(cls)}
+            </span>
+            <span role="cell" className="brk-subcount">
+              {T.groupCount(registered, broke)}
+            </span>
+          </div>
+          {rows.map((row) => (
+            <Row key={row.id} row={row} busy={busy} hidden={hidden} notSavedId={notSavedId} handlers={handlers} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
