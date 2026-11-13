@@ -117,7 +117,7 @@
 /* (No position on the th: a positioned header cell would paint its gray band over the tilted name
    of the column before it.) */
 .stg-table thead th.stg-h-rot {
-  height: 172px;
+  height: 236px; /* room for the bigger, bolder names (Jeffrey 2026-11-12: easy to read while grading) */
   padding: 0 0 var(--space-8);
   border-left: 1px solid var(--color-border);
   white-space: nowrap;
@@ -127,8 +127,8 @@
   width: 28px;
   margin-left: 50%;
   color: var(--color-text);
-  font-size: var(--text-13);
-  font-weight: 500;
+  font-size: var(--text-16);
+  font-weight: 700;
   text-align: left;
   transform: rotate(-60deg);
   transform-origin: left bottom;
@@ -145,7 +145,8 @@
 }
 
 .stg-h-ex > div {
-  font-size: var(--text-12);
+  font-size: var(--text-14);
+  font-weight: 700;
 }
 
 /* Body rows */
@@ -349,12 +350,12 @@
 }
 
 .stg-grid--narrow .stg-table thead th.stg-h-rot {
-  height: 160px;
+  height: 210px;
 }
 
 .stg-grid--narrow .stg-h-rot > div,
 .stg-grid--narrow .stg-h-ex > div {
-  font-size: var(--text-12);
+  font-size: var(--text-14);
 }
 
 .stg-grid--narrow .stg-count {
