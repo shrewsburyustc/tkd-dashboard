@@ -39,9 +39,9 @@ the body or the url.
 
 ## Square webhooks — `functions/api/square/breaking/[school].js`  (`/api/square/breaking/worcester|shrewsbury`)
 POST only, no Origin check. `[school]` must be `worcester` or `shrewsbury` else 404. Needs `SQUARE_WEBHOOK_SIGNATURE_KEY_<SCHOOL>`,
-`SQUARE_WEBHOOK_URL_<SCHOOL>` and the `HYPERDRIVE_BREAKING_SQUARE` binding, else 503 (fails closed). Verify
+`SQUARE_WEBHOOK_URL_<SCHOOL>`, `SQUARE_LOCATION_ID_<SCHOOL>` and the `HYPERDRIVE_BREAKING_SQUARE` binding, else 503 (fails closed). Verify
 `base64(HMAC-SHA256(key, SQUARE_WEBHOOK_URL + raw body))` against header `x-square-hmacsha256-signature` in **constant time** BEFORE
-parsing (403 on mismatch). Accept only `type = payment.updated`; read `event_id`, `data.object.payment.{id, order_id, status,
+parsing (403 on mismatch). Accept only `type = payment.updated` **whose `payment.location_id` equals that school's `SQUARE_LOCATION_ID_<SCHOOL>`** (any other payment on the same Square account — dues, retail — is answered 200 "ignored" with no database call; a missing location variable is a 503); read `event_id`, `data.object.payment.{id, order_id, status,
 amount_money.{amount,currency}}`; call `brk_square_payment(school-from-the-path, event_id, payment id, order id, amount, currency,
 status)` as `brk_square`; answer 200 for every outcome (so Square stops retrying), 500 only on a database error. Logs: outcome word
 and timing only.

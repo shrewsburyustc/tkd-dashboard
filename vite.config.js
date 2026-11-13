@@ -41,7 +41,8 @@ import react from '@vitejs/plugin-react';
 const worktreesDir = fileURLToPath(new URL('./.claude/worktrees/', import.meta.url)).replace(/\\/g, '/').toLowerCase();
 
 // /register, /register/ and /register/<code> (with or without ?query) → register.html, and
-// /camp, /camp/ and /camp/<code> → camp.html, like public/_redirects does on Cloudflare.
+// /camp, /camp/ and /camp/<code> → camp.html and /breaking, /breaking/ and /breaking/<code> →
+// breaking.html (the public Board breaking sign-up page, contract 0051 §5), like public/_redirects does on Cloudflare.
 // Everything else is left alone.
 function registerPageRewrite() {
   const rewrite = (req, _res, next) => {
@@ -50,6 +51,8 @@ function registerPageRewrite() {
       req.url = '/register.html' + (query !== undefined ? `?${query}` : '');
     } else if (path === '/camp' || path.startsWith('/camp/')) {
       req.url = '/camp.html' + (query !== undefined ? `?${query}` : '');
+    } else if (path === '/breaking' || path.startsWith('/breaking/')) {
+      req.url = '/breaking.html' + (query !== undefined ? `?${query}` : '');
     }
     next();
   };
@@ -171,6 +174,7 @@ export default defineConfig(({ mode }) => {
           register: resolve(root, 'register.html'),
           forms: resolve(root, 'forms.html'),
           camp: resolve(root, 'camp.html'),
+          breaking: resolve(root, 'breaking.html'),
           blackBelt: resolve(root, 'black-belt.html'),
           ...(star ? { star: resolve(root, 'star.html') } : {}),
         },
@@ -182,7 +186,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       // Only look for the app's libraries starting from our own pages.
-      entries: ['index.html', 'register.html', 'forms.html', 'camp.html', 'black-belt.html', ...(star ? ['star.html'] : [])],
+      entries: ['index.html', 'register.html', 'forms.html', 'camp.html', 'breaking.html', 'black-belt.html', ...(star ? ['star.html'] : [])],
     },
   };
 });
