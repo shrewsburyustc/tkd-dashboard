@@ -4,6 +4,7 @@
   "subtitle": "Add student (walk-in), Mark paid with its Undo toast, Edit student, and Add / Edit event. PC and tablet draw a box on a dimmed page; phones draw the full-screen dialog page. Fake data.",
   "states": [
     "add",
+    "rank",
     "markpaid",
     "toast",
     "edit",
@@ -11,6 +12,7 @@
   ],
   "pcOwnLine": [
     "add",
+    "rank",
     "markpaid",
     "toast",
     "edit",

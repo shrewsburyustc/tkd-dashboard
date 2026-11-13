@@ -24,6 +24,28 @@ const cap = (html) => html.replace(/"/g, '&quot;');
 const tib = (label, icon, extra = '') => `<button type="button" class="tib" aria-label="${label}"${extra}><span class="tib-box">${I(icon)}</span><span class="tib-tip" aria-hidden="true">${label}</span></button>`;
 const moneyHtml = (s) => s;
 
+// ---------- belt pictures: Belt.jsx's drawing, size 'row' (40×12), colors from tokens.css --belt-* ----------
+let beltN = 0;
+const BELT_RANKS = {
+  'Orange belt': ['solid', 'orange'], 'Green belt': ['solid', 'green'], 'Yellow belt': ['solid', 'yellow'], 'White belt': ['solid', 'white'],
+  'Red belt': ['solid', 'red'], 'Purple belt': ['solid', 'purple'],
+  'High Green belt': ['stripe', 'green', 'white'], 'High Blue belt': ['stripe', 'blue', 'white'],
+  'Little Tiger Yellow': ['stripe', 'white', 'yellow'],
+  'Red / Black': ['half', 'red', 'black'],
+  '1st Dan': ['stripe', 'black', 'white'], // Black Belt testing draws no belt: this is the Bo Dan picture (black, white stripe)
+};
+function beltSvg(rank) {
+  const [pattern, c1, c2] = BELT_RANKS[rank];
+  const W = 40, H = 12, id = 'bc' + (beltN++);
+  const f = (k) => `var(--belt-${k}, var(--belt-unknown))`;
+  let bands;
+  if (pattern === 'stripe') { const o = Math.ceil(H / 3), m = H - o * 2; bands = [[0, o, f(c1)], [o, m, f(c2)], [o + m, o, f(c1)]]; }
+  else if (pattern === 'half') bands = [[0, H / 2, f(c1)], [H / 2, H / 2, f(c2)]];
+  else bands = [[0, H, f(c1)]];
+  return `<svg class="belt belt--row" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false"><defs><clipPath id="${id}"><rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="2"/></clipPath></defs><g clip-path="url(#${id})" shape-rendering="crispEdges">${bands.map(([y, h, fill]) => `<rect x="0" y="${y}" width="${W}" height="${h}" style="fill:${fill}"/>`).join('')}</g><rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="2" style="fill:none;stroke:var(--belt-outline)" stroke-width="1"/></svg>`;
+}
+const rankHtml = (s) => `<span class="ev-ssub brk-rank"><span>${s.age} ·</span>${beltSvg(s.rank)}<span>${s.rank}</span></span>`;
+
 // ---------- the shell (copied from the app's signed-in frame; Testing is the current rail item) ----------
 const RAIL_ITEMS = [
   ['Home', 'home'], ['Testing', 'certificate'], ['Camps', 'tent'], ['Schedule', 'clock'], ['Calendar', 'calendar-month'],
@@ -83,12 +105,12 @@ const classes = [
 const students = [
   { c: 0, n: 'Ava Reed', age: 8, rank: 'Orange belt', t: 4, a: 0, by: 'Cash', amt: '$12', pay: 'paid', broke: true },
   { c: 0, n: 'Mia Santos', age: 9, rank: 'Green belt', t: 4, a: 0, by: 'Cash', amt: '$16', pay: 'paid', broke: true, same: true },
-  { c: 0, n: 'Owen Reed', age: 8, rank: 'Yellow belt', t: 4, a: 0, by: 'Cash', amt: '$12', pay: 'unpaid' },
+  { c: 0, n: 'Owen Reed', age: 8, rank: 'High Green belt', t: 4, a: 0, by: 'Cash', amt: '$12', pay: 'unpaid' },
   { c: 1, n: 'Eli Park', age: 6, rank: 'Little Tiger Yellow', t: 3, a: 0, by: 'Card', amt: '$9.75', pay: 'await' },
   { c: 1, n: 'Ben Torres', age: 7, rank: 'White belt', t: 4, a: 0, by: 'Check', amt: '$12', pay: 'unpaid', id: 'ben' },
   { c: 2, n: 'Zoe Park', age: 10, rank: 'Red belt', t: 3, a: 1, by: 'Check', amt: '$13', pay: 'paid' },
-  { c: 2, n: 'Noah Kim', age: 12, rank: 'Brown belt', t: 2, a: 2, by: 'Cash', amt: '$14', pay: 'unpaid' },
-  { c: 3, n: 'Cara Lin', age: 14, rank: 'Blue belt', t: 1, a: 3, by: 'Card', amt: '$16', pay: 'paid' },
+  { c: 2, n: 'Noah Kim', age: 12, rank: 'Red / Black', t: 2, a: 2, by: 'Cash', amt: '$14', pay: 'unpaid' },
+  { c: 3, n: 'Cara Lin', age: 14, rank: 'High Blue belt', t: 1, a: 3, by: 'Card', amt: '$16', pay: 'paid' },
   { c: 3, n: 'Gia Chen', age: 13, rank: 'Purple belt', t: 2, a: 1, by: 'Cash', amt: '$10', pay: 'paid' },
   { c: 3, n: 'Leo Brooks', age: 16, rank: '1st Dan', t: 4, a: 3, by: 'Cash', amt: '$24', pay: 'unpaid' },
 ];
@@ -105,8 +127,8 @@ function groupHead(ci) {
   const broke = list.filter((s) => s.broke).length;
   return `<div class="gr-subhead ev-subhead brk-subhead" role="row"><span role="cell"><strong>${classes[ci].name}</strong> · ${classes[ci].time}</span><span role="cell" class="brk-subcount">${list.length} registered · ${broke} broke</span></div>`;
 }
-const wideRow = (s) => `<div class="ev-srow brk-srow" role="row" aria-label="${s.n}"><span class="ev-scell ev-sname-line" role="cell"><span class="ev-sname">${s.n}</span><span class="ev-ssub">${s.age} · ${s.rank}</span>${sameTag(s)}<span class="brk-boards-inline ev-ssub">${boards(s)}</span></span><span class="ev-scell brk-boards" role="cell">${boards(s)}</span><span class="ev-scell" role="cell">${s.by}<span class="brk-sub">${s.amt}</span></span><span class="ev-scell" role="cell">${payTag(s)}</span><span class="ev-scell" role="cell">${brokeBtn(s)}</span><span class="acts" role="cell">${markBtn(s)}${more(s)}</span></div>`;
-const phoneRow = (s) => `<div class="ev-srow is-phone" role="row" aria-label="${s.n}"><span class="ev-srow-main" role="cell"><span class="ev-sname-line"><span class="ev-sname">${s.n}</span><span class="ev-ssub">${s.age} · ${s.rank}</span></span><span class="ev-sline">${boards(s)}</span><span class="ev-sline l2">${s.by} · ${s.amt}${s.same ? ' ' + sameTag(s) : ''}</span><span class="ev-sline ev-sline-tag">${payTag(s)}${markBtn(s)}${brokeBtn(s)}</span></span><span class="acts" role="cell">${more(s)}</span></div>`;
+const wideRow = (s) => `<div class="ev-srow brk-srow" role="row" aria-label="${s.n}"><span class="ev-scell ev-sname-line" role="cell"><span class="ev-sname">${s.n}</span>${rankHtml(s)}${sameTag(s)}<span class="brk-boards-inline ev-ssub">${boards(s)}</span></span><span class="ev-scell brk-boards" role="cell">${boards(s)}</span><span class="ev-scell" role="cell">${s.by}<span class="brk-sub">${s.amt}</span></span><span class="ev-scell" role="cell">${payTag(s)}</span><span class="ev-scell" role="cell">${brokeBtn(s)}</span><span class="acts" role="cell">${markBtn(s)}${more(s)}</span></div>`;
+const phoneRow = (s) => `<div class="ev-srow is-phone" role="row" aria-label="${s.n}"><span class="ev-srow-main" role="cell"><span class="ev-sname-line"><span class="ev-sname">${s.n}</span>${rankHtml(s)}</span><span class="ev-sline">${boards(s)}</span><span class="ev-sline l2">${s.by} · ${s.amt}${s.same ? ' ' + sameTag(s) : ''}</span><span class="ev-sline ev-sline-tag">${payTag(s)}${markBtn(s)}${brokeBtn(s)}</span></span><span class="acts" role="cell">${more(s)}</span></div>`;
 const rosterHead = `<div class="ev-srow ev-shead brk-srow" role="row"><span role="columnheader">Student</span><span role="columnheader" class="brk-boards">Boards</span><span role="columnheader">Paying by</span><span role="columnheader">Payment</span><span role="columnheader">Broke</span><span role="columnheader" aria-label="Actions"></span></div>`;
 const rosterGroups = (row) => [0, 1, 2, 3].map((ci) => `<div role="rowgroup">${groupHead(ci)}${students.filter((s) => s.c === ci).map(row).join('')}</div>`).join('');
 
@@ -133,7 +155,7 @@ ben.pay = 'unpaid';
 // ---------- dialogs ----------
 const field = (label, input, hint = '') => `<div class="field"><label>${label}</label>${input}${hint ? `<p class="field-hint">${hint}</p>` : ''}</div>`;
 const text = (v = '', ph = '') => `<input class="input" autocomplete="off" type="text" value="${v}"${ph ? ` placeholder="${ph}"` : ''}>`;
-const select = (v, empty = false) => `<div class="fa-select"><div role="combobox" class="input fa-field sel-field${empty ? ' is-empty' : ''}" aria-haspopup="listbox" aria-expanded="false"><span class="fa-value">${v}</span>${I('chevron-down', 16, 'fa-chevron')}</div></div>`;
+const select = (v, empty = false, belt = false) => `<div class="fa-select"><div role="combobox" class="input fa-field sel-field${empty ? ' is-empty' : ''}" aria-haspopup="listbox" aria-expanded="false"><span class="fa-value${belt ? ' brk-rankvalue' : ''}">${belt ? beltSvg(v) : ''}<span>${v}</span></span>${I('chevron-down', 16, 'fa-chevron')}</div></div>`;
 const timeSel = (label, v) => `<span class="ev-time"><span class="visually-hidden">${label}</span>${select(v)}</span>`;
 const dateField = (v) => `<button type="button" class="input dp-field" aria-haspopup="dialog"><span class="dp-value">${v}</span>${I('chevron-down')}</button>`;
 const chips = (label, items, sel) => `<div class="field"><span class="field-label">${label}</span><div class="ev-chips" role="radiogroup">${items.map((x) => `<button type="button" role="radio" aria-checked="${x === sel}" class="ev-chip${x === sel ? ' is-checked' : ''}">${x}</button>`).join('')}</div></div>`;
@@ -155,8 +177,12 @@ ${anchorBox}</div>`;
 
 const amountLine = (big, small) => `<p class="brk-amount"><strong>${big}</strong><span>${small}</span></p>`;
 
-const addStudentBody = () => `<div class="ev-two">${field('First name', text(''))}${field('Last name', text(''))}</div>
-<div class="ev-two">${field('Age', text('9'))}${field('Rank', select('Green belt'))}</div>
+const rankOpen = () => {
+  const names = ['White belt', 'Little Tiger Yellow', 'Yellow belt', 'Orange belt', 'High Green belt', 'Green belt', 'High Blue belt', 'Purple belt', 'Red belt', 'Red / Black', '1st Dan'];
+  return `<div class="fa-select brk-open"><div role="combobox" class="input fa-field sel-field is-open" aria-haspopup="listbox" aria-expanded="true"><span class="fa-value brk-rankvalue">${beltSvg('Green belt')}<span>Green belt</span></span>${I('chevron-down', 16, 'fa-chevron')}</div><ul role="listbox" class="fa-list sel-list">${names.map((n) => `<li role="option" class="fa-option brk-opt${n === 'Green belt' ? ' is-selected' : ''}">${beltSvg(n)}<span>${n}</span></li>`).join('')}</ul></div>`;
+};
+const addStudentBody = (isPhone, open = false) => `<div class="ev-two">${field('First name', text(''))}${field('Last name', text(''))}</div>
+<div class="ev-two">${field('Age', text('9'))}${field('Rank', open ? rankOpen() : select('Green belt', false, true))}</div>
 ${chips('Class', ['Group D · 4:20 PM', 'White / Little Tiger · 5:10 PM', 'Group A · 6:00 PM', 'Teen / Adult · 7:40 PM'], 'Group D · 4:20 PM')}
 <p class="field-hint brk-hint">Group D is the recommended class for Green belt. Any class is fine.</p>
 <div class="ev-two">${step('Technical boards', 4)}${step('Adult boards', 0)}</div>
@@ -166,7 +192,7 @@ ${amountLine('Amount $16', 'Event day: +$1 per board. 4 Technical × $3 + 4 × $
 <p class="field-hint">Added at the desk. Card here means taken at the desk, so no Square link is sent.</p>`;
 
 const editStudentBody = (isPhone) => `<div class="ev-two">${field('First name', text('Eli'))}${field('Last name', text('Park'))}</div>
-<div class="ev-two">${field('Age', text('6'))}${field('Rank', select('Little Tiger Yellow'))}</div>
+<div class="ev-two">${field('Age', text('6'))}${field('Rank', select('Little Tiger Yellow', false, true))}</div>
 ${chips('Class', ['Group D · 4:20 PM', 'White / Little Tiger · 5:10 PM', 'Group A · 6:00 PM', 'Teen / Adult · 7:40 PM'], 'Group D · 4:20 PM')}
 <p class="field-hint brk-hint">Eli will move from White / Little Tiger to Group D.</p>
 <div class="ev-two">${step('Technical boards', 3)}${step('Adult boards', 0)}</div>
@@ -229,6 +255,10 @@ const states = [
     id: 'add', title: 'Add student', sub: 'November Board Breaking · Shrewsbury school', body: addStudentBody, behind: behindRoster,
     caption: '<b>Add student (walk-in).</b> First and last name, age and rank (one long list of every rank), class (free choice, the recommended one named), the two board steppers filled in from age and rank, <b>Paying by</b>, and the amount worked out by the database with the <b>event-day +$1 per board</b> line. One primary button. On a phone it is the usual full-screen dialog page.',
   }),
+  dialogState({
+    id: 'rank', title: 'Add student', sub: 'November Board Breaking · Shrewsbury school', body: (p) => addStudentBody(p, true), behind: behindRoster,
+    caption: '<b>The Rank list, open.</b> One long list of every rank, each with its belt picture beside the name (regular, High, Little Tiger, Red / Black, Dan), as Color belt testing shows belts beside names. Color belt testing uses belt buttons because a class has about six ranks; with about 25 ranks here a dropdown is shorter. The closed field shows the chosen belt too.',
+  }),
   crop('markpaid', '<b>Mark paid.</b> The shared small box under the row\'s button (design review M3): the amount, <b>Paid by</b> Cash / Check / Card preset to the family\'s choice with its hint, then <b>Mark paid $12</b>. <b style="color:#b45309">NEW (a guess)</b>: the gray line <i>Counts at Shrewsbury, this device\'s school</i>; the shared box shows no school today, the school comes from the account menu\'s This device.', rosterMain, `${markPaidBox}`, '[data-mark=ben]'),
   crop('toast', '<b>After Mark paid.</b> The row now says Paid, and the usual dark toast says what was recorded with <b>Undo</b> for 5 seconds. Undo takes the payment back in one step.', rosterBenPaid, toast, '[data-more=ben]'),
   dialogState({
@@ -288,6 +318,11 @@ const style = `
   .brk .brk-subhead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-12); }
   .brk .brk-subhead strong { font-weight: 600; }
   .brk .brk-subcount { color: var(--color-text-secondary); font-weight: 400; white-space: nowrap; }
+  .brk-rank { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px var(--space-8); }
+  .brk-rankvalue { display: inline-flex; align-items: center; gap: var(--space-8); min-width: 0; }
+  .brk-opt { gap: var(--space-8); }
+  .brk-open { position: relative; }
+  .mock-frame .brk-open .fa-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 280px; }
   .brk .brk-boards-inline { display: none; flex-basis: 100%; }
   .brk .brk-srow { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 84px 176px 92px 152px; }
   .brk .brk-erow, .brk .ev-list:not(.is-touch) .ev-row { grid-template-columns: minmax(0, 1.4fr) 150px 110px minmax(0, 1fr) 160px 64px; }
@@ -306,7 +341,12 @@ const style = `
   @media (min-width: 640px) and (max-width: 1023.98px) {
     .brk .brk-srow { grid-template-columns: minmax(0, 1.6fr) 76px 150px 76px 152px; }
     .brk .brk-boards { display: none; }
-    .brk .brk-boards-inline { display: block; }
+    .brk-rank { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px var(--space-8); }
+  .brk-rankvalue { display: inline-flex; align-items: center; gap: var(--space-8); min-width: 0; }
+  .brk-opt { gap: var(--space-8); }
+  .brk-open { position: relative; }
+  .mock-frame .brk-open .fa-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 280px; }
+  .brk .brk-boards-inline { display: block; }
     .brk .brk-erow, .brk .ev-list:not(.is-touch) .ev-row { grid-template-columns: minmax(0, 1fr) 108px 84px 170px 136px 64px; white-space: nowrap; } .brk .brk-erow .ev-name, .brk .ev-list:not(.is-touch) .ev-row .ev-name { white-space: normal; }
   }
   @media (max-width: 1023.98px) {
@@ -383,7 +423,7 @@ const sheets = [
     subtitle: 'New page inside Testing (rulebook v1.300): the list of Board breaking events. Drawn with the app\'s own stylesheets, at PC 1280×800, tablet 820×1180 touch, phone 390×844 touch and small phone 320×640 touch. School = Shrewsbury. Fake data.' },
   { out: 'B-staff-roster', title: 'Board breaking · Event roster (staff dashboard)', states: ['roster', 'rowmenu', 'link'], own: ['roster', 'rowmenu', 'link'],
     subtitle: 'One event page: header, counts, Square notice (admin), Find a student and the students grouped by class time. Rows copy Color belt testing\'s roster and Camps\' check-in box. Fake data.' },
-  { out: 'B-staff-dialogs', title: 'Board breaking · Dialogs (staff dashboard)', states: ['add', 'markpaid', 'toast', 'edit', 'event'], own: ['add', 'markpaid', 'toast', 'edit', 'event'],
+  { out: 'B-staff-dialogs', title: 'Board breaking · Dialogs (staff dashboard)', states: ['add', 'rank', 'markpaid', 'toast', 'edit', 'event'], own: ['add', 'rank', 'markpaid', 'toast', 'edit', 'event'],
     subtitle: 'Add student (walk-in), Mark paid with its Undo toast, Edit student, and Add / Edit event. PC and tablet draw a box on a dimmed page; phones draw the full-screen dialog page. Fake data.' },
 ];
 for (const s of sheets) {
