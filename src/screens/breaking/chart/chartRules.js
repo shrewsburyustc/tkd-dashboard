@@ -94,14 +94,24 @@ export const isRankDirty = (state) => {
 };
 
 // ----- The prices dialog -----
-export const PRICE_FIELDS = [
-  { key: 'tech', setting: 'techCents' },
-  { key: 'adult', setting: 'adultCents' },
-  { key: 'card', setting: 'cardExtraCents' },
-  { key: 'sameDay', setting: 'sameDayExtraCents' },
-];
+// FRAMING (Jeffrey, 2026-11-13): the LISTED price is the card price; cash or check gets a DISCOUNT. The database keeps its own
+// numbers (tech_cents / adult_cents = the cash or check price, card_extra_cents = the difference), so nothing stored or
+// charged changes: this dialog shows listed = cash price + discount, and converts back when saving:
+//   tech_cents = listed technical − discount, adult_cents = listed adult − discount, card_extra_cents = discount.
+// Boxes: tech (listed Technical price), adult (listed Adult price), discount (per board), sameDay (event-day extra).
+export const PRICE_FIELDS = [{ key: 'tech' }, { key: 'adult' }, { key: 'discount' }, { key: 'sameDay' }];
 export function pricesToValues(settings) {
-  return Object.fromEntries(PRICE_FIELDS.map((f) => [f.key, centsToDollarsText(settings[f.setting])]));
+  return {
+    tech: centsToDollarsText(settings.techCents + settings.cardExtraCents),
+    adult: centsToDollarsText(settings.adultCents + settings.cardExtraCents),
+    discount: centsToDollarsText(settings.cardExtraCents),
+    sameDay: centsToDollarsText(settings.sameDayExtraCents),
+  };
+}
+// The settings a set of typed boxes means, or null while any box doesn't parse or the discount is bigger than a listed price.
+export function settingsFromListed({ tech, adult, discount, sameDay }) {
+  if (![tech, adult, discount, sameDay].every(Number.isInteger) || (discount > 0 && (discount >= tech || discount >= adult))) return null;
+  return { techCents: tech - discount, adultCents: adult - discount, cardExtraCents: discount, sameDayExtraCents: sameDay };
 }
 // One typed box → { cents } or { problem: 'empty' | 'notMoney' | 'tooHigh' }
 export function parseMoneyBox(text) {
@@ -111,24 +121,23 @@ export function parseMoneyBox(text) {
   if (cents > MAX_CENTS) return { problem: 'tooHigh' };
   return { cents };
 }
-// → { canSave, errors: { tech, adult, card, sameDay }, sameAsSaved, settings (the numbers, where they parse), payload }
+// → { canSave, errors: { tech, adult, discount, sameDay }, sameAsSaved, cents (the typed LISTED numbers, where they parse),
+//     settings (what they mean in the database's numbers, or null), payload (the same, for the save) }
+// A discount equal to or bigger than a listed price is refused with the code 'discountTooBig' on the discount box (amber message).
 export function checkPricesForm(state, saved) {
   const errors = {};
   const cents = {};
   for (const f of PRICE_FIELDS) {
     const r = parseMoneyBox(state.values[f.key]);
     if (r.problem) errors[f.key] = r.problem;
-    else cents[f.setting] = r.cents;
+    else cents[f.key] = r.cents;
   }
+  if (!errors.discount && !errors.tech && !errors.adult && (cents.discount > 0 && (cents.discount >= cents.tech || cents.discount >= cents.adult))) errors.discount = 'discountTooBig';
   const ok = Object.keys(errors).length === 0;
-  const sameAsSaved = ok && PRICE_FIELDS.every((f) => cents[f.setting] === saved[f.setting]);
-  return {
-    canSave: !state.blocked && ok,
-    errors,
-    sameAsSaved,
-    cents,
-    payload: ok ? { techCents: cents.techCents, adultCents: cents.adultCents, cardExtraCents: cents.cardExtraCents, sameDayExtraCents: cents.sameDayExtraCents } : null,
-  };
+  const settings = ok ? settingsFromListed(cents) : null;
+  const sameAsSaved = ok && settings.techCents === saved.techCents && settings.adultCents === saved.adultCents
+    && settings.cardExtraCents === saved.cardExtraCents && settings.sameDayExtraCents === saved.sameDayExtraCents;
+  return { canSave: !state.blocked && ok, errors, sameAsSaved, cents, settings, payload: settings };
 }
 export const isPricesDirty = (state) => PRICE_FIELDS.some((f) => state.values[f.key].trim() !== state.initial[f.key].trim());
 

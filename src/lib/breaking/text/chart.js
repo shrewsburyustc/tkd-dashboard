@@ -19,8 +19,8 @@ export const PRICES_TITLE = 'Prices (all events)';
 export const EDIT_PRICES_LABEL = 'Edit prices';
 export const ROW_TECH = 'Technical board';
 export const ROW_ADULT = 'Adult board';
-export const ROW_CASH_CHECK = ' (cash / check)';
-export const ROW_CARD = 'Card adds, per board';
+export const ROW_LISTED = ' (listed price, paid by card)';
+export const ROW_DISCOUNT = 'Discount for paying cash or check, per board';
 export const ROW_SAME_DAY = 'From the event date on, adds per board';
 export const EXAMPLE = 'Example';
 
@@ -31,10 +31,14 @@ export const ageChildText = (max) => `: ${max} and under`;
 export const ageTeenText = (max) => `: ${max + 1} and up`;
 export const AGE_NOTE = "A student's age decides which chart row is used. Little Tiger belts always use the Little Tiger rows, and Black Belt ranks always use the Black Belt rows.";
 
-// "Card, 4 Technical, event day: 4 × $4.25 = $17.00" — the worked example, from the prices as typed or saved.
+// "Cash, 4 Technical, event day: 4 × $4.25 = $17.00, minus the $1.00 discount = $16.00" — the worked example, from the prices as
+// typed or saved (settings = the database's numbers: cash price, discount = cardExtraCents). 4 × the listed event-day price, then
+// the discount for 4 boards; with no discount the "minus" part is left out.
 export function exampleLine(settings) {
-  const each = settings.techCents + settings.cardExtraCents + settings.sameDayExtraCents;
-  return `Card, 4 Technical, event day: 4 × ${formatMoneyWithCents(each)} = ${formatMoneyWithCents(4 * each)}`;
+  const listed = settings.techCents + settings.cardExtraCents + settings.sameDayExtraCents;
+  const discount = 4 * settings.cardExtraCents;
+  const head = `Cash, 4 Technical, event day: 4 × ${formatMoneyWithCents(listed)} = ${formatMoneyWithCents(4 * listed)}`;
+  return discount > 0 ? `${head}, minus the ${formatMoneyWithCents(discount)} discount = ${formatMoneyWithCents(4 * listed - discount)}` : head;
 }
 
 // ----- The chart -----
@@ -72,11 +76,11 @@ export const DISCARD_CHANGES = 'Discard changes';
 export const ALL_EVENTS = 'All Board breaking events';
 
 export const EDIT_PRICES = 'Edit prices';
-export const PRICES_CASH_GROUP = 'Cash or check, per board';
-export const PRICES_EXTRA_GROUP = 'Added to every board';
-export const LABEL_TECH = 'Technical board';
-export const LABEL_ADULT = 'Adult board';
-export const LABEL_CARD = 'Card adds, per board';
+export const PRICES_LISTED_GROUP = 'Listed prices (paid by card), per board';
+export const PRICES_EXTRA_GROUP = 'Discount and event day';
+export const LABEL_TECH = 'Technical board, listed price';
+export const LABEL_ADULT = 'Adult board, listed price';
+export const LABEL_DISCOUNT = 'Discount for paying cash or check, per board';
 export const LABEL_SAME_DAY = 'From the event date on, adds per board';
 export const WORKED_EXAMPLE = 'Worked example';
 export const PRICES_HINT = 'Dollars and cents. A change applies to new sign-ups and when a student is edited; amounts already charged stay as they were.';
@@ -84,6 +88,7 @@ const MONEY_PROBLEMS = {
   empty: 'Enter an amount, like 3.00.',
   notMoney: 'Use dollars and cents, like 3.25.',
   tooHigh: 'Use $1,000 or less.',
+  discountTooBig: 'The discount must be less than the listed price.',
 };
 export const moneyProblemText = (problem) => MONEY_PROBLEMS[problem] ?? null;
 

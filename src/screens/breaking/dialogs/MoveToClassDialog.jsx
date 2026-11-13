@@ -46,7 +46,7 @@ export default function MoveToClassDialog({ registration, classes, isPhone = fal
     if (result.status === 'ok') {
       const to = sorted.find((c) => c.id === classId);
       showToast?.(T.movedToast(name, to?.name ?? ''));
-      onSaved?.({ kind: 'moved', name });
+      onSaved?.({ kind: 'moved', name, classId });
       onClose();
       return;
     }

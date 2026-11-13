@@ -114,7 +114,7 @@ export const MOVE_DOWN = 'Move down';
 export const REMOVE_CLASS = 'Remove class';
 export const copiedFromEvent = (name) =>
   `Copied from ${name}. Use ⋯ to move a class up or down or remove it. A class with students in it can't be removed.`;
-export const FIRST_EVENT_HINT = 'Add the class times for this event. Use ⋯ to move a class up or down or remove it.';
+export const FIRST_EVENT_HINT = 'The usual class times, to start from. Change them, use ⋯ to move a class up or down, or remove one.';
 export const EDIT_CLASSES_HINT = "Use ⋯ to move a class up or down or remove it. A class with students in it can't be removed.";
 export const REGISTRATION = 'Registration';
 export const REG_OPEN = 'Open';

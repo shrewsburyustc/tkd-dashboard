@@ -27,7 +27,7 @@
 //   onBack(), onGone() (the event doesn't exist any more), screenLocked, onNoAccess, onRefreshProfile,
 //   showToast, clearToast, onModalOpenChange
 // Draw it inside <div className="testing brk"> like the other Testing pages.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconArrowBackUp, IconCheck, IconHammer, IconPlus, IconQrcode, IconSearch, IconSum, IconUsers, IconX } from '@tabler/icons-react';
 import BackLink from '../../components/BackLink.jsx';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
@@ -40,7 +40,7 @@ import RowMenu from '../../components/RowMenu.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import { markedPaidToast, markedPaidToastHidden, paymentUndoneToast, undoPaymentTitle } from '../../components/text.js';
 import { loadRoster, loadSettings, markPaid, setBroke, undoPayment, undoRefund, updateEvent } from '../../lib/breaking/breakingApi.js';
-import { owedCents, paidCents, paidState, payingByLabel, rankLabel, rankOptions } from '../../lib/breaking/breakingRules.js';
+import { classTimes, owedCents, paidCents, paidState, payingByLabel, rankLabel, rankOptions } from '../../lib/breaking/breakingRules.js';
 import * as T from '../../lib/breaking/text/roster.js';
 import { formatMoney } from '../../lib/money.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
@@ -67,6 +67,9 @@ import '../../styles/breaking-roster.css';
 // The dialogs about money: they close when Hide private details is switched on.
 const MONEY_DIALOGS = ['refund', 'editPayment', 'undoPayment', 'undoRefund', 'square'];
 const settingsLoader = () => loadSettings();
+// The class tab last used on each event, kept while the app is open (Color belt testing's classByEvent): coming back to an event
+// from the list lands on the same class.
+const classByEvent = new Map();
 
 export default function EventPage({
   eventId,
@@ -109,6 +112,8 @@ export default function EventPage({
   const [notSavedId, setNotSavedId] = useState(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState(null); // null | 'paid' | 'broke'
+  const [classSel, setClassSelState] = useState(() => classByEvent.get(eventId) ?? null); // the class tab (null = the first class)
+  const classLabelId = `${useId()}-class`;
 
   // ----- The page's line of saves: one at a time; an Undo pressed meanwhile waits its turn -----
   const lastUndoRowRef = useRef(null);
@@ -395,13 +400,23 @@ export default function EventPage({
     return [fullName(row), rankLabel(row.rankName), cls.name].some((text) => text.toLowerCase().includes(q));
   };
   const filtering = shownFilter !== null || q !== '';
-  const groups = classes
-    .map((cls) => {
-      const all = registrations.filter((r) => r.classId === cls.id);
-      return { cls, rows: all.filter((r) => passes(r, cls)).sort(byRank), registered: all.length, broke: all.filter((r) => r.broke).length };
-    })
-    .filter((g) => !filtering || g.rows.length > 0);
-  const shownCount = groups.reduce((n, g) => n + g.rows.length, 0);
+  // One class at a time (the class switch, as in Color belt testing). A search or a card filter looks at EVERY class: when the
+  // chosen class has no match but another one has, that class is shown meanwhile (the choice itself is kept for when the search
+  // is cleared), the tabs count matches, and the class line says how many more matches are in other classes.
+  const matchCount = new Map(classes.map((cls) => [cls.id, registrations.filter((r) => r.classId === cls.id && passes(r, cls)).length]));
+  const shownCount = [...matchCount.values()].reduce((n, c) => n + c, 0); // matches in all classes
+  const picked = classes.find((c) => c.id === classSel) ?? classes[0] ?? null;
+  const firstWithMatch = filtering ? classes.find((c) => matchCount.get(c.id) > 0) ?? null : null;
+  const selectedClass = picked && filtering && matchCount.get(picked.id) === 0 && firstWithMatch ? firstWithMatch : picked;
+  const classAll = selectedClass ? registrations.filter((r) => r.classId === selectedClass.id) : [];
+  const classRows = selectedClass ? classAll.filter((r) => passes(r, selectedClass)).sort(byRank) : [];
+  const matchesElsewhere = filtering && selectedClass ? shownCount - matchCount.get(selectedClass.id) : 0;
+  const countOnTab = (cls) => (filtering ? matchCount.get(cls.id) : registrations.filter((r) => r.classId === cls.id).length);
+  function setClassSel(id) {
+    classByEvent.set(eventId, id);
+    setClassSelState(id);
+    setMenu(null);
+  }
   const hasStudents = registrations.length > 0;
   const paidCount = registrations.filter((r) => paidState(r) === 'paid').length;
   const brokeCount = registrations.filter((r) => r.broke).length;
@@ -520,12 +535,19 @@ export default function EventPage({
           registration={d.row}
           isAdmin={isAdmin}
           onClose={closeDialog}
-          onSaved={() => dialogDone()}
+          defaultClassId={selectedClass?.id ?? null}
+          onSaved={(info) => {
+            if (info?.classId) setClassSel(info.classId); // show the class the student is in (Color belt does the same)
+            dialogDone();
+          }}
           {...common}
         />
       );
     } else if (d.type === 'move') {
-      dialogElement = <MoveToClassDialog key={d.key} registration={d.row} classes={event.classes} onClose={closeDialog} onSaved={() => dialogDone()} {...common} />;
+      dialogElement = <MoveToClassDialog key={d.key} registration={d.row} classes={event.classes} onClose={closeDialog} onSaved={(info) => {
+        if (info?.classId) setClassSel(info.classId); // the moved student's class opens
+        dialogDone();
+      }} {...common} />;
     } else if (d.type === 'history') {
       dialogElement = <StudentHistoryDialog key={d.key} registration={d.row} isPhone={isPhone} onClose={closeDialog} onNoAccess={onNoAccess} />;
     } else if (d.type === 'delete') {
@@ -647,22 +669,64 @@ export default function EventPage({
       )}
       {!hasStudents ? (
         <p className="tempty">{T.NO_STUDENTS}</p>
-      ) : shownCount === 0 ? (
-        <p className="ev-filter-line cards-showing cp-nomatch">
-          {q !== '' ? T.noMatch(query.trim()) : shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_BROKE} ·{' '}
-          <button
-            type="button"
-            className="link-button inline-link"
-            onClick={() => {
-              setQuery('');
-              setFilter(null);
-            }}
-          >
-            {T.CLEAR_FILTERS}
-          </button>
-        </p>
+      ) : classes.length === 0 ? (
+        <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>
       ) : (
-        <Roster groups={groups} isPhone={isPhone} hidden={hidden} busy={busy} notSavedId={notSavedId} handlers={handlers} />
+        <>
+          {/* The class switch, copied from Color belt testing (EventPage.jsx there): one button per class with its count; the
+              chosen one is gray. A radio group (arrow keys move and choose), not a tab list — Color belt's is the same. */}
+          <span id={classLabelId} className="visually-hidden">
+            {T.CLASS_SWITCH_LABEL}
+          </span>
+          <div className="ev-class-switch">
+            <ChoiceGroup
+              labelId={classLabelId}
+              value={selectedClass?.id ?? null}
+              onChange={setClassSel}
+              options={classes.map((cls) => {
+                const count = countOnTab(cls);
+                return {
+                  key: cls.id,
+                  label: `${cls.name} ${count}`,
+                  content: (
+                    <>
+                      <span className="ev-cs-name">{cls.name}</span>
+                      <span className="ev-cs-count">{count}</span>
+                    </>
+                  ),
+                };
+              })}
+            />
+          </div>
+          {filtering && shownCount === 0 ? (
+            <p className="ev-filter-line cards-showing cp-nomatch">
+              {q !== '' ? T.noMatch(query.trim()) : shownFilter === 'paid' ? T.SHOWING_PAID : T.SHOWING_BROKE} ·{' '}
+              <button
+                type="button"
+                className="link-button inline-link"
+                onClick={() => {
+                  setQuery('');
+                  setFilter(null);
+                }}
+              >
+                {T.CLEAR_FILTERS}
+              </button>
+            </p>
+          ) : (
+            <>
+              <p className="ev-classline">
+                <strong>{T.classLineTitle(selectedClass.name, classTimes(selectedClass))}</strong>
+                <span>{T.groupCount(classAll.length, classAll.filter((r) => r.broke).length)}</span>
+                {matchesElsewhere > 0 && <span className="ttag">{T.moreInOtherClasses(matchesElsewhere)}</span>}
+              </p>
+              {classRows.length === 0 ? (
+                <p className="tempty">{T.NO_STUDENTS_IN_CLASS}</p>
+              ) : (
+                <Roster rows={classRows} isPhone={isPhone} hidden={hidden} busy={busy} notSavedId={notSavedId} handlers={handlers} />
+              )}
+            </>
+          )}
+        </>
       )}
       {popover && popoverRow && !hidden && !screenLocked && (
         // The shared Mark paid box: the amount still owed, Paid by preset to the student's way, and where that

@@ -3,7 +3,7 @@
 // migration 0051 adds for the STAFF screens: the settings row, the board chart, events with their class times,
 // registrations, append-only payments, the Square "need a look" list and every staff function of the sheet — with
 // the same order of checks, the same status words, the same staff / admin split, the version (`stale`) check, the
-// 10-second Undo window for staff, the price maths (card extra, event-day extra, override) and the delete rules.
+// 10-second Undo window for staff, the price maths (cash / check discount, event-day extra, override) and the delete rules.
 // What you see in preview is what the real dashboard will do. (The PUBLIC functions — brk_public_*,
 // brk_square_payment — belong to the family page and the Square Function and are built later; here they answer
 // "permission denied", as they do for a signed-in person on the real database.)

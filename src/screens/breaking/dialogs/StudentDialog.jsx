@@ -31,7 +31,8 @@
 //   registration     the roster row (Edit only)
 //   isAdmin, isPhone
 //   onClose()        close the box
-//   onSaved({ kind: 'added' | 'edited', name, amountCents })   after a successful save (the page reloads)
+//   defaultClassId   the class tab the page shows: Add starts on it
+//   onSaved({ kind: 'added' | 'edited', name, amountCents, classId })   after a successful save (the page reloads)
 //   onNoAccess()     the database says this sign-in is locked: the page locks the screen
 //   onRefreshProfile()  re-read who I am (the database said "only an admin")
 //   showToast / clearToast   the toast at the bottom
@@ -84,7 +85,7 @@ const problemWords = {
 const SERVER_FIELD = { first_name: 'first', last_name: 'last', age: 'age', rank_name: 'rank', class_id: 'class', boards: 'boards' };
 const SERVER_WORDS = { first: T.NAME_EMPTY, last: T.NAME_EMPTY, age: T.AGE_BAD, rank: T.RANK_EMPTY, class: T.CLASS_EMPTY, boards: T.BOARDS_BAD };
 
-export default function StudentDialog({ mode, event, classes, settings, chart, registration = null, isAdmin = false, isPhone = false, onClose, onSaved, onNoAccess, onRefreshProfile, showToast }) {
+export default function StudentDialog({ mode, event, classes, settings, chart, registration = null, defaultClassId = null, isAdmin = false, isPhone = false, onClose, onSaved, onNoAccess, onRefreshProfile, showToast }) {
   const idBase = useId();
   const [hidden] = usePrivateDetailsHidden(); // Hide private details: no money in this box
   const editing = mode === 'edit';
@@ -116,7 +117,8 @@ export default function StudentDialog({ mode, event, classes, settings, chart, r
   const rec = rank ? recommendedBoards(chart, rank, ageNumber ?? settings.childMaxAge, settings.childMaxAge) : null;
   const effective = boards ?? (rec && rec.tech !== null ? { tech: rec.tech, adult: rec.adult } : { tech: 0, adult: 0 });
   const recClass = !editing && rank ? recommendedClass(sortedClasses, rank, rec?.band) : null;
-  const classId = classPick ?? recClass?.id ?? sortedClasses[0]?.id ?? null;
+  // Add starts on the class tab the page is showing (then the class that rank usually comes to, then the first one).
+  const classId = classPick ?? (sortedClasses.some((c) => c.id === defaultClassId) ? defaultClassId : null) ?? recClass?.id ?? sortedClasses[0]?.id ?? null;
   const card = payingBy === 'card';
   const sameDay = editing ? registration.sameDay : schoolToday() >= event.eventDate;
   const amount = priceCents({ tech: effective.tech, adult: effective.adult, card, sameDay }, settings);
@@ -221,7 +223,7 @@ export default function StudentDialog({ mode, event, classes, settings, chart, r
     setSaving(false);
     if (status === 'ok') {
       showToast?.(editing ? T.updatedToast(name) : T.addedToast(name));
-      onSaved?.({ kind: editing ? 'edited' : 'added', name, amountCents: result.amountCents });
+      onSaved?.({ kind: editing ? 'edited' : 'added', name, amountCents: result.amountCents, classId });
       onClose();
       return;
     }
@@ -266,7 +268,7 @@ export default function StudentDialog({ mode, event, classes, settings, chart, r
     if (boards === null) boardsHint = T.chartFill(ageNumber, rankLabel(rank), chartName);
     else if (boards.tech !== rec.tech || boards.adult !== rec.adult) boardsHint = T.chartDiffers(ageNumber, rankLabel(rank), chartName, rec.tech, rec.adult);
   }
-  const lineExtras = [sameDay ? T.eventDayNote(settings.sameDayExtraCents) : null, card ? T.cardNote(settings.cardExtraCents) : null].filter(Boolean).join(' ');
+  const lineExtras = [sameDay ? T.eventDayNote(settings.sameDayExtraCents) : null, !card && settings.cardExtraCents > 0 ? T.discountNote(settings.cardExtraCents) : null].filter(Boolean).join(' ');
   const sum = priceLine({ tech: effective.tech, adult: effective.adult, card, sameDay }, settings);
   const amountSmall = overrideOn && overrideCents !== null && overrideValid
     ? T.overrideLine(amount, `${sum.split(' = ')[0] || '0 boards'}, ${payingBy}`)

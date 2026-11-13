@@ -30,7 +30,7 @@ export const AGE_HINT = 'Age on the event day';
 export const RANK = 'Rank';
 export const CHOOSE_RANK = 'Choose a rank';
 export const GROUP_TIGER = 'Little Tiger belts';
-export const GROUP_BELTS = 'Belts';
+export const GROUP_BELTS = 'Color Belts'; // (Jeffrey, after trying the live page: "Color Belts", not "Belts")
 export const GROUP_BLACK = 'Black Belt';
 export const CLASS_TIME = 'Class time';
 export const CHOOSE_CLASS = 'Choose a class time';
@@ -73,8 +73,9 @@ export const AMOUNT = 'Amount';
 export const NO_BOARDS_YET = 'No boards chosen yet';
 export const TOTAL = 'Total';
 export const lineBoards = (kind, count, each) => `${kind} ${count} × ${each}`;
-export const CARD_ADDS = (each) => `Card adds ${each} per board`;
-export const SAME_DAY_ADDS = (each) => `Same-day registration adds ${each} per board`;
+// The listed price is the card price; paying cash or check takes the difference off (Jeffrey: families only see the listed price and a cash / check discount).
+export const DISCOUNT = 'Cash or check discount';
+export const saveHint = (each) => `Pay by cash or check and save ${each} per board.`;
 export const boardsTimes = (count, each) => `${count} ${count === 1 ? 'board' : 'boards'} × ${each}`;
 
 export const REGISTER = 'Register';

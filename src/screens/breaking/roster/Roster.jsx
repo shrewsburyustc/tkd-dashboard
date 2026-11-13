@@ -5,12 +5,13 @@
 //     tablet they sit under the name) · Paying by with the amount under it · Payment tag (Paid / Not paid /
 //     Awaiting card payment) · the Broke box (Camps' check-in box look) · Mark paid and ⋯.
 //   Phone: a stacked card per student with the same pieces, the ⋯ on the right.
-// Rows come in groups, one per class: a header line "Group D · 4:20 – 5:00 PM" with "3 registered · 2 broke".
+// One class at a time (the class switch above the table, as in Color belt testing; EventPage.jsx draws the switch and the
+// class line "Group D · 4:20 – 5:00 PM · 3 registered · 2 broke"), so there is no heading inside the table any more.
 // While Hide private details is on, the money parts (Paying by, the amount, the payment tag, Mark paid) are
 // left out and the payment cell says "Hidden on this tablet" — the Broke box and the belt stay.
 //
 // Props:
-//   groups        [{ cls: { id, name, startTime, endTime }, rows: Registration[], registered, broke }]
+//   rows          the selected class's students (Registration[])
 //   isPhone       draw the phone cards instead of the table
 //   hidden        Hide private details is on
 //   busy          a save is running: Mark paid and Broke are unavailable meanwhile (aria-disabled)
@@ -22,7 +23,7 @@ import Belt from '../../../components/Belt.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import { formatMoney } from '../../../lib/money.js';
 import { HIDDEN_ON_THIS_TABLET } from '../../../lib/privateDetails.js';
-import { beltFor, classTimes, owedCents, paidState, payingByLabel, rankLabel } from '../../../lib/breaking/breakingRules.js';
+import { beltFor, owedCents, paidState, payingByLabel, rankLabel } from '../../../lib/breaking/breakingRules.js';
 import * as T from '../../../lib/breaking/text/roster.js';
 
 export const fullName = (row) => `${row.firstName} ${row.lastName}`;
@@ -169,7 +170,7 @@ function PhoneRow({ row, busy, hidden, notSavedId, handlers }) {
   );
 }
 
-export default function Roster({ groups, isPhone, hidden, busy, notSavedId, handlers }) {
+export default function Roster({ rows, isPhone, hidden, busy, notSavedId, handlers }) {
   const Row = isPhone ? PhoneRow : WideRow;
   return (
     <div className={`clist ev-roster brk-roster${isPhone ? ' is-phone is-touch' : ''}`} role="table" aria-label={T.STUDENTS_BY_CLASS}>
@@ -183,21 +184,11 @@ export default function Roster({ groups, isPhone, hidden, busy, notSavedId, hand
           <span role="columnheader" aria-label={T.COL_ACTIONS} />
         </div>
       )}
-      {groups.map(({ cls, rows, registered, broke }) => (
-        <div role="rowgroup" key={cls.id}>
-          <div className="gr-subhead ev-subhead brk-subhead" role="row">
-            <span role="cell">
-              <strong>{cls.name}</strong> · {classTimes(cls)}
-            </span>
-            <span role="cell" className="brk-subcount">
-              {T.groupCount(registered, broke)}
-            </span>
-          </div>
-          {rows.map((row) => (
-            <Row key={row.id} row={row} busy={busy} hidden={hidden} notSavedId={notSavedId} handlers={handlers} />
-          ))}
-        </div>
-      ))}
+      <div role="rowgroup">
+        {rows.map((row) => (
+          <Row key={row.id} row={row} busy={busy} hidden={hidden} notSavedId={notSavedId} handlers={handlers} />
+        ))}
+      </div>
     </div>
   );
 }

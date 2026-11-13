@@ -48,7 +48,8 @@ export const UNDO_WINDOW_MS = 10 * 1000; // staff may undo their own payment thi
 // ----- Money -----
 
 // What ONE board costs, in cents. kind = 'tech' | 'adult'. card = Paying by Card, sameDay = on or after the
-// event date. (Card adds a little to every board; so does the event day.)
+// event date. (The database's numbers: cash / check prices, plus card_extra_cents for a card. People see it the other way round:
+// the LISTED price is the card price and cash or check gets a discount of that same amount per board, so the money is the same.)
 export function unitCents(kind, { card = false, sameDay = false } = {}, settings) {
   const base = kind === 'adult' ? settings.adultCents : settings.techCents;
   return base + (card ? settings.cardExtraCents : 0) + (sameDay ? settings.sameDayExtraCents : 0);
@@ -62,8 +63,9 @@ export function priceCents({ tech, adult, card = false, sameDay = false }, setti
   return t * unitCents('tech', { card, sameDay }, settings) + a * unitCents('adult', { card, sameDay }, settings);
 }
 
-// The worked line under the amount: "4 Technical × $3 + 4 × $1 same day = $16".
-// Shows the card part only when Paying by is Card and the same-day part only on the event day.
+// The worked line under the amount, in the LISTED-price framing: "4 Technical × $3.25 + 4 × $1 same day − 4 × $0.25 discount = $16".
+// Each board is written at its listed (card) price; paying cash or check takes the discount off; the same-day part shows only on the
+// event day. The total is the same number priceCents gives, and the same one the database works out.
 export function priceLine({ tech, adult, card = false, sameDay = false }, settings) {
   const parts = [];
   const kinds = [
@@ -73,12 +75,13 @@ export function priceLine({ tech, adult, card = false, sameDay = false }, settin
   const boards = (tech || 0) + (adult || 0);
   for (const [label, count, base] of kinds) {
     if (!count) continue;
-    parts.push(`${count} ${label} × ${formatMoney(base)}`);
+    parts.push(`${count} ${label} × ${formatMoney(base + settings.cardExtraCents)}`);
   }
-  if (card && boards > 0) parts.push(`${boards} × ${formatMoney(settings.cardExtraCents)} card`);
-  if (sameDay && boards > 0) parts.push(`${boards} × ${formatMoney(settings.sameDayExtraCents)} same day`);
   if (parts.length === 0) return '';
-  return `${parts.join(' + ')} = ${formatMoney(priceCents({ tech, adult, card, sameDay }, settings))}`;
+  let line = parts.join(' + ');
+  if (sameDay && boards > 0) line += ` + ${boards} × ${formatMoney(settings.sameDayExtraCents)} same day`;
+  if (!card && boards > 0 && settings.cardExtraCents > 0) line += ` − ${boards} × ${formatMoney(settings.cardExtraCents)} discount`;
+  return `${line} = ${formatMoney(priceCents({ tech, adult, card, sameDay }, settings))}`;
 }
 
 // ----- Boards from the chart -----

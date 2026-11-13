@@ -5,6 +5,9 @@
 import assert from 'node:assert/strict';
 import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState } from './breakingRules.js';
 import { createBreakingBackend } from '../mockBreaking.js';
+import { STARTER_CLASSES, startingClasses } from './starterClasses.js';
+import { exampleLine } from './text/chart.js';
+import { checkPricesForm, pricesToValues, settingsFromListed } from '../../screens/breaking/chart/chartRules.js';
 
 const settings = { techCents: 300, adultCents: 400, cardExtraCents: 25, sameDayExtraCents: 100, childMaxAge: 12 };
 let checks = 0;
@@ -16,7 +19,20 @@ ok(() => assert.equal(priceCents({ tech: 4, adult: 0, sameDay: true }, settings)
 ok(() => assert.equal(priceCents({ tech: 3, adult: 0, card: true }, settings), 975)); // Eli Park, card
 ok(() => assert.equal(priceCents({ tech: 1, adult: 3, card: true }, settings), 1600)); // Cara Lin, card
 ok(() => assert.equal(priceCents({ tech: 4, adult: 0, card: true, sameDay: true }, settings), 1700)); // the Prices card's example
-ok(() => assert.equal(priceLine({ tech: 4, adult: 0, sameDay: true }, settings), '4 Technical × $3 + 4 × $1 same day = $16'));
+// the LISTED-price framing: the listed price is the card price, cash or check gets a discount; the money is the same
+ok(() => assert.equal(priceLine({ tech: 4, adult: 0, sameDay: true }, settings), '4 Technical × $3.25 + 4 × $1 same day − 4 × $0.25 discount = $16'));
+ok(() => assert.equal(priceLine({ tech: 3, adult: 0, card: true }, settings), '3 Technical × $3.25 = $9.75')); // a card: no discount line
+ok(() => assert.equal(priceLine({ tech: 4, adult: 0 }, { ...settings, cardExtraCents: 0 }), '4 Technical × $3 = $12')); // no discount set: no discount line
+ok(() => assert.equal(exampleLine(settings), 'Cash, 4 Technical, event day: 4 × $4.25 = $17.00, minus the $1.00 discount = $16.00'));
+// the Edit prices dialog: today's $3.00 / $4.00 / $0.25 show as listed $3.25 / $4.25 and a $0.25 discount, and convert back on save
+ok(() => assert.deepEqual(pricesToValues(settings), { tech: '3.25', adult: '4.25', discount: '0.25', sameDay: '1.00' }));
+ok(() => assert.deepEqual(checkPricesForm({ values: pricesToValues(settings), blocked: false }, settings).payload, { techCents: 300, adultCents: 400, cardExtraCents: 25, sameDayExtraCents: 100 }));
+ok(() => assert.equal(checkPricesForm({ values: pricesToValues(settings), blocked: false }, settings).sameAsSaved, true));
+ok(() => assert.deepEqual(settingsFromListed({ tech: 350, adult: 450, discount: 50, sameDay: 100 }), { techCents: 300, adultCents: 400, cardExtraCents: 50, sameDayExtraCents: 100 }));
+ok(() => assert.equal(checkPricesForm({ values: { tech: '3.25', adult: '4.25', discount: '3.50', sameDay: '1.00' }, blocked: false }, settings).errors.discount, 'discountTooBig')); // a discount over a listed price is refused
+ok(() => assert.equal(checkPricesForm({ values: { tech: '3.25', adult: '4.25', discount: '3.50', sameDay: '1.00' }, blocked: false }, settings).canSave, false));
+ok(() => assert.equal(checkPricesForm({ values: { tech: '3.25', adult: '4.25', discount: '3.25', sameDay: '1.00' }, blocked: false }, settings).errors.discount, 'discountTooBig')); // equal to a listed price (a $0 cash price) is refused too
+ok(() => assert.equal(checkPricesForm({ values: { tech: '3.25', adult: '4.25', discount: '0.00', sameDay: '1.00' }, blocked: false }, settings).canSave, true)); // no discount is fine
 
 // ----- the chart and ranks -----
 const chart = [
@@ -184,5 +200,39 @@ const gia = f7.person('Gia');
 const pay = f7.ro().registrations.find((r) => r.id === gia.id).payments[0];
 ok(() => assert.equal(f7.run('brk_edit_payment', { p_payment_id: pay.id, p_method: 'cash', p_amount_cents: 1000, p_paid_on: '2026-11-01', p_school: 'shrewsbury' }).field, 'date'));
 ok(() => assert.equal(f7.run('brk_undo_refund', { p_payment_id: pay.id }).status, 'invalid'));
+
+// ----- Add event's starting class list (EventsTab.jsx follows this rule; the database copy is what saveAdd relies on) -----
+ok(() => assert.deepEqual(STARTER_CLASSES.map((c) => [c.name, c.startTime, c.endTime]), [
+  ['Group D', '16:20', '17:00'], ['White / Little Tiger', '17:10', '17:50'], ['Group A', '18:00', '18:40'], ['Group B+C', '18:50', '19:30'], ['Teen / Adult', '19:40', '20:20'],
+]));
+ok(() => assert.deepEqual(startingClasses([]), STARTER_CLASSES)); // no earlier event: the starter list
+ok(() => assert.deepEqual(startingClasses(null), STARTER_CLASSES));
+ok(() => assert.deepEqual(startingClasses(undefined), STARTER_CLASSES)); // no copy at all
+ok(() => assert.deepEqual(startingClasses([]), STARTER_CLASSES)); // an earlier event with ZERO classes falls back to the starter list
+ok(() => assert.deepEqual(startingClasses([{ id: 'x', name: 'Only', startTime: '10:00', endTime: '10:40' }]), [{ name: 'Only', startTime: '10:00', endTime: '10:40' }])); // an earlier event: its classes, in its order
+// What saveAdd does with the database: add the event (classesFrom = the copy's id, or none), then save the dialog's list when it
+// differs. A class is never duplicated: the saved list is exactly what the dialog showed.
+const classNamesOf = (f, id) => f.run('brk_event_roster', { p_event_id: id }).event.classes.map((c) => [c.name, c.start_time, c.end_time]);
+const f8 = fresh();
+const latest = f8.run('brk_events_list', { p_location_code: 'shrewsbury' }).events.sort((a, b) => (a.event_date < b.event_date ? 1 : -1))[0];
+const copied = classNamesOf(f8, latest.id);
+const addCopy = f8.run('brk_add_event', { p_name: 'Copy me', p_location_code: 'shrewsbury', p_event_date: '2027-01-15', p_copy_classes_from: latest.id });
+ok(() => assert.deepEqual(classNamesOf(f8, addCopy.event_id), copied)); // copied once, in order, no duplicates
+const trimmedList = copied.slice(0, 3).map(([name, start_time, end_time]) => ({ name, start_time, end_time })); // the admin removed two rows
+const v8 = f8.run('brk_event_roster', { p_event_id: addCopy.event_id }).event.version;
+ok(() => assert.equal(f8.run('brk_save_classes', { p_event_id: addCopy.event_id, p_expected_version: v8, p_classes: trimmedList }).status, 'ok'));
+ok(() => assert.deepEqual(classNamesOf(f8, addCopy.event_id), copied.slice(0, 3))); // exactly what the dialog showed
+// a school with no event at all: nothing is copied, then the starter list is saved once
+const f9 = fresh();
+const store9 = JSON.parse(JSON.stringify(f9.b.snapshot()));
+store9.events = store9.events.filter((e) => e.location_code !== 'worcester'); // (Worcester has no event)
+const b9 = createBreakingBackend({ loadStore: () => store9, saveStore: (x) => Object.assign(store9, x), now: () => clock, today: () => '2026-11-12', newId: () => `00000000-0000-4000-8000-${String(700000 + store9.events.length + store9.classes.length + store9.registrations.length + Math.floor(Math.random() * 1e5)).padStart(12, '0')}` });
+const addStarter = b9.rpc('brk_add_event', { p_name: 'First', p_location_code: 'worcester', p_event_date: '2027-01-15' }, admin).data;
+const rosterOf = (id) => b9.rpc('brk_event_roster', { p_event_id: id }, admin).data;
+ok(() => assert.equal(rosterOf(addStarter.event_id).event.classes.length, 0)); // the database copies nothing when there is no earlier event
+const saveStarter = b9.rpc('brk_save_classes', { p_event_id: addStarter.event_id, p_expected_version: rosterOf(addStarter.event_id).event.version,
+  p_classes: STARTER_CLASSES.map((c) => ({ name: c.name, start_time: c.startTime, end_time: c.endTime })) }, admin).data;
+ok(() => assert.equal(saveStarter.status, 'ok'));
+ok(() => assert.deepEqual(rosterOf(addStarter.event_id).event.classes.map((c) => [c.name, c.start_time, c.end_time]), STARTER_CLASSES.map((c) => [c.name, c.startTime, c.endTime])));
 
 console.log(`ALL BOARD BREAKING CHECKS PASSED (${checks} checks)`);

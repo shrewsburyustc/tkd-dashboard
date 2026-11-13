@@ -50,6 +50,13 @@ export const CLEAR_SEARCH = 'Clear search';
 export const noMatch = (query) => `No students match “${query}”.`;
 export const CLEAR_FILTERS = 'Show all';
 export const NO_STUDENTS = 'No students yet. Add one, or share the registration link.';
+// The class switch (copied from Color belt testing's: one button per class with its count, the selected class's line under it).
+export const CLASS_SWITCH_LABEL = 'Class';
+export const NO_CLASSES_IN_EVENT = 'This event has no class times yet. An admin adds them with Edit event.';
+export const NO_STUDENTS_IN_CLASS = 'No students in this class yet.';
+export const classLineTitle = (name, time) => (time ? `${name} · ${time}` : name);
+// While Find a student or a card filters: matches in the OTHER classes (the tab counts then count matches too).
+export const moreInOtherClasses = (n) => (n === 1 ? '1 more match in another class' : `${n} more matches in other classes`);
 export const groupCount = (registered, broke) => `${registered} registered · ${broke} broke`;
 export const STUDENTS_BY_CLASS = 'Students by class time';
 

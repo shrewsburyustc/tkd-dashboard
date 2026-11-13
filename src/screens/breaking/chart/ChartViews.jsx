@@ -18,9 +18,10 @@ import { rankKey } from './chartRules.js';
 // ----- The two cards -----
 export function PricesCard({ settings, selected, onEdit }) {
   const rows = [
-    [T.ROW_TECH, T.ROW_CASH_CHECK, settings.techCents],
-    [T.ROW_ADULT, T.ROW_CASH_CHECK, settings.adultCents],
-    [T.ROW_CARD, '', settings.cardExtraCents],
+    // The LISTED price is the card price; cash or check gets a discount (the database's cash price + the difference).
+    [T.ROW_TECH, T.ROW_LISTED, settings.techCents + settings.cardExtraCents],
+    [T.ROW_ADULT, T.ROW_LISTED, settings.adultCents + settings.cardExtraCents],
+    [T.ROW_DISCOUNT, '', settings.cardExtraCents],
     [T.ROW_SAME_DAY, '', settings.sameDayExtraCents],
   ];
   return (

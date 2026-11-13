@@ -10,7 +10,9 @@
 // (breaking-public.css). Every box has a visible label tied to it; messages are tied with aria-describedby.
 import { useState } from 'react';
 import { EventCard, FieldError, Icon, TopError } from './parts.jsx';
-import { ageNumber, chartView, classLabel, fieldId, MAX_BOARDS, priceView, rankGroups, recommendationFor } from './form.js';
+import RankPicker from './RankPicker.jsx';
+import Belt from '../components/Belt.jsx';
+import { ageNumber, beltOf, chartView, classLabel, fieldId, listedCents, MAX_BOARDS, priceView, rankPickerGroups, recommendationFor } from './form.js';
 import { formatMoneyWithCents } from '../lib/money.js';
 import * as T from './text.js';
 
@@ -21,7 +23,7 @@ export default function BreakingForm({ event, form, change, errors, showAll, ban
   const age = ageNumber(form.age);
   const price = priceView(form, event);
   const rec = recommendationFor(event, age, form.rank);
-  const groups = rankGroups(event, age);
+  const groups = rankPickerGroups(event, age);
 
   return (
     <>
@@ -66,27 +68,21 @@ export default function BreakingForm({ event, form, change, errors, showAll, ban
             autoCapitalize="off"
           />
 
-          {/* Rank: ONE long list in three groups. On a phone the device's own picker opens with the same groups. */}
+          {/* Rank: ONE list in three groups (Little Tiger belts, Color Belts, Black Belt), a belt picture beside every
+              rank. A custom picker, not a <select>: the phone's own picker was unusable on an iPhone (RankPicker.jsx). */}
           <div className="reg-field">
-            <label className="reg-label" htmlFor={fieldId('rank')}>{T.RANK}</label>
-            <select
+            <label className="reg-label" id="brk-rank-label" onClick={() => document.getElementById(fieldId('rank'))?.focus()}>{T.RANK}</label>
+            <RankPicker
               id={fieldId('rank')}
-              className={`reg-input brk-select${form.rank ? '' : ' is-empty'}${show('rank') ? ' is-invalid' : ''}`}
+              labelId="brk-rank-label"
+              describedBy={show('rank') ? 'brk-rank-err' : undefined}
               value={form.rank}
-              onChange={(e) => change({ rank: e.target.value })}
+              groups={groups}
+              placeholder={T.CHOOSE_RANK}
+              onChange={(rank) => change({ rank })}
               onBlur={leave('rank')}
-              aria-invalid={show('rank') ? true : undefined}
-              aria-describedby={show('rank') ? 'brk-rank-err' : undefined}
-            >
-              <option value="" disabled>{T.CHOOSE_RANK}</option>
-              {groups.map((g) => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.ranks.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              invalid={Boolean(show('rank'))}
+            />
             <FieldError id="brk-rank-err">{show('rank')}</FieldError>
           </div>
 
@@ -124,8 +120,8 @@ export default function BreakingForm({ event, form, change, errors, showAll, ban
               T.BOARDS_EMPTY_NOTE
             )}
           </div>
-          <Stepper id={fieldId('boards')} kind={T.TECHNICAL} each={event.prices.techCents} value={form.tech} setValue={(n) => change({ tech: n })} describedBy={show('boards') ? 'brk-boards-err' : undefined} />
-          <Stepper kind={T.ADULT} each={event.prices.adultCents} value={form.adult} setValue={(n) => change({ adult: n })} describedBy={show('boards') ? 'brk-boards-err' : undefined} />
+          <Stepper id={fieldId('boards')} kind={T.TECHNICAL} each={listedCents('tech', event)} value={form.tech} setValue={(n) => change({ tech: n })} describedBy={show('boards') ? 'brk-boards-err' : undefined} />
+          <Stepper kind={T.ADULT} each={listedCents('adult', event)} value={form.adult} setValue={(n) => change({ adult: n })} describedBy={show('boards') ? 'brk-boards-err' : undefined} />
           {show('boards') ? <FieldError id="brk-boards-err">{show('boards')}</FieldError> : null}
           <ChartFold event={event} age={age} rank={form.rank} />
         </section>
@@ -182,6 +178,7 @@ export default function BreakingForm({ event, form, change, errors, showAll, ban
             <span>{T.TOTAL}</span>
             <b>{formatMoneyWithCents(price.totalCents)}</b>
           </div>
+          {price.saveHint ? <div className="reg-hint brk-save">{price.saveHint}</div> : null}
         </section>
 
         {/* Turnstile puts its "Verify you are human" box here, only when Cloudflare asks. React never puts
@@ -259,9 +256,12 @@ function ChartFold({ event, age, rank }) {
         </div>
         {view.rows.map((r) => (
           <div className={`brk-chart__row${r.rankName === rank ? ' is-you' : ''}`} role="row" key={r.rankName}>
-            <span role="cell">
-              {r.rankName}
-              {r.technique ? <small>{r.technique}</small> : null}
+            <span role="cell" className="brk-chart__rank">
+              <Belt belt={beltOf(r.rankName)} />
+              <span>
+                {r.rankName}
+                {r.technique ? <small>{r.technique}</small> : null}
+              </span>
             </span>
             <span role="cell">{T.boardsText(r.techBoards, r.adultBoards)}</span>
           </div>

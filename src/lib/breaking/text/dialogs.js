@@ -42,7 +42,8 @@ export const CHART_NAMES = { tiger: 'Little Tiger chart', child: 'Child chart', 
 export const AMOUNT_WORD = 'Amount';
 export const amountBig = (cents) => `${AMOUNT_WORD} ${formatMoney(cents)}`;
 export const eventDayNote = (extraCents) => `Event day: +${formatMoney(extraCents)} per board.`;
-export const cardNote = (extraCents) => `Card: +${formatMoney(extraCents)} per board.`;
+// Paying cash or check takes this off every board (the listed price is the card price); nothing is shown for a card.
+export const discountNote = (cents) => `Cash or check discount −${formatMoney(cents)} per board.`;
 export const OVERRIDE_LABEL = 'Override price (admins only)';
 export const OVERRIDE_INPUT_LABEL = 'Price for this student';
 export const overrideLine = (wouldBe, explain) => `Set by hand. The price would be ${formatMoney(wouldBe)} (${explain}).`;

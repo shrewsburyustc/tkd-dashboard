@@ -44,6 +44,7 @@ import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../lib/useShortcutN.js';
 import * as T from '../../lib/breaking/text/events.js';
 import EventDialog, { checkEventForm, isEventFormDirty, sameRows } from './EventDialog.jsx';
+import { startingClasses } from '../../lib/breaking/starterClasses.js';
 
 // Upcoming / Past, per school list, kept while the page is open.
 const sideBySchool = new Map();
@@ -328,7 +329,9 @@ export default function EventsTab({
     const schoolFixed = locationCode !== 'both';
     const school = schoolFixed ? locationCode : '';
     const copy = school ? read.copies[school] : null;
-    const rows = copy ? rowsFromClasses(copy.classes) : [{ key: newKey(), id: null, name: '', startTime: null, endTime: null }];
+    // The school's latest event's classes, or (no event yet) the starter list; a school not chosen yet (Both) starts with the starter list.
+    // (an earlier event with NO classes falls back to the starter list too: startingClasses decides)
+    const rows = rowsFromClasses(startingClasses(copy?.classes));
     const values = { name: '', date: '', school, open: false, rows };
     openDialog({
       mode: 'add',
@@ -384,7 +387,7 @@ export default function EventsTab({
       // class list is still the one the dialog started with, so nothing the admin typed is thrown away).
       if (current.mode === 'add' && 'school' in patch && patch.school !== current.values.school && sameRows(current.values.rows, current.initial.rows)) {
         const copy = current.copies?.[patch.school] ?? null;
-        const rows = copy ? rowsFromClasses(copy.classes) : [{ key: newKey(), id: null, name: '', startTime: null, endTime: null }];
+        const rows = rowsFromClasses(startingClasses(copy?.classes));
         next = { ...next, values: { ...next.values, rows }, initial: { ...current.initial, school: patch.school, rows }, copiedFrom: copy?.name ?? null };
       }
       return { ...next, note: next.note && !BLOCKING_NOTES.includes(next.note) ? null : next.note };

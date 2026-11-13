@@ -6,7 +6,7 @@
 // migration's own seed (taken from the preview database), so the examples are the real numbers.
 import assert from 'node:assert/strict';
 import { createBreakingBackend } from '../lib/mockBreaking.js';
-import { applyChange, ageNumber, buildSignupBody, chartView, classLabel, emptyForm, eventFromAnswer, formErrors, priceView, LINK_HOSTS, rankGroups, recommendationFor, safePayUrl, shortName, summaryOf } from './form.js';
+import { applyChange, ageNumber, beltOf, rankPickerGroups, tabChooses, buildSignupBody, chartView, classLabel, emptyForm, eventFromAnswer, formErrors, priceView, LINK_HOSTS, listedCents, rankGroups, recommendationFor, safePayUrl, shortName, summaryOf } from './form.js';
 import { freshSubmission, MAX_AGE_MS } from './memory.js';
 import * as T from './text.js';
 
@@ -47,39 +47,101 @@ ok(() => assert.equal(total(4, 0, 'card', eventDay), 1700)); // both: 4 × ($3 +
 ok(() => assert.equal(total(1, 3, 'card', eventDay), 1 * 425 + 3 * 525)); // both, tech and adult
 ok(() => assert.equal(total(12, 12, 'card', eventDay), 12 * 425 + 12 * 525)); // the most
 ok(() => assert.equal(total(0, 0, 'card'), 0)); // nothing chosen yet
-ok(() => assert.equal(total(2, 2, null), 2 * 300 + 2 * 400)); // no way to pay chosen: no card extra
+ok(() => assert.equal(total(2, 2, null), 2 * 325 + 2 * 425)); // no way to pay chosen yet: the LISTED price (the card price)
 // other prices: the page follows the Function's numbers, not its own
 ok(() => assert.equal(total(2, 1, 'card', eventFromAnswer(answerFor(true, { tech_cents: 350, adult_cents: 450, card_extra_cents: 30, same_day_extra_cents: 50 }))), 2 * (350 + 30 + 50) + 1 * (450 + 30 + 50)));
 ok(() => assert.equal(total(4, 0, 'card', eventFromAnswer(answerFor(true, { same_day_extra_cents: 0, card_extra_cents: 0 }))), 1200));
+// the page's total is exactly the database's maths (breakingRules.priceCents = SIGNATURES-0051) for the chosen way to pay,
+// in every combination: cash, check and card, on and before the event day, with and without the card difference
+import { priceCents } from '../lib/breaking/breakingRules.js';
+const noDifference = eventFromAnswer(answerFor(true, { card_extra_cents: 0 }));
+const otherPrices = eventFromAnswer(answerFor(false, { tech_cents: 350, adult_cents: 450, card_extra_cents: 30, same_day_extra_cents: 50 }));
+for (const ev of [event, eventDay, noDifference, otherPrices]) {
+  for (const by of ['cash', 'check', 'card']) {
+    for (const [t, a] of [[1, 0], [4, 0], [0, 3], [1, 3], [3, 4], [12, 12], [0, 1]]) {
+      ok(() => assert.equal(total(t, a, by, ev), priceCents({ tech: t, adult: a, card: by === 'card', sameDay: ev.prices.sameDay }, ev.prices), `${by} ${t}+${a}`));
+    }
+  }
+}
 // the worked lines add up to the total
-for (const [t, a, by, ev] of [[4, 0, 'card', event], [1, 3, 'cash', event], [4, 3, 'card', eventDay], [0, 5, 'check', eventDay]]) {
+for (const [t, a, by, ev] of [[4, 0, 'card', event], [1, 3, 'cash', event], [4, 3, 'card', eventDay], [0, 5, 'check', eventDay], [2, 2, null, event], [3, 0, 'cash', noDifference]]) {
   ok(() => {
     const view = priceView({ ...emptyForm(), tech: t, adult: a, payingBy: by }, ev);
     assert.equal(view.lines.reduce((s, l) => s + l.cents, 0), view.totalCents);
   });
 }
-// the lines say what the picture says
+// the lines: the LISTED price per board (the card price), then a discount for cash or check (Jeffrey's framing)
+const show = (view) => view.lines.map((l) => [l.text, l.small ?? null, l.cents]);
+ok(() => assert.deepEqual(show(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'card' }, event)), [['Technical 4 × $3.25', null, 1300]])); // card: no discount line, total $13.00
+ok(() => assert.deepEqual(show(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'cash' }, event)), [['Technical 4 × $3.25', null, 1300], ['Cash or check discount', '4 boards × $0.25', -100]])); // cash: $12.00
+ok(() => assert.equal(total(4, 0, 'cash'), 1200));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'check' }, event).lines.at(-1).text, 'Cash or check discount'));
+ok(() => assert.deepEqual(show(priceView({ ...emptyForm(), tech: 1, adult: 3, payingBy: 'check' }, event)), [['Technical 1 × $3.25', null, 325], ['Adult 3 × $4.25', null, 1275], ['Cash or check discount', '4 boards × $0.25', -100]])); // $15.00
+// the event day: the listed price includes the event-day amount (no separate line)
+ok(() => assert.deepEqual(show(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'card' }, eventDay)), [['Technical 4 × $4.25', null, 1700]]));
+ok(() => assert.deepEqual(show(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'cash' }, eventDay)), [['Technical 4 × $4.25', null, 1700], ['Cash or check discount', '4 boards × $0.25', -100]])); // $16.00
+// before a way to pay is chosen: the listed total and the "save" sentence
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: null }, event).totalCents, 1300));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: null }, event).saveHint, 'Pay by cash or check and save $0.25 per board.'));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'card' }, event).saveHint, null));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'cash' }, event).saveHint, null));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'cash' }, otherPrices).saveHint, null));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: null }, otherPrices).saveHint, 'Pay by cash or check and save $0.30 per board.'));
+// no card difference: no discount line and no sentence at all
+ok(() => assert.deepEqual(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'cash' }, noDifference).lines.map((l) => l.key), ['tech']));
+ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: null }, noDifference).saveHint, null));
+ok(() => assert.equal(listedCents('tech', event), 325));
+ok(() => assert.equal(listedCents('adult', eventDay), 525));
+// the family page never says "surcharge", "fee" or that the card costs extra (every word of text.js, every line the form makes)
+const FORBIDDEN = /card adds|surcharge|\bfee\b|extra for card|card extra|card fee|more by card|extra by card/i;
+ok(() => assert.deepEqual(Object.entries(T).filter(([, v]) => typeof v === 'string' && FORBIDDEN.test(v)), []));
 ok(() => {
-  const lines = priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'card' }, event).lines;
-  assert.deepEqual(lines.map((l) => [l.text, l.small ?? null, l.cents]), [['Technical 4 × $3.00', null, 1200], ['Card adds $0.25 per board', '4 boards × $0.25', 100]]);
+  const words = [];
+  for (const ev of [event, eventDay, noDifference, otherPrices]) {
+    for (const by of ['cash', 'check', 'card', null]) {
+      const view = priceView({ ...emptyForm(), tech: 4, adult: 2, payingBy: by }, ev);
+      words.push(...view.lines.flatMap((l) => [l.text, l.small ?? '']), view.saveHint ?? '');
+    }
+  }
+  assert.deepEqual(words.filter((w) => FORBIDDEN.test(w)), []);
 });
-ok(() => assert.equal(priceView({ ...emptyForm(), tech: 4, adult: 0, payingBy: 'cash' }, eventDay).lines.at(-1).text, 'Same-day registration adds $1.00 per board'));
 ok(() => assert.equal(priceView(emptyForm(), event).lines.length, 0)); // "No boards chosen yet"
 
 // ----- the one long rank list, three groups, by age -----
 const names = (groups, label) => groups.find((g) => g.label === label)?.ranks ?? [];
-ok(() => assert.deepEqual(rankGroups(event, 9).map((g) => g.label), ['Little Tiger belts', 'Belts', 'Black Belt']));
+ok(() => assert.deepEqual(rankGroups(event, 9).map((g) => g.label), ['Little Tiger belts', 'Color Belts', 'Black Belt'])); // Jeffrey: "Color Belts", not "Belts"
 ok(() => assert.equal(names(rankGroups(event, 9), 'Little Tiger belts')[0], 'Little Tiger White'));
-ok(() => assert.equal(names(rankGroups(event, 9), 'Belts')[0], 'White'));
-ok(() => assert.equal(names(rankGroups(event, 9), 'Belts').at(-1), 'Bo-Dan / Deputy'));
+ok(() => assert.equal(names(rankGroups(event, 9), 'Color Belts')[0], 'White'));
+ok(() => assert.equal(names(rankGroups(event, 9), 'Color Belts').at(-1), 'Bo-Dan / Deputy'));
 ok(() => assert.equal(names(rankGroups(event, 9), 'Black Belt')[0], '1st Dan'));
 ok(() => assert.deepEqual(rankGroups(event, null), rankGroups(event, 9))); // no age typed: the Child list
 ok(() => assert.equal(rankGroups(event, 9).flatMap((g) => g.ranks).length, 35)); // the picture's "35 choices"
 ok(() => assert.ok(!rankGroups(event, 9).flatMap((g) => g.ranks).some((r) => /belt$/i.test(r)))); // plain names, as the chart
 // the Belts group is the teen list for a 13-year-old: delete a rank from teen only and it disappears for them, not for an 8-year-old
 const noTeenOrange = eventFromAnswer({ ...answerFor(false), event: { ...answerFor(false).event, chart: answerFor(false).event.chart.filter((r) => !(r.band === 'teen' && r.rank_name === 'Orange')) } });
-ok(() => assert.ok(!names(rankGroups(noTeenOrange, 13), 'Belts').includes('Orange')));
-ok(() => assert.ok(names(rankGroups(noTeenOrange, 8), 'Belts').includes('Orange')));
+ok(() => assert.ok(!names(rankGroups(noTeenOrange, 13), 'Color Belts').includes('Orange')));
+ok(() => assert.ok(names(rankGroups(noTeenOrange, 8), 'Color Belts').includes('Orange')));
+
+// ----- the rank picker's groups carry the staff roster's belt pictures -----
+const picker = rankPickerGroups(event, 9);
+ok(() => assert.deepEqual(picker.map((g) => g.label), ['Little Tiger belts', 'Color Belts', 'Black Belt']));
+// Tab in the open list: nothing chosen and not moved → no pick (the field stays empty, boards stay as they are); moved or already chosen → picks
+ok(() => assert.equal(tabChooses(-1, false), false));
+ok(() => assert.equal(tabChooses(-1, true), true)); // moved with the arrows / typed
+ok(() => assert.equal(tabChooses(5, false), true)); // a rank was already chosen: Tab keeps it
+ok(() => assert.equal(tabChooses(0, false), true));
+ok(() => assert.deepEqual(picker.map((g) => g.options.map((o) => o.value)), rankGroups(event, 9).map((g) => g.ranks))); // the same ranks, in the same order
+ok(() => assert.ok(picker.flatMap((g) => g.options).every((o) => o.belt && o.belt.beltColor))); // every rank has a belt picture
+const beltOfRank = (name) => picker.flatMap((g) => g.options).find((o) => o.value === name).belt;
+ok(() => assert.deepEqual(beltOfRank('Little Tiger White'), { beltPattern: 'solid', beltColor: 'white' }));
+ok(() => assert.deepEqual(beltOfRank('Little Tiger Yellow'), { beltPattern: 'stripe', beltColor: 'white', beltColor2: 'yellow' }));
+ok(() => assert.deepEqual(beltOfRank('Orange'), { beltPattern: 'solid', beltColor: 'orange' }));
+ok(() => assert.deepEqual(beltOfRank('High Green'), { beltPattern: 'stripe', beltColor: 'green', beltColor2: 'white' }));
+ok(() => assert.deepEqual(beltOfRank('Red / Black'), { beltPattern: 'half', beltColor: 'red', beltColor2: 'black' }));
+ok(() => assert.deepEqual(beltOfRank('Bo-Dan / Deputy'), { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' }));
+ok(() => assert.deepEqual(beltOfRank('1st Dan'), { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' })); // Dan ranks as the roster draws them (danStripe)
+ok(() => assert.deepEqual(beltOf('2nd Dan 1 Star'), beltOf('1st Dan')));
+ok(() => assert.equal(rankPickerGroups(event, 14)[1].options.length, rankGroups(event, 14)[1].ranks.length)); // the age-driven list is unchanged
 
 // ----- which chart group the boards come from -----
 const rec = (age, rank) => recommendationFor(event, age, rank);

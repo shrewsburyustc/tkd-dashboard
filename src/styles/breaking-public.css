@@ -38,6 +38,89 @@
   color: var(--color-text);
 }
 
+/* ---------- The Rank picker (RankPicker.jsx): a field with the belt picture, and its popup list ---------- */
+/* The belt picture (components/Belt.jsx draws it from the belt colors in tokens.css; its page rule lives here because the
+   dashboard stylesheet that normally holds it is not loaded on this page). */
+.belt {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}
+.brk-combo {
+  position: relative;
+}
+.brk-combo__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.brk-combo__field.is-open {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue);
+}
+.brk-combo__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.brk-combo__value > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The popup: fixed under the field (RankPicker.jsx sets top, left, width and max-height), scrolls inside itself. */
+.brk-list {
+  position: fixed;
+  z-index: 60;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.brk-grp {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 12px;
+  font-size: var(--text-12);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.brk-grpbox + .brk-grpbox .brk-grp {
+  border-top: 1px solid var(--color-border);
+}
+.brk-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: var(--text-14);
+  cursor: pointer;
+}
+.brk-opt.is-active {
+  background: var(--color-surface);
+}
+.brk-opt.is-selected {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+}
+.brk-opt.is-selected.is-active {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
 /* ---------- Boards ---------- */
 .brk-note {
   margin: 0 0 8px;
@@ -126,11 +209,17 @@
   font-size: var(--text-13);
   border-top: 1px solid var(--color-border);
 }
-.brk-chart__row span:first-child {
+.brk-chart__rank {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.brk-chart__row span:last-child {
+.brk-chart__rank .belt {
+  margin-top: 3px;
+}
+.brk-chart__row > span:last-child {
   text-align: right;
   white-space: nowrap;
 }
@@ -185,6 +274,10 @@
   font-size: var(--text-20);
   font-weight: 500;
 }
+/* "Pay by cash or check and save $0.25 per board." (before a way to pay is chosen) */
+.brk-save {
+  margin-top: 6px;
+}
 
 /* ---------- After Register ---------- */
 .brk-paybox {
@@ -231,5 +324,12 @@
   }
   .brk-select {
     font-size: 16px; /* 16 px stops iPhones zooming the page when the list opens */
+  }
+  .brk-opt {
+    min-height: var(--tap-size); /* big tap rows (≥ 44 px) in the rank list */
+    font-size: 16px;
+  }
+  .brk-grp {
+    padding: 8px 12px;
   }
 }

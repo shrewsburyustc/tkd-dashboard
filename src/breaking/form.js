@@ -9,7 +9,7 @@
 // only what the page SHOWS while someone types, and the amount it expects. The maths and the rank lists
 // are the dashboard's own (src/lib/breaking/breakingRules.js), written once and shared with the staff
 // screens, so the family page can never drift from the Add student box.
-import { ageProblem, bandFor, boardsProblem, MAX_BOARDS, priceCents, rankOptionsFor, recommendedBoards, unitCents } from '../lib/breaking/breakingRules.js';
+import { ageProblem, bandFor, beltFor, boardsProblem, MAX_BOARDS, priceCents, rankOptionsFor, recommendedBoards, unitCents } from '../lib/breaking/breakingRules.js';
 import { nameProblem, normalizeName } from '../lib/testing/names.js';
 import { formatMoneyWithCents } from '../lib/money.js';
 import * as T from './text.js';
@@ -66,7 +66,7 @@ export function ageNumber(text) {
   return ageProblem(text) === null ? Number(String(text).trim()) : null;
 }
 
-// The ONE long rank list for this age, in three groups: Little Tiger belts, Belts (the Child or the Teen / Adult
+// The ONE long rank list for this age, in three groups: Little Tiger belts, Color Belts (the Child or the Teen / Adult
 // list, by the age typed; the Child list while no age is typed) and Black Belt. → [{ label, ranks: [name] }]
 export function rankGroups(event, age) {
   const groups = [
@@ -80,6 +80,18 @@ export function rankGroups(event, age) {
   }
   return groups.filter((g) => g.ranks.length > 0).map(({ label, ranks }) => ({ label, ranks }));
 }
+
+// The same list for the rank picker: every rank with its belt picture, drawn as the staff roster draws it (a Dan rank
+// black with a white stripe). → [{ label, options: [{ value, label, belt }] }]
+export const beltOf = (rankName) => beltFor(rankName, { danStripe: true });
+export function rankPickerGroups(event, age) {
+  return rankGroups(event, age).map((g) => ({ label: g.label, options: g.ranks.map((name) => ({ value: name, label: name, belt: beltOf(name) })) }));
+}
+
+// Does Tab choose the highlighted rank in the open rank list? Only when a rank was already chosen, or the person moved with
+// the arrows / typed. With nothing chosen and nothing touched, Tab just closes the list and moves on (it must never pick
+// the first rank by itself, which would also fill in boards).
+export const tabChooses = (chosenIndex, moved) => chosenIndex >= 0 || moved === true;
 
 // The chart's recommended boards for this age and rank → { band, tech, adult, technique } or null (no age or
 // rank yet, or the rank has no row in the group the age selects).
@@ -128,28 +140,36 @@ export function chartView(event, age, rankName) {
 }
 
 // ----- The live price preview (the database's own rule, SIGNATURES-0051) -----
-//   total = tech × (tech price + card? + same day?) + adult × (adult price + card? + same day?)
-// → { boards, lines: [{ key, text, small?, cents }], totalCents }. `lines` are the worked lines of the Amount card.
+// The page shows the LISTED price (what a board costs by card, plus the event-day amount on the event day) and a
+// discount for paying cash or check (Jeffrey: families are only ever shown the listed price and a cash / check discount). The database keeps its own
+// prices (cash / check) and the card difference, so the money is the same either way:
+//   listed  = tech × (tech price + card difference + same day?) + adult × (adult price + card difference + same day?)
+//   cash / check total = listed − boards × card difference   (= the database's tech × (tech price + same day?) + …)
+//   card total = listed
+// → { boards, lines: [{ key, text, small?, cents }], totalCents, saveHint }. `lines` are the worked lines of the Amount
+// card (the discount line is a minus amount); `totalCents` is exactly the database's number for the chosen way to pay
+// (before a way is chosen it is the listed price, and `saveHint` says what paying cash or check saves).
 export function priceView(form, event) {
   const tech = Number.isInteger(form.tech) ? form.tech : 0;
   const adult = Number.isInteger(form.adult) ? form.adult : 0;
-  const card = form.payingBy === 'card';
   const sameDay = event.prices.sameDay;
   const settings = event.prices;
   const boards = tech + adult;
+  const listed = (kind) => unitCents(kind, { card: true, sameDay }, settings);
   const lines = [];
-  if (tech > 0) lines.push({ key: 'tech', text: T.lineBoards(T.TECHNICAL, tech, formatMoneyWithCents(settings.techCents)), cents: tech * settings.techCents });
-  if (adult > 0) lines.push({ key: 'adult', text: T.lineBoards(T.ADULT, adult, formatMoneyWithCents(settings.adultCents)), cents: adult * settings.adultCents });
-  if (card && boards > 0 && settings.cardExtraCents > 0) {
-    const each = formatMoneyWithCents(settings.cardExtraCents);
-    lines.push({ key: 'card', text: T.CARD_ADDS(each), small: T.boardsTimes(boards, each), cents: boards * settings.cardExtraCents });
+  if (tech > 0) lines.push({ key: 'tech', text: T.lineBoards(T.TECHNICAL, tech, formatMoneyWithCents(listed('tech'))), cents: tech * listed('tech') });
+  if (adult > 0) lines.push({ key: 'adult', text: T.lineBoards(T.ADULT, adult, formatMoneyWithCents(listed('adult'))), cents: adult * listed('adult') });
+  const difference = settings.cardExtraCents;
+  const discounted = (form.payingBy === 'cash' || form.payingBy === 'check') && difference > 0 && boards > 0;
+  if (discounted) {
+    lines.push({ key: 'discount', text: T.DISCOUNT, small: T.boardsTimes(boards, formatMoneyWithCents(difference)), cents: -boards * difference });
   }
-  if (sameDay && boards > 0 && settings.sameDayExtraCents > 0) {
-    const each = formatMoneyWithCents(settings.sameDayExtraCents);
-    lines.push({ key: 'same', text: T.SAME_DAY_ADDS(each), small: T.boardsTimes(boards, each), cents: boards * settings.sameDayExtraCents });
-  }
-  return { boards, lines, totalCents: priceCents({ tech, adult, card, sameDay }, settings) };
+  const totalCents = lines.reduce((sum, l) => sum + l.cents, 0);
+  const saveHint = form.payingBy === null && difference > 0 ? T.saveHint(formatMoneyWithCents(difference)) : null;
+  return { boards, lines, totalCents, saveHint };
 }
+// What one board of a kind is listed at on this event ('tech' | 'adult'), in cents (the card price, plus the event-day amount on the event day).
+export const listedCents = (kind, event) => unitCents(kind, { card: true, sameDay: event.prices.sameDay }, event.prices);
 export { unitCents };
 
 // ----- Checking the form before it is sent (the Function and the database check again) -----

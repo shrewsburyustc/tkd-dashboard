@@ -2,7 +2,8 @@
 // Why it exists: approved pictures C-admin-prices (prices-edit, age-edit) and C-admin-chart (rank-edit), rulebook
 // v1.300. Each one only DRAWS the form inside ChartFormDialog; the typed values, the checks' inputs and the saving
 // live in ChartAndPricesTab (state prop), so a screen lock while a dialog is open brings it back still filled in.
-//   Edit prices        four money boxes (dollars and cents), a read-only worked example that follows what is typed
+//   Edit prices        four money boxes (dollars and cents: the two LISTED prices, the cash / check discount and the event-day
+//                      extra), a read-only worked example that follows what is typed
 //   Edit age groups    one number box; "Teen / Adult" below it is that number + 1, read-only
 //   Edit / Add rank    rank name, technique and two − n + steppers (0–12); the group is fixed and named under the title
 // The fields check while typing with the same rules as the database (chartRules.js): money 0–$1,000, age 1–98 here
@@ -17,19 +18,14 @@ import { checkAgeForm, checkPricesForm, checkRankForm } from './chartRules.js';
 const describe = (...ids) => ids.filter(Boolean).join(' ') || undefined;
 
 // ----- Edit prices -----
-const PRICE_LABELS = { tech: T.LABEL_TECH, adult: T.LABEL_ADULT, card: T.LABEL_CARD, sameDay: T.LABEL_SAME_DAY };
+const PRICE_LABELS = { tech: T.LABEL_TECH, adult: T.LABEL_ADULT, discount: T.LABEL_DISCOUNT, sameDay: T.LABEL_SAME_DAY };
 
 export function PricesDialog({ state, saved, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const check = checkPricesForm(state, saved);
   const readOnly = state.saving;
   const idBase = `brk-prices-${state.key}`;
   // The worked example, from what is typed (a box that doesn't parse keeps its saved number).
-  const example = T.exampleLine({
-    techCents: check.cents.techCents ?? saved.techCents,
-    adultCents: check.cents.adultCents ?? saved.adultCents,
-    cardExtraCents: check.cents.cardExtraCents ?? saved.cardExtraCents,
-    sameDayExtraCents: check.cents.sameDayExtraCents ?? saved.sameDayExtraCents,
-  });
+  const example = T.exampleLine(check.settings ?? saved);
   const box = (key, first = false) => {
     const error = check.errors[key];
     return (
@@ -74,7 +70,7 @@ export function PricesDialog({ state, saved, isPhone, onChange, onTouch, onSave,
       onRequestClose={onRequestClose}
     >
       <p className="ro-label tdialog-group" style={{ marginTop: 0 }}>
-        {T.PRICES_CASH_GROUP}
+        {T.PRICES_LISTED_GROUP}
       </p>
       <div className={isPhone ? 'tprices is-stacked' : 'tprices brk-two'}>
         {box('tech', true)}
@@ -82,7 +78,7 @@ export function PricesDialog({ state, saved, isPhone, onChange, onTouch, onSave,
       </div>
       <p className="ro-label tdialog-group">{T.PRICES_EXTRA_GROUP}</p>
       <div className={isPhone ? 'tprices is-stacked' : 'tprices brk-two'}>
-        {box('card')}
+        {box('discount')}
         {box('sameDay')}
       </div>
       <div className="ro">
