@@ -1,7 +1,7 @@
 # Board Breaking — status
 
 **Branch:** `board-breaking` (worktree `board-breaking-efd1a3`) · **Started:** 2026-11-12
-**Rulebook block:** 1.300–1.399 (**v1.300, v1.301 used**; next free 1.302) · **Migrations (reserved by Main 2026-11-12):** **0051** = the Board Breaking section; **0052** = Finance: Board Breaking payments in the Daily report (runs after 0051 is live, builds on 0047's `finance_money_rows_core`). No migration file is written before Jeffrey OKs the contract.
+**Rulebook block:** 1.300–1.399 (**v1.300–v1.302 used**; next free 1.303) · **Migrations (reserved by Main 2026-11-12):** **0051** = the Board Breaking section; **0052** = Finance: Board Breaking payments in the Daily report (runs after 0051 is live, builds on 0047's `finance_money_rows_core`). No migration file is written before Jeffrey OKs the contract.
 **Goal (Main's brief, 2026-11-12):** a new **Board Breaking event** section in the dashboard, replacing Jeffrey's existing Board Breaking system (a Netlify page + Google Apps Script + Google Sheet, outside this repo).
 
 ## Where we are
@@ -12,6 +12,7 @@
 - [x] Studied it → "What it does today" and "What the new section must do" below.
 - [x] Questions Q1–Q8 answered by Jeffrey one at a time, 2026-11-12 → rulebook v1.300 (10b row + changelog line + section 9 row); see "Decisions" below.
 - [x] Contract `CONTRACT-0051.md` drafted, three agents drew the screens (`Mockups/`: A family form, B staff events / roster / dialogs, C admin chart and prices), pictures sent to Jeffrey 2026-11-12 (cut into pages under 8000 px: `Mockups/pages/`). Jeffrey's first reactions → v1.301: belt pictures on the roster rows, the printed chart is wrong (live-page numbers are the chart), one age line at 12 / 13.
+- [x] 2026-11-12 Jeffrey: a Square payment counts at the event's school; the schools have different bank accounts, so Square credentials and webhooks are **per school** (v1.302, contract §5/§6).
 - [ ] **Next (old plan, partly done):** reserve the migration number through Main (done: 0051, 0052); write the build contract (`docs/Board Breaking/CONTRACT-00NN.md`: tables, functions, who may call what); draw the screens (one picture per page at PC / tablet / phone, as combined PNGs): the family form (age instead of Program), the event list, the roster, Edit event / Settings (prices, age lines, board chart), and the Square "Pay" result screen.
 - [ ] After his OK on the pictures and the contract: build in batches, reviewer agent per batch (security for the database + Square work, design at 1280×800 / 820×1180 / 390×844 / 320), commit on this branch. No push.
 

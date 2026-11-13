@@ -46,9 +46,9 @@ overrides and refunds.
   functions (as `camp_payments_guard`).
 - **`brk_public_attempts`** — `client_key`, `event_id`, `at`, `outcome` (as `camp_public_attempts`; RLS on, no grants; rows
   older than 2 days removed on each call).
-- **`brk_square_events`** — one row per Square message ever received: `square_event_id text primary key`, `received_at`,
+- **`brk_square_events`** — one row per Square message ever received: `square_event_id text primary key`, `school` (the endpoint it arrived on), `received_at`,
   `type`, `payment_id`, `order_id`, `amount_cents`, `outcome` (`paid`·`duplicate`·`unknown_order`·`amount_mismatch`·`not_card`·
-  `not_completed`·`already_paid`), `registration_id null`. **The primary key is the replay guard.** Mismatches stay visible
+  `not_completed`·`already_paid`·`wrong_school`), `registration_id null`. **The primary key is the replay guard.** Mismatches stay visible
   to admins (a count on the event page: "N Square payments need a look").
 
 Every table logs through `public.change_log_write()` triggers; functions set `tkd.action` / `tkd.batch_id` first and write
@@ -81,7 +81,7 @@ paying_by}` or `not_found` · `invalid` · `closed` · `not_open` · `rate_limit
 registration is paid).
 
 **Square webhook** (a second login **`brk_square`** that may execute only this one function):
-`brk_square_payment(square_event_id, payment_id, order_id, amount_cents, currency, status)`.
+`brk_square_payment(school, square_event_id, payment_id, order_id, amount_cents, currency, status)` (`school` comes from the endpoint address, never from the message body).
 
 ## 4. How the database works out boards and the amount (never trusted from the browser)
 
@@ -109,25 +109,30 @@ registration is paid).
 - **Family link / QR address:** `src/lib/publicOrigin.js` (Domain's constant) — never a hard-coded address. The page:
   `breaking.html`, `src/breaking/main.jsx`; `/breaking/*` line in `public/_redirects` and header lines in `public/_headers`
   are **sent to Main for the Domain session**, not edited here. Built last.
-- **Square secrets** — set by Jeffrey in Cloudflare (Settings → Variables and Secrets), never in the app, git, chat or a screenshot:
-  `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `SQUARE_WEBHOOK_SIGNATURE_KEY`, `SQUARE_WEBHOOK_URL` (the exact address
-  registered in Square), `SQUARE_ENVIRONMENT` (`sandbox` / `production`), and the `HYPERDRIVE_BREAKING` binding for `brk_registrar`.
-  If any is missing the card path answers "pay at the desk" and the webhook answers 503 (fail closed).
+- **Square: one account per school** (Jeffrey, 2026-11-12: "Shrewsbury and Worcester have different banking accounts so that needs to be
+  separately", v1.302). Each school has its own Square credentials, so money lands in that school's bank. The Function picks the
+  credentials by the **event's school** (the database says which). Secrets, set by Jeffrey in Cloudflare (Settings → Variables and
+  Secrets), never in the app, git, chat or a screenshot — **two sets, one suffix per school**:
+  `SQUARE_ACCESS_TOKEN_WORCESTER` / `_SHREWSBURY`, `SQUARE_LOCATION_ID_…`, `SQUARE_WEBHOOK_SIGNATURE_KEY_…`, `SQUARE_WEBHOOK_URL_…`
+  (the exact address registered in that school's Square), `SQUARE_ENVIRONMENT_…` (`sandbox` / `production`), plus the
+  `HYPERDRIVE_BREAKING` binding for `brk_registrar`. **A school with an incomplete set fails closed on its own**: its card students
+  get "pay at the front desk" and its webhook answers 503; the other school is not affected.
 
-## 6. The Square webhook — `functions/api/square/breaking.js` (no Origin check; the signature is the gate)
+## 6. The Square webhooks — `functions/api/square/breaking/[school].js` (`/api/square/breaking/worcester` and `/api/square/breaking/shrewsbury`; no Origin check; the signature is the gate)
 
-1. Read the **raw body** once. Compute `base64(HMAC-SHA256(signature key, SQUARE_WEBHOOK_URL + raw body))` and compare with the
+0. The path says the school; anything but `worcester` / `shrewsbury` → 404. Each school's Square sends to **its own address** and is checked with **its own** key.
+1. Read the **raw body** once. Compute `base64(HMAC-SHA256(that school's signature key, that school's SQUARE_WEBHOOK_URL + raw body))` and compare with the
    `x-square-hmacsha256-signature` header in **constant time**. No / wrong signature → 403, nothing parsed, no database call.
 2. Parse; accept only `payment.updated` with `status = COMPLETED`; anything else answers 200 "ignored" (so Square stops retrying).
-3. Call `brk_square_payment(event_id, payment.id, payment.order_id, amount_money.amount, currency, status)` as `brk_square`.
+3. Call `brk_square_payment(school-from-the-path, event_id, payment.id, payment.order_id, amount_money.amount, currency, status)` as `brk_square`.
 4. Inside the database, one transaction: insert the `brk_square_events` row (**duplicate event id → `duplicate`, nothing else
-   changes**); find the registration by `square_order_id`; unknown → `unknown_order`; not Card / link was cleared →
+   changes**); find the registration by `square_order_id`; unknown → `unknown_order`; **its event's school is not the endpoint's school → `wrong_school` (no payment: a Worcester Square message can never mark a Shrewsbury student paid)**; not Card / link was cleared →
    `not_card`; currency not USD or amount ≠ what is still owed → `amount_mismatch` (**no payment is written; an admin sees it**);
-   already paid → `already_paid`; else insert the payment (`kind payment`, `method card`, `school` = the event's school,
+   already paid → `already_paid`; else insert the payment (`kind payment`, `method card`, `school` = the event's school (= the endpoint's),
    `recorded_by_name` "Square", `square_payment_id` unique) → `paid`. Every outcome answers 200 except a database error (500, so
    Square retries; the unique keys make a retry safe).
 5. Logs hold only the outcome word and timing — never the body, the token or a signature.
-6. **Test with Square's sandbox first** (sandbox token and signature key in Cloudflare, `SQUARE_ENVIRONMENT = sandbox`), then switch.
+6. **Test with Square's sandbox first, one school at a time** (that school's sandbox token and signature key in Cloudflare, its `SQUARE_ENVIRONMENT_… = sandbox`), then switch that school to production.
 
 ## 7. Finance (migration 0052, separate, after 0051 is live)
 
@@ -159,8 +164,8 @@ does not touch any other section's tables or functions in 0051.
 ## 10. Open points for Jeffrey (asked one at a time, with the pictures)
 
 1. ~~Little Tiger age line~~ — **settled v1.301: dropped**, one line at 12 / 13.
-2. **Square account:** the Square account/location the links use, and when you can set the Cloudflare secrets (sandbox first).
-3. **Where a Square payment counts in Finance:** the event's school (**recommended**) or something else?
+2. **Square accounts:** settled v1.302: **one per school** (separate bank accounts). Still needed from Jeffrey: that each school has (or will make) a Square account that can take online payment links, and when he can set the Cloudflare secrets (sandbox first, one school at a time).
+3. ~~Where a Square payment counts in Finance~~ — **settled: the event's school** (Jeffrey chose it; with one Square account per school the event's school is also the school whose bank gets the money).
 4. **A card student whose boards change after the link was made:** the old link is cancelled and staff take the card on the Square
    terminal (**recommended**), or the app makes a new link for the new amount?
 5. Two boxes (first / last name) instead of today's one name box, for search and duplicates (**recommended**)?
