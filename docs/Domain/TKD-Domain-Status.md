@@ -42,6 +42,13 @@
 - Origin + Turnstile proof without writing data (valid-shaped POST with a fake token, forms and register Functions): with its own address as Origin each of the three addresses reaches the human check (`verify_failed`, i.e. the live `PUBLIC_ORIGIN` list works); `https://evil.example` and the `http://` version of each address are `bad_request`. So the Cloudflare variable is live.
 - **Still to prove with a real browser (Jeffrey, no data written):** the Turnstile box shows no domain error on the new hostnames, and the live Shrewsbury Thanksgiving camp link still opens on `tkd-dashboard.pages.dev` (I do not know the camp code). A real test sign-up is NOT done: it would write test data to the live database (needs Jeffrey's OK and a deletion afterwards).
 
+## Batch 4 (2026-11-13, built + tested, not pushed): the next section's public-page lines + a framing guard
+
+- At Main's request for the Board Breaking session: `public/_redirects` `/breaking/*  /breaking  200`; `public/_headers` the same single strict policy as `/camp` on `/breaking`, `/breaking.html`, `/breaking/*` (confirmed identical to all 18 existing public lines; frame-ancestors 'none').
+- New `functions/tests/headers.test.mjs` (7 tests, in `functions/tests/index.js`): every public family page address has exactly one policy, equal to /camp's, with frame-ancestors none; no `frame-ancestors` or `X-Frame-Options` anywhere allows framing; `/*` keeps DENY + noindex + nosniff; `/api/*` no-store; each family link shape has its redirect. Function tests now 194; run-checks 21/21; both builds pass.
+- Rulebook v1.202 (10b row + changelog).
+- Webhook host answer for Board Breaking (Square): no reason against `forms.ustaekwondo.net`. Register that exact address; do NOT use `dashboard.` (the staff host) or `pages.dev`. A Square webhook is server-to-server, so it has no browser `Origin` header: it must NOT go through `matchOrigin` (that would refuse it); verify Square's signature over the exact address instead, and keep `SQUARE_WEBHOOK_URL_<SCHOOL>` identical to the registered one. `/api/*` is already routed to Functions and `_headers` does not apply to Function answers (the Function sets its own headers).
+
 ## The domain's DNS records at Squarespace (Jeffrey's screenshots, 2026-11-12; the list to keep ready)
 
 - **Squarespace Defaults box** (the Coming Soon placeholder; never delete): four `A` records for `@` (198.185.159.144 / .145, 198.49.23.144 / .145), `CNAME www → ext-sq.squarespace.com`, one `HTTPS` record for `@`. TTL 4 hrs.
