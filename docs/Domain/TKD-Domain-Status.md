@@ -25,6 +25,7 @@
 - `public/_headers`: `X-Robots-Tag: noindex, nofollow` on every static page; `src/forms/ics.js`: calendar-file id label follows `publicOrigin.js`; `supabase/SETUP.md`: new section "Custom domain: dashboard.ustaekwondo.net … forms.ustaekwondo.net" (Domain-a … Domain-f, click by click).
 - **Assumed defaults, not yet explicitly confirmed by Jeffrey (he was told and did not object):** staff stay on `pages.dev` for now, no `pages.dev` redirect, DNS stays at Squarespace, noindex + label yes. Rulebook rows for these wait for his explicit word.
 - Jeffrey (2026-11-12): has the domain admin controls; has never worked with DNS/Cloudflare settings and has set nothing up, so every outside step is guided from zero, one at a time.
+- Website (via Main, 2026-11-12): the school website will be built on Cloudflare Pages (its own project), not Squarespace. So no `/embed/*` path or frame-ancestors allow-list, and nothing for the website in `_headers`, `origins.js` or Turnstile. The only thing left that touches us is the bare name `ustaekwondo.net`: on Cloudflare Pages it needs Cloudflare DNS unless Squarespace can forward it to `www.` over https (unverified). Plan §2b / Q4 stays as is; not urgent (only at website launch, after this work is live). Records list to keep ready: the Squarespace DNS panel (Jeffrey's screenshot, step 1).
 - Checks: Function tests 187 pass, run-checks 21/21, both builds pass.
 
 ## How a NEW public Function adopts the origin helper + the address constant (for Board Breaking; written 2026-11-12)
