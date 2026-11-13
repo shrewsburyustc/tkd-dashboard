@@ -11,7 +11,13 @@
 // clocks change. Plain functions with no browser parts except downloadIcs, so checks.mjs can test
 // them in Node.
 
+import { PUBLIC_ORIGIN } from '../lib/publicOrigin.js';
+
 const SCHOOL_ZONE = 'America/New_York';
+
+// The part after the @ in each event's id: the host of the school's public address (src/lib/publicOrigin.js).
+// It is only a label that makes each id unique worldwide; calendar apps never visit it.
+const UID_HOST = new URL(PUBLIC_ORIGIN).hostname;
 
 // How far Massachusetts is from UTC at that moment, in minutes (e.g. -240 in summer, -300 in winter).
 function zoneOffsetMinutes(utcMs) {
@@ -61,7 +67,7 @@ export function icsText({ events, now = Date.now() }) {
   for (const e of events) {
     lines.push(
       'BEGIN:VEVENT',
-      `UID:${randomId()}@tkd-dashboard.pages.dev`,
+      `UID:${randomId()}@${UID_HOST}`,
       `DTSTAMP:${stamp(now)}`,
       `DTSTART:${stamp(schoolTimeToUtc(e.date, e.start))}`,
       `DTEND:${stamp(schoolTimeToUtc(e.date, e.end))}`,

@@ -19,5 +19,8 @@
 //   - checks (src/lib/*/checks.mjs, eventsChecks.mjs) and functions/tests name the address too; they
 //     import this constant where they can and spell it out only to prove the exact text.
 //
+// History: tkd-dashboard.pages.dev until 2026-11-12; families' links moved to forms.ustaekwondo.net (rulebook v1.201). Staff
+// open the dashboard at dashboard.ustaekwondo.net (or still at the old address); that is not a link the app makes.
+//
 // Pure data, no browser or database, so Node checks can import it.
-export const PUBLIC_ORIGIN = 'https://tkd-dashboard.pages.dev';
+export const PUBLIC_ORIGIN = 'https://forms.ustaekwondo.net';
