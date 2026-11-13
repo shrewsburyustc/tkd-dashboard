@@ -6,6 +6,8 @@ the Function and the Square webhooks. **Nothing here happens without Jeffrey's O
 Cloudflare or Square only: never in chat, git, a file or a screenshot.** Detailed click-by-click: `supabase/SETUP.md`
 "Migration 0051", steps 0051f and 0051g. Every step below says who does it.
 
+**Status 2026-11-13: step 1 is DONE** — Jeffrey said "push boardbreaking"; the branch and Domain's `/breaking` lines are live as `main` 297f30fa (Cloudflare success). Checked live by Main: `/breaking/<code>` serves the page (strict policy, noindex), `/api/breaking/<code>` answers `not_open` (switch off), the Square webhook answers 503 `no-store` (not configured). Nothing is on for users. The next step is 2 (logins), when Jeffrey is ready.
+
 ## Order (agreed with the Main and Domain sessions, 2026-11-13)
 
 1. **Merge.** Main merges branch `board-breaking` and Domain's `_headers` / `_redirects` batch (the `/breaking` lines) into `main`,
