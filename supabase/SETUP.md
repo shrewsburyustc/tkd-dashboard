@@ -3946,3 +3946,122 @@ Tested in PGlite on every run (`run.mjs` step0050: a Worcester camp with a famil
 - **A default on the new Fill in input:** the live app's 15-input call keeps meaning "the camp's own school".
 
 ---
+
+## Migration 0051: Board breaking
+
+**Status: not applied yet.** Built on `board-breaking` (rulebook v1.300–v1.303; contract `docs/Board Breaking/CONTRACT-0051.md`, exact names in `SIGNATURES-0051.md`). The new **Board breaking** section: a monthly board-breaking night, one school per event; families register through a link / QR (name, age, rank, class time, boards, Paying by); staff run the roster (Mark paid, Mark broke, Add student, Edit); card families get a **Square payment link** with the exact amount and Square's "payment completed" message marks them paid; admins own events, prices, the age line, the board chart, price overrides and refunds. It needs a **security review** and Jeffrey's OK before it is pasted. Apply it **before** any app version that has the section. Nothing live changes: it only **adds** tables, functions and two logins, and touches no other section's table or function (tested: no other fingerprint file moves).
+
+**Production order:** it needs 0001–0005 (the helpers `has_data_access`, `is_admin`, `change_log_*`, the `testing_*` helpers) and nothing else; it may go before or after any other migration. Its guard stops with "0051 needs 0001-0005 first … Nothing was changed." if one is missing. **Finance's 0052** (Board breaking payments in the Daily report) comes **after** 0051 is live.
+
+**What it does** (`supabase/migrations/0051_board_breaking.sql`):
+- **Nine tables**, all with row security on and **nothing for `anon`, `service_role` or either new login**; the app (`authenticated`) may only **read**, only the listed columns, only while `has_data_access()` is true — every write goes through a function: `brk_settings` (one row: prices 300 / 400 / 25 / 100 cents and the age line 12), `brk_chart` (the board chart, seeded from the live page's numbers; the technique words are only a starting text), `brk_events` (one night at one school, with the family link code), `brk_event_classes`, `brk_registrations` (**no date of birth, address, contact or signature exist here**), `brk_payments` (append-only: a mistake is fixed by a reversal row; a registration's net can never go below $0), `brk_public_attempts` (the family form's rate-limit ledger, 30 tries an hour per visitor; nobody can read it) `brk_square_events` (every Square message ever received; its primary key is the replay guard) and `brk_cleared_links` (the Square order ids whose payment link was cleared, with their student; a trigger on the students' table writes a row whenever an order id goes from set to empty, so every place that clears a link is covered; nobody in the app can read it).
+- **Never readable by the app, even by staff:** `square_order_id`, `square_link_url`, `submission_id` (registrations) and `recorded_by`, `paying_by_before` (payments). The history reader strips them too.
+- **The database works out every price** (never trusted from the browser, the Function or Square): boards × (technical or adult price + 25 cents a board for Card + 100 cents a board from the event date on), Child up to the age line (12) and Teen / Adult above it, a "Little Tiger …" rank uses the Little Tiger row, a Black Belt rank ignores age; staff's Edit works the amount out again with the same maths and **cancels the Square link** when it can no longer be right.
+- **21 staff functions** (`authenticated` only; `has_data_access()` first; admin-only ones also check the role): `brk_settings_get`, `brk_events_list`, `brk_event_roster`, `brk_registration_history`, `brk_add_event`, `brk_update_event`, `brk_delete_event`, `brk_save_classes`, `brk_add_student`, `brk_edit_registration`, `brk_set_override`, `brk_set_broke`, `brk_mark_paid`, `brk_undo_payment`, `brk_edit_payment`, `brk_record_refund`, `brk_undo_refund`, `brk_delete_registration`, `brk_save_settings`, `brk_save_chart`, `brk_dismiss_square_event`.
+- **The family form's login `brk_registrar`** (new; `login noinherit`, connection limit 5, `statement_timeout 5s`, no table rights): it can run **exactly four** functions — `brk_public_event`, `brk_public_signup`, `brk_public_registration`, `brk_public_set_link` — and nothing else.
+- **Square's login `brk_square`** (new; connection limit 3, same limits): it can run **exactly one** function, `brk_square_payment` (the webhook's); the school comes from the address the message arrived on, never from its body, so **a Worcester message can never mark a Shrewsbury student paid** (outcome `wrong_school`, no payment).
+- Every function: `security definer`, `search_path = ''`, fully qualified names, revoked from public, anon, authenticated and service_role and then granted as above; the internal helpers and trigger functions can be run by nobody but their owner. **Nothing for anon.** No password is in the file (the two logins get theirs in 0051f).
+
+**Each step needs Jeffrey's OK. Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
+
+### 0051a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0051_preapply_check.sql` (one read-only SELECT, connector-safe). Ready = `prereqs_found 14`, `locations_found 2`, `brk_tables 0`, `brk_functions 0`, `brk_roles 0` (written `14 / 2 / 0 / 0 / 0`). `14 / 2 / 9 / 47 / 2` = already applied. Anything else — especially `prereqs_found` below 14 (an earlier migration's helper is missing) or some `brk_` table / function / role already there — **stop and tell Claude**.
+2. Claude runs every earlier fingerprint file it keeps a record of (at least `0013_fingerprints.sql`, `0039_fingerprints.sql`, `0050_fingerprints.sql`) and keeps the results: **none of them may change** after 0051.
+
+### 0051b. Apply 0051 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0051_board_breaking.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase will warn about **destructive operations**. That is expected: the words are inside rules (`on delete cascade`), inside functions that run later (an admin removing an event, a student or a class; old rate-limit rows being cleaned up) and in `drop policy if exists` / `… if exists` lines that make a re-run safe. **Nothing is removed now.** Confirm.
+3. "Success. No rows returned." It is one transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested in PGlite: a second run changes no fingerprint and no row; the two logins' attributes and passwords are never touched).
+
+### 0051c. Fingerprints (Claude, read-only through the connection)
+
+1. **Pre-apply check again:** `14 / 2 / 9 / 47 / 2`.
+2. `supabase/tests/0051_fingerprints.sql` must match what `run.mjs` printed ("0051 fingerprints") **row for row** — 259 rows: 47 functions (code, settings, owner, who may call them: the 21 staff ones `authenticated:EXECUTE`, the 4 family-form ones `brk_registrar:EXECUTE`, `brk_square_payment` `brk_square:EXECUTE`, every helper and trigger function `postgres:EXECUTE` only), 9 tables (row security on and the column rights), 101 columns, 71 table rules, 22 triggers, 6 policies (each: `SELECT` for `authenticated` using `has_data_access()`), 1 sequence and the 2 role rows. **One expected difference:** on Supabase the role rows show `members=postgres` (PostgreSQL 16+ makes the role that created a login an administrator of it; that gives the login nothing). In PGlite it is empty. The file is a single read-only SELECT and contains neither of the words the connection refuses (`run.mjs` checks that).
+3. Every other migration's fingerprint file: **unchanged** from 0051a's record (`run.mjs` step0051 checks exactly that).
+
+### 0051d. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection). Expected notices: "RLS enabled, no policy" on `brk_public_attempts` and `brk_square_events` (INFO: nobody in the app may read them) and "security definer function executable by authenticated" for the 21 staff functions (each checks access and role itself). Anything else about a `brk_` object — especially anything executable by `anon`, or a table without row security — is a real problem: stop.
+
+### 0051e. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0051_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), copy the whole file, paste, **Run**. Supabase may warn about destructive operations (the tests remove their own test rows and, once, take a table rule out for a moment and put it back). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0051 TESTS PASSED** (and how many checks ran: about 700). A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. What it checks: the settings and the chart (seed, ranges, stale versions, a row per band); events and classes (copying classes, update, delete only without payments, a class with students can't be removed); the family form (the page's answer, the price maths for cash / check / card / same day / Child / Teen / Little Tiger / Black Belt, price changed, a retry returns the same registration, the same child under another submission id is `duplicate`, `full` at 500 students, every refusal, the rate limits per visitor (30) and per event (300) where turned-away tries are not counted, the attempts rows, the Square link's host list and amount check, the balance on the family's page); staff (Add student, Edit, the Square link cancelled when it can no longer be right, price override, Mark broke); payments (Mark paid, a different way and its Undo, Undo within 10 seconds, Edit payment, refunds, the append-only guard, deletes); Square (paid, a replayed event id, the same payment id twice, unknown order, wrong amount or currency, not COMPLETED, **wrong school**, a cleared link answering `link_cleared` with the student's name for an admin, already paid, one event row per message, "needs a look" and Dismiss); sessions without data access (locked, five wrong PINs, signed out, eight days, magic link) get `no_access` from every staff function and read no rows; the desk (role staff) gets `not_allowed` from every admin function; the history reader and what staff reads never contain (no Square link or order, no submission id, no login id); and the rights of every table, function and the two logins.
+4. Put the placeholders back afterwards (don't save the file with the UIDs in it).
+
+### 0051f. Create the two logins' passwords (you, on your PC + SQL Editor)
+
+The file creates **`brk_registrar`** (the family form) and **`brk_square`** (the Square webhook) **without a password**, so neither can sign in yet. Same method as 0013d — **each with its own script and its own password; never reuse the Color Belt, Star, Camps or Forms one, and never the same password for the two.**
+
+0. **Clipboard history off** first (12a step 0): Windows **Settings → System → Clipboard** → Clipboard history off, Sync across your devices off.
+1. Make a file **outside the repo**, e.g. `C:\Users\jberg\Documents\make-scram-brk.mjs`, with exactly this (the role name is the only thing you change for the second run; **there is no password in it** — it makes a new random one each time):
+   ```js
+   // Makes a random password for one login and its SCRAM-SHA-256 verifier.
+   // The password goes to the clipboard (never shown); only the verifier is printed.
+   import { randomBytes, pbkdf2Sync, createHmac, createHash } from 'node:crypto';
+   import { execSync } from 'node:child_process';
+   const role = 'brk_registrar';   // second run: 'brk_square'
+   const password = randomBytes(32).toString('base64url');   // 43 letters, digits, - and _
+   const salt = randomBytes(16);
+   const salted = pbkdf2Sync(password, salt, 4096, 32, 'sha256');
+   const clientKey = createHmac('sha256', salted).update('Client Key').digest();
+   const storedKey = createHash('sha256').update(clientKey).digest();
+   const serverKey = createHmac('sha256', salted).update('Server Key').digest();
+   execSync('clip', { input: password });
+   console.log(`alter role ${role} password 'SCRAM-SHA-256$4096:${salt.toString('base64')}$${storedKey.toString('base64')}:${serverKey.toString('base64')}';`);
+   ```
+2. In PowerShell: `node C:\Users\jberg\Documents\make-scram-brk.mjs`. The password is now on the clipboard: **save it in your password manager as a NEW entry**, "Supabase brk_registrar (Hyperdrive)".
+3. **Check the printed line says `alter role brk_registrar password 'SCRAM-SHA-256$4096:XXXX…$XXXX…:XXXX…';`** (the `XXXX` parts are different random text each time; they stand for the salt and the two keys) — and that the role is **`brk_registrar`**, not `camps_registrar`, `testing_registrar` or `star_registrar`. If it names any other role, stop and tell Claude.
+4. Copy only that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and **delete `make-scram-brk.mjs`** (or change `role` and keep it for step 5).
+5. **Do it a second time for `brk_square`:** change the `role` line to `'brk_square'`, run the script again (a new random password), check the printed line says `alter role brk_square password 'SCRAM-SHA-256$4096:XXXX…'`, save the password as a second NEW entry, "Supabase brk_square (Hyperdrive)", paste the line in a new SQL Editor query, **Run**, delete the snippet, delete the script.
+6. If either password ever leaks: run the script again for that login (new password and verifier), update its Hyperdrive configuration (0051g), and the old password stops working.
+7. Claude checks read-only that each login now has a password (a verifier is stored) and that nothing else about it changed (the two role rows of 0051_fingerprints.sql).
+
+### 0051g. Hyperdrive and Cloudflare (you, in the Cloudflare dashboard; each only when Jeffrey says go)
+
+**This section is for the family page and Square, which are built and deployed last** (after the staff screens and Finance's 0052). Nothing here is needed to apply or test 0051.
+
+1. **Two Hyperdrive configurations**, one per login, as 0013g (Cloudflare → **Storage & databases → Postgres & MySQL (Hyperdrive) → Connect database → Connect to public database**, **Manual entry**, the same Session pooler host and port as 12g — `aws-0-us-east-1.pooler.supabase.com`, 5432 — database `postgres`; caching **Disabled**; **Server certificates → Verify full** with the existing Supabase CA certificate; **origin connection limit 5 or less**, and **3 or less for the Square one**):
+   - `tkd-brk-registrar`: user **`brk_registrar.eozkfbdfxqlcbpewhach`**, the password of the "Supabase brk_registrar (Hyperdrive)" entry.
+   - `tkd-brk-square`: user **`brk_square.eozkfbdfxqlcbpewhach`**, the password of the "Supabase brk_square (Hyperdrive)" entry.
+2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**, **Production only** (Preview gets no binding, so a branch preview site can never reach the database): variable name **`HYPERDRIVE_BREAKING`** → `tkd-brk-registrar` (the family form's Function). The webhook Function connects as `brk_square`, so it needs its own binding: **`HYPERDRIVE_BREAKING_SQUARE`** → `tkd-brk-square` — **the contract names only `HYPERDRIVE_BREAKING`; this second name is a proposal until the Function's author confirms it.**
+3. **Variables and secrets** — `tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production** only. **Secrets are typed by Jeffrey in Cloudflare only: never in chat, git, `.env.local` or a screenshot** (then copy something harmless so nothing stays on the clipboard):
+
+   | Name | Type | Value | Notes |
+   |---|---|---|---|
+   | `HYPERDRIVE_BREAKING` | Binding | `tkd-brk-registrar` | new (step 2) |
+   | `BREAKING_REGISTRATION` | Text | `off` | new; `on` only when Jeffrey says the family page opens |
+   | `TURNSTILE_SITE_KEY` | Text | the Site Key | already there (12a) — shared |
+   | `TURNSTILE_SECRET` | **Secret** | the Secret Key | already there (12a) — shared; this page asks for its own action, `breaking_signup` |
+   | `CLIENT_KEY_SECRET` | **Secret** | — | already there (12a) — shared; keep the same one (the 30-tries-an-hour limit is counted per Board breaking's own ledger, but the visitor key is made the same way) |
+   | `PUBLIC_ORIGIN` | Text | the school's address | already there — shared (the Domain session owns it); the family link and every Square return address are made from it, never hard-coded |
+   | `SQUARE_ENVIRONMENT_WORCESTER` | Text | `sandbox` (later `production`) | new; **one set per school** |
+   | `SQUARE_ENVIRONMENT_SHREWSBURY` | Text | `sandbox` (later `production`) | new |
+   | `SQUARE_ACCESS_TOKEN_WORCESTER` | **Secret** | Worcester's Square access token | new |
+   | `SQUARE_ACCESS_TOKEN_SHREWSBURY` | **Secret** | Shrewsbury's Square access token | new |
+   | `SQUARE_LOCATION_ID_WORCESTER` | Text | Worcester's Square location id | new |
+   | `SQUARE_LOCATION_ID_SHREWSBURY` | Text | Shrewsbury's Square location id | new |
+   | `SQUARE_WEBHOOK_SIGNATURE_KEY_WORCESTER` | **Secret** | the signature key of Worcester's webhook subscription | new |
+   | `SQUARE_WEBHOOK_SIGNATURE_KEY_SHREWSBURY` | **Secret** | the signature key of Shrewsbury's webhook subscription | new |
+   | `SQUARE_WEBHOOK_URL_WORCESTER` | Text | exactly `<PUBLIC_ORIGIN>/api/square/breaking/worcester` | new; must be **exactly** the address registered in Worcester's Square (Square signs that address together with the message) |
+   | `SQUARE_WEBHOOK_URL_SHREWSBURY` | Text | exactly `<PUBLIC_ORIGIN>/api/square/breaking/shrewsbury` | new; same rule |
+
+   Variables take effect on the next deployment. **A school with an incomplete set fails closed on its own:** its card students are told "pay at the front desk" and its webhook answers 503; the other school is not affected.
+4. **Square, one school at a time, sandbox first** (each school has its own Square account and bank): in that school's **Square Developer dashboard** make an application, copy its **sandbox** access token and location id into that school's Cloudflare names above (`SQUARE_ENVIRONMENT_… = sandbox`); add a **webhook subscription** for the event `payment.updated` pointing at that school's address (`…/api/square/breaking/worcester` or `…/shrewsbury`), copy its **signature key** into the Cloudflare secret; deploy; make one sandbox test payment through a test registration and check it marks that registration paid **at that school only**; then do the same for the other school. Only after a school's sandbox test passes (and Jeffrey says so) switch **that school** to its **production** token, location id, signature key and `SQUARE_ENVIRONMENT_… = production`.
+5. Check the Free plan's pooler connection budget with Claude first (this adds up to 5 + 3 connections).
+
+**No undo file:** 0051 only adds objects. To go back, ask Claude: it would remove the section's tables and functions and the two logins (and, if 0051g was done, the Cloudflare side: the two bindings, the two Hyperdrive configurations, the variables above, **Retry deployment**, and the two password-manager entries). Once a real event or payment exists, take a copy of the data first.
+
+Tested in PGlite on every run (`run.mjs` step0051: the pre-apply check before and after; no other fingerprint file and no existing row changes; the rights of every function, table and login; the seed; `0051_tests.sql` plus the older `0013`, `0050`, `0002` and PIN tests; the app's calls as roles `authenticated` / `brk_registrar` / `brk_square` / `anon` by argument name; re-run safety).
+
+**Why:**
+- **Two logins, not one:** the family form (anyone on the internet) and Square's webhook (a signed message from Square) are different doors; each can run only its own functions, so a leak of one password can never mark a payment or read a roster.
+- **The database prices everything:** the browser, the Function and Square can each be wrong or hostile; only a number the database worked out can become money.
+- **Append-only payments and a message ledger:** a mistake is a reversal row, never an edit, and every Square message is kept with what became of it, so an admin can see the ones that need a look and a replayed message can never pay twice.
+- **One Square account per school:** each school's money lands in its own bank (Jeffrey, 2026-11-12), so each school has its own token, signature key and address, and the database refuses a message that arrived at the wrong school's address.
+
+---

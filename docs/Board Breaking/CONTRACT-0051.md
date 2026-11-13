@@ -48,7 +48,7 @@ overrides and refunds.
   older than 2 days removed on each call).
 - **`brk_square_events`** — one row per Square message ever received: `square_event_id text primary key`, `school` (the endpoint it arrived on), `received_at`,
   `type`, `payment_id`, `order_id`, `amount_cents`, `outcome` (`paid`·`duplicate`·`unknown_order`·`amount_mismatch`·`not_card`·
-  `not_completed`·`already_paid`·`wrong_school`), `registration_id null`. **The primary key is the replay guard.** Mismatches stay visible
+  `not_completed`·`already_paid`·`wrong_school`·`link_cleared`), `registration_id null`. A cleared link's order id is kept in `brk_cleared_links` (never granted) so money paid on it names the student (v1.304). **The primary key is the replay guard.** Mismatches stay visible
   to admins (a count on the event page: "N Square payments need a look").
 
 Every table logs through `public.change_log_write()` triggers; functions set `tkd.action` / `tkd.batch_id` first and write
@@ -62,7 +62,7 @@ Every table logs through `public.change_log_write()` triggers; functions set `tk
 `brk_set_registration_open` (**admin**), `brk_save_class` / `brk_delete_class` (**admin**; delete refused when students are in it),
 `brk_add_student` (walk-in; the database prices it, **same-day price from the event date on**),
 `brk_edit_registration` (boards, class, Paying by, name, age, rank → amount recomputed; Paying by moving away from Card, or an
-amount change on a card registration with an unpaid link, **clears the Square link** so it can't mark them paid later),
+amount change on a card registration with an unpaid link, **clears the Square link** so it can't mark them paid later; the old link cannot be cancelled at Square, so it only stops counting: v1.304),
 `brk_set_override` (**admin**), `brk_set_broke(registration_id, value, version)` (toggle, with Undo),
 `brk_mark_paid(registration_id, version, school, method)` (Camps `camp_mark_paid` rules; amount = owed), `brk_undo_payment`
 (staff: own payment within 10 s; else **admin**), `brk_edit_payment` (**admin**), `brk_record_refund` / `brk_undo_refund`
@@ -109,6 +109,8 @@ registration is paid).
 - **Family link / QR address:** `src/lib/publicOrigin.js` (Domain's constant) — never a hard-coded address. The page:
   `breaking.html`, `src/breaking/main.jsx`; `/breaking/*` line in `public/_redirects` and header lines in `public/_headers`
   are **sent to Main for the Domain session**, not edited here. Built last.
+- **Two Hyperdrive bindings:** the public form connects as `brk_registrar` (`HYPERDRIVE_BREAKING`), the Square webhook as `brk_square` (`HYPERDRIVE_BREAKING_SQUARE`), each with its own limited login (SETUP "Migration 0051").
+- **Public limits (v1.304):** 500 sign-ups per event (`full`), 300 attempts per hour per event, an identical student is a `duplicate`; `brk_public_set_link` accepts only Square's own https addresses and needs the exact balance (`p_amount_cents`).
 - **Square: one account per school** (Jeffrey, 2026-11-12: "Shrewsbury and Worcester have different banking accounts so that needs to be
   separately", v1.302). Each school has its own Square credentials, so money lands in that school's bank. The Function picks the
   credentials by the **event's school** (the database says which). Secrets, set by Jeffrey in Cloudflare (Settings → Variables and
