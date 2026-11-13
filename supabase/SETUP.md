@@ -3949,7 +3949,7 @@ Tested in PGlite on every run (`run.mjs` step0050: a Worcester camp with a famil
 
 ## Custom domain: dashboard.ustaekwondo.net for staff, forms.ustaekwondo.net for families
 
-**Status: NOT DONE YET (planned 2026-11-12, rulebook v1.200 and v1.201; plan `docs/Domain/TKD-Domain-Plan.md`).** No migration. Every step is yours, in a web page; each has an undo. **Do them in this order and tell Claude after each one** (Claude checks it from outside before the next).
+**Status: Domain-a to Domain-d DONE 2026-11-12 (both names Active, two CNAME lines added, Turnstile hostnames added, `PUBLIC_ORIGIN` list saved); Domain-e (the push) and Domain-f (live checks) follow (rulebook v1.200 and v1.201; plan `docs/Domain/TKD-Domain-Plan.md`).** No migration. Every step is yours, in a web page; each has an undo. **Do them in this order and tell Claude after each one** (Claude checks it from outside before the next).
 
 **Why each step exists, in a line each.** A *domain name* is the school's web address (`ustaekwondo.net`). A *subdomain* is a word put in front (`dashboard.`, `forms.`). *DNS* is the internet's phone book: it says which computer answers for a name; the school's phone book is kept at Squarespace (where the domain was bought). A *CNAME record* is one phone-book line saying "this name is another name for that one": here, `dashboard.` and `forms.` are other names for `tkd-dashboard.pages.dev`, the address the app already has. A *custom domain on Cloudflare Pages* tells Cloudflare "also answer for this name, with its own HTTPS padlock". The old `tkd-dashboard.pages.dev` address stays on for good, so every printed link keeps working. **Never touch** the domain's other DNS lines (mail: MX, SPF, DKIM) and **never change the domain's name servers**.
 
