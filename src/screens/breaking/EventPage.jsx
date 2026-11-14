@@ -28,7 +28,7 @@
 //   showToast, clearToast, onModalOpenChange
 // Draw it inside <div className="testing brk"> like the other Testing pages.
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowBackUp, IconCheck, IconHammer, IconPlus, IconQrcode, IconSearch, IconSum, IconUsers, IconX } from '@tabler/icons-react';
+import { IconArrowBackUp, IconCheck, IconHammer, IconPlus, IconQrcode, IconSearch, IconStack2, IconStack3, IconSum, IconUsers, IconX } from '@tabler/icons-react';
 import BackLink from '../../components/BackLink.jsx';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
@@ -51,6 +51,8 @@ import { reloadBounded, saveOnLine, undoAnswer } from '../camps/lineSave.js';
 import { focusSoon } from '../camps/focusSoon.js';
 import RegistrationLink from './roster/RegistrationLink.jsx';
 import Roster, { fullName } from './roster/Roster.jsx';
+import { classBoardTotals, eventBoardTotals, ROSTER_ROOM } from './roster/rosterRules.js';
+import { usePageRoomBelow } from '../../lib/pageRoom.js';
 import { rosterMenuItems } from './roster/rosterMenu.jsx';
 import { standingPayment, standingRefunds } from './roster/rosterRules.js';
 import StudentDialog from './dialogs/StudentDialog.jsx';
@@ -101,6 +103,10 @@ export default function EventPage({
   const chart = settingsLive.data?.chart ?? null;
 
   const isPhone = useMediaQuery(PHONE_QUERY);
+  // Only the roster's own layout follows the room beside the left panel (Color belt's pattern): too narrow for the tablet columns → the
+  // stacked rows phones show. Dialogs and menus keep following the window (isPhone).
+  const narrowRoom = usePageRoomBelow(ROSTER_ROOM);
+  const rosterStacked = isPhone || narrowRoom;
   const [hidden] = usePrivateDetailsHidden(); // Hide private details
   const hiddenNowRef = useRef(hidden);
   hiddenNowRef.current = hidden;
@@ -422,11 +428,17 @@ export default function EventPage({
   const brokeCount = registrations.filter((r) => r.broke).length;
   const collected = registrations.reduce((sum, r) => sum + paidCents(r), 0);
   const due = registrations.reduce((sum, r) => sum + owedCents(r), 0);
+  const boardsOfClass = selectedClass ? classBoardTotals(registrations, selectedClass.id) : { tech: 0, adult: 0 };
+  const boardsOfEvent = eventBoardTotals(registrations);
   const cards = [
     { key: 'all', Icon: IconUsers, label: T.CARD_REGISTERED, value: registrations.length, kind: 'all' },
     ...(hidden ? [] : [{ key: 'paid', Icon: IconCheck, label: T.CARD_PAID, value: paidCount, kind: 'filter' }]),
     { key: 'broke', Icon: IconHammer, label: T.CARD_BROKE, value: brokeCount, kind: 'filter' },
     ...(hidden ? [] : [{ key: 'collected', Icon: IconSum, label: T.CARD_COLLECTED, value: formatMoney(collected), note: T.collectedNote(formatMoney(due)), kind: 'total' }]),
+    // The boards of the SELECTED class tab (the whole class, never the filtered rows) with the whole event under each. They are totals,
+    // not buttons, and not money, so they stay while Hide private details is on. (breaking-roster.css tints the last two cards.)
+    { key: 'techBoards', Icon: IconStack2, label: T.CARD_TECHNICAL, value: boardsOfClass.tech, note: T.wholeEvent(boardsOfEvent.tech), kind: 'total' },
+    { key: 'adultBoards', Icon: IconStack3, label: T.CARD_ADULT, value: boardsOfClass.adult, note: T.wholeEvent(boardsOfEvent.adult), kind: 'total' },
   ];
   const popoverRow = popover ? registrations.find((r) => r.id === popover.rowId) ?? null : null;
 
@@ -719,10 +731,18 @@ export default function EventPage({
                 <span>{T.groupCount(classAll.length, classAll.filter((r) => r.broke).length)}</span>
                 {matchesElsewhere > 0 && <span className="ttag">{T.moreInOtherClasses(matchesElsewhere)}</span>}
               </p>
+              {/* The second, small line: the same class's boards, by kind (the numbers are bold) */}
+              {classAll.length > 0 && (
+                <p className="ev-classline brk-boardsline">
+                  <span>
+                    <b>{boardsOfClass.tech}</b> {T.COL_TECHNICAL} {T.CLASS_BOARDS_SEPARATOR} <b>{boardsOfClass.adult}</b> {T.CLASS_BOARDS_ADULT_SUFFIX}
+                  </span>
+                </p>
+              )}
               {classRows.length === 0 ? (
                 <p className="tempty">{T.NO_STUDENTS_IN_CLASS}</p>
               ) : (
-                <Roster rows={classRows} isPhone={isPhone} hidden={hidden} busy={busy} notSavedId={notSavedId} handlers={handlers} />
+                <Roster rows={classRows} isPhone={rosterStacked} hidden={hidden} busy={busy} notSavedId={notSavedId} handlers={handlers} />
               )}
             </>
           )}

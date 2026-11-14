@@ -1,0 +1,15 @@
+{
+  "shots": "D-roster-boards-shots",
+  "title": "Board breaking · Roster: Technical boards and Adult boards separated (for your OK, nothing built yet)",
+  "subtitle": "The roster exactly as built today, with only what is new outlined in <b style=\"color:#b45309\">amber</b>. Why: on event day the Technical boards and the Adult boards are different boards stacked at the stations, so staff need the two numbers apart, per student, per class and for the whole event. Fake names and numbers.",
+  "states": [
+    "roster",
+    "rowstates"
+  ],
+  "pcOwnLine": [
+    "roster",
+    "rowstates"
+  ],
+  "out": "D-roster-boards",
+  "footer": "<b>What stays the same:</b> the class tabs (Color belt testing style), Find a student, the belt pictures, Paying by with the amount, the Payment tag, the Broke box, Mark paid, the ⋯ menu, Registration link, the amber Square notice, the Registration Open / Closed switch. <b>What would change if you say yes:</b> the one \"Boards\" cell becomes two columns / two chips; two count cards and one small class line are added. No database change: the two numbers are already stored per student."
+}

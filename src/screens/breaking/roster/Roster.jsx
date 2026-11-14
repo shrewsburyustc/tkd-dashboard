@@ -1,10 +1,12 @@
 // Roster.jsx — the students of a Board breaking event, grouped by class time (the roster table / phone cards).
 // Why it exists: the event page (EventPage.jsx) keeps the data and the saves; this file only DRAWS the rows,
 // exactly as the approved pictures show them (docs/Board Breaking/Mockups/B-staff-gen.mjs wideRow / phoneRow):
-//   PC and tablet: one table. Student (name, "age · [belt] rank", the small Same day tag) · Boards (PC only; on a
-//     tablet they sit under the name) · Paying by with the amount under it · Payment tag (Paid / Not paid /
-//     Awaiting card payment) · the Broke box (Camps' check-in box look) · Mark paid and ⋯.
-//   Phone: a stacked card per student with the same pieces, the ⋯ on the right.
+//   PC and tablet: one table. Student (name, "age · [belt] rank", the small Same day tag) · Technical · Adult (two board
+//     columns: just the number, a gray dash for zero, a tint each) · Paying by with the amount under it (on a tablet it sits under
+//     the Payment tag instead) · Payment tag (Paid / Not paid / Awaiting card payment) · the Broke box (Camps' check-in box look)
+//     · Mark paid and ⋯. A student who has broken keeps the numbers, in gray and light type (the .is-broke row).
+//   Phone: a stacked card per student: two labelled chips (Technical 3 / Adult 0) on their own line, then the same pieces, the ⋯ on
+//     the right. (Approved picture: docs/Board Breaking/Mockups/D-roster-boards-gen.mjs, "Boards separated".)
 // One class at a time (the class switch above the table, as in Color belt testing; EventPage.jsx draws the switch and the
 // class line "Group D · 4:20 – 5:00 PM · 3 registered · 2 broke"), so there is no heading inside the table any more.
 // While Hide private details is on, the money parts (Paying by, the amount, the payment tag, Mark paid) are
@@ -104,20 +106,38 @@ function MoreButton({ row, onMore }) {
   return <IconButton label={T.moreFor(fullName(row))} Icon={IconDots} aria-haspopup="menu" data-more={row.id} onClick={(event) => onMore(row, event.currentTarget)} />;
 }
 
-// One row on PC / tablet.
+// One board number: the number itself (a bold 16px figure), or a quiet gray dash for zero. Never colour alone: the column header (PC and
+// tablet) or the chip's own visible label (phone) says which kind of board it is, so the number carries no label of its own. A zero's
+// dash is hidden from screen readers and the word "0" is read in its place.
+function BoardNumber({ n }) {
+  return n === 0 ? (
+    <b className="brk-zero">
+      <span aria-hidden="true">–</span>
+      <span className="visually-hidden">0</span>
+    </b>
+  ) : (
+    <b className="brk-num">{n}</b>
+  );
+}
+
+// One row on PC / tablet: Student · Technical · Adult · Paying by · Payment · Broke · actions. On a tablet there is no room for a
+// Paying by column, so "Cash · $9" sits under the Payment tag (brk-payby-inline; the CSS decides which one shows).
 function WideRow({ row, busy, hidden, notSavedId, handlers }) {
   const name = fullName(row);
-  const boards = T.boardsText(row.techBoards, row.adultBoards);
   return (
-    <div className="ev-srow brk-srow" role="row" aria-label={name} data-nav-row={row.id}>
+    <div className={`ev-srow brk-srow${row.broke ? ' is-broke' : ''}`} role="row" aria-label={name} data-nav-row={row.id}>
       <span className="ev-scell ev-sname-line" role="cell">
         <span className="ev-sname">{name}</span>
         <RankLine row={row} />
         {row.sameDay && <span className="ttag">{T.SAME_DAY}</span>}
-        <span className="brk-boards-inline ev-ssub">{boards}</span>
       </span>
-      <span className="ev-scell brk-boards" role="cell">{boards}</span>
-      <span className="ev-scell" role="cell">
+      <span className="ev-scell brk-bcell brk-bcell--tech" role="cell">
+        <BoardNumber n={row.techBoards} />
+      </span>
+      <span className="ev-scell brk-bcell brk-bcell--adult" role="cell">
+        <BoardNumber n={row.adultBoards} />
+      </span>
+      <span className="ev-scell brk-payby-col" role="cell">
         {!hidden && (
           <>
             {payingByLabel(row.payingBy)}
@@ -127,6 +147,11 @@ function WideRow({ row, busy, hidden, notSavedId, handlers }) {
       </span>
       <span className="ev-scell" role="cell">
         {hidden ? <span className="brk-hidden-pay">{HIDDEN_ON_THIS_TABLET}</span> : <PayTag row={row} notSaved={notSavedId === row.id} />}
+        {!hidden && (
+          <span className="brk-sub brk-payby-inline">
+            {payingByLabel(row.payingBy)} · {formatMoney(owedCents(row))}
+          </span>
+        )}
       </span>
       <span className="ev-scell" role="cell">
         <BrokeBox row={row} busy={busy} onBroke={handlers.onBroke} />
@@ -143,13 +168,23 @@ function WideRow({ row, busy, hidden, notSavedId, handlers }) {
 function PhoneRow({ row, busy, hidden, notSavedId, handlers }) {
   const name = fullName(row);
   return (
-    <div className="ev-srow is-phone" role="row" aria-label={name} data-nav-row={row.id}>
+    <div className={`ev-srow is-phone brk-prow${row.broke ? ' is-broke' : ''}`} role="row" aria-label={name} data-nav-row={row.id}>
       <span className="ev-srow-main" role="cell">
         <span className="ev-sname-line">
           <span className="ev-sname">{name}</span>
           <RankLine row={row} />
         </span>
-        <span className="ev-sline">{T.boardsText(row.techBoards, row.adultBoards)}</span>
+        {/* Two labelled chips side by side on their own line: "Technical 3" / "Adult 0" */}
+        <span className="ev-sline brk-chips">
+          <span className="brk-chip brk-chip--tech">
+            <span className="brk-chip-label">{T.COL_TECHNICAL}</span>
+            <BoardNumber n={row.techBoards} />
+          </span>
+          <span className="brk-chip brk-chip--adult">
+            <span className="brk-chip-label">{T.COL_ADULT}</span>
+            <BoardNumber n={row.adultBoards} />
+          </span>
+        </span>
         {!hidden && (
           <span className="ev-sline l2">
             {payingByLabel(row.payingBy)} · {formatMoney(owedCents(row))}
@@ -177,8 +212,9 @@ export default function Roster({ rows, isPhone, hidden, busy, notSavedId, handle
       {!isPhone && (
         <div className="ev-srow ev-shead brk-srow" role="row">
           <span role="columnheader">{T.COL_STUDENT}</span>
-          <span role="columnheader" className="brk-boards">{T.COL_BOARDS}</span>
-          <span role="columnheader">{hidden ? '' : T.COL_PAYING_BY}</span>
+          <span role="columnheader" className="brk-bcell brk-bcell--tech brk-bhead">{T.COL_TECHNICAL}</span>
+          <span role="columnheader" className="brk-bcell brk-bcell--adult brk-bhead">{T.COL_ADULT}</span>
+          <span role="columnheader" className="brk-payby-col">{hidden ? '' : T.COL_PAYING_BY}</span>
           <span role="columnheader">{T.COL_PAYMENT}</span>
           <span role="columnheader">{T.COL_BROKE}</span>
           <span role="columnheader" aria-label={T.COL_ACTIONS} />

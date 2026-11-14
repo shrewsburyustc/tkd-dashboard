@@ -62,7 +62,14 @@ export const STUDENTS_BY_CLASS = 'Students by class time';
 
 // ----- Rows -----
 export const COL_STUDENT = 'Student';
-export const COL_BOARDS = 'Boards';
+// The two board columns (PC and tablet), the two chips (phones), the two count cards and the class's second line.
+export const COL_TECHNICAL = 'Technical';
+export const COL_ADULT = 'Adult';
+export const CARD_TECHNICAL = 'Technical boards';
+export const CARD_ADULT = 'Adult boards';
+export const wholeEvent = (n) => `whole event: ${n}`;
+export const CLASS_BOARDS_SEPARATOR = '·'; // between the two kinds in the class's second line
+export const CLASS_BOARDS_ADULT_SUFFIX = 'Adult boards for this class'; // "14 Technical · 12 Adult boards for this class" (the numbers are bold)
 export const COL_PAYING_BY = 'Paying by';
 export const COL_PAYMENT = 'Payment';
 export const COL_BROKE = 'Broke';

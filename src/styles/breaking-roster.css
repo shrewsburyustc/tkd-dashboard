@@ -58,16 +58,148 @@
   gap: 2px var(--space-8);
 }
 
-/* The boards line that tablets and phones show under the name (PC has its own column) */
-.brk-ev .brk-boards-inline {
-  display: none;
-  flex-basis: 100%;
+/* A student's row on PC: Student · Technical · Adult · Paying by · Payment · Broke · actions
+   (the approved picture "Boards separated", docs/Board Breaking/Mockups/D-roster-boards-gen.mjs) */
+.brk-ev .brk-srow {
+  grid-template-columns: minmax(0, 1.5fr) 84px 84px 84px 176px 92px 152px;
+  cursor: default;
 }
 
-/* A student's row on PC: Student · Boards · Paying by · Payment · Broke · actions */
-.brk-ev .brk-srow {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 84px 176px 92px 152px;
-  cursor: default;
+/* The two board cells: one tinted column each, full row height, a thin line on the outer sides. A zero is a quiet gray dash; the
+   number (16px, semibold) is what the eye finds from a step away. Never colour alone: the headers and aria-labels name the kind. */
+.brk-ev .brk-bcell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  margin: calc(-1 * var(--space-4)) 0;
+  font-size: var(--text-16);
+  font-variant-numeric: tabular-nums;
+}
+
+.brk-ev .brk-bcell--tech {
+  background: var(--color-blue-tint);
+  border-left: 1px solid var(--color-border-strong);
+}
+
+.brk-ev .brk-bcell--adult {
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-strong);
+}
+
+.brk-ev .brk-num {
+  font-weight: 600;
+}
+
+.brk-ev {
+  /* The quiet gray for a zero or a broken student's number on the blue tint: #6b6b6b (--color-text-secondary) is only 4.45:1 there,
+     this is 4.8:1 (5.35:1 on the plain surface). A check (src/lib/breaking/checks.mjs) keeps every pair in these cells at 4.5:1 or more. */
+  --brk-quiet-on-tint: #666666;
+}
+
+.brk-ev .brk-zero {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.brk-ev .brk-bcell--tech .brk-zero,
+.brk-ev .brk-chip--tech .brk-zero {
+  color: var(--brk-quiet-on-tint);
+}
+
+.brk-ev .brk-bhead {
+  font-size: var(--text-12);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.brk-ev .ev-shead .brk-bcell--adult {
+  background: var(--color-border);
+}
+
+/* The row that has broken: the numbers stay, but gray and light (the boards still to set out stand out) */
+.brk-ev .is-broke .brk-bcell .brk-num,
+.brk-ev .is-broke .brk-chip .brk-num {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.brk-ev .is-broke .brk-bcell--tech .brk-num,
+.brk-ev .is-broke .brk-chip--tech .brk-num {
+  color: var(--brk-quiet-on-tint);
+}
+
+/* "Cash · $9" under the Payment tag: only on a tablet (PC has its own Paying by column) */
+.brk-ev .brk-payby-inline {
+  display: none;
+}
+
+/* Phone: two labelled chips side by side on their own line */
+.brk-ev .brk-chips {
+  display: flex;
+  gap: var(--space-8);
+  margin: var(--space-4) 0;
+}
+
+.brk-ev .brk-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  min-height: 32px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-tag);
+  font-size: var(--text-13);
+  color: var(--color-text);
+}
+
+.brk-ev .brk-chip--tech {
+  background: var(--color-blue-tint);
+}
+
+.brk-ev .brk-chip--adult {
+  background: var(--color-surface);
+}
+
+.brk-ev .brk-chip .brk-num,
+.brk-ev .brk-chip .brk-zero {
+  font-size: var(--text-16);
+}
+
+/* The count strip: six cards in one row on a PC, three by two on a tablet, two by three on a phone. (With Hide private details on
+   there are four, and the shared four-column strip is right; :has keeps this to the six-card case.) The last two cards are the board
+   totals: Technical on the app's blue tint, Adult on the neutral gray the other cards have. */
+.brk-ev .ev-cards:has(> .ev-card:nth-child(6)) {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.brk-ev .ev-cards > .ev-card:nth-last-child(2) {
+  background: var(--color-blue-tint);
+}
+
+.brk-ev .ev-cards > .ev-card:nth-last-child(2) .ev-card-label,
+.brk-ev .ev-cards > .ev-card:nth-last-child(2) .ev-card-note {
+  color: var(--color-text); /* the gray label is only 4.4:1 on the tint */
+}
+
+.brk-ev .ev-cards > .ev-card:nth-last-child(-n + 2) .ev-card-value {
+  font-weight: 600;
+}
+
+/* The second class line: this class's boards by kind */
+.brk-ev .brk-boardsline {
+  margin-top: calc(-1 * var(--space-4));
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.brk-ev .brk-boardsline b {
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 /* Gray "Hidden on this tablet" in the payment cell while private details are hidden */
@@ -76,23 +208,44 @@
   font-size: var(--text-12);
 }
 
-/* Tablet: no Boards column; the boards go under the name */
-@media (min-width: 640px) and (max-width: 1023.98px) {
+/* A narrower PC window (about 1024 to 1180): the two board columns take 72 px each so the Student column keeps room for "High Blue belt" */
+@media (min-width: 1024px) and (max-width: 1179.98px) {
   .brk-ev .brk-srow {
-    grid-template-columns: minmax(0, 1.6fr) 76px 150px 76px 152px;
-  }
-
-  .brk-ev .brk-boards {
-    display: none;
-  }
-
-  .brk-ev .brk-boards-inline {
-    display: block;
+    grid-template-columns: minmax(0, 1.5fr) 72px 72px 84px 176px 92px 152px;
   }
 }
 
-/* Phone: the class header may wrap; the tag line keeps its gaps */
+/* Tablet: the same two columns, narrower; there is no room for a separate Paying by column, so "Cash · $9" goes under the Payment tag
+   and the long tag may wrap to two lines. The count strip is three by two. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .brk-ev .brk-srow {
+    grid-template-columns: minmax(0, 1fr) 56px 56px 130px 72px 148px;
+    column-gap: var(--space-8);
+  }
+
+  .brk-ev .brk-payby-col {
+    display: none;
+  }
+
+  .brk-ev .brk-payby-inline {
+    display: block;
+  }
+
+  .brk-ev .brk-srow .ttag {
+    white-space: normal;
+  }
+
+  .brk-ev .ev-cards:has(> .ev-card:nth-child(6)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Phone: the class header may wrap; the tag line keeps its gaps; the count strip is two by three */
 @media (max-width: 639.98px) {
+  .brk-ev .ev-cards:has(> .ev-card:nth-child(6)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .brk-ev .brk-subhead {
     flex-wrap: wrap;
     row-gap: 0;

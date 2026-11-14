@@ -3,10 +3,12 @@
 // work out the same number as the real database will, and the staff / admin / stale / undo rules must hold. These checks
 // pin the examples from the approved pictures ($12, $16, $9.75, $138.75) and the main rules of SIGNATURES-0051.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState } from './breakingRules.js';
 import { createBreakingBackend } from '../mockBreaking.js';
 import { STARTER_CLASSES, startingClasses } from './starterClasses.js';
 import { exampleLine } from './text/chart.js';
+import { boardTotals, classBoardTotals, eventBoardTotals } from '../../screens/breaking/roster/rosterRules.js';
 import { checkPricesForm, pricesToValues, settingsFromListed } from '../../screens/breaking/chart/chartRules.js';
 
 const settings = { techCents: 300, adultCents: 400, cardExtraCents: 25, sameDayExtraCents: 100, childMaxAge: 12 };
@@ -247,5 +249,57 @@ for (const row of seedChart.filter((r) => r.band === 'black')) {
 }
 ok(() => assert.deepEqual(beltFor('1st Dan – 4 Star'), GOLD(1))); // a dash before the stars (the family page's label) reads the same
 ok(() => assert.deepEqual(beltFor('Bo-Dan / Deputy'), { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' }));
+
+// ----- Board totals: the two count cards and the class's second line (rosterRules.js) -----
+const reg = (classId, techBoards, adultBoards, extra = {}) => ({ classId, techBoards, adultBoards, ...extra });
+const sample = [reg('A', 3, 0, { broke: true }), reg('A', 0, 3), reg('A', 1, 3), reg('A', 2, 3, { broke: true }), reg('A', 4, 3), reg('A', 4, 0), reg('D', 4, 0), reg('D', 3, 0)];
+ok(() => assert.deepEqual(classBoardTotals(sample, 'A'), { tech: 14, adult: 12 })); // the picture's Group A: 14 Technical, 12 Adult (paid or not, broke or not)
+ok(() => assert.deepEqual(classBoardTotals(sample, 'D'), { tech: 7, adult: 0 }));
+ok(() => assert.deepEqual(eventBoardTotals(sample), { tech: 21, adult: 12 })); // the whole event = every class
+ok(() => assert.deepEqual(classBoardTotals(sample, 'Z'), { tech: 0, adult: 0 })); // a class with nobody
+ok(() => assert.deepEqual(boardTotals([]), { tech: 0, adult: 0 })); // no students at all
+ok(() => assert.deepEqual(boardTotals(null), { tech: 0, adult: 0 }));
+ok(() => assert.deepEqual(boardTotals([reg('A', 0, 0)]), { tech: 0, adult: 0 })); // zero boards
+// a student moved from class D to class A changes both classes' totals and leaves the event's the same
+const moved = sample.map((r, i) => (i === 6 ? { ...r, classId: 'A' } : r));
+ok(() => assert.deepEqual(classBoardTotals(moved, 'A'), { tech: 18, adult: 12 }));
+ok(() => assert.deepEqual(classBoardTotals(moved, 'D'), { tech: 3, adult: 0 }));
+ok(() => assert.deepEqual(eventBoardTotals(moved), eventBoardTotals(sample)));
+// a deleted student is not on the roster: leaving them out lowers the totals
+ok(() => assert.deepEqual(eventBoardTotals(sample.slice(1)), { tech: 18, adult: 12 }));
+// the same totals come out of the preview database's own roster (an event is one school; the roster knows nothing of the school switcher)
+{
+  const fx = fresh();
+  const rows = fx.ro().registrations.map((r) => ({ classId: r.class_id, techBoards: r.tech_boards, adultBoards: r.adult_boards }));
+  ok(() => assert.deepEqual(eventBoardTotals(rows), { tech: 31, adult: 10 }));
+  ok(() => assert.equal(rows.length, 10));
+}
+
+// ----- Contrast of the new board cells (WCAG: text needs 4.5:1 against its background) -----
+// Reads the real colors from tokens.css and breaking-roster.css, so a changed token or a changed gray fails here.
+{
+  const tokens = readFileSync(new URL('../../styles/tokens.css', import.meta.url), 'utf8');
+  const roster = readFileSync(new URL('../../styles/breaking-roster.css', import.meta.url), 'utf8');
+  const hex = (name, text = tokens) => new RegExp(name + ': *(#[0-9a-fA-F]{6})').exec(text)[1];
+  const channel = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const luminance = (h) => 0.2126 * channel(parseInt(h.slice(1, 3), 16)) + 0.7152 * channel(parseInt(h.slice(3, 5), 16)) + 0.0722 * channel(parseInt(h.slice(5, 7), 16));
+  const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+  const tint = hex('--color-blue-tint');
+  const surface = hex('--color-surface');
+  const border = hex('--color-border');
+  const text = hex('--color-text');
+  const secondary = hex('--color-text-secondary');
+  const quietOnTint = hex('--brk-quiet-on-tint', roster);
+  const pairs = [
+    ['number (dark) on the Technical tint', text, tint], ['number (dark) on the Adult surface', text, surface],
+    ['quiet gray (zero, broke) on the Technical tint', quietOnTint, tint], ['quiet gray (zero, broke) on the Adult surface', secondary, surface],
+    ['header on the Technical tint', text, tint], ['header on the Adult header gray', text, border],
+    ['chip label on the tint', text, tint], ['chip label on the surface', text, surface],
+    ['Technical card label and note on the tint', text, tint], ['Adult card label on the surface', secondary, surface],
+  ];
+  for (const [what, fg, bg] of pairs) ok(() => assert.ok(contrast(fg, bg) >= 4.5, `${what}: ${contrast(fg, bg).toFixed(2)}:1`));
+  // the quiet gray is a different color from the token only where the token fails on the tint
+  ok(() => assert.ok(contrast(secondary, tint) < 4.5 && contrast(quietOnTint, tint) >= 4.5));
+}
 
 console.log(`ALL BOARD BREAKING CHECKS PASSED (${checks} checks)`);
