@@ -50,7 +50,6 @@ ok(() => assert.deepEqual(rankOptions(chart).map((r) => r.name), ['Little Tiger 
 ok(() => assert.deepEqual(beltFor('High Green belt'), { beltPattern: 'stripe', beltColor: 'green', beltColor2: 'white' }));
 ok(() => assert.deepEqual(beltFor('Little Tiger Yellow'), { beltPattern: 'stripe', beltColor: 'white', beltColor2: 'yellow' }));
 ok(() => assert.deepEqual(beltFor('Red / Black'), { beltPattern: 'half', beltColor: 'red', beltColor2: 'black' }));
-ok(() => assert.deepEqual(beltFor('1st Dan'), { beltPattern: 'solid', beltColor: 'black' }));
 ok(() => assert.equal(paidState({ amountCents: 1200, overrideCents: null, payments: [], payingBy: 'card', hasLink: true }), 'awaiting'));
 ok(() => assert.equal(paidState({ amountCents: 1200, overrideCents: 600, payments: [{ amountCents: 600 }], payingBy: 'cash', hasLink: false }), 'paid'));
 
@@ -234,5 +233,19 @@ const saveStarter = b9.rpc('brk_save_classes', { p_event_id: addStarter.event_id
   p_classes: STARTER_CLASSES.map((c) => ({ name: c.name, start_time: c.startTime, end_time: c.endTime })) }, admin).data;
 ok(() => assert.equal(saveStarter.status, 'ok'));
 ok(() => assert.deepEqual(rosterOf(addStarter.event_id).event.classes.map((c) => [c.name, c.start_time, c.end_time]), STARTER_CLASSES.map((c) => [c.name, c.startTime, c.endTime])));
+
+// ----- Black Belt ranks: a SOLID black belt with gold end stripes = the Dan; stars never change the picture; Bo-Dan / Deputy unchanged -----
+const GOLD = (n) => ({ beltPattern: 'solid', beltColor: 'black', beltEndStripes: n, beltEndStripeColor: 'yellow' });
+ok(() => assert.deepEqual(beltFor('1st Dan'), GOLD(1)));
+ok(() => assert.deepEqual(beltFor('2nd Dan'), GOLD(2)));
+ok(() => assert.deepEqual(beltFor('3rd Dan'), GOLD(3)));
+for (const row of seedChart.filter((r) => r.band === 'black')) {
+  const dan = Number(row.rank_name[0]); // "2nd Dan 3 Star" -> 2
+  ok(() => assert.deepEqual(beltFor(row.rank_name), GOLD(dan))); // every Black Belt rank, stars ignored
+  ok(() => assert.deepEqual(beltFor(row.rank_name, { danStripe: true }), GOLD(dan))); // the old option changes nothing any more
+  ok(() => assert.equal(beltFor(row.rank_name).beltColor2, undefined)); // no white middle stripe: it can't look like Bo-Dan
+}
+ok(() => assert.deepEqual(beltFor('1st Dan – 4 Star'), GOLD(1))); // a dash before the stars (the family page's label) reads the same
+ok(() => assert.deepEqual(beltFor('Bo-Dan / Deputy'), { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' }));
 
 console.log(`ALL BOARD BREAKING CHECKS PASSED (${checks} checks)`);

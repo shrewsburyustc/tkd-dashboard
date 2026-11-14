@@ -151,10 +151,13 @@ export function rankLabel(rankName) {
 // called "Brown belt" or "High Brown belt" gets a picture without anyone editing a table:
 //   "Little Tiger Yellow"  white belt with a yellow stripe ("Little Tiger White": plain white)
 //   "High Green belt"      the color with a white stripe          "Red / Black"  half red, half black
-//   "Bo-Dan / Deputy"      black with a white stripe              "1st Dan …"   black
+//   "Bo-Dan / Deputy"      black with a white stripe (unchanged)
+//   "1st Dan", "2nd Dan", "3rd Dan"   a SOLID black belt with that many gold stripes at the end (1, 2, 3; Belt.jsx's end
+//                          stripes, in the yellow the Bo Dan belt's Big Stripes use). Stars never change the picture: "1st Dan 4 Star"
+//                          looks exactly like "1st Dan"; nothing white, so it can't be taken for Bo-Dan / Deputy.
 //   "Orange belt"          one solid color
-// An unknown word draws the neutral gray (Belt.jsx). danStripe: draw a Dan rank black with a white stripe (the
-// roster picture does, as Color belt testing's Bo Dan belt); the chart draws it solid black.
+// An unknown word draws the neutral gray (Belt.jsx). danStripe is kept so old calls still work; it no longer does anything (every
+// Black Belt rank is drawn the same way, on every screen: staff, chart and family page).
 const COLORS = ['white', 'yellow', 'orange', 'green', 'blue', 'purple', 'red', 'brown', 'black'];
 export function beltFor(rankName, { danStripe = false } = {}) {
   const name = String(rankName ?? '').trim();
@@ -167,11 +170,11 @@ export function beltFor(rankName, { danStripe = false } = {}) {
       : { beltPattern: 'stripe', beltColor: 'white', beltColor2: color };
   }
   if (lower.includes('red') && lower.includes('black')) return { beltPattern: 'half', beltColor: 'red', beltColor2: 'black' };
-  if (/\b(dan|deputy)\b/.test(lower)) {
-    const boDan = /\bbo[ -]?dan\b/.test(lower) || /\bdeputy\b/.test(lower);
-    return boDan || danStripe
-      ? { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' }
-      : { beltPattern: 'solid', beltColor: 'black' };
+  if (/\bbo[ -]?dan\b/.test(lower) || /\bdeputy\b/.test(lower)) return { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' };
+  if (/\bdan\b/.test(lower)) {
+    // "1st Dan", "2nd Dan 3 Star", "3rd Dan 5 Star": the ordinal is the Dan (1-3 gold stripes; Belt.jsx draws at most 3).
+    const dan = Number(/^(\d+)(?:st|nd|rd|th)\s+dan\b/.exec(lower)?.[1] ?? 0);
+    return { beltPattern: 'solid', beltColor: 'black', ...(dan > 0 ? { beltEndStripes: Math.min(dan, 3), beltEndStripeColor: 'yellow' } : {}) };
   }
   const color = COLORS.find((c) => lower.includes(c)) ?? null;
   if (!color) return { beltPattern: 'solid', beltColor: 'unknown' };

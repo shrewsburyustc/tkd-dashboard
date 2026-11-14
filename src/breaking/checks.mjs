@@ -139,8 +139,10 @@ ok(() => assert.deepEqual(beltOfRank('Orange'), { beltPattern: 'solid', beltColo
 ok(() => assert.deepEqual(beltOfRank('High Green'), { beltPattern: 'stripe', beltColor: 'green', beltColor2: 'white' }));
 ok(() => assert.deepEqual(beltOfRank('Red / Black'), { beltPattern: 'half', beltColor: 'red', beltColor2: 'black' }));
 ok(() => assert.deepEqual(beltOfRank('Bo-Dan / Deputy'), { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' }));
-ok(() => assert.deepEqual(beltOfRank('1st Dan'), { beltPattern: 'stripe', beltColor: 'black', beltColor2: 'white' })); // Dan ranks as the roster draws them (danStripe)
-ok(() => assert.deepEqual(beltOf('2nd Dan 1 Star'), beltOf('1st Dan')));
+ok(() => assert.deepEqual(beltOfRank('1st Dan'), { beltPattern: 'solid', beltColor: 'black', beltEndStripes: 1, beltEndStripeColor: 'yellow' })); // a Dan: solid black + gold end stripes (1st = 1)
+ok(() => assert.equal(beltOf('2nd Dan 1 Star').beltEndStripes, 2)); // 2nd Dan = 2 stripes, the star changes nothing
+ok(() => assert.deepEqual(beltOf('2nd Dan 3 Star'), beltOf('2nd Dan')));
+ok(() => assert.deepEqual(beltOf('3rd Dan 5 Star'), beltOf('3rd Dan')));
 ok(() => assert.equal(rankPickerGroups(event, 14)[1].options.length, rankGroups(event, 14)[1].ranks.length)); // the age-driven list is unchanged
 
 // ----- which chart group the boards come from -----
