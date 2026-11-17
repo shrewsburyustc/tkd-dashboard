@@ -287,11 +287,15 @@ export function resultTag(result, { isMakeup = false, isAdmin = false, save = nu
   }
 }
 
-// The Total column: complete → "280"; a make-up's running total → "250 so far"; else "—".
+// The Total column: complete → "280"; not complete but something is graded → the running total
+// "250 so far" (any candidate, not only a make-up — Jeffrey 2026-11-17, so scores can be read while
+// Assistant classes or other subjects are still empty); nothing graded yet → "—".
+// The result tag does NOT change: it still says "N of M left" until everything is graded, so no
+// Passed / Make-up result appears early. (isMakeup is kept in the signature for the callers.)
 export function totalText(result, isMakeup) {
   if (!result) return T.TOTAL_NONE;
   if (result.complete) return T.scoreText(result.total);
-  return isMakeup && result.gradedCount > 0 ? T.totalSoFar(result.total) : T.TOTAL_NONE;
+  return result.gradedCount > 0 ? T.totalSoFar(result.total) : T.TOTAL_NONE;
 }
 
 // After a choice: the next cell (proposal 28) — the next editable cell to the RIGHT in the same row;

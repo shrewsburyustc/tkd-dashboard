@@ -342,7 +342,7 @@ export function resultReason(row, { testingDate, isAdmin = false } = {}) {
   }
 }
 
-// The Total column: complete → "280"; a make-up's running total → "250 so far"; else "—"
+// The Total column: complete → "280"; not complete but something graded → "250 so far"; else "—"
 // (Testing privately always "—", proposal 5).
 export function resultsTotalText(result, isMakeup) {
   if (!result || result.status === 'testing_privately') return T.TOTAL_NONE;

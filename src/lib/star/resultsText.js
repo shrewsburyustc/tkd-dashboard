@@ -65,7 +65,7 @@ export const lateOne = (subject, day) => `${subject} graded ${monthDay(day)}`; /
 export const lateMany = (n, day) => `${n} subjects graded ${monthDay(day)}`; // "2 subjects graded Dec 3"
 export const privateTestingOn = (day) => `private testing ${monthDay(day)}`; // "private testing Dec 1"
 
-// ----- Total (R1): "280" · "250 so far" (a make-up's running total) · "—"
+// ----- Total (R1): "280" · "250 so far" (the running total while some subjects aren't graded) · "—"
 export const TOTAL_NONE = '—';
 
 // ----- The sent line (R1, 10, 25) -----

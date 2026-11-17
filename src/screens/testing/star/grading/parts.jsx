@@ -54,7 +54,7 @@ export function ResultTag({ row, saves, isAdmin, onChooseSubjects }) {
   );
 }
 
-// The Total: "280", a make-up's "250 so far" (the "so far" in gray), or "—" (proposal 2).
+// The Total: "280", the running "250 so far" (the "so far" in gray), or "—" when nothing is graded.
 export function TotalText({ row, saves }) {
   const text = totalText(saves.resultFor(row), row.isMakeup);
   const soFar = text.endsWith(' so far');
