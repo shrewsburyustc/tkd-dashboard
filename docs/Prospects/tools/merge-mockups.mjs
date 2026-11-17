@@ -129,6 +129,14 @@ function injectScript(spec) {
         if (holder) holder.insertAdjacentHTML('beforebegin', spec.chips);
         if (spec.showingLine) q('.psection .mk-chips').insertAdjacentHTML('afterend', spec.showingLine);
       }
+      if (spec.railFix) {
+        const items = [...document.querySelectorAll('.rail-item, .bottombar-item')];
+        items.forEach((el) => { if (el.textContent.trim().startsWith('Forms')) el.remove(); });
+        const left = [...document.querySelectorAll('.rail-item, .bottombar-item')];
+        if (spec.railFix.current) left.forEach((el) => { el.classList.remove('is-current'); el.removeAttribute('aria-current'); if (el.textContent.trim().startsWith('Prospects')) el.classList.add('is-current'); });
+        left.forEach((el) => { if (el.textContent.trim().startsWith('Prospects')) el.classList.add('mk'); });
+      }
+      if (spec.titleMk) q('.ptitle').classList.add('mk');
       if (spec.noteOnHead) q('.phead-titles').insertAdjacentHTML('beforeend', spec.noteOnHead);
       resolve('ok');
     }, 1800));
@@ -267,5 +275,43 @@ await withChrome(async (tab) => {
     await sheet(tab, 'Merge-Questions-1', html.slice(0, cut) + '</div>', 1700);
     await sheet(tab, 'Merge-Questions-2', headHtml + '<div class="wrap"><h1>Prospects + Forms in one section — questions (continued)</h1>' + html.slice(cut), 1700);
     console.log('wrote Merge-Questions');
+  }
+
+  if (sheets.includes('pages')) {
+    const lineA = `<p class="ev-filter-line cards-showing mk" style="margin-top:0">Showing 4 of __TOTAL__ prospects from Visitor Information · <button type="button" class="link-button inline-link">Show all</button></p>`;
+    const rail = { current: true };
+    const WIDTHS = { pc: 720, tablet: 440, phone: 230, small: 190 };
+    const shotsFor = async (hash, specFor) => {
+      const out = [];
+      for (const size of SIZES) {
+        const phone = size.w < 600;
+        const buf = await picture(tab, size, { hash, height: size.h, spec: specFor({ phone, size }) });
+        out.push({ size, buf });
+      }
+      return out;
+    };
+    const row = (shots, label) => `<div class="pics" style="margin:8px 0 18px">${shots.map(({ size, buf }) => fig(buf, `${label} · ${size.label}`, WIDTHS[size.name])).join('')}</div>`;
+    const pageHtml = (title, intro, rowsHtml) => `<!doctype html><meta charset="utf-8"><style>${SHEET_CSS}</style><div class="wrap"><h1>${title}</h1><p>${intro}</p>${rowsHtml}</div>`;
+    const TAB_INTRO = 'Drawn on the real page (fake data; the form names and counts in the drawing are examples). <span class="amber">Amber outline = new or changed</span>.';
+
+    // Page 1 — Prospects tab (the first thing you see)
+    const p1 = await shotsFor('#prospects', ({ phone }) => ({ tabs: tabsHtml('prospects'), showAll: true, railFix: rail, row: filterRow({ picked: [] }) }));
+    await sheet(tab, 'Merge-Page-1-Prospects-tab', pageHtml('Page 1 — the merged section, Prospects tab (opens first)',
+      TAB_INTRO + ' One rail entry <b>Prospects</b> (the separate <b>Forms</b> entry is gone, also from the phone\'s More menu). Under the title: two tabs, <b>Prospects</b> (selected) and <b>Forms</b>. The new <b>Forms</b> button beside the search box filters by form; "All forms" is the default, so the page looks the same as today until you pick one.',
+      row(p1, 'Prospects tab')), 1750);
+
+    // Page 2 — Forms tab
+    const p2 = await shotsFor('#forms', () => ({ title: 'Prospects', titleMk: true, tabs: tabsHtml('forms'), railFix: rail }));
+    await sheet(tab, 'Merge-Page-2-Forms-tab', pageHtml('Page 2 — the Forms tab inside Prospects',
+      TAB_INTRO + ' The Forms screen is unchanged, it just lives under the second tab: same list, same New form button (admins), same view-only line for staff, same form builder. Opening a form to edit it hides the tabs, as the Camps tabs do today. Old <code>#forms</code> bookmarks open this tab.',
+      row(p2, 'Forms tab')), 1750);
+
+    // Page 3 — the filter, open and applied
+    const open = await shotsFor('#prospects', ({ phone }) => ({ tabs: tabsHtml('prospects'), showAll: true, railFix: rail, row: filterRow({ picked: [0], open: true, phone }) }));
+    const applied = await shotsFor('#prospects', () => ({ tabs: tabsHtml('prospects'), showAll: true, railFix: rail, row: filterRow({ picked: [0] }), showingLine: lineA, counts: [1, 1, 2, 0, 0], hideRows: 4 }));
+    await sheet(tab, 'Merge-Page-3-Form-filter', pageHtml('Page 3 — the form filter, open and applied',
+      TAB_INTRO + ' <b>Open:</b> tick one form, several, or "All forms". Each form shows how many prospects it has; with Both schools the forms are grouped under Worcester and Shrewsbury. On a phone it opens as a bottom sheet with big rows. <b>Applied:</b> the button turns blue, the line under it says what is filtered with <b>Show all</b>, and the stage numbers (and the Board) count only the picked forms. It resets on reload, sign-in or lock.',
+      '<h2>Open</h2>' + row(open, 'Filter open') + '<h2>Applied (Visitor Information picked)</h2>' + row(applied, 'Filter applied')), 1750);
+    console.log('wrote Merge-Page-1/2/3');
   }
 });
