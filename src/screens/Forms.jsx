@@ -1,4 +1,7 @@
-// Forms.jsx — the Forms section (rail icon ti-clipboard-text, "Forms"; rulebook v0.235, v0.241, v0.242).
+// Forms.jsx — the Forms tab (rulebook v0.235, v0.241, v0.242). Since 2026-11-17 (Jeffrey) it is the SECOND tab of
+// the Prospects section, no longer a rail entry of its own: ProspectsSection.jsx passes `heading` ("Prospects", the
+// section's title) and `tabs` (the Prospects | Forms bar), which this screen draws under its page head. Opening
+// the form builder hides the head and the tabs, as before.
 // Why it exists: the school builds its own sign-up forms here — free class (social media),
 // walk-in, event — and staff fill them in for a family. This file is the "brain" of the
 // section, like Calendar.jsx. It:
@@ -32,6 +35,7 @@ import { slugify } from '../lib/forms/fields.js';
 import { useForms } from '../lib/forms/useForms.js';
 import { copyFormToSchool, createForm, deleteForm, duplicateForm, loadForm, setFormStatus } from '../lib/forms/api.js';
 import FormsList from './forms/FormsList.jsx';
+import { prospectsPanelId, prospectsTabId } from './prospects/ProspectsTabs.jsx';
 import NewFormDialog, { checkNewForm } from './forms/NewFormDialog.jsx';
 import Builder from './forms/Builder.jsx';
 import ShareDialog from './forms/ShareDialog.jsx';
@@ -44,7 +48,7 @@ const otherSchool = (code) => Object.values(LOCATION_CODE).find((c) => c !== cod
 // Does the form book a free class? Its copy then needs the other school's class times (v0.642).
 const hasBookingStep = (form) => (Array.isArray(form.draft) ? form.draft : []).some((f) => f?.type === 'booking');
 
-export default function Forms({ location, profile, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function Forms({ location, profile, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, heading = T.PAGE_TITLE, tabs = null }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const both = location === 'Both';
@@ -515,7 +519,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
         <>
           <div className="phead">
             <div className="phead-titles">
-              <h1 className="ptitle">{T.PAGE_TITLE}</h1>
+              <h1 className="ptitle">{heading}</h1>
               <p className="psub">{schoolLabel}</p>
             </div>
             {isAdmin && (
@@ -525,6 +529,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
               </button>
             )}
           </div>
+          {tabs}
           {privateHidden && (
             <p className="phidden-line pdesk-line" id="forms-fill-at-desk">
               {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
@@ -535,9 +540,12 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
           {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
         </>
       )}
+      {/* the tab's panel (not while the builder is open: it has no tabs) */}
+      <div {...(builder || !tabs ? {} : { role: 'tabpanel', id: prospectsPanelId('forms'), 'aria-labelledby': prospectsTabId('forms') })}>
       {/* a bar with `retry` gets Retry, which does the same again (v1.004) */}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || Boolean(banner.retrying)} onDismiss={() => setBanner(null)} />}
       {body}
+      </div>
       {menu && !screenLocked && (
         <RowMenu
           anchor={menu.anchor}

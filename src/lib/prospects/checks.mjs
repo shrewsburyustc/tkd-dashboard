@@ -38,8 +38,8 @@ const calendar = { closures: [], closureClasses: [] };
 const SIG = `data:image/png;base64,${'A'.repeat(300)}`;
 
 let clock = NOW;
-// schema 3: the store's version since migration 0036 (mockForms.js FORMS_STORE_SCHEMA)
-let store = { schema: 3, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
+// schema 4: the store's version since the Forms filter's sample forms (mockForms.js FORMS_STORE_SCHEMA; 3 was 0036's)
+let store = { schema: 4, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
 const backend = createFormsBackend({
   loadStore: () => store,
   saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); },

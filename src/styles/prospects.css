@@ -251,6 +251,62 @@
   margin-top: 0;
 }
 
+/* ----- The "Forms" filter (Jeffrey 2026-11-17) -----
+   The button sits left of "Find a prospect" on one row (wrapping under it when the screen is narrow); the gray
+   "Showing 4 of 10 prospects from … · Show all" line sits under the pair, like the stage filter's line. */
+.pfilterrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.pfilterrow .psearch {
+  flex: 1 1 180px;
+  width: auto;
+  margin-bottom: 0;
+}
+
+.pformbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  max-width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* picked forms: the same blue the stage chips use when they are on */
+.pformbtn.is-on {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.pformbtn-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pformbtn svg {
+  flex: none;
+}
+
+/* the line under the search row: close to it, then the list */
+.pformsline.ev-filter-line {
+  margin-top: 0;
+}
+
 /* ----- List ----- */
 .pbody {
   display: flex;
@@ -1579,6 +1635,10 @@ body.is-card-dragging * {
   }
 
   .psearch {
+    height: var(--control-height-touch);
+  }
+
+  .pformbtn {
     height: var(--control-height-touch);
   }
 

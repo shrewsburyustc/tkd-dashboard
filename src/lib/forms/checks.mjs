@@ -224,7 +224,7 @@ const schedule = {
 const calendar = { closures: [], closureClasses: [] };
 
 function makeBackend() {
-  let store = { schema: 3, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [],
+  let store = { schema: 4, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [],
     statuses: [], prospects: [], notes: [], activity: [], opens: [] };
   let clock = NOW;
   let today = TODAY;
@@ -471,15 +471,15 @@ group("backend: a child's age from the date of birth; the old shape and a plain-
 });
 
 group('preview samples: a store from before 0036 is replaced; the samples follow 0036', () => {
-  // a preview store saved by an older build (schema 2) is put aside for fresh samples (schema 3)
+  // a preview store saved by an older build (schema 2) is put aside for fresh samples (schema 4)
   let store = { schema: 2, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [],
     statuses: [], prospects: [], notes: [], activity: [], opens: [] };
   const backend = createFormsBackend({
     loadStore: () => store, saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); }, now: () => NOW, newId: randomUUID,
     getSchedule: () => schedule, getCalendar: () => calendar, getClasses: () => classes, today: () => TODAY,
   });
-  assert.equal(backend.snapshot().schema, 3);
-  assert.equal(store.schema, 3);
+  assert.equal(backend.snapshot().schema, 4);
+  assert.equal(store.schema, 4);
   // the Forms samples: every child in the new shape with its age; the answers pass the database's
   // rules for the form as it was sent; one form (the older walk-in) doesn't ask the address
   const db = defaultFormsData({ today: TODAY, newId: randomUUID, stamp: new Date(NOW).toISOString(), classes, schedule, calendar });

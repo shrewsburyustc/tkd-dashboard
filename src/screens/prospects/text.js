@@ -437,3 +437,24 @@ export const KEEP_PROSPECT = 'Keep prospect';
 export const KEEP_STATUS = 'Keep status';
 export const DELETING = 'Deleting…';
 export { UNDO, UNDONE }; // the toast's button and the words after an Undo that worked (v0.618): the shared ones
+
+// ----- The two tabs, and the "Forms" filter (Jeffrey 2026-11-17: Prospects and Forms are one section) -----
+// The section is called Prospects; its tabs are Prospects (first, opens by default) and Forms.
+export const TAB_PROSPECTS = 'Prospects';
+export const TAB_FORMS = 'Forms';
+// The filter button beside "Find a prospect": "Forms: All forms", "Forms: Visitor Information" or, with
+// several picked, "Forms: 2 of 3 forms". The menu under it lists each form that has prospects at the
+// shown school(s), with how many; "All forms" is the same as nothing picked.
+export const FILTER_LABEL = 'Forms';
+export const ALL_FORMS = 'All forms';
+export const FILTER_MENU = 'Show prospects from';
+export const formsButton = (picked, names, listedCount) => (picked === 0 ? `${FILTER_LABEL}: ${ALL_FORMS}` : picked === 1 ? `${FILTER_LABEL}: ${names[0]}` : `${FILTER_LABEL}: ${picked} of ${listedCount} forms`);
+// one menu row: the form's name and its number of prospects ("Visitor Information · 4"); on Both the school too
+export const formOption = (name, n, school) => `${name}${school ? ` · ${school}` : ''} · ${n}`;
+// The gray line under the search row while forms are picked (like "Showing follow up today only · Show all"):
+// "Showing 4 of 10 prospects from Visitor Information". Two forms are named, more are counted.
+const joinNames = (names) => (names.length === 1 ? names[0] : names.length === 2 ? `${names[0]} and ${names[1]}` : `${names.length} forms`);
+export const showingForms = (n, total, names) => `Showing ${n} of ${total} prospects from ${joinNames(names)}`;
+export const NOBODY_FROM_FORMS = 'No prospects from the picked forms.';
+// The list can't be filtered until each family's form is known; if that read fails (with forms picked)
+export const FORM_FILTER_FAILED = loadFailedNamed('the forms');

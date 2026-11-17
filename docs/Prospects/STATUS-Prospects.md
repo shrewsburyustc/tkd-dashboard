@@ -2,6 +2,14 @@
 
 **Design review changes (N1–N17):** see `STATUS-DesignReview.md`.
 
+## Prospects + Forms in one section, and the Forms filter (Jeffrey 2026-11-17, rulebook v0.650)
+
+Built on branch `claude/prospects-forms-tab-95173f`, **committed locally, not pushed, not merged** (needs Jeffrey's OK for each). No database change, no migration.
+- **Done:** one rail entry "Prospects"; tabs Prospects (first) and Forms (`src/screens/ProspectsSection.jsx`, `prospects/ProspectsTabs.jsx`); `#forms` opens the Forms tab; a **Forms** tick-box filter beside "Find a prospect" (`prospects/FormFilter.jsx`, `lib/prospects/useProspectForms.js`, two read-only reads in `lib/prospects/api.js`); tiles, List and Board follow it; resets on reload / lock / leaving the section.
+- **Pictures:** `Merge-Questions-1/2.png` (his answers A/A/A), `Merge-Page-1/2/3-*.png` (approved), `Before-After-1/2/3-*.png` (the built result). Tools: `tools/merge-mockups.mjs`, `tools/before-after.mjs`, `tools/check-merge.mjs` (14 browser checks), `src/lib/prospects/formFilterChecks.mjs`.
+- **Shared files touched:** `src/App.jsx`, `src/components/navItems.js`, `src/components/RowMenu.jsx` (optional `width`, item `wrap`), `src/lib/pageAddress.js`, `src/lib/mockForms.js` (sample forms; store version 4), `src/lib/mockProspects.js`, `src/styles/shared.css` (one wrap rule), the rulebook, and the schema literals in three older check files.
+- **Open:** pass 3 of the design review (New students) and the Website session's "part 2 of the visitor form" are not touched; a form added later simply shows in the filter's menu.
+
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md` (approved 2026-10-18). Rulebook v0.236 (design) and v0.244 (plan answers). Mockup: `TKD-Prospects-Mockups.html` rev 3.
 
 **Database live, app not yet.** Migration 0012 is applied to the live Supabase database (2026-10-19), with the 7 starting statuses per school and 0 prospects. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed. 0012 goes live after 0007 → 0008 → 0009, and Prospects goes live together with the Forms public page (v0.241 answer 1).

@@ -29,7 +29,7 @@ import { createProspectsPart, emptyProspectsTables, PROSPECTS_ADMIN_ONLY, PROSPE
 
 // 2: + the Prospects tables (0012). 3: children with a last name and a date of birth, and the
 // Address question (0036) — a store saved before is replaced by fresh samples.
-export const FORMS_STORE_SCHEMA = 3;
+export const FORMS_STORE_SCHEMA = 4; // 4: two more Worcester forms with sign-ups, so Prospects' Forms filter has something to filter (2026-11-17)
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const KINDS = ['free_class', 'walk_in', 'event', 'blank'];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -275,6 +275,10 @@ export function defaultFormsData({ today, newId, stamp, classes, schedule, calen
   };
   const WAIVER = 'Sample wording for preview only. The school writes its own waiver in the builder before a form goes live.';
   const insta = form({ location_code: 'worcester', name: 'Free class — Instagram', slug: 'free-class-instagram', kind: 'free_class', status: 'live', waiverText: WAIVER });
+  // Two more Worcester forms (made-up samples; the names are Jeffrey's examples) so the Prospects "Forms" filter has
+  // forms to choose from. Their families are added in mockProspects.js. A long name on purpose; one is closed.
+  form({ location_code: 'worcester', name: 'Visitor Information', slug: 'visitor-information', kind: 'walk_in', status: 'live', waiverText: WAIVER });
+  form({ location_code: 'worcester', name: 'Al-Hamra Special 4-Week Introductory Taekwondo Program', slug: 'al-hamra-special', kind: 'event', status: 'closed', waiverText: WAIVER });
   // (Shrewsbury's walk-in form is older: no Address question yet, so its sign-up shows "Not asked")
   form({ location_code: 'shrewsbury', name: 'Walk-in', slug: 'walk-in-shrewsbury', kind: 'walk_in', status: 'live', waiverText: WAIVER, withoutAddress: true });
   form({ location_code: 'worcester', name: 'Summer camp sign-up', slug: 'summer-camp', kind: 'event', status: 'draft' });

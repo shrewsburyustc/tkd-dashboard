@@ -458,7 +458,8 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     };
     // old: an older sign-up (children sent as { first_name, age }, before the Address question
     // existed — its copy of the form has none), kept so the profile's "Not asked" state shows.
-    const family = (parent, phone, kids, ago, { old = false, street = null, heard = null } = {}) => {
+    const family = (parent, phone, kids, ago, { old = false, street = null, heard = null, onForm = form } = {}) => {
+      const form = onForm; // (shadows the default on purpose: the form this family used)
       if (!form) return [];
       const email = `${parent.split(' ')[0].toLowerCase()}@example.com`;
       const fields = JSON.parse(JSON.stringify(form.published)).filter((f) => !old || f.type !== 'address');
@@ -499,6 +500,12 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     if (noah) updateRow(noah, { status_id: named('worcester', 'Contacted'), follow_up_on: addDays(today(), 4) }, ctx);
     const [zoe] = family('Kim Lee', '508-555-0152', [kid('Zoe', 'Lee', 10, '02-17')], 15, { street: '33 Salisbury Street', heard: 'Facebook' });
     if (zoe) updateRow(zoe, { status_id: statusOf(db, 'worcester', 'not_interested'), follow_up_on: addDays(today(), 1) }, ctx);
+    // Families who used Worcester's other two forms (the Forms filter's sample data, 2026-11-17)
+    const visitor = db.forms.find((f) => f.location_code === 'worcester' && f.name === 'Visitor Information') ?? null;
+    const alHamra = db.forms.find((f) => f.location_code === 'worcester' && f.name.startsWith('Al-Hamra')) ?? null;
+    family('Tom Moore', '508-555-0190', [kid('Isla', 'Moore', 6, '03-09')], 2, { onForm: visitor, street: '5 Maple Street', heard: 'Walked by' });
+    family('Rae Grant', '508-555-0191', [kid('Eli', 'Grant', 8, '07-21')], 6, { onForm: visitor, street: '90 Chandler Street', heard: 'Walked by' });
+    family('Raj Patel', '508-555-0192', [kid('Nina', 'Patel', 9, '11-03'), kid('Dev', 'Patel', 6, '04-27')], 11, { onForm: alHamra, street: '14 Highland Street', heard: 'A friend' });
     const byChild = (name) => db.prospects.find((p) => p.child_first_name === name);
     const rohan = byChild('Rohan');
     if (rohan) {

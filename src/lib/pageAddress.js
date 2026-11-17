@@ -14,8 +14,10 @@
 //                   (Camps is the same with the Star switch on or off.)
 //   Schedule        tkd-dashboard.pages.dev/#schedule
 //   Calendar        tkd-dashboard.pages.dev/#calendar
-//   Forms           tkd-dashboard.pages.dev/#forms
-//   Prospects       tkd-dashboard.pages.dev/#prospects
+//   Prospects       tkd-dashboard.pages.dev/#prospects         the Prospects tab (opens first)
+//                   tkd-dashboard.pages.dev/#prospects/forms   the Forms tab, inside Prospects (Jeffrey 2026-11-17:
+//                                                              Prospects and Forms became one section). The old
+//                                                              #forms address is sent here (bookmarks keep working).
 //   Staff accounts  tkd-dashboard.pages.dev/#staff-accounts
 //   Settings        tkd-dashboard.pages.dev/#settings          (admins, v0.135)
 //                   tkd-dashboard.pages.dev/#settings/classes-and-ranks   the same page, scrolled to its
@@ -66,8 +68,8 @@
 //                                    → #testing (Color Belt — Star isn't in this build)
 //
 // A "route" is a small object saying which page is open:
-//   { section: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' | 'prospects' |
-//              'finance' | 'staffAccounts' | 'settings',
+//   { section: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'prospects' |
+//              'finance' | 'staffAccounts' | 'settings',  (Forms is a tab of 'prospects' since 2026-11-17)
 //     testingPage: 'chooser' | 'colorBelt' | 'star' | 'blackBelt' | 'breaking' | null   (null when section isn't
 //              'testing'; 'blackBelt' works with the switch on or off; 'breaking' only with its switch on),
 //     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
@@ -79,7 +81,8 @@
 //               (a different Finance view is a different page); on the Camps list 'camps' |
 //               'templates', on a camp's page 'default' | 'checkin' | 'payments' | 'attendance'
 //               ('default' = Check in during camp week, else Payments — CampPage decides); on Settings
-//               'classes-and-ranks' (its second part) or 'students' (= no part asked for); otherwise
+//               'classes-and-ranks' (its second part) or 'students' (= no part asked for); on Prospects
+//               'prospects' (the default) | 'forms'; otherwise
 //               always 'students' — see routeTab,
 //     privateId: the open private testing's id (its grading page, Color Belt phase 4 — always on
 //                the Color Belt page, never together with an event), or null }
@@ -91,12 +94,15 @@ const HASH_BY_PAGE = {
   camps: '#camps',
   schedule: '#schedule',
   calendar: '#calendar',
-  forms: '#forms',
   prospects: '#prospects',
   staffAccounts: '#staff-accounts',
   settings: '#settings',
 };
 const PAGE_BY_HASH = Object.fromEntries(Object.entries(HASH_BY_PAGE).map(([page, hash]) => [hash, page]));
+// Prospects has two tabs (2026-11-17): Prospects (no ending) and Forms. The old stand-alone Forms page
+// had #forms; that address now opens the Forms tab (and the bar is quietly corrected to the new one).
+const PROSPECTS_FORMS_HASH = '#prospects/forms';
+const OLD_FORMS_HASH = '#forms';
 
 // An event id is the database's uuid; the pattern only allows letters, digits and dashes, so
 // nothing odd from the address bar ever reaches the page.
@@ -169,6 +175,7 @@ export function normalEventTab(testingPage, eventId, tab) {
 // on the list, 'templates' when asked, otherwise 'camps'; otherwise normalEventTab's answer.
 export function routeTab(section, testingPage, eventId, tab) {
   if (section === 'settings') return tab === SETTINGS_CLASSES_PART ? SETTINGS_CLASSES_PART : 'students';
+  if (section === 'prospects') return tab === 'forms' ? 'forms' : 'prospects';
   if (section === 'finance') return FINANCE_VIEWS.includes(tab) ? tab : 'report';
   if (section === 'camps') {
     if (eventId) return CAMP_TABS.includes(tab) ? tab : 'default';
@@ -224,6 +231,8 @@ function readHash(hash) {
     if (camp[1]) return { route: route('camps', null, camp[1], camp[2] ?? 'default'), known: true };
     return { route: route('camps', null, null, hash === CAMPS_TEMPLATES_HASH ? 'templates' : 'camps'), known: true };
   }
+  // Prospects' Forms tab — and the old #forms address, which means the same.
+  if (hash === PROSPECTS_FORMS_HASH || hash === OLD_FORMS_HASH) return { route: route('prospects', null, null, 'forms'), known: true };
   // Settings asked to open on its Classes and ranks part.
   if (hash === SETTINGS_CLASSES_HASH) return { route: route('settings', null, null, SETTINGS_CLASSES_PART), known: true };
   // The other pages.
@@ -249,6 +258,7 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
     return eventTab === 'templates' ? CAMPS_TEMPLATES_HASH : HASH_BY_PAGE.camps;
   }
   if (section === 'settings') return eventTab === SETTINGS_CLASSES_PART ? SETTINGS_CLASSES_HASH : HASH_BY_PAGE.settings;
+  if (section === 'prospects') return eventTab === 'forms' ? PROSPECTS_FORMS_HASH : HASH_BY_PAGE.prospects;
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
   if (testingPage === 'blackBelt') {
     // Cycles / Candidates have no ending. Grading and Results exist only on a cycle's page, so
@@ -316,13 +326,14 @@ export function sameRoute(a, b) {
   if (!samePage(a, b)) return false;
   if (a.section === 'camps') return routeTab('camps', null, a.eventId, a.eventTab) === routeTab('camps', null, b.eventId, b.eventTab);
   if (a.section === 'settings') return routeTab('settings', null, null, a.eventTab) === routeTab('settings', null, null, b.eventTab);
+  if (a.section === 'prospects') return routeTab('prospects', null, null, a.eventTab) === routeTab('prospects', null, null, b.eventTab);
   if (!a.eventId && a.testingPage !== 'star' && a.testingPage !== 'blackBelt' && a.testingPage !== 'breaking') return true;
   return normalEventTab(a.testingPage, a.eventId, a.eventTab) === normalEventTab(b.testingPage, b.eventId, b.eventTab);
 }
 
 // true when a route's page has tabs that live in the address (a Color Belt or Star event page, Star's
-// home, and every Camps page: the list's Camps | Templates and a camp's Check in | Payments | Attendance).
+// home, Prospects' Forms tab, and every Camps page: the list's Camps | Templates and a camp's Check in | Payments | Attendance).
 export function hasAddressTabs(r) {
-  if (r.section === 'camps' || r.section === 'settings') return true; // Settings: its Classes and ranks part (CB14)
+  if (r.section === 'camps' || r.section === 'settings' || r.section === 'prospects') return true; // Settings: its Classes and ranks part (CB14); Prospects: its Forms tab
   return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star' || r.testingPage === 'blackBelt' || r.testingPage === 'breaking');
 }

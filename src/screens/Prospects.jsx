@@ -23,6 +23,11 @@
 //     of on the page behind it — never both.
 //   - "+ Add prospect" (which form → Fill in, shared with Forms), Edit statuses, Book / Change /
 //     Cancel a free class, Joined date, Delete (admins only)
+//   - since 2026-11-17 (Jeffrey) this is the first tab of the Prospects section, Forms is the second
+//     (ProspectsSection.jsx draws the tab bar, here under the page head), and the "Forms" button beside
+//     "Find a prospect" shows only the prospects that came from the forms you pick (FormFilter.jsx,
+//     useProspectForms.js; no database change). Picked forms narrow the stage numbers, the List and
+//     the Board together, so they always add up.
 // Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus } from '@tabler/icons-react';
@@ -38,6 +43,7 @@ import { useShortcutN } from '../lib/useShortcutN.js';
 import { addDays } from '../lib/schedule/versions.js';
 import { loadForms } from '../lib/forms/api.js';
 import { useProspects } from '../lib/prospects/useProspects.js';
+import { useProspectForms } from '../lib/prospects/useProspectForms.js';
 import { childInitial, isDueToday } from '../lib/prospects/followUps.js';
 import { childFullName } from '../lib/prospects/child.js';
 import { takeOpenProspect } from '../lib/prospects/openRequest.js';
@@ -49,6 +55,8 @@ import {
 import { useFillIn } from './forms/useFillIn.js';
 import PipelineBar, { SearchBox } from './prospects/PipelineBar.jsx';
 import ProspectList from './prospects/ProspectList.jsx';
+import FormFilter from './prospects/FormFilter.jsx';
+import { prospectsPanelId, prospectsTabId } from './prospects/ProspectsTabs.jsx';
 import Board from './prospects/Board.jsx';
 import { useCardDrag } from './prospects/useCardDrag.js';
 import ProspectPanel from './prospects/ProspectPanel.jsx';
@@ -57,6 +65,7 @@ import { AddProspectDialog, BookTimeDialog, CameDialog, DeleteDialog, JoinedDial
 import * as T from './prospects/text.js';
 
 const ALL_CODES = ['worcester', 'shrewsbury'];
+const NO_FORMS = []; // "no form picked" (one array, so it never looks like a change)
 // 'list' | 'board', remembered per person on this device (v0.246) — the front-desk PC is shared
 const viewKey = (staffId) => `tkd.prospects.view.${staffId ?? 'anyone'}`;
 const savedView = (staffId) => (readStorage(viewKey(staffId)) === 'board' ? 'board' : 'list');
@@ -83,7 +92,9 @@ function focusSoon(find, tries = 20, preventScroll = false) {
 }
 
 // profileName: the signed-in person's name, for the printed sheet's "Printed … by …" (v0.636)
-export default function Prospects({ location, staffId, isAdmin, profileName = '', screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh }) {
+// tabs: the Prospects | Forms tab bar, drawn under the page head. formFilter: the picked form ids
+// ([] = All forms), kept by ProspectsSection so they survive a trip to the Forms tab; onFormFilter(ids) changes them.
+export default function Prospects({ location, staffId, isAdmin, profileName = '', screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh, tabs = null, formFilter = NO_FORMS, onFormFilter = () => {} }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const isPc = useMediaQuery(PC_QUERY);
@@ -93,6 +104,41 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   const pros = useProspects({ codes, enabled: !screenLocked });
   const data = pros.data;
   const today = data?.today ?? localToday();
+
+  // ----- The form filter (Jeffrey 2026-11-17) -----
+  // Each family's form is read once (useProspectForms); a prospect shows while the picked forms include it.
+  const familyIds = useMemo(() => {
+    const seen = new Set();
+    for (const code of codes) for (const p of data?.lists[code] ?? []) seen.add(p.familyId);
+    return [...seen];
+  }, [data, codes]);
+  const formInfo = useProspectForms({ familyIds, enabled: !screenLocked && Boolean(data) });
+  // The forms the menu lists: those with prospects at the shown school(s), Worcester first, then by name.
+  const listedForms = useMemo(() => {
+    if (!data || !formInfo.ready) return [];
+    const counts = new Map();
+    for (const code of codes) {
+      for (const p of data.lists[code] ?? []) {
+        const formId = formInfo.formOf.get(p.familyId);
+        counts.set(formId, (counts.get(formId) ?? 0) + 1);
+      }
+    }
+    return formInfo.forms
+      .filter((f) => counts.has(f.id) && codes.includes(f.locationCode))
+      .map((f) => ({ id: f.id, name: f.name, locationCode: f.locationCode, n: counts.get(f.id) }))
+      .sort((a, b) => ALL_CODES.indexOf(a.locationCode) - ALL_CODES.indexOf(b.locationCode) || a.name.localeCompare(b.name));
+  }, [data, codes, formInfo.ready, formInfo.version, formInfo.forms]);
+  // A pick that is not listed (another school was switched to, or its last prospect is gone) drops out.
+  const effectivePicked = useMemo(
+    () => (formInfo.ready && data ? formFilter.filter((id) => listedForms.some((f) => f.id === id)) : formFilter),
+    [formInfo.ready, data, formFilter, listedForms],
+  );
+  useEffect(() => {
+    if (formInfo.ready && data && effectivePicked.length !== formFilter.length) onFormFilter(effectivePicked);
+  }, [formInfo.ready, data, effectivePicked, formFilter, onFormFilter]);
+  const pickedActive = formInfo.ready && effectivePicked.length > 0; // the list is narrowed now
+  const pickedSet = useMemo(() => (pickedActive ? new Set(effectivePicked) : null), [pickedActive, effectivePicked]);
+  const formsPending = Boolean(data) && formFilter.length > 0 && !formInfo.ready; // picked, but families' forms not known yet
 
   const [filters, setFilters] = useState({}); // code -> { kind: 'today' | 'all' | 'status', id }
   const [view, setViewState] = useState(() => savedView(staffId));
@@ -188,25 +234,32 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     return codes.map((code) => {
       const statuses = data.statuses.filter((s) => s.locationCode === code).sort((a, b) => a.position - b.position);
       const statusById = new Map(statuses.map((s) => [s.id, s]));
-      const all = data.lists[code] ?? [];
+      // `everyone` = all of the school's prospects; `all` = those the picked forms leave (the same when none is picked).
+      // Everything the page counts or lists uses `all`, so the stage numbers, List and Board add up; what must
+      // be exact for the whole school (a status's count before it is deleted, the open profile and its
+      // brothers and sisters) uses `everyone`.
+      const everyone = data.lists[code] ?? [];
+      const all = pickedSet ? everyone.filter((p) => pickedSet.has(formInfo.formOf.get(p.familyId))) : everyone;
       const counts = new Map();
-      for (const p of all) counts.set(p.statusId, (counts.get(p.statusId) ?? 0) + 1);
+      for (const p of everyone) counts.set(p.statusId, (counts.get(p.statusId) ?? 0) + 1);
+      const shownCounts = new Map();
+      for (const p of all) shownCounts.set(p.statusId, (shownCounts.get(p.statusId) ?? 0) + 1);
       // A No-show stays with the Booked children until staff change it (rulebook v0.610): it is a
       // card in the Booked column and is counted in the Booked tile. (`counts` stays the plain
       // count per status — deleting a status checks it.)
       const bookedStage = statuses.find((s) => s.builtin === 'booked') ?? null;
       const noShowIds = new Set(statuses.filter((s) => s.builtin === 'no_show').map((s) => s.id));
-      const barCounts = new Map(counts);
+      const barCounts = new Map(shownCounts);
       if (bookedStage) {
         const extra = all.filter((p) => noShowIds.has(p.statusId)).length;
-        barCounts.set(bookedStage.id, (counts.get(bookedStage.id) ?? 0) + extra);
+        barCounts.set(bookedStage.id, (shownCounts.get(bookedStage.id) ?? 0) + extra);
       }
       const due = all.filter((p) => isDueToday(p, statusById.get(p.statusId)?.builtin, today));
       // "Ava N." - the child's first name and own last initial (v0.637; the parent's for older sign-ups)
-      const initials = new Map(all.map((p) => [p.id, childInitial(p)]));
-      return { code, name: T.SCHOOL_NAME[code], statuses, statusById, all, counts, barCounts, bookedStage, noShowIds, due, initials };
+      const initials = new Map(everyone.map((p) => [p.id, childInitial(p)]));
+      return { code, name: T.SCHOOL_NAME[code], statuses, statusById, everyone, all, counts, barCounts, bookedStage, noShowIds, due, initials };
     });
-  }, [data, codes, today]);
+  }, [data, codes, today, pickedSet, formInfo.version]);
 
   // ----- Search (in the database: names, or 4+ phone digits) -----
   useEffect(() => {
@@ -893,7 +946,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
   // The profile window (v0.639): one child at a time, over the whole page, on every device.
   const profileSchool = selected ? schools.find((s) => s.code === selected.code) ?? null : null;
   const shownDetail = detail && selected && detail.id === selected.id ? detail : null;
-  const selectedItem = selected ? profileSchool?.all.find((p) => p.id === selected.id) ?? null : null;
+  const selectedItem = selected ? profileSchool?.everyone.find((p) => p.id === selected.id) ?? null : null;
   let profileElement = null;
   if (selected && profileSchool && !screenLocked) {
     profileElement = (
@@ -916,7 +969,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         note={note}
         idBase={`prospect-${selected.id}`}
         // every free-class date of the sign-up: the signature picture is kept 90 days after the latest
-        familyBookingDates={shownDetail ? profileSchool.all.filter((p) => p.familyId === shownDetail.familyId).map((p) => p.booking?.date ?? null) : []}
+        familyBookingDates={shownDetail ? profileSchool.everyone.filter((p) => p.familyId === shownDetail.familyId).map((p) => p.booking?.date ?? null) : []}
         printedBy={profileName}
         // the amber bar shows in the window while it is open (the page's own bar is behind it)
         banner={banner && banner.scope !== 'page' ? banner : null} // a 'page' bar (a Board drop) waits on the page until the window closes
@@ -942,15 +995,51 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         onBook={(e) => openBook(null, null, e?.currentTarget ?? null)}
         onCancelBooking={doCancelBooking}
         // a brother or sister opens in the same window (marked opened, like a row of the list)
-        onOpenSibling={(id, opener) => openProspect(profileSchool.all.find((p) => p.id === id) ?? { id, openedByMe: true }, profileSchool.code, opener)}
+        onOpenSibling={(id, opener) => openProspect(profileSchool.everyone.find((p) => p.id === id) ?? { id, openedByMe: true }, profileSchool.code, opener)}
         onDelete={(e) => setDialog({ type: 'delete', key: Date.now(), name: shownDetail.childFirstName, siblings: shownDetail.siblings.length > 0, saving: false, note: null, opener: e?.currentTarget ?? null })}
         onNoAccess={onNoAccess}
       />
     );
   }
 
+  // The search row's "Forms" button (only once the forms are known, and only worth showing with two or more
+  // forms to choose from — or while one is picked) and the gray line that says what is filtered.
+  const formsButton = data && formInfo.ready && (listedForms.length >= 2 || effectivePicked.length > 0) ? (
+    <FormFilter listed={listedForms} picked={effectivePicked} both={both} isPhone={isPhone} subtitle={both ? T.BOTH_SCHOOLS : location} onChange={onFormFilter} />
+  ) : null;
+  const formsLine = pickedActive && (
+    <p className="ev-filter-line cards-showing pformsline">
+      {T.showingForms(
+        schools.reduce((n, s) => n + s.all.length, 0),
+        schools.reduce((n, s) => n + s.everyone.length, 0),
+        listedForms.filter((f) => effectivePicked.includes(f.id)).map((f) => f.name),
+      )}{' '}
+      ·{' '}
+      <button
+        type="button"
+        className="link-button inline-link"
+        onClick={() => {
+          onFormFilter(NO_FORMS);
+          focusSoon(() => usable(document.querySelector('[data-forms-filter]')));
+        }}
+      >
+        {T.SHOW_ALL}
+      </button>
+    </p>
+  );
+  // the search box, with the Forms button before it when there is one (the gray line goes under the pair)
+  const searchRow = (box) => (formsButton ? (
+    <>
+      <div className="pfilterrow">
+        {formsButton}
+        {box}
+      </div>
+      {formsLine}
+    </>
+  ) : box);
+
   let body;
-  if (pros.status === 'loading' && !data) {
+  if ((pros.status === 'loading' && !data) || (formsPending && !formInfo.failed)) {
     body = (
       <div className="sskeleton" aria-busy="true" aria-label={T.LOADING}>
         <div className="tskeleton-row">
@@ -963,6 +1052,8 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
     );
   } else if (pros.status === 'error') {
     body = <ErrorBanner text={T.LOAD_FAILED} onRetry={() => pros.reload()} />;
+  } else if (formsPending) {
+    body = <ErrorBanner text={T.FORM_FILTER_FAILED} onRetry={() => formInfo.reload()} />;
   } else if (!data) {
     body = null;
   } else {
@@ -985,7 +1076,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         items = items.filter((p) => p.statusId === filter.id || (withNoShows && school.noShowIds.has(p.statusId)));
       }
       const onBoard = (p) => school.statusById.get(p.statusId)?.kind === 'stage' || school.noShowIds.has(p.statusId);
-      const emptyText = school.all.length === 0 ? T.NO_PROSPECTS : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
+      const emptyText = school.all.length === 0 ? (pickedActive && school.everyone.length > 0 ? T.NOBODY_FROM_FORMS : T.NO_PROSPECTS) : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
       // "Showing follow up today only · Show all" (R3-03, v1.047 (10)): one gray line under the bar
       // while the List is filtered (the opening filter included, search not on). The Board always
       // shows everyone, so it gets none.
@@ -1044,7 +1135,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
           {/* In this order (v1.047 (15)): the stage bar and chips, "Showing … only", Find a prospect,
               then the list. On Both there is one box above the two schools instead. */}
           {showingLine}
-          {!both && <SearchBox id={`prospects-${school.code}-search`} search={search} onSearch={setSearch} />}
+          {!both && searchRow(<SearchBox id={`prospects-${school.code}-search`} search={search} onSearch={setSearch} />)}
           <div className="pbody">
             {board ? (
               <Board
@@ -1171,6 +1262,7 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
         {/* the page's ⋯ comes last, to the right of the blue button (R3-11, v1.047 (16)) */}
         <IconButton label={T.MORE_ACTIONS} aria-haspopup="menu" aria-expanded={menu ? 'true' : 'false'} onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })} Icon={IconDots} />
       </div>
+      {tabs}
       {privateHidden && (
         <p className="phidden-line pdesk-line" id="prospects-add-at-desk">
           {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
@@ -1178,13 +1270,15 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
           {T.ADD_AT_DESK}
         </p>
       )}
+      <div role="tabpanel" id={prospectsPanelId('prospects')} aria-labelledby={prospectsTabId('prospects')}>
       {/* the amber bar: here while no profile window is open, else at the top of the window — never both */}
       {/* a bar with `retry` gets Retry, which does the same call again (v1.004, R2-01) */}
       {/* PageBar draws it under the top bar (v1.128); a failed Undo's bar says when its Retry is on its way */}
       {banner && !profileElement && <PageBar text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={banner.retrying ?? busy} takeFocus={banner.takeFocus} onDismiss={() => setBanner(null)} />}
       {/* On Both, ONE search for the two schools (each section shows its own matches), on the left above them */}
-      {both && data && <SearchBox id="prospects-both-search" search={search} onSearch={setSearch} both />}
+      {both && data && !formsPending && searchRow(<SearchBox id="prospects-both-search" search={search} onSearch={setSearch} both />)}
       {body}
+      </div>
       {profileElement}
       {menu && !screenLocked && (
         <RowMenu

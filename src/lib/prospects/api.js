@@ -78,6 +78,44 @@ const readSaved = (d) => (typeof d.id === 'string' && Number.isInteger(d.version
 
 // ----- Reading -----
 
+// ----- The form filter's two reads (Jeffrey 2026-11-17; no database change: the app may read these
+// columns of its own — the same ones the Forms page reads — and the list already carries each
+// prospect's family_id, which is the id of its sign-up) -----
+
+// Every form's name, school and status (both schools; the screen picks).
+export async function loadFormNames() {
+  try {
+    if (!supabase) return failure(new Error('No connection is set up'));
+    const res = await supabase.from('forms').select('id, location_code, name, status').order('name', { ascending: true });
+    if (res?.error) return failure(res.error);
+    if (!Array.isArray(res?.data)) return unexpected('forms');
+    return { status: 'ok', forms: res.data.map((f) => ({ id: f.id, locationCode: f.location_code, name: f.name, status: f.status })) };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// Which form each of these sign-ups (families) came from → { status:'ok', pairs: [[familyId, formId], …] }.
+// Asked a bunch at a time so no answer comes near the database's 1000-row limit; only ids are read.
+const FAMILY_CHUNK = 80;
+export async function loadFormsOfFamilies(ids) {
+  try {
+    if (!supabase) return failure(new Error('No connection is set up'));
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += FAMILY_CHUNK) chunks.push(ids.slice(i, i + FAMILY_CHUNK));
+    const results = await Promise.all(chunks.map((chunk) => supabase.from('form_submissions').select('id, form_id').in('id', chunk)));
+    const pairs = [];
+    for (const res of results) {
+      if (res?.error) return failure(res.error);
+      if (!Array.isArray(res?.data)) return unexpected('form_submissions');
+      for (const row of res.data) pairs.push([row.id, row.form_id]);
+    }
+    return { status: 'ok', pairs };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
 // Both schools' status lists (the screen picks the shown school's).
 export async function loadStatuses() {
   try {

@@ -503,6 +503,21 @@ html.is-reordering .tib-tip {
   white-space: nowrap;
 }
 
+/* A row that may wrap (RowMenu item `wrap`, Prospects' Forms filter: form names are long): the label wraps
+   onto a second line, the row grows to fit, and the tick box stays at the top-left of the row. */
+.tmenu-item.tmenu-item--wrap {
+  align-items: flex-start;
+  height: auto;
+  min-height: var(--control-height);
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  white-space: normal;
+}
+
+.tmenu-item--wrap > .menu-check {
+  margin-top: 1px;
+}
+
 /* Red means delete — and only delete (guidelines 7) */
 .tmenu-item--danger,
 .tmenu-item--danger .menu-icon {

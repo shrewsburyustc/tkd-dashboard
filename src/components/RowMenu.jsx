@@ -17,22 +17,24 @@
 //   isSheet   true on phones
 //   title     sheet header line 1 (phone)       subtitle  sheet header line 2 (phone)
 //   label     accessible name of the menu, e.g. "More actions for Yellow"
-//   items     [{ key, label, Icon, onSelect, disabled, danger, separatorBefore, checked }]
+//   items     [{ key, label, Icon, onSelect, disabled, danger, separatorBefore, checked, wrap }]
 //             A row with checked (true or false) is a tick-box row (rulebook v1.141, N16): role="menuitemcheckbox",
 //             aria-checked, a tick box instead of its Icon, and choosing it does NOT close the menu: the
 //             choice takes effect at once (onSelect is called, the menu stays), and Esc, Tab or a click outside
 //             closes it as for any ⋯ menu. Rows without checked are as before.
 //   onClose   (reason) => void — reason 'escape' | 'outside' | 'select' | 'tab'
+//   width     (optional, PC / tablet dropdown) the menu's width in px, 200 unless given (Prospects' Forms filter,
+//             2026-11-17: form names are long). An item with wrap: true may wrap its label onto a second line.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconCheck } from '@tabler/icons-react';
 import { CANCEL } from './text.js';
 
-const MENU_WIDTH = 200; // px, as mocked up
+const MENU_WIDTH = 200; // px, as mocked up (a menu may ask for another width)
 const GAP = 4; // px between the ⋯ button and the dropdown
 const ROW_SELECTOR = '[role="menuitem"], [role="menuitemcheckbox"]'; // plain rows and tick-box rows
 
-export default function RowMenu({ anchor, isSheet, title, subtitle, label, items, onClose }) {
+export default function RowMenu({ anchor, isSheet, title, subtitle, label, items, onClose, width = MENU_WIDTH }) {
   const panelRef = useRef(null);
   const [position, setPosition] = useState(null); // { top, left } for the dropdown
 
@@ -50,7 +52,8 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
       const height = panelRef.current?.offsetHeight ?? 0;
       let top = rect.bottom + GAP;
       if (top + height > window.innerHeight - 8 && rect.top - GAP - height > 8) top = rect.top - GAP - height;
-      const left = Math.max(8, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8));
+      // right edges lined up with the button; a wide menu (a left-hand button) starts at the button's left edge instead
+      const left = Math.max(8, Math.min(width > MENU_WIDTH ? rect.left : rect.right - width, window.innerWidth - width - 8));
       setPosition({ top, left });
     }
     place();
@@ -61,7 +64,7 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
       window.removeEventListener('scroll', place, true);
       window.removeEventListener('resize', place);
     };
-  }, [anchor, isSheet]);
+  }, [anchor, isSheet, width]);
 
   // When it opens (and, for the dropdown, once it has its place): focus the first item that
   // can be chosen. focusedRef makes sure this happens only once.
@@ -133,7 +136,7 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
           aria-checked={tick ? (item.checked ? 'true' : 'false') : undefined}
           tabIndex={-1}
           aria-disabled={item.disabled ? 'true' : undefined}
-          className={`menu-item tmenu-item${item.danger ? ' tmenu-item--danger' : ''}${item.disabled ? ' is-disabled' : ''}`}
+          className={`menu-item tmenu-item${item.danger ? ' tmenu-item--danger' : ''}${item.disabled ? ' is-disabled' : ''}${item.wrap ? ' tmenu-item--wrap' : ''}`}
           onClick={() => choose(item)}
         >
           {tick ? (
@@ -184,7 +187,7 @@ export default function RowMenu({ anchor, isSheet, title, subtitle, label, items
       className="tmenu"
       role="menu"
       aria-label={label}
-      style={position ? { top: position.top, left: position.left } : { top: -9999, left: -9999 }}
+      style={position ? { top: position.top, left: position.left, width } : { top: -9999, left: -9999, width }}
       onKeyDown={handleKeyDown}
       onClick={(event) => event.stopPropagation()}
     >
