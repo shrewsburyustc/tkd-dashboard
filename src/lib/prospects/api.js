@@ -103,12 +103,15 @@ export async function loadFormsOfFamilies(ids) {
     if (!supabase) return failure(new Error('No connection is set up'));
     const chunks = [];
     for (let i = 0; i < ids.length; i += FAMILY_CHUNK) chunks.push(ids.slice(i, i + FAMILY_CHUNK));
-    const results = await Promise.all(chunks.map((chunk) => supabase.from('form_submissions').select('id, form_id').in('id', chunk)));
     const pairs = [];
-    for (const res of results) {
-      if (res?.error) return failure(res.error);
-      if (!Array.isArray(res?.data)) return unexpected('form_submissions');
-      for (const row of res.data) pairs.push([row.id, row.form_id]);
+    // a few at a time (4), so a long list of families never fires dozens of requests at once
+    for (let i = 0; i < chunks.length; i += 4) {
+      const results = await Promise.all(chunks.slice(i, i + 4).map((chunk) => supabase.from('form_submissions').select('id, form_id').in('id', chunk)));
+      for (const res of results) {
+        if (res?.error) return failure(res.error);
+        if (!Array.isArray(res?.data)) return unexpected('form_submissions');
+        for (const row of res.data) pairs.push([row.id, row.form_id]);
+      }
     }
     return { status: 'ok', pairs };
   } catch (error) {

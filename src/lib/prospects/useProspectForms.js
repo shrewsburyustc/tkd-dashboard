@@ -40,6 +40,9 @@ export function useProspectForms({ familyIds, enabled }) {
       if (names.status === 'ok' && pairs.status === 'ok') {
         cache.forms = names.forms;
         for (const [familyId, formId] of pairs.pairs) cache.formOf.set(familyId, formId);
+        // a family whose sign-up row was not returned (nothing to read it by) has no form: remember that, so the filter
+        // never waits for it; such a prospect shows only under All forms
+        for (const id of missing) if (!cache.formOf.has(id)) cache.formOf.set(id, null);
         namesFresh.current = true;
         setFailed(false);
         setVersion((v) => v + 1);

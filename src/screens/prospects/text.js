@@ -456,5 +456,9 @@ export const formOption = (name, n, school) => `${name}${school ? ` · ${school}
 const joinNames = (names) => (names.length === 1 ? names[0] : names.length === 2 ? `${names[0]} and ${names[1]}` : `${names.length} forms`);
 export const showingForms = (n, total, names) => `Showing ${n} of ${total} prospects from ${joinNames(names)}`;
 export const NOBODY_FROM_FORMS = 'No prospects from the picked forms.';
+// A search that finds nobody while forms are picked: the family may be under another form, so say so and offer all forms
+export const noMatchInForms = (text) => `No prospects from the picked forms match “${text}”.`;
+export const SHOW_ALL_FORMS = 'Show all forms'; // the screen-reader name of the forms line's "Show all"
+
 // The list can't be filtered until each family's form is known; if that read fails (with forms picked)
 export const FORM_FILTER_FAILED = loadFailedNamed('the forms');

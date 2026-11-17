@@ -1228,6 +1228,12 @@ html.is-reordering .tib-tip {
     height: var(--tap-size);
   }
 
+  /* a row that may wrap (two-line form names in Prospects' Forms filter) grows instead of clipping its second line */
+  .tmenu-item.menu-item.tmenu-item--wrap {
+    height: auto;
+    min-height: var(--tap-size);
+  }
+
   .fa-option {
     min-height: var(--tap-size);
   }

@@ -15,7 +15,8 @@ import * as T from './text.js';
 const MENU_WIDTH = 340; // px: form names are long ("Al-Hamra Special 4-Week Introductory Taekwondo Program")
 
 // listed: [{ id, name, locationCode, n }] in the order shown; picked: the picked form ids (only listed ones)
-export default function FormFilter({ listed, picked, both, isPhone, subtitle, onChange }) {
+// loading: the forms are still being read — a grayed "Forms: All forms" button holds the place (no menu yet)
+export default function FormFilter({ listed, picked, both, isPhone, subtitle, onChange, loading = false }) {
   const [menu, setMenu] = useState(null); // { anchor } while the menu is open
   const pickedForms = listed.filter((f) => picked.includes(f.id));
   const on = pickedForms.length > 0;
@@ -39,13 +40,14 @@ export default function FormFilter({ listed, picked, both, isPhone, subtitle, on
         data-forms-filter
         aria-haspopup="menu"
         aria-expanded={menu ? 'true' : 'false'}
-        onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })}
+        aria-disabled={loading ? 'true' : undefined}
+        onClick={(e) => !loading && setMenu(menu ? null : { anchor: e.currentTarget })}
       >
         <IconFilter size={16} aria-hidden="true" />
         <span className="pformbtn-text">{T.formsButton(pickedForms.length, pickedForms.map((f) => f.name), listed.length)}</span>
         <IconChevronDown size={16} aria-hidden="true" />
       </button>
-      {menu && (
+      {menu && !loading && (
         <RowMenu
           anchor={menu.anchor}
           isSheet={isPhone}

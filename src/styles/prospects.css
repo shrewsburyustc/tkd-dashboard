@@ -292,6 +292,11 @@
   color: var(--color-blue);
 }
 
+.pformbtn[aria-disabled='true'] {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
 .pformbtn-text {
   min-width: 0;
   overflow: hidden;

@@ -1004,9 +1004,17 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
 
   // The search row's "Forms" button (only once the forms are known, and only worth showing with two or more
   // forms to choose from — or while one is picked) and the gray line that says what is filtered.
+  // While the forms are still being read, a grayed button holds the place, so the search box does not slide when it arrives.
+  const formsLoading = Boolean(data) && !formInfo.ready && !formInfo.failed && formFilter.length === 0;
   const formsButton = data && formInfo.ready && (listedForms.length >= 2 || effectivePicked.length > 0) ? (
     <FormFilter listed={listedForms} picked={effectivePicked} both={both} isPhone={isPhone} subtitle={both ? T.BOTH_SCHOOLS : location} onChange={onFormFilter} />
+  ) : formsLoading ? (
+    <FormFilter loading listed={[]} picked={NO_FORMS} both={both} isPhone={isPhone} onChange={onFormFilter} />
   ) : null;
+  function showAllForms() {
+    onFormFilter(NO_FORMS);
+    focusSoon(() => usable(document.querySelector('[data-forms-filter]')));
+  }
   const formsLine = pickedActive && (
     <p className="ev-filter-line cards-showing pformsline">
       {T.showingForms(
@@ -1018,10 +1026,8 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       <button
         type="button"
         className="link-button inline-link"
-        onClick={() => {
-          onFormFilter(NO_FORMS);
-          focusSoon(() => usable(document.querySelector('[data-forms-filter]')));
-        }}
+        aria-label={T.SHOW_ALL_FORMS}
+        onClick={showAllForms}
       >
         {T.SHOW_ALL}
       </button>
@@ -1095,10 +1101,18 @@ export default function Prospects({ location, staffId, isAdmin, profileName = ''
       // interested child) keeps the Board's own "Showing 0 of N" note, because the List would find them.
       const noMatchLine = resultsFresh && school.all.length > 0 && items.length === 0 && (
         <p className="ev-filter-line cards-showing pnomatch">
-          {T.noMatch(search.trim())} ·{' '}
+          {pickedActive ? T.noMatchInForms(search.trim()) : T.noMatch(search.trim())} ·{' '}
           <button type="button" className="link-button inline-link" aria-label={both ? T.clearSearchFor(school.name) : undefined} onClick={clearSearch}>
             {T.CLEAR_SEARCH}
           </button>
+          {pickedActive && (
+            <>
+              {' '}·{' '}
+              <button type="button" className="link-button inline-link" onClick={showAllForms}>
+                {T.SHOW_ALL_FORMS}
+              </button>
+            </>
+          )}
         </p>
       );
       return (

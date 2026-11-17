@@ -191,6 +191,25 @@ await withChrome(async (tab) => {
     assert.equal(await ev(`document.querySelector('.pformsline') === null`), true);
   });
 
+  await check('PC: a search that finds nobody while forms are picked says so and offers "Show all forms"', async () => {
+    await openApp('prospects');
+    await setLocation('Worcester');
+    await sleep(900);
+    await ev(`document.querySelector('[data-forms-filter]').click()`);
+    await sleep(300);
+    await ev(`[...document.querySelectorAll('[role=menuitemcheckbox]')].find((r) => r.textContent.includes('Al-Hamra')).click()`);
+    await sleep(300);
+    await ev(`document.querySelector('[data-forms-filter]').click()`);
+    await sleep(300);
+    await ev(`(() => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; const el = document.querySelector('.psearch-input'); set.call(el, 'Liam'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(1000);
+    const line = await text('.pnomatch');
+    assert.ok(line && line.startsWith('No prospects from the picked forms match “Liam”.') && line.includes('Show all forms'), String(line));
+    await clickText('.pnomatch button', 'Show all forms');
+    await sleep(500);
+    assert.equal(await text('[data-forms-filter]'), 'Forms: All forms');
+  });
+
   await check('PC: on Both the menu names each form\'s school and the Shrewsbury list can be empty for a Worcester pick', async () => {
     await setLocation('Both');
     await sleep(1200);
@@ -237,6 +256,16 @@ await withChrome(async (tab) => {
     await sleep(400);
     const nums = await stageNumbers();
     assert.equal(nums.reduce((a, b) => a + b, 0), 2, JSON.stringify(nums));
+  });
+
+  await check('Phone: a two-line form name in the sheet is not clipped (row at least as tall as its text)', async () => {
+    await openApp('prospects');
+    await setLocation('Worcester');
+    await sleep(900);
+    await ev(`document.querySelector('[data-forms-filter]').click()`);
+    await sleep(400);
+    const bad = await ev(`[...document.querySelectorAll('.tsheet [role=menuitemcheckbox]')].filter((r) => r.scrollHeight > r.clientHeight + 1).map((r) => r.textContent.trim())`);
+    assert.deepEqual(bad, []);
   });
 
   await check('Phone: no sideways scroll at 390 and 320 on either tab', async () => {
