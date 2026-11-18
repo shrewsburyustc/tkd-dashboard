@@ -743,6 +743,12 @@ export function createMockClient() {
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
+    // Delete student / event (contract 0053): a payment that a CLOSED Finance day counted keeps its student. The fake Finance keeps its
+    // closing items in its own store (FINANCE_KEY); the ones for Board breaking name the payment by chain_id or row_id.
+    closedPaymentIds: () => {
+      const items = JSON.parse(readStorage(FINANCE_KEY))?.closing_items;
+      return Array.isArray(items) ? items.filter((i) => i?.source === 'board_breaking').flatMap((i) => [i.chain_id, i.row_id]).filter(Boolean) : [];
+    },
   });
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;

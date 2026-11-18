@@ -246,7 +246,9 @@ function fail(code, message, status = 400) {
 }
 const ok = (data) => ({ data, error: null, count: null, status: 200, statusText: 'OK' });
 
-export function createBreakingBackend({ loadStore, saveStore, now = () => Date.now(), today, newId }) {
+// closedPaymentIds (optional) says which Board breaking payment ids a closed Finance day counted: () => array of ids. mockClient
+// wires it to the fake Finance's closing items (source 'board_breaking': chain_id / row_id). Left out, no payment counts as closed.
+export function createBreakingBackend({ loadStore, saveStore, now = () => Date.now(), today, newId, closedPaymentIds = () => [] }) {
   let failNext = false;
   const stamp = () => new Date(now()).toISOString();
 
@@ -273,6 +275,26 @@ export function createBreakingBackend({ loadStore, saveStore, now = () => Date.n
   const paymentsOf = (db, regId) => db.payments.filter((p) => p.registration_id === regId);
   const isReversed = (db, paymentId) => db.payments.some((p) => p.reverses_payment_id === paymentId);
   const paidOf = (db, reg) => sum(paymentsOf(db, reg.id).map((p) => p.amount_cents));
+  // Delete rule (contract 0053 §2, both delete functions): money must net to zero per student (every payment row, reversals included),
+  // and no closed Finance day may have counted one of their payments. 'has_payments' (money still stands) is checked before 'closed_day'.
+  function purgeProblem(db, regs) {
+    if (regs.some((r) => paidOf(db, r) !== 0)) return 'has_payments';
+    let closed;
+    try {
+      closed = new Set(closedPaymentIds() ?? []);
+    } catch {
+      closed = new Set();
+    }
+    if (regs.some((r) => paymentsOf(db, r.id).some((p) => closed.has(p.id)))) return 'closed_day';
+    return null;
+  }
+  // The rows that go with deleted students: their payment rows and cleared links; Square messages stay, with no student.
+  function purgeStudents(db, regIds) {
+    db.payments = db.payments.filter((p) => !regIds.has(p.registration_id));
+    db.cleared_links = db.cleared_links.filter((c) => !regIds.has(c.registration_id));
+    for (const x of db.square_events) if (regIds.has(x.registration_id)) x.registration_id = null;
+    db.registrations = db.registrations.filter((r) => !regIds.has(r.id));
+  }
   const owedOf = (reg) => (Number.isInteger(reg.override_cents) ? reg.override_cents : reg.amount_cents);
   const standingRefunds = (db, regId) => paymentsOf(db, regId).filter((p) => p.kind === 'refund' && !isReversed(db, p.id));
 
@@ -523,9 +545,11 @@ export function createBreakingBackend({ loadStore, saveStore, now = () => Date.n
       const event = findEvent(db, a.p_event_id);
       if (!event) return st('not_found');
       if (event.version !== a.p_expected_version) return st('stale');
-      const regIds = new Set(db.registrations.filter((r) => r.event_id === event.id).map((r) => r.id));
-      if (db.payments.some((p) => regIds.has(p.registration_id))) return st('has_payments');
-      db.registrations = db.registrations.filter((r) => !regIds.has(r.id));
+      // All or nothing: one student whose money still stands (or was counted by a closed day) keeps the whole event.
+      const regs = db.registrations.filter((r) => r.event_id === event.id);
+      const problem = purgeProblem(db, regs);
+      if (problem) return st(problem);
+      purgeStudents(db, new Set(regs.map((r) => r.id)));
       db.classes = db.classes.filter((c) => c.event_id !== event.id);
       db.events = db.events.filter((e) => e.id !== event.id);
       return st('ok');
@@ -745,8 +769,9 @@ export function createBreakingBackend({ loadStore, saveStore, now = () => Date.n
       const reg = findReg(db, a.p_registration_id);
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
-      if (paymentsOf(db, reg.id).length > 0) return st('has_payments');
-      db.registrations = db.registrations.filter((r) => r.id !== reg.id);
+      const problem = purgeProblem(db, [reg]);
+      if (problem) return st(problem);
+      purgeStudents(db, new Set([reg.id]));
       return st('ok');
     },
 

@@ -663,6 +663,18 @@
 //       Finance function under 2 s with its Export total equal to brk_payments,
 //       and re-run safety - see step0052 below. Run only this step with
 //       node run.mjs --only-step0052
+//   step0053. 0053 (Board breaking: a student, or a whole event with its students,
+//       can be permanently removed once the money of every student nets to zero
+//       and no closed Finance day counted it; replaces ONLY brk_payments_guard,
+//       brk_delete_registration and brk_delete_event of 0051; v1.307; contract
+//       docs/Board Breaking/CONTRACT-0053.md) on its own databases in the production
+//       order (0052's build with Finance's real 0052 after it): the pre-apply check,
+//       the guard refusing a missing 0051 / 0052 and a changed function, no row or
+//       history row written, only the three functions' fingerprint lines move
+//       (0051's file), 0053's tests and 0051's / 0052's after it, a seed of
+//       Board breaking money plus an event of 1,200 students netting to 0 removed
+//       under 2 s, and re-run safety - see step0053 below. Run only this step with
+//       node run.mjs --only-step0053
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -721,6 +733,7 @@ const onlyStep0043 = process.argv.includes('--only-step0043');
 const onlyStep0050 = process.argv.includes('--only-step0050');
 const onlyStep0051 = process.argv.includes('--only-step0051');
 const onlyStep0052 = process.argv.includes('--only-step0052');
+const onlyStep0053 = process.argv.includes('--only-step0053');
 const onlyStep0039 = process.argv.includes('--only-step0039');
 const onlyStep0044 = process.argv.includes('--only-step0044');
 const onlyStepFinanceCampRefunds = process.argv.includes('--only-stepFinanceCampRefunds');
@@ -1107,6 +1120,15 @@ async function main() {
     }
     return finish();
   }
+  // --only-step0053: just Board breaking's remove-once-money-nets-to-zero step (0053)
+  if (onlyStep0053) {
+    const prints53 = await step0053();
+    if (prints53) {
+      console.log('\n0053 fingerprints (kind  item  detail):');
+      for (const line of prints53) console.log('  ' + line);
+    }
+    return finish();
+  }
   // --only-step0044: just Color Belt's rolling-check step A (0044)
   if (onlyStep0044) {
     const prints44 = await step0044();
@@ -1451,6 +1473,9 @@ async function main() {
   // step0052: Finance reads Board breaking payments (its own databases, production order: it is pasted after 0051)
   console.log('\nMigration 0052 (Finance: Board breaking payments in the Daily report, Close the day, History, Export and payment detail):');
   const after52 = after5 ? await step0052() : null;
+  // step0053: Board breaking remove once money nets to zero (its own databases, production order: it is pasted after 0052)
+  console.log('\nMigration 0053 (Board breaking: remove a student or an event once its money nets to zero):');
+  const after53 = after5 ? await step0053() : null;
 
   // step0044: Color Belt rolling check, step A - the family form's own Paying by, Edit event Undo in one call, each payment's school
   console.log('\nMigration 0044 (Color Belt: the form\'s own Paying by, Edit event Undo in one call, each payment\'s school):');
@@ -1636,6 +1661,10 @@ async function main() {
   if (after52) {
     console.log('\n0052 fingerprints (kind  item  detail):');
     for (const line of after52) console.log('  ' + line);
+  }
+  if (after53) {
+    console.log('\n0053 fingerprints (kind  item  detail):');
+    for (const line of after53) console.log('  ' + line);
   }
   if (after45) {
     console.log('\n0045 fingerprints (kind  item  detail):');
@@ -12398,6 +12427,346 @@ async function step0052() {
   }
   await db2.close().catch(() => {});
   return prints52;
+}
+
+// =====================================================================
+// step0053: Board breaking - remove a student or an event once its money
+// nets to zero (0053; rulebook v1.307; contract docs/Board Breaking/CONTRACT-0053.md)
+// ---------------------------------------------------------------------
+// 0053 REPLACES three functions of 0051, each starting from the live text:
+// brk_payments_guard (the append-only trigger function: a DELETE is allowed
+// only while the transaction-local note tkd.brk_purge names the row's student
+// or event), brk_delete_registration and brk_delete_event (remove when every
+// student's payment rows add up to 0 and no closed Finance day counted one of
+// them: has_payments / closed_day otherwise). Nothing else changes.
+// DATABASE A, built in the production order with every live migration (the
+// real files up to Camps' 0050, Board breaking's 0051 and Finance's 0052):
+//   a. 0053's fingerprints and pre-apply check are connector-safe (no
+//      "delete" / "drop"); the migration is pure ASCII and grants nothing to
+//      anon; the pre-apply check before: three functions "ok: the live ...",
+//      0051 and 0052 there
+//   b. the guard refuses 0053 when 0051 is missing, when 0052 is missing, and
+//      when any of the three functions differs from the live text - nothing
+//      changes
+//   c. apply 0053: no row of any table changed and no history row written;
+//      in every fingerprint file ONLY the three functions' lines (code md5,
+//      live text -> 0053's) move; 0053's own 3 rows are as planned
+//   d. 0053_tests.sql (and the Board breaking / Finance tests of the other
+//      steps), then a seed of Board breaking money (2,000 students, edits,
+//      undos, refunds, Square) plus an event of 1,200 students whose money
+//      nets to 0 and 4,000 closed-day items: removing the big event, and
+//      removing one seeded student, each under 2 s; a refusal under 2 s
+//   e. 0053 applied a SECOND time: no fingerprint, no row, no history row
+//      changed; tests again
+// DATABASE B, clean (no seeds), same order: 0053's tests, then 0051's and
+// 0052's (the files that know about deletes / Board breaking money), 0047's,
+// 0037's, 0011's, 0018's and 0026's after it.
+// Run only this step with   node run.mjs --only-step0053
+// =====================================================================
+const MD5_0053 = {
+  old: {
+    brk_payments_guard: 'b6cf31a8d2829ae41e7744e62591e467',
+    brk_delete_registration: '6308d9aae45ce0d5aef45c29ffca73b8',
+    brk_delete_event: 'bcca69a68f80d76a4d9daa002190297b',
+  },
+  new: {
+    brk_payments_guard: '6f4c504c74a5bb809aeee77396e433fb',
+    brk_delete_registration: 'f6ad9259087a6c583b2126f4971211d4',
+    brk_delete_event: '6bba9594f6e1fe529d9eb3022b175f01',
+  },
+};
+const THREE_0053 = ['brk_payments_guard', 'brk_delete_registration', 'brk_delete_event'];
+const SIGS_0053 = {
+  brk_payments_guard: 'public.brk_payments_guard()',
+  brk_delete_registration: 'public.brk_delete_registration(uuid, integer)',
+  brk_delete_event: 'public.brk_delete_event(uuid, integer)',
+};
+
+// An event of 1,200 students, each with a payment and its reversal (net 0), and a closed day with 4,000 items
+// that name other (made-up) Board breaking payments: the removal's two checks run over all of them.
+const PURGE_SEED_0053 = `
+begin;
+select set_config('request.jwt.claims', '', true);
+select set_config('tkd.actor_label', 'PGlite brk purge seed', true);
+insert into public.brk_events (name, location_code, event_date, public_code, created_by_name, updated_by_name)
+values ('PGlite brk purge', 'worcester', public.testing_today() + 90, public.testing_new_public_code(), '', '');
+insert into public.brk_event_classes (event_id, name, start_time, end_time, sort)
+select e.id, 'Group A', '17:00', '18:00', 0 from public.brk_events e where e.name = 'PGlite brk purge';
+insert into public.brk_registrations (event_id, class_id, first_name, last_name, age, rank_name, band_used, tech_boards, adult_boards,
+                                      paying_by, paying_by_on_form, same_day, amount_cents, source, entered_by, created_by_name, updated_by_name)
+select e.id, c.id, 'Purgeperf', 'Pg ' || g, 10, 'Yellow', 'child', 1, 0, 'cash', 'cash', false, 1000, 'desk', 'seed', '', ''
+  from generate_series(1, 1200) as g
+  join public.brk_events e on e.name = 'PGlite brk purge'
+  join public.brk_event_classes c on c.event_id = e.id;
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+select r.id, 'payment', 1000, 'cash', public.testing_today(), 'worcester', now(), '${DESK_UID}'::uuid, 'Staff'
+  from public.brk_registrations r where r.first_name = 'Purgeperf' order by r.id;
+insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+select p.registration_id, 'reversal', -1000, 'cash', public.testing_today(), 'worcester', now() + interval '1 minute', '${ADMIN_UID}'::uuid, 'Main Admin', p.id
+  from public.brk_payments p join public.brk_registrations r on r.id = p.registration_id
+ where r.first_name = 'Purgeperf' and p.kind = 'payment' order by p.id;
+with c as (
+  insert into public.finance_day_closings
+    (location_code, day, kind, cash_counted_cents, checks_counted, checks_counted_cents, card_counted_cents,
+     expected_count, expected_cash_cents, expected_checks, expected_checks_cents, expected_card_cents, recorded_by_name)
+  values ('worcester', date '2020-01-06', 'close', 0, 0, 0, 0, 0, 0, 0, 0, 0, 'PGlite purge seed')
+  returning id
+)
+insert into public.finance_day_closing_items (closing_id, location_code, source, chain_id, row_id, kind, method, amount_cents)
+select c.id, 'worcester', 'board_breaking', gen_random_uuid(), gen_random_uuid(), 'payment', 'cash', 1000
+  from c, generate_series(1, 4000);
+commit;`;
+
+// The production order up to and including 0052 (0051's builder, then Finance's real 0052)
+async function build0053(L) {
+  const built = await build0052(L);
+  if (!built) return null;
+  const f52 = readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith('0052_') && f.endsWith('.sql'));
+  if (!f52) { record(`${L}the real 0052 file is in supabase/migrations/`, false, 'missing'); return null; }
+  if (!(await run(built.db, `${L}apply 0052 (the real file)`, read('migrations', f52)))) return null;
+  built.applied.push('0052');
+  return built;
+}
+
+async function step0053() {
+  const L = '[0053] ';
+  const migFile = path.join(supabaseDir, 'migrations', '0053_board_breaking_delete.sql');
+  if (!existsSync(migFile)) {
+    record(`${L}migrations/0053_board_breaking_delete.sql exists`, false, 'the file is missing');
+    return null;
+  }
+  const migration = read('migrations', '0053_board_breaking_delete.sql');
+  const preSql = read('tests', '0053_preapply_check.sql');
+  const unsafe = [['tests', '0053_fingerprints.sql'], ['tests', '0053_preapply_check.sql']]
+    .filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0053_fingerprints.sql and 0053_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  record(`${L}the migration file is pure ASCII (no curly quotes, dashes or other characters outside 0x00-0x7F)`,
+    /^[\r\n -~]*$/.test(migration), (migration.match(/[^\r\n -~]/g) ?? []).slice(0, 5).join(' '));
+  record(`${L}0053's migration has no secret key in it (no "eyJ" token, no "sb_secret_" key)`,
+    !/eyJ[A-Za-z0-9_-]{20,}|sb_secret_/.test(migration));
+  record(`${L}the migration file has CRLF line endings like the others`,
+    (migration.match(/\r\n/g) ?? []).length === migration.split('\n').length - 1, '');
+  const blocks = migration.replace(/\r\n/g, '\n');
+  record(`${L}the migration grants nothing to anon or public, drops nothing, and replaces only the three functions (no table, trigger, policy or grant change)`,
+    !/\bto\s+(anon|public)\b/i.test(blocks) && !/\bdrop\s+(function|table|trigger|policy|constraint|column|index)\b/i.test(blocks)
+      && !/\b(create|alter)\s+table\b/i.test(blocks) && !/\bcreate\s+(or\s+replace\s+)?trigger\b/i.test(blocks)
+      && (blocks.match(/create or replace function/g) ?? []).length === 3);
+
+  // ================== DATABASE A: seeded later
+  const built = await build0053(L);
+  if (!built) return null;
+  const { db, applied } = built;
+  await adminSession(db);
+  const md5Of = async (name) => one(db, `select md5(regexp_replace(regexp_replace(p.prosrc, '--[^\\n]*', '', 'g'), '\\s+', '', 'g'))
+                                           from pg_proc p where p.oid = to_regprocedure('${SIGS_0053[name]}')`);
+  for (const name of THREE_0053) {
+    record(`${L}before 0053 ${name} is the live text (0051's; md5 ${MD5_0053.old[name]})`, (await md5Of(name)) === MD5_0053.old[name], await md5Of(name));
+  }
+
+  // a. the pre-apply check
+  const pre = async () => (await db.query(preSql)).rows;
+  const preBefore = await pre();
+  record(`${L}[pre-apply check] before 0053: the three functions "ok: the live ...", 0051's tables and 0052's rule there, the students and closings rows`,
+    preBefore.filter((r) => r.kind === 'function').length === 3 && preBefore.filter((r) => r.kind === 'function').every((r) => r.detail.startsWith('ok: the live'))
+      && preBefore.filter((r) => r.kind === 'needs').length === 2 && preBefore.filter((r) => r.kind === 'needs').every((r) => r.detail.startsWith('ok: '))
+      && preBefore.filter((r) => r.kind === 'students').length === 1 && preBefore.filter((r) => r.kind === 'closings').length === 1,
+    JSON.stringify(preBefore.map((r) => r.item + ': ' + r.detail.slice(0, 30))));
+
+  // b. the guard refuses
+  const md5Guard = await md5Of('brk_payments_guard');
+  const md5Reg = await md5Of('brk_delete_registration');
+  const md5Event = await md5Of('brk_delete_event');
+  const ruleSql = `select pg_get_constraintdef(c.oid) from pg_constraint c
+      where c.conrelid = to_regclass('public.finance_day_closing_items') and c.conname = 'finance_day_closing_items_source_check'`;
+  const ruleOld = await one(db, ruleSql);
+  const guardTry = async (label, plant, wanted) => {
+    let message = '';
+    try {
+      await db.exec(`begin;\n${plant}\n${migration}`);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0053 when ${label} (it stops, nothing changes)`,
+      message.includes(wanted) && (await md5Of('brk_payments_guard')) === md5Guard && (await md5Of('brk_delete_registration')) === md5Reg
+        && (await md5Of('brk_delete_event')) === md5Event && (await one(db, `select to_regclass('public.brk_payments') is not null`)) === true
+        && (await one(db, ruleSql)) === ruleOld, message || 'it ran');
+  };
+  await guardTry('0051 is missing', 'alter table public.brk_payments rename to brk_payments_gone;', '0053 needs migration 0051');
+  await guardTry('0052 is missing (the table rule does not name board_breaking)',
+    `alter table public.finance_day_closing_items drop constraint finance_day_closing_items_source_check;
+     alter table public.finance_day_closing_items add constraint finance_day_closing_items_source_check
+       check (source in ('color_belt', 'star', 'camp', 'black_belt'));`, '0053 needs migration 0052');
+  await guardTry('the guard function differs from the live one',
+    `create or replace function public.brk_payments_guard() returns trigger language plpgsql set search_path = ''
+     as $$ begin if tg_op = 'DELETE' then return old; end if; return new; end; $$;`, 'rebuild 0053 first');
+  await guardTry('brk_delete_registration differs from the live one',
+    `create or replace function public.brk_delete_registration(p_registration_id uuid, p_expected_version integer)
+     returns jsonb language plpgsql volatile security definer set search_path = '' as $$ begin return '{}'::jsonb; end; $$;`, 'rebuild 0053 first');
+  await guardTry('brk_delete_event differs from the live one',
+    `create or replace function public.brk_delete_event(p_event_id uuid, p_expected_version integer)
+     returns jsonb language plpgsql volatile security definer set search_path = '' as $$ begin return '{}'::jsonb; end; $$;`, 'rebuild 0053 first');
+
+  // c. apply 0053
+  const tables = [...FINANCE_TABLES, 'brk_settings', 'brk_chart', 'brk_events', 'brk_event_classes', 'brk_registrations', 'brk_payments',
+    'brk_square_events', 'brk_cleared_links'];
+  const snap = `select md5(${tables.map((t) => `coalesce((select string_agg(to_jsonb(x)::text, ',' order by to_jsonb(x)::text) from public.${t} x), '')`).join(' || ')})`;
+  const logSql = `select count(*)::text from public.change_log`;
+  const numbers = [...NUMBERS_0025, ...applied, '0053']
+    .filter((n, i, all) => all.indexOf(n) === i && existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const printsBefore = await printsOf(db, numbers);
+  const rowsBefore = await one(db, snap);
+  const logBefore = await one(db, logSql);
+  if (!(await run(db, `${L}apply 0053_board_breaking_delete.sql`, migration))) return null;
+  const printsAfter = await printsOf(db, numbers);
+  record(`${L}0053 changed no row of any Board breaking or Finance table and wrote no history row`,
+    rowsBefore === (await one(db, snap)) && logBefore === (await one(db, logSql)));
+  for (const name of THREE_0053) {
+    record(`${L}after 0053 ${name} is 0053's text (md5 ${MD5_0053.new[name]})`, (await md5Of(name)) === MD5_0053.new[name], await md5Of(name));
+  }
+  const nameOf = (line) => (line.split('  ')[1] ?? '').split('(')[0];
+  const wrong = [];
+  const movedIn = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = printsBefore[f].filter((line) => !printsAfter[f].includes(line));
+    const added = printsAfter[f].filter((line) => !printsBefore[f].includes(line));
+    if (!gone.length && !added.length) continue;
+    if (gone.length !== added.length || ![...gone, ...added].every((line) => THREE_0053.includes(nameOf(line)))) {
+      wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      continue;
+    }
+    for (const g of gone) {
+      const a = added.find((line) => nameOf(line) === nameOf(g) && line.split('  ')[0] === g.split('  ')[0]);
+      const name = nameOf(g);
+      if (!a || !g.startsWith('function  ')) { wrong.push(`${n}: no matching function line for ${g}`); continue; }
+      if (g.replace(MD5_0053.old[name], '<md5>') !== a.replace(MD5_0053.new[name], '<md5>') || !g.includes(MD5_0053.old[name]) || !a.includes(MD5_0053.new[name])) {
+        wrong.push(`${n}: more than the code md5 changed: ${g} => ${a}`);
+      }
+    }
+    movedIn.push(n);
+  }
+  record(`${L}fingerprints: in every file only the three functions' lines (code md5, live text -> 0053's; definer, settings, owner, rights, volatility, result stay) moved, every other line byte-identical`,
+    wrong.length === 0 && movedIn.includes('0051') && movedIn.includes('0053'),
+    wrong.join('; ') || `moved in ${movedIn.join(', ')}; ${numbers.length} files checked`);
+  const prints53 = printsAfter['0053_fingerprints.sql'];
+  const lineOf = (name) => prints53.find((l) => nameOf(l) === name) ?? '';
+  const planned = THREE_0053.every((name) => {
+    const l = lineOf(name);
+    const app = name !== 'brk_payments_guard';
+    return l.startsWith('function  ') && l.includes(MD5_0053.new[name]) && l.includes('settings=search_path=""') && l.includes('owner=postgres')
+      && l.includes(`definer=${app}`) && l.includes('lang=plpgsql volatility=v') && l.includes(`returns=${app ? 'jsonb' : 'trigger'}`)
+      && (app ? /rights=authenticated:EXECUTE,postgres:EXECUTE$/.test(l) : l.endsWith('rights=postgres:EXECUTE'));
+  });
+  record(`${L}0053 fingerprints: three lines; md5, definer, search_path="", volatility, result and rights as planned (the two staff functions: authenticated only; the guard: owner only)`,
+    prints53.length === 3 && planned, prints53.join(' | '));
+  const preAfter = await pre();
+  record(`${L}[pre-apply check] after 0053: the three functions say "ok: already 0053's version"`,
+    preAfter.filter((r) => r.kind === 'function').length === 3 && preAfter.filter((r) => r.kind === 'function').every((r) => r.detail.startsWith('ok: already 0053')),
+    JSON.stringify(preAfter.filter((r) => r.kind === 'function').map((r) => r.item + ': ' + r.detail.slice(0, 28))));
+
+  // d. the tests, then a seed
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await runTestFileLive(db, `${L}0053_tests.sql (on the database before the seed)`, '0053_tests.sql', 'ALL 0053 TESTS PASSED');
+  await runTestFile(db, `${L}0051_tests.sql (after 0053)`, '0051_tests.sql', 'ALL 0051 TESTS PASSED');
+  await runTestFileLive(db, `${L}0052_tests.sql (after 0053)`, '0052_tests.sql', 'ALL 0052 TESTS PASSED');
+  const today = await one(db, 'select public.testing_today()::text');
+  if ((await run(db, `${L}the Board breaking money seed (2,000 students, edits, undos, refunds, Square)`, BRK_SEED_0052(today)))
+      && (await run(db, `${L}an event of 1,200 students whose money nets to 0 and a closed day with 4,000 items`, PURGE_SEED_0053))) {
+    const as = async () => db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+    await as();
+    const counts = async () => (await db.query(`select (select count(*) from public.brk_registrations)::int as students,
+        (select count(*) from public.brk_payments)::int as payments, (select count(*) from public.brk_events)::int as events,
+        (select count(*) from public.brk_event_classes)::int as classes`)).rows[0];
+    const c0 = await counts();
+    record(`${L}the seeds: thousands of students and payment rows, an event of 1,200 students with 2,400 rows netting to 0`,
+      c0.students >= 3200 && c0.payments > 5000 && c0.events >= 3
+        && (await one(db, `select count(*)::int from public.brk_payments p join public.brk_registrations r on r.id = p.registration_id
+                            where r.first_name = 'Purgeperf'`)) === 2400, JSON.stringify(c0));
+    // a refusal is fast: the seeded Worcester event has money standing on most students
+    const seedEvent = (await db.query(`select e.id, e.version from public.brk_events e where e.name = 'PGlite brk perf worcester'`)).rows[0];
+    await db.exec('set role authenticated;');
+    let t = performance.now();
+    const refused = (await db.query(`select public.brk_delete_event($1::uuid, $2) as r`, [seedEvent.id, seedEvent.version])).rows[0].r;
+    let ms = Math.round(performance.now() - t);
+    await db.exec('reset role;');
+    record(`${L}brk_delete_event on the seeded event with money standing: has_payments under 2 s, nothing removed`,
+      refused.status === 'has_payments' && ms < 2000 && JSON.stringify(await counts()) === JSON.stringify(c0), `${ms} ms, ${refused.status}`);
+    // one seeded student whose payment was undone (net 0)
+    const stu = (await db.query(`select r.id, r.version, (select coalesce(sum(p.amount_cents), 0)::int from public.brk_payments p where p.registration_id = r.id) as net,
+        (select count(*)::int from public.brk_payments p where p.registration_id = r.id) as rows
+        from public.brk_registrations r where r.first_name = 'Brkperf' and r.last_name = 'Bp 11'`)).rows[0];
+    record(`${L}the seeded student Bp 11 has a payment and its reversal (net 0)`, stu.net === 0 && stu.rows === 2, JSON.stringify(stu));
+    const one1 = await timed0026(db, L, 'brk_delete_registration (a student with 2 rows, 4,000 closed-day items and 7,000 rows in the table)',
+      `select public.brk_delete_registration('${stu.id}', ${stu.version}) as r`);
+    const c1 = await counts();
+    record(`${L}... it removed exactly that student and its two rows`,
+      one1?.status === 'ok' && c1.students === c0.students - 1 && c1.payments === c0.payments - 2, JSON.stringify(c1));
+    // the big event
+    const big = (await db.query(`select e.id, e.version from public.brk_events e where e.name = 'PGlite brk purge'`)).rows[0];
+    const del = await timed0026(db, L, 'brk_delete_event (1,200 students, 2,400 payment rows, 4,000 closed-day items)',
+      `select public.brk_delete_event('${big.id}', ${big.version}) as r`);
+    const c2 = await counts();
+    record(`${L}... it removed exactly that event: its class, 1,200 students and 2,400 payment rows; nothing else`,
+      del?.status === 'ok' && c2.students === c1.students - 1200 && c2.payments === c1.payments - 2400 && c2.events === c1.events - 1
+        && c2.classes === c1.classes - 1, JSON.stringify(c2));
+    record(`${L}... the history holds all of it: the event, its class, 1,200 students and 2,400 payment rows (3,602 delete rows)`,
+      (await one(db, `select count(*)::int from public.change_log where op = 'delete' and action = 'brk_delete_event'`)) === 3602);
+    record(`${L}the note is cleared after the removals`, (await one(db, `select coalesce(current_setting('tkd.brk_purge', true), '')`)) === '');
+    // the closed-day check is fast too: a student whose payment a closing counted
+    const cd = (await db.query(`select r.id from public.brk_registrations r where r.first_name = 'Brkperf' and r.last_name = 'Bp 22'`)).rows[0];
+    await db.exec(`insert into public.finance_day_closing_items (closing_id, location_code, source, chain_id, row_id, kind, method, amount_cents)
+        select (select c.id from public.finance_day_closings c where c.recorded_by_name = 'PGlite purge seed' limit 1), 'worcester', 'board_breaking',
+               p.id, p.id, 'payment', 'cash', 1000 from public.brk_payments p where p.registration_id = '${cd.id}' and p.kind = 'payment'`);
+    // (Bp 22 is paid and stands unless undone: give it a reversal so only the closing blocks it)
+    await db.exec(`insert into public.brk_payments (registration_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+        select p.registration_id, 'reversal', -p.amount_cents, p.method, public.testing_today(), p.school, now(), '${ADMIN_UID}'::uuid, 'Main Admin', p.id
+          from public.brk_payments p where p.registration_id = '${cd.id}' and p.kind = 'payment'
+           and not exists (select 1 from public.brk_payments x where x.reverses_payment_id = p.id)`);
+    const net22 = await one(db, `select coalesce(sum(p.amount_cents), 0)::int from public.brk_payments p where p.registration_id = '${cd.id}'`);
+    await as();
+    const cdVer = await one(db, `select version from public.brk_registrations where id = '${cd.id}'`);
+    await db.exec('set role authenticated;');
+    t = performance.now();
+    const closed = (await db.query(`select public.brk_delete_registration('${cd.id}', ${cdVer}) as r`)).rows[0].r;
+    ms = Math.round(performance.now() - t);
+    await db.exec('reset role;');
+    record(`${L}a student whose payment a closed day counted (net 0 otherwise): closed_day under 2 s, nothing removed`,
+      net22 === 0 && closed.status === 'closed_day' && ms < 2000
+        && (await one(db, `select count(*)::int from public.brk_registrations where id = '${cd.id}'`)) === 1, `${ms} ms, ${closed.status}, net ${net22}`);
+    await db.query(`select set_config('request.jwt.claims', '', false)`);
+  }
+
+  // e. re-run safety
+  const printsSeeded = await printsOf(db, numbers);
+  const rowsSeeded = await one(db, snap);
+  const logSeeded = await one(db, logSql);
+  await run(db, `${L}apply 0053 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(printsSeeded[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0053 re-run: no fingerprint, no row and no history row changed`,
+    movedAgain.length === 0 && rowsSeeded === (await one(db, snap)) && logSeeded === (await one(db, logSql)), movedAgain.join(', '));
+  await runTestFileLive(db, `${L}0053_tests.sql (after the re-run)`, '0053_tests.sql', 'ALL 0053 TESTS PASSED');
+  await db.close().catch(() => {});
+
+  // ================== DATABASE B: clean
+  const L2 = '[0053 clean] ';
+  const built2 = await build0053(L2);
+  if (!built2) return prints53;
+  const db2 = built2.db;
+  if (await run(db2, `${L2}apply 0053_board_breaking_delete.sql`, migration)) {
+    const clean = await fingerprints(db2, '0053_fingerprints.sql');
+    record(`${L2}the 0053 fingerprints equal the ones from the other database`, JSON.stringify(clean) === JSON.stringify(prints53), clean.join(' | '));
+    const testFiles = [['0053_tests.sql', 'ALL 0053 TESTS PASSED'], ['0051_tests.sql', 'ALL 0051 TESTS PASSED'], ['0052_tests.sql', 'ALL 0052 TESTS PASSED'],
+      ['0047_tests.sql', 'ALL 0047 TESTS PASSED'], ['0037_tests.sql', 'ALL 0037 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
+      ['0018_tests.sql', 'ALL 0018 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED']];
+    for (const [file, ok] of testFiles) {
+      if (existsSync(path.join(supabaseDir, 'tests', file))) await (['0053_tests.sql', '0052_tests.sql'].includes(file) ? runTestFileLive : runTestFile)(db2, `${L2}${file} (after 0053)`, file, ok);
+    }
+  }
+  await db2.close().catch(() => {});
+  return prints53;
 }
 
 function finish() {

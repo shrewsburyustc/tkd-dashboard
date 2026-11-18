@@ -79,15 +79,16 @@ export const deleteEventTitle = (name) => `Delete ${name}?`;
 export const KEEP_EVENT = 'Keep event';
 export const DELETING = 'Deleting…';
 export const DELETE_FAILED = "Couldn't delete. Check the connection, then retry.";
-export const DELETE_HAS_PAYMENTS = "This event has payments recorded, so it can't be deleted.";
-// What goes with it: its students (if any). Payments block the delete, so they are never in this sentence.
-// An event with payments can't be deleted at all (money is never removed), so say that instead of "N students are deleted".
-export const DELETE_BLOCKED_BODY = "Payments are recorded for this event, so it can't be deleted (money is never removed). Close registration instead.";
+// The server decides (migration 0053): money that still counts, or a payment counted by a closed Finance day, keeps the event.
+export const DELETE_HAS_PAYMENTS = 'Some students on this event still have payments that count. Undo or refund them first, then delete the event.';
+export const DELETE_CLOSED_DAY = "Money on this event was counted when a day was closed in Finance, so the event can't be deleted.";
+// A quiet line whenever the event has students (the list can't tell who paid through Square): deleting changes nothing at Square.
+export const DELETE_SQUARE_NOT_REFUNDED = 'Deleting does not refund card payments taken through Square. Refund those in Square first.';
+// What goes with it: its students (if any) and their payment history. The list only knows how many students are PAID, so with none
+// paid the sentence says "any payment history" (an undone payment is history too).
 export const deleteEventBody = (registered, paid = 0) =>
-  paid > 0
-    ? DELETE_BLOCKED_BODY
-    : registered > 0
-    ? `Its ${registered} registered ${registered === 1 ? 'student is' : 'students are'} deleted with it. This can't be undone.`
+  registered > 0
+    ? `Its ${registered} registered ${registered === 1 ? 'student is' : 'students are'} deleted with it, ${paid > 0 ? 'together with their payment history' : 'along with any payment history'}. This can't be undone.`
     : "Nothing is registered yet. This can't be undone.";
 
 // ----- Add / Edit event -----

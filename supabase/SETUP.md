@@ -4176,3 +4176,53 @@ Tested in PGlite on every run (`run.mjs` step0052, or `node run.mjs --only-step0
 - **Nothing else moves:** the other sections' answers are compared byte for byte on five years of history, and every fingerprint file but the six names is compared line by line.
 
 ---
+
+## Migration 0053: Board breaking delete once money nets to zero
+
+**Status: written 2026-11-17 on `board-breaking`, not applied.** Rulebook v1.307; contract `docs/Board Breaking/CONTRACT-0053.md`. Needs an independent **security review** and Jeffrey's OK before it is pasted. Runs **after 0051 and 0052** (both live): its guard checks both. **Apply it before the app that uses it is pushed** (the new app words the new answer `closed_day`; the old app keeps working and just shows a generic message for it). Nothing is removed by applying it: it only replaces three functions.
+
+**Why:** 0051's "remove a student" and "remove an event" refused whenever ANY payment row existed. But Undo never removes a payment: it adds an opposite row (a reversal), so an undone payment still blocked the removal, and the dialog's advice "Undo the payment first" could never work. Test students and test events (the Square sandbox makes payments) could not be cleaned up.
+
+**What it does** (`supabase/migrations/0053_board_breaking_delete.sql`): replaces **only** three functions of 0051, each starting from the live text, with `create or replace` (no drop, no table, trigger, grant or Finance change; nothing for `anon`):
+1. `brk_delete_registration` and `brk_delete_event` (admin only, as before): a student, or an event with all its students, classes and payment rows, is **permanently removed** when (1) every student concerned has payment rows that **add up to exactly 0 cents** (never paid, paid then undone, an edit chain that was undone, a payment refunded in full all qualify) AND (2) **no closed Finance day counted one of those payments** (no row of `finance_day_closing_items` with `source = 'board_breaking'` has a `chain_id` or `row_id` equal to a payment id of those students). Otherwise nothing is removed and the answer is `has_payments` (money still stands; the same word as before) or the new word `closed_day` (checked after `has_payments`). An event is **all or nothing**.
+2. `brk_payments_guard` (the trigger function that keeps `brk_payments` append-only): a `DELETE` is allowed in exactly one situation - the **transaction-local note** `tkd.brk_purge` says `student:<registration id>` and the row belongs to that student, or says `event:<event id>` and the row's student belongs to that event. Only the two functions write the note, **after** they have locked the student(s) and proved the rule, and they clear it on the next line. `UPDATE` stays refused always; the INSERT rules (a reversal must undo a real payment or refund of the same student for exactly minus its amount; a student's rows can never add up to less than 0) are unchanged. The app's logins have no DELETE right on the table and cannot write the note through the API.
+Order inside the functions: the student's payment rows first (one statement), then the student, then (event) the event. `change_log` records every removed row with who and when. A **guard** at the top of the file stops it - and changes nothing - unless 0051's tables and the columns it reads are there, 0052's table rule names `board_breaking`, and each of the three functions is exactly the live text (or 0053's own, on a re-run), compared by an md5 of the code without comments and white space. **Forward-only** - no undo file.
+
+**Each step needs Jeffrey's OK.**
+
+### 0053a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0053_preapply_check.sql` (one read-only SELECT, connector-safe). Expected: three `function` rows saying **"ok: the live version (0053 can be applied)"** (`brk_payments_guard` md5 `b6cf31a8d2829ae41e7744e62591e467`, the two delete functions `6308d9aae45ce0d5aef45c29ffca73b8` and `bcca69a68f80d76a4d9daa002190297b`), two `needs` rows starting **"ok:"**, and two information rows (`students`: how many Board breaking students there are and how many could be removed under the new rule; `closings`: how many closed-day items name a Board breaking payment). A `DIFFERS` or `MISSING` row: stop - 0053 must be rebuilt (the guard would refuse it anyway).
+2. Claude runs `supabase/tests/0053_fingerprints.sql` and keeps the result (3 rows), and `supabase/tests/0051_fingerprints.sql`: after 0053 only these three functions' lines (code md5) move in 0051's file.
+
+### 0053b. Apply 0053 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0053_board_breaking_delete.sql`, **SQL Editor -> New query**, paste, **Run**.
+2. Supabase may show a destructive-operations warning because the word "delete" is in the function names and in the new text. Nothing is removed now - it only replaces three functions. Confirm.
+3. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: no fingerprint, row or history change).
+
+### 0053c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0053_fingerprints.sql` must match what `run.mjs` printed ("0053 fingerprints"), 3 rows:
+   - `function  brk_delete_event(p_event_id uuid, p_expected_version integer)  6bba9594f6e1fe529d9eb3022b175f01 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  brk_delete_registration(p_registration_id uuid, p_expected_version integer)  f6ad9259087a6c583b2126f4971211d4 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`
+   - `function  brk_payments_guard()  6f4c504c74a5bb809aeee77396e433fb lang=plpgsql volatility=v returns=trigger definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`
+   The file contains neither of the words the connection refuses.
+2. `0051_fingerprints.sql`: **only** these three functions' lines (code md5) differ from the record before 0053 - every other line the same. Every other migration's fingerprints: unchanged (`run.mjs` step0053 checks exactly that).
+3. **Pre-apply check again:** the three functions say **"ok: already 0053's version"**.
+4. **Security advisor:** nothing new (no new function or table). Every replaced function keeps `search_path = ''` and its rights.
+
+### 0053d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0053_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (an ACTIVE admin and the ACTIVE front-desk login), paste, **Run** -> **ALL 0053 TESTS PASSED** (and how many checks ran). It makes its own `zz t53 ...` events and students with the app's **real** functions (Mark paid, Undo, Edit payment, price override + Record refund, Undo refund, Square's payment function) and checks: a student never paid, paid-then-undone, with an undone edit chain, with a refund and its reversal, and refunded in full is removed with all payment rows; money standing (an edit, a partial refund, a plain payment) is refused with `has_payments` and nothing is removed; a closed Finance day's item naming a payment (by chain id or row id) refuses with `closed_day`, an item of another source does not, and `has_payments` is checked first; a whole event with several such students is removed with its classes while another event is untouched; **one** student whose money stands, or one payment a closed day counted, refuses the whole event and removes **nothing**; stale / not found / invalid; the front desk gets `not_allowed` and signed-out, PIN-locked and locked sessions `no_access`; the guard still refuses a direct DELETE (no note, empty or nonsense note, another student's, another event's, the wrong kind of id) and every UPDATE, even with the right note; the note is cleared after every removal; the INSERT rules are the same; the app's logins cannot remove a payment even with the right note; a Square payment (no login) that was undone can be removed, and Square messages that arrive afterwards (the same message id, or a new id for the same payment) make no payment; every removed row is in `change_log`; every answer is exactly `{"status": ...}`; the functions' rights and the guard's trigger. One transaction, rolled back. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved - run `rollback;` once on its own, then tell Claude.
+2. Then `0051_tests.sql` and `0052_tests.sql` again - each must still pass (`0051_tests.sql` F7 knows the new rule: before 0053 an undone payment still blocked the removal; from 0053 on it does not).
+3. Put the placeholders back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0053, or `node run.mjs --only-step0053`): **database A**, built in the production order with every live migration (the real files up to Camps' 0050, Board breaking's 0051 and Finance's 0052): the pre-apply check before and after; the guard refusing a missing 0051, a missing 0052 and each of the three functions changed; no row and no history row written; only the three functions' fingerprint lines (0051's file) move, in every other file every line is byte-identical; `0053_tests.sql`, `0051_tests.sql` and `0052_tests.sql`; a seed of Board breaking money (2,000 students, edits, undos, refunds, Square) plus an event of 1,200 students whose money nets to 0 and 4,000 closed-day items: removing the big event, removing one seeded student and the refusals (`has_payments`, `closed_day`) each under 2 s, with every removed row in the history; a second run of 0053. **Database B**, clean: `0053_tests.sql`, `0051_tests.sql`, `0052_tests.sql`, `0047_tests.sql`, `0037_tests.sql`, `0011_tests.sql`, `0018_tests.sql` and `0026_tests.sql`.
+
+**Why:**
+- **The rule is about the money, not about a row existing:** Undo writes an opposite row, so "no payment row at all" could never be reached after a payment. Net zero is exactly "nothing stands".
+- **A closed day is a promise:** a closing keeps the ids of the payments it counted; removing them would change that day's "Changed after closing" view, so that student (or event) stays on the roster.
+- **The proof lives in the two functions, the guard stays narrow:** the guard only opens for the student or event named by a transaction-local note that nobody in the app can write; UPDATE stays refused.
+
+---

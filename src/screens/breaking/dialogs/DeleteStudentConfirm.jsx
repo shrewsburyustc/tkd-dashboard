@@ -2,7 +2,9 @@
 // Why it exists: deleting a student is for good, so it asks first with the dashboard's one "are you sure?" box
 // (components/ConfirmBox.jsx, rulebook v1.008): the button that changes nothing says what stays ("Keep student") and is
 // on the LEFT; the red action repeats the words pressed ("Delete student") on the RIGHT, and says "Deleting…" while it works.
-// The database refuses when the student has any payment on record ('has_payments': money is never lost quietly),
+// The student goes with their payment history, once their money nets to zero (an undone payment counts: migration 0053).
+// The database refuses while money still stands ('has_payments'), when a closed Finance day counted a payment ('closed_day'),
+// A student with a Square payment also gets a quiet gray line: deleting does not refund it at Square.
 // when someone else changed the row first ('stale'), and for a non-admin ('not_allowed'). Each refusal, and a failed
 // save, shows an amber note under the buttons and the box stays open (guidelines 3.5).
 //
@@ -11,6 +13,7 @@ import { useState } from 'react';
 import { IconTrash } from '@tabler/icons-react';
 import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import { deleteRegistration } from '../../../lib/breaking/breakingApi.js';
+import { hasSquarePayment } from '../../../lib/breaking/breakingRules.js';
 import * as T from '../../../lib/breaking/text/dialogs.js';
 
 export default function DeleteStudentConfirm({ registration, onClose, onDeleted, onNoAccess, onRefreshProfile }) {
@@ -33,6 +36,7 @@ export default function DeleteStudentConfirm({ registration, onClose, onDeleted,
       onRefreshProfile?.();
       setFailed(T.ROSTER_NOT_ALLOWED);
     } else if (result.status === 'has_payments') setFailed(T.deleteHasPayments(name));
+    else if (result.status === 'closed_day') setFailed(T.deleteClosedDay(name));
     else if (result.status === 'stale' || result.status === 'not_found') setFailed(T.DELETE_STALE);
     else setFailed(T.DELETE_FAILED);
   }
@@ -46,10 +50,11 @@ export default function DeleteStudentConfirm({ registration, onClose, onDeleted,
       busyLabel={T.DELETING}
       loses="forGood"
       failed={failed}
+      hint={hasSquarePayment(registration.payments) ? T.SQUARE_NOT_REFUNDED : null}
       onKeep={onClose}
       onConfirm={confirm}
     >
-      {T.deleteBody(name)}
+      {T.deleteBody(name, (registration.payments ?? []).length > 0)}
     </ConfirmBox>
   );
 }

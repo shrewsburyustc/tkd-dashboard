@@ -185,7 +185,7 @@ export default function EventsTab({
     if (status === 'not_allowed') {
       onRefreshProfile();
       reason = T.UNDO_REASON_ADMIN_ONLY;
-    } else if (status === 'has_payments') reason = T.UNDO_REASON_HAS_PAYMENTS;
+    } else if (status === 'has_payments' || status === 'closed_day') reason = T.UNDO_REASON_HAS_PAYMENTS;
     else if (status === 'class_in_use') reason = T.UNDO_REASON_CLASS_IN_USE;
     else if (['stale', 'not_found', 'invalid'].includes(status)) reason = T.undoReasonSomeoneElse(name);
     if (!reason) return { status: 'error' };
@@ -600,7 +600,7 @@ export default function EventsTab({
     focusLater(() => d.opener, () => rowEl(d.eventId), reloaded);
   }
 
-  // ===== Delete event (permanent; refused while any payment exists) =====
+  // ===== Delete event (permanent; the server refuses while money still counts or a closed Finance day counted it) =====
   function startDelete(event, anchor) {
     if (!isAdmin) return;
     openDialog({ type: 'delete', id: event.id, name: event.name, registered: event.registered, paid: event.paid, version: event.version, failed: null, index: shown.findIndex((e) => e.id === event.id), opener: anchor });
@@ -625,8 +625,8 @@ export default function EventsTab({
         addEventEl,
         reloaded,
       );
-    } else if (status === 'has_payments') {
-      patchDialog({ saving: false, failed: T.DELETE_HAS_PAYMENTS });
+    } else if (status === 'has_payments' || status === 'closed_day') {
+      patchDialog({ saving: false, failed: status === 'closed_day' ? T.DELETE_CLOSED_DAY : T.DELETE_HAS_PAYMENTS });
     } else if (status === 'no_access') {
       patchDialog({ saving: false });
       onNoAccess();
@@ -830,6 +830,7 @@ export default function EventsTab({
           loses="forGood"
           busy={dialog.saving}
           failed={dialog.failed}
+          hint={dialog.registered > 0 ? T.DELETE_SQUARE_NOT_REFUNDED : null}
           onConfirm={confirmDelete}
           onKeep={cancelDialog}
         >
