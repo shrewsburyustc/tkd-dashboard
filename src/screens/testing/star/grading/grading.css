@@ -531,6 +531,12 @@
   font-weight: 500;
 }
 
+/* On the phone card the "so far" sits on the same line as the total ("Total 122.5 so far"), as drawn
+   in the partial-scores picture (v0.524); in the grid it stays under the number. */
+.stg-card-totaltext .stg-sofar {
+  display: inline;
+}
+
 .stg-card-total .stg-result {
   font-size: var(--text-13);
   text-align: right;

@@ -185,7 +185,9 @@ await check('the reason wording (proposal 4) and the late-grade note (26) for ev
   assert.deepEqual(resultTag(rowOf(res, 'Zoe').result), { tone: 'gray', text: 'Testing privately', icon: 'calendar' });
   assert.deepEqual(resultTag(rowOf(res, 'Grace').result), { tone: 'amber', text: 'Make-up', icon: null });
   assert.deepEqual(resultTag(rowOf(res, 'Ben').result), { tone: 'gray', text: 'Not finished', icon: null });
-  assert.equal(resultsTotalText(rowOf(res, 'Zoe').result, false), '—');
+  assert.equal(resultsTotalText(rowOf(res, 'Zoe').result, false), '—'); // testing privately: always "—"
+  // v0.524: a Not finished row with something graded shows its running total; the tag stays Not finished
+  assert.match(resultsTotalText(rowOf(res, 'Ben').result, false), /^\d+(\.\d)? so far$/);
   assert.equal(resultsTotalText(rowOf(res, 'Lucas').result, false), '280');
   const emailable = allRows(res).filter((r) => canEmailResult(r.result)).map((r) => r.firstName).sort();
   assert.deepEqual(emailable, ['Drew', 'Ella', 'Grace', 'Ivy', 'Lucas', 'Morgan', 'Nina', 'Sofia', 'Taylor']); // not Ben, Zoe, Avery

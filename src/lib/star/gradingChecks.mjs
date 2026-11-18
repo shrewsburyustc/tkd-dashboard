@@ -328,8 +328,10 @@ await check('the seed: every grading state of H1–H6 is there', async () => {
   assert.equal(resultTag(row('Ethan').result, { isAdmin: false }).after, '· an admin chooses subjects');
   assert.equal(tag(row('Sam')), '⚠ Make-up · retests Breaking, Knowledge');
   assert.equal(tag(row('Ava', 0)), '7 of 11 left');
-  assert.equal(totalText(row('Ava', 0).result, false), '—');
+  // v0.524: a candidate with some subjects graded shows the running total, not "—" (the tag still says "7 of 11 left")
+  assert.equal(totalText(row('Ava', 0).result, false), '122.5 so far');
   for (const name of ['Mia', 'Lily']) assert.equal(tag(row(name)), 'Not started');
+  for (const name of ['Mia', 'Lily']) assert.equal(totalText(row(name).result, false), '—'); // nothing graded → "—"
   assert.equal(tag(row('Ava', 1)), 'Not started');
   // Sofia: a make-up with kept grades; retests Breaking (graded) and Korean Terminology → "1 of 2 left"
   const sofia = row('Sofia');

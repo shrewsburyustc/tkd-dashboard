@@ -48,8 +48,8 @@ export const notSavedTag = (grades, counts) => `⚠ Not saved · ${gradesAndCoun
 // Under a Not saved subject on a phone line / the private page (proposal 19)
 export const NOT_SAVED_SHORT = '⚠ Not saved';
 
-// Total: the database's total; a make-up's running total "250 so far" (v0.129); "—" otherwise while
-// the row isn't complete (proposal 2).
+// Total: the database's total; the running total "250 so far" while the row isn't complete but
+// something is graded (a make-up since v0.129, every candidate since v0.524); "—" when nothing is.
 export const totalSoFar = (n) => `${scoreText(n)} so far`;
 export const TOTAL_NONE = '—';
 

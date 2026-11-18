@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- partial-scores.html — mockup (not the real app) for "show a running total while some Star subjects
+     are not graded yet" (Jeffrey, 2026-11-17). Why: Jeffrey wants to see scores right after grading even
+     when Assistant classes (or other subjects) are still empty. The amber outline marks what changes.
+     Use: open in a browser; ?s=results or ?s=grading picks the screen. Colours copied from the approved
+     Star mockups (TKD-StarTesting-Results-Mockups.html). -->
+<html lang="en"><head><meta charset="utf-8"><title>Star partial scores mockup</title>
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#fff;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA;--amber:#E08A00}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
+main{width:1340px;padding:20px 16px}
+h1{font-size:20px;font-weight:600;margin:0 0 2px}.lead{color:var(--text2);font-size:13px;margin:0 0 14px}
+.cap{font-size:12px;color:var(--text2);margin:14px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:20px;align-items:flex-start}
+.dev{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;overflow:hidden}
+.pc{width:650px}.tab{width:650px;border:6px solid #2B2B2B;border-radius:18px}.ph{width:340px;border:6px solid #2B2B2B;border-radius:26px}
+.bar{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;font-size:13px}
+.bar b{font-size:15px}.bar .sp{flex:1}.pill{border:1px solid var(--control-border);border-radius:8px;padding:2px 10px;font-size:12px;color:var(--text2)}.pill.on{background:var(--blue-tint);color:var(--blue);border-color:var(--blue-tint)}
+.body{padding:12px 14px}
+.tag{font-size:12px;padding:1px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);white-space:nowrap}
+.t-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}.t-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.chg{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+.num{font-size:17px;font-weight:700;line-height:1.1}.num small{display:block;font-size:11px;font-weight:400;color:var(--text2)}
+.sofar{font-size:11px;font-weight:400;color:var(--text2)}
+table{border-collapse:collapse;width:100%}th{font-size:11px;color:var(--text2);font-weight:500;text-align:left;padding:4px 6px;border-bottom:1px solid var(--border-strong)}
+td{padding:7px 6px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
+td.c,th.c{text-align:center}.sub{font-size:12px;color:var(--text2)}
+.g{display:inline-block;min-width:26px;text-align:center;border:1px solid var(--border-strong);border-radius:6px;padding:1px 0;font-weight:600;font-size:12px}.g.e{color:#B0B0AB;font-weight:400;border-style:dashed}.g.d{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.grades{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.grades div{font-size:11px;color:var(--text2);text-align:center}
+.foot{font-size:13px;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between}
+.note{background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px;margin:10px 0 0;width:1320px}
+.legend{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--text2);margin-bottom:6px}.legend i{display:inline-block;width:16px;height:12px;outline:2px solid var(--amber);border-radius:3px}
+</style></head><body><main>
+<script>
+const s=new URLSearchParams(location.search).get('s')||'results';
+const hdr=(t,sub)=>`<h1>${t}</h1><p class="lead">${sub}</p><div class="legend"><i></i> amber outline = what changes · nothing else on the screen changes</div>`;
+// ---------- RESULTS ----------
+const rRows=(after,mode)=>{
+ const R=[['Maya Chen','Worcester','<span class="tag t-ok">Passed</span>','268.5','of 315','Earns 2nd star',0],
+ ['Ben Ortiz','Shrewsbury','<span class="tag t-warn">Make-up</span>','250','so far','Needs: Breaking',0],
+ ['Sofia Reyes','Worcester','<span class="tag">Not finished</span>',after?'262.5':'—',after?'so far':'','Assistant classes not entered yet',1],
+ ['Leo Park','Worcester','<span class="tag">Not finished</span>',after?'187.5':'—',after?'so far':'','Korean Terminology and Breaking not graded yet',1],
+ ['Ava Lin','Shrewsbury','<span class="tag">Not finished</span>','—','','Nothing graded yet',0]];
+ if(mode==='ph') return R.map(r=>`<div class="card"><div class="top"><b>${r[0]}</b>${r[2]}</div><div class="sub">${r[1]} · Total&nbsp;<b class="${r[6]&&after?'chg':''}">${r[3]}${r[4]&&r[4]!=='of 315'?` <span class="sofar">${r[4]}</span>`:''}</b></div><div class="sub">${r[5]}</div></div>`).join('');
+ return `<table><tr><th>Name</th><th>Result</th><th>Total</th><th>Reason</th></tr>`+R.map(r=>`<tr><td><b>${r[0]}</b><div class="sub">${r[1]}</div></td><td>${r[2]}</td><td><div class="num ${r[6]&&after?'chg':''}">${r[3]}<small>${r[4]}</small></div></td><td class="sub">${r[5]}</td></tr>`).join('')+`</table>`;
+};
+const res=(after,mode)=>`<div class="dev ${mode}"><div class="bar"><b>Results</b><span class="pill on">1st Dan</span><span class="pill">2nd Dan</span><span class="sp"></span><span class="pill">Both schools</span></div><div class="body">${rRows(after,mode)}</div></div>`;
+// ---------- GRADING ----------
+const subj=['Forms','Sparring','Breaking','Korean','Knowledge','Asst.'];
+const gRows=(after)=>[
+ ['Maya Chen',['A','A+','B+','A','A','A'],'268.5',1],['Ben Ortiz',['B','B+','D','B+','B','B'],'250',0],
+ ['Sofia Reyes',['A','A','B+','A','B+',''],after?'262.5':'—',2],['Leo Park',['B+','B','','','B+',''],after?'187.5':'—',2]];
+const gt=(v,after,chg)=>v==='—'?'—':(chg===2&&after?`<span class="${'chg'}">${v} <span class="sofar">so far</span></span>`:v);
+const grid=(after)=>`<div class="dev pc"><div class="bar"><b>Grading</b><span class="pill on">1st Dan</span><span class="pill">2nd Dan</span></div><div class="body"><table><tr><th>Name</th>${subj.map(x=>`<th class="c">${x}</th>`).join('')}<th>Total</th><th>Result</th></tr>`+
+ gRows(after).map(r=>`<tr><td><b>${r[0]}</b></td>${r[1].map(g=>`<td class="c"><span class="g ${g===''?'e':g==='D'?'d':''}">${g||'·'}</span></td>`).join('')}<td><b>${gt(r[2],after,r[3])}</b></td><td><span class="tag ${r[0]==='Maya Chen'?'t-ok':r[0]==='Ben Ortiz'?'t-warn':''}">${r[0]==='Maya Chen'?'Passed':r[0]==='Ben Ortiz'?'Make-up · D':r[0]==='Sofia Reyes'?'1 of 6 left':'3 of 6 left'}</span></td></tr>`).join('')+`</table><p class="sub" style="margin:8px 0 0">Result stays "N of 6 left" until every subject is graded — no Passed / Make-up yet.</p></div></div>`;
+const card=(after)=>`<div class="dev ph"><div class="bar"><b>Grading</b><span class="pill on">1st Dan</span></div><div class="body"><div class="card"><div class="top"><b>Sofia Reyes</b><span class="tag">1 of 6 left</span></div><div class="grades">${['Forms:A','Sparring:A','Breaking:B+','Korean:A','Knowl.:B+','Asst.:·'].map(x=>{const[a,b]=x.split(':');return `<div>${a}<br><span class="g ${b==='·'?'e':''}">${b}</span></div>`}).join('')}</div><div class="foot"><span>Asst. classes: <span class="g e">–</span></span><b class="${after?'chg':''}">Total ${after?'262.5 <span class="sofar">so far</span>':'—'}</b></div></div></div></div>`;
+const tabG=(after)=>grid(after).replace('class="dev pc"','class="dev tab"');
+if(s==='results'){document.write(hdr('Results tab — Total while some subjects are not graded','Today an unfinished candidate shows "—". Proposed: show the running total with "so far", like make-ups already do. The tag and reason lines do not change; no Passed / Make-up / email until everything is graded.')+
+ `<div class="row"><div><div class="cap">PC — before</div>${res(0,'pc')}</div><div><div class="cap">PC — after</div>${res(1,'pc')}</div></div>
+  <div class="row"><div><div class="cap">Tablet (820) — after</div>${res(1,'tab')}</div><div><div class="cap">Phone (390) — after</div>${res(1,'ph')}</div></div>
+  <div class="note">Ava Lin has nothing graded, so she stays "—". Candidates testing privately also stay "—".</div>`);}
+else{document.write(hdr('Grading tab — Total while some subjects are not graded','The grades already show in the cells today; only the Total column and the phone card total change.')+
+ `<div class="row"><div><div class="cap">PC — before</div>${grid(0)}</div><div><div class="cap">PC — after</div>${grid(1)}</div></div>
+  <div class="row"><div><div class="cap">Tablet (820) — after</div>${tabG(1)}</div><div><div class="cap">Phone (390) — before</div>${card(0)}</div><div><div class="cap">Phone (390) — after</div>${card(1)}</div></div>`);}
+</script></main></body></html>

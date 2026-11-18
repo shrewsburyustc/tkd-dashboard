@@ -11,6 +11,8 @@
 // Camps comes after Testing (icon ti-tent, contract 0013 §6.1; rulebook v0.229).
 // Schedule comes after Camps (ti-clock, v0.233); Calendar after Schedule (ti-calendar-month, v0.234);
 // Forms after Calendar (ti-clipboard-text, v0.235); Prospects after Forms (ti-address-book, v0.236).
+// Since 2026-11-17 (Jeffrey) Forms is no longer its own entry: it is the second tab inside Prospects
+// (Prospects first), so the rail, the phone bar and the phone's More menu list only Prospects.
 // phone: true = on the phone's bottom bar; the others go under More (ti-menu-2) on a phone
 // (too many sections to fit: Home, Calendar, Prospects, More - rulebook v0.236).
 // Finance (v0.201): icon ti-report-money, LAST on the rail; on phones it is under More.
@@ -20,7 +22,7 @@
 // time it draws; it refills the SAME list (in place) with or without Finance, and the bars, which
 // are drawn again right after, pick it up. (Testing's `pages` are part of its item, so they stay.)
 import {
-  IconAddressBook, IconCalendarMonth, IconCertificate, IconClipboardText, IconClock, IconHome, IconReportMoney, IconStar,
+  IconAddressBook, IconCalendarMonth, IconCertificate, IconClock, IconHome, IconReportMoney, IconStar,
   IconTent, IconAward, IconHammer,
 } from '@tabler/icons-react';
 import { BOARD_BREAKING_ON, STAR_TESTING_ON } from '../lib/features.js';
@@ -41,7 +43,6 @@ const ALL_ITEMS = [
   { id: 'camps', label: 'Camps', Icon: IconTent },
   { id: 'schedule', label: 'Schedule', Icon: IconClock },
   { id: 'calendar', label: 'Calendar', Icon: IconCalendarMonth, phone: true },
-  { id: 'forms', label: 'Forms', Icon: IconClipboardText },
   { id: 'prospects', label: 'Prospects', Icon: IconAddressBook, phone: true },
   { id: 'finance', label: 'Finance', Icon: IconReportMoney },
 ];

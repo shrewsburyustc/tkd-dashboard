@@ -1,9 +1,18 @@
 # Star Testing — status and next steps
 
-**Updated:** 2026-11-05 (Star testing worktree session — event end time built (v0.520), migration 0041 live 2026-11-05, app pushed (main 8d884cc); rolling check pass 1 started: plan written, migration 0038 reserved, S-1 decided v0.519; before that: Design Review part 1 committed (30c0b45, v0.517); part 2 committed (289f773, v0.518); **migration 0028 live 2026-10-28** (checks and tests pass), so both parts can merge; count cards on the shared CountCards, so the design-review list is fully built)
+**Updated:** 2026-11-17 (partial scores built on branch `claude/star-partial-scores-25818f`, v0.524, not merged or pushed; before that, 2026-11-05: Star testing worktree session — event end time built (v0.520), migration 0041 live 2026-11-05, app pushed (main 8d884cc); rolling check pass 1 started: plan written, migration 0038 reserved, S-1 decided v0.519; before that: Design Review part 1 committed (30c0b45, v0.517); part 2 committed (289f773, v0.518); **migration 0028 live 2026-10-28** (checks and tests pass), so both parts can merge; count cards on the shared CountCards, so the design-review list is fully built)
 **Rulebook at this update:** v0.520 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.130, v0.137–v0.146, v0.148–v0.156, v0.158–v0.177, v0.222–v0.223, v0.248–v0.253, v0.500–v0.520 (Star's block is 0.500–0.599 since v0.300; v0.224 is Black Belt's, v0.225–v0.228 Color Belt's, v0.229–v0.237 Camps', v0.233–v0.247 Prospects' working copy — Star's uncommitted R3–R4b rows were renumbered twice, last from 0.229–0.232); v0.147 and v0.157 are Color Belt's) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html`, `TKD-StarTesting-Events-Mockups.html`, `TKD-StarTesting-Form-Mockups.html`, `TKD-StarTesting-Candidates-Mockups.html`, `TKD-StarTesting-Grading-Mockups.html`, `TKD-StarTesting-Results-Mockups.html`, `TKD-StarTesting-Private-Mockups.html`, `TKD-StarTesting-Home-Mockups.html` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Star testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
+
+---
+
+## Partial scores (2026-11-17, v0.524) — built, waiting for review and merge
+
+Why: a Star event was graded in real use while Assistant classes were still empty, and the Total showed "—" until every subject was graded. Jeffrey saw the picture (`Partial scores mockups/`) and said "OK, build it".
+What changed (app only, no migration — the database already sends the running `total` and `graded_count`): `totalText()` in `src/lib/star/gradingCore.js` now shows "N so far" for any candidate with at least one graded subject (before: only make-ups). That one function feeds the Grading grid, the phone grade card, the Results list and the printed sheet. Nothing graded and Testing privately still show "—". The result tag is unchanged ("N of M left" / "Not finished"), so no Passed / Make-up, no Email result, no Mark as sent early. On the phone card "so far" sits on the same line (one CSS rule in `grading.css`).
+Checks: `gradingChecks.mjs` (Ava Reed now "122.5 so far", Mia / Lily still "—") and `resultsChecks.mjs` (Ben: "so far"). Preview checked at 1280, 820, 390 and 320 as admin and staff, with Hide private details on.
+Rulebook: v0.524 (10b row + changelog line). Not committed to main, not pushed; the separate pass-3 fix list (`Fix-Star.md` on `design-review`) was not touched.
 
 ---
 

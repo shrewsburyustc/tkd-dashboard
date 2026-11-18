@@ -73,8 +73,7 @@ import Testing, { showPrivateTestingTabNext } from './screens/Testing.jsx';
 import Camps from './screens/Camps.jsx';
 import Schedule from './screens/Schedule.jsx';
 import Calendar from './screens/Calendar.jsx';
-import Forms from './screens/Forms.jsx';
-import Prospects from './screens/Prospects.jsx';
+import ProspectsSection from './screens/ProspectsSection.jsx'; // Prospects | Forms, one section since 2026-11-17
 import Finance from './screens/Finance.jsx';
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePrivateDetailsHidden } from './lib/privateDetails.js';
@@ -114,14 +113,14 @@ const PAGE_TITLES = {
   locked: 'Locked · U.S. Taekwondo Center',
 };
 
-// While the dashboard is open ('home' phase) the title names the open section instead.
+// While the dashboard is open ('home' phase) the title names the open section instead. (The Forms tab of
+// Prospects is titled "Forms" — see the effect that sets document.title.)
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
   camps: 'Camps · U.S. Taekwondo Center',
   schedule: 'Schedule · U.S. Taekwondo Center',
   calendar: 'Calendar · U.S. Taekwondo Center',
-  forms: 'Forms · U.S. Taekwondo Center',
   prospects: 'Prospects · U.S. Taekwondo Center',
   finance: 'Finance · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
@@ -189,8 +188,8 @@ export default function App() {
   });
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  // Which page is open: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' |
-  // 'prospects' | 'finance' | 'staffAccounts' | 'settings'. Staff accounts isn't a rail section
+  // Which page is open: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' |
+  // 'prospects' (with its Prospects | Forms tabs, kept in eventTab) | 'finance' | 'staffAccounts' | 'settings'. Staff accounts isn't a rail section
   // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
   // It starts from the address in the browser bar (v0.83): a reload, a bookmark or a link to
   // ".../#testing" opens Testing once the person is signed in and unlocked.
@@ -209,8 +208,7 @@ export default function App() {
   const [campsModalOpen, setCampsModalOpen] = useState(false); // a Camps dialog is showing
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
   const [calendarModalOpen, setCalendarModalOpen] = useState(false); // a Calendar dialog is showing
-  const [formsModalOpen, setFormsModalOpen] = useState(false); // a Forms dialog is showing
-  const [prospectsModalOpen, setProspectsModalOpen] = useState(false); // a Prospects dialog is showing
+  const [prospectsModalOpen, setProspectsModalOpen] = useState(false); // a Prospects or Forms dialog is showing (one section)
   const [prospectsCount, setProspectsCount] = useState(0); // the rail badge: new sign-ups I haven't opened (v0.244)
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
@@ -855,6 +853,15 @@ export default function App() {
     setEventTab(next);
   }, []);
 
+  // Prospects | Forms: the same page, so no new history step (Back still leaves the section; a reload keeps the tab).
+  const changeProspectsTab = useCallback((tab) => {
+    const next = routeTab('prospects', null, null, tab);
+    const route = { section: 'prospects', testingPage: null, eventId: null, eventTab: next, privateId: null };
+    window.history.replaceState(window.history.state, '', addressForRoute(route));
+    setEventTab(next);
+    eventTabRef.current = next;
+  }, []);
+
   // ----- Browser Back / Forward (rulebook v0.83) -----
   // 'popstate' = the browser moved to another step of its history (Back, Forward, or an address
   // typed by hand). Read the page from the new address and follow it — except:
@@ -1075,8 +1082,9 @@ export default function App() {
   // Keep the browser tab title in step with the screen (and, on the dashboard, the section).
   useEffect(() => {
     const testingTitle = section === 'testing' && (STAR_TESTING_ON || testingPage === 'blackBelt') ? TESTING_PAGE_TITLES[testingPage] : null;
-    document.title = phase === 'home' ? (testingTitle ?? SECTION_TITLES[section]) : PAGE_TITLES[phase];
-  }, [phase, section, testingPage]);
+    const formsTab = section === 'prospects' && eventTab === 'forms';
+    document.title = phase === 'home' ? (testingTitle ?? (formsTab ? 'Forms · U.S. Taekwondo Center' : SECTION_TITLES[section])) : PAGE_TITLES[phase];
+  }, [phase, section, testingPage, eventTab]);
 
   // ----- Drawing -----
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
@@ -1097,7 +1105,7 @@ export default function App() {
   }, [phase, profile, section, refreshBadge]);
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || scheduleModalOpen || calendarModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
   // Finance is in the rail / bottom bar unless payments are hidden on this device (navItems.js).
   showFinanceInNav(!paymentsHidden);
 
@@ -1253,24 +1261,13 @@ export default function App() {
                 onModalOpenChange={setCalendarModalOpen}
               />
             )}
-            {section === 'forms' && (
-              <Forms
-                location={location}
-                profile={profile}
-                // For showing or hiding controls only — the database decides what may change.
-                isAdmin={profile.role === 'admin'}
-                screenLocked={phase === 'locked'}
-                onNoAccess={handleNoAccess}
-                onRefreshProfile={refreshProfile}
-                showToast={showToast}
-                clearToast={clearToast}
-                onModalOpenChange={setFormsModalOpen}
-              />
-            )}
             {section === 'prospects' && (
-              <Prospects
+              <ProspectsSection
+                tab={eventTab}
+                onTab={changeProspectsTab}
                 location={location}
                 staffId={profile.id}
+                profile={profile}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
                 // "Printed … by [name]" on the visitor sheet (rulebook v0.636), as Finance's report

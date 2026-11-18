@@ -57,7 +57,7 @@ function Tag({ result }) {
   );
 }
 
-// The Total: "280", a make-up's "250 so far" (the "so far" in gray), or "—".
+// The Total: "280", the running "250 so far" (the "so far" in gray), or "—" when nothing is graded.
 function Total({ row }) {
   const text = resultsTotalText(row.result, row.isMakeup);
   if (!text.endsWith(' so far')) return text;

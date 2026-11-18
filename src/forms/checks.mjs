@@ -99,7 +99,7 @@ group('preview database: forms_public_get / forms_public_submit', () => {
   const versionId = randomUUID();
   const schedule = { versions: [{ id: versionId, location_code: 'worcester', starts_on: '2026-01-01' }],
     slots: [{ id: randomUUID(), version_id: versionId, weekday: 3, starts_at: '16:00:00', ends_at: '16:40:00', class_ids: [classes[0].id] }] };
-  let store = { schema: 3, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
+  let store = { schema: 4, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], statuses: [], prospects: [], notes: [], activity: [], opens: [] };
   const b = createFormsBackend({
     loadStore: () => store, saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); }, now: () => Date.parse('2027-01-11T13:00:00Z'), newId: randomUUID,
     getSchedule: () => schedule, getCalendar: () => ({ closures: [], closureClasses: [] }), getClasses: () => classes, today: () => '2027-01-11',
