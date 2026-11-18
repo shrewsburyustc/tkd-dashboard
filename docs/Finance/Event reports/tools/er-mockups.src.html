@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event money reports and paid dates · mockups</title>
+<!--
+  Event money reports (one report per event) and paid dates on every roster: mockups BEFORE building
+  (Jeffrey's rule: new things are drawn first). Four pictures:
+    ER1  where the report lives (three choices) and who sees it
+    ER2  one camp's report at PC 1280, tablet 820, phone 390 and small phone 320, plus the other layout
+    ER3  a Star testing event on Both schools, and Private testing (which has no single event)
+    PD1  the paid date on the Camps, Board Breaking and Black Belt rosters
+  Amber dashed outline = what is new. Amber text = a proposal to confirm. Sample data only (made-up names).
+  Open with #ER1, #ER2, #ER3 or #PD1 at the end of the address to see one picture alone.
+  Source: docs/Finance/Event reports/tools/er-mockups.src.html — built into one self-contained file by build.mjs.
+-->
+<style>
+/*BASECSS*/
+/*ICONS*/
+/* ----- things only these mockups need ----- */
+main{max-width:1700px}
+.shot{width:1660px}
+.row2{flex-wrap:nowrap}
+.bk{display:inline-flex;align-items:center;gap:6px;color:var(--blue);font-size:13px;margin-bottom:4px}
+.bk i{font-size:16px}
+.ph-sub{color:var(--text2);font-size:13px;margin:0 0 12px}
+.pagehead{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pagehead .ptitle{margin:0}
+.pagehead .grow{flex:1}
+.d-sm{width:332px;border-radius:24px;border:6px solid #2B2B2B}
+.d-sm .content{padding:12px}
+.zw{zoom:.6}
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.pairs h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.sch{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.d-ph .sch,.d-sm .sch{grid-template-columns:1fr}
+.sch .card .n{font-size:18px}
+.sch .meta{font-size:12px;color:var(--text2);margin-top:2px}
+.dtable td.chev{width:32px;color:var(--text2)}
+.dtable tr.dayrow2 td{height:44px;cursor:pointer}
+.touch .dtable tr.dayrow2 td{height:52px}
+.dtable tr.open td{background:var(--surface);border-bottom-color:var(--border-strong)}
+.dtable tr.expand td{padding:0 0 8px;background:var(--surface);height:auto}
+.dtable tr.total td{font-weight:500;background:var(--bg);border-top:1px solid var(--border-strong)}
+.inner{padding:0 12px}
+.inner table th{background:transparent}
+.inner table td{height:34px;background:transparent}
+.touch .inner table td{height:44px}
+.dcard{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.dcard .hd{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;min-height:56px}
+.dcard .hd b{display:block}
+.dcard.open .hd{background:var(--surface);border-bottom:1px solid var(--border)}
+.dcard .bd{padding:0 12px}
+.blk{margin-bottom:24px}
+.blk .bh{display:flex;align-items:baseline;gap:8px;font-size:15px;font-weight:500;margin:0 0 4px;flex-wrap:wrap}
+.blk .bh span{font-weight:400;color:var(--text2);font-size:13px}
+.sch-tag{font-size:11px;color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:0 6px;margin-left:6px;white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chips span{font-size:12px;border:1px solid var(--control-border);border-radius:8px;height:32px;display:inline-flex;align-items:center;padding:0 12px}
+.chips span.on{background:var(--blue-tint);color:var(--blue);border-color:var(--blue)}
+.hidden-note{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text2);display:flex;gap:8px;align-items:center}
+.chipHidden{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--control-border);border-radius:8px;height:32px;padding:0 10px;font-size:12px;background:var(--surface);color:var(--text2)}
+.pill{font-size:12px;border-radius:6px;padding:1px 8px;white-space:nowrap}
+.good{font-size:12px;color:var(--ok)}
+.cbtn{height:30px;padding:0 10px;border:1px solid var(--control-border);border-radius:8px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);white-space:nowrap}
+.touch .cbtn{height:36px}
+.rost td{vertical-align:middle}
+.rost .nm{font-weight:500}
+.rcard{border-bottom:1px solid var(--border);padding:10px 0;display:flex;gap:8px;justify-content:space-between;min-height:56px}
+.rcard .l1{font-weight:500;font-size:14px}
+.rcard .l2{font-size:12px;color:var(--text2);margin-top:2px}
+.days{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.cap2{font-size:12px;color:var(--text2);margin:0 0 6px}
+</style>
+</head>
+<body>
+<main>
+<h1 class="doc">Event money reports · paid dates on rosters — mockups before building</h1>
+<p class="lead">Nothing is built yet. Each picture shows what is new inside an amber dashed outline. Sample data only.</p>
+<div id="screens"></div>
+</main>
+<script>
+// ===================== helpers =====================
+const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const H = { pc: 800, tab: 1180, ph: 844, sm: 640 };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WDAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const dt = (iso) => new Date(iso + 'T12:00:00');
+const md = (iso) => `${MONTHS[dt(iso).getMonth()]} ${dt(iso).getDate()}`;
+const wmd = (iso) => `${WDAY[dt(iso).getDay()]}, ${md(iso)}`;
+const p = (n) => `${n} payment${n === 1 ? '' : 's'}`;
+const touch = (d) => d !== 'pc';
+
+function shell(d, o) {
+  const { section = 'camps', loc = 'Both', body = '', av = 'JB', chip = false } = o;
+  const nav = [['home','Home','home'],['certificate','Testing','testing'],['tent','Camps','camps'],['clock','Schedule','schedule'],['calendar-month','Calendar','calendar'],['address-book','Prospects','prospects'],['hammer','Board breaking','breaking'],['report-money','Finance','finance']];
+  const locs = d === 'pc' || d === 'tab' ? [['Worcester','Worcester'],['Shrewsbury','Shrewsbury'],['Both','Both']] : [['Worcester','Worc.'],['Shrewsbury','Shrew.'],['Both','Both']];
+  const locHtml = `<div class="loc">${locs.map(([k, l], i) => `<span class="${k === loc ? 'on' : ''}">${i === 0 && (d === 'pc' || d === 'tab') ? '<i class="ti ti-map-pin"></i>' : ''}${l}</span>`).join('')}</div>`;
+  const chipHtml = chip ? `<span class="chipHidden"><i class="ti ti-eye-off"></i>${d === 'ph' || d === 'sm' ? '' : 'Payments hidden'}</span>` : '';
+  if (d === 'ph' || d === 'sm') {
+    const phNav = [['home','Home','home'],['calendar-month','Calendar','calendar'],['address-book','Prospects','prospects'],['menu-2','More','more']];
+    return `<div class="phshell" style="min-height:${o.minH ?? (H[d] - 12)}px"><div class="topbar">${locHtml}<span class="grow"></span>${chipHtml}<span class="avatar">${av}</span></div>
+      <div class="content" style="position:relative">${body}</div>
+      <div class="phbar">${phNav.map(([i, l, id]) => `<a class="${id === 'more' ? 'on' : ''}"><i class="ti ti-${i}"></i>${l}</a>`).join('')}</div></div>`;
+  }
+  const rail = d === 'pc'
+    ? `<nav class="rail">${nav.map(([i, l, id]) => `<a class="${id === section ? 'on' : ''}"><i class="ti ti-${i}"></i></a>`).join('')}</nav>`
+    : `<nav class="rail-t">${nav.slice(0, 8).map(([i, l, id]) => `<a class="${id === section ? 'on' : ''}"><i class="ti ti-${i}"></i>${l.length > 9 ? l.split(' ')[0] : l}</a>`).join('')}</nav>`;
+  return `<div class="app" style="min-height:${o.minH ?? (H[d] - (d === 'pc' ? 2 : 12))}px">${rail}<div class="app-col"><div class="topbar"><span class="grow"></span>${chipHtml}${locHtml}<span class="avatar">${av}</span></div><div class="content">${body}</div></div></div>`;
+}
+const dev = (d, o) => `<div class="dev d-${d} ${touch(d) ? 'touch' : ''}">${shell(d, o)}</div>`;
+const cap = (t) => `<div class="cap">${t}</div>`;
+
+// ===================== the report =====================
+// A payment: day, t (time), name, school, m (Cash / Check / Card), amt (negative = refund), by, state ('counted' | 'undone' | 'edited'), was (edited from), what
+const counted = (r) => r.state !== 'undone';
+function sum(rows, f = () => true) { return rows.filter((r) => counted(r) && f(r)).reduce((t, r) => t + r.amt, 0); }
+function cnt(rows, f = () => true) { return rows.filter((r) => counted(r) && f(r)).length; }
+const METHODS = ['Cash', 'Check', 'Card'];
+
+function cards(rows) {
+  const ins = (r) => r.amt > 0;
+  const refunds = rows.filter((r) => counted(r) && r.amt < 0);
+  const c = (icon, label, m) => {
+    const f = m ? (r) => ins(r) && r.m === m : ins;
+    return `<div class="card"><div class="l"><i class="ti ti-${icon}"></i>${label}</div><div class="n">${money(sum(rows, f))}</div><div class="s">${p(cnt(rows, f))}</div></div>`;
+  };
+  return `<div class="cards">${c('sum', 'Total taken')}${c('cash', 'Cash', 'Cash')}${c('receipt', 'Check', 'Check')}${c('credit-card', 'Card', 'Card')}</div>
+    <div class="hint" style="margin:-4px 0 16px">${refunds.length ? `Refunded ${money(sum(rows, (r) => r.amt < 0))} · ${refunds.length} refund${refunds.length === 1 ? '' : 's'} · ` : ''}<b style="color:var(--text)">Net ${money(sum(rows))}</b></div>`;
+}
+function schoolBoxes(rows) {
+  const box = (s) => {
+    const f = (r) => r.school === s;
+    const ins = (r) => f(r) && r.amt > 0;
+    return `<div class="card"><div class="l"><i class="ti ti-map-pin"></i>${s}</div><div class="n">${money(sum(rows, f))}</div>
+      <div class="meta">${p(cnt(rows, ins))} · Cash ${money(sum(rows, (r) => ins(r) && r.m === 'Cash'))} · Check ${money(sum(rows, (r) => ins(r) && r.m === 'Check'))} · Card ${money(sum(rows, (r) => ins(r) && r.m === 'Card'))}</div></div>`;
+  };
+  return `<div class="sch">${box('Worcester')}${box('Shrewsbury')}</div>`;
+}
+const tagFor = (r) => r.state === 'undone' ? ' <span class="tag neutral">Undone</span>' : r.state === 'edited' ? ' <span class="tag neutral">Edited</span>' : '';
+const subFor = (r) => r.state === 'undone' ? '<div class="sub small">Undone by Jeffrey · not counted</div>' : r.state === 'edited' ? `<div class="sub small">Was ${money(r.was)} · edited by Jeffrey</div>` : '';
+const schTag = (r, both) => both ? `<span class="sch-tag">${r.school}</span>` : '';
+
+// The payments of one day, grouped Cash / Check / Card / Refunds (Finance's own grouping, v0.807 + v0.209 "Own group")
+function dayLines(d, rows, both, forCol) {
+  const groups = [...METHODS.map((m) => ({ name: m, rows: rows.filter((r) => r.amt > 0 && r.m === m) })), { name: 'Refunds', rows: rows.filter((r) => r.amt < 0) }].filter((g) => g.rows.length);
+  const head = (g) => { const c = g.rows.filter(counted); return `${g.name} <span class="sub" style="font-weight:400">· ${p(c.length)} · ${money(c.reduce((t, r) => t + r.amt, 0))}</span>`; };
+  if (d === 'ph' || d === 'sm') {
+    return groups.map((g) => `<div class="pgrp">${head(g)}</div>` + g.rows.map((r) => `<div class="pc"><div><span class="${r.state === 'undone' ? 'strike' : ''}">${r.name}</span>${tagFor(r)}${schTag(r, both)}<div class="sub small">${r.t}${forCol ? ' · ' + r.what : ''} · ${r.by}</div>${subFor(r)}</div><div class="r"><span class="${r.state === 'undone' ? 'strike' : ''}">${money(r.amt)}</span></div></div>`).join('')).join('');
+  }
+  const cols = (d === 'tab' ? 4 : 5) + (forCol ? 1 : 0);
+  return `<table><thead><tr><th style="width:84px">Time</th><th>${'Student'}</th>${forCol ? '<th>For</th>' : ''}${both ? '<th style="width:110px">School</th>' : ''}<th class="r" style="width:100px">Amount</th>${d === 'pc' ? '<th style="width:140px;padding-left:24px">Recorded by</th>' : ''}</tr></thead><tbody>${groups.map((g) => `<tr class="grp"><td colspan="${cols + (both ? 1 : 0)}">${head(g)}</td></tr>` + g.rows.map((r) => `<tr><td class="sub">${r.t}</td><td><span class="${r.state === 'undone' ? 'strike' : ''}">${r.name}</span>${tagFor(r)}${subFor(r)}</td>${forCol ? `<td class="sub">${r.what}</td>` : ''}${both ? `<td class="sub">${r.school}</td>` : ''}<td class="r"><span class="${r.state === 'undone' ? 'strike' : ''}">${money(r.amt)}</span></td>${d === 'pc' ? `<td class="sub" style="padding-left:24px">${r.by}</td>` : ''}</tr>`).join('')).join('')}</tbody></table>`;
+}
+
+function byDay(rows) {
+  const days = [...new Set(rows.map((r) => r.day))].sort();
+  return days.map((day) => ({ day, rows: rows.filter((r) => r.day === day) }));
+}
+
+// Layout B (recommended): one row per day, tap a day to open its payments
+function dayTable(d, rows, o = {}) {
+  const { both = true, open = null, forCol = false, qTable = false } = o;
+  const days = byDay(rows);
+  const ins = (r) => r.amt > 0;
+  if (d === 'ph' || d === 'sm') {
+    return `<div class="${qTable ? 'q' : ''}" style="padding:2px">${days.map(({ day, rows: rs }) => {
+      const isOpen = day === open;
+      const parts = METHODS.map((m) => [m, sum(rs, (r) => ins(r) && r.m === m)]).filter(([, v]) => v).map(([m, v]) => `${m} ${money(v)}`).join(' · ');
+      const ref = sum(rs, (r) => r.amt < 0);
+      return `<div class="dcard ${isOpen ? 'open' : ''}"><div class="hd"><div><b>${wmd(day)}</b><div class="sub small">${p(cnt(rs))}${parts ? ' · ' + parts : ''}${ref ? ' · Refunded ' + money(ref) : ''}</div></div><div style="text-align:right;white-space:nowrap"><b>${money(sum(rs))}</b><div class="sub"><i class="ti ti-chevron-${isOpen ? 'up' : 'down'}"></i></div></div></div>${isOpen ? `<div class="bd">${dayLines(d, rs, both, forCol)}</div>` : ''}</div>`;
+    }).join('')}<div class="dcard"><div class="hd" style="background:var(--surface)"><b>All days</b><b>${money(sum(rows))}</b></div></div></div>`;
+  }
+  const wide = d === 'pc';
+  const head = `<tr><th></th><th>Day</th><th class="r">Payments</th><th class="r">Cash</th><th class="r">Check</th><th class="r">Card</th>${wide ? '<th class="r">Refunds</th>' : ''}<th class="r">Day total</th></tr>`;
+  const money0 = (v) => (v ? money(v) : '<span class="sub">—</span>');
+  const body = days.map(({ day, rows: rs }) => {
+    const isOpen = day === open;
+    return `<tr class="dayrow2 ${isOpen ? 'open' : ''}"><td class="chev"><i class="ti ti-chevron-${isOpen ? 'down' : 'right'}"></i></td><td><b style="font-weight:500">${wmd(day)}</b></td><td class="r">${cnt(rs, ins)}</td><td class="r">${money0(sum(rs, (r) => ins(r) && r.m === 'Cash'))}</td><td class="r">${money0(sum(rs, (r) => ins(r) && r.m === 'Check'))}</td><td class="r">${money0(sum(rs, (r) => ins(r) && r.m === 'Card'))}</td>${wide ? `<td class="r">${money0(sum(rs, (r) => r.amt < 0))}</td>` : ''}<td class="r"><b style="font-weight:500">${money(sum(rs))}</b></td></tr>` +
+      (isOpen ? `<tr class="expand"><td colspan="${wide ? 8 : 7}"><div class="inner">${dayLines(d, rs, both, forCol)}</div></td></tr>` : '');
+  }).join('');
+  const tot = `<tr class="total"><td></td><td>All days</td><td class="r">${cnt(rows, ins)}</td><td class="r">${money(sum(rows, (r) => ins(r) && r.m === 'Cash'))}</td><td class="r">${money(sum(rows, (r) => ins(r) && r.m === 'Check'))}</td><td class="r">${money(sum(rows, (r) => ins(r) && r.m === 'Card'))}</td>${wide ? `<td class="r">${money0(sum(rows, (r) => r.amt < 0))}</td>` : ''}<td class="r">${money(sum(rows))}</td></tr>`;
+  return `<table class="dtable ${qTable ? 'q' : ''}"><thead>${head}</thead><tbody>${body}${tot}</tbody></table>`;
+}
+
+// Layout A: every day is a full block, like Finance's own Daily report repeated
+function dayBlocks(d, rows, o = {}) {
+  const { both = true, forCol = false, onlyDays = null } = o;
+  return byDay(rows).filter(({ day }) => !onlyDays || onlyDays.includes(day)).map(({ day, rows: rs }) => `<div class="blk"><div class="bh">${wmd(day)}<span>· ${p(cnt(rs))} · net ${money(sum(rs))}</span></div>${dayLines(d, rs, both, forCol)}</div>`).join('');
+}
+
+function pageHead(d, o) {
+  const { back, title = 'Money report', sub, print = true } = o;
+  const btns = d === 'ph' || d === 'sm'
+    ? `<span class="ibtn plain"><i class="ti ti-dots"></i></span>`
+    : `<span class="btn"><i class="ti ti-printer"></i>Print</span>`;
+  return `<div class="bk"><i class="ti ti-arrow-left"></i>${back}</div><div class="pagehead"><div><h1 class="ptitle">${title}</h1><div class="ph-sub">${sub}</div></div><span class="grow"></span>${print ? btns : ''}</div>`;
+}
+
+function report(d, o) {
+  const { rows, both = true, layout = 'B', open, forCol = false, back, sub, title, header = '' } = o;
+  return pageHead(d, { back, title, sub }) + header + cards(rows) + (both ? `<div class="lbl" style="margin-top:4px">By school</div>${schoolBoxes(rows)}` : '') +
+    `<div class="lbl">By day</div>` + (layout === 'B' ? dayTable(d, rows, { both, open, forCol }) : dayBlocks(d, rows, { both, forCol }));
+}
+
+// ===================== sample data =====================
+const R = (day, t, name, school, m, amt, by = 'Staff', extra = {}) => ({ day, t, name, school, m, amt, by, state: 'counted', what: '', ...extra });
+const CAMP = [
+  R('2027-03-25', '10:12 AM', 'Ava Thompson', 'Worcester', 'Card', 335, 'Jeffrey'),
+  R('2027-03-25', '11:40 AM', 'Emma Garcia', 'Shrewsbury', 'Cash', 335),
+  R('2027-03-29', '9:05 AM', 'Isla Moore', 'Worcester', 'Check', 219),
+  R('2027-04-02', '10:30 AM', 'Jack Murphy', 'Worcester', 'Card', 335, 'Jeffrey'),
+  R('2027-04-02', '12:15 PM', 'Leo Kim', 'Shrewsbury', 'Cash', 320),
+  R('2027-04-02', '12:20 PM', 'Noah Reyes', 'Worcester', 'Cash', 335, 'Staff', { state: 'undone' }),
+  R('2027-04-12', '9:48 AM', 'Liam Ortiz', 'Shrewsbury', 'Check', 335),
+  R('2027-04-12', '4:02 PM', 'Zoe Patel', 'Shrewsbury', 'Card', 300, 'Staff', { state: 'edited', was: 335 }),
+  R('2027-04-19', '8:50 AM', 'Mia Rossi', 'Worcester', 'Cash', 166),
+  R('2027-04-19', '3:10 PM', 'Emma Garcia', 'Shrewsbury', 'Cash', -100, 'Jeffrey'),
+];
+const STAR = [
+  R('2026-11-02', '4:20 PM', 'Ben Alvarez', 'Worcester', 'Cash', 140),
+  R('2026-11-02', '4:45 PM', 'Chloe Nguyen', 'Shrewsbury', 'Check', 140),
+  R('2026-11-05', '5:10 PM', 'Dylan Park', 'Worcester', 'Card', 140, 'Jeffrey'),
+  R('2026-11-05', '5:30 PM', 'Ella Brooks', 'Shrewsbury', 'Cash', 140),
+  R('2026-11-14', '9:25 AM', 'Finn Walsh', 'Worcester', 'Check', 120, 'Staff', { state: 'edited', was: 140 }),
+  R('2026-11-14', '9:05 AM', 'Grace Silva', 'Shrewsbury', 'Cash', 140),
+  R('2026-11-14', '9:12 AM', 'Hugo Chen', 'Worcester', 'Card', 140, 'Jeffrey'),
+  R('2026-11-14', '9:40 AM', 'Ivy Kim', 'Worcester', 'Cash', 140, 'Staff', { state: 'undone' }),
+  R('2026-11-16', '10:15 AM', 'Dylan Park', 'Worcester', 'Card', -140, 'Jeffrey'),
+];
+const PRIV = [
+  R('2026-11-04', '5:05 PM', 'Maya Ross', 'Worcester', 'Cash', 95, 'Staff', { what: 'Private test · Nov 12' }),
+  R('2026-11-04', '5:20 PM', 'Owen Price', 'Worcester', 'Check', 95, 'Staff', { what: 'Private test · Nov 12' }),
+  R('2026-11-10', '4:40 PM', 'Nina Cho', 'Worcester', 'Card', 110, 'Jeffrey', { what: 'Private test · Nov 19' }),
+  R('2026-11-17', '6:10 PM', 'Theo Grant', 'Worcester', 'Cash', 95, 'Staff', { what: 'Private test · Nov 24' }),
+  R('2026-11-17', '6:25 PM', 'Maya Ross', 'Worcester', 'Cash', -95, 'Jeffrey', { what: 'Private test · Nov 12' }),
+];
+
+// ===================== screens =====================
+const SCREENS = [];
+const S = (id, title, explain, render) => SCREENS.push({ id, title, explain, render });
+
+// ---- ER1 ----
+function campHead(d, o = {}) {
+  const { button = false, hidden = false } = o;
+  const b = button ? '<span class="btn q"><i class="ti ti-report-money"></i>Money report</span>' : '';
+  return `<div class="bk"><i class="ti ti-arrow-left"></i>Camps</div><div class="pagehead"><div><h1 class="ptitle">April Vacation Camp <span class="tag neutral" style="font-weight:400;vertical-align:middle">Not open yet</span></h1><div class="ph-sub">Mon, Apr 19 – Fri, Apr 23, 2027 · 9:00 AM – 3:00 PM · Both schools · 9 campers</div></div><span class="grow"></span>${b}<span class="btn">Fill in</span><span class="btn btn-primary"><i class="ti ti-qrcode"></i>Registration link</span><span class="ibtn plain"><i class="ti ti-dots"></i></span></div>
+  <div class="cards"><div class="card"><div class="l"><i class="ti ti-users"></i>Campers</div><div class="n">9</div></div><div class="card"><div class="l"><i class="ti ti-calendar"></i>Coming Mon, Apr 19</div><div class="n">8</div></div><div class="card"><div class="l"><i class="ti ti-sum"></i>To collect</div><div class="n">2</div><div class="s">$181</div></div><div class="card"><div class="l"><i class="ti ti-sum"></i>Payments recorded</div><div class="n">$2,245</div></div></div>
+  <table><thead><tr><th>Camper</th><th>Paid</th><th class="r">&nbsp;</th></tr></thead><tbody><tr><td>Ava Thompson · 8</td><td><span class="tag ok">Paid</span></td><td></td></tr><tr><td>Emma Garcia · 7</td><td><span class="tag ok">Paid</span></td><td></td></tr><tr><td>Leo Kim · 11</td><td><span class="tag warn">Owes $15</span></td><td></td></tr></tbody></table>`;
+}
+function cbHead(tabQ) {
+  return `<div class="bk"><i class="ti ti-arrow-left"></i>Color belt testing</div><div class="pagehead"><div><h1 class="ptitle">Fall color belt testing</h1><div class="ph-sub">Thu, Oct 29, 2026 · Worcester · 31 students</div></div></div>
+  <div class="ttabs"><span class="ttab on">Roster</span><span class="ttab">Grading</span><span class="ttab ${tabQ ? 'q' : ''}" style="${tabQ ? 'padding:0 8px' : ''}">${tabQ ? '<i class="ti ti-report-money" style="margin-right:6px"></i>' : ''}Money</span></div>
+  <table><thead><tr><th>Student</th><th>Class</th><th>Paid</th></tr></thead><tbody><tr><td>Mia Chen</td><td class="sub">Orange belt</td><td><span class="tag ok">Paid</span></td></tr><tr><td>Lucas Patel</td><td class="sub">Orange belt</td><td><span class="tag ok">Paid</span></td></tr><tr><td>Noah Kim</td><td class="sub">Green belt</td><td><span class="tag neutral">Not paid</span></td></tr></tbody></table>`;
+}
+function financeEvents() {
+  const ev = [['April Vacation Camp','Camps','Mar 25 – Apr 19','Both','9','$2,245.00'],['Thanksgiving Camp','Camps','Nov 12 – Nov 17','Worcester','13','$1,815.00'],['Fall Star Test','Star testing','Nov 2 – Nov 16','Both','8','$720.00'],['Fall color belt testing','Color belt testing','Oct 12 – Oct 29','Worcester','27','$1,755.00'],['Spring Black Belt cycle','Black Belt','Sep 3 – Nov 10','Both','14','$18,900.00'],['Fall Board Breaking','Board breaking','Nov 1 – Nov 25','Shrewsbury','12','$198.50']];
+  return `<h1 class="ptitle">Finance</h1><div class="ttabs"><span class="ttab">Daily report</span><span class="ttab on q" style="padding:0 8px">Events</span><span class="ttab">Settings</span></div>
+  <div class="chips"><span class="on">All</span><span>Color belt</span><span>Star</span><span>Black Belt</span><span>Camps</span><span>Board breaking</span><span>Private testing</span></div>
+  <table><thead><tr><th>Event</th><th>Section</th><th>Money taken</th><th>School</th><th class="r">Payments</th><th class="r">Net total</th></tr></thead><tbody>${ev.map((r) => `<tr><td><b style="font-weight:500">${r[0]}</b></td><td class="sub">${r[1]}</td><td class="sub">${r[2]}</td><td class="sub">${r[3]}</td><td class="r">${r[4]}</td><td class="r">${r[5]}</td></tr>`).join('')}</tbody></table>`;
+}
+
+S('ER1', 'Where an event’s money report lives, and who sees it', `
+  <h3>What this picture is for</h3>
+  <ul><li>Three places the report could be opened from. The amber outline marks the new part in each.</li>
+  <li><b>A</b> — a <b>Money report</b> button in the header of every event page (camp, Star event, Black Belt cycle, Color belt event, Board Breaking event). The same button and words everywhere. It opens the report as its own page with a back link (pictures ER2 and ER3). <span class="prop">Recommended: it is “inside each event”, as your boss asked, and it works on pages that have no tabs.</span></li>
+  <li><b>B</b> — a <b>Money</b> tab beside Roster / Grading. Good where tabs already exist; Camps and Board Breaking have no tabs, so those two would still need something different.</li>
+  <li><b>C</b> — an <b>Events</b> tab inside Finance: a list of every event with its net total; click one to open its report. One place for the owner, nothing to add on the event pages, but the owner has to leave the event to see it.</li>
+  <li><b>D (bottom right)</b> — who sees it: <span class="prop">admins only, like Finance. Staff logins don’t get the button at all, and with “Hide private details” on (the gray chip) the button disappears on admin logins too.</span></li></ul>`,
+  () => `<div class="pairs">
+    <div><h3>A · Money report button (recommended)</h3><div class="zw">${dev('pc', { section: 'camps', minH: 520, body: campHead('pc', { button: true }) })}</div></div>
+    <div><h3>B · A Money tab</h3><div class="zw">${dev('pc', { section: 'testing', minH: 520, body: cbHead(true) })}</div></div>
+    <div><h3>C · An Events tab inside Finance</h3><div class="zw">${dev('pc', { section: 'finance', minH: 520, body: financeEvents() })}</div></div>
+    <div><h3>D · Staff login, or Hide private details on: no button</h3><div class="zw">${dev('pc', { section: 'camps', av: 'S', chip: true, minH: 520, body: campHead('pc', { button: false }).replace('<span class="btn">Fill in</span><span class="btn btn-primary"><i class="ti ti-qrcode"></i>Registration link</span>', '<span class="q" style="display:inline-flex;gap:8px"><span class="btn">Fill in</span><span class="btn btn-primary"><i class="ti ti-qrcode"></i>Registration link</span></span>') })}</div></div>
+  </div>`);
+
+// ---- ER2 ----
+const campSub = 'April Vacation Camp · Mon, Apr 19 – Fri, Apr 23, 2027 · Both schools';
+S('ER2', 'One camp’s money report (Both schools)', `
+  <h3>What is new</h3>
+  <ul><li>A whole new page, opened by the Money report button. It is <b>read-only</b>: nothing is closed, edited or counted here. Finance’s Daily report, Close the day, History and Export stay exactly as they are.</li>
+  <li><b>Same words and rules as Finance:</b> Total / Cash / Check / Card cards, payments grouped Cash · Check · Card · Refunds, undone payments struck through and not counted, edited payments “Was $335.00”, refunds shown in their own group, each payment counted at the school stored on it.</li>
+  <li><b>By school</b> boxes appear on Both (and on single-school events when you are on Both). With one school picked in the top bar, the page shows only that school’s money and the boxes go away.</li>
+  <li><b>By day</b> = the day each payment was <i>paid</i> (its “Paid on” date, as Finance counts it), so a camp that is paid over five weeks shows five weeks.</li>
+  <li><b>Layout B (recommended, this picture):</b> one compact row per day; tap a day to open its payments (Apr 2 is open). Print opens every day. <b>Layout A (bottom picture):</b> every day is a full block like Finance’s Daily report, repeated down the page — longer, but everything visible without tapping.</li>
+  <li><span class="prop">Proposals: “Total taken” + a “Net” line under the cards (Finance’s own refund choice, “own group”, v0.209); staff-free: this page is admin only (ER1 D).</span></li></ul>`,
+  () => {
+    const o = { rows: CAMP, both: true, back: 'April Vacation Camp', sub: campSub, open: '2027-04-02' };
+    const mk = (d) => dev(d, { section: 'camps', body: report(d, o) });
+    return `<div class="q" style="padding:2px">${mk('pc')}</div>
+      <div class="row2">${cap('Tablet · 820 touch').replace('<div', '<div style="display:none"')}<div>${cap('Tablet · 820 touch')}<div class="q" style="padding:2px">${mk('tab')}</div></div><div>${cap('Phone · 390 touch')}<div class="q" style="padding:2px">${mk('ph')}</div></div><div>${cap('Small phone · 320')}<div class="q" style="padding:2px">${mk('sm')}</div></div></div>
+      <h2 class="scr" style="margin-top:32px">Other layout (A): every day as a full block</h2>
+      ${dev('pc', { section: 'camps', body: pageHead('pc', { back: 'April Vacation Camp', sub: campSub }) + cards(CAMP) + `<div class="lbl">By school</div>` + schoolBoxes(CAMP) + `<div class="lbl">By day</div><div class="q" style="padding:2px">${dayBlocks('pc', CAMP, { onlyDays: ['2027-04-02', '2027-04-12', '2027-04-19'] })}<div class="hint">…and the other two days, down the page.</div></div>` })}`;
+  });
+
+// ---- ER3 ----
+S('ER3', 'Star testing event (joint, Both schools) and Private testing', `
+  <h3>What this picture is for</h3>
+  <ul><li><b>Star testing:</b> a Star event is run by both schools together, so the report has the same <b>By school</b> boxes; each line carries its school tag (the school stored on the payment, as Finance counts it). Undone payment (Ivy Kim), edited payment (Finn Walsh, “Was $140.00”) and a refund on Nov 16 (Dylan Park) show the Finance way.</li>
+  <li><b>Color belt events</b> look the same (one school); <b>Black Belt cycles</b> add Finance’s “For” words on each line (“Payment 2”, Kukkiwon fee) and show returned checks; <b>Board Breaking</b> lines include Square card payments.</li>
+  <li><b>Private testing is not an event</b> — each private test is one student on their own day. <span class="prop">Proposal: its report is a <b>month</b> (‹ November 2026 ›), for the school you are on, with a For column saying which private test each payment is for (bottom picture). The button sits on the Private testing tab.</span> The other choice is no report for Private testing; its money is still in Finance’s Daily report.</li></ul>`,
+  () => {
+    const so = { rows: STAR, both: true, back: 'Fall Star Test', sub: 'Fall Star Test · Sat, Nov 14, 2026 · Both schools', open: '2026-11-14' };
+    const po = { rows: PRIV, both: false, back: 'Private testing', title: 'Money report · Private testing', sub: 'Worcester · payments taken in November 2026', open: '2026-11-17', forCol: true,
+      header: `<div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">November 2026</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>` };
+    return `<div class="q" style="padding:2px">${dev('pc', { section: 'testing', body: report('pc', so) })}</div>
+      <h2 class="scr" style="margin-top:32px">Private testing · one month, for the school you are on (PC)</h2><div class="q" style="padding:2px;width:fit-content">${dev('pc', { section: 'testing', loc: 'Worcester', minH: 560, body: report('pc', po) })}</div>
+      <h2 class="scr" style="margin-top:32px">Star event · phone</h2><div class="row2"><div>${cap('Phone · 390 touch')}<div class="q" style="padding:2px">${dev('ph', { section: 'testing', body: report('ph', so) })}</div></div><div>${cap('Small phone · 320')}<div class="q" style="padding:2px">${dev('sm', { section: 'testing', body: report('sm', so) })}</div></div></div>`;
+  });
+
+// ---- PD1 ----
+const CAMP_R = [['Ava Thompson', 8, 'Paid', 'Card', 'Mar 25'], ['Emma Garcia', 7, 'Paid', 'Cash', 'Mar 25'], ['Isla Moore', 7, 'Paid', 'Check', 'Mar 29'], ['Leo Kim', 11, 'Owes $15', 'Cash', 'Apr 2'], ['Mia Rossi', 9, '$166 due', 'Cash', 'Apr 19']];
+const dayBtns = (n = 5) => Array.from({ length: n }, () => '<span class="cbtn">Check in</span>').join('');
+function campRosterPC(d) {
+  return `<h1 class="ptitle">April Vacation Camp</h1><div class="ph-sub">Both schools · 9 campers</div>
+  <table class="rost"><thead><tr><th>Camper</th><th>Paid</th><th class="q" style="outline-offset:-2px">Paid on</th><th class="r">Mon 19</th><th class="r">Tue 20</th><th class="r">Wed 21</th><th class="r">Thu 22</th><th class="r">Fri 23</th></tr></thead><tbody>${CAMP_R.map((r) => `<tr><td><span class="nm">${r[0]}</span> <span class="sub">· ${r[1]}</span></td><td><span class="tag ${r[2] === 'Paid' ? 'ok' : 'warn'}">${r[2]}</span></td><td class="${r[2] === 'Paid' ? 'q' : ''}" style="white-space:nowrap">${r[2] === 'Paid' ? r[4] : '<span class="sub">—</span>'}</td>${[1, 2, 3, 4, 5].map(() => '<td class="r"><span class="cbtn">Check in</span></td>').join('')}</tr>`).join('')}</tbody></table>`;
+}
+function campRosterPh(d) {
+  return `<h1 class="ptitle" style="font-size:18px">April Vacation Camp</h1><div class="ph-sub">Both schools · 9 campers</div>${CAMP_R.slice(0, 4).map((r) => `<div class="rcard"><div><div class="l1">${r[0]} <span class="sub" style="font-weight:400">· ${r[1]}</span></div>${r[2] === 'Paid' ? `<div class="l2 q" style="display:inline-block;padding:0 4px;margin-top:4px">${r[3]} · paid ${r[4]}</div>` : ''}<div class="days">${dayBtns(5).replace(/Check in/g, 'In')}</div></div><div><span class="tag ${r[2] === 'Paid' ? 'ok' : 'warn'}">${r[2]}</span></div></div>`).join('')}`;
+}
+const BRK = [['Ivy Nolan', 'Orange belt · 9', 2, 1, 'Cash', '$12', 'Paid', 'Nov 17'], ['Max Ortiz', 'Green belt · 12', 3, 0, 'Cash', '$12', 'Paid', 'Nov 17'], ['Lena Hart', 'Blue belt · 14', 2, 2, 'Card', '$9.75', 'Paid', 'Nov 17'], ['Sam Rivera', 'Red belt · 15', 0, 3, 'Card', '$22', 'Awaiting card payment', ''], ['Kai Moore', 'Yellow belt · 8', 1, 0, 'Cash', '$10', 'Not paid', '']];
+const tagCls = (t) => (t === 'Paid' ? 'ok' : t.startsWith('Await') ? 'warn' : 'neutral');
+function brkPC(d, tablet) {
+  return `<h1 class="ptitle">Fall Board Breaking</h1><div class="ph-sub">Sat, Nov 25, 2026 · Shrewsbury · 12 students</div>
+  <table class="rost"><thead><tr><th>Student</th><th class="r">Technical</th><th class="r">Adult</th>${tablet ? '' : '<th>Paying by</th>'}<th>Payment</th>${tablet ? '' : '<th class="q" style="outline-offset:-2px">Paid on</th>'}<th>Broke</th></tr></thead><tbody>${BRK.map((r) => `<tr><td><span class="nm">${r[0]}</span><div class="sub small">${r[1]}</div></td><td class="r"><b>${r[2] || '–'}</b></td><td class="r"><b>${r[3] || '–'}</b></td>${tablet ? '' : `<td>${r[4]}<div class="sub small">${r[5]}</div></td>`}<td><span class="tag ${tagCls(r[6])}">${r[6]}</span>${tablet ? `<div class="sub small ${r[6] === 'Paid' ? 'q' : ''}" style="margin-top:2px;display:inline-block">${r[4]} · ${r[5]}${r[6] === 'Paid' ? ' · paid ' + r[7] : ''}</div>` : ''}</td>${tablet ? '' : `<td class="${r[6] === 'Paid' ? 'q' : ''}">${r[6] === 'Paid' ? r[7] : '<span class="sub">—</span>'}</td>`}<td><span class="cbtn">Broke</span></td></tr>`).join('')}</tbody></table>`;
+}
+function brkPh() {
+  return `<h1 class="ptitle" style="font-size:18px">Fall Board Breaking</h1><div class="ph-sub">Shrewsbury · 12 students</div>${BRK.slice(0, 4).map((r) => `<div class="rcard"><div><div class="l1">${r[0]}</div><div class="l2">${r[1]}</div><div class="l2">${r[4]} · ${r[5]}${r[6] === 'Paid' ? ` · <span class="q" style="padding:0 3px">paid ${r[7]}</span>` : ''}</div><div style="margin-top:6px;display:flex;gap:6px;align-items:center"><span class="tag ${tagCls(r[6])}">${r[6]}</span><span class="cbtn">Broke</span></div></div></div>`).join('')}`;
+}
+const BB = [['Ava Chen', 'Worcester', '1st Dan', 'Paid in full', 'Oct 28', 'ok'], ['Ben Alvarez', 'Worcester', '2nd Dan', 'Paid in full', 'Nov 3', 'ok'], ['Chloe Park', 'Shrewsbury', '1st Dan', '$900 of $2,700 paid', 'Oct 12', 'neutral'], ['Dan Silva', 'Shrewsbury', '3rd Dan', 'Late · $450 due', '—', 'warn']];
+function bbPC(d) {
+  return `<h1 class="ptitle">Spring Black Belt cycle</h1><div class="ph-sub">Both schools · 14 candidates</div>
+  <table class="rost"><thead><tr><th>Candidate</th><th>School</th><th>Dan</th><th>Money</th><th class="q" style="outline-offset:-2px">Paid in full on</th><th></th></tr></thead><tbody>${BB.map((r) => `<tr><td><span class="nm">${r[0]}</span></td><td class="sub">${r[1]}</td><td>${r[2]}</td><td><span class="tag ${r[5]}">${r[3]}</span></td><td class="${r[5] === 'ok' ? 'q' : ''}">${r[5] === 'ok' ? r[4] : '<span class="sub">—</span>'}</td><td class="r"><span class="cbtn">Record payment</span></td></tr>`).join('')}</tbody></table>`;
+}
+function bbPh() {
+  return `<h1 class="ptitle" style="font-size:18px">Spring Black Belt cycle</h1><div class="ph-sub">Both schools · 14 candidates</div>${BB.map((r) => `<div class="rcard"><div><div class="l1">${r[0]} <span class="sub" style="font-weight:400">· ${r[2]}</span></div><div class="l2">${r[1]}</div>${r[5] === 'ok' ? `<div class="l2 q" style="display:inline-block;padding:0 4px;margin-top:4px">paid in full ${r[4]}</div>` : ''}<div style="margin-top:6px"><span class="tag ${r[5]}">${r[3]}</span></div></div></div>`).join('')}`;
+}
+S('PD1', 'The paid date on every roster', `
+  <h3>What I found in the code</h3>
+  <ul><li><b>Already shows the paid date (nothing to do):</b> Color belt testing, Star testing and Private testing — PC/tablet have a <b>“Paid on”</b> column (“Nov 14”), phones show “Cash · paid Nov 14”.</li>
+  <li><b>Gets it now:</b> <b>Camps</b> (the roster data already carries the date of the last payment), <b>Board Breaking</b> (already carries every payment’s date), and <b>Black Belt</b> — the Black Belt roster does <i>not</i> carry any payment date today, so it needs one small database change (a read-only addition to the roster reader, no new table).</li>
+  <li><b>Copying Color Belt’s pattern exactly:</b> a <b>Paid on</b> column on PC (and on tablets where there is room), and “<i>Cash · paid Nov 14</i>” under the name on phones. The new parts have the amber outline.</li>
+  <li><span class="prop">Proposals to confirm: (1) the date is the day the payment was <b>paid</b> (its “Paid on”, which an admin can correct) — for a camper or Black Belt candidate who paid in several payments, the date of the payment that made them <b>paid in full</b>, and a dash while a balance is left; (2) it is part of the payment details, so it hides with “Hide private details” on the mat-side tablet, like Color Belt’s column does today; (3) Camps’ tablet keeps its card layout where the room is narrow and shows the same “· paid Mar 25” line.</span></li>
+  <li>Black Belt’s roster layout here is simplified (its real rows have more tags); only the new column matters.</li></ul>`,
+  () => `<h3 style="margin-top:8px">Camps · PC</h3>${dev('pc', { section: 'camps', minH: 380, body: campRosterPC('pc') })}
+    <h3 style="margin-top:24px">Board Breaking · PC</h3>${dev('pc', { section: 'breaking', minH: 380, body: brkPC('pc') })}
+    <h3 style="margin-top:24px">Black Belt · PC (needs the one small database change)</h3>${dev('pc', { section: 'testing', minH: 380, body: bbPC('pc') })}
+    <div class="row2" style="margin-top:24px"><div>${cap('Board Breaking · tablet 820: no room for a column, so the date joins the line under the tag')}${dev('tab', { section: 'breaking', minH: 520, body: brkPC('tab', true) })}</div><div>${cap('Camps · phone 390')}${dev('ph', { section: 'camps', minH: 520, body: campRosterPh() })}</div></div>
+    <div class="row2" style="margin-top:24px"><div>${cap('Board Breaking · phone 390')}${dev('ph', { section: 'breaking', minH: 520, body: brkPh() })}</div><div>${cap('Black Belt · phone 390')}${dev('ph', { section: 'testing', minH: 520, body: bbPh() })}</div><div>${cap('Camps · small phone 320')}${dev('sm', { section: 'camps', minH: 520, body: campRosterPh() })}</div></div>`);
+
+// ===================== page =====================
+const want = (location.hash || '').replace('#', '');
+document.getElementById('screens').innerHTML = SCREENS.filter((s) => !want || s.id === want).map((s) =>
+  `<section id="${s.id}"><h2 class="scr">${s.id} · ${s.title}</h2><div class="explain">${s.explain}</div>${s.render()}</section>`).join('');
+</script>
+</body>
+</html>
