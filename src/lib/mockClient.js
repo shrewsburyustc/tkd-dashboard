@@ -207,7 +207,7 @@ import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 import { previewPeopleSearch } from './mockPeople.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
-import { createBreakingBackend, BRK_RPC_NAMES, BRK_RESTRICTED_RPC_NAMES, BRK_WRITE_RPC_NAMES, BRK_STORE_KEY } from './mockBreaking.js';
+import { createBreakingBackend, closedPaymentIdsFromFinance, BRK_RPC_NAMES, BRK_RESTRICTED_RPC_NAMES, BRK_WRITE_RPC_NAMES, BRK_STORE_KEY } from './mockBreaking.js';
 import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
 import { blackBeltPublicHelpers } from './blackBelt/publicApi.preview.js';
 import BLACK_BELT_MOCKUP_CAST from '../../docs/Testing/Black Belt Testing/TKD-BlackBelt-Mockup-Cast.json'; // 0025's sample (made-up people)
@@ -743,12 +743,9 @@ export function createMockClient() {
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
-    // Delete student / event (contract 0053): a payment that a CLOSED Finance day counted keeps its student. The fake Finance keeps its
-    // closing items in its own store (FINANCE_KEY); the ones for Board breaking name the payment by chain_id or row_id.
-    closedPaymentIds: () => {
-      const items = JSON.parse(readStorage(FINANCE_KEY))?.closing_items;
-      return Array.isArray(items) ? items.filter((i) => i?.source === 'board_breaking').flatMap((i) => [i.chain_id, i.row_id]).filter(Boolean) : [];
-    },
+    // Delete student / event (contract 0053): a payment that a closed Finance day counted keeps its student, until that closing is undone
+    // or the day reopened. The fake Finance keeps closings and their items in its own store (FINANCE_KEY).
+    closedPaymentIds: () => closedPaymentIdsFromFinance(JSON.parse(readStorage(FINANCE_KEY))),
   });
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;

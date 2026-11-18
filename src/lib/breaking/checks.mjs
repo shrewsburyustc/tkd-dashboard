@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState, hasSquarePayment } from './breakingRules.js';
-import { createBreakingBackend } from '../mockBreaking.js';
+import { createBreakingBackend, closedPaymentIdsFromFinance } from '../mockBreaking.js';
 import { STARTER_CLASSES, startingClasses } from './starterClasses.js';
 import { exampleLine } from './text/chart.js';
 import * as dialogText from './text/dialogs.js';
@@ -206,13 +206,13 @@ ok(() => assert.equal(f7.run('brk_undo_refund', { p_payment_id: pay.id }).status
 
 // ----- Delete a student or an event once its money nets to zero (migration 0053, contract CONTRACT-0053) -----
 // A fresh preview database whose "closed Finance days" can be told which payment ids they counted (closedIds).
-function freshDelete() {
+function freshDelete(closedFn = null) {
   let st = null;
   let n = 0;
   const closedIds = [];
   const b = createBreakingBackend({
     loadStore: () => st, saveStore: (x) => { st = JSON.parse(JSON.stringify(x)); }, now: () => clock, today: () => '2026-11-12',
-    newId: () => `00000000-0000-4000-8000-${String(600000 + (++n)).padStart(12, '0')}`, closedPaymentIds: () => closedIds,
+    newId: () => `00000000-0000-4000-8000-${String(600000 + (++n)).padStart(12, '0')}`, closedPaymentIds: () => (closedFn ? closedFn() : closedIds),
   });
   const run = (name, args, ctx = admin) => b.rpc(name, args, ctx).data;
   const ev = run('brk_events_list', { p_location_code: 'shrewsbury' }).events.find((e) => e.registered === 10);
@@ -325,6 +325,69 @@ ok(() => assert.deepEqual(d8.delEvent(), { status: 'closed_day' }));
 ok(() => assert.deepEqual(d8.count(), before8));
 d8.closedIds.length = 0;
 ok(() => assert.equal(d8.delEvent().status, 'ok'));
+// A closing counts only while it stands (the real rule: an Undo close or Reopen day ends it; closing again counts again). The fake Finance
+// keeps closings (the ending row has reverses_closing_id) and closing_items (closing_id, source, chain_id / row_id).
+{
+  // One fresh preview database per question, each with its own fake Finance store.
+  const scenario = (first = 'Gia') => {
+    const fin = { closings: [], closing_items: [] };
+    const d = freshDelete(() => closedPaymentIdsFromFinance(fin));
+    d.settle(first);
+    const rows = d.person(first).payments.map((p) => p.id); // the payment and its reversal
+    const close = (id, source = 'board_breaking') => {
+      fin.closings.push({ id, kind: 'close', reverses_closing_id: null });
+      fin.closing_items.push({ id: `item-${id}`, closing_id: id, source, chain_id: rows[0], row_id: rows[1] });
+    };
+    const end = (id, ends, kind) => fin.closings.push({ id, kind, reverses_closing_id: ends }); // 'undo' or 'reopen' row
+    const del = () => d.run('brk_delete_registration', { p_registration_id: d.person(first).id, p_expected_version: d.person(first).version });
+    return { fin, d, close, end, del };
+  };
+  ok(() => assert.deepEqual(closedPaymentIdsFromFinance(null), [])); // no Finance store: nothing is closed
+  ok(() => assert.deepEqual(closedPaymentIdsFromFinance({ closings: 5, closing_items: 'x' }), [])); // damaged: nothing is closed
+  // a day was closed and counted the payment: refused, and it stays refused
+  const s1 = scenario();
+  s1.close('c1');
+  ok(() => assert.deepEqual(s1.del(), { status: 'closed_day' }));
+  // another source's item with the same ids never blocks
+  const s2 = scenario();
+  s2.close('c1', 'star');
+  ok(() => assert.equal(s2.del().status, 'ok'));
+  // the closing was undone: its items stay in Finance's table but no longer block
+  const s3 = scenario();
+  s3.close('c1');
+  s3.end('u1', 'c1', 'undo');
+  ok(() => assert.deepEqual(closedPaymentIdsFromFinance(s3.fin), []));
+  ok(() => assert.equal(s3.del().status, 'ok'));
+  // the day was reopened: the same
+  const s4 = scenario();
+  s4.close('c1');
+  s4.end('r1', 'c1', 'reopen');
+  ok(() => assert.equal(s4.del().status, 'ok'));
+  // the day was closed again after the undo: a new closing with new items counts again
+  const s5 = scenario();
+  s5.close('c1');
+  s5.end('u1', 'c1', 'undo');
+  s5.close('c2');
+  ok(() => assert.deepEqual(s5.del(), { status: 'closed_day' }));
+  s5.end('r2', 'c2', 'reopen'); // ... and reopened once more
+  ok(() => assert.equal(s5.del().status, 'ok'));
+  // a whole event: every student nets to zero; one standing closing → closed_day, nothing deleted; once it is ended → deleted
+  const s6 = scenario('Mia');
+  for (const first of s6.d.ro().registrations.filter((r) => r.paid_cents !== 0).map((r) => r.first_name)) s6.d.settle(first);
+  s6.close('c9');
+  const before6 = s6.d.count();
+  ok(() => assert.deepEqual(s6.d.delEvent(), { status: 'closed_day' }));
+  ok(() => assert.deepEqual(s6.d.count(), before6));
+  s6.end('u9', 'c9', 'undo');
+  ok(() => assert.equal(s6.d.delEvent().status, 'ok'));
+}
+// the closed-day sentences say nothing about reopening being useless (the rule lets a reopened or undone day go)
+ok(() => assert.equal(/reopen|does not free|never/i.test(`${dialogText.deleteClosedDay('A B')} ${eventText.DELETE_CLOSED_DAY}`), false));
+{
+  const student = readFileSync(new URL('../../screens/breaking/dialogs/DeleteStudentConfirm.jsx', import.meta.url), 'utf8');
+  const eventsTab = readFileSync(new URL('../../screens/breaking/EventsTab.jsx', import.meta.url), 'utf8');
+  ok(() => assert.equal(/Reopen day does not/i.test(student + eventsTab), false));
+}
 // the words (plain, straight apostrophes, no "Undo the payment first", no "money is never removed")
 ok(() => assert.equal(dialogText.deleteHasPayments('Ava Reed'), 'Ava Reed has payments that still count. Undo or refund them first, then delete the student.'));
 ok(() => assert.equal(dialogText.deleteClosedDay('Ava Reed'), "Ava Reed's payments were counted when a day was closed in Finance, so the student can't be deleted. Leave the student on the roster."));

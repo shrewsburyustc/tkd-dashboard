@@ -12471,8 +12471,8 @@ const MD5_0053 = {
   },
   new: {
     brk_payments_guard: '6f4c504c74a5bb809aeee77396e433fb',
-    brk_delete_registration: 'f6ad9259087a6c583b2126f4971211d4',
-    brk_delete_event: '6bba9594f6e1fe529d9eb3022b175f01',
+    brk_delete_registration: '41a939cf0f185a0154d2460857cc3f5d',
+    brk_delete_event: '68491e02055b417b7c3276314ef9b1d5',
   },
 };
 const THREE_0053 = ['brk_payments_guard', 'brk_delete_registration', 'brk_delete_event'];

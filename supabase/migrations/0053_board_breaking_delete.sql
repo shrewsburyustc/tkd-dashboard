@@ -31,9 +31,14 @@
 --     2. no closed Finance day counted one of those payments: no row of
 --        public.finance_day_closing_items with source = 'board_breaking'
 --        has a chain_id or row_id equal to the id of one of the student's
---        payment rows. (A closing keeps the ids of the rows it counted;
---        removing them would change a closed day's "Changed after closing"
---        view, so that student has to stay on the roster.)
+--        payment rows, UNLESS that closing was undone or reopened (a row of
+--        public.finance_day_closings points at it with reverses_closing_id:
+--        the day is open again and counts nothing). A close that is still in
+--        force keeps the ids of the rows it counted; removing them would
+--        change a closed day's "Changed after closing" view, so that student
+--        has to stay on the roster until an admin undoes or reopens the
+--        close. A day that is closed again writes NEW items, so it is caught
+--        again.
 --   Otherwise NOTHING is removed and the answer is
 --     {"status":"has_payments"}  money still stands on at least one student
 --                                (the same word as before, so the app that
@@ -165,8 +170,8 @@ begin
   for v_row in
     select * from (values
       ('public.brk_payments_guard()', 'b6cf31a8d2829ae41e7744e62591e467', '6f4c504c74a5bb809aeee77396e433fb'),
-      ('public.brk_delete_registration(uuid, integer)', '6308d9aae45ce0d5aef45c29ffca73b8', 'f6ad9259087a6c583b2126f4971211d4'),
-      ('public.brk_delete_event(uuid, integer)', 'bcca69a68f80d76a4d9daa002190297b', '6bba9594f6e1fe529d9eb3022b175f01')
+      ('public.brk_delete_registration(uuid, integer)', '6308d9aae45ce0d5aef45c29ffca73b8', '41a939cf0f185a0154d2460857cc3f5d'),
+      ('public.brk_delete_event(uuid, integer)', 'bcca69a68f80d76a4d9daa002190297b', '68491e02055b417b7c3276314ef9b1d5')
     ) as t(sig, live_md5, new_md5)
   loop
     if to_regprocedure(v_row.sig) is null then
@@ -311,9 +316,11 @@ begin
       return jsonb_build_object('status', 'has_payments');
     end if;
     -- ... and no closed Finance day may have counted one of the student's rows
+    -- (a closing that was undone or reopened no longer counts: a row of finance_day_closings points at it)
     if exists (select 1
                  from public.finance_day_closing_items ci
                 where ci.source = 'board_breaking'
+                  and not exists (select 1 from public.finance_day_closings x where x.reverses_closing_id = ci.closing_id)
                   and exists (select 1 from public.brk_payments p
                                where p.registration_id = v_r.id
                                  and p.id in (ci.chain_id, ci.row_id))) then
@@ -409,9 +416,11 @@ begin
       return jsonb_build_object('status', 'has_payments');
     end if;
     -- ... and no closed Finance day may have counted any of their rows
+    -- (a closing that was undone or reopened no longer counts: a row of finance_day_closings points at it)
     if exists (select 1
                  from public.finance_day_closing_items ci
                 where ci.source = 'board_breaking'
+                  and not exists (select 1 from public.finance_day_closings x where x.reverses_closing_id = ci.closing_id)
                   and exists (select 1
                                 from public.brk_payments p
                                 join public.brk_registrations r on r.id = p.registration_id

@@ -246,8 +246,19 @@ function fail(code, message, status = 400) {
 }
 const ok = (data) => ({ data, error: null, count: null, status: 200, statusText: 'OK' });
 
-// closedPaymentIds (optional) says which Board breaking payment ids a closed Finance day counted: () => array of ids. mockClient
-// wires it to the fake Finance's closing items (source 'board_breaking': chain_id / row_id). Left out, no payment counts as closed.
+// Which Board breaking payment ids does a CLOSED Finance day still count? Reads the fake Finance's store ({ closings, closing_items }).
+// A closing item counts only while its closing stands: a closing that an Undo close or Reopen day points at (another closing row has
+// reverses_closing_id = its id) is ended, so its items are ignored. Closing the day again adds new items, which count again
+// (CONTRACT-0053 §2). Anything unreadable gives no ids.
+export function closedPaymentIdsFromFinance(financeStore) {
+  const closings = Array.isArray(financeStore?.closings) ? financeStore.closings : [];
+  const items = Array.isArray(financeStore?.closing_items) ? financeStore.closing_items : [];
+  const ended = new Set(closings.map((c) => c?.reverses_closing_id).filter(Boolean));
+  return items.filter((i) => i?.source === 'board_breaking' && !ended.has(i.closing_id)).flatMap((i) => [i.chain_id, i.row_id]).filter(Boolean);
+}
+
+// closedPaymentIds (optional) says which Board breaking payment ids a closed Finance day still counts: () => array of ids. mockClient
+// wires it to the fake Finance through closedPaymentIdsFromFinance above. Left out, no payment counts as closed.
 export function createBreakingBackend({ loadStore, saveStore, now = () => Date.now(), today, newId, closedPaymentIds = () => [] }) {
   let failNext = false;
   const stamp = () => new Date(now()).toISOString();

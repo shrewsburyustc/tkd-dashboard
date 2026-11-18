@@ -18,8 +18,11 @@ A student (or a whole event with all its students, classes and payment rows) may
 1. every student concerned has payments that **net to zero** (`sum(brk_payments.amount_cents) = 0` per student; a student with no
    payment rows qualifies, as today; a payment that was edited or refunded and nets to zero qualifies), AND
 2. **no closed Finance day counted one of those payments**: no row of `public.finance_day_closing_items` with
-   `source = 'board_breaking'` has a `chain_id` or `row_id` equal to a payment id of those students. (A closing item keeps the ids of
-   the payment rows it counted; deleting them would change a closed day's "Changed after closing" view.)
+   `source = 'board_breaking'` has a `chain_id` or `row_id` equal to a payment id of those students, **for a closing that has not
+   been undone or reopened** (no row of `public.finance_day_closings` points at it with `reverses_closing_id`). (A closing item keeps
+   the ids of the payment rows it counted; deleting them would change a closed day's "Changed after closing" view. **Undo close and
+   Reopen day free the student again**: the day then counts nothing. A day that is closed again writes NEW items, so it is caught
+   again. Added after Medium finding M1 of the independent review.)
 
 Otherwise nothing is deleted and the answer is:
 - `{"status":"has_payments"}` — money still stands on at least one student (net ≠ 0). (Same word as today, so the live app keeps
@@ -39,6 +42,17 @@ and `set_config` is not callable through the API, so the flag can only be set fr
 Order inside the functions: delete the student's payment rows (one statement, so the self-referencing reversal foreign key is checked
 at the end of the statement), then the student (then, for an event, the event; classes and cleared Square links go with it as in 0051;
 Square messages keep their row with `registration_id` set to null, as in 0051).
+
+**The school lock (race with Close the day).** `finance_close_day` reads the payments without locking them, so a close and a
+delete could overlap and leave a closing item that names a payment that is gone. Both functions therefore take
+`perform 1 from public.locations l order by l.code for share;` (all school rows, in code order) **after** the version check and the
+student locks and **before** the net-zero and closed-day checks. It conflicts with `finance_close_day`'s `for no key update` on its
+school's row, so the two run one after the other: a close that started first finishes before we look (we then see its items and
+answer `closed_day`); a close that starts after us waits until we are done and no longer sees the deleted rows. Lock order is event,
+then students, then schools. **Invariant: no function that holds a `locations` lock may ever wait for a `brk_` row lock** (Close the
+day never locks Board breaking rows today; a future function that locks a school and then a student or event could deadlock with the
+deletes). A call that waits longer than the 5-second `lock_timeout` answers `stale`. Concurrency itself cannot be tested in PGlite
+(one connection); the test proves the lock is in both functions' text, before the checks.
 
 ## 4. What stays on record
 

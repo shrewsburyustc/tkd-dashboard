@@ -16,7 +16,8 @@
 --     C  closed Finance days: a closing item that names one of the
 --        student's payments (by its chain id, or by its row id) refuses with
 --        closed_day and removes nothing; an item of another source does not;
---        money standing beats closed_day (has_payments is checked first)
+--        money standing beats closed_day (has_payments is checked first); a close
+--        that was undone or reopened counts nothing, a day closed again counts again
 --     E  removing a whole EVENT: students never paid / undone / refunded in
 --        full / edited-and-undone are all removed with their payment rows,
 --        their classes and the event; another event is untouched; ONE
@@ -338,6 +339,11 @@ declare
 
   v_cd      date := date '2019-03-04';   -- the day of the pretend closing
   v_closing uuid;
+  v_cd2     date := date '2019-03-05';   -- the day of the closes that are undone, reopened and made again (C5)
+  v_closing2 uuid; v_closing3 uuid;
+  v_e7 uuid; v_e8 uuid;
+  v_sa1 uuid; v_sa2 uuid; v_sb1 uuid; v_sb2 uuid;
+  v_pa1 uuid; v_pa2 uuid; v_pb1 uuid; v_pb2 uuid;
 
   v_ew uuid; v_ex uuid; v_ey uuid; v_ez uuid;   -- events
   v_e1 uuid; v_e2 uuid; v_e3 uuid; v_e4 uuid; v_e5 uuid; v_e6 uuid;
@@ -372,8 +378,8 @@ begin
      or not exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.brk_delete_event(uuid, integer)') and p.prosrc like '%closed_day%') then
     raise exception 'TEST SETUP: 0053 must be applied first';
   end if;
-  if exists (select 1 from public.finance_day_closings c where c.day = v_cd) then
-    raise exception 'TEST SETUP: a Finance closing exists on %; this test needs that day empty', v_cd;
+  if exists (select 1 from public.finance_day_closings c where c.day in (v_cd, v_cd2)) then
+    raise exception 'TEST SETUP: a Finance closing exists on % or %; this test needs those days empty', v_cd, v_cd2;
   end if;
 
   perform set_config('request.jwt.claims', '', true);
@@ -539,6 +545,54 @@ begin
   values (v_closing, 'worcester', 'board_breaking', v_p4, v_p4, 'payment', 'cash', 1000);
   v_r := pg_temp.t_delreg(v_c_a1, (select p.registration_id from public.brk_payments p where p.id = v_p4));
   perform pg_temp.t_eq('C4 a standing payment that a closed day also counted: has_payments (checked first)', v_r ->> 'status', 'has_payments');
+
+  -- C5. A close that was UNDONE or REOPENED counts nothing any more; a day that is closed AGAIN counts again.
+  --     (An undo / reopen is a row of finance_day_closings that points at the close with reverses_closing_id.)
+  --     Students A1, A2 (one by one) and two events E7, E8 (a student each), every one paid and undone (net 0).
+  v_sa1 := pg_temp.t_reg(v_e1, 'C5 A1', 1000, 'cash');
+  v_sa2 := pg_temp.t_reg(v_e1, 'C5 A2', 1000, 'cash');
+  v_e7 := pg_temp.t_event(v_tag || ' C5 E7', 'worcester', 208);
+  v_e8 := pg_temp.t_event(v_tag || ' C5 E8', 'shrewsbury', 209);
+  v_sb1 := pg_temp.t_reg(v_e7, 'C5 B1', 1000, 'cash');
+  v_sb2 := pg_temp.t_reg(v_e8, 'C5 B2', 1000, 'cash');
+  v_pa1 := pg_temp.t_mark(v_c_a1, v_sa1);  perform pg_temp.t_undo(v_c_a1, v_pa1);
+  v_pa2 := pg_temp.t_mark(v_c_a1, v_sa2);  perform pg_temp.t_undo(v_c_a1, v_pa2);
+  v_pb1 := pg_temp.t_mark(v_c_a1, v_sb1);  perform pg_temp.t_undo(v_c_a1, v_pb1);
+  v_pb2 := pg_temp.t_mark(v_c_a1, v_sb2);  perform pg_temp.t_undo(v_c_a1, v_pb2);
+  -- a close counts all four payments
+  insert into public.finance_day_closings
+    (location_code, day, kind, cash_counted_cents, checks_counted, checks_counted_cents, card_counted_cents,
+     expected_count, expected_cash_cents, expected_checks, expected_checks_cents, expected_card_cents, recorded_by_name)
+  values ('worcester', v_cd2, 'close', 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Test 0053')
+  returning id into v_closing2;
+  insert into public.finance_day_closing_items (closing_id, location_code, source, chain_id, row_id, kind, method, amount_cents)
+  select v_closing2, 'worcester', 'board_breaking', x, x, 'payment', 'cash', 1000 from unnest(array[v_pa1, v_pa2, v_pb1, v_pb2]) as x;
+  perform pg_temp.t_eq('C5 a student a close in force counted: closed_day', pg_temp.t_delreg(v_c_a1, v_sa1) ->> 'status', 'closed_day');
+  perform pg_temp.t_eq('C5 an event with a student a close in force counted: closed_day', pg_temp.t_delev(v_c_a1, v_e7) ->> 'status', 'closed_day');
+  perform pg_temp.t_ok('C5 ... nothing was removed', pg_temp.t_here(v_sa1) and pg_temp.t_snap(v_e7) = '1|2|0|1|true');
+  -- an admin undoes that close: the day is open again and counts nothing
+  insert into public.finance_day_closings (location_code, day, kind, reverses_closing_id, recorded_by_name)
+  values ('worcester', v_cd2, 'undo', v_closing2, 'Test 0053');
+  perform pg_temp.t_eq('C5 after the close was undone the student can be removed', pg_temp.t_delreg(v_c_a1, v_sa1) ->> 'status', 'ok');
+  perform pg_temp.t_eq('C5 ... and so can the event', pg_temp.t_delev(v_c_a1, v_e7) ->> 'status', 'ok');
+  perform pg_temp.t_ok('C5 ... they and their rows are gone', not pg_temp.t_here(v_sa1) and pg_temp.t_snap(v_e7) = '0|0|0|0|false');
+  -- the day is closed AGAIN (new items for the same payments): caught again, although the first close is still undone
+  insert into public.finance_day_closings
+    (location_code, day, kind, cash_counted_cents, checks_counted, checks_counted_cents, card_counted_cents,
+     expected_count, expected_cash_cents, expected_checks, expected_checks_cents, expected_card_cents, recorded_by_name)
+  values ('worcester', v_cd2, 'close', 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Test 0053')
+  returning id into v_closing3;
+  insert into public.finance_day_closing_items (closing_id, location_code, source, chain_id, row_id, kind, method, amount_cents)
+  select v_closing3, 'worcester', 'board_breaking', x, x, 'payment', 'cash', 1000 from unnest(array[v_pa2, v_pb2]) as x;
+  perform pg_temp.t_eq('C5 after the day was closed again: the student is caught again (closed_day)', pg_temp.t_delreg(v_c_a1, v_sa2) ->> 'status', 'closed_day');
+  perform pg_temp.t_eq('C5 ... and so is the event', pg_temp.t_delev(v_c_a1, v_e8) ->> 'status', 'closed_day');
+  perform pg_temp.t_ok('C5 ... nothing was removed', pg_temp.t_here(v_sa2) and pg_temp.t_snap(v_e8) = '1|2|0|1|true');
+  -- a REOPEN of the second close frees them again
+  insert into public.finance_day_closings (location_code, day, kind, reverses_closing_id, recorded_by_name)
+  values ('worcester', v_cd2, 'reopen', v_closing3, 'Test 0053');
+  perform pg_temp.t_eq('C5 after the second close was reopened the student can be removed', pg_temp.t_delreg(v_c_a1, v_sa2) ->> 'status', 'ok');
+  perform pg_temp.t_eq('C5 ... and so can the event', pg_temp.t_delev(v_c_a1, v_e8) ->> 'status', 'ok');
+  perform pg_temp.t_ok('C5 ... they and their rows are gone', not pg_temp.t_here(v_sa2) and pg_temp.t_snap(v_e8) = '0|0|0|0|false');
 
   -- ===================================================================
   -- E. Removing a whole EVENT

@@ -20,11 +20,12 @@
 --                  are, and how many of them could be removed right now
 --                  under the new rule (their payment rows add up to 0 -
 --                  including never paid - and no closed Finance day counted
---                  one of their rows). Before 0053 none with payment rows can
+--                  one of their rows that is still in force - a closing that was
+--                  undone or reopened does not count). Before 0053 none with payment rows can
 --                  be removed (the old rule); after it these can.
 --     closings   - information only: how many rows of closed-day snapshots
 --                  name a Board breaking payment (each blocks the removal of
---                  its student).
+--                  its student, unless its closing was undone or reopened).
 --
 -- WHY
 --   So nobody is surprised: the guard would stop a wrong 0053 anyway, but
@@ -40,8 +41,8 @@
 with guard(name, md5_live, md5_0053) as (
   values
     ('brk_payments_guard', 'b6cf31a8d2829ae41e7744e62591e467', '6f4c504c74a5bb809aeee77396e433fb'),
-    ('brk_del' || 'ete_registration', '6308d9aae45ce0d5aef45c29ffca73b8', 'f6ad9259087a6c583b2126f4971211d4'),
-    ('brk_del' || 'ete_event', 'bcca69a68f80d76a4d9daa002190297b', '6bba9594f6e1fe529d9eb3022b175f01')
+    ('brk_del' || 'ete_registration', '6308d9aae45ce0d5aef45c29ffca73b8', '41a939cf0f185a0154d2460857cc3f5d'),
+    ('brk_del' || 'ete_event', 'bcca69a68f80d76a4d9daa002190297b', '68491e02055b417b7c3276314ef9b1d5')
 ),
 live as (
   select p.proname,
@@ -70,6 +71,7 @@ counts as (
            where coalesce((select sum(p.amount_cents) from public.brk_payments p where p.registration_id = r.id), 0) = 0
              and not exists (select 1 from public.finance_day_closing_items ci
                               where ci.source = 'board_breaking'
+                                and not exists (select 1 from public.finance_day_closings x where x.reverses_closing_id = ci.closing_id)
                                 and exists (select 1 from public.brk_payments p
                                              where p.registration_id = r.id and p.id in (ci.chain_id, ci.row_id)))) as removable,
          (select count(*) from public.brk_registrations r
@@ -77,9 +79,12 @@ counts as (
              and coalesce((select sum(p.amount_cents) from public.brk_payments p where p.registration_id = r.id), 0) = 0
              and not exists (select 1 from public.finance_day_closing_items ci
                               where ci.source = 'board_breaking'
+                                and not exists (select 1 from public.finance_day_closings x where x.reverses_closing_id = ci.closing_id)
                                 and exists (select 1 from public.brk_payments p
                                              where p.registration_id = r.id and p.id in (ci.chain_id, ci.row_id)))) as removable_with_rows,
-         (select count(*) from public.finance_day_closing_items ci where ci.source = 'board_breaking') as closing_items
+         (select count(*) from public.finance_day_closing_items ci
+           where ci.source = 'board_breaking'
+             and not exists (select 1 from public.finance_day_closings x where x.reverses_closing_id = ci.closing_id)) as closing_items
 )
 select r.* from (
   select 'function' as kind,
@@ -111,7 +116,7 @@ select r.* from (
   union all
   select 'closings',
          'closed-day items naming Board breaking',
-         c.closing_items::text || ' item(s) in closed-day snapshots'
+         c.closing_items::text || ' item(s) in closes that are still in force'
     from counts c
 ) as r
  order by r.kind collate "C", r.item collate "C";
