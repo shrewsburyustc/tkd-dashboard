@@ -9,7 +9,7 @@
   (Jeffrey's rule: new things are drawn first). Four pictures:
     ER1  where the report lives (three choices) and who sees it
     ER2  one camp's report at PC 1280, tablet 820, phone 390 and small phone 320, plus the other layout
-    ER3  a Star testing event on Both schools, and Private testing (which has no single event)
+    ER3  a Star testing event on Both schools
     PD1  the paid date on the Camps, Board Breaking and Black Belt rosters
   Amber dashed outline = what is new. Amber text = a proposal to confirm. Sample data only (made-up names).
   Open with #ER1, #ER2, #ER3 or #PD1 at the end of the address to see one picture alone.
@@ -193,7 +193,7 @@ function pageHead(d, o) {
   const { back, title = 'Money report', sub, print = true } = o;
   const btns = d === 'ph' || d === 'sm'
     ? `<span class="ibtn plain"><i class="ti ti-dots"></i></span>`
-    : `<span class="btn"><i class="ti ti-printer"></i>Print</span>`;
+    : `<span class="btn q"><i class="ti ti-download"></i>Download CSV</span><span class="btn"><i class="ti ti-printer"></i>Print</span>`;
   return `<div class="bk"><i class="ti ti-arrow-left"></i>${back}</div><div class="pagehead"><div><h1 class="ptitle">${title}</h1><div class="ph-sub">${sub}</div></div><span class="grow"></span>${print ? btns : ''}</div>`;
 }
 
@@ -256,7 +256,7 @@ function cbHead(tabQ) {
 function financeEvents() {
   const ev = [['April Vacation Camp','Camps','Mar 25 – Apr 19','Both','9','$2,245.00'],['Thanksgiving Camp','Camps','Nov 12 – Nov 17','Worcester','13','$1,815.00'],['Fall Star Test','Star testing','Nov 2 – Nov 16','Both','8','$720.00'],['Fall color belt testing','Color belt testing','Oct 12 – Oct 29','Worcester','27','$1,755.00'],['Spring Black Belt cycle','Black Belt','Sep 3 – Nov 10','Both','14','$18,900.00'],['Fall Board Breaking','Board breaking','Nov 1 – Nov 25','Shrewsbury','12','$198.50']];
   return `<h1 class="ptitle">Finance</h1><div class="ttabs"><span class="ttab">Daily report</span><span class="ttab on q" style="padding:0 8px">Events</span><span class="ttab">Settings</span></div>
-  <div class="chips"><span class="on">All</span><span>Color belt</span><span>Star</span><span>Black Belt</span><span>Camps</span><span>Board breaking</span><span>Private testing</span></div>
+  <div class="chips"><span class="on">All</span><span>Color belt</span><span>Star</span><span>Black Belt</span><span>Camps</span><span>Board breaking</span></div>
   <table><thead><tr><th>Event</th><th>Section</th><th>Money taken</th><th>School</th><th class="r">Payments</th><th class="r">Net total</th></tr></thead><tbody>${ev.map((r) => `<tr><td><b style="font-weight:500">${r[0]}</b></td><td class="sub">${r[1]}</td><td class="sub">${r[2]}</td><td class="sub">${r[3]}</td><td class="r">${r[4]}</td><td class="r">${r[5]}</td></tr>`).join('')}</tbody></table>`;
 }
 
@@ -294,17 +294,15 @@ S('ER2', 'One camp’s money report (Both schools)', `
   });
 
 // ---- ER3 ----
-S('ER3', 'Star testing event (joint, Both schools) and Private testing', `
+S('ER3', 'Star testing event (joint, Both schools)', `
   <h3>What this picture is for</h3>
   <ul><li><b>Star testing:</b> a Star event is run by both schools together, so the report has the same <b>By school</b> boxes; each line carries its school tag (the school stored on the payment, as Finance counts it). Undone payment (Ivy Kim), edited payment (Finn Walsh, “Was $140.00”) and a refund on Nov 16 (Dylan Park) show the Finance way.</li>
   <li><b>Color belt events</b> look the same (one school); <b>Black Belt cycles</b> add Finance’s “For” words on each line (“Payment 2”, Kukkiwon fee) and show returned checks; <b>Board Breaking</b> lines include Square card payments.</li>
-  <li><b>Private testing is not an event</b> — each private test is one student on their own day. <span class="prop">Proposal: its report is a <b>month</b> (‹ November 2026 ›), for the school you are on, with a For column saying which private test each payment is for (bottom picture). The button sits on the Private testing tab.</span> The other choice is no report for Private testing; its money is still in Finance’s Daily report.</li></ul>`,
+  <li><b>Private testing gets no report</b> (Jeffrey’s answer): each private test is one student, not an event. Its money stays in Finance’s Daily report.</li>
+  <li><b>Print and Download CSV</b> (Jeffrey’s answer): on PC and tablet both buttons sit in the header (CSV outlined). On phones they are in the ⋯ menu. The CSV is admin only and every download is logged, like Finance’s Export.</li></ul>`,
   () => {
     const so = { rows: STAR, both: true, back: 'Fall Star Test', sub: 'Fall Star Test · Sat, Nov 14, 2026 · Both schools', open: '2026-11-14' };
-    const po = { rows: PRIV, both: false, back: 'Private testing', title: 'Money report · Private testing', sub: 'Worcester · payments taken in November 2026', open: '2026-11-17', forCol: true,
-      header: `<div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">November 2026</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>` };
     return `<div class="q" style="padding:2px">${dev('pc', { section: 'testing', body: report('pc', so) })}</div>
-      <h2 class="scr" style="margin-top:32px">Private testing · one month, for the school you are on (PC)</h2><div class="q" style="padding:2px;width:fit-content">${dev('pc', { section: 'testing', loc: 'Worcester', minH: 560, body: report('pc', po) })}</div>
       <h2 class="scr" style="margin-top:32px">Star event · phone</h2><div class="row2"><div>${cap('Phone · 390 touch')}<div class="q" style="padding:2px">${dev('ph', { section: 'testing', body: report('ph', so) })}</div></div><div>${cap('Small phone · 320')}<div class="q" style="padding:2px">${dev('sm', { section: 'testing', body: report('sm', so) })}</div></div></div>`;
   });
 
