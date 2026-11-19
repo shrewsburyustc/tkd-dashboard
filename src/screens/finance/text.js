@@ -11,7 +11,7 @@
 // Black Belt payments and returned checks (migration 0026): the words of mockups B1–B9
 // (docs/Finance/TKD-Finance-BlackBelt-Mockups.html, rulebook v0.814 / v0.815). Words the
 // mockups don't draw (plural forms) are marked  // NOT IN MOCKUPS (B…)
-import { money, dayShort, timeOfDay } from './format.js';
+import { money as moneyText, money, dayShort, monthDay, monthDayYear, timeOfDay } from './format.js';
 import { someoneElseChanged } from '../../components/text.js';
 import { blackBeltItemsText } from '../../lib/finance/csv.js';
 import { LOCATION_NAME } from '../../lib/device.js';
@@ -495,3 +495,64 @@ export const OPEN_HISTORY = 'Open History';
 // ----- Hide private details (was Hide payments, Questions #q14, v0.215; renamed v0.506) -----
 // The switch is dashboard-wide now, so its words live with it in src/lib/privateDetails.js
 // (HIDE_PRIVATE_DETAILS, PRIVATE_DETAILS_HIDDEN, SHOW_PRIVATE_DETAILS).
+
+// ----- An event's money report (migration 0054; pictures ER1–ER3 in docs/Finance/Event reports) -----
+// The "Money report" button on every event page opens one page with that event's payments by day: the
+// Daily report's words (Cash · Check · Card · Refunds groups, Undone, Was $335.00), grouped by the day each
+// payment was PAID. Admins only; hidden while Hide private details is on.
+// A money amount whose minus sign can't be left at the end of a line, away from its number (U+2060 = word joiner).
+const noBreakMinus = (text) => text.replace('\u2212', '\u2212\u2060');
+export const MONEY_REPORT = 'Money report'; // the button's words and the page's title
+export const MONEY_REPORT_LOADING = 'Loading the money report';
+export const BACK_TO_EVENT = 'Back to the event'; // the back link until the event's name has loaded
+export const CARD_TAKEN = 'Total taken';
+export const EVENT_SCHOOL_BOTH = 'Both schools';
+// "April Vacation Camp · Money taken Mar 25 – Apr 19 · Both schools"
+export const eventReportSub = (name, firstDay, lastDay, schoolText) => {
+  // "Mar 25 – Apr 19, 2027" (a year on each end only when the years differ)
+  const sameYear = !firstDay || String(firstDay).slice(0, 4) === String(lastDay).slice(0, 4);
+  const first = !firstDay ? '' : sameYear ? monthDay(firstDay) : monthDayYear(firstDay);
+  const range = !firstDay ? '' : firstDay === lastDay ? ' · Money taken ' + monthDayYear(firstDay) : ' · Money taken ' + first + ' – ' + monthDayYear(lastDay);
+  return name + range + ' · ' + schoolText;
+};
+// The line under the cards: "Refunded −$100.00 · 1 refund · Net $2,245.00" (a returned check, Black Belt: "· Returned check −$900.00")
+export function netLine(refunds, returned, netCents) {
+  const money = (cents) => noBreakMinus(moneyText(cents));
+  const parts = [];
+  if ((refunds?.count ?? 0) > 0) parts.push('Refunded ' + money(refunds.cents) + ' · ' + refundsCount(refunds.count));
+  if ((returned?.count ?? 0) > 0) parts.push((returned.count === 1 ? 'Returned check ' : 'Returned checks ') + money(returned.cents));
+  return parts.length ? parts.join(' · ') + ' · Net ' + money(netCents) : '';
+}
+export const NET = 'Net';
+export const BY_SCHOOL = 'By school';
+export const BY_DAY = 'By day';
+export const COL_PAYMENTS = 'Payments';
+export const COL_REFUNDS = 'Refunds';
+export const COL_DAY_TOTAL = 'Day total';
+export const ALL_DAYS = 'All days';
+export const showDayPayments = (dayText) => 'Show the payments of ' + dayText;
+export const hideDayPayments = (dayText) => 'Hide the payments of ' + dayText;
+// A day's sub-line on phones: "2 payments · Cash $335.00 · Card $335.00 · Refunded −$100.00" (nothing taken: "No payments")
+export function daySummary(day) {
+  const money = (cents) => noBreakMinus(moneyText(cents));
+  const t = day.totals ?? day;
+  const parts = [];
+  if ((t.count ?? 0) > 0) {
+    parts.push(paymentsCount(t.count));
+    if (t.cash?.cents) parts.push('Cash ' + money(t.cash.cents));
+    if (t.check?.cents) parts.push('Check ' + money(t.check.cents));
+    if (t.card?.cents) parts.push('Card ' + money(t.card.cents));
+  }
+  if ((day.refunds?.count ?? 0) > 0) parts.push('Refunded ' + money(day.refunds.cents));
+  if ((day.returned?.count ?? 0) > 0) parts.push('Returned check ' + money(day.returned.cents));
+  return parts.length ? parts.join(' · ') : NO_PAYMENTS;
+}
+export const EVENT_REPORT_LOAD_FAILED = "Couldn't load the money report. Check the connection, then retry.";
+export const EVENT_REPORT_NOT_FOUND = "This event isn't here any more.";
+export const EVENT_REPORT_NOT_ALLOWED = 'Only an admin can see the money report.';
+export const EVENT_REPORT_EMPTY = 'No payments have been recorded for this event yet.';
+export const eventReportEmptySchool = (school) => 'No payments have been recorded for this event at ' + school + ' yet.';
+export const EVENT_REPORT_HINT = 'Payments are counted on the day they were paid, at the school whose desk took them. Click a day to see its payments.';
+export const EVENT_REPORT_HINT_TOUCH = 'Payments are counted on the day they were paid, at the school whose desk took them. Tap a day to see its payments.';
+export const EVENT_REPORT_PRINT_TITLE = (eventName) => 'Money report · ' + eventName;
+export const PRIVATE_TESTING = 'Private testing'; // a Star private test's line, under the student's name

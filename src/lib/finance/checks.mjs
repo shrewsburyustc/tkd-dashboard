@@ -449,7 +449,7 @@ function assertClean(value, where) {
 }
 
 check('mock: every §1.4 function is there; signed out / no access / staff gates', () => {
-  assert.equal(FINANCE_RPC_NAMES.length, 14); // the 13 of §1.4 + finance_export_preview
+  assert.equal(FINANCE_RPC_NAMES.length, 16); // the 13 of §1.4 + finance_export_preview + the event report's two (0054; their own checks: eventReportChecks.mjs)
   assert.ok(FINANCE_WRITE_RPC_NAMES.every((n) => FINANCE_RPC_NAMES.includes(n)));
   assert.equal(finance.rpc('finance_day', dayArgs('shrewsbury'), { signedIn: false }).error.code, '42501');
   assert.equal(finance.rpc('finance_day', { p_day: T }, ADMIN_CTX).error.code, 'PGRST202'); // missing argument

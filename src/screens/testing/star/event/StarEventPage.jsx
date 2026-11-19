@@ -100,6 +100,7 @@ import StarResultsSheet from '../results/StarResultsSheet.jsx';
 import { TAB_RESULTS, danBandWithMark, sheetSubLine } from '../results/text.js';
 import StarLinksDialog from './StarLinksDialog.jsx';
 import * as T from '../events/text.js';
+import MoneyReportButton from '../../../finance/MoneyReportButton.jsx'; // Money report (Finance event report, v0.827)
 
 // The event and its candidates, read together (one "couldn't load" state, G11). Never throws.
 async function loadEventPage(eventId) {
@@ -793,6 +794,7 @@ export default function StarEventPage({
           <p className="st-summary">{T.eventSummary(event)}</p>
         </div>
         <div className="st-event-buttons">
+          <MoneyReportButton source="star" eventId={event.id} isAdmin={isAdmin} />
           {addButton}
           <button type="button" className="btn" data-star-reg-link onClick={(clickEvent) => openLinks(clickEvent.currentTarget)}>
             {/* ti-qrcode = registration link / QR code */}

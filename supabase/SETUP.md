@@ -4176,3 +4176,97 @@ Tested in PGlite on every run (`run.mjs` step0052, or `node run.mjs --only-step0
 - **Nothing else moves:** the other sections' answers are compared byte for byte on five years of history, and every fingerprint file but the six names is compared line by line.
 
 ---
+
+## Migration 0054: Finance event money report
+
+**Status: written on `claude/event-reports-dfd86c`, NOT applied.** Contract `docs/Finance/Event reports/CONTRACT-0054-0055.md` (Jeffrey's answers 2026-11-19). It needs an independent **security review** and Jeffrey's OK before it is pasted. It runs **after 0052** (live) and does not touch anything Board breaking's 0053 replaces. The live app does not know these functions and does not call them, so pasting it changes nothing on screen: the Event reports screen that uses them is pushed only after this file is live.
+
+**What it does** (`supabase/migrations/0054_finance_event_report.sql`): the database half of the admin-only **Event money report** - open one event (a Color Belt testing, a Star testing, a camp, a Black Belt cycle or a Board breaking event) and see all its money: the totals, the totals per school (Worcester first), and every day, newest first, with its lines; plus the same lines as CSV rows. It **adds only new things and replaces no live function**:
+1. **One new table, `finance_event_exports`** - one row per event CSV download (source, event id and name, school or both, how many rows, when, who by name, and the login id in `downloaded_by`, which is **never returned**). The twin of `finance_exports` (0011): append-only (the same guard function `finance_append_only`), every change in `change_log`, no "empty the table" shortcut, **RLS on with no rules and no rights for anon, authenticated or service_role**; only the export function writes it.
+2. **Four internal helpers** nobody in the app can call (owner only): `finance_event_check` (the contract's checks 3-5: bad source or no event -> `invalid`, unknown school or event -> `not_found`; answers the event's name), `finance_event_items` (all of one event's lines), `finance_event_figures` (adds up totals / refunds / returned in the shape of `finance_day`), `finance_event_extras` (the extra keys a camp, Black Belt or Board breaking line carries, as `finance_day` has them).
+3. **Two app functions, admins only** (staff get `not_allowed`; signed out or PIN-locked get `no_access`; authenticated only, nothing for anon): `finance_event_report(p_source, p_event_id, p_location_code default null)` and `finance_event_export(p_source, p_event_id, p_location_code default null)`. Checks in this order: `has_data_access()`, `is_admin()`, bad source / no event (`invalid`), unknown school (`not_found`), the event is not in its table (`not_found`).
+
+**Why the numbers are Finance's own:** both functions read their lines through `finance_money_rows_core` (0052's version) - the reader behind the Daily report, History and Export - and add them up with Finance's own `finance_figures_from`. So which payments count, undone / edited / moved / refund / returned-check states, the school stored on each payment (the desk that took the money) and every name are exactly Finance's, and each payment counts on the day it was paid. A Color Belt **private testing** has no event and never appears; a Star **private candidate** belongs to its Star event and appears, flagged `is_private`. (`finance_money_rows_core` only finds payments inside the range of days it is given, so the range is 2020-01-01 - the first day Finance accepts - to today; payments cannot be dated later.)
+
+**The report's answer** (`status: ok`): `source`, `school` (null = both), `event {id, name}`, `totals {count, total_cents, in_cents, net_cents, cash/check/card {count, cents}}`, `refunds {count, cents, cash_cents, check_cents, card_cents}`, `returned {count, cents}` (Black Belt returned checks), `by_school` (one entry per school that has lines: `school` + the same three groups; Worcester first) and `days` (newest first: `day` + the same three groups + `items`, each item the keys of a `finance_day` line + `school` + the camp / Black Belt / Board breaking extras, with no `added_after_closing`). The CSV rows (`finance_event_export`, answer `status, source, event_name, school, rows`) have exactly the keys of a `finance_export` row, in the order day, recorded time, last name, first name, payment id, and write **one** log row per call.
+
+**One word note:** the append-only trigger of the new table has to say `before update or delete` (as `finance_exports` did in 0011), so this file contains that word - Jeffrey pastes migrations in the SQL Editor himself, so it makes no difference there; the Supabase connector (which refuses the word) cannot apply this one. Its tests, fingerprints and pre-check do not contain it.
+
+**Guard and re-runs:** the file stops - and changes nothing - unless `finance_money_rows_core` is exactly 0052's text (md5 of the code without comments and white space) and the other tools it uses exist. **Forward-only** - nothing existing changed, so there is nothing to put back; running it again is safe (tested: no fingerprint, row or history change).
+
+**Each step needs Jeffrey's OK.**
+
+### 0054a. Before you apply (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0054_preapply_check.sql` (one row, connector-safe). Expected **`core_is_0052 = true`, `table_there = false`, `functions = 0`**. A `false` first column means `finance_money_rows_core` is not 0052's: stop - 0054 must be rebuilt (its guard would refuse anyway).
+2. Claude keeps the result of `supabase/tests/0052_fingerprints.sql` (the md5 of `finance_money_rows_core` must be **`534cb48c5cc6d5f6c9be6ce4ca0e0d8d`**).
+
+### 0054b. Apply 0054 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0054_finance_event_report.sql`, **SQL Editor -> New query**, paste, **Run**.
+2. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe.**
+
+### 0054c. Read-only checks (Claude runs these through the connection)
+
+1. **Pre-check again:** `0054_preapply_check.sql` now answers **true / true / 6**.
+2. **Fingerprints:** `supabase/tests/0054_fingerprints.sql` must match what `run.mjs` printed ("0054 fingerprints"), 20 rows:
+   - the six `function` md5s: `finance_event_check` **`1c941ba6f5ea5ba1068ad010d39af13b`**, `finance_event_export` **`1b1bbba0160a2ab9a6e1ac479a792439`**, `finance_event_extras` **`e0138816e087ddfd209d26ba77d29abc`**, `finance_event_figures` **`2a0a560abbcdf85503fcd9938a4e8d4a`**, `finance_event_items` **`d57ceabd0d2df9a5e9eea8576790ec06`**, `finance_event_report` **`408afe0759eaee69dd8e5f8927d73e88`**; the two app functions `definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`, the four helpers `definer=false ... rights=postgres:EXECUTE`
+   - their `function-kind` rows (volatility `s` for all but the export, `v`; languages plpgsql for check / export / report, sql for the other three)
+   - `table  finance_event_exports  rls=true owner=postgres rights= columns= policies=` (**no rights and no rules for anyone but the owner**)
+   - three `trigger` rows (append-only, history, no truncate) and four `constraint` rows (key, school foreign key, five sources, row count)
+   The file contains neither of the words the connection refuses.
+3. `0011_fingerprints.sql`, `0017_fingerprints.sql`, `0018_fingerprints.sql`, `0026_fingerprints.sql`, `0037_fingerprints.sql`, `0047_fingerprints.sql` (each lists every `finance_*` function and index): only lines of the new objects were **added** - nothing moved, nothing went. Every other migration's fingerprints: unchanged (`run.mjs` step0054 checks exactly that).
+4. **Security advisor:** the six functions and the table are new; nothing for anon, no other notice expected.
+
+### 0054d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0054_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (an ACTIVE admin and the ACTIVE front-desk login), paste, **Run** -> **ALL 0054 TESTS PASSED**. It makes its own `zz fin54 ...` event of **each** of the five kinds (a Color Belt testing, a Star testing with a private candidate, a camp with three campers through the family form, a Black Belt cycle with three candidates, two Board breaking events) and writes their money on August / September 2021 days inside the test only: payments at each school's desk, an edit that moves the money to another day and school, an undone payment, a quick Undo that leaves no line, refunds, a Square payment with no login and a returned Black Belt check. It checks: **the report of each event equals Finance's own Daily reports** (on every day its figures are the two schools' `finance_day` figures added, and its lines are Finance's lines with the school); the days add up to the totals, the schools add up to the totals, Worcester is listed first, days run newest first; asking for **one school** gives only that school's lines and exactly that school's part of the full report; the specific lines (edited, moved in / out, undone, no line for a quick Undo, the refund at the other desk, the Square payment, the returned check, the private Star candidate flagged `is_private`, another event's money absent); the CSV rows (the keys of a `finance_export` row, counted cents = the report's total, **one log row per call** with its school and row count); the log cannot be changed, removed or emptied and its login id is kept but never returned; refused calls write nothing; staff get `not_allowed`, signed-out / PIN-locked / locked sessions get `no_access`, **anon cannot run either function, and no one in the app can read the table or run a helper**; bad source, missing event, unknown school and an event of another source -> `invalid` / `not_found`; every key in every answer is on a fixed list with no login id; the six functions' security and rights and the table's. One transaction, rolled back. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved - run `rollback;` once on its own, then tell Claude.
+2. Then `0011_tests.sql`, `0052_tests.sql`, `0047_tests.sql` and `0026_tests.sql` again - each must still pass (`0011_tests.sql` F11 counts the six new `finance_event_*` functions as expected once 0054 is applied).
+3. Put the placeholders back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0054, or `node run.mjs --only-step0054`): **database A**, built in the production order with every live migration (... 0039 -> 0037, Color Belt's 0035 and 0044, Star's 0038, Black Belt's 0046, Finance's 0047, Camps' 0050, Board breaking's 0051, then the real 0052) with five years of Color Belt, Star, camp, private-testing and Black Belt money: the pre-apply check before and after; the guard refusing a changed or missing `finance_money_rows_core`; **Finance's own Daily reports, History and Home byte for byte the same before and after**; no row of any table and no history row written; only lines of the new objects *added* in the fingerprint files; 0054's fingerprints as planned; `0054_tests.sql`, then `0052_tests.sql` and `0026_tests.sql`; a seed of 2,000 Board breaking students (edits, undos, refunds, Square) read by the report and the CSV rows - each under 5 s (about 0.6 s), every total equal to the money in `brk_payments`, each school's total equal to the money stored at that school - and a sample of every older kind of event (each report ok, its days and schools add up, only its own source's lines); a second run of 0054. **Database B**, clean: `0054_tests.sql`, `0052_tests.sql`, `0047_tests.sql`, `0037_tests.sql`, `0011_tests.sql`, camps' `0017_tests.sql`, `0018_tests.sql`, `0026_tests.sql` and `finance_camp_refunds_tests.sql`.
+
+**Why:**
+- **One source of truth:** the event report is built on the rows and the figures Finance already uses, so it cannot disagree with the Daily report, History or Export of the same days.
+- **Admins only:** event money is not for the front desk; staff get `not_allowed`.
+- **A log of downloads:** each event CSV download is one append-only row (like Finance's own export log) - who, when, which event, which school, how many rows - and the login id never leaves the database.
+
+---
+
+## Migration 0055: Black Belt roster paid date
+
+**Status: written on `claude/event-reports-dfd86c`, NOT applied.** Contract `docs/Finance/Event reports/CONTRACT-0054-0055.md` (Jeffrey's answers 2026-11-19). It needs an independent **security review** and Jeffrey's OK before it is pasted. It runs **after 0025** (live), is independent of 0054, and touches no other section. The live app ignores keys it does not know, so pasting it changes nothing on screen until the Black Belt app that shows the date is pushed.
+
+**What it does** (`supabase/migrations/0055_black_belt_roster_paid_on.sql`): the Black Belt **roster** (`bb_cycle_roster(p_cycle_id uuid)`, 0025 section 9i) gains **one key on every row: `paid_on`** - the day of the candidate's **last payment that still counts** (the latest `paid_on` among the candidate's `payment` rows that no reversal points at and that are not a bounced check - the very same "counts" rule `bb_candidate_money` uses), or **null** when there is no such payment. The database does **not** decide whether the candidate is paid in full: the app shows the date only when `money` says the balance is 0. It replaces **only** that one function: same signature, return type, rules, `security definer` / `search_path = ''`, and rights (authenticated only; nothing for anon); everything else in it is 0025's text word for word. No table, no row, no other function. A **guard** stops the file - and changes nothing - unless the live function is exactly 0025's text (or this file's, on a re-run). **Forward-only** - re-running 0025 would put the old roster back (no `paid_on`); run 0055 straight after.
+
+**Each step needs Jeffrey's OK.**
+
+### 0055a. Before you apply (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0055_preapply_check.sql` (one row, connector-safe). Expected **`roster_is_0025 = true`, `roster_is_0055 = false`, `roster_versions = 1`** (0025's `bb_cycle_roster` md5 is **`b7bcfd84fd802df5cdacbbd10eea20d7`**). A false / false pair means someone changed the function since: stop - 0055 must be rebuilt (its guard would refuse anyway).
+
+### 0055b. Apply 0055 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0055_black_belt_roster_paid_on.sql`, **SQL Editor -> New query**, paste, **Run**.
+2. "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe.**
+
+### 0055c. Read-only checks (Claude runs these through the connection)
+
+1. **Pre-check again:** `0055_preapply_check.sql` now answers **false / true / 1**.
+2. **Fingerprint:** `supabase/tests/0055_fingerprints.sql` must match what `run.mjs` printed ("0055 fingerprints"): `function  bb_cycle_roster(p_cycle_id uuid)  5e8c053932bb48deeaad4b5161bdd4d4 lang=plpgsql volatility=v returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+3. `0016_fingerprints.sql` and `0025_fingerprints.sql` (each lists every Black Belt function): **only** the `bb_cycle_roster` line differs (its body md5, `b7bcfd84...` -> `5e8c0539...`) - every other line the same. Every other migration's fingerprints: unchanged (`run.mjs` step0055 checks exactly that).
+4. **Security advisor:** nothing new (no new function or table).
+
+### 0055d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0055_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** -> **ALL 0055 TESTS PASSED**. It makes a `zz fin55 ...` cycle with eight candidates and writes their payment rows on September 2021 days inside the test only, then reads the roster as the front desk and checks `paid_on`: one payment, paid in full -> that day (money says `paid_in_full`); two payments -> the later day; a later payment that was **undone** -> the earlier day; a **bounced check** -> null; **no payment** -> null; a bounced check whose **return was undone** -> its day again; an **edited** payment -> the new day; a payment and a later **refund** -> the payment's day; the admin reads the same dates; each roster row has exactly 0025's keys plus `paid_on` (a date or null, no login id, no email); signed-out and PIN-locked sessions get `no_access`, an unknown cycle `not_found`, none `invalid`; the function's security and rights. One transaction, rolled back.
+2. Then `0016_tests.sql` and `0025_tests.sql` again - each must still pass (`0016_tests.sql` T9c knows the new key once 0055 is applied).
+3. Put the placeholders back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0055, or `node run.mjs --only-step0055`): a database built in the production order up to 0025 and every later Black Belt migration (0027, 0026, 0028, 0029, 0031, 0032, 0033, 0034, 0046): the pre-apply check before and after; the guard refusing a changed roster; only the `bb_cycle_roster` line moving in `0016_fingerprints.sql` and `0025_fingerprints.sql`; 0055's fingerprint; `0055_tests.sql`, then the older Black Belt tests (`0016`, `0024`, `0025`, `0026`, `0032`, `0034`, `0046`); a second run of 0055.
+
+**Why:**
+- **The desk sees when the candidate finished paying** without opening each candidate: the roster already says "Paid in full", and now says since when.
+- **The same "counts" rule as the money picture**, so the date never counts a payment the balance does not.
+
+---

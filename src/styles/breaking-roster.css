@@ -58,10 +58,10 @@
   gap: 2px var(--space-8);
 }
 
-/* A student's row on PC: Student · Technical · Adult · Paying by · Payment · Broke · actions
+/* A student's row on PC: Student · Technical · Adult · Paying by · Payment · Paid on · Broke · actions
    (the approved picture "Boards separated", docs/Board Breaking/Mockups/D-roster-boards-gen.mjs) */
 .brk-ev .brk-srow {
-  grid-template-columns: minmax(0, 1.5fr) 84px 84px 84px 176px 92px 152px;
+  grid-template-columns: minmax(0, 1.5fr) 84px 84px 84px 176px 76px 92px 152px;
   cursor: default;
 }
 
@@ -211,7 +211,7 @@
 /* A narrower PC window (about 1024 to 1180): the two board columns take 72 px each so the Student column keeps room for "High Blue belt" */
 @media (min-width: 1024px) and (max-width: 1179.98px) {
   .brk-ev .brk-srow {
-    grid-template-columns: minmax(0, 1.5fr) 72px 72px 84px 176px 92px 152px;
+    grid-template-columns: minmax(0, 1.5fr) 72px 72px 84px 176px 76px 92px 152px;
   }
 }
 
@@ -223,7 +223,8 @@
     column-gap: var(--space-8);
   }
 
-  .brk-ev .brk-payby-col {
+  .brk-ev .brk-payby-col,
+  .brk-ev .brk-paidon-col {
     display: none;
   }
 

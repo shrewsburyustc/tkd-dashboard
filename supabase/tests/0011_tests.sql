@@ -1702,6 +1702,12 @@ begin
       raise exception 'TEST FAILED: F11 % must be append-only', v_txt;
     end if;
   end loop;
+  -- 0054 (the event money report) adds two app functions and four internal helpers; once it is applied they are
+  -- expected too (their own rights, security and table are checked in 0054_tests.sql)
+  if to_regprocedure('public.finance_event_report(text, uuid, text)') is not null then
+    v_app_fns := v_app_fns || array['finance_event_report', 'finance_event_export'];
+    v_helper_fns := v_helper_fns || array['finance_event_check', 'finance_event_items', 'finance_event_figures', 'finance_event_extras'];
+  end if;
   select count(*) into v_n from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'finance\_%';
   perform pg_temp.t_eq('F11 number of finance_ functions', v_n::text, (cardinality(v_app_fns) + cardinality(v_helper_fns))::text);

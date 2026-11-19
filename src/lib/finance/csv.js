@@ -156,19 +156,23 @@ function wasSchoolNote(row, labels) {
 //   rows: finance_export's `rows` (snake_case, exactly as the database sends them)
 //   options.headers: { key: 'Header words' } to replace any default header
 //   options.labels:  { school | what | what_private | kind | method | state: { code: 'Words' } } to replace labels
+//   options.leading: extra columns written BEFORE the usual ones, [[key, type], …] — the event money report
+//                    (eventReportCsv.js) puts the event's name first: [['event_name', 'text']]. Default none, so
+//                    Finance's own Export file is exactly as it was.
 // Summing the "Counted in total" column always gives the right total (counted_cents is 0 for
 // rows that don't add up: undone and moved-out lines).
-export function toCsv(rows, { headers = {}, labels = {} } = {}) {
+export function toCsv(rows, { headers = {}, labels = {}, leading = [] } = {}) {
+  const columns = [...leading, ...CSV_COLUMNS];
   const head = { ...DEFAULT_CSV_HEADERS, ...headers };
   const words = Object.fromEntries(Object.keys(DEFAULT_CSV_LABELS).map((k) => {
     const base = DEFAULT_CSV_LABELS[k];
     return [k, typeof base === 'string' ? (labels[k] ?? base) : { ...base, ...(labels[k] ?? {}) }];
   }));
-  const lines = [CSV_COLUMNS.map(([key]) => quoteCell(guardFormula(String(head[key] ?? key)))).join(',')];
+  const lines = [columns.map(([key]) => quoteCell(guardFormula(String(head[key] ?? key)))).join(',')];
   for (const row of rows ?? []) {
     let withNote = row?.kind === 'returned' ? { ...row, note: noteOf(row, words) } : row;
     if (withNote?.was_school) withNote = { ...withNote, note: wasSchoolNote(withNote, words) };
-    lines.push(CSV_COLUMNS.map(([key, type]) => cellText(withNote, key, type, words)).join(','));
+    lines.push(columns.map(([key, type]) => cellText(withNote, key, type, words)).join(','));
   }
   return `${CSV_BOM}${lines.join('\r\n')}\r\n`;
 }

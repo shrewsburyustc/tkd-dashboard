@@ -596,6 +596,9 @@ function toRosterRow(r) {
     duplicateOf: orNull(r.duplicate_of),
     version: r.version,
     hasPaymentRows: r.has_payment_rows === true,
+    // 0055 (Event reports PD1): the day of the candidate's last counting payment; the roster shows it only
+    // once the candidate has paid in full. null while the database doesn't send it yet (before 0055).
+    paidOn: isDate(r.paid_on) ? r.paid_on : null,
     money,
     // 0025: a make-up from an earlier cycle (no plan, no fee) and whether real grades exist
     // (Delete permanently is grayed then, v0.950)

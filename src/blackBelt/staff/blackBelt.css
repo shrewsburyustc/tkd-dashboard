@@ -800,9 +800,10 @@
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.4fr) 80px 44px;
 }
 
-/* PC: Candidate · Dan · School · Plan · Payments · Balance · Record payment + ⋯ */
+/* PC: Candidate · Dan · School · Plan · Payments · Paid in full on · Balance · Record payment + ⋯
+   (Event reports PD1: the 104px "Paid in full on" column) */
 .bb-roster.is-wide .bb-crow {
-  grid-template-columns: minmax(0, 1.5fr) 64px 92px minmax(0, 1.1fr) minmax(0, 1.5fr) 72px 176px;
+  grid-template-columns: minmax(0, 1.5fr) 64px 92px minmax(0, 1.1fr) minmax(0, 1.5fr) 104px 72px 176px;
 }
 
 /* Hide payments on: no Payments / Balance; one narrow column for the duplicate / removed tag */
@@ -826,6 +827,12 @@
 .bb-cline {
   color: var(--color-text-secondary);
   font-size: var(--text-12);
+}
+
+/* The gray "paid in full Oct 28": its own line under the tag (tablet) or under the school (phone) */
+.bb-paidline {
+  display: block;
+  margin-top: 2px;
 }
 
 /* Tablet: "1st Dan · Shrewsbury" on its own line under the name */

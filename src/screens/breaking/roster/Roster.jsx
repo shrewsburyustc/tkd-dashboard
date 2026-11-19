@@ -9,6 +9,10 @@
 //     the right. (Approved picture: docs/Board Breaking/Mockups/D-roster-boards-gen.mjs, "Boards separated".)
 // One class at a time (the class switch above the table, as in Color belt testing; EventPage.jsx draws the switch and the
 // class line "Group D · 4:20 – 5:00 PM · 3 registered · 2 broke"), so there is no heading inside the table any more.
+// Paid on (Event reports PD1, 2026-11-19; Jeffrey: only when paid in full): a "Paid on" column right after Payment on a PC
+//   ("Nov 17", a dash while a balance is left), "Cash · $12 · paid Nov 17" on the tablet's line under the tag and on the phone's
+//   gray line. The day is the one breakingRules.paidInFullOn works out. It is money, so it goes with the Paying by column
+//   while Hide private details is on.
 // While Hide private details is on, the money parts (Paying by, the amount, the payment tag, Mark paid) are
 // left out and the payment cell says "Hidden on this tablet" — the Broke box and the belt stay.
 //
@@ -25,7 +29,7 @@ import Belt from '../../../components/Belt.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import { formatMoney } from '../../../lib/money.js';
 import { HIDDEN_ON_THIS_TABLET } from '../../../lib/privateDetails.js';
-import { beltFor, owedCents, paidState, payingByLabel, rankLabel } from '../../../lib/breaking/breakingRules.js';
+import { beltFor, owedCents, paidInFullOn, paidState, payingByLabel, rankLabel } from '../../../lib/breaking/breakingRules.js';
 import * as T from '../../../lib/breaking/text/roster.js';
 
 export const fullName = (row) => `${row.firstName} ${row.lastName}`;
@@ -124,6 +128,7 @@ function BoardNumber({ n }) {
 // Paying by column, so "Cash · $9" sits under the Payment tag (brk-payby-inline; the CSS decides which one shows).
 function WideRow({ row, busy, hidden, notSavedId, handlers }) {
   const name = fullName(row);
+  const paidOn = hidden ? null : paidInFullOn(row);
   return (
     <div className={`ev-srow brk-srow${row.broke ? ' is-broke' : ''}`} role="row" aria-label={name} data-nav-row={row.id}>
       <span className="ev-scell ev-sname-line" role="cell">
@@ -150,8 +155,13 @@ function WideRow({ row, busy, hidden, notSavedId, handlers }) {
         {!hidden && (
           <span className="brk-sub brk-payby-inline">
             {payingByLabel(row.payingBy)} · {formatMoney(owedCents(row))}
+            {T.paidOnSuffix(paidOn)}
           </span>
         )}
+      </span>
+      {/* PC only (the tablet has no room: its date is in the line above) */}
+      <span className="ev-scell nowrap brk-paidon-col" role="cell">
+        {!hidden && (paidOn ? T.monthDay(paidOn) : '—')}
       </span>
       <span className="ev-scell" role="cell">
         <BrokeBox row={row} busy={busy} onBroke={handlers.onBroke} />
@@ -167,6 +177,7 @@ function WideRow({ row, busy, hidden, notSavedId, handlers }) {
 // One card on a phone.
 function PhoneRow({ row, busy, hidden, notSavedId, handlers }) {
   const name = fullName(row);
+  const paidOn = hidden ? null : paidInFullOn(row);
   return (
     <div className={`ev-srow is-phone brk-prow${row.broke ? ' is-broke' : ''}`} role="row" aria-label={name} data-nav-row={row.id}>
       <span className="ev-srow-main" role="cell">
@@ -188,6 +199,7 @@ function PhoneRow({ row, busy, hidden, notSavedId, handlers }) {
         {!hidden && (
           <span className="ev-sline l2">
             {payingByLabel(row.payingBy)} · {formatMoney(owedCents(row))}
+            {T.paidOnSuffix(paidOn)}
             {row.sameDay && ' '}
             {row.sameDay && <span className="ttag">{T.SAME_DAY}</span>}
           </span>
@@ -216,6 +228,7 @@ export default function Roster({ rows, isPhone, hidden, busy, notSavedId, handle
           <span role="columnheader" className="brk-bcell brk-bcell--adult brk-bhead">{T.COL_ADULT}</span>
           <span role="columnheader" className="brk-payby-col">{hidden ? '' : T.COL_PAYING_BY}</span>
           <span role="columnheader">{T.COL_PAYMENT}</span>
+          <span role="columnheader" className="brk-paidon-col">{hidden ? '' : T.COL_PAID_ON}</span>
           <span role="columnheader">{T.COL_BROKE}</span>
           <span role="columnheader" aria-label={T.COL_ACTIONS} />
         </div>

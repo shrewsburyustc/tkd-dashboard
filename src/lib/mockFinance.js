@@ -1,5 +1,7 @@
 // mockFinance.js — the PREVIEW (fake) database for Finance: the Daily report, Close the day,
 // History, Export and the reminder settings.
+// Also (migration 0054) one event's Money report and its CSV: finance_event_report / finance_event_export,
+// built from the same payment items by finance/mockEventReport.js; the CSV's download log is `event_exports`.
 // Why it exists: preview mode (npm run dev:preview-mode) runs without Supabase. This file
 // pretends to be migration 0011 (contract 0011 §1): the same 14 functions (13 + finance_export_preview), the same order of
 // checks, the same status codes, the same staff / admin split and the same correction rules
@@ -64,6 +66,7 @@ import {
   UNDO_CLOSE_WINDOW_MS, MAX_COUNT_CENTS, MAX_CHECKS, NOTE_MAX,
 } from './finance/financeRules.js';
 import { centsToCsvNumber } from './finance/csv.js';
+import { buildEventExport, buildEventReport } from './finance/mockEventReport.js'; // the event Money report (migration 0054)
 import { addDays, isIsoDate, normalizeNote, SCHOOL_TIME_ZONE } from './testing/eventRules.js';
 
 const STORE_FORMAT = 2; // bump when the store's shape changes (old stores are then replaced)
@@ -91,6 +94,8 @@ const RPC_ARGS = {
   finance_reopen_day: [['p_location_code', 'text'], ['p_day', 'date'], ['p_expected_closing_id', 'uuid']],
   finance_export: [['p_location_code', 'text'], ['p_from', 'date'], ['p_to', 'date']],
   finance_export_preview: [['p_location_code', 'text'], ['p_from', 'date'], ['p_to', 'date']],
+  finance_event_report: [['p_source', 'text'], ['p_event_id', 'uuid'], ['p_location_code', 'text']], // 0054
+  finance_event_export: [['p_source', 'text'], ['p_event_id', 'uuid'], ['p_location_code', 'text']], // 0054
   finance_settings_get: [],
   finance_set_reminder_on: [['p_on', 'bool'], ['p_expected_version', 'int']],
   finance_set_reminder_time: [['p_location_code', 'text'], ['p_weekday', 'smallint'], ['p_time', 'time'], ['p_expected_version', 'int']],
@@ -100,10 +105,12 @@ export const FINANCE_RPC_NAMES = Object.keys(RPC_ARGS);
 // The functions that write (the failNextSave helper makes the next one of these fail).
 export const FINANCE_WRITE_RPC_NAMES = [
   'finance_close_day', 'finance_undo_close', 'finance_reopen_day', 'finance_export', // export writes its log row
+  'finance_event_export', // so does an event's CSV (finance_event_exports, 0054)
   'finance_set_reminder_on', 'finance_set_reminder_time', 'finance_copy_monday',
 ];
 const ADMIN_ONLY = new Set([
   'finance_history', 'finance_reopen_day', 'finance_export', 'finance_export_preview', 'finance_settings_get',
+  'finance_event_report', 'finance_event_export', // 0054: admins only
   'finance_set_reminder_on', 'finance_set_reminder_time', 'finance_copy_monday',
 ]);
 
@@ -629,6 +636,23 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     return rows;
   }
 
+  // One event of one section, { id, name }, or null when it isn't there (the event report's "not_found"):
+  // Color Belt event, Star event, camp, Black Belt cycle, Board breaking event — each from its own preview store.
+  function eventOf(db, source, id) {
+    let list = [];
+    try {
+      if (source === 'color_belt') list = readColorBelt?.()?.events ?? [];
+      else if (source === 'star') list = starSource(db).events;
+      else if (source === 'camp') list = campsStore()?.camps ?? [];
+      else if (source === 'black_belt') list = blackBeltStore()?.bb_cycles ?? [];
+      else if (source === 'board_breaking') list = breakingStore()?.events ?? [];
+    } catch {
+      list = [];
+    }
+    const found = list.find((e) => e && e.id === id);
+    return found ? { id: found.id, name: found.name } : null;
+  }
+
   // ----- Closings -----
 
   // A close is "ended" when an undo or reopen points at it.
@@ -942,19 +966,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     finance_export(db, a, ctx) {
       const refused = exportRangeProblem(a);
       if (refused) return st(refused);
-      const rows = rangeItems(db, a)
-        .map((it) => ({
-          day: it.day, school: it.school, time: schoolNow(it.recorded_at).time, first_name: it.first_name, last_name: it.last_name,
-          what: it.what, event_date: it.event_date, is_private: it.is_private === true, // 0037: like finance_day's items
-          kind: it.kind, method: it.method, amount_cents: it.amount_cents,
-          counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
-          note: exportNote(it), was_school: it.was_school ?? null,
-          ...(it.source === 'camp' || it.source === 'board_breaking' ? { event_name: it.event_name } : {}), // camp / Board breaking rows: the event's name (not a CSV column)
-          // Black Belt rows (0026 §6): the cycle name, what it's for and, on a returned check, the handed-in day.
-          ...(it.source === 'black_belt'
-            ? { event_name: it.event_name, for_items: it.for_items, one_payment_plan: it.one_payment_plan, handed_in_on: it.handed_in_on }
-            : {}),
-        }));
+      const rows = rangeItems(db, a).map(exportRow);
       db.exports.push({
         id: newId(), location_code: a.p_location_code, from_day: a.p_from, to_day: a.p_to, row_count: rows.length,
         downloaded_at: stamp(), downloaded_by: ctx.userId ?? null, downloaded_by_name: ctx.actorName,
@@ -973,6 +985,23 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         count: counted.filter((it) => it.kind === 'payment').length,
         total_cents: counted.reduce((sum, it) => sum + it.amount_cents, 0),
       };
+    },
+
+    // One event's Money report (0054): the rows of that event from the same items as the Daily report
+    // (mockEventReport.js keeps the shape; the event must exist in its own section's store).
+    finance_event_report(db, a) {
+      return buildEventReport({ args: a, items: allItems(db), findEvent: (source, id) => eventOf(db, source, id), itemOut });
+    },
+
+    // The same rows as a CSV file's lines; each call is logged like finance_export (0054: finance_event_exports).
+    finance_event_export(db, a, ctx) {
+      const answer = buildEventExport({ args: a, items: allItems(db), findEvent: (source, id) => eventOf(db, source, id), exportRow });
+      if (answer.status !== 'ok') return answer;
+      (db.event_exports ??= []).push({
+        id: newId(), source: a.p_source, event_id: a.p_event_id, event_name: answer.event_name, location_code: a.p_location_code,
+        row_count: answer.rows.length, downloaded_at: stamp(), downloaded_by: ctx.userId ?? null, downloaded_by_name: ctx.actorName,
+      });
+      return answer;
     },
 
     finance_settings_get(db) {
@@ -1108,6 +1137,22 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
   }
 
   return { rpc, failNextSave, setNow, reset, snapshot: read };
+}
+
+// One finance_export row (also the event report's CSV rows, 0054, which add event_name to every row).
+function exportRow(it) {
+  return {
+    day: it.day, school: it.school, time: schoolNow(it.recorded_at).time, first_name: it.first_name, last_name: it.last_name,
+    what: it.what, event_date: it.event_date, is_private: it.is_private === true, // 0037: like finance_day's items
+    kind: it.kind, method: it.method, amount_cents: it.amount_cents,
+    counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
+    note: exportNote(it), was_school: it.was_school ?? null,
+    ...(it.source === 'camp' || it.source === 'board_breaking' ? { event_name: it.event_name } : {}), // camp / Board breaking rows: the event's name (not a CSV column)
+    // Black Belt rows (0026 §6): the cycle name, what it's for and, on a returned check, the handed-in day.
+    ...(it.source === 'black_belt'
+      ? { event_name: it.event_name, for_items: it.for_items, one_payment_plan: it.one_payment_plan, handed_in_on: it.handed_in_on }
+      : {}),
+  };
 }
 
 // 0047: the first desk's school when it differs from the line shown, only for an edited or moved-in

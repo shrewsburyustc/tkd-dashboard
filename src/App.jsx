@@ -75,6 +75,7 @@ import Schedule from './screens/Schedule.jsx';
 import Calendar from './screens/Calendar.jsx';
 import ProspectsSection from './screens/ProspectsSection.jsx'; // Prospects | Forms, one section since 2026-11-17
 import Finance from './screens/Finance.jsx';
+import EventReport from './screens/finance/EventReport.jsx'; // one event's Money report (migration 0054)
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePrivateDetailsHidden } from './lib/privateDetails.js';
 import { usePanelSize } from './lib/panelSize.js';
@@ -151,6 +152,10 @@ const TOASTS = {
 // its view, 'report' | 'history' | 'settings', in the eventTab slot; Camps keeps the open camp's id
 // in eventId and its tab — 'camps' | 'templates' on the list, 'default' | 'checkin' | 'payments' |
 // 'attendance' on a camp's page — in eventTab, contract 0013 §6.1.)
+
+// An event's Money report (migration 0054) names its event's section in the page address; this is the Testing
+// page whose rail item stays highlighted while the report is open (a camp highlights Camps instead).
+const REPORT_TESTING_PAGE = { color_belt: 'colorBelt', star: 'star', black_belt: 'blackBelt', board_breaking: 'breaking' };
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
 const LOCK_RETRY_EVERY_MS = 30 * 1000;
@@ -690,13 +695,15 @@ export default function App() {
       // id is dropped, so it can never become a Color Belt event address.
       const starAskedWhileOff = !STAR_TESTING_ON && nextPage === 'star';
       // (Camps keeps its open camp's id in the same slot.)
-      const nextEvent = (id === 'testing' && !starAskedWhileOff) || id === 'camps' ? nextEventId : null;
+      // (An event's Money report, on Finance, keeps its event's id and its source — in testingPage's slot.)
+      const reportAsked = id === 'finance' && (nextTab ?? tab) === 'event-report' && Boolean(nextEventId) && Boolean(nextPage);
+      const nextEvent = (id === 'testing' && !starAskedWhileOff) || id === 'camps' || reportAsked ? nextEventId : null;
       // A private testing only opens on Testing, and never together with an event.
       const nextPrivate = id === 'testing' && !nextEvent && !starAskedWhileOff ? nextPrivateId : null;
       const askedPage = nextPrivate ? 'colorBelt' : nextPage;
       // (Switch off: Color Belt, or Black Belt when it is asked for — C2.)
       const offPage = askedPage === 'blackBelt' ? 'blackBelt' : 'colorBelt';
-      const page = id === 'testing' ? (STAR_TESTING_ON ? (askedPage ?? DEFAULT_TESTING_PAGE) : offPage) : null;
+      const page = id === 'testing' ? (STAR_TESTING_ON ? (askedPage ?? DEFAULT_TESTING_PAGE) : offPage) : reportAsked ? nextPage : null;
       const next = {
         section: id,
         testingPage: page,
@@ -1024,6 +1031,15 @@ export default function App() {
       }
     });
   }, [guarded, navigate, location, changeLocation]);
+  // An event's Money report (migration 0054): its back link, and the detail's "Open in …", go to the event's own
+  // page in its section. The report is opened by MoneyReportButton (it sets the page address itself).
+  const openEventFromReport = useCallback((source, id) => {
+    if (source === 'camp') openCamp(id);
+    else if (source === 'star') openStarEvent(id);
+    else if (source === 'black_belt') openBlackBelt({ cycleId: id });
+    else if (source === 'board_breaking') openBreaking({ eventId: id });
+    else openEvent(id);
+  }, [openCamp, openStarEvent, openBlackBelt, openBreaking, openEvent]);
   const openFinanceHistory = useCallback((firstDay) => {
     showMonthOf(firstDay);
     navigate('finance', { tab: 'history' });
@@ -1083,7 +1099,8 @@ export default function App() {
   useEffect(() => {
     const testingTitle = section === 'testing' && (STAR_TESTING_ON || testingPage === 'blackBelt') ? TESTING_PAGE_TITLES[testingPage] : null;
     const formsTab = section === 'prospects' && eventTab === 'forms';
-    document.title = phase === 'home' ? (testingTitle ?? (formsTab ? 'Forms · U.S. Taekwondo Center' : SECTION_TITLES[section])) : PAGE_TITLES[phase];
+    const reportTitle = section === 'finance' && eventTab === 'event-report' ? 'Money report · U.S. Taekwondo Center' : null; // Finance's event Money report
+    document.title = phase === 'home' ? (reportTitle ?? testingTitle ?? (formsTab ? 'Forms · U.S. Taekwondo Center' : SECTION_TITLES[section])) : PAGE_TITLES[phase];
   }, [phase, section, testingPage, eventTab]);
 
   // ----- Drawing -----
@@ -1108,6 +1125,8 @@ export default function App() {
   const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || scheduleModalOpen || calendarModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
   // Finance is in the rail / bottom bar unless payments are hidden on this device (navItems.js).
   showFinanceInNav(!paymentsHidden);
+  // An event's Money report is open (admins only; the database decides again).
+  const reportOpen = section === 'finance' && eventTab === 'event-report' && Boolean(eventId) && isAdminNow && !paymentsHidden;
 
   return (
     <div className="app-root">
@@ -1131,8 +1150,10 @@ export default function App() {
           <Shell
             hidden={phase === 'locked'}
             inert={shellInert}
-            currentSection={section}
-            currentTestingPage={section === 'testing' ? testingPage : null}
+            // An event's Money report highlights the event's own section in the rail (Camps, or Testing with
+            // that event's page), not Finance — it is "inside the event" (pictures ER2, ER3).
+            currentSection={reportOpen ? (testingPage === 'camp' ? 'camps' : 'testing') : section}
+            currentTestingPage={reportOpen ? REPORT_TESTING_PAGE[testingPage] ?? null : section === 'testing' ? testingPage : null}
             // The person's own ways off the event page are guarded (contract 0010 §4.9) — the
             // rail's icons, the bottom bar and the Testing hover menu's items (which pass options).
             onNavigate={(id, options) => guarded(() => navigate(id, options))}
@@ -1281,7 +1302,23 @@ export default function App() {
                 onBadgeRefresh={refreshBadge}
               />
             )}
-            {section === 'finance' && !paymentsHidden && (
+            {reportOpen && (
+              <EventReport
+                // A new event or a new school starts a fresh page (its open days, its detail dialog).
+                key={`${testingPage}|${eventId}`}
+                source={testingPage}
+                eventId={eventId}
+                location={location}
+                profileName={profile.full_name}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onBack={openEventFromReport}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setFinanceModalOpen}
+              />
+            )}
+            {section === 'finance' && !paymentsHidden && !reportOpen && (
               <Finance
                 location={location}
                 onLocationChange={changeLocation}

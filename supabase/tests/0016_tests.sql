@@ -202,6 +202,9 @@ declare
   v_has_0024 boolean := to_regclass('public.bb_default_rubric') is not null;
   -- 0025 (grading and results) installed? (CONTRACT-0025 12.4)
   v_has_0025 boolean := to_regclass('public.bb_grades') is not null;
+  -- 0055 adds one key (paid_on) to every roster row; before it the roster has the keys below without it
+  v_has_0055 boolean := coalesce((select position('paid_on' in p.prosrc) > 0 from pg_proc p
+                                   where p.oid = to_regprocedure('public.bb_cycle_roster(uuid)')), false);
   -- 0032 (history reader, Edit cycle's Undo in one call) installed? Its 3 new functions
   v_has_0032 boolean := to_regprocedure('public.bb_candidate_history(uuid)') is not null;
   v_review_fns text[] := array['bb_history_strip', 'bb_candidate_history', 'bb_undo_cycle_edit'];
@@ -3013,7 +3016,12 @@ begin
      or exists (select 1 from jsonb_array_elements(v_r -> 'rows') as x(value) where x.value -> 'money' ? 'items')
      -- (0025 adds exactly four keys, CONTRACT-0025 6.5 / 12.4)
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'rows' -> 0) as k)
-        <> (case when v_has_0025
+        <> (case when v_has_0025 and v_has_0055
+                then array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_grades', 'has_payment_rows', 'id',
+                           'is_makeup', 'kukkiwon', 'last_name', 'location_code', 'makeup_of_cycle_name', 'money', 'paid_on',
+                           'plan_id', 'plan_name', 'reference', 'registered_at', 'retest_names', 'source', 'status', 'version',
+                           'withdrawn_reason']
+                when v_has_0025
                 then array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_grades', 'has_payment_rows', 'id',
                            'is_makeup', 'kukkiwon', 'last_name', 'location_code', 'makeup_of_cycle_name', 'money', 'plan_id',
                            'plan_name', 'reference', 'registered_at', 'retest_names', 'source', 'status', 'version',

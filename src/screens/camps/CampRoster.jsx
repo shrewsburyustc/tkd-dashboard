@@ -47,7 +47,8 @@
 // Then Find a camper, and — only when the camp's days cross more than one calendar week —
 // the week switch ("Week 1 · Jul 6–10 | Week 2 · Jul 13–17"; each week shows only its own days,
 // Paid and the cards stay whole-camp), the roster, then "Removed".
-// Phones: one card per child — name + Paid on top, the week's day buttons underneath (today
+// Phones: one card per child — name + Paid on top, a small gray line under the name with how and when a
+// paid camper paid ("Card · paid Mar 25"), the week's day buttons underneath (today
 // outlined), 44px targets. The same cards are drawn on a bigger screen when the ROOM beside the left
 // panel is too narrow for the table's columns (rulebook v0.747, picture 24; v1.053 / v1.130, L-02):
 // the shared hook `usePageRoomBelow` (src/lib/pageRoom.js) is asked with `rosterRoomNeeded` (the room
@@ -59,6 +60,11 @@
 // week switch, legend) with "No campers yet…" as one row inside it, so a closed or past camp
 // never looks like it lost its roster; and "Updated 2:41:07 PM" stays (since C10 on its own line,
 // right, above the cards; a camp nobody signed up for shows only that line, no cards).
+// Paid on (Event reports PD1, 2026-11-19; Jeffrey: only when paid in full): a column right after Paid on PC /
+// tablet with the day the camper paid in full ("Mar 25", a dash while a balance is left), and on the cards
+// the gray line "Card · paid Mar 25" for a camper who has paid in full (no line otherwise). Both are
+// money, so they go with the Paid column when Hide private details is on. campRules.paidInFullOn
+// works the day out. Color belt's words and layout, copied (screens/testing/event/RosterRows.jsx).
 // "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
 // v0.412): no Paid column (PC / tablet) and no money tags on the phone cards, only the Campers and
 // Coming (or Came) cards (To collect and Payments recorded go, and a To collect filter is cleared
@@ -80,7 +86,7 @@ import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { usePageRoomBelow } from '../../lib/pageRoom.js';
 import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
 import {
-  rosterRoomNeeded, overpaidCents, campCardCounts, dayExtraCounts, dayExtrasFor, everyDayExtras, extraDayWord, extraShortName, matchesCardFilter, missingExtraOnDay, paidTagParts, payTag, payingByChoiceWhere,
+  rosterRoomNeeded, overpaidCents, paidInFullOn, campCardCounts, dayExtraCounts, dayExtrasFor, everyDayExtras, extraDayWord, extraShortName, matchesCardFilter, missingExtraOnDay, paidTagParts, payTag, payingByChoiceWhere,
 } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { formatMoney } from '../../lib/money.js';
@@ -333,7 +339,7 @@ export default function CampRoster({
   // The table needs more room while someone is overpaid (the amber words widen the Paid column), and
   // for the week on screen, so a week with fewer days can show the table where a longer one shows cards.
   const anyOverpaid = !detailsHidden && active.some((r) => overpaidCents(r) > 0);
-  const narrowRoom = usePageRoomBelow(rosterRoomNeeded(shownDays.length, showMore, anyOverpaid));
+  const narrowRoom = usePageRoomBelow(rosterRoomNeeded(shownDays.length, showMore, anyOverpaid, !detailsHidden));
   const stacked = isPhone || narrowRoom;
   // The layout flipped (a window turned, Panel size changed, another week): the tag a Mark paid box
   // hangs from, or the ⋯ a menu hangs from, is a different element now — close them (never on the
@@ -512,6 +518,11 @@ export default function CampRoster({
   );
   // The family's school, a small gray line under the name (only a both-schools camp on Both).
   const schoolLine = (row) => (showSchool && row.school ? <span className="cp-rschool">{T.schoolName(row.school)}</span> : null);
+  // The cards' "Card · paid Mar 25" under the name: only a camper paid in full, never while details are hidden.
+  const paidLine = (row) => {
+    const on = detailsHidden ? null : paidInFullOn(row);
+    return on ? <span className="cp-rpaidline">{T.paidOnPhone(row.paidMethod, on)}</span> : null;
+  };
   const more = (row) =>
     showMore ? (
       <IconButton
@@ -587,6 +598,7 @@ export default function CampRoster({
                 </span>
               </div>
               {schoolLine(row)}
+              {paidLine(row)}
               {note && <span className="cp-rnote">{note}</span>}
               <div className="cp-rdays">{shownDays.map((d) => cell(row, d, true))}</div>
             </div>
@@ -599,7 +611,7 @@ export default function CampRoster({
     );
   } else {
     // ----- PC and tablet: the grid -----
-    const columns = 1 + (detailsHidden ? 0 : 1) + shownDays.length + (showMore ? 1 : 0);
+    const columns = 1 + (detailsHidden ? 0 : 2) + shownDays.length + (showMore ? 1 : 0);
     list = (
       // Always the full content width (Jeffrey, live test 2026-10-21: "make it fit the whole
       // screen"); with only a few days the Camper column takes the spare room (camps.css).
@@ -613,6 +625,11 @@ export default function CampRoster({
               {!detailsHidden && (
                 <th scope="col" className="cp-rcol-paid">
                   {T.COL_PAID}
+                </th>
+              )}
+              {!detailsHidden && (
+                <th scope="col" className="cp-rcol-paidon">
+                  {T.COL_PAID_ON}
                 </th>
               )}
               {shownDays.map((d) => (
@@ -651,6 +668,9 @@ export default function CampRoster({
                     <td className="cp-rcol-paid">
                       <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} amounts />
                     </td>
+                  )}
+                  {!detailsHidden && (
+                    <td className="cp-rcol-paidon">{paidInFullOn(row) ? T.monthDay(paidInFullOn(row)) : '—'}</td>
                   )}
                   {shownDays.map((d) => (
                     <td key={d.dayId} className={`cp-rcol-day${d.day === today ? ' is-today' : ''}`}>

@@ -1,0 +1,263 @@
+/*
+  finance-event-report.css — the look of an event's Money report (finance/EventReport.jsx, EventReportDays.jsx,
+  EventReportPrint.jsx; pictures ER2 and ER3, layout B, docs/Finance/Event reports).
+  Why it exists: the page reuses Finance's own pieces (finance.css: .fin-cards, .fin-card, .fin-table, .fin-grp,
+  .fin-pcard, .fin-both-box, the print rules .fp-…); this file adds only what is new: the title block, the
+  "Net" line, the compact day rows with a chevron, the phone day cards, and a few print rules.
+  Everything here starts with "fin-er-" (screen) or "fp-" (the printed page, same prefix as Finance's print).
+  Layouts: PC ≥1024px with a mouse · tablet / touch (44px tap areas, 48px rows) · phone <640px (a card per
+  day) · and 320px wide without sideways scrolling.
+*/
+
+/* ===== The top: title and what the report is ===== */
+.fin-er-titles {
+  min-width: 0;
+}
+
+.fin-er-titles .fin-title {
+  margin-bottom: 0;
+}
+
+.fin-er-sub {
+  margin-top: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+/* "Refunded −$100.00 · 1 refund · Net $2,245.00" under the cards */
+.fin-er-net {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-16);
+  font-size: var(--text-13);
+}
+
+.fin-er-net strong {
+  font-weight: 500;
+}
+
+/* "By school" / "By day": the small gray labels over each part */
+.fin-er-label {
+  margin: var(--space-16) 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.fin-er-schools {
+  margin-bottom: var(--space-4);
+}
+
+/* A school box is smaller than the Both summary's: no tag, no button */
+.fin-er-schools .fin-box-title {
+  font-size: var(--text-13);
+}
+
+.fin-er-schoolline {
+  margin-bottom: 0;
+}
+
+/* ===== By day, PC and tablet: one table ===== */
+.fin-er-table th:first-child {
+  width: 150px;
+}
+
+.fin-er-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fin-er-toggle:focus-visible,
+.fin-er-cardhead:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.fin-er-daytotal {
+  font-weight: 500;
+}
+
+/* The opened day: its row gets the gray tint, and its payments sit in a row of their own under it */
+.fin-er-open .fin-er-dayrow td {
+  background: var(--color-surface);
+}
+
+.fin-er-detail > td {
+  height: auto;
+  padding: 0 0 var(--space-12) var(--space-24);
+}
+
+.fin-er-paytable {
+  margin-top: var(--space-4);
+}
+
+.fin-er-col-school {
+  width: 120px;
+}
+
+/* The last row: the whole event */
+.fin-er-all td {
+  border-bottom: 0;
+  border-top: 1px solid var(--color-border-strong);
+  font-weight: 500;
+}
+
+/* ===== By day, phone: one card per day ===== */
+.fin-er-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.fin-er-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-13);
+}
+
+.fin-er-card.fin-er-all {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.fin-er-card.is-open {
+  background: var(--color-bg);
+}
+
+.fin-er-cardhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: var(--tap-size);
+  padding: var(--space-8) var(--space-12);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fin-er-cardhead--static {
+  align-items: center;
+  cursor: default;
+}
+
+.fin-er-cardmain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fin-er-cardday,
+.fin-er-cardtotal {
+  font-weight: 500;
+}
+
+.fin-er-cardsub {
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.fin-er-cardtotal {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  white-space: nowrap;
+}
+
+.fin-er-chev {
+  color: var(--color-text-secondary);
+  transition: transform 120ms ease;
+}
+
+.fin-er-card.is-open .fin-er-chev {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fin-er-chev {
+    transition: none;
+  }
+}
+
+.fin-er-cardbody {
+  padding: 0 var(--space-12) var(--space-8);
+  border-top: 1px solid var(--color-border);
+}
+
+.fin-er-pays .fin-pgrp {
+  margin: 0;
+}
+
+.fin-er-pays .fin-pcard:last-child {
+  border-bottom: 0;
+}
+
+/* ===== Touch screens: 44px tap areas ===== */
+@media (pointer: coarse) {
+  .fin-er-toggle {
+    min-height: var(--tap-size);
+  }
+}
+
+/* ===== Tablets and small PCs ===== */
+@media (max-width: 1023.98px) {
+  .fin-er-table th:first-child {
+    width: 130px;
+  }
+
+  .fin-er-detail > td {
+    padding-left: var(--space-8);
+  }
+}
+
+/* ===== Phones ===== */
+@media (max-width: 639.98px) {
+  /* The title block may shrink (its words wrap); the ⋯ never drops to a second line */
+  .fin-dayrow > .fin-er-titles {
+    flex-shrink: 1;
+  }
+
+  .fin-dayrow.fin-er-head {
+    align-items: flex-start;
+  }
+}
+
+/* ===== The printed page (extra rules for the Money report; the base print rules are finance.css's) ===== */
+@media print {
+  .fp-col-school {
+    width: 1.1in;
+  }
+
+  .fp-dayhead {
+    padding-top: 12pt;
+    border-bottom: 1px solid #000;
+    font-weight: 500;
+    break-after: avoid;
+  }
+
+  .fp-daysub {
+    color: #444;
+    font-weight: 400;
+  }
+
+  .fp-group {
+    break-after: avoid;
+  }
+}
+
+@media print {
+  /* a little air between the Amount and Recorded by columns */
+  .fin-er-print .fp-row td:last-child {
+    padding-left: 8pt;
+  }
+}

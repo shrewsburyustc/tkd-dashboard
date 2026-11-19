@@ -100,6 +100,10 @@ export const {
   sortBy,
   payingByText,
   payingByLower,
+  // The paid date next to Paid (Event reports PD1, 2026-11-19): Color belt's own words — the column
+  // "Paid on" (PC / tablet table) and "Card · paid Nov 14" (the cards of a phone or a narrow room).
+  COL_PAID_ON,
+  paidOnPhone,
   shortDate,
   monthDay,
   monthDayYear,
