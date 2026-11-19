@@ -1228,8 +1228,13 @@ begin
 
   -- F7. deletes: refused when a registration (or any registration of the event) has payments
   perform pg_temp.st('F7 delete a registration with payments', public.brk_delete_registration(v_p6, pg_temp.rv(v_p6)), 'has_payments');
-  perform pg_temp.chk('F7 ... even when its payment was undone (the rows stay)', pg_temp.npay(v_p4) >= 2
-    and public.brk_delete_registration(v_p4, pg_temp.rv(v_p4)) ->> 'status' = 'has_payments');
+  -- 0053: money that nets to zero may be removed (0053_tests.sql tests that). Before 0053 an undone payment still blocked the
+  -- removal (the rows stayed); from 0053 on the student can go, so this check only tries the removal on a database without 0053.
+  perform pg_temp.chk('F7 ... when its payment was undone (net 0): refused before 0053 (the rows stay); from 0053 on it is allowed (see 0053_tests.sql)',
+    pg_temp.npay(v_p4) >= 2 and pg_temp.paid(v_p4) = 0
+    and case when exists (select 1 from pg_proc p where p.oid = to_regprocedure('public.brk_delete_registration(uuid, integer)') and p.prosrc like '%brk_purge%')
+             then true   -- (a CASE, so the removal is really not tried when 0053 is there)
+             else public.brk_delete_registration(v_p4, pg_temp.rv(v_p4)) ->> 'status' = 'has_payments' end);
   perform pg_temp.st('F7 delete the event with payments', public.brk_delete_event(v_w1, pg_temp.evv(v_w1)), 'has_payments');
   perform pg_temp.chk('F7 refused deletes removed nothing', exists (select 1 from public.brk_registrations r where r.id = v_p6)
     and exists (select 1 from public.brk_events e where e.id = v_w1));

@@ -4,10 +4,12 @@
 // pin the examples from the approved pictures ($12, $16, $9.75, $138.75) and the main rules of SIGNATURES-0051.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState } from './breakingRules.js';
-import { createBreakingBackend } from '../mockBreaking.js';
+import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState, hasSquarePayment } from './breakingRules.js';
+import { createBreakingBackend, closedPaymentIdsFromFinance } from '../mockBreaking.js';
 import { STARTER_CLASSES, startingClasses } from './starterClasses.js';
 import { exampleLine } from './text/chart.js';
+import * as dialogText from './text/dialogs.js';
+import * as eventText from './text/events.js';
 import { boardTotals, classBoardTotals, eventBoardTotals } from '../../screens/breaking/roster/rosterRules.js';
 import { checkPricesForm, pricesToValues, settingsFromListed } from '../../screens/breaking/chart/chartRules.js';
 
@@ -201,6 +203,225 @@ const gia = f7.person('Gia');
 const pay = f7.ro().registrations.find((r) => r.id === gia.id).payments[0];
 ok(() => assert.equal(f7.run('brk_edit_payment', { p_payment_id: pay.id, p_method: 'cash', p_amount_cents: 1000, p_paid_on: '2026-11-01', p_school: 'shrewsbury' }).field, 'date'));
 ok(() => assert.equal(f7.run('brk_undo_refund', { p_payment_id: pay.id }).status, 'invalid'));
+
+// ----- Delete a student or an event once its money nets to zero (migration 0053, contract CONTRACT-0053) -----
+// A fresh preview database whose "closed Finance days" can be told which payment ids they counted (closedIds).
+function freshDelete(closedFn = null) {
+  let st = null;
+  let n = 0;
+  const closedIds = [];
+  const b = createBreakingBackend({
+    loadStore: () => st, saveStore: (x) => { st = JSON.parse(JSON.stringify(x)); }, now: () => clock, today: () => '2026-11-12',
+    newId: () => `00000000-0000-4000-8000-${String(600000 + (++n)).padStart(12, '0')}`, closedPaymentIds: () => (closedFn ? closedFn() : closedIds),
+  });
+  const run = (name, args, ctx = admin) => b.rpc(name, args, ctx).data;
+  const ev = run('brk_events_list', { p_location_code: 'shrewsbury' }).events.find((e) => e.registered === 10);
+  const ro = () => run('brk_event_roster', { p_event_id: ev.id });
+  const person = (first) => ro().registrations.find((r) => r.first_name === first);
+  const del = (r) => run('brk_delete_registration', { p_registration_id: r.id, p_expected_version: r.version });
+  const delEvent = () => run('brk_delete_event', { p_event_id: ev.id, p_expected_version: ev.version });
+  // Undo whatever still stands for one student: a refund first (it blocks undoing the payment), then the payments.
+  function settle(first) {
+    const r = person(first);
+    const reversed = new Set(r.payments.map((p) => p.reverses_payment_id).filter(Boolean));
+    for (const p of r.payments.filter((x) => x.kind === 'refund' && !reversed.has(x.id))) assert.equal(run('brk_undo_refund', { p_payment_id: p.id }).status, 'ok');
+    for (const p of person(first).payments.filter((x) => x.kind === 'payment' && !new Set(person(first).payments.map((y) => y.reverses_payment_id)).has(x.id))) assert.equal(run('brk_undo_payment', { p_payment_id: p.id }).status, 'ok');
+  }
+  return { b, run, ev, ro, person, del, delEvent, settle, closedIds, count: () => ({ regs: b.snapshot().registrations.length, pays: b.snapshot().payments.length, events: b.snapshot().events.length }) };
+}
+// a student whose money still stands: refused (has_payments); a student who never paid: deleted, as before
+const d1 = freshDelete();
+const ava1 = d1.person('Ava');
+ok(() => assert.ok(ava1.payments.length > 0 && ava1.paid_cents > 0));
+ok(() => assert.deepEqual(d1.del(ava1), { status: 'has_payments' }));
+const before1 = d1.count();
+const owen1 = d1.person('Owen'); // never paid
+ok(() => assert.equal(owen1.payments.length, 0));
+ok(() => assert.equal(d1.del(owen1).status, 'ok'));
+ok(() => assert.deepEqual(d1.count(), { ...before1, regs: before1.regs - 1 }));
+// after Undo the payments net to zero: staff may not delete, an admin may; the student, the payment rows AND the reversal rows go
+ok(() => assert.equal(d1.del({ ...ava1, version: d1.person('Ava').version }).status, 'has_payments'));
+d1.settle('Ava');
+const avaZero = d1.person('Ava');
+ok(() => assert.equal(avaZero.paid_cents, 0));
+ok(() => assert.ok(avaZero.payments.length >= 2)); // the payment and its reversal are still rows
+ok(() => assert.equal(d1.run('brk_delete_registration', { p_registration_id: avaZero.id, p_expected_version: avaZero.version }, staff).status, 'not_allowed'));
+ok(() => assert.equal(d1.run('brk_delete_registration', { p_registration_id: avaZero.id, p_expected_version: avaZero.version - 1 }).status, 'stale'));
+ok(() => assert.equal(d1.del(avaZero).status, 'ok'));
+ok(() => assert.equal(d1.ro().registrations.some((r) => r.first_name === 'Ava'), false));
+ok(() => assert.equal(d1.b.snapshot().payments.some((p) => avaZero.payments.some((q) => q.id === p.id)), false));
+ok(() => assert.equal(d1.del(avaZero).status, 'not_found')); // already gone
+// the change log keeps who deleted what: one delete line for the student and one for each payment row
+const log1 = d1.b.snapshot().change_log.filter((r) => r.op === 'delete');
+ok(() => assert.equal(log1.filter((r) => r.table_name === 'brk_registrations' && r.record_id === avaZero.id).length, 1));
+ok(() => assert.equal(log1.filter((r) => r.table_name === 'brk_payments' && avaZero.payments.some((q) => q.id === r.record_id)).length, avaZero.payments.length));
+// an edit chain that nets to zero: Edit payment (reversal + new payment) still stands; undo the new one and it is zero
+const d2 = freshDelete();
+const mia = d2.person('Mia');
+const edit2 = d2.run('brk_edit_payment', { p_payment_id: mia.payments[0].id, p_method: 'cash', p_amount_cents: 1500, p_paid_on: '2026-11-12', p_school: 'shrewsbury' });
+ok(() => assert.equal(edit2.status, 'ok'));
+ok(() => assert.equal(d2.del(d2.person('Mia')).status, 'has_payments')); // the new payment stands
+ok(() => assert.equal(d2.run('brk_undo_payment', { p_payment_id: edit2.payment_id }).status, 'ok'));
+ok(() => assert.deepEqual([d2.person('Mia').paid_cents, d2.person('Mia').payments.length], [0, 4])); // payment, reversal, new payment, reversal
+ok(() => assert.equal(d2.del(d2.person('Mia')).status, 'ok'));
+// a refund that was undone, then the payment undone: zero, deletable (the refund blocks undoing the payment until it is undone)
+const d3 = freshDelete();
+const zoe = d3.person('Zoe');
+ok(() => assert.ok(zoe.payments.some((p) => p.kind === 'refund')));
+ok(() => assert.equal(d3.del(zoe).status, 'has_payments'));
+d3.settle('Zoe');
+ok(() => assert.equal(d3.person('Zoe').paid_cents, 0));
+ok(() => assert.equal(d3.del(d3.person('Zoe')).status, 'ok'));
+// a Square payment (no staff login) that was undone can be deleted too
+const d4 = freshDelete();
+const cara = d4.person('Cara');
+ok(() => assert.ok(cara.payments.length > 0 && d4.b.snapshot().payments.find((p) => p.id === cara.payments[0].id).recorded_by === null));
+d4.settle('Cara');
+ok(() => assert.equal(d4.del(d4.person('Cara')).status, 'ok'));
+// a closed Finance day counted a payment: refused even though the money nets to zero, nothing deleted, and it works again when no closing names it
+const d5 = freshDelete();
+const giaPaid = d5.person('Gia');
+d5.settle('Gia');
+d5.closedIds.push(giaPaid.payments[0].id);
+const before5 = d5.count();
+ok(() => assert.deepEqual(d5.del(d5.person('Gia')), { status: 'closed_day' }));
+ok(() => assert.deepEqual(d5.count(), before5));
+ok(() => assert.equal(d5.delEvent().status, 'has_payments')); // the whole event: the other payers' money still stands, which is checked first
+ok(() => assert.deepEqual(d5.count(), before5));
+d5.closedIds.length = 0;
+ok(() => assert.equal(d5.del(d5.person('Gia')).status, 'ok'));
+// money standing is checked BEFORE a closed day: both true gives has_payments
+const d6 = freshDelete();
+d6.closedIds.push(d6.person('Ava').payments[0].id);
+ok(() => assert.equal(d6.del(d6.person('Ava')).status, 'has_payments'));
+// the whole event: all or nothing. One student whose money stands keeps everything; once all are zero the event and every row of it goes
+const d7 = freshDelete();
+const others = d7.b.snapshot().registrations.filter((r) => r.event_id !== d7.ev.id).length;
+const classesBefore = d7.b.snapshot().classes.length;
+const before7 = d7.count();
+ok(() => assert.equal(d7.delEvent().status, 'has_payments'));
+ok(() => assert.deepEqual(d7.count(), before7)); // nothing at all deleted
+const payers = d7.ro().registrations.filter((r) => r.paid_cents !== 0).map((r) => r.first_name);
+ok(() => assert.ok(payers.length >= 3));
+for (const first of payers.slice(0, -1)) d7.settle(first); // every payer but the last: that one's money still stands
+ok(() => assert.equal(d7.delEvent().status, 'has_payments'));
+ok(() => assert.equal(d7.count().regs, before7.regs)); // still nothing deleted: all or nothing
+d7.settle(payers[payers.length - 1]);
+ok(() => assert.equal(d7.run('brk_delete_event', { p_event_id: d7.ev.id, p_expected_version: d7.ev.version }, staff).status, 'not_allowed'));
+ok(() => assert.equal(d7.delEvent().status, 'ok'));
+ok(() => assert.equal(d7.b.snapshot().events.some((e) => e.id === d7.ev.id), false));
+ok(() => assert.equal(d7.b.snapshot().registrations.some((r) => r.event_id === d7.ev.id), false));
+ok(() => assert.equal(d7.b.snapshot().classes.some((c) => c.event_id === d7.ev.id), false));
+ok(() => assert.equal(d7.b.snapshot().registrations.length, others)); // the other events' students are untouched
+ok(() => assert.equal(d7.b.snapshot().classes.length, classesBefore - 5)); // only this event's five classes went
+ok(() => assert.equal(d7.run('brk_event_roster', { p_event_id: d7.ev.id }).status, 'not_found'));
+
+// the whole event when every student nets to zero but a closed Finance day counted a payment: refused, nothing deleted; fine once no closing names it
+const d8 = freshDelete();
+for (const first of d8.ro().registrations.filter((r) => r.paid_cents !== 0).map((r) => r.first_name)) d8.settle(first);
+d8.closedIds.push(d8.person('Ava').payments[0].id);
+const before8 = d8.count();
+ok(() => assert.deepEqual(d8.delEvent(), { status: 'closed_day' }));
+ok(() => assert.deepEqual(d8.count(), before8));
+d8.closedIds.length = 0;
+ok(() => assert.equal(d8.delEvent().status, 'ok'));
+// A closing counts only while it stands (the real rule: an Undo close or Reopen day ends it; closing again counts again). The fake Finance
+// keeps closings (the ending row has reverses_closing_id) and closing_items (closing_id, source, chain_id / row_id).
+{
+  // One fresh preview database per question, each with its own fake Finance store.
+  const scenario = (first = 'Gia') => {
+    const fin = { closings: [], closing_items: [] };
+    const d = freshDelete(() => closedPaymentIdsFromFinance(fin));
+    d.settle(first);
+    const rows = d.person(first).payments.map((p) => p.id); // the payment and its reversal
+    const close = (id, source = 'board_breaking') => {
+      fin.closings.push({ id, kind: 'close', reverses_closing_id: null });
+      fin.closing_items.push({ id: `item-${id}`, closing_id: id, source, chain_id: rows[0], row_id: rows[1] });
+    };
+    const end = (id, ends, kind) => fin.closings.push({ id, kind, reverses_closing_id: ends }); // 'undo' or 'reopen' row
+    const del = () => d.run('brk_delete_registration', { p_registration_id: d.person(first).id, p_expected_version: d.person(first).version });
+    return { fin, d, close, end, del };
+  };
+  ok(() => assert.deepEqual(closedPaymentIdsFromFinance(null), [])); // no Finance store: nothing is closed
+  ok(() => assert.deepEqual(closedPaymentIdsFromFinance({ closings: 5, closing_items: 'x' }), [])); // damaged: nothing is closed
+  // a day was closed and counted the payment: refused, and it stays refused
+  const s1 = scenario();
+  s1.close('c1');
+  ok(() => assert.deepEqual(s1.del(), { status: 'closed_day' }));
+  // another source's item with the same ids never blocks
+  const s2 = scenario();
+  s2.close('c1', 'star');
+  ok(() => assert.equal(s2.del().status, 'ok'));
+  // the closing was undone: its items stay in Finance's table but no longer block
+  const s3 = scenario();
+  s3.close('c1');
+  s3.end('u1', 'c1', 'undo');
+  ok(() => assert.deepEqual(closedPaymentIdsFromFinance(s3.fin), []));
+  ok(() => assert.equal(s3.del().status, 'ok'));
+  // the day was reopened: the same
+  const s4 = scenario();
+  s4.close('c1');
+  s4.end('r1', 'c1', 'reopen');
+  ok(() => assert.equal(s4.del().status, 'ok'));
+  // the day was closed again after the undo: a new closing with new items counts again
+  const s5 = scenario();
+  s5.close('c1');
+  s5.end('u1', 'c1', 'undo');
+  s5.close('c2');
+  ok(() => assert.deepEqual(s5.del(), { status: 'closed_day' }));
+  s5.end('r2', 'c2', 'reopen'); // ... and reopened once more
+  ok(() => assert.equal(s5.del().status, 'ok'));
+  // a whole event: every student nets to zero; one standing closing → closed_day, nothing deleted; once it is ended → deleted
+  const s6 = scenario('Mia');
+  for (const first of s6.d.ro().registrations.filter((r) => r.paid_cents !== 0).map((r) => r.first_name)) s6.d.settle(first);
+  s6.close('c9');
+  const before6 = s6.d.count();
+  ok(() => assert.deepEqual(s6.d.delEvent(), { status: 'closed_day' }));
+  ok(() => assert.deepEqual(s6.d.count(), before6));
+  s6.end('u9', 'c9', 'undo');
+  ok(() => assert.equal(s6.d.delEvent().status, 'ok'));
+}
+// the closed-day sentences say nothing about reopening being useless (the rule lets a reopened or undone day go)
+ok(() => assert.equal(/reopen|does not free|never/i.test(`${dialogText.deleteClosedDay('A B')} ${eventText.DELETE_CLOSED_DAY}`), false));
+{
+  const student = readFileSync(new URL('../../screens/breaking/dialogs/DeleteStudentConfirm.jsx', import.meta.url), 'utf8');
+  const eventsTab = readFileSync(new URL('../../screens/breaking/EventsTab.jsx', import.meta.url), 'utf8');
+  ok(() => assert.equal(/Reopen day does not/i.test(student + eventsTab), false));
+}
+// the words (plain, straight apostrophes, no "Undo the payment first", no "money is never removed")
+ok(() => assert.equal(dialogText.deleteHasPayments('Ava Reed'), 'Ava Reed has payments that still count. Undo or refund them first, then delete the student.'));
+ok(() => assert.equal(dialogText.deleteClosedDay('Ava Reed'), "Ava Reed's payments were counted when a day was closed in Finance, so the student can't be deleted. Leave the student on the roster."));
+ok(() => assert.equal(dialogText.deleteBody('Ava Reed'), "This removes Ava Reed from the roster. This can't be undone."));
+ok(() => assert.equal(dialogText.deleteBody('Ava Reed', true), "This removes Ava Reed from the roster, together with their payment history. This can't be undone."));
+ok(() => assert.equal(eventText.DELETE_HAS_PAYMENTS, 'Some students on this event still have payments that count. Undo or refund them first, then delete the event.'));
+ok(() => assert.equal(eventText.DELETE_CLOSED_DAY, "Money on this event was counted when a day was closed in Finance, so the event can't be deleted."));
+ok(() => assert.equal(eventText.deleteEventBody(0, 0), "Nothing is registered yet. This can't be undone."));
+ok(() => assert.equal(eventText.deleteEventBody(1, 0), "Its 1 registered student is deleted with it, along with any payment history. This can't be undone."));
+ok(() => assert.equal(eventText.deleteEventBody(10, 5), "Its 10 registered students are deleted with it, together with their payment history. This can't be undone."));
+ok(() => assert.equal(dialogText.SQUARE_NOT_REFUNDED, 'A card payment taken through Square is not refunded by this. Refund it in Square first.'));
+ok(() => assert.equal(eventText.DELETE_SQUARE_NOT_REFUNDED, 'Deleting does not refund card payments taken through Square. Refund those in Square first.'));
+ok(() => assert.equal(/Square/.test(dialogText.deleteBody('A B', true)) || /Square/.test(eventText.deleteEventBody(3, 1)), false)); // the Square line is a separate quiet line, not part of the sentence
+// the student box shows the Square line only for a payment recorded by "Square" (the roster's own data)
+{
+  const rosterNow = freshDelete().ro().registrations.map((r) => ({ name: r.first_name, payments: r.payments.map((p) => ({ recordedByName: p.recorded_by_name })) }));
+  ok(() => assert.equal(hasSquarePayment(rosterNow.find((r) => r.name === 'Cara').payments), true)); // Cara paid by card through Square
+  ok(() => assert.equal(hasSquarePayment(rosterNow.find((r) => r.name === 'Gia').payments), false)); // Gia paid cash at the desk
+  ok(() => assert.equal(hasSquarePayment(rosterNow.find((r) => r.name === 'Owen').payments), false)); // never paid
+  ok(() => assert.equal(hasSquarePayment(undefined), false));
+  ok(() => assert.equal(hasSquarePayment([{ recordedByName: 'Square' }, { recordedByName: 'Square' }]), true)); // an undone Square payment (payment + reversal) still shows it
+}
+// the screens pass the line as the box's quiet hint, never as the amber failure
+{
+  const student = readFileSync(new URL('../../screens/breaking/dialogs/DeleteStudentConfirm.jsx', import.meta.url), 'utf8');
+  const eventsTab = readFileSync(new URL('../../screens/breaking/EventsTab.jsx', import.meta.url), 'utf8');
+  ok(() => assert.ok(/hint=\{hasSquarePayment\(registration\.payments\) \? T\.SQUARE_NOT_REFUNDED : null\}/.test(student)));
+  ok(() => assert.ok(/hint=\{dialog\.registered > 0 \? T\.DELETE_SQUARE_NOT_REFUNDED : null\}/.test(eventsTab))); // shown whenever the event has students
+}
+ok(() => assert.equal(eventText.DELETE_BLOCKED_BODY, undefined)); // the old "Close registration instead" block is gone
+{
+  const all = [dialogText.deleteHasPayments('A B'), dialogText.deleteClosedDay('A B'), eventText.DELETE_HAS_PAYMENTS, eventText.DELETE_CLOSED_DAY, eventText.deleteEventBody(3, 1)].join(' ');
+  ok(() => assert.equal(/Undo the payment first|never removed|surcharge|’/.test(all), false));
+}
 
 // ----- Add event's starting class list (EventsTab.jsx follows this rule; the database copy is what saveAdd relies on) -----
 ok(() => assert.deepEqual(STARTER_CLASSES.map((c) => [c.name, c.startTime, c.endTime]), [

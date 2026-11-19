@@ -4,7 +4,7 @@
 // and always get back a plain object with a `status` CODE (never words: breakingText.js turns codes into words):
 //   'ok' (plus the result fields) · 'no_access' (locked sign-in) · 'not_allowed' (staff pressed an admin
 //   thing) · 'not_found' · 'stale' (someone else changed it first) · 'invalid' (+ field) · 'closed' ·
-//   'has_payments' · 'class_in_use' (+ classId) · 'already_paid' · 'amount_below_paid' (+ paidCents) ·
+//   'has_payments' (money still stands) · 'closed_day' (a closed Finance day counted a payment) · 'class_in_use' (+ classId) · 'already_paid' · 'amount_below_paid' (+ paidCents) ·
 //   'refund_stands' · 'refund_too_large' (+ overpaidCents) · 'error' (no connection / odd answer: { status:'error', error })
 // These functions NEVER throw.
 //
@@ -19,7 +19,7 @@ import { supabase } from '../supabase.js';
 // Every status a call here can return. A status the database sends that isn't on this list counts as an
 // unexpected answer ('error').
 export const BREAKING_STATUSES = [
-  'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'invalid', 'closed', 'has_payments', 'class_in_use',
+  'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'invalid', 'closed', 'has_payments', 'closed_day', 'class_in_use',
   'already_paid', 'amount_below_paid', 'refund_stands', 'refund_too_large', 'error',
 ];
 const SERVER_STATUSES = new Set(BREAKING_STATUSES.filter((s) => s !== 'error'));
@@ -119,7 +119,9 @@ export async function updateEvent(eventId, expectedVersion, { name, eventDate, r
   }, hasVersion);
 }
 
-// Delete event (refused with 'has_payments' when any payment row exists). → { status:'ok' }
+// Delete event, with its students, classes and payment rows (admin). Refused, and nothing is deleted, with 'has_payments' while money
+// still stands on any student (payments that net to zero, e.g. after Undo, may go) or 'closed_day' when a closed Finance day counted a
+// payment (migration 0053). → { status:'ok' }
 export async function deleteEvent(eventId, expectedVersion) {
   return callRpc('brk_delete_event', { p_event_id: eventId, p_expected_version: expectedVersion });
 }
@@ -165,7 +167,8 @@ export async function setBroke(registrationId, expectedVersion, broke) {
   return callRpc('brk_set_broke', { p_registration_id: registrationId, p_expected_version: expectedVersion, p_broke: broke }, hasVersion);
 }
 
-// Delete student (admin; 'has_payments' while any payment row exists). → { status:'ok' }
+// Delete student with their payment rows (admin). 'has_payments' while their money still stands (net not zero), 'closed_day' when a closed
+// Finance day counted one of their payments (migration 0053). → { status:'ok' }
 export async function deleteRegistration(registrationId, expectedVersion) {
   return callRpc('brk_delete_registration', { p_registration_id: registrationId, p_expected_version: expectedVersion });
 }

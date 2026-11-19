@@ -222,6 +222,11 @@ export function owedCents(reg) {
 export function paidCents(reg) {
   return (reg.payments ?? []).reduce((total, p) => total + p.amountCents, 0);
 }
+// True when any payment row was taken through Square (recorded by "Square", no staff login). Deleting a student does not refund it at
+// Square, so the Delete student box says so (CONTRACT-0053 security review). `payments` is the roster row's list (camelCase).
+export function hasSquarePayment(payments) {
+  return (payments ?? []).some((p) => p.recordedByName === 'Square');
+}
 // 'paid' (net paid ≥ owed, the database's own rule for the Events list's "paid" count; a student whose price
 // an admin set to $0 therefore counts as paid) · 'awaiting' (card with a Square link, unpaid) · 'unpaid'.
 export function paidState(reg) {

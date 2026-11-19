@@ -87,11 +87,17 @@ export const historyWhen = (date, who) => [date, who].filter(Boolean).join(' · 
 
 // ----- Delete student -----
 export const deleteTitle = (name) => `Delete ${name}?`;
-export const deleteBody = (name) => `This removes ${name} from the roster. This can't be undone.`;
+// withPayments: the student has payment rows (even ones that were undone): they are deleted too.
+export const deleteBody = (name, withPayments = false) => (withPayments
+  ? `This removes ${name} from the roster, together with their payment history. This can't be undone.`
+  : `This removes ${name} from the roster. This can't be undone.`);
+// A quiet line under the sentence when the student has a Square payment: deleting changes nothing at Square.
+export const SQUARE_NOT_REFUNDED = 'A card payment taken through Square is not refunded by this. Refund it in Square first.';
 export const KEEP_STUDENT = 'Keep student';
 export const DELETE_STUDENT = 'Delete student';
 export const DELETING = 'Deleting…';
-export const deleteHasPayments = (name) => `${name} has payments on record, so the student can't be deleted. Undo the payment first, or leave the student on the roster.`;
+export const deleteHasPayments = (name) => `${name} has payments that still count. Undo or refund them first, then delete the student.`;
+export const deleteClosedDay = (name) => `${name}'s payments were counted when a day was closed in Finance, so the student can't be deleted. Leave the student on the roster.`;
 export const DELETE_FAILED = "Couldn't delete. Check the connection, then retry.";
 export const DELETE_STALE = "Someone else changed this student just now. Close this box, then open it again to see the latest.";
 export const deletedToast = (name) => `${name} deleted`;
