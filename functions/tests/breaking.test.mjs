@@ -103,6 +103,11 @@ function fakeFetch({ turnstile, square } = {}) {
       if (siteverify instanceof Error) throw siteverify;
       return new Response(JSON.stringify(siteverify), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    // Like the real Workers runtime: only 'follow' and 'manual' exist; 'error' throws before anything is sent
+    // (the live sandbox test 2026-11-19 found that our code used 'error', so no link was ever asked for).
+    if (init.redirect !== undefined && init.redirect !== 'follow' && init.redirect !== 'manual') {
+      throw new TypeError(`Invalid redirect value, must be one of "follow" or "manual" (got "${init.redirect}")`);
+    }
     squareCalls.push({ url, init, body: JSON.parse(init.body) });
     const out = typeof square === 'function' ? square(url, init) : square;
     if (out instanceof Error) throw out;
@@ -1135,7 +1140,7 @@ test('Square never answers: the request is cut off by the timeout; the family is
   let aborted = false;
   const square = (url, init) => new Promise((resolve, reject) => {
     assert.ok(init.signal, 'a timeout signal is passed to fetch');
-    assert.equal(init.redirect, 'error');
+    assert.equal(init.redirect, 'manual');
     init.signal.addEventListener('abort', () => { aborted = true; reject(new Error('aborted')); });
   });
   const out = await post({
