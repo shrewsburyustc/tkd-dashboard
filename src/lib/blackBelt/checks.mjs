@@ -1673,7 +1673,7 @@ check('B2 store: the roster = 16c (Candidates 1 sample, order, money, no persona
   ]);
   assert.deepEqual(Object.keys(answer.rows[0]).sort(), ['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon',
     'last_name', 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status', 'version', 'withdrawn_reason',
-    'is_makeup', 'makeup_of_cycle_name', 'retest_names', 'has_grades'].sort()); // (the last four: 0025 §6.5)
+    'is_makeup', 'makeup_of_cycle_name', 'retest_names', 'has_grades', 'paid_on'].sort()); // (is_makeup … has_grades: 0025 §6.5; paid_on: 0055)
   const byLast = (last, i = 0) => answer.rows.filter((r) => r.last_name === last)[i];
   assert.equal(byLast('Kim').money.items, undefined); // the roster's money has no item list
   const tag = (r) => [r.money.tag, r.money.balance_cents];
@@ -1688,6 +1688,9 @@ check('B2 store: the roster = 16c (Candidates 1 sample, order, money, no persona
   assert.deepEqual([...tag(byLast('Garcia')), byLast('Garcia').money.next_on], ['next', 135000, '2027-05-29']);
   assert.equal(byLast('Kim').has_payment_rows, true);
   assert.equal(byLast('Patel').has_payment_rows, false);
+  // 0055: the day of the last counting payment (a date), null for a candidate with no payment
+  assert.match(byLast('Kim').paid_on, /^\d{4}-\d\d-\d\d$/);
+  assert.equal(byLast('Patel').paid_on, null);
   const text = JSON.stringify(answer);
   for (const key of SECRET_KEYS) assert.ok(!text.includes(key), key);
   assert.ok(!text.includes('2012-03-04') && !text.includes('@example.com'));

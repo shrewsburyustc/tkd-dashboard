@@ -65,6 +65,7 @@ import SquareReviewDialog from './dialogs/SquareReviewDialog.jsx';
 import '../../styles/testing-events.css';
 import '../../styles/camps.css';
 import '../../styles/breaking-roster.css';
+import MoneyReportButton from '../finance/MoneyReportButton.jsx'; // Money report (Finance event report, v0.827)
 
 // The dialogs about money: they close when Hide private details is switched on.
 const MONEY_DIALOGS = ['refund', 'editPayment', 'undoPayment', 'undoRefund', 'square'];
@@ -654,6 +655,7 @@ export default function EventPage({
           <RegistrationSwitch open={event.registrationOpen} isAdmin={isAdmin} busy={busy} onChange={doRegistration} />
         </div>
         <div className="ev-head-buttons">
+          <MoneyReportButton source="board_breaking" eventId={event.id} isAdmin={isAdmin} />
           {addStudent}
           <button type="button" className="btn" data-event-link onClick={(e) => openDialog({ type: 'link', opener: e.currentTarget })}>
             {/* ti-qrcode = registration link / QR code */}

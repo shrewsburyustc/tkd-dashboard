@@ -4,7 +4,7 @@
 // pin the examples from the approved pictures ($12, $16, $9.75, $138.75) and the main rules of SIGNATURES-0051.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState, hasSquarePayment } from './breakingRules.js';
+import { priceCents, priceLine, bandFor, recommendedBoards, rankOptions, beltFor, paidState, hasSquarePayment, paidInFullOn } from './breakingRules.js';
 import { createBreakingBackend, closedPaymentIdsFromFinance } from '../mockBreaking.js';
 import { STARTER_CLASSES, startingClasses } from './starterClasses.js';
 import { exampleLine } from './text/chart.js';
@@ -56,6 +56,23 @@ ok(() => assert.deepEqual(beltFor('Little Tiger Yellow'), { beltPattern: 'stripe
 ok(() => assert.deepEqual(beltFor('Red / Black'), { beltPattern: 'half', beltColor: 'red', beltColor2: 'black' }));
 ok(() => assert.equal(paidState({ amountCents: 1200, overrideCents: null, payments: [], payingBy: 'card', hasLink: true }), 'awaiting'));
 ok(() => assert.equal(paidState({ amountCents: 1200, overrideCents: 600, payments: [{ amountCents: 600 }], payingBy: 'cash', hasLink: false }), 'paid'));
+
+// Paid on (Event reports PD1): the day the student became paid in full, a dash (null) while a balance is left
+const payRow = (id, amountCents, paidOn, recordedAt, extra = {}) => ({ id, kind: 'payment', amountCents, method: 'cash', paidOn, recordedAt, reversesPaymentId: null, ...extra });
+ok(() => assert.equal(paidInFullOn({ amountCents: 1200, overrideCents: null, payments: [payRow('a', 1200, '2026-11-17', '2026-11-17T15:00:00Z')] }), '2026-11-17'));
+ok(() => assert.equal(paidInFullOn({ amountCents: 1200, overrideCents: null, payments: [payRow('a', 500, '2026-11-10', '2026-11-10T15:00:00Z')] }), null), 'a balance is left');
+ok(() => assert.equal(paidInFullOn({ amountCents: 1200, overrideCents: null, payments: [] }), null), 'nothing paid');
+ok(() => assert.equal(paidInFullOn({ amountCents: 0, overrideCents: null, payments: [] }), null), 'a $0 student has no date');
+// paid in two parts: the date of the part that made them paid in full
+ok(() => assert.equal(paidInFullOn({ amountCents: 1200, overrideCents: null, payments: [payRow('a', 500, '2026-11-10', '2026-11-10T15:00:00Z'), payRow('b', 700, '2026-11-17', '2026-11-17T15:00:00Z')] }), '2026-11-17'));
+// a payment that was undone (reversal row) and paid again: the second payment's day
+ok(() => assert.equal(paidInFullOn({ amountCents: 1200, overrideCents: null, payments: [
+  payRow('a', 1200, '2026-11-10', '2026-11-10T15:00:00Z'),
+  { id: 'r', kind: 'reversal', amountCents: -1200, method: 'cash', paidOn: '2026-11-11', recordedAt: '2026-11-11T15:00:00Z', reversesPaymentId: 'a' },
+  payRow('c', 1200, '2026-11-12', '2026-11-12T15:00:00Z'),
+] }), '2026-11-12'));
+// the admin's price override counts as what is owed
+ok(() => assert.equal(paidInFullOn({ amountCents: 1200, overrideCents: 600, payments: [payRow('a', 600, '2026-11-14', '2026-11-14T15:00:00Z')] }), '2026-11-14'));
 
 // ----- the preview database -----
 let store = null;

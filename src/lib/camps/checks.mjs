@@ -21,7 +21,7 @@ import {
   getsExtraOnDay, extraShortName, extraDayWord, everyDayExtras, dayExtrasFor, dayExtraCounts,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, payingByChoiceWhere, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
   overpaidCents, refundStands, refundMenuItems, newestStandingRefund, reversesRefund, standingPayments, parseRefundAmount,
-  paidTagParts, rosterRoomNeeded, ROSTER_ROOM,
+  paidTagParts, rosterRoomNeeded, ROSTER_ROOM, paidInFullOn,
   campLinks, rowSchool, rowsForSchool, otherSchool, SCHOOL_CODES,
 } from './campRules.js';
 import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
@@ -3254,6 +3254,21 @@ check('Search people opens a camper (M16)', () => {
   const page = readFileSync(new URL('../../screens/camps/CampPage.jsx', import.meta.url), 'utf8');
   assert.ok(page.includes("import { takeOpenPerson } from '../../lib/people/openPerson.js';"));
   assert.ok(page.includes("takeOpenPerson(['camp'])") && page.includes('if (row) openCamper(row);'), 'takes the request once and opens the camper like a click on the name');
+});
+
+check('Paid on (Event reports PD1): the day a camper paid in full, a dash while a balance is left', () => {
+  const paid = { status: 'active', paidCents: 31500, owesCents: 0, paidOn: '2026-03-25', paidMethod: 'card' };
+  assert.equal(paidInFullOn(paid), '2026-03-25');
+  assert.equal(paidInFullOn({ ...paid, owesCents: 1500 }), null, 'a balance is left');
+  assert.equal(paidInFullOn({ ...paid, owesCents: -2300 }), '2026-03-25', 'overpaid is still paid in full');
+  assert.equal(paidInFullOn({ ...paid, paidCents: 0, paidOn: null }), null, 'nothing was ever paid');
+  assert.equal(paidInFullOn({ ...paid, paidOn: null }), null);
+  assert.equal(paidInFullOn({ ...paid, status: 'withdrawn' }), null);
+  assert.equal(paidInFullOn(null), null);
+  assert.equal(CampText.paidOnPhone('card', '2026-03-25'), 'Card · paid Mar 25');
+  // The column takes 80 px more room only while the money is shown.
+  assert.equal(rosterRoomNeeded(5, false, false, true), rosterRoomNeeded(5, false) + ROSTER_ROOM.paidOn);
+  assert.equal(ROSTER_ROOM.paidOn, 80);
 });
 
 console.log(`${count} groups of checks ran.`);

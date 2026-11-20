@@ -686,6 +686,14 @@
   text-align: left;
 }
 
+.cp-rcol-paidon {
+  /* The day a camper paid in full ("Mar 25"), right after Paid (Event reports PD1, 2026-11-19): as wide
+     as its date, so the spare room still goes to the Camper column and the Check in buttons stay on screen */
+  width: 1%;
+  text-align: left;
+  white-space: nowrap;
+}
+
 .cp-rcol-day {
   /* Every day column asks for the same width, so the Camper column (the only one without a
      width) takes the spare room — a 1-day camp still fills the screen. On a narrow screen with
@@ -727,6 +735,15 @@
   outline: 2px solid var(--color-blue);
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+/* How and when a paid camper paid, a small gray line under the name on the cards: "Card · paid Mar 25"
+   (Event reports PD1; the same gray 12px line as Color belt's phone rows, .l2) */
+.cp-rpaidline {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
 }
 
 /* The small amber note under a name, today only ("No pizza"; Early / Late are in the day boxes) */

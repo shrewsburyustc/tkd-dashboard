@@ -72,6 +72,14 @@ export const CLASS_BOARDS_SEPARATOR = '·'; // between the two kinds in the clas
 export const CLASS_BOARDS_ADULT_SUFFIX = 'Adult boards for this class'; // "14 Technical · 12 Adult boards for this class" (the numbers are bold)
 export const COL_PAYING_BY = 'Paying by';
 export const COL_PAYMENT = 'Payment';
+// The paid date (Event reports PD1, 2026-11-19): a "Paid on" column after Payment on a PC, "· paid Nov 17" on the
+// tablet's and the phone's Paying by line. Color belt testing's words; shown only for a student who has paid in full.
+export const COL_PAID_ON = 'Paid on';
+export const monthDay = (iso) => {
+  const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(iso ?? '');
+  return m ? `${SHORT_MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : '';
+};
+export const paidOnSuffix = (iso) => (monthDay(iso) ? ` · paid ${monthDay(iso)}` : '');
 export const COL_BROKE = 'Broke';
 export const COL_ACTIONS = 'Actions';
 export const boardsText = (tech, adult) => `${tech} Technical · ${adult} Adult`;

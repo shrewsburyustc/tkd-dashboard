@@ -4,12 +4,16 @@
 // decides what a click does. One row per candidate, in the database's order (Dan, then school —
 // Shrewsbury, Worcester — then last name):
 //   PC (1024px and wider):  Candidate ("Registered Mar 10" beside the name) · Dan · School ·
-//                           Plan ("· Kukkiwon") · Payments (one tag) · Balance ·
+//                           Plan ("· Kukkiwon") · Payments (one tag) · Paid in full on · Balance ·
 //                           Record payment (rows with a balance) · ⋯
-//   Tablet:                 Candidate ("1st Dan · Shrewsbury" under it) · Plan · Payments ·
-//                           Balance · ⋯ (Record payment moves into ⋯)
-//   Phone:                  name; "1st Dan · Shrewsbury · 3 payments · Kukkiwon"; the tag and the
-//                           balance; ⋯ on the right; no row button
+//   Tablet:                 Candidate ("1st Dan · Shrewsbury" under it) · Plan · Payments (the gray
+//                           "paid in full Oct 28" under the tag) · Balance · ⋯ (Record payment moves into ⋯)
+//   Phone:                  name; "1st Dan · Shrewsbury · 3 payments · Kukkiwon"; the gray "paid in
+//                           full Oct 28"; the tag and the balance; ⋯ on the right; no row button
+// Paid in full on (Event reports PD1, 2026-11-19; Jeffrey: only when paid in full): the day of the candidate's
+// last counting payment (row.paidOn, sent by bb_cycle_roster since migration 0055), shown ONLY while the
+// money tag says "Paid in full" — a dash in the PC column and no line on a phone while a balance is left. It
+// is a money detail: with Hide payments on there is no column and no line.
 // With the device's Hide payments switch on (v0.215, OP-B7) the Payments and Balance columns and
 // the Record payment button aren't drawn at all, and the plan — how a family pays, a payment
 // detail (R4-01, v1.036, as Camps' Paying by, v0.722) — reads the gray "Hidden on this tablet":
@@ -69,6 +73,12 @@ export function MoneyTag({ money }) {
   return <span className={`ttag${kind}`}>{tag.text}</span>;
 }
 
+// The day this candidate paid in full, or null: only while the tag says paid in full (not a make-up, not hidden).
+function paidInFullDay(row, hidden) {
+  if (hidden || row.isMakeup || row.money?.tag !== 'paid_in_full') return null;
+  return row.paidOn ?? null;
+}
+
 function Balance({ row }) {
   if (row.isMakeup) return <span className="bb-balance">{T.BALANCE_NONE}</span>;
   const over = row.money?.overpaidCents > 0;
@@ -91,6 +101,7 @@ function CandidateRow({ row, ctx }) {
   // The make-up's gray line (G 27)
   const makeupText = makeup ? <span className="bb-cline bb-makeup-line">{T.makeupLine(row.makeupOfCycleName, row.retestNames)}</span> : null;
   const RecordIcon = ICONS.recordPayment;
+  const paidDay = paidInFullDay(row, hidden);
 
   const record = showRecord ? (
     <button
@@ -154,6 +165,7 @@ function CandidateRow({ row, ctx }) {
               T.phoneSubline(row)
             )}
           </span>
+          {paidDay && <span className="bb-cline bb-paidline">{T.paidInFullOnLine(paidDay)}</span>}
           {(tag || !hidden) && (
             <span className="ev-sline-tag bb-ctagline">
               {tag}
@@ -198,7 +210,14 @@ function CandidateRow({ row, ctx }) {
         <>
           <span className="ev-scell" role="cell">
             {tag}
+            {/* Tablet: no column, so the date sits under the tag */}
+            {!layout.isWide && paidDay && <span className="bb-cline bb-paidline">{T.paidInFullOnLine(paidDay)}</span>}
           </span>
+          {layout.isWide && (
+            <span className="ev-scell nowrap" role="cell">
+              {paidDay ? T.monthDay(paidDay) : '—'}
+            </span>
+          )}
           <span className="ev-scell bb-num" role="cell">
             <Balance row={row} />
           </span>
@@ -229,6 +248,7 @@ export default function RosterRows({ rows, removedRows, removedOpen, onToggleRem
           {layout.isWide && <span role="columnheader">{T.COL_SCHOOL}</span>}
           <span role="columnheader">{T.COL_PLAN}</span>
           {!hidden && <span role="columnheader">{T.COL_PAYMENTS}</span>}
+          {!hidden && layout.isWide && <span role="columnheader">{T.COL_PAID_IN_FULL_ON}</span>}
           {!hidden && (
             <span role="columnheader" className="bb-num">
               {T.COL_BALANCE}

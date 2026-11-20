@@ -131,6 +131,7 @@ import { closedWords, useCampFillIn } from './FillInDialog.jsx';
 import { focusSoon } from './focusSoon.js';
 import { reloadBounded, saveOnLine, undoAnswer } from './lineSave.js';
 import * as T from './text.js';
+import MoneyReportButton from '../finance/MoneyReportButton.jsx'; // Money report (Finance event report, v0.827)
 
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
 const OLD_TABS = ['checkin', 'payments', 'attendance'];
@@ -1629,6 +1630,7 @@ export default function CampPage({
             </p>
           </div>
           <div className="cp-phone-buttons">
+            <MoneyReportButton source="camp" eventId={camp.id} isAdmin={isAdmin} />
             {/* The one blue button, with its words as on PC (ti-qrcode = registration link / QR code). */}
             <button type="button" className="btn btn-primary" data-camp-link onClick={(event) => openDialog({ type: 'link', opener: event.currentTarget })}>
               <IconQrcode size={16} aria-hidden="true" />
@@ -1654,6 +1656,7 @@ export default function CampPage({
           <p className="ev-summary">{T.campSummaryLine(camp, days.map((d) => d.day), active.length)}</p>
         </div>
         <div className="ev-head-buttons">
+          <MoneyReportButton source="camp" eventId={camp.id} isAdmin={isAdmin} />
           {/* Fill in (v0.741): a plain button before Registration link. Gray with a tip when it can't
               be used (aria-disabled, still a Tab stop; pressing does nothing but show the tip). */}
           {/* Desk-only (Hide private details on): no tip — the gray line under the title says why,

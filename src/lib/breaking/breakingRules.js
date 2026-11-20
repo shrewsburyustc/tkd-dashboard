@@ -235,6 +235,31 @@ export function paidState(reg) {
   return 'unpaid';
 }
 
+// The day the student became PAID IN FULL (Event reports PD1, 2026-11-19; Jeffrey: only when paid in full).
+// null while a balance is left, or when no money was ever paid (a $0 student shows a dash too).
+// How: replay the payment rows oldest first (as recorded) with a running total; the row after which the
+// total reached what is owed, for the last time, is the payment that made the student paid in full, and
+// its paid-on date (the day the money came in, which an admin can correct) is the answer. A refund or an
+// undone payment that dropped the student below the amount and a later payment that brought them back
+// up is handled the same way: the LAST climb over the line counts. If a row that is not a plain
+// payment made the last climb (undoing a refund), the newest payment that still stands gives the date.
+export function paidInFullOn(reg) {
+  const owed = owedCents(reg);
+  const rows = [...(reg.payments ?? [])].sort((a, b) => String(a.recordedAt ?? '').localeCompare(String(b.recordedAt ?? '')) || String(a.id).localeCompare(String(b.id)));
+  let total = 0;
+  let climbed = null;
+  for (const p of rows) {
+    const before = total;
+    total += p.amountCents;
+    if (before < owed && total >= owed) climbed = p;
+  }
+  if (!climbed || total < owed || total <= 0) return null;
+  if (climbed.kind === 'payment') return climbed.paidOn ?? null;
+  const reversed = new Set(rows.filter((p) => p.reversesPaymentId).map((p) => p.reversesPaymentId));
+  const standing = rows.filter((p) => p.kind === 'payment' && !reversed.has(p.id));
+  return standing.length > 0 ? (standing[standing.length - 1].paidOn ?? null) : null;
+}
+
 // ----- Small checks the dialogs make before they send (the database checks again) -----
 
 export function boardsProblem(tech, adult) {

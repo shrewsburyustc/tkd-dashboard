@@ -63,6 +63,7 @@ import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubr
 import LinksDialog from './LinksDialog.jsx';
 import { useCycleEditor } from './useCycleEditor.jsx';
 import * as T from '../text.js';
+import MoneyReportButton from '../../../screens/finance/MoneyReportButton.jsx'; // Money report (Finance event report, v0.827)
 
 const load = (cycleId) => loadCycle({ cycleId });
 
@@ -350,6 +351,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
           <h1 className="ptitle">{cycle.name}</h1>
           <p className="ev-summary bb-summary">{T.cycleSummary(firstDay, cycle.days?.length ?? 0, cycle.candidateCount ?? 0)}</p>
         </div>
+        {!isPhone && <MoneyReportButton source="black_belt" eventId={cycle.id} isAdmin={isAdmin} />}
         {!isPhone && addButton}
         {!isPhone && registrationLinkButton}
         {/* Only when it has something in it: a finished cycle has no ⋯ items for staff now that
@@ -372,6 +374,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       {addReasonLine}
       {isPhone && (
         <div className="bb-phone-actions">
+          <MoneyReportButton source="black_belt" eventId={cycle.id} isAdmin={isAdmin} />
           {addButton}
           {registrationLinkButton}
         </div>

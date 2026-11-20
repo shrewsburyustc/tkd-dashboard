@@ -64,6 +64,13 @@ export function financePaymentDetail({ source, paymentId } = {}) {
   return call('finance_payment_detail', { p_source: v(source), p_payment_id: v(paymentId) });
 }
 
+// Admins: one event's money report (migration 0054): its payments by day, with totals, per-school totals and
+// every row Finance's Daily report would show. source 'color_belt' | 'star' | 'camp' | 'black_belt' |
+// 'board_breaking'; locationCode null = both schools. Staff get 'not_allowed'; an event that isn't there is 'not_found'.
+export function financeEventReport({ source, eventId, locationCode = null } = {}) {
+  return call('finance_event_report', { p_source: v(source), p_event_id: v(eventId), p_location_code: v(locationCode) });
+}
+
 // Which schools need the close-the-day reminder on Home now (+ admins' earlier unclosed days).
 export function financeHome() {
   return call('finance_home', {});
@@ -105,6 +112,12 @@ export function financeReopenDay({ locationCode, day, expectedClosingId } = {}) 
 // Admins: the rows for a CSV file (one school, at most 366 days). Each call is logged.
 export function financeExport({ locationCode, from, to } = {}) {
   return call('finance_export', { p_location_code: v(locationCode), p_from: v(from), p_to: v(to) });
+}
+
+// Admins: the rows of one event's money report for a CSV file (migration 0054). Each call is logged
+// (finance_event_exports), because the file holds students' names and amounts, like Export….
+export function financeEventExport({ source, eventId, locationCode = null } = {}) {
+  return call('finance_event_export', { p_source: v(source), p_event_id: v(eventId), p_location_code: v(locationCode) });
 }
 
 // Admins: how many payments a range holds and their total, for the Export dialog's count line.

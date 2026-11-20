@@ -695,6 +695,18 @@ export function paidTagParts(row) {
   return { paidCents: named ? (Number.isInteger(row?.paidCents) ? row.paidCents : 0) : null, overpaidCents: over };
 }
 
+// ----- The day a camper paid in full (Event reports PD1, 2026-11-19; Jeffrey: only when paid in full) -----
+// The roster shows the date next to Paid, in Color belt's pattern. It is the day of the payment that
+// made the camper paid in full: the camp_roster view's paid_on is the date of the LAST payment that
+// still stands (undone ones are skipped), so once nothing is owed it is that day. While a balance is
+// left (owes above 0), or nothing was ever paid, there is no date: the roster shows a dash.
+// Removed campers and "Possible duplicate" rows are judged by their money like any other row.
+export function paidInFullOn(row) {
+  if (!row || row.status !== 'active') return null;
+  if ((row.paidCents ?? 0) <= 0 || (row.owesCents ?? 0) > 0) return null;
+  return isIsoDate(row.paidOn) ? row.paidOn : null;
+}
+
 // ----- The roster's layout from the room beside the panel (rulebook v1.053, v1.130; L-02) -----
 // The roster's table needs room for its columns: the page's side margins (50 px), the Camper and Paid
 // columns (273 px, with the widest ordinary tag, "Possible duplicate"), one column per day of the
@@ -705,11 +717,14 @@ export function paidTagParts(row) {
 // mouse). When the page area beside the left panel is narrower than that, the roster draws its cards
 // instead (the phone layout), whatever the window's width. The shared hook `usePageRoomBelow(px)`
 // (src/lib/pageRoom.js) answers; this says the px for the shown week.
-export const ROSTER_ROOM = { margins: 50, fixed: 273, perDay: 72, more: 40, overpaid: 42 };
-export function rosterRoomNeeded(dayCount, withMore, anyOverpaid = false) {
+// The "Paid on" column (Event reports PD1, 2026-11-19) sits right after Paid and takes another 80 px
+// ("Paid on" header, "Mar 25" under it, the cell padding); only asked for (withPaidOn) while the money
+// is shown, so Hide private details gives the room back.
+export const ROSTER_ROOM = { margins: 50, fixed: 273, perDay: 72, more: 40, overpaid: 42, paidOn: 80 };
+export function rosterRoomNeeded(dayCount, withMore, anyOverpaid = false, withPaidOn = false) {
   const days = Number.isInteger(dayCount) && dayCount > 0 ? dayCount : 1;
   return ROSTER_ROOM.margins + ROSTER_ROOM.fixed + ROSTER_ROOM.perDay * days
-    + (withMore ? ROSTER_ROOM.more : 0) + (anyOverpaid ? ROSTER_ROOM.overpaid : 0);
+    + (withMore ? ROSTER_ROOM.more : 0) + (anyOverpaid ? ROSTER_ROOM.overpaid : 0) + (withPaidOn ? ROSTER_ROOM.paidOn : 0);
 }
 
 // The refund Undo refund reverses: the NEWEST refund row that stands (no reversal points at it),

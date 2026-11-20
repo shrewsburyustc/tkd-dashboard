@@ -537,6 +537,11 @@ export const COL_SCHOOL = 'School';
 export const COL_PLAN = 'Plan';
 export const COL_PAYMENTS = 'Payments';
 export const COL_BALANCE = 'Balance';
+// The paid date (Event reports PD1, 2026-11-19; migration 0055 sends it): a column "Paid in full on" on a PC,
+// the gray line "paid in full Oct 28" on a tablet (under the tag) and a phone (under the school). Only for a candidate
+// who has paid in full; a dash in the column while a balance is left.
+export const COL_PAID_IN_FULL_ON = 'Paid in full on';
+export const paidInFullOnLine = (iso) => `paid in full ${monthDay(iso)}`;
 export const registeredOnShort = (iso) => `Registered ${monthDay(iso)}`;
 export const danSchool = (dan, code) => `${DAN_LABELS[dan] ?? ''} · ${schoolName(code)}`;
 export const planCell = (planName, kukkiwon) => (kukkiwon ? `${planName} · Kukkiwon` : planName);

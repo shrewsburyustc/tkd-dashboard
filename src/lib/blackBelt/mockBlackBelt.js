@@ -1285,6 +1285,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
           source: c.source, reference: c.reference, registered_at: c.registered_at, status: c.status,
           withdrawn_reason: c.withdrawn_reason, duplicate_state: c.duplicate_state, duplicate_of: c.duplicate_of, version: c.version,
           has_payment_rows: db.bb_payments.some((p) => p.candidate_id === c.id),
+          // 0055: the day of the last counting payment (not undone, not a returned check); null with none
+          paid_on: lastCountingPaidOn(db, c.id),
           money: moneyOf(db, c, onDay, false),
           ...grading.candidateExtras(db, c), // is_makeup, makeup_of_cycle_name, retest_names, has_grades
         }));
@@ -1917,6 +1919,12 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       })),
       ...out,
     };
+  }
+  // 0055 (bb_cycle_roster's paid_on): the latest paid-on date among the candidate's counting payments — live
+  // 'payment' rows (not undone) that are not returned checks. null when there is none.
+  function lastCountingPaidOn(db, candidateId) {
+    const counting = liveLines(paymentRowsOf(db, candidateId)).filter((l) => l.kind === 'payment' && !l.returned);
+    return counting.length > 0 ? counting.map((l) => l.paidOn).sort().at(-1) : null;
   }
   // The live rows of a candidate as the detail and the receipt list them (oldest first), each
   // the stored row + returned (a payment whose check has a live returned mark).

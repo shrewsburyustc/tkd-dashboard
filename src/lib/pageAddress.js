@@ -27,6 +27,10 @@
 //                   tkd-dashboard.pages.dev/#finance/history   History   (admins: App.jsx sends staff
 //                   tkd-dashboard.pages.dev/#finance/settings  Settings   to #finance; with "Hide
 //                                                              payments" on, every #finance… goes Home)
+//                   tkd-dashboard.pages.dev/#finance/event-report/<source>/<id>
+//                                                              one event's Money report (admins; migration 0054).
+//                                                              source: color_belt | star | camp | black_belt | board_breaking
+//                                                              (the event's section); <id> the event's / camp's / cycle's id
 // The "#…" part (the "hash") is never sent to the server — it only lives in the browser — so the
 // hosting needs no change. App.jsx adds a history step each time the page changes
 // (history.pushState) and listens for Back / Forward ('popstate').
@@ -123,6 +127,10 @@ const SETTINGS_CLASSES_HASH = '#settings/classes-and-ranks';
 // Finance (contract 0011 §4): #finance, #finance/history, #finance/settings.
 const FINANCE_HASH = /^#finance(?:\/(history|settings))?$/;
 export const FINANCE_VIEWS = ['report', 'history', 'settings'];
+// An event's Money report: #finance/event-report/<source>/<id>. In a route it is { section: 'finance',
+// testingPage: <source>, eventId: <id>, eventTab: 'event-report' } (the source rides in the testingPage slot).
+export const EVENT_REPORT_SOURCES = ['color_belt', 'star', 'camp', 'black_belt', 'board_breaking'];
+const FINANCE_REPORT_HASH = new RegExp(`^#finance/event-report/(${EVENT_REPORT_SOURCES.join('|')})/${ID}$`);
 // Camps (contract 0013 §6.1): #camps, #camps/templates, #camps/camp/<id>(/checkin|/payments|/attendance).
 const CAMPS_HASH = new RegExp(`^#camps(?:/templates|/camp/${ID}(?:/(checkin|payments|attendance))?)?$`);
 const CAMPS_TEMPLATES_HASH = '#camps/templates';
@@ -176,7 +184,11 @@ export function normalEventTab(testingPage, eventId, tab) {
 export function routeTab(section, testingPage, eventId, tab) {
   if (section === 'settings') return tab === SETTINGS_CLASSES_PART ? SETTINGS_CLASSES_PART : 'students';
   if (section === 'prospects') return tab === 'forms' ? 'forms' : 'prospects';
-  if (section === 'finance') return FINANCE_VIEWS.includes(tab) ? tab : 'report';
+  if (section === 'finance') {
+    // The Money report needs an event (and a known source); without them it is the Daily report.
+    if (tab === 'event-report') return eventId && EVENT_REPORT_SOURCES.includes(testingPage) ? 'event-report' : 'report';
+    return FINANCE_VIEWS.includes(tab) ? tab : 'report';
+  }
   if (section === 'camps') {
     if (eventId) return CAMP_TABS.includes(tab) ? tab : 'default';
     return tab === 'templates' ? 'templates' : 'camps';
@@ -222,7 +234,9 @@ function readHash(hash) {
   if (hash === STAR_RUBRICS_HASH) return { route: route('testing', 'star', null, 'rubrics'), known: true };
   if (hash === STAR_HASH) return { route: route('testing', 'star', null, 'events'), known: true };
   if (hash === HASH_BY_PAGE.testing) return { route: route('testing', DEFAULT_TESTING_PAGE), known: true };
-  // Finance and its two other views.
+  // An event's Money report (migration 0054), then Finance and its two other views.
+  const report = FINANCE_REPORT_HASH.exec(hash);
+  if (report) return { route: route('finance', report[1], report[2], 'event-report'), known: true };
   const finance = FINANCE_HASH.exec(hash);
   if (finance) return { route: route('finance', null, null, finance[1] ?? 'report'), known: true };
   // Camps: its two list tabs, and a camp's page on one of its tabs.
@@ -252,7 +266,10 @@ export function routeIsUnknown() {
 
 // The "#…" for a route (Home has none at all).
 function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 'students', privateId = null }) {
-  if (section === 'finance') return eventTab === 'history' || eventTab === 'settings' ? `#finance/${eventTab}` : '#finance';
+  if (section === 'finance') {
+    if (routeTab('finance', testingPage, eventId, eventTab) === 'event-report') return `#finance/event-report/${testingPage}/${eventId}`;
+    return eventTab === 'history' || eventTab === 'settings' ? `#finance/${eventTab}` : '#finance';
+  }
   if (section === 'camps') {
     if (eventId) return `#camps/camp/${eventId}${CAMP_TABS.includes(eventTab) ? `/${eventTab}` : ''}`;
     return eventTab === 'templates' ? CAMPS_TEMPLATES_HASH : HASH_BY_PAGE.camps;
@@ -311,7 +328,13 @@ export function correctedAddress() {
 // private testing's grading page is a different page from the Color Belt tabs (and from another one).
 export function samePage(a, b) {
   if (a.section !== b.section) return false;
-  if (a.section === 'finance') return routeTab('finance', null, null, a.eventTab) === routeTab('finance', null, null, b.eventTab);
+  if (a.section === 'finance') {
+    const tabA = routeTab('finance', a.testingPage, a.eventId, a.eventTab);
+    const tabB = routeTab('finance', b.testingPage, b.eventId, b.eventTab);
+    if (tabA !== tabB) return false;
+    // Two Money reports are the same page only for the same event.
+    return tabA !== 'event-report' || (a.testingPage === b.testingPage && a.eventId === b.eventId);
+  }
   return (
     (a.testingPage ?? null) === (b.testingPage ?? null) &&
     (a.eventId ?? null) === (b.eventId ?? null) &&

@@ -149,6 +149,7 @@ import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDi
 import { useGradingSaves } from './useGradingSaves.js';
 import { useSaveLine } from '../../../lib/saveLine.js';
 import * as T from '../text.js';
+import MoneyReportButton from '../../finance/MoneyReportButton.jsx'; // Money report (Finance event report, v0.827)
 
 // The class chosen on each event's page, kept while the page is open.
 const classByEvent = new Map();
@@ -2074,6 +2075,7 @@ export default function EventPage({
           <p className="ev-summary">{T.eventSummary(event, school, active.length, event.state)}</p>
         </div>
         <div className="ev-head-buttons">
+          <MoneyReportButton source="color_belt" eventId={event.id} isAdmin={isAdmin} />
           {addButton}
           {linkButton}
         </div>
