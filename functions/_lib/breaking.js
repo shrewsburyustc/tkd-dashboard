@@ -297,7 +297,10 @@ export async function createPaymentLink({ fetchImpl, env, school, registrationId
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-      redirect: 'error', // Square must answer itself; the token is never sent on to another address
+      // 'manual', never 'error': Cloudflare Workers do not implement the 'error' mode and throw a TypeError before
+      // anything is sent (found in the live sandbox test 2026-11-19). With 'manual' a redirect comes back as a 3xx
+      // answer (not ok, so no link) and the token is never sent on to another address.
+      redirect: 'manual',
       signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(timeoutMs) : undefined,
     });
     if (!response.ok) return null;
