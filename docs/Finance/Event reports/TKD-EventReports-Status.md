@@ -37,6 +37,12 @@ ER1 where the report lives · ER2 a camp's report at PC / tablet / phone / 320 +
 
 - **Security review (2026-11-19):** nothing above Low. One Low left on purpose: each report or CSV reads all five sources' money since 2020 and then filters to the event, so its time grows with the school's total history (0.6 s for 2,000 Board breaking students in the test). A lower bound from the event's own date was proposed, but a payment can be back-dated before its event was created, so it was NOT added; revisit only if a report gets slow.
 
+## Applied 2026-11-19 (Jeffrey pasted both in the SQL Editor)
+
+- **0054** applied ("success"). Pre-check before true/false/0, after true/true/6; all 20 fingerprint rows equal the plan; `0054_tests.sql` passed (Jeffrey: "all 0054 test pass"); then `0011`, `0052`, `0047`, `0026` tests passed ("all tests pass").
+- **0055** applied ("success"). Pre-check before true/false/1, after false/true/1; fingerprint `5e8c0539...` equal; `0055`, `0016`, `0025` tests passed ("all pass").
+- Jeffrey: "main clear to merge and push if readu". The app waits for Main's merge, pre-push checks and Jeffrey's push word.
+
 ## Next
 
 Main merges the branch; Jeffrey pastes 0054 then 0055 (SQL Editor) after his OK, runs `0054_tests.sql` / `0055_tests.sql` and the fingerprint files; then the app goes live. Nothing is pushed.
